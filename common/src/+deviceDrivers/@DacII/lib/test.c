@@ -22,11 +22,11 @@
 * CVS header info.
 * ----------------
 * $CVSfile$
-* $Author: bdonovan $
-* $Date: 2011-02-01 14:36:25 -0500 (Tue, 01 Feb 2011) $
+* $Author$
+* $Date$
 * $Locker:  $
 * $Name:  $
-* $Revision: 712 $
+* $Revision$
 *
 * $Log: test.c,v $
 * Revision 1.7  2008/12/03 15:47:57  bdonovan
@@ -216,7 +216,7 @@ dealloc:
 }
 
 void printHelp(){
-	printf("BBN DacII C Test Bench $Rev: 712 $\n");
+	printf("BBN DacII C Test Bench $Rev$\n");
 	printf("   -t Trigger Loop Test\n");
 	printf("   -s List Available Dac Serial Numbers\n");
 	printf("   -ks List Known Dac Serial Numbers\n");
