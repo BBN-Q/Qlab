@@ -1,0 +1,23 @@
+--- AgilentE8363C-auto.m	2009-10-08 14:57:30.761144900 -0400
++++ AgilentE8363C.m	2009-10-09 15:23:44.157715300 -0400
+@@ -135,7 +135,19 @@
+         end
+         function val = get.sweep_data(obj)
+             gpib_string = ':CALCulate:DATA';
+-            val = obj.Query([gpib_string '?']);
++            raw_response = obj.Query([gpib_string '? SDATA']);
++            scanned_response = textscan(raw_response, '%f,%f,');
++            val = [scanned_response{1} scanned_response{2}];
++        end
++        function dup_plot(obj)
++            center = str2double(obj.sweep_center);
++            span = str2double(obj.sweep_span);
++            npoints = str2double(obj.sweep_points);
++            start = center-span/2;
++            stop = center+span/2;
++            data = obj.sweep_data;
++            figure;
++            semilogy(linspace(start,stop,npoints),(data(:,1).^2+data(:,2).^2).^.5);
+         end
+ 
+         function obj = set.output(obj, value)
