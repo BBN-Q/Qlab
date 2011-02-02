@@ -24,10 +24,10 @@
 * ----------------
 * $CVSfile$
 * $Author: bdonovan $
-* $Date: 2011-01-26 17:09:18 -0500 (Wed, 26 Jan 2011) $
+* $Date$
 * $Locker:  $
 * $Name:  $
-* $Revision: 706 $
+* $Revision$
 *
 * $Log: libdacii.c,v $
 * Revision 1.8  2008/12/05 14:47:05  bdonovan
@@ -1293,6 +1293,6 @@ EXPORT int DACII_SetupVCXO(int device)
 }
 
 EXPORT void DACII_ReadLibraryVersion(void *buffer, int maxlen) {
-	snprintf(buffer, maxlen, "Libdacii $Revision: 706 $");
+	snprintf(buffer, maxlen, "Libdacii $Revision$");
 }
 

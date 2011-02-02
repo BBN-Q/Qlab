@@ -22,7 +22,7 @@
 * CVS header info.
 * ----------------
 * $CVSfile$
-* $Author$
+* $Author: bdonovan $
 * $Date$
 * $Locker:  $
 * $Name:  $

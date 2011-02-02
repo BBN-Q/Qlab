@@ -21,10 +21,10 @@
 # ----------------
 # $CVSfile$
 # $Author: bdonovan $
-# $Date: 2008/12/03 15:47:57 $
+# $Date$
 # $Locker:  $
 # $Name:  $
-# $Revision: 103 $
+# $Revision$
 #
 # $Log: Makefile,v $
 # Revision 1.7  2008/12/03 15:47:57  bdonovan

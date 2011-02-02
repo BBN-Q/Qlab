@@ -25,10 +25,10 @@
 * ----------------
 * $CVSfile$
 * $Author: bdonovan $
-* $Date: 2011-01-26 17:09:18 -0500 (Wed, 26 Jan 2011) $
+* $Date$
 * $Locker:  $
 * $Name:  $
-* $Revision: 706 $
+* $Revision$
 *
 * $Log: fpga.h,v $
 * Revision 1.7  2008/12/03 15:47:57  bdonovan

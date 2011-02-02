@@ -23,10 +23,10 @@
 * ----------------
 * $CVSfile$
 * $Author: bdonovan $
-* $Date: 2011-01-21 16:35:11 -0500 (Fri, 21 Jan 2011) $
+* $Date$
 * $Locker:  $
 * $Name:  $
-* $Revision: 703 $
+* $Revision$
 *
 * $Log: dacii.h,v $
 * Revision 1.7  2008/12/03 15:47:57  bdonovan
