@@ -1,4 +1,4 @@
-function LinkListFormateUnitTest(sequence)
+function LinkListFormatUnitTest(sequence)
 
 %% DacII Enhanced Link List Unit Test
 %%
