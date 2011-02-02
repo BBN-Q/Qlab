@@ -302,6 +302,9 @@ classdef PatternGen < handle
                 entry.length = length(pulse);
                 entry.repeat = 1;
                 entry.isTimeAmplitude = 0;
+                entry.isZero = (key == padWaveformKey);
+                entry.hasTrigger = 0;
+                entry.linkListRepeat = 0;
             end
             
             for n = 1:numsteps
@@ -337,6 +340,8 @@ classdef PatternGen < handle
                                 
                                 xLinkList{i+1}.repeat = r;
                                 yLinkList{i+1}.repeat = r;
+                                xLinkList{i+1}.isTimeAmplitude = 1;
+                                yLinkList{i+1}.isTimeAmplitude = 1;
                                 break;
                             end
                         end
