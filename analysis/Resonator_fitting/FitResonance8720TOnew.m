@@ -116,7 +116,7 @@ pause
 % 
 % Call the fitting function
 options = optimset('LargeScale','off','MaxIter',10000, 'MaxFunEvals', 10000000,...
-    'TolX', 1e-10, 'TolFun', 1e-10, 'Display', notifyoriteration);
+    'TolX', 1e-10, 'TolFun', 1e-10, 'Display', 'notify');
 % [FitParameters] = ... 
 %     fminsearch(@ChiSqr, FitParameterStart, options, frequency, S21Mag);
 LB = [frequency(1) 1E-10 -1E-9 1E-15 -1E-10 1];

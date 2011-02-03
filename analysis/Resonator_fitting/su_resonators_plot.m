@@ -1,4 +1,4 @@
-rindex = 5; % which resonator do you want to look at?
+rindex = 1; % which resonator do you want to look at?
 throwaway = 0; % # of temperatures to ignore
 
 %data points per sweep
