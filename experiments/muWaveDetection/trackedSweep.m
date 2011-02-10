@@ -200,6 +200,8 @@ set(mainWindow, 'Visible', 'on');
 		
 		% get other experiment settings
 		settings.ExpParams.digitalHomodyne = get_digitalHomodyne_settings();
+        settings.ExpParams.searchFunction = 'max'; % looking for a peak or a valley?
+        settings.ExpParams.offsetFreq = 0.002; % bias off the bare frequency by this much (in GHz)
 		settings.displayScope = 0;
 		settings.SoftwareDevelopmentMode = 0;
         

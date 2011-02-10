@@ -191,10 +191,10 @@ classdef AgilentAP120 < handle
             %ignored
             AqRoot=getenv('AcqirisDxRoot');
             addpath([AqRoot,'\bin']);
-            %addpath([AqRoot,'\MATLAB\mex'],[AqRoot,'\MATLAB\mex\functions']);
-            addpath([AqRoot,'\MATLAB\mex']);
-            addpath([AqRoot,'\MATLAB\mex\help']);
-            addpath([AqRoot,'\MATLAB\mex\functions']);
+            addpath([AqRoot,'\MATLAB\mex'],[AqRoot,'\MATLAB\mex\functions']);
+            %addpath([AqRoot,'\MATLAB\mex']);
+            %addpath([AqRoot,'\MATLAB\mex\help']);
+            %addpath([AqRoot,'\MATLAB\mex\functions']);
             obj.channel_on = 1;
             obj.trigger_ch = -1;
             [status instrumentID] = Aq_InitWithOptions(obj.resourceName, 0, 0, obj.options);

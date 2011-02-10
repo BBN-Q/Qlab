@@ -14,6 +14,7 @@ ExpParams = obj.inputStructure.ExpParams;
 Instr = obj.Instr;
 fid = obj.DataFileHandle;
 trackedfid = obj.TrackedDataFileHandle;
+searchfcn = eval(['@' ExpParams.searchFunction]);
 SD_mode = obj.inputStructure.SoftwareDevelopmentMode;
 displayScope = obj.inputStructure.displayScope;
 
@@ -143,8 +144,10 @@ for loop2_index = 1:Loop.two.steps
     end
     
     % find the new cavity frequency and set it
-    [minamp freq_index] = min(amp);
-    freq = x_range(freq_index);
+%     [minamp freq_index] = min(amp);
+    [minamp freq_index] = feval(searchfcn, amp);
+    freq = x_range(freq_index) + ExpParams.offsetFreq;
+    fprintf('Bias frequency: %e\n', freq);
     Instr.RFgen.frequency = freq;
     Instr.LOgen.frequency = freq + ExpParams.digitalHomodyne.IFfreq*1e-3; % IF frequency is in MHz
     
