@@ -35,6 +35,7 @@ classdef PatternGen < handle
         dPiAmp = 4000;
         dPiOn2Amp = 2000;
         dPiOn4Amp = 1000;
+        dBuffer = 5;
         cycleLength = 10000;
     end
     
@@ -183,7 +184,7 @@ classdef PatternGen < handle
             % set default pulse parameters
             params.amp = 0;
             params.width = self.dPulseLength;
-            params.duration = params.width + 5;
+            params.duration = params.width + self.dBuffer;
             params.sigma = self.dSigma;
             params.angle = 0; % in radians
             if ismember(p, qubitPulses)
