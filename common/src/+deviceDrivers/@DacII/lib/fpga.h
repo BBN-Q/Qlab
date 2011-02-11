@@ -53,6 +53,8 @@
 #define FPGA_H
 
 #define VERSION_ELL 0x10
+#define ERROR_READ 65535
+
 
 #define K4 4096
 #define K8 8192

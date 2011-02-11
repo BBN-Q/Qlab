@@ -111,4 +111,5 @@ EXPORT int DACII_SetPllFreq(int device, int dac, int freq);
 
 EXPORT int DACII_ReadBitFileVersion(int device);
 EXPORT void DACII_ReadLibraryVersion(void * buffer, int maxlen);
+EXPORT int DACII_ReadAllRegisters(int device);
 #endif

@@ -57,8 +57,8 @@ classdef DacII < deviceDrivers.lib.deviceDriverBase
         num_devices;
         message_manager =[];
         bit_file_path = '';
-        bit_file = 'cbl_dac2_r5_d6ma_fx.bit';
-        expected_bit_file_ver = 5;
+        bit_file = 'mqco_dac2_r10_p13.bit';
+        expected_bit_file_ver = hex2dec('10');
         Address = 0;
         verbose = 0;
     end
@@ -436,6 +436,11 @@ classdef DacII < deviceDrivers.lib.deviceDriverBase
             val = dac.librarycall('Setup VCX0', 'DACII_SetupVCXO');
         end
         
+         function readAllRegisters(dac)
+            val = dac.librarycall(sprintf('Read Registers'), ...
+                'DACII_ReadAllRegisters');
+        end
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %% Link List Format Conversion
@@ -803,6 +808,12 @@ classdef DacII < deviceDrivers.lib.deviceDriverBase
                 end
             end
         end
+        
+        function setModeR5(dac)
+            dac.bit_file = 'cbl_dac2_r5_d6ma_fx.bit';
+            dac.expected_bit_file_ver = 5;
+        end
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     end
     methods(Static)
@@ -815,9 +826,22 @@ classdef DacII < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function wf = get_waveform_obj()
+        function wf = getNewWaveform()
             % Utility function to get a DacII wavform object from DacII Driver
-            wf = dacIIWaveform();
+            try
+                wf = dacIIWaveform();
+            catch
+                % if dacIIWaveform is not on the path
+                % attempt to add the util directory to the path
+                % and reload the waveform
+                path = mfilename('fullpath');
+                % search path
+                spath = ['common' filesep 'src'];
+                idx = strfind(path,spath);
+                path = [path(1:idx+length(spath)) 'util'];
+                addpath(path);
+                wf = dacIIWaveform();
+            end
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -827,5 +851,72 @@ classdef DacII < deviceDrivers.lib.deviceDriverBase
         %% UnitTest of Link List Format Conversion
         %% See: LinkListFormatUnitTest.m
         LinkListFormatUnitTest(sequence)
+        
+        function dac = UnitTest(skipLoad)
+            %
+            
+            % work around for not knowing full name
+            % of class - can not use simply DacII when in 
+            % experiment framework
+            classname = mfilename('class');
+            
+            % tests channel 0 & 1 output for basic bit file testing
+            dac = eval(sprintf('%s();', classname));
+            
+            % waveform parameters
+            wfScaleFactor = 1;
+            wfOffset = 0;
+            wfSampleRate = 1200;
+            
+            dacId = 0;
+            
+            %dac.setModeR5();
+            dac.open(dacId);
+            
+            if (~dac.is_open)
+                dac.close();
+                dac.open(dacId);
+                if (~dac.is_open)
+                    error('Could not open dac')
+                end
+            end
+            
+
+            dac.loadBitFile();
+
+            ver = dac.readBitFileVersion();
+            fprintf('Found Bit File Version: %i\n', ver);
+            dac.readAllRegisters();
+            pause(1);
+            keyboard
+            for cnt = 1:5
+                
+                wf = dac.getNewWaveform();
+                ln = cnt * 400;
+                
+                wf.data = [zeros([1,2000 - ln]) ones([1,ln])];
+                wf.set_scale_factor(cnt/10+.5);
+                
+                dac.loadWaveform(0, wf.get_vector(), wf.offset);
+                
+                ln = (5-cnt) * 400;
+                
+                wf.data = [zeros([1,2000 - ln]) ones([1,ln]) zeros([1,1000])];
+                wf.set_scale_factor((20-cnt)/10+.5);
+                
+                dac.loadWaveform(1, wf.get_vector(), wf.offset);
+                
+                dac.setFrequency(0, wf.sample_rate);
+                dac.triggerFpga(0, 1); % 0 -  dac number 1 - software trigger
+                
+                pause(10);
+                
+                dac.pauseFpga(0);
+                dac.pauseFpga(2);
+                
+            end
+            
+            dac.close();
+        end
     end
 end

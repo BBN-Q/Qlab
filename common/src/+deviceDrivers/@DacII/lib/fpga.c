@@ -410,7 +410,7 @@ EXPORT int DACII_LoadWaveform(int device, unsigned short *Data, int ByteCount, i
   
   int error = 0;
   
-  #if 0
+  #if 1
   for(cnt = 0; cnt < ByteCount; cnt++) {
     data = DACII_ReadFPGA(device, dac_read + cnt, fpga);
     if (data != Data[cnt]) {
@@ -1514,12 +1514,33 @@ EXPORT int DACII_ReadBitFileVersion(int device) {
 
 	version = DACII_ReadFPGA(device, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, fpga);
 
-	if (version == -1) { // tried to read invalid address
+	if (version == ERROR_READ) { // tried to read invalid address
 		version = DACII_ReadFPGA(device, FPGA_ADDR_ELL_REGREAD | FPGA_OFF_VERSION, fpga);
+		version = version & 0x7FF; // First 11 bits hold version
 	}
 	fprintf(stderr, "Found BitFile Version %i\n", version);
 	fflush(stderr);
+
+	/*
+	fprintf(stderr,"WARNING: Forcing version for testing\n");
+	fflush(stderr);
+	version = 0x10;
+	*/
+
 	gBitFileVersion = version;
 	gRegRead = (version >= VERSION_ELL) ? FPGA_ADDR_ELL_REGREAD : FPGA_ADDR_REGREAD;
 	return version;
 }
+
+EXPORT int DACII_ReadAllRegisters(int device) {
+	int cnt;
+	int val;
+	int fpga = 1;
+
+	for(cnt = 0; cnt < 20; cnt++) {
+		val = DACII_ReadFPGA(device, gRegRead | cnt, fpga);
+		// register values will be dumped to lob by DACII_ReadFPGA
+	}
+	return 0;
+}
+

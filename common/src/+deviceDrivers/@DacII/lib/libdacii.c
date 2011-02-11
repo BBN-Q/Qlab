@@ -1107,14 +1107,14 @@ DACII_SPI_REC PllSetup[] =
   0xF5, 0x00,  // Enable un-inverted 400mv clock on OUT5
   0x190, 0x55, //	6 high, 6 low = channel 0 divide by 12
   0x191, 0x00, //	Clear divider 0 bypass
-  0x193, 0xBB, //	12 high, 12 low = channel 1 divide by 24
+  0x193, 0x33, //	4 high, 4 low = channel 1 divide by 8
   0x196, 0x55, //	6 high, 6 low = channel 2 divide by 12
   0x1E0, 0x0,  // Set VCO post divide to 2
   0x1E1, 0x2,  // Select VCO as clock source for VCO divider
   0x232, 0x1,  // Set bit 0 to 1 to simultaneously update all registers with pending writes.
   0x18, 0x71,  // Initiate Calibration.  Must be followed by Update Registers Command
   0x232, 0x1,   // Set bit 0 to 1 to simultaneously update all registers with pending writes.
-  0x18, 0x70,  // Clear calibration flag so that next set generats 0 to 1.
+  0x18, 0x70,  // Clear calibration flag so that next set generates 0 to 1.
   0x232, 0x1   // Set bit 0 to 1 to simultaneously update all registers with pending writes.
 };
 
@@ -1295,4 +1295,5 @@ EXPORT int DACII_SetupVCXO(int device)
 EXPORT void DACII_ReadLibraryVersion(void *buffer, int maxlen) {
 	snprintf(buffer, maxlen, "Libdacii $Revision$");
 }
+
 
