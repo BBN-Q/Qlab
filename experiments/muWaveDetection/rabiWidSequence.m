@@ -28,7 +28,7 @@ for n = 1:numsteps;
 	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt, cycleLength);
 	ch3(n, :) = patx + offset;
 	ch4(n, :) = paty + offset;
-    ch3m1(n, :) = pg.bufferPulse(patx, 0, 200, 100, 50);
+    ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, 200, 100, 50);
 end
 
 % trigger at 1000

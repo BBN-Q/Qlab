@@ -37,7 +37,7 @@ for n = 1:numsteps;
 	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt);
 	ch3(n, :) = patx + offset;
 	ch4(n, :) = paty + offset;
-    ch3m1(n, :) = pg.bufferPulse(patx, 0, bufferPadding, bufferReset, bufferDelay);
+    ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
 % trigger at beginning of measurement pulse

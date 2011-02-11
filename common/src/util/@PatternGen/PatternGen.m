@@ -98,10 +98,14 @@ classdef PatternGen < handle
         end
         
         % buffer pulse generator
-		function out = bufferPulse(pat, zeroLevel, padding, reset, delay)
+		function out = bufferPulse(patx, paty, zeroLevel, padding, reset, delay)
 			self = PatternGen;
-			% subtract offset
-			pat = pat - zeroLevel;
+			% subtract offsets
+			patx = patx - zeroLevel;
+            paty = paty - zeroLevel;
+            
+            % find when either channel is high
+            pat = double(patx | paty);
 			
 			% buffer to the left
 			pat = flipud(conv( flipud(pat), ones(1+padding, 1), 'same' ));
