@@ -159,7 +159,7 @@ for n = 1:numsteps;
     devLinkListX(n, :) = patternX(st:en) + offset;
     devLinkListY(n, :) = patternY(st:en) + offset;
     
-    pattenGenMarker(n, :) = pg.bufferPulse(patx, 0, bufferPadding, bufferReset, bufferDelay);
+    pattenGenMarker(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
 %{

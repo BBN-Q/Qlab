@@ -48,6 +48,7 @@
 OS=$(shell uname)
 
 ifeq (${OS},Darwin)
+GCC=gcc
 CFLAGS=-dynamiclib 
 CFLAGS2=
 LIBNAME=libdacii.dylib
@@ -55,12 +56,14 @@ EXFLAGS=-Wl
 LFLAGS=
 else 
 ifeq (${OS},Linux)
+GCC=gcc-3
 CFLAGS=
 CFLAGS2=
 LIBNAME=libdacii.so
 EXFLAGS=-Wl
 LFLAGS=-ldl
 else
+GCC=gcc-3
 CFLAGS=
 CFLAGS2=-mno-cygwin -DBUILD_DLL -I./include
 LIBNAME=libdacii.dll
@@ -72,17 +75,17 @@ endif
 all: ${LIBNAME} test
 	
 ${LIBNAME}: dacii.o fpga.o
-	gcc-3  ${CFLAGS} ${CFLAGS2} -shared  -o ${LIBNAME} dacii.o fpga.o ${EXFLAGS}
+	${GCC}  ${CFLAGS} ${CFLAGS2} -shared  -o ${LIBNAME} dacii.o fpga.o ${EXFLAGS}
 	
 dacii.o: libdacii.c dacii.h
-	gcc-3  ${CFLAGS2} -c  libdacii.c -o dacii.o
+	${GCC}  ${CFLAGS2} -c  libdacii.c -o dacii.o
 	
 fpga.o: fpga.c fpga.h dacii.h
-	gcc-3  ${CFLAGS2} -c  fpga.c -o fpga.o
+	${GCC}  ${CFLAGS2} -c  fpga.c -o fpga.o
 	
 clean:
 	rm -f *.o *.dylib *.dll test *.exe *.a
 	
 test: test.c
-	gcc-3 ${OSFLAG} ${LFLAGS} -I./include -o test test.c
+	${GCC} ${OSFLAG} ${LFLAGS} -I./include -o test test.c
 	

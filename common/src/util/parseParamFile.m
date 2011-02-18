@@ -12,7 +12,7 @@ CFG = [];
 
 % Put config file name in configuration structure so CFG parameters
 % can be reconstructed for a given configuration file 
-CFG.file_name = filename;
+CFG.cfg_file_name = filename;
 
 if ~exist('header','var')
     % The default assumption is we are reading a cfg file
