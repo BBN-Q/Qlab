@@ -104,18 +104,18 @@ get_acqiris_settings = deviceGUIs.acqiris_settings_gui(mainWindow, 10, 155, prev
 % create tab group for microwave sources
 muWaveTabGroupPanel = uipanel('parent', mainWindow, ...
 	'units', 'pixels', 'position', [350, 490, 405, 290]);
-muWaveTabGroup = uitabgroup('v0', 'parent', muWaveTabGroupPanel, ...
+muWaveTabGroup = uitabgroup('parent', muWaveTabGroupPanel, ...
 	'units', 'pixels', 'position', [2, 2, 400, 285]);
-RFtab = uitab('v0', 'parent', muWaveTabGroup, 'title', 'RF');
-LOtab = uitab('v0', 'parent', muWaveTabGroup, 'title', 'LO');
-Spectab = uitab('v0', 'parent', muWaveTabGroup, 'title', 'Spec');
+RFtab = uitab('parent', muWaveTabGroup, 'title', 'RF');
+LOtab = uitab('parent', muWaveTabGroup, 'title', 'LO');
+Spectab = uitab('parent', muWaveTabGroup, 'title', 'Spec');
 
-get_rf_settings = deviceGUIs.uW_source_settings_gui(RFtab, 10, 10, 'RF', prevSettings.InstrParams.RFgen);
-get_lo_settings = deviceGUIs.uW_source_settings_gui(LOtab, 10, 10, 'LO', prevSettings.InstrParams.LOgen);
-get_spec_settings = deviceGUIs.uW_source_settings_gui(Spectab, 10, 10, 'Spec', prevSettings.InstrParams.Specgen);
+get_rf_settings = deviceGUIs.uW_source_settings_GUI(RFtab, 10, 10, 'RF', prevSettings.InstrParams.RFgen);
+get_lo_settings = deviceGUIs.uW_source_settings_GUI(LOtab, 10, 10, 'LO', prevSettings.InstrParams.LOgen);
+get_spec_settings = deviceGUIs.uW_source_settings_GUI(Spectab, 10, 10, 'Spec', prevSettings.InstrParams.Specgen);
 
 % add AWGs
-get_tekAWG_settings = deviceGUIs.AWG5014_settings_gui(mainWindow, 240, 350, 'TekAWG', prevSettings.InstrParams.TekAWG);
+get_tekAWG_settings = deviceGUIs.AWG5014_settings_GUI(mainWindow, 240, 350, 'TekAWG', prevSettings.InstrParams.TekAWG);
 
 % add DC sources
 get_DCsource_settings = deviceGUIs.DCBias_settings_GUI(mainWindow, 240, 775, prevSettings.InstrParams.BBNdc);
@@ -127,14 +127,14 @@ get_digitalHomodyne_settings = digitalHomodyne_GUI(mainWindow, 140, 350);
 % add tab group for sweeps
 sweepsTabGroupPanel = uipanel('parent', mainWindow, ...
 	'units', 'pixels', 'position', [775, 620, 440, 160]);
-sweepsTabGroup = uitabgroup('v0', 'parent', sweepsTabGroupPanel, ...
+sweepsTabGroup = uitabgroup('parent', sweepsTabGroupPanel, ...
 	'units', 'pixels', 'position', [2, 2, 430, 160]);
-FreqAtab = uitab('v0', 'parent', sweepsTabGroup, 'title', 'Freq A');
-FreqBtab = uitab('v0', 'parent', sweepsTabGroup, 'title', 'Freq B');
-Powertab = uitab('v0', 'parent', sweepsTabGroup, 'title', 'Power');
-Phasetab = uitab('v0', 'parent', sweepsTabGroup, 'title', 'Phase');
-DCtab = uitab('v0', 'parent', sweepsTabGroup, 'title', 'DC');
-TekChtab = uitab('v0', 'parent', sweepsTabGroup, 'title', 'TekCh');
+FreqAtab = uitab('parent', sweepsTabGroup, 'title', 'Freq A');
+FreqBtab = uitab('parent', sweepsTabGroup, 'title', 'Freq B');
+Powertab = uitab('parent', sweepsTabGroup, 'title', 'Power');
+Phasetab = uitab('parent', sweepsTabGroup, 'title', 'Phase');
+DCtab = uitab('parent', sweepsTabGroup, 'title', 'DC');
+TekChtab = uitab('parent', sweepsTabGroup, 'title', 'TekCh');
 
 get_freqA_settings = sweepGUIs.FrequencySweepGUI(FreqAtab, 5, 2, 'A');
 get_freqB_settings = sweepGUIs.FrequencySweepGUI(FreqBtab, 5, 2, 'B');
