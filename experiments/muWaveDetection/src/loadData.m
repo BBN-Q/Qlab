@@ -25,9 +25,14 @@ function data = loadData(makePlot)
 
     % parse
     Exp.parseExpcfgFile;
-    data = Exp.parseDataFile(makePlot);
+    [data, h1, h2] = Exp.parseDataFile(makePlot);
     data.loops = Exp.populateLoopStructure(true);
     data.filename = filename;
+    data.path = pathname;
+    
+    sanitized_filedname = strrep(filename, '_', '\_');
+    if h1 ~= 0, figure(h1); title(sanitized_filedname); end
+    if h2 ~= 0, figure(h2); title(sanitized_filedname); end
 
     % helper function to find the nth parent of directory given in 'path'
     function str = parent_dir(path, n)

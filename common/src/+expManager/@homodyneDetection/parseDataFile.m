@@ -1,4 +1,4 @@
-function data = parseDataFile(obj,makePlot)
+function [data, h1, h2] = parseDataFile(obj,makePlot)
 
 filename = [obj.DataPath '/' obj.DataFileName];
 % process header
@@ -68,20 +68,21 @@ if makePlot
 	end
     if size(data.mean_Data(:,:,index3),1) > 1
         for index3 = 1:size(data.mean_Data,3)
-            figure;
+            h1 = figure;
 			imagesc(x_range,y_range,data.abs_Data(:,:,index3).')
             xlabel(['\fontname{Times}\fontsize{16}' Loop.one.sweep.name]);
             ylabel(['\fontname{Times}\fontsize{16}' Loop.two.sweep.name]);
             set(gca,'FontSize',12)
 			
-			figure;
+			h2 = figure;
 			imagesc(x_range,y_range,data.phase_Data(:,:,index3).')
             xlabel(['\fontname{Times}\fontsize{16}' Loop.one.sweep.name]);
             ylabel(['\fontname{Times}\fontsize{16}' Loop.two.sweep.name]);
             set(gca,'FontSize',12)
         end
     else
-        figure;
+        h1 = figure;
+        h2 = 0;
 		subplot(2,1,1);
 		plot(x_range,data.abs_Data,'linewidth',1.5);
 		xlabel(['\fontname{Times}\fontsize{16}' Loop.one.sweep.name]);
@@ -92,7 +93,11 @@ if makePlot
         xlabel(['\fontname{Times}\fontsize{16}' Loop.one.sweep.name]);
 		ylabel(['\fontname{Times}\fontsize{16}Phase']);
         set(gca,'FontSize',12);
+        subplot(2,1,1);
     end
+else
+    h1 = 0;
+    h2 = 0;
 end
 
 obj.DataStruct = data;
