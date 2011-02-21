@@ -25,7 +25,7 @@
  % See the License for the specific language governing permissions and
  % limitations under the License.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function status = muWaveDetectionSweep(cfg_file_name)
+function status = muWaveDetectionSweep()
 % This script will execute the experiment muWaveDetection using the
 % default parameters found in the cfg file or specified using the GUI.
 
@@ -53,10 +53,6 @@ data_path = [base_path '/experiments/muWaveDetection/data/'];
 cfg_path = [base_path '/experiments/muWaveDetection/cfg/'];
 basename = 'muWaveDetection';
 
-if nargin < 1
-	cfg_file_name = [cfg_path 'homodyneDetection_v1_005.cfg'];
-end
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%     INITIALIZE PATH     %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -82,9 +78,9 @@ mainWindow = figure( ...
 	'Visible', 'off');
 
 % get previous settings
-cfg_name = [cfg_path 'lastRun.cfg'];
+cfg_name = [cfg_path 'muWaveDetectionSweep.cfg'];
 if exist(cfg_name, 'file')
-	prevSettings = parseParamFile([cfg_path 'lastRun.cfg']);
+	prevSettings = parseParamFile(cfg_name);
 else
 	prevSettings = struct();
 	prevSettings.InstrParams = struct();
@@ -208,21 +204,22 @@ set(mainWindow, 'Visible', 'on');
             data_path = temppath;
             basename = tempbasename;
         end
-        %basename = [basename '_' datestr(now(),30)];
-		new_cfg_file_name = [cfg_path 'lastRun.cfg'];
+        
+        % save settings to specific program cfg file as well as common cfg.
+		new_cfg_file_name = [cfg_path 'muWaveDetectionSweep.cfg'];
+        common_cfg_name = [cfg_path 'lastRun.cfg'];
 		writeCfgFromStruct(new_cfg_file_name, settings);
+        writeCfgFromStruct(common_cfg_name, settings);
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		%%%%%%%%%%%%%%%%%%%     PREPARE FOR EXPERIMENT      %%%%%%%%%%%%%%%%%%%%%%%
+		%%%%%%%%%%%%%%%%%%%     PREPARE AND RUN EXPERIMENT      %%%%%%%%%%%%%%%%%%%
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		% These methods are inherited from the superclass 'experiment'.  They are
-		% generic for all Experiments
+		
+        % create experiment object
 		Exp = expManager.homodyneDetection(data_path, new_cfg_file_name, basename);
+        
+        % parse cfg file
 		Exp.parseExpcfgFile;
-
-		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		%%%%%%%%%%%%%%%%%%%%%     RUN THE EXPERIMENT      %%%%%%%%%%%%%%%%%%%%%%%%%
-		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 		% Initialize the data file and record the parameters
 		Exp.openDataFile;
@@ -233,34 +230,8 @@ set(mainWindow, 'Visible', 'on');
 		Exp.Do;
 		Exp.CleanUp;
 
-		% Close the data file and end connection to all insturments.  This is 
-		% another method inherited from 'experiment'
+		% Close the data file and end connection to all insturments.
 		Exp.finalizeData;
-
-		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		%%%%%%%%%%%%%%%%     PRINT DATA AND CHECK HEADER      %%%%%%%%%%%%%%%%%%%%%
-		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-		% Now we print the output file (header and data) to the command prompt
-		% fprintf('\nStart of Data Output File print out\n');
-		% type(Exp.DataFileName);
-		% fprintf('\nEnd of Data Output File print out\n\n');
-
-		% Now we can parse the header to recover the inputStructure
-% 		Exp.parseDataFile;
-% 		headerStructure = Exp.DataStruct.params;
-% 
-% 		% This function will compare the two structures and make sure that they
-% 		% match.
-% 		[HeaderFields InputFields err] = comp_struct(headerStructure,Exp.inputStructure,...
-% 			'headerStructure','Exp.inputStructure');
-% 
-% 		if isempty(err)
-% 			fprintf('\nSucess: inputStructure matches header data\n');
-% 		else
-% 			fprintf('\ninputStructure does not match header data\n');
-% 			display(HeaderFields);display(InputFields);display(err);
-% 		end
 
 		status = 0;
 	end
