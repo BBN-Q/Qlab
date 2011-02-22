@@ -16,17 +16,17 @@ fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
 numsteps = 100;
-piWidth = 27;
+piWidth = 40;
 piAmp = 8000;
-pi2Width = 14;
-pg = PatternGen('dPiAmp', piAmp, 'diPiOn2Amp', piAmp/2, 'dPulseLength', piWidth, 'cycleLength', cycleLength);
+pi2Width = 20;
+pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dPulseLength', piWidth, 'cycleLength', cycleLength);
 
-stepsize = 5;
+stepsize = 10;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {...
-    pg.pulse('X90p', 'pType', 'square'), ...
+    pg.pulse('Xtheta', 'amp', piAmp, 'width', pi2Width, 'pType', 'square'), ...
     pg.pulse('QId', 'width', delaypts), ...
-    pg.pulse('X90p', 'pType', 'square') ...
+    pg.pulse('Xtheta', 'amp', piAmp, 'width', pi2Width, 'pType', 'square') ...
     };
 
 ch3 = zeros(numsteps, cycleLength);

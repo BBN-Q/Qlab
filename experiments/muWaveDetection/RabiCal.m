@@ -15,24 +15,25 @@ bufferPadding = 20;
 fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
-pg = PatternGen;
+piAmp = 8000;
+pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'cycleLength', cycleLength);
+
 numsteps = 41;
 minWidth = 0;
 stepsize = 2;
-%sigma = 2:stepsize:(numsteps-1)*stepsize+2;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 %amps = 0:stepsize:(numsteps-1)*stepsize;
-patseq = {pg.pulse('Xtheta', 'amp', 8000, 'width', pulseLength, 'pType', 'square')};
+patseq = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};
 
 ch3 = zeros(numsteps, cycleLength);
 ch4 = ch3;
 ch3m1 = ch3;
 
 for n = 1:numsteps;
-	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt, cycleLength);
+	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt);
 	ch3(n, :) = patx + offset;
 	ch4(n, :) = paty + offset;
-    ch3m1(n, :) = pg.bufferPulse(patx, 0, bufferPadding, bufferReset, bufferDelay);
+    ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
 % trigger at beginning of measurement pulse
@@ -43,7 +44,7 @@ ch1m1 = zeros(numsteps, cycleLength);
 ch1m2 = zeros(numsteps, cycleLength);
 for n = 1:numsteps;
 	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
-	ch1m2(n,:) = pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength, cycleLength);
+	ch1m2(n,:) = pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength);
 end
 
 myn = 20;

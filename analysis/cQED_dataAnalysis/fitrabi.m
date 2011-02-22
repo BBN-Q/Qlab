@@ -9,7 +9,8 @@ if nargin < 2
     xdata = get(line(1), 'xdata');
     ydata = get(line(1), 'ydata');
 end
-y = ydata .* 1000;
+%y = ydata .* 1000;
+y = ydata;
 
 % if xdata is a single value, assume that it is the time step
 if length(xdata) == 1
@@ -42,12 +43,12 @@ plot(xdata,y,'o')
 hold on
 plot(xdata,rabif(beta,xdata),'-r')
 xlabel('Time [ns]')
-ylabel('Amp [mV]')
+ylabel('Amp [V]')
 hold off
 subplot(3,1,1)
 bar(xdata,r);
 xlabel('Time [ns]')
-ylabel('Residuals [mV]')
+ylabel('Residuals [V]')
 axis tight
 
 t3 = beta(3);

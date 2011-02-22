@@ -15,14 +15,16 @@ bufferPadding = 20;
 fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
-pg = PatternGen;
-numsteps = 150
+
+piAmp = 8000;
+pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'cycleLength', cycleLength);
+
+numsteps = 50;
 minWidth = 0;
 stepsize = 10;
-%sigma = 2:stepsize:(numsteps-1)*stepsize+2;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
-%amps = 0:stepsize:(numsteps-1)*stepsize;
-patseq = {pg.pulse('Xtheta', 'amp', 8000, 'width', pulseLength, 'pType', 'square')};
+
+patseq = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};
 
 ch3 = zeros(numsteps, cycleLength);
 ch4 = ch3;
