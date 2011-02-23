@@ -35,6 +35,7 @@ classdef PatternGen < handle
         dPiAmp = 4000;
         dPiOn2Amp = 2000;
         dPiOn4Amp = 1000;
+        dDelta = 0.4;
         dBuffer = 5;
         cycleLength = 10000;
     end
@@ -67,26 +68,26 @@ classdef PatternGen < handle
             outy = zeros(n, 1);
         end
         
-        function [outx, outy] = gaussianPulse(amp, n, sigma)
+        function [outx, outy] = gaussianPulse(amp, n, sigma, varargin)
             midpoint = (n+1)/2;
             t = 1:n;
             outx = round(amp * exp(-(t - midpoint).^2./(2 * sigma^2))).';
             outy = zeros(n, 1);
         end
         
-        function [outx, outy] = gaussOn(amp, n, sigma)
+        function [outx, outy] = gaussOn(amp, n, sigma, varargin)
             t = 1:n;
             outx = round(amp * exp(-(t - n).^2./(2 * sigma^2))).';
             outy = zeros(n, 1);
         end
         
-        function [outx, outy] = gaussOff(amp, n, sigma)
+        function [outx, outy] = gaussOff(amp, n, sigma, varargin)
             t = 1:n;
             outx = round(amp * exp(-(t-1).^2./(2 * sigma^2))).';
             outy = zeros(n, 1);
         end
         
-        function [outx, outy] = tanhPulse(amp, n, sigma)
+        function [outx, outy] = tanhPulse(amp, n, sigma, varargin)
             if (n < 6*sigma)
                 warning('tanhPulse:params', 'Tanh pulse length is shorter than rise+fall time');
             end
@@ -95,6 +96,19 @@ classdef PatternGen < handle
             t = 1:n;
             outx = round(0.5*amp * (tanh((t-t0)./sigma) + tanh(-(t-t1)./sigma))).';
             outy = zeros(n, 1);
+        end
+        
+        function [outx, outy] = derivGaussianPulse(amp, n, sigma, varargin)
+            midpoint = (n+1)/2;
+            t = 1:n;
+            outx = round(amp .* (t - midpoint)./sigma^2 .* exp(-(t - midpoint).^2./(2 * sigma^2))).';
+            outy = zeros(n, 1);
+        end
+        
+        function [outx, outy] = dragPulse(amp, n, sigma, delta)
+            self = PatternGen;
+            [outx, tmp] = self.gaussianPulse(amp, n, sigma);
+            [outy, tmp] = self.derivGaussianPulse(amp*delta, n, sigma);
         end
         
         % buffer pulse generator
@@ -190,6 +204,7 @@ classdef PatternGen < handle
             params.width = self.dPulseLength;
             params.duration = params.width + self.dBuffer;
             params.sigma = self.dSigma;
+            params.delta = self.dDelta;
             params.angle = 0; % in radians
             if ismember(p, qubitPulses)
                 params.pType = 'gaussian';
@@ -249,10 +264,11 @@ classdef PatternGen < handle
                 amp = getelement(params.amp);
                 width = getelement(params.width);
                 sigma = getelement(params.sigma);
+                delta = getelement(params.delta);
                 angle = getelement(params.angle);
                 duration = getelement(params.duration);
                 
-                [xpulse, ypulse] = pf(amp, width, sigma);
+                [xpulse, ypulse] = pf(amp, width, sigma, delta);
                 
                 xypairs = [xpulse ypulse].';
                 R = [cos(angle) -sin(angle); sin(angle) cos(angle)];
