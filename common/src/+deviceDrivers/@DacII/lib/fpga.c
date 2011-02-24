@@ -410,7 +410,7 @@ EXPORT int DACII_LoadWaveform(int device, unsigned short *Data, int ByteCount, i
   
   int error = 0;
   
-  #if 1
+  #if 0
   for(cnt = 0; cnt < ByteCount; cnt++) {
     data = DACII_ReadFPGA(device, dac_read + cnt, fpga);
     if (data != Data[cnt]) {
