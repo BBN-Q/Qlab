@@ -77,22 +77,10 @@ mainWindow = figure( ...
 	'Color', get(0,'DefaultUicontrolBackgroundColor'), ...
 	'Visible', 'off');
 
-% get previous settings
-cfg_name = [cfg_path 'muWaveDetectionSweep.cfg'];
-if exist(cfg_name, 'file')
-	prevSettings = parseParamFile(cfg_name);
-else
-	prevSettings = struct();
-	prevSettings.InstrParams = struct();
-end
-% make sure it has fields for current set of instruments
+% list of instruments expected in the settings structs
 instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'TekAWG', 'BBNdc'};
-for f = instrumentNames
-	name = cell2mat(f);
-	if ~isfield(prevSettings.InstrParams, name)
-		prevSettings.InstrParams.(name) = struct();
-	end
-end
+% load previous settings structs
+[commonSettings, prevSettings] = get_previous_settings('muWaveDetectionSweep', cfg_path, instrumentNames);
 
 % add instrument panels
 get_acqiris_settings = deviceGUIs.acqiris_settings_gui(mainWindow, 10, 155, prevSettings.InstrParams.scope);
@@ -146,8 +134,8 @@ fastLoop = labeledDropDown(mainWindow, [775 550 120 25], 'Fast Loop', ...
 slowLoop = labeledDropDown(mainWindow, [775 500 120 25], 'Slow Loop', ...
 	{'nothing', 'frequencyA','frequencyB', 'power', 'phase', 'dc', 'TekCh'});
 
-% add file path selector
-get_path = path_selector(mainWindow, [910 525 250 25]);
+% add path and file controls
+get_path_and_file = path_and_file_controls(mainWindow, [910 525], commonSettings, prevSettings);
 
 % add run button
 runHandle = uicontrol(mainWindow, ...
@@ -198,17 +186,23 @@ set(mainWindow, 'Visible', 'on');
 		settings.displayScope = 0;
 		settings.SoftwareDevelopmentMode = 0;
         
-        % get file path
-        [tempbasename, temppath] = get_path();
+        % get file path, counter, device name, and experiment name
+        [temppath, counter, deviceName, exptName] = get_path_and_file();
         if ~strcmp(temppath, '')
             data_path = temppath;
-            basename = tempbasename;
         end
+        if (~strcmp(exptName, '') && ~strcmp(deviceName, ''))
+            basename = [deviceName '_' exptName];
+        end
+        settings.data_path = data_path;
+        settings.deviceName = deviceName;
+        settings.exptName = exptName;
+        settings.counter = counter.value;
         
         % save settings to specific program cfg file as well as common cfg.
-		new_cfg_file_name = [cfg_path 'muWaveDetectionSweep.cfg'];
-        common_cfg_name = [cfg_path 'lastRun.cfg'];
-		writeCfgFromStruct(new_cfg_file_name, settings);
+		cfg_file_name = [cfg_path 'muWaveDetectionSweep.cfg'];
+        common_cfg_name = [cfg_path 'common.cfg'];
+		writeCfgFromStruct(cfg_file_name, settings);
         writeCfgFromStruct(common_cfg_name, settings);
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -216,7 +210,7 @@ set(mainWindow, 'Visible', 'on');
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		
         % create experiment object
-		Exp = expManager.homodyneDetection(data_path, new_cfg_file_name, basename);
+		Exp = expManager.homodyneDetection(data_path, cfg_file_name, basename, counter.value);
         
         % parse cfg file
 		Exp.parseExpcfgFile;
@@ -232,6 +226,9 @@ set(mainWindow, 'Visible', 'on');
 
 		% Close the data file and end connection to all insturments.
 		Exp.finalizeData;
+        
+        % increment counter
+        counter.increment();
 
 		status = 0;
 	end

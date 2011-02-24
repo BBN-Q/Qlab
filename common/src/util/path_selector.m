@@ -16,18 +16,30 @@
 %
 % Description: A GUI control for choosing a file path
 
-function value_fcn = path_selector(parent, position)
+function value_fcn = path_selector(parent, position, pathname)
+    % FUNCTION path_selector
+    % INPUTS:
+    % parent - handle of parent window/figure
+    % position - position vector of the form [left bottom]
+    % OUTPUTS:
+    % value_fcn - a function which returns the current selected filename
+    % and path
 
-    filename = '';
-    pathname = '';
+    if ~ischar(pathname)
+        pathname = '';
+    end
 
-    height = position(4);
-    width = position(3);
+    height = 25;
+    width = 250;
+    buttonWidth = 75;
+    position = [position width height]; % create 4-element position vector
     labelPosition = position + [0 2*height-5 0 0];
     editboxPosition = position + [0 height 0 0];
+    
+    % right align the button with the edit box
     buttonPosition = position;
-    buttonPosition(1) = position(1) + (width-75);
-    buttonPosition(3) = 75;
+    buttonPosition(1) = position(1) + (width-buttonWidth);
+    buttonPosition(3) = buttonWidth;
 
     uicontrol( ...
             'Parent', parent, ...
@@ -36,7 +48,7 @@ function value_fcn = path_selector(parent, position)
             'Position', labelPosition, ...
             'FontName', 'Helvetica', ...
             'FontSize', 10, ...
-            'String', 'File name');
+            'String', 'Data path');
         
      editbox = uicontrol( ...
             'Parent', parent, ...
@@ -46,7 +58,7 @@ function value_fcn = path_selector(parent, position)
             'Position', editboxPosition, ...
             'FontName', 'Helvetica', ...
             'FontSize', 10, ...
-            'String', '');
+            'String', pathname);
         
      uicontrol( ...
             'Parent', parent, ...
@@ -60,26 +72,23 @@ function value_fcn = path_selector(parent, position)
         
     value_fcn = @get_path;
         
-    function [fname, pname] = get_path()
-        fullname = get(editbox, 'String');
-        [path name ext] = fileparts(fullname);
-        fname = [name ext];
-        pname = path;
+    function pname = get_path()
+        pname = get(editbox, 'String');
     end
 
     function choose_callback(hObject, eventData)
         % if there is already a path in the box, change to that directory
         % first
-        [tmp pname] = get_path();
+        pname = get_path();
         if ~strcmp(pname, '')
             savedir = pwd;
             cd(pname);
-            [filename, pathname] = uiputfile();
+            pathname = uigetdir();
             cd(savedir); % go back to the former path
         else
-            [filename, pathname] = uiputfile();
+            pathname = uigetdir();
         end
-        set(editbox, 'String', [pathname filename]);
+        set(editbox, 'String', pathname);
     end
     
 end

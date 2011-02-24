@@ -81,22 +81,10 @@ mainWindow = figure( ...
 	'Color', get(0,'DefaultUicontrolBackgroundColor'), ...
 	'Visible', 'off');
 
-% get previous settings
-cfg_name = [cfg_path 'trackedSweep.cfg'];
-if exist(cfg_name, 'file')
-	prevSettings = parseParamFile([cfg_path 'trackedSweep.cfg']);
-else
-	prevSettings = struct();
-	prevSettings.InstrParams = struct();
-end
-% make sure it has fields for current set of instruments
+% list of instruments expected in the settings structs
 instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'TekAWG', 'BBNdc'};
-for f = instrumentNames
-	name = cell2mat(f);
-	if ~isfield(prevSettings.InstrParams, name)
-		prevSettings.InstrParams.(name) = struct();
-	end
-end
+% load previous settings structs
+[commonSettings, prevSettings] = get_previous_settings('trackedSweep', cfg_path, instrumentNames);
 
 % add instrument panels
 get_acqiris_settings = deviceGUIs.acqiris_settings_gui(mainWindow, 10, 155, prevSettings.InstrParams.scope);
@@ -150,8 +138,8 @@ fastLoop = labeledDropDown(mainWindow, [775 550 120 25], 'Fast Loop', ...
 slowLoop = labeledDropDown(mainWindow, [775 500 120 25], 'Slow Loop', ...
 	{'nothing','frequencyA', 'power', 'phase', 'dc', 'TekCh'});
 
-% add file path selector
-get_path = path_selector(mainWindow, [910 525 250 25]);
+% add path and file controls
+get_path_and_file = path_and_file_controls(mainWindow, [910 525], commonSettings, prevSettings);
 
 % add run button
 runHandle = uicontrol(mainWindow, ...
@@ -205,22 +193,31 @@ set(mainWindow, 'Visible', 'on');
 		settings.displayScope = 0;
 		settings.SoftwareDevelopmentMode = 0;
         
-        % get file path
-        [tempbasename, temppath] = get_path();
+        % get file path, counter, device name, and experiment name
+        [temppath, counter, deviceName, exptName] = get_path_and_file();
         if ~strcmp(temppath, '')
             data_path = temppath;
-            basename = tempbasename;
         end
-        %basename = [basename '_' datestr(now(),30)];
-		new_cfg_file_name = [cfg_path 'trackedSweep.cfg'];
-		writeCfgFromStruct(new_cfg_file_name, settings);
+        if (~strcmp(exptName, '') && ~strcmp(deviceName, ''))
+            basename = [deviceName '_' exptName];
+        end
+        settings.data_path = data_path;
+        settings.deviceName = deviceName;
+        settings.exptName = exptName;
+        settings.counter = counter.value;
+
+        % save settings to specific program cfg file as well as common cfg.
+		cfg_file_name = [cfg_path 'trackedSweep.cfg'];
+        common_cfg_name = [cfg_path 'common.cfg'];
+		writeCfgFromStruct(cfg_file_name, settings);
+        writeCfgFromStruct(common_cfg_name, settings);
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		%%%%%%%%%%%%%%%%%%%     PREPARE FOR EXPERIMENT      %%%%%%%%%%%%%%%%%%%%%%%
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% These methods are inherited from the superclass 'experiment'.  They are
 		% generic for all Experiments
-		Exp = expManager.trackHomodyneDetection(data_path, new_cfg_file_name, basename);
+		Exp = expManager.trackHomodyneDetection(data_path, cfg_file_name, basename, counter.value);
 		Exp.parseExpcfgFile;
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -240,6 +237,9 @@ set(mainWindow, 'Visible', 'on');
 		% another method inherited from 'experiment'
 		Exp.finalizeData;
 
+        % increment counter
+        counter.increment();
+        
 		status = 0;
 	end
 

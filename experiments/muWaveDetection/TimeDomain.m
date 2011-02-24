@@ -81,22 +81,10 @@ mainWindow = figure( ...
 	'Color', get(0,'DefaultUicontrolBackgroundColor'), ...
 	'Visible', 'off');
 
-% get previous settings
-cfg_name = [cfg_path 'lastRun.cfg'];
-if exist(cfg_name, 'file')
-	prevSettings = parseParamFile([cfg_path 'TimeDomain_lastRun.cfg']);
-else
-	prevSettings = struct();
-	prevSettings.InstrParams = struct();
-end
-% make sure it has fields for current set of instruments
+% list of instruments expected in the settings structs
 instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'TekAWG', 'BBNdc'};
-for f = instrumentNames
-	name = cell2mat(f);
-	if ~isfield(prevSettings.InstrParams, name)
-		prevSettings.InstrParams.(name) = struct();
-	end
-end
+% load previous settings structs
+[commonSettings, prevSettings] = get_previous_settings('TimeDomain', cfg_path, instrumentNames);
 
 % add instrument panels
 get_acqiris_settings = deviceGUIs.acqiris_settings_gui(mainWindow, 10, 155, prevSettings.InstrParams.scope);
@@ -145,12 +133,13 @@ get_dc_settings = sweepGUIs.DCSweepGUI(DCtab, 5, 2, '');
 fastLoop = labeledDropDown(mainWindow, [775 550 120 25], 'Fast Loop', ...
 	{'frequencyA', 'power', 'phase', 'dc', 'nothing'});
 
-% add file path selector
-get_path = path_selector(mainWindow, [910 525 250 25]);
+% add path and file controls
+get_path_and_file = path_and_file_controls(mainWindow, [910 525], commonSettings, prevSettings);
 
 % add soft averages control
 softAvgs = uicontrol(mainWindow, ...
     'Style', 'edit', ...
+    'BackgroundColor', 'white', ...
     'String', '1', ...
     'Position', [775 495 100 25]);
 
@@ -205,22 +194,31 @@ set(mainWindow, 'Visible', 'on');
 		settings.displayScope = 1;
 		settings.SoftwareDevelopmentMode = 0;
         
-        % get file path
-        [tempbasename, temppath] = get_path();
+        % get file path, counter, device name, and experiment name
+        [temppath, counter, deviceName, exptName] = get_path_and_file();
         if ~strcmp(temppath, '')
             data_path = temppath;
-            basename = tempbasename;
         end
-        %basename = [basename '_' datestr(now(),30)];
-		new_cfg_file_name = [cfg_path 'TimeDomain_lastRun.cfg'];
-		writeCfgFromStruct(new_cfg_file_name, settings);
+        if (~strcmp(exptName, '') && ~strcmp(deviceName, ''))
+            basename = [deviceName '_' exptName];
+        end
+        settings.data_path = data_path;
+        settings.deviceName = deviceName;
+        settings.exptName = exptName;
+        settings.counter = counter.value;
+        
+        % save settings to specific program cfg file as well as common cfg.
+		cfg_file_name = [cfg_path 'TimeDomain.cfg'];
+        common_cfg_name = [cfg_path 'common.cfg'];
+		writeCfgFromStruct(cfg_file_name, settings);
+        writeCfgFromStruct(common_cfg_name, settings);
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		%%%%%%%%%%%%%%%%%%%     PREPARE FOR EXPERIMENT      %%%%%%%%%%%%%%%%%%%%%%%
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		% These methods are inherited from the superclass 'experiment'.  They are
 		% generic for all Experiments
-		Exp = expManager.homodyneDetection2D(data_path, new_cfg_file_name, basename);
+		Exp = expManager.homodyneDetection2D(data_path, cfg_file_name, basename, counter.value);
 		Exp.parseExpcfgFile;
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -239,31 +237,9 @@ set(mainWindow, 'Visible', 'on');
 		% Close the data file and end connection to all insturments.  This is 
 		% another method inherited from 'experiment'
 		Exp.finalizeData;
-
-		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		%%%%%%%%%%%%%%%%     PRINT DATA AND CHECK HEADER      %%%%%%%%%%%%%%%%%%%%%
-		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-		% Now we print the output file (header and data) to the command prompt
-		% fprintf('\nStart of Data Output File print out\n');
-		% type(Exp.DataFileName);
-		% fprintf('\nEnd of Data Output File print out\n\n');
-
-		% Now we can parse the header to recover the inputStructure
-% 		Exp.parseDataFile;
-% 		headerStructure = Exp.DataStruct.params;
-% 
-% 		% This function will compare the two structures and make sure that they
-% 		% match.
-% 		[HeaderFields InputFields err] = comp_struct(headerStructure,Exp.inputStructure,...
-% 			'headerStructure','Exp.inputStructure');
-% 
-% 		if isempty(err)
-% 			fprintf('\nSucess: inputStructure matches header data\n');
-% 		else
-% 			fprintf('\ninputStructure does not match header data\n');
-% 			display(HeaderFields);display(InputFields);display(err);
-% 		end
+        
+        % increment counter
+        counter.increment();
 
 		status = 0;
 	end

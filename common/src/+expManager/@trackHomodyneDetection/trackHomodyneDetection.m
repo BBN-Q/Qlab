@@ -43,7 +43,7 @@ classdef trackHomodyneDetection < expManager.expBase
     end
     methods (Static)
         %% Class constructor
-        function obj = trackHomodyneDetection(data_path,cfgFileName,basename)
+        function obj = trackHomodyneDetection(data_path, cfgFileName, basename, filenumber)
             if ~exist('data_path','var')
                 data_path = 'C:\Documents and Settings\Administrator\My Documents\DR_Exp\SVN\qlab\'; % default value
             end
@@ -53,10 +53,9 @@ classdef trackHomodyneDetection < expManager.expBase
             end
                         
 			% call base class constructor
-            obj = obj@expManager.expBase(basename,data_path,cfgFileName);
+            obj = obj@expManager.expBase(basename, data_path, cfgFileName, filenumber);
             
-            time = now;
-            obj.TrackedDataFileName = [obj.Name 'Tracked_' datestr(time,30) '.out'];
+            obj.TrackedDataFileName = sprintf('%03d_%s_tracked.out', obj.filenumber, obj.Name);
         end
     end
     methods

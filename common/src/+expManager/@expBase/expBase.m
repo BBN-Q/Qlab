@@ -43,6 +43,7 @@
 classdef  expBase < handle
     properties
         Name
+        filenumber
         cfgFileName
         DataFileName
         inputStructure
@@ -59,19 +60,23 @@ classdef  expBase < handle
     end
     methods
         %%
-		function  obj = expBase(Name,DataPath,cfgFileName)
-            if nargin ~= 3
+		function  obj = expBase(Name, DataPath, cfgFileName, filenumber)
+            if nargin < 3
                 error('Must specify a Name, DataPath, and cfgFileName when running an experiment');
             end
             obj.Name = Name;
             obj.cfgFileName = cfgFileName;
+            
+            if ~exist('filenumber', 'var') || ~isnumeric(filenumber)
+                obj.filenumber = 1;
+            end
+            
             createDataFileName(obj)
             obj.DataPath = DataPath;
         end
         %%
         function createDataFileName(obj)
-            time = now;
-            obj.DataFileName = [obj.Name '_' datestr(time,30) '.out'];
+            obj.DataFileName = sprintf('%03d_%s.out', obj.filenumber, obj.Name);
         end
         %%
         function setPath(obj) %#ok<MANU>

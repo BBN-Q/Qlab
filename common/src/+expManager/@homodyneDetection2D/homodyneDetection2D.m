@@ -39,7 +39,7 @@ classdef homodyneDetection2D < expManager.expBase
     end
     methods (Static)
         %% Class constructor
-        function obj = homodyneDetection2D(data_path,cfgFileName,basename)
+        function obj = homodyneDetection2D(data_path, cfgFileName, basename, filenumber)
             if ~exist('data_path','var')
                 data_path = 'C:\Documents and Settings\Administrator\My Documents\DR_Exp\SVN\qlab\'; % default value
             end
@@ -49,7 +49,7 @@ classdef homodyneDetection2D < expManager.expBase
             end
             
 			% finally we inherit methods and properties from the experiment class
-            obj = obj@expManager.expBase(basename,data_path,cfgFileName);
+            obj = obj@expManager.expBase(basename, data_path, cfgFileName, filenumber);
         end
     end
     methods
