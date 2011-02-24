@@ -172,7 +172,7 @@ paired = [1 0 3 2];
 val = get(hObject,'Value');
 id = getDacID(hObject);
 handles.guifunctions.set_wf_sample_rate(id,val);
-txtHandle = sprintf('pm_wf_sample_rate_%i', paried(id+1));
+txtHandle = sprintf('pm_wf_sample_rate_%i', paired(id+1));
 set(handles.(txtHandle),'Value', val);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
