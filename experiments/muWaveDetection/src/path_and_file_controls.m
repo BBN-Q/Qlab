@@ -43,7 +43,7 @@ function value_fcn = path_and_file_controls(parent, position, commonSettings, pr
     if ~isa(counter, 'Counter')
         initial_counter_value = 1;
         if isfield(commonSettings, 'counter')
-            initial_counter_value = commonSettings.counter;
+            initial_counter_value = commonSettings.counter + 1;
         end
         counter = Counter(initial_counter_value);
     end

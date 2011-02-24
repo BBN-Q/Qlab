@@ -65,7 +65,7 @@ while true
         % cell assignments
          eval(['CFG.', linedat{1},' = ',linedat{2},';']);
     else
-        eval(['CFG.', linedat{1},' = linedat{2};']);
+        eval(['CFG.', linedat{1},' = strtrim(sprintf(''%s '', linedat{2:end}));']);
     end
 end
 

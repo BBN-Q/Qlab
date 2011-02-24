@@ -69,6 +69,8 @@ classdef  expBase < handle
             
             if ~exist('filenumber', 'var') || ~isnumeric(filenumber)
                 obj.filenumber = 1;
+            else
+                obj.filenumber = filenumber;
             end
             
             createDataFileName(obj)
