@@ -48,7 +48,7 @@ function value_fcn = path_and_file_controls(parent, position, commonSettings, pr
         counter = Counter(initial_counter_value);
     end
     position = position - [0 55]; % counter is down by gutter (10) + label height (20) + box height(25)
-    file_counter(parent, position, counter);
+    file_counter(parent, position, counter, get_path);
 
     % add basename input
     deviceName = '';

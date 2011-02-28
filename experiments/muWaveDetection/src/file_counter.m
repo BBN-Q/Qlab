@@ -17,12 +17,13 @@
 % Description: Creates a GUI display of a file number counter
 % button
 
-function file_counter(parent, position, counter)
+function file_counter(parent, position, counter, path_fcn)
     % FUNCTION file_counter
     % INPUTS:
     % parent - handle of parent window/figure
     % position - position vector of the form [left bottom]
     % counter - the initial value of the counter
+    % path_fcn - finds the current value of the data path
     
     height = 25;
     
@@ -72,6 +73,6 @@ function file_counter(parent, position, counter)
     counter.add_uihandle(editbox);
 
     function reset_callback(hObject, eventData)
-        counter.reset();
+        counter.reset( path_fcn() );
     end
 end

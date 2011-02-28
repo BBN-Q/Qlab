@@ -12,8 +12,29 @@ classdef Counter < handle
             obj.value = initial_value;
         end
         
-        function reset(obj)
-            obj.value = 1;
+        function reset(obj, data_path)
+            % if the current data path is not empty, reset the counter to
+            % one more than the highest value file name in the path
+            newval = 1;
+            add_one = 0; % state variable
+            if ~strcmp(data_path, '')
+                file_list = dir([data_path '/*.out']);
+                for i = 1:length(file_list)
+                    % pull out the number from ###_device_experiment.out
+                    tokens = regexp(file_list(i).name, '(\d+)_.*\.out', 'tokens');
+                    fnumber = str2double(tokens{1}{1});
+                    if fnumber > newval
+                        newval = fnumber;
+                        add_one = 1;
+                    end
+                end
+                % if we found at least one file with a number, increment by
+                % one
+                if add_one
+                    newval = newval + 1;
+                end
+            end
+            obj.value = newval;
         end
         
         function increment(obj)
