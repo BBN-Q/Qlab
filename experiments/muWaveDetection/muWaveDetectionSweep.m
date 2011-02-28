@@ -239,7 +239,7 @@ end
 function str = parent_dir(path, n)
 	str = path;
 	if nargin < 2
-		n = 1
+		n = 1;
 	end
 	for j = 1:n
 		pos = find(str == filesep, 1, 'last');

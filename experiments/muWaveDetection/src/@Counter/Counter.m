@@ -18,7 +18,7 @@ classdef Counter < handle
             newval = 1;
             add_one = 0; % state variable
             if ~strcmp(data_path, '')
-                file_list = dir([data_path '/*.out']);
+                file_list = dir([data_path filesep '*.out']);
                 for i = 1:length(file_list)
                     % pull out the number from ###_device_experiment.out
                     tokens = regexp(file_list(i).name, '(\d+)_.*\.out', 'tokens');
