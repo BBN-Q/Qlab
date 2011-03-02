@@ -19,7 +19,7 @@
 %
 %    Modified    By    Reason
 %    --------    --    ------
-%                CBL
+%    3/2/2010    BRJ   Update to work with new version of linux gpibio class.
 %
 % $Revision$
 %
@@ -39,8 +39,6 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
         % Parameters below this line are not saved.
         % I/O through this.
         GPIBHandle;
-        % The next variable is only used in the linux variant of the calls.
-        InstrumentHandle;
         CardOpen;
         
         % Initialization environment
@@ -119,7 +117,8 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
             try
                 if obj.CardOpen
                     if isunix
-                        obj.GPIBHandle.ibonl(obj.InstrumentHandle, 0);
+                        %obj.GPIBHandle.close();
+						delete(obj.GPIBHandle);
                     else
                         fclose(obj.GPIBHandle);
                         delete(obj.GPIBHandle);
@@ -226,15 +225,15 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
             % Can't reopen the card, close it first.
             if obj.CardOpen
                 if isunix
-                    obj.GPIBHandle.ibonl(obj.InstrumentHandle, 0);
-                else
-                   fclose(obj.GPIBHandle);
+					obj.GPIBHandle.close();
+				else
+					fclose(obj.GPIBHandle);
                 end
             end
 
             % Perform the open
             if isunix
-                %Arguments to FMH library are:
+                % Arguments to NI-4882 library are:
                 % 
                 % brd board index
                 % pad primary device address
@@ -243,26 +242,26 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
                 % send_eoi - send an end of line
                 % eos      - end of line type.
                 %
-                obj.GPIBHandle = gpibio;   % Initialze class
-                obj.InstrumentHandle = obj.GPIBHandle.ibdev( ...
-                    obj.BoardIndex , ...
+				obj.GPIBHandle = gpibio( ...
+					obj.BoardIndex , ...
                     obj.Address , ...
                     0,...                  % Secondary address
                     11, ...                % Timeout, see pge 51 of doc.
                     1, ...                 % send EOL or not (1=true)
                     0);                    % EOL type. (0=crlf)
-                if obj.InstrumentHandle < 0
+
+                if obj.GPIBHandle.ud < 0
                     errordlg('Error opening GPIB Port');
                     return;
                 end
-                % With is library ou can open many devices with the ame
+                % With is library you can open many devices with the same
                 % card online. Should be careful. 
-                obj.GPIBHandle.ibonl( obj.InstrumentHandle, 1);
+                % obj.GPIBHandle.ibonl(1);
                 %
                 % timeout is not set correctly in above call. 
                 % set it to 1s.
                 %
-                obj.GPIBHandle.ibtmo(obj.InstrumentHandle,11);
+                % obj.GPIBHandle.ibtmo(11);
             else
                 obj.GPIBHandle = gpib( obj.VendorName, obj.BoardIndex, ...
                     obj.Address);
@@ -314,8 +313,7 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
             % string.
             if obj.CardOpen
                 if isunix
-                    rc = obj.GPIBHandle.write( obj.InstrumentHandle, ...
-                        string, 4);
+                    rc = obj.GPIBHandle.write(string);
                 else
                     fprintf( obj.GPIBHandle, string);
                 end
@@ -354,13 +352,7 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
             obj.LastError = obj.NoError;
             if obj.CardOpen
                 if isunix
-                    rv = obj.GPIBHandle.ibrd( obj.InstrumentHandle, 128);
-                    if obj.GPIBHandle.ibcnt.Value > 0
-                        rc = char(obj.GPIBHandle.buffer.Value);
-                    else
-                        obj.LastError = obj.ReadFailed;
-                        rc = ' ';
-                    end
+					rc = obj.GPIBHandle.read();
                 else
                     rc = fscanf(obj.GPIBHandle);
                 end
@@ -396,6 +388,7 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
             % string.
             if obj.CardOpen
                 if isunix
+					rc = obj.GPIBHandle.ask(string);
                 else
                     rc = query( obj.GPIBHandle, string);
                 end
@@ -430,8 +423,8 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
             obj.LastError = 0;
             if obj.CardOpen
                 if isunix
-                    obj.GPIBHandle.Write('ATN');
-                    obj.GPIBHandle.Write('DCL');
+                    obj.GPIBHandle.write('ATN');
+                    obj.GPIBHandle.write('DCL');
                 else
                     fprintf(obj.GPIBHandle, 'ATN');
                     fprintf(obj.GPIBHandle, 'DCL');
@@ -445,7 +438,7 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
             obj.LastError = 0;
             if obj.CardOpen
                 if isunix
-                    obj.GPIBHandle.Write('REN');
+                    obj.GPIBHandle.write('REN');
                 else
                     fprintf(obj.GPIBHandle, 'REN');
                 end
