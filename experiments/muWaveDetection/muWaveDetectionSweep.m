@@ -78,7 +78,7 @@ mainWindow = figure( ...
 	'Visible', 'off');
 
 % list of instruments expected in the settings structs
-instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'TekAWG', 'BBNdc'};
+instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'TekAWG', 'BBNdc'};
 % load previous settings structs
 [commonSettings, prevSettings] = get_previous_settings('muWaveDetectionSweep', cfg_path, instrumentNames);
 
@@ -93,10 +93,12 @@ muWaveTabGroup = uitabgroup('parent', muWaveTabGroupPanel, ...
 RFtab = uitab('parent', muWaveTabGroup, 'title', 'RF');
 LOtab = uitab('parent', muWaveTabGroup, 'title', 'LO');
 Spectab = uitab('parent', muWaveTabGroup, 'title', 'Spec');
+Spec2tab = uitab('parent', muWaveTabGroup, 'title', 'Spec 2');
 
 get_rf_settings = deviceGUIs.uW_source_settings_GUI(RFtab, 10, 10, 'RF', prevSettings.InstrParams.RFgen);
 get_lo_settings = deviceGUIs.uW_source_settings_GUI(LOtab, 10, 10, 'LO', prevSettings.InstrParams.LOgen);
 get_spec_settings = deviceGUIs.uW_source_settings_GUI(Spectab, 10, 10, 'Spec', prevSettings.InstrParams.Specgen);
+get_spec2_settings = deviceGUIs.uW_source_settings_GUI(Spec2tab, 10, 10, 'Spec2', prevSettings.InstrParams.Spec2gen);
 
 % add AWGs
 get_tekAWG_settings = deviceGUIs.AWG5014_settings_GUI(mainWindow, 240, 350, 'TekAWG', prevSettings.InstrParams.TekAWG);
@@ -137,11 +139,24 @@ slowLoop = labeledDropDown(mainWindow, [775 500 120 25], 'Slow Loop', ...
 % add path and file controls
 get_path_and_file = path_and_file_controls(mainWindow, [910 525], commonSettings, prevSettings);
 
+% add check box for scope
+scopeButton = uicontrol(mainWindow, ...
+    'Style', 'checkbox', ...
+    'Units', 'pixels', ...
+    'Position', [775 200 25 25]);
+% scope box label
+uicontrol(mainWindow,...
+    'Style', 'text',...
+    'HorizontalAlignment', 'left',...
+    'Units', 'pixels', ...
+    'Position', [800 195 80 25],...
+    'String', 'Scope');
+
 % add run button
 runHandle = uicontrol(mainWindow, ...
 	'Style', 'pushbutton', ...
 	'String', 'Run', ...
-	'Position', [50 50, 75, 30], ...
+	'Position', [50 50 75 30], ...
 	'Callback', {@run_callback});
 
 % show mainWindow
@@ -164,6 +179,7 @@ set(mainWindow, 'Visible', 'on');
 		settings.InstrParams.RFgen = get_rf_settings();
 		settings.InstrParams.LOgen = get_lo_settings();
 		settings.InstrParams.Specgen = get_spec_settings();
+        settings.InstrParams.Spec2gen = get_spec2_settings();
 		settings.InstrParams.TekAWG = get_tekAWG_settings();
 		settings.InstrParams.BBNdc = get_DCsource_settings();
 		
@@ -183,7 +199,7 @@ set(mainWindow, 'Visible', 'on');
 		
 		% get other experiment settings
 		settings.ExpParams.digitalHomodyne = get_digitalHomodyne_settings();
-		settings.displayScope = 0;
+		settings.displayScope = get(scopeButton, 'Value');
 		settings.SoftwareDevelopmentMode = 0;
         
         % get file path, counter, device name, and experiment name
