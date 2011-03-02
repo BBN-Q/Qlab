@@ -123,7 +123,8 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
                         fclose(obj.GPIBHandle);
                         delete(obj.GPIBHandle);
                     end
-                end
+				end
+				obj.CardOpen = false;
             catch HOTPOTATO
                 disp('GPIB object already closed');
                 %                 disp(lasterror);
@@ -237,8 +238,8 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
                 % 
                 % brd board index
                 % pad primary device address
-                % sad secondary device address
-                % tmo timeout value 11 = 1 s
+                % sad secondary device address (usually zero)
+                % tmo timeout value 11 = 1 s, 12 = 3s, 13 = 10s
                 % send_eoi - send an end of line
                 % eos      - end of line type.
                 %
@@ -246,7 +247,7 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
 					obj.BoardIndex , ...
                     obj.Address , ...
                     0,...                  % Secondary address
-                    11, ...                % Timeout, see pge 51 of doc.
+                    12, ...                % Timeout, see pge 51 of doc.
                     1, ...                 % send EOL or not (1=true)
                     0);                    % EOL type. (0=crlf)
 
@@ -254,14 +255,9 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
                     errordlg('Error opening GPIB Port');
                     return;
                 end
-                % With is library you can open many devices with the same
+                % With this library you can open many devices with the same
                 % card online. Should be careful. 
                 % obj.GPIBHandle.ibonl(1);
-                %
-                % timeout is not set correctly in above call. 
-                % set it to 1s.
-                %
-                % obj.GPIBHandle.ibtmo(11);
             else
                 obj.GPIBHandle = gpib( obj.VendorName, obj.BoardIndex, ...
                     obj.Address);

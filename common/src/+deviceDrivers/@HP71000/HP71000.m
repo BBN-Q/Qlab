@@ -35,23 +35,24 @@ classdef HP71000 < deviceDrivers.lib.GPIB
        end
        
        function val = peakAmplitude(obj)
-           obj.sweep(); % take a sweep
            obj.Write('MKPK HI;'); % move marker to peak
            tmp = obj.Query('MKA?;'); % get marker amplitude
            val = str2double(tmp);
        end
        
        function val = peakFrequency(obj)
-           obj.sweep(); % take a sweep
            obj.Write('MKPK HI;'); % move marker to peak
            tmp = obj.Query('MKF?;'); % get marker frequency
            val = str2double(tmp);
        end
        
-       function val = downloadTrace(obj)
-           obj.sweep(); % take a sweep
+       function [xpts, ypts] = downloadTrace(obj)
            tmp = obj.Query('TRA?;');
-           val = str2double(tmp);
+		   ypts = strread(tmp, '%f', 'delimiter', ',');
+		   
+		   center_freq = obj.center_frequency;
+		   span = obj.span;
+		   xpts = linspace(center_freq - span/2, center_freq + span/2, length(ypts));
        end
        
        % instrument meta-setter
