@@ -20,9 +20,9 @@
 function optimize_mixer_offsets2()
     % load constants here (TO DO: load from cfg file)
     spec_analyzer_address = 17;
-    spec_generator_address = 12;
-    awg_address = 10;
-    spec_analyzer_span = 100e3; % 100 kHz span
+    spec_generator_address = 19;
+    awg_address = 2;
+    spec_analyzer_span = 1e6; % 1 MHz span
     awg_I_channel = 3;
     awg_Q_channel = 4;
     max_offset = 0.05; % 50 mV max I/Q offset voltage
@@ -31,7 +31,7 @@ function optimize_mixer_offsets2()
     pthreshold = 2.0;
     dthreshold = 0.001;
     verbose = true;
-    simulate = true;
+    simulate = false;
     simul_vertex.a = 0;
     simul_vertex.b = 0;
     
@@ -42,8 +42,10 @@ function optimize_mixer_offsets2()
 
         sa = deviceDrivers.HP71000();
         sa.connect(spec_analyzer_address);
-        sa.center_frequency( specgen.frequency * 1e9 );
+        sa.center_frequency = specgen.frequency * 1e9;
         sa.span = spec_analyzer_span;
+        sa.sweep();
+        sa.peakAmplitude();
 
         awg = deviceDrivers.Tek5014();
         awg.connect(awg_address);
@@ -78,6 +80,7 @@ function optimize_mixer_offsets2()
     function localSearch(v_start)
       v = v_start;
       v_best = v_start;
+      setOffsets(v_start);
       p_best = readPower();
 
       for i = (v_start.a-min_step_size):min_step_size:(v_start.a+min_step_size)
@@ -121,6 +124,7 @@ function optimize_mixer_offsets2()
         if ~simulate
             awg.(['chan_' num2str(awg_I_channel)]).offset = vertex.a;
             awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
+            pause(0.05);
             sa.sweep();
         else
             simul_vertex.a = vertex.a;

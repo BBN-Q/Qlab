@@ -23,15 +23,22 @@ classdef HP71000 < deviceDrivers.lib.GPIB
        span
        resolution_bw
        video_bw
+       sweep_mode
+       video_averaging
+       sweep_points
    end
    
    methods
        function obj = HP71000()
-           
        end
        
        function sweep(obj)
            obj.Write('TS;');
+       end
+       
+       % reset instrument to default state
+       function reset(obj)
+           obj.Write('IP;');
        end
        
        function val = peakAmplitude(obj)
@@ -90,6 +97,18 @@ classdef HP71000 < deviceDrivers.lib.GPIB
             val = str2double(temp);
         end
         
+        function val = get.sweep_mode(obj)
+            val = '';
+        end
+        
+        function val = get.video_averaging(obj)
+            val = str2double(obj.Query('VAVG?;'));
+        end
+        
+        function val = get.sweep_points(obj)
+            val = str2double(obj.Query('TRDEF TRA?;'));
+        end
+        
         % property settors
         
         function set.center_frequency(obj, value)
@@ -145,6 +164,49 @@ classdef HP71000 < deviceDrivers.lib.GPIB
                 error('Invalid input');
             end
 
+            obj.Write(gpib_string);
+        end
+        
+        function set.sweep_mode(obj, value)
+            % Validate input
+            checkMapObj = containers.Map({'single','continuous','cont'},...
+                {'SNGLS','CONTS','CONTS'});
+            if not (checkMapObj.isKey( lower(value) ))
+                error('Invalid input');
+            end
+            
+            gpib_string =[checkMapObj(value) ';'];
+            obj.Write(gpib_string);
+        end
+        
+        function set.video_averaging(obj, value)
+            gpib_string = 'VAVG ';
+            if isnumeric(value)
+                value = num2str(value);
+            end
+            
+            % Validate input
+            checkMapObj = containers.Map({'on','1','off','0'},...
+                {'ON','ON','OFF','OFF'});
+            if not (checkMapObj.isKey( lower(value) ))
+                error('Invalid input');
+            end
+            
+            gpib_string =[gpib_string checkMapObj(value) ';'];
+            obj.Write(gpib_string);
+        end
+        
+        function set.sweep_points(obj, value)
+            gpib_string = 'TRDEF TRA,%d;';
+
+            % Validate input
+            if ~isnumeric(value)
+                error('Invalid input');
+            end
+            if value > 1024, value = 1024; end
+            if value < 3, value = 3; end
+            
+            gpib_string = sprintf(gpib_string, uint32(value));
             obj.Write(gpib_string);
         end
    end

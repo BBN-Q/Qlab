@@ -20,9 +20,11 @@
 function optimize_mixer_offsets()
     % load constants here (TO DO: load from cfg file)
     spec_analyzer_address = 17;
-    spec_generator_address = 12;
-    awg_address = 10;
-    spec_analyzer_span = 100e3; % 100 kHz span
+    spec_generator_address = 19;
+    awg_address = 2;
+    spec_analyzer_span = 100e3;
+    spec_resolution_bw = 10e3;
+    spec_sweep_points = 20;
     awg_I_channel = 3;
     awg_Q_channel = 4;
     max_offset = 0.05; % 50 mV max I/Q offset voltage
@@ -31,7 +33,7 @@ function optimize_mixer_offsets()
     pthreshold = 2.0;
     dthreshold = 0.002;
     verbose = true;
-    simulate = true;
+    simulate = false;
     simul_vertex.a = 0;
     simul_vertex.b = 0;
     fevals = 0;
@@ -39,13 +41,19 @@ function optimize_mixer_offsets()
     
     % initialize instruments
     if ~simulate
-        specgen = deviceDrivers.AgilentN5183A();
+        specgen = deviceDrivers.HP8673B();
         specgen.connect(spec_generator_address);
 
         sa = deviceDrivers.HP71000();
         sa.connect(spec_analyzer_address);
-        sa.center_frequency( specgen.frequency * 1e9 );
+        sa.center_frequency = specgen.frequency * 1e9;
         sa.span = spec_analyzer_span;
+        sa.sweep_mode = 'single';
+        sa.resolution_bw = spec_resolution_bw;
+        sa.sweep_points = spec_sweep_points;
+        sa.video_averaging = 0;
+        sa.sweep();
+        sa.peakAmplitude();
 
         awg = deviceDrivers.Tek5014();
         awg.connect(awg_address);
@@ -60,6 +68,15 @@ function optimize_mixer_offsets()
     
     % search for best I and Q values to minimize the peak amplitude
     optimize();
+    
+    % restore spectrum analyzer to a normal state
+    if ~simulate
+        sa.sweep_mode = 'cont';
+        sa.resolution_bw = 'auto';
+        sa.sweep_points = 800;
+        sa.sweep();
+        sa.peakAmplitude();
+    end
     
     % local functions
     
@@ -101,6 +118,8 @@ function optimize_mixer_offsets()
           fprintf('Nelder-Mead optimum: %.2f\n', values(low));
           fprintf('Offset: (%.3f, %.3f)\n', [vertices(low).a vertices(low).b]);
           fprintf('Optimization converged in %d steps\n', steps);
+          % turn on video averaging
+          sa.video_averaging = 1;
           % start local search around minimum
           localSearch(vertices(low));
           fprintf('Total calls to readPower: %d\n', fevals);
@@ -136,7 +155,7 @@ function optimize_mixer_offsets()
 
       setOffsets(vertices(low));
       fprintf('Offset: (%.3f, %.3f)\n', [vertices(low).a vertices(low).b]);
-      warning('ERROR N-M optimization timed out, starting local search.');
+      warning('N-M optimization timed out, starting local search.');
       localSearch(vertices(low));     
     end
 
@@ -165,6 +184,7 @@ function optimize_mixer_offsets()
     function localSearch(v_start)
       v = v_start;
       v_best = v_start;
+      setOffsets(v_start);
       p_best = readPower();
 
       for i = (v_start.a-min_step_size):min_step_size:(v_start.a+min_step_size)
@@ -172,10 +192,10 @@ function optimize_mixer_offsets()
               v.a = i;
               v.b = j;
               setOffsets(v);
-              if (verbose)
-                  fprintf('A: %.3f, B: %.3f\n', [v.a v.b]);
-              end
               p = readPower();
+              if (verbose)
+                  fprintf('Offset: (%.3f, %.3f), Power: %.2f\n', [v.a v.b p]);
+              end
               if p < p_best
                 v_best = v;
                 p_best = p;
@@ -204,6 +224,7 @@ function optimize_mixer_offsets()
         if ~simulate
             awg.(['chan_' num2str(awg_I_channel)]).offset = vertex.a;
             awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
+            pause(0.02);
             sa.sweep();
         else
             simul_vertex.a = vertex.a;
