@@ -34,6 +34,8 @@ function optimize_mixer_offsets()
     simulate = true;
     simul_vertex.a = 0;
     simul_vertex.b = 0;
+    fevals = 0;
+    fevals2 = 0;
     
     % initialize instruments
     if ~simulate
@@ -64,10 +66,9 @@ function optimize_mixer_offsets()
     %% Optimizes DAC outputs on channels A and B to minimize the output
      % voltage of the log amp.
      %
-     % Uses a Nelder Mead method.
+     % Uses the Nelder-Mead Simplex method in fminsearch
     %%
     function optimize()
-      %ptol, dtol, trial, save;
 
       % initialize vertices and values
       vertices(1).a = 0;
@@ -102,6 +103,8 @@ function optimize_mixer_offsets()
           fprintf('Optimization converged in %d steps\n', steps);
           % start local search around minimum
           localSearch(vertices(low));
+          fprintf('Total calls to readPower: %d\n', fevals);
+          fprintf('Total calls to setOffsets: %d\n', fevals2);
           return
         end
 
@@ -132,9 +135,9 @@ function optimize_mixer_offsets()
       end
 
       setOffsets(vertices(low));
-      printTuple(vertices(low));
+      fprintf('Offset: (%.3f, %.3f)\n', [vertices(low).a vertices(low).b]);
       warning('ERROR N-M optimization timed out, starting local search.');
-      localSearch(vertices(low));
+      localSearch(vertices(low));     
     end
 
     function trial = extrapolate(factor)
@@ -194,6 +197,7 @@ function optimize_mixer_offsets()
             distance = sqrt((simul_vertex.a - best_a)^2 + (simul_vertex.b - best_b)^2);
             power = 20*log10(distance);
         end
+        fevals = fevals + 1;
     end
 
     function setOffsets(vertex)
@@ -205,6 +209,7 @@ function optimize_mixer_offsets()
             simul_vertex.a = vertex.a;
             simul_vertex.b = vertex.b;
         end
+        fevals2 = fevals2 + 1;
     end
 
 end
