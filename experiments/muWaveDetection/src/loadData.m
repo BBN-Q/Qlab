@@ -18,7 +18,7 @@ function data = loadData(makePlot)
     [filename, pathname] = uigetfile('*.out');
 
     % create the exp object
-    Exp = expManager.homodyneDetection(base_path,cfg_file_name);
+    Exp = expManager.homodyneDetection(base_path,cfg_file_name, 'homodyneDetection', 1);
     % overwrite the filename to the file specified from uigetfile()
     Exp.DataPath = pathname;
     Exp.DataFileName = filename;
