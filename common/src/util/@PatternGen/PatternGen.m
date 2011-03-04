@@ -75,13 +75,13 @@ classdef PatternGen < handle
             outy = zeros(n, 1);
         end
         
-        function [outx, outy] = gaussOn(amp, n, sigma, varargin)
+        function [outx, outy] = gaussOnPulse(amp, n, sigma, varargin)
             t = 1:n;
             outx = round(amp * exp(-(t - n).^2./(2 * sigma^2))).';
             outy = zeros(n, 1);
         end
         
-        function [outx, outy] = gaussOff(amp, n, sigma, varargin)
+        function [outx, outy] = gaussOffPulse(amp, n, sigma, varargin)
             t = 1:n;
             outx = round(amp * exp(-(t-1).^2./(2 * sigma^2))).';
             outy = zeros(n, 1);
@@ -177,7 +177,7 @@ classdef PatternGen < handle
             len = 0;
             
             for i = 1:numPatterns
-                [xpulse ypulse] = patList{i}(n);
+                [xpulse ypulse] = patList{i}(n); % call the current pulse function
                 increment = length(xpulse);
                 xpat(len+1:len+increment) = xpulse;
                 ypat(len+1:len+increment) = ypulse;
@@ -202,7 +202,6 @@ classdef PatternGen < handle
             % set default pulse parameters
             params.amp = 0;
             params.width = self.dPulseLength;
-            params.duration = params.width + self.dBuffer;
             params.sigma = self.dSigma;
             params.delta = self.dDelta;
             params.angle = 0; % in radians
@@ -214,6 +213,11 @@ classdef PatternGen < handle
                 params.pType = 'square';
             end
             params = parseargs(params, varargin{:});
+            % if duration not specified, use the default (has to come after
+            % because the default can depend on a specified width)
+            if ~isfield(params, 'duration')
+                params.duration = params.width + self.dBuffer;
+            end
             
             
             % extract additional parameters from pulse name
