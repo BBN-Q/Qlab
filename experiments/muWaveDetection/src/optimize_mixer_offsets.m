@@ -16,6 +16,9 @@
 %
 % Description: Searches for optimal I/Q offset voltages to minimize carrier
 % leakage.
+%
+% Nelder-Mead Simplex implementation adapted from code in Numerical Recipes
+% in C.
 
 function optimize_mixer_offsets()
     % load constants here (TO DO: load from cfg file)
