@@ -44,10 +44,10 @@ classdef TekPattern < handle
 			fid = fopen(fullpath, 'w');
 
 			% write header information
-			self.writeTekHeader(fid); % TODO: allow optional params here
+            numsteps = size(patCh1,1);
+			self.writeTekHeader(fid, numsteps, basename); % TODO: allow optional params here
 
 			% write patterns
-			numsteps = size(patCh1,1);
 			for i = 1:numsteps
                 % by some weird Tektronix convention, waveform numbering
                 % starts at 21
@@ -81,7 +81,7 @@ classdef TekPattern < handle
 			out = bitor(pattern, bitor(bitshift(marker1, 14), bitshift(marker2, 15)));
 		end
 		
-		function writeTekHeader(fid)
+		function writeTekHeader(fid, numsteps, basename)
 			% writes the file header for the binary AWG format of the Tek AWG5000 series
 			% magic number to determine endian-ness
 			self = TekPattern;
@@ -94,7 +94,12 @@ classdef TekPattern < handle
 			self.writeField(fid, 'SAMPLING_RATE', 1e9, 'double');
 
 			% run mode: 1 = continuous, 2 = triggered, 3 = gated, 4 = sequence
-			self.writeField(fid, 'RUN_MODE', 4, 'int16');
+            if numsteps == 1
+                runMode = 2; % use triggered mode if only one step
+            else
+                runMode = 4;
+            end
+			self.writeField(fid, 'RUN_MODE', runMode, 'int16');
 
 			% run state: 1 = on, 0 = off
 			self.writeField(fid, 'RUN_STATE', 0, 'int16');
@@ -122,7 +127,16 @@ classdef TekPattern < handle
 
 				% channel skew
 				%self.writeField(fid, strcat('CHANNEL_SKEW_', num2str(i)), 0.0, 'double');
-			end
+            end
+            
+            % if only one step, need to specify waveform names for each
+            % channel
+            if numsteps == 1
+                for i = 1:4
+                    namestring = strcat(basename, 'Ch', num2str(i), '001');
+                    self.writeField(fid, strcat('OUTPUT_WAVEFORM_NAME_', num2str(i)), namestring, 'char');
+                end
+            end
 		end
 		
 		function writeTekPattern(fid, filename, number, packedPattern)
