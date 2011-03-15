@@ -227,6 +227,8 @@ set(mainWindow, 'Visible', 'on');
 		% Initialize the data file and record the parameters
 		Exp.openDataFile;
 		Exp.writeDataFileHeader;
+        % increment counter
+        counter.increment();
 
 		% Run the actual experiment
 		Exp.Init;
@@ -236,9 +238,6 @@ set(mainWindow, 'Visible', 'on');
 		% Close the data file and end connection to all insturments.  This is 
 		% another method inherited from 'experiment'
 		Exp.finalizeData;
-
-        % increment counter
-        counter.increment();
         
 		status = 0;
 	end

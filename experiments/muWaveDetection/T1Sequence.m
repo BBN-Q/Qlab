@@ -15,12 +15,12 @@ bufferPadding = 20;
 fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
-piWidth = 40;
+piWidth = 44;
 piAmp = 8000;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dPulseLength', piWidth, 'cycleLength', cycleLength);
 
 numsteps = 100;
-stepsize = 30;
+stepsize = 40;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {...
     pg.pulse('Xp', 'pType', 'square'), ...
@@ -71,4 +71,4 @@ ch2 = ch2 + offset;
 
 % make TekAWG file
 TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2
+%clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2

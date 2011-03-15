@@ -23,14 +23,14 @@
 function optimize_mixer_offsets()
     % load constants here (TO DO: load from cfg file)
     spec_analyzer_address = 17;
-    spec_generator_address = 19;
+    spec_generator_address = 11;
     awg_address = 2;
     spec_analyzer_span = 100e3;
     spec_resolution_bw = 10e3;
     spec_sweep_points = 20;
     awg_I_channel = 3;
     awg_Q_channel = 4;
-    max_offset = 0.05; % 50 mV max I/Q offset voltage
+    max_offset = 0.5; % 50 mV max I/Q offset voltage
     max_steps = 50;
     min_step_size = 0.001;
     pthreshold = 2.0;
@@ -44,8 +44,9 @@ function optimize_mixer_offsets()
     
     % initialize instruments
     if ~simulate
-        specgen = deviceDrivers.HP8673B();
+        specgen = deviceDrivers.AgilentN5183A();
         specgen.connect(spec_generator_address);
+        specgen.mod = 'off';
 
         sa = deviceDrivers.HP71000();
         sa.connect(spec_analyzer_address);
@@ -60,6 +61,13 @@ function optimize_mixer_offsets()
 
         awg = deviceDrivers.Tek5014();
         awg.connect(awg_address);
+        awg.openConfig('U:\AWG\Trigger\Trigger.awg');
+        awg.(['chan_' num2str(awg_I_channel)]).Amplitude = 4.0;
+        awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = 4.0;
+        awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
+        awg.(['chan_' num2str(awg_Q_channel)]).Enabled = 1;
+        awg.run();
+        awg.waitForAWGtoStartRunning();
     end
     
     % 'global' variables

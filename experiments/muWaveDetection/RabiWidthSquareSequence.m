@@ -19,22 +19,26 @@ offset = 8192;
 piAmp = 8000;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'cycleLength', cycleLength);
 
-numsteps = 50;
+numsteps = 100;
 minWidth = 0;
 stepsize = 10;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 
-patseq = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};
+patseq1 = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};
+%patseq2 = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};
 
 ch3 = zeros(numsteps, cycleLength);
 ch4 = ch3;
+ch4m1 = ch3;
 ch3m1 = ch3;
 
 for n = 1:numsteps;
-	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt);
-	ch3(n, :) = patx + offset;
-	ch4(n, :) = paty + offset;
-    ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
+	[patx1 paty1] = pg.getPatternSeq(patseq1, n, delay, fixedPt);
+    %[patx2 paty2] = pg.getPatternSeq(patseq2, n, delay, fixedPt);
+	ch3(n, :) = patx1 + offset;
+	ch4(n, :) = paty1 + offset;
+    ch3m1(n, :) = pg.bufferPulse(patx1, paty1, 0, bufferPadding, bufferReset, bufferDelay);
+    %ch4m1(n, :) = pg.bufferPulse(patx2, paty2, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
 % trigger at beginning of measurement pulse
@@ -55,7 +59,7 @@ hold on
 plot(ch4(myn,:), 'r')
 plot(5000*ch3m1(myn,:), 'k')
 plot(5000*ch1m2(myn,:), 'g')
-%plot(1000*ch3m1(myn,:))
+plot(5000*ch4m1(myn,:),'c')
 plot(5000*ch1m1(myn,:),'.')
 grid on
 hold off
@@ -70,4 +74,4 @@ ch2 = ch2 + offset;
 
 % make TekAWG file
 TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 myn
+%clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 myn

@@ -15,13 +15,13 @@ bufferPadding = 20;
 fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
-numsteps = 41;
+numsteps = 81;
 stepsize = 200;
-sigma = 10;
-pulseLength = 4*sigma;
-pg = PatternGen('dPiAmp', piAmp, 'diPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
+sigma = 15;
+pulseLength = 6*sigma;
+pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
-amps = 0:stepsize:(numsteps-1)*stepsize;
+amps = -((numsteps-1)/2)*stepsize:stepsize:((numsteps-1)/2)*stepsize;
 patseq = {pg.pulse('Xtheta', 'amp', amps)};
 
 ch3 = zeros(numsteps, cycleLength);
@@ -64,5 +64,5 @@ ch2m1 = zeros(numsteps, cycleLength);
 ch2m2 = zeros(numsteps, cycleLength);
 
 % make TekAWG file
-%TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2
+TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
+%clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2
