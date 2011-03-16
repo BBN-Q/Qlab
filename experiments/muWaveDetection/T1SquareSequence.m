@@ -4,9 +4,9 @@
 addpath('../../common/src','-END');
 addpath('../../common/src/util/','-END');
 
-path = 'U:\AWG\Ramsey\';
+path = 'U:\AWG\T1\';
 %path = '';
-basename = 'URamsey';
+basename = 'T1Square';
 delay = -10;
 measDelay = -53;
 bufferDelay = 58;
@@ -15,19 +15,19 @@ bufferPadding = 20;
 fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
-numsteps = 100;
-piAmp = 4200;
-pi2Amp = 2100;
+piWidth = 30;
+piAmp = 8000;
+%piAmp = 5600;
 sigma = 10;
-pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseLength', 6*sigma, 'cycleLength', cycleLength);
+pulseLength = 6*sigma;
+pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'cycleLength', cycleLength);
 
-stepsize = 4;
+numsteps = 100;
+stepsize = 50;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
-anglepts = 0:pi/4:(numsteps-1)*pi/4;
 patseq = {...
-    pg.pulse('X90p'), ...
-    pg.pulse('QId', 'width', delaypts), ...
-    pg.pulse('U90p', 'angle', anglepts) ...
+    pg.pulse('Xp', 'width', piWidth, 'pType', 'square'), ...
+    pg.pulse('QId', 'width', delaypts)
     };
 
 ch3 = zeros(numsteps, cycleLength);
@@ -74,4 +74,4 @@ ch2 = ch2 + offset;
 
 % make TekAWG file
 TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2
+%clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2

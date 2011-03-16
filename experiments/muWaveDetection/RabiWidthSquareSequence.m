@@ -19,9 +19,9 @@ offset = 8192;
 piAmp = 8000;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'cycleLength', cycleLength);
 
-numsteps = 100;
+numsteps = 50;
 minWidth = 0;
-stepsize = 10;
+stepsize = 2;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 
 patseq1 = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};

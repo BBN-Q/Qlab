@@ -17,7 +17,7 @@ cycleLength = 10000;
 offset = 8192;
 numsteps = 81;
 stepsize = 200;
-sigma = 15;
+sigma = 10;
 pulseLength = 6*sigma;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
@@ -52,7 +52,7 @@ plot(ch3(myn,:))
 hold on
 plot(ch4(myn,:), 'r')
 plot(5000*ch1m2(myn,:), 'g')
-%plot(1000*ch3m1(myn,:))
+plot(1000*ch3m1(myn,:), 'r')
 plot(5000*ch1m1(myn,:),'.')
 grid on
 hold off
@@ -65,4 +65,4 @@ ch2m2 = zeros(numsteps, cycleLength);
 
 % make TekAWG file
 TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-%clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2
+clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2

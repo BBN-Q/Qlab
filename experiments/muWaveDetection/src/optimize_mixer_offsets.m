@@ -30,7 +30,7 @@ function optimize_mixer_offsets()
     spec_sweep_points = 20;
     awg_I_channel = 3;
     awg_Q_channel = 4;
-    max_offset = 0.5; % 50 mV max I/Q offset voltage
+    max_offset = 0.05; % 50 mV max I/Q offset voltage
     max_steps = 50;
     min_step_size = 0.001;
     pthreshold = 2.0;
@@ -62,8 +62,8 @@ function optimize_mixer_offsets()
         awg = deviceDrivers.Tek5014();
         awg.connect(awg_address);
         awg.openConfig('U:\AWG\Trigger\Trigger.awg');
-        awg.(['chan_' num2str(awg_I_channel)]).Amplitude = 4.0;
-        awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = 4.0;
+        awg.(['chan_' num2str(awg_I_channel)]).Amplitude = 1.0;
+        awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = 1.0;
         awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
         awg.(['chan_' num2str(awg_Q_channel)]).Enabled = 1;
         awg.run();

@@ -6,7 +6,7 @@ addpath('../../common/src/util/','-END');
 
 path = 'U:\AWG\Ramsey\';
 %path = '';
-basename = 'URamsey';
+basename = 'RamseySquare';
 delay = -10;
 measDelay = -53;
 bufferDelay = 58;
@@ -16,19 +16,20 @@ fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
 numsteps = 100;
-piAmp = 4200;
-pi2Amp = 2100;
-sigma = 10;
-pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseLength', 6*sigma, 'cycleLength', cycleLength);
+piWidth = 30;
+piAmp = 8000;
+pi2Width = 15;
+pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dPulseLength', piWidth, 'cycleLength', cycleLength);
 
-stepsize = 4;
+stepsize = 5;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
-anglepts = 0:pi/4:(numsteps-1)*pi/4;
 patseq = {...
-    pg.pulse('X90p'), ...
+    pg.pulse('Xtheta', 'amp', piAmp, 'width', pi2Width, 'pType', 'square'), ...
     pg.pulse('QId', 'width', delaypts), ...
-    pg.pulse('U90p', 'angle', anglepts) ...
+    pg.pulse('Xtheta', 'amp', piAmp, 'width', pi2Width, 'pType', 'square') ...
     };
+%pg.pulse('Xtheta', 'amp', piAmp, 'width', piWidth, 'pType', 'square'), ...
+   % pg.pulse('QId', 'width', delaypts), ...
 
 ch3 = zeros(numsteps, cycleLength);
 ch4 = ch3;
