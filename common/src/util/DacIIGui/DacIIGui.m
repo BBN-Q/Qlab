@@ -346,6 +346,7 @@ uicontrol(...
         dd(1).tag = sprintf('pm_wf_trigger_%i',dac);
         dd(1).position = [72 (row1Top + ddAdj) 17 1.7];
         dd(1).string = {'Software'; 'Hardware' };
+		dd(2).callback = 'pm_wf_trigger_Callback';
         
         dd(2).tag = sprintf('pm_wf_sample_rate_%i',dac);
         dd(2).position = [72 (row2Top + ddAdj) 17 1.7];
