@@ -281,8 +281,8 @@ classdef PatternGen < handle
                 ypulse = xypairs(2,:).';
                 
                 if (duration > width)
-                    padleft = floor((params.duration - width)/2);
-                    padright = ceil((params.duration - width)/2);
+                    padleft = floor((duration - width)/2);
+                    padright = ceil((duration - width)/2);
                     xpulse = [zeros(padleft,1); xpulse; zeros(padright,1)];
                     ypulse = [zeros(padleft,1); ypulse; zeros(padright,1)];
                 end
