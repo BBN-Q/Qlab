@@ -19,6 +19,7 @@ function simpleTekUpload(channel, waveform, marker1, marker2)
     port = 4000;
     awg = tcpip(address, port);
     set(awg, 'OutputBufferSize', 1000000);
+    fopen(awg);
     
     % write
     wname = ['ch' num2str(channel)];
@@ -26,10 +27,10 @@ function simpleTekUpload(channel, waveform, marker1, marker2)
     fwrite(awg,[':wlist:waveform:new "' wname '",' num2str(length(waveform)) ',integer;']);
     binblockwrite(awg, bindata, [':wlist:waveform:data "' wname '",']); %data transmission
     fwrite(awg, ';');
-    fwrite(awg,[':source1:waveform "' wname '";']);
+    fwrite(awg,[':source' num2str(channel) ':waveform "' wname '";']);
     
     % connect
     fclose(awg);
     delete(awg);
-    clear(awg);
+    clear awg;
 end
