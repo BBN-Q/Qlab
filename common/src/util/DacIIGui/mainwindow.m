@@ -102,7 +102,10 @@ if isfield(handles,'guifunctions')
     % gui functions may not have been set if there was an
     % error during figure load - usually only a problem
     % during development
+    try
     handles.guifunctions.close();
+    catch
+    end
 end
 delete(hObject);
 
