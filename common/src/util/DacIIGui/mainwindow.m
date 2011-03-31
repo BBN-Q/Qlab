@@ -269,13 +269,6 @@ pair = paired(id+1);
 val = get(hObject, 'Value');
 txtHandle = sprintf('cb_simultaneous_%i',pair);
 set(handles.(txtHandle),'Value', val);
-% set both DACs to software trigger
-handles.guifunctions.set_wf_trigger_type(id,1);
-txtHandle = sprintf('pm_wf_trigger_%i',id);
-set(handles.(txtHandle), 'Value',1);
-handles.guifunctions.set_wf_trigger_type(pair,1);
-txtHandle = sprintf('pm_wf_trigger_%i',pair);
-set(handles.pm_wf_trigger_1, 'Value',1);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % * All Callbacks
