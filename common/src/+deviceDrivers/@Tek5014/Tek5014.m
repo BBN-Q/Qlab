@@ -65,7 +65,6 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
 		OperationState;  	%   Values: 0 (stopped) 1 (waiting for trigger) 2 (running)
 		RepetitionRate;  	%	Values: <numeric>
 		samplingRate;    	%	Values: <numeric>
-        waveformDuration;   %   max length of all waveforms (not set on the device)
 		
 		%% ArbSeq group object properties
 		% Most of these remain unimplemented in GPIB.
@@ -166,7 +165,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
         end
         
         function val = read(obj)
-            val = fscanf(obj.deviceObj_awg);
+            val = fgets(obj.deviceObj_awg);
         end
         
         function val = query(obj, msg)
@@ -223,7 +222,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
             %GETSETUPFILENAME returns the current setup file for the AWG.
             %
             gpib_string = 'AWGControl:SNAMe?';
-            val = query(obj.deviceObj_awg, gpib_string);
+            val = obj.query(gpib_string);
             
             % output is of the form: "name","basepath"
             expr = '"(.*)","(.*)"';
@@ -253,7 +252,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
 			end
 			name = ['"' name '"'];
             gpib_string = ['AWGControl:SSAVe ' name];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
         end
         
         function openConfig(obj, name)
@@ -275,7 +274,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
 			end
 			name = ['"' name '"'];
             gpib_string = ['AWGControl:SREStore ' name];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
         end
         
         function importWaveform(obj, waveform_name, file_name, type)
@@ -311,7 +310,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 },{'ISF', 'TDS', 'TXT', 'TXT8', 'TXT10', 'WFM', 'PAT', 'TFW'});
             type = typeMapObj(type);
             gpib_string = ['MMEMory:IMPort ' waveform_name ',' file_name ',' type];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
         end
         
         function makeDirectory(obj, directory_name)
@@ -325,13 +324,13 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
 				error('');
             end
             gpib_string = ['MMEMory:MDIRectory' directory_name];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
         end
 		
 		%% Reset, stop, start methods for AWG.
         function reset(obj)
             %RESET returns the AWG to its default state.
-            fprintf(obj.deviceObj_awg, '*RST;');
+            obj.write('*RST;');
         end
 
 		function val = calibrate(obj)
@@ -339,7 +338,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
 			%status
 			%
 			gpib_string = '*CAL?';
-			val = query(obj.deviceObj_awg, gpib_string);
+			val = obj.query(gpib_string);
 		end
         
         function run(obj)
@@ -347,13 +346,13 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
             % to output a waveform, however, it must be enabled (see
             % 'awg_channel.Enabled'.).
             gpib_string = 'AWGControl:RUN';
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
         end
 
 		function stop(obj)
 			%STOP ends the output of a waveform or sequence
 			gpib_string = 'AWGControl:STOP';
-			fprintf(obj.deviceObj_awg, gpib_string);
+			obj.write(gpib_string);
         end
         
         function sync(obj)
@@ -361,7 +360,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
             % a second one. By default, this command is off and can
             % possibly be turned off by issuing a reset() command.
             gpib_string = '*OPC';
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
         end
         
         function clearSeq(obj)
@@ -449,23 +448,23 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
         
         function createWaveform(obj, name, size, type)
             gpib_string = [':WLISt:WAVeform:NEW "', name , '",', num2str(size), ', ',type];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
         end
         
         function deleteWaveform(obj, name) 
-            fprintf(obj.deviceObj_awg, [':wlist:waveform:del "' name '";']);
+            obj.write([':wlist:waveform:del "' name '";']);
         end
         
         function val = getWaveform(obj, name)
             gpib_string = ['WLIST:WAVeform:DATA? "', name, '"'];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
             val = binblockread(obj.deviceObj_awg, 'uint16');
         end
         
         function val = getWaveformReal(obj, name, startIndex, blockSize)
             gpib_string = ['WLIST:WAVeform:DATA? ', name, ',', ... 
                     num2str(startIndex),',', num2str(blockSize)];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
             val = binblockread(obj.deviceObj_awg, 'single');
         end
 
@@ -495,87 +494,85 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
 		%
         function val = get.current_working_directory(obj)
 			gpib_string = 'MMEMory:CDIRectory?';
-            val = query(obj.deviceObj_awg, gpib_string);
+            val = obj.query(gpib_string);
         end
         
 		%% property get functions for Trigger group object
 		function val = get.Impedance(obj)
-            val = query(obj.deviceObj_awg, ['TRIGger' seq_string(obj) ':IMPedance?']);
+            val = obj.query(['TRIGger' seq_string(obj) ':IMPedance?']);
 		end
 		function val = get.InternalRate(obj)
-            val = query(obj.deviceObj_awg, ['TRIGger' seq_string(obj) ':TIMer?']);
+            val = obj.query(['TRIGger' seq_string(obj) ':TIMer?']);
 		end
 		function val = get.Level(obj)
-            val = query(obj.deviceObj_awg, ['TRIGger' seq_string(obj) ':LEVel?']);
+            val = obj.query(['TRIGger' seq_string(obj) ':LEVel?']);
 		end
 		function val = get.Polarity(obj)
-            val = query(obj.deviceObj_awg, ['TRIGger' seq_string(obj) ':POLarity?']);
+            val = obj.query(['TRIGger' seq_string(obj) ':POLarity?']);
 		end
 		function val = get.Slope(obj)
-            val = query(obj.deviceObj_awg, ['TRIGger' seq_string(obj) ':SLOPe?']);
+            val = obj.query(['TRIGger' seq_string(obj) ':SLOPe?']);
 		end
 		function val = get.triggerSource(obj)
-            val = query(obj.deviceObj_awg, ['TRIGger' seq_string(obj) ':SOURce?']);
+            val = obj.query(['TRIGger' seq_string(obj) ':SOURce?']);
 		end
 		function val = get.WaitValue(obj)
-            val = query(obj.deviceObj_awg, ['TRIGger' seq_string(obj) ':WVALue?']);
+            val = obj.query(['TRIGger' seq_string(obj) ':WVALue?']);
 		end
 		
 		%% property get functions for Control group object
 		function val = get.ChannelCount(obj)
-            val = query(obj.deviceObj_awg, 'AWGControl:CONFigure:CNUMber?');
+            val = obj.query('AWGControl:CONFigure:CNUMber?');
 		end
 		function val = get.ClockSource(obj)
-            val = query(obj.deviceObj_awg, 'AWGControl:CLOCk:SOURce?');
+            val = obj.query('AWGControl:CLOCk:SOURce?');
 		end
 		function val = get.runMode(obj)
-            val = query(obj.deviceObj_awg, 'AWGControl:RMODe?');
+            val = obj.query('AWGControl:RMODe?');
 		end
 		function val = get.OperationState(obj)
-            val = query(obj.deviceObj_awg, 'AWGControl:RSTate?');
+            val = obj.query('AWGControl:RSTate?');
         end
 		function val = get.RepetitionRate(obj)
-            val = query(obj.deviceObj_awg, 'AWGControl:RRATe?');
+            val = obj.query('AWGControl:RRATe?');
 		end
 		function val = get.samplingRate(obj)
-            temp = query(obj.deviceObj_awg, 'SOURce1:FREQuency?');
+            temp = obj.query('SOURce1:FREQuency?');
             val = str2double(temp);
         end
         function val = get.DividerRate(obj) % external clock source divider rate
-            gpib_string = 'AWGControl:CLOCk:DRATe?';
-            temp = query(obj.deviceObj_awg, gpib_string);
+            temp = obj.query('AWGControl:CLOCk:DRATe?');
             val = str2double(temp);
         end
 
 		%% property get functions for ArbSeq group object
 		function val = get.ArbSeqType(obj)
-            val = query(obj.deviceObj_awg, 'SEQ:Type?');
+            val = obj.query('SEQ:Type?');
 		end
 		function val = get.CurrentPosition(obj)
-            temp = query(obj.deviceObj_awg, 'SEQ:Position?');
+            temp = obj.query('SEQ:Position?');
             val = str2double(temp);
 		end
 		function val = get.Length(obj)
-            temp = query(obj.deviceObj_awg, 'SEQ:Length?');
+            temp = obj.query('SEQ:Length?');
             val = str2double(temp);
         end
 
         %% Reference oscillator functions
         function val = get.refOsc(obj)
-            val = query(obj.deviceObj_awg, 'SOURce1:ROSCillator:SOURce?');
+            val = obj.query('SOURce1:ROSCillator:SOURce?');
         end
         
         function val = get.refOscType(obj)
-            val = query(obj.deviceObj_awg, 'SOURce1:ROSCillator:TYPE?');
+            val = obj.query('SOURce1:ROSCillator:TYPE?');
         end
 
         function val = get.refOscMultiplier(obj)
-            temp = query(obj.deviceObj_awg, 'SOURce1:ROSCillator:MULTiplier?');
+            temp = obj.query('SOURce1:ROSCillator:MULTiplier?');
             val = str2double(temp);
         end
         function val = get.refOscFrequency(obj)
-            gpib_string = 'SOURce1:ROSCillator:FREQuency?';
-            val = query(obj.deviceObj_awg, gpib_string);
+            val = obj.query('SOURce1:ROSCillator:FREQuency?');
         end
 		
 		
@@ -597,7 +594,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', value]);
             else
                 gpib_string = ['TRIGger' seq_string(obj) ':IMPedance ',checkMapObj(check_val)];
-                fprintf(obj.deviceObj_awg, gpib_string);
+                obj.write(gpib_string);
                 obj.Impedance = check_val; 
             end
         end
@@ -609,7 +606,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', num2str(value)]);
             else
                 gpib_string = ['TRIGger' seq_string(obj) ':TIMer ', num2str(value)];
-                fprintf(obj.deviceObj_awg, gpib_string);
+                obj.write(gpib_string);
                 obj.InternalRate = value; 
             end
 		end
@@ -619,7 +616,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', num2str(value)]);
             else
                 gpib_string = ['TRIGger' seq_string(obj) ':LEVel ', num2str(value)];
-                fprintf(obj.deviceObj_awg, gpib_string);
+                obj.write(gpib_string);
                 obj.Level = check_value; 
             end
 		end
@@ -634,7 +631,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', value]);
             else
                 gpib_string = ['TRIGger' seq_string(obj) ':POLarity ', value];
-                fprintf(obj.deviceObj_awg, gpib_string);
+                obj.write(gpib_string);
                 obj.Polarity = value; 
             end
 		end
@@ -649,7 +646,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', value]);
             else
                 gpib_string = ['TRIGger' seq_string(obj) ':SLOPe ', value];
-                fprintf(obj.deviceObj_awg, gpib_string);
+                obj.write(gpib_string);
                 obj.Slope = value; 
             end
 		end
@@ -665,7 +662,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', value]);
             else
                 gpib_string = ['TRIGger' seq_string(obj) ':SOURce ', checkMapObj(check_val)];
-                fprintf(obj.deviceObj_awg, gpib_string);
+                obj.write(gpib_string);
                 %obj.triggerSource = check_val;
             end
 		end
@@ -681,7 +678,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', value]);
             else
                 gpib_string = ['TRIGger' seq_string(obj) ':WVALue ', checkMapObj(check_val)];
-                fprintf(obj.deviceObj_awg, gpib_string);
+                obj.write(gpib_string);
                 obj.WaitValue = check_value; 
             end
 		end
@@ -700,7 +697,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', value]);
             else
                 gpib_string = ['AWGControl:CLOCk:SOURce ', checkMapObj(check_val)];
-                fprintf(obj.deviceObj_awg, gpib_string);
+                obj.write(gpib_string);
                 obj.ClockSource = check_value; 
             end
 		end
@@ -719,7 +716,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', value]);
             else
                 gpib_string = ['AWGControl:RMODe ',checkMapObj(value)];
-                fprintf(obj.deviceObj_awg, gpib_string);
+                obj.write(gpib_string);
 %                     obj.runMode = check_val; 
             end
 		end
@@ -735,7 +732,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', value]);
             else
                 gpib_string = ['SOURce1:ROSCillator:SOURce ',checkMapObj(check_val)];
-                fprintf(obj.deviceObj_awg, gpib_string);
+                obj.write(gpib_string);
                 obj.refOsc = check_val; 
             end
 		end
@@ -746,7 +743,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', num2str(value)]);
             else
                 gpib_string = ['AWGControl:RRATe ', num2str(value)];
-                fprintf(obj.deviceObj_awg, gpib_string);
+                obj.write(gpib_string);
                 obj.RepetitionRate = check_val; 
             end
 		end
@@ -757,15 +754,8 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', num2str(value)]);
             else
                 gpib_string = ['SOURce1:FREQuency ', num2str(value)];
-                fprintf(obj.deviceObj_awg, gpib_string);
+                obj.write(gpib_string);
                 obj.samplingRate = value;
-            end
-        end
-        function obj = set.waveformDuration(obj, value)
-            if isscalar(value) && isnumeric(value)
-                obj.waveformDuration = value;
-            else
-                error('waveformDuraiton must be a numeric scalar')
             end
         end
 
@@ -775,17 +765,17 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
             if (~isnumeric(value) || value < 0 || value > 16000)
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', num2str(value)]);
             end
-            fprintf(obj.deviceObj_awg, ['SEQuence:LENGth ', num2str(value)]);
+            obj.write(['SEQuence:LENGth ', num2str(value)]);
         end
 
         function set.loopCount(obj, value)
             optionString = 'LoopCount';            
 
-            if (~isnumeric(value) || value < 65536 || value < 1)
+            if (~isnumeric(value) || value > 65536 || value < 1)
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', num2str(value)]);
             end
             gpib_string = ['SEQuence:ELEMent:LOOP:COUNt ', num2str(value)];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
             obj.loopCount = value;
         end
 
@@ -793,7 +783,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
             obj.Length = 1;
             gpib_string = ['SEQuence:ELEMent1:WAVeform', ...
                     num2str(value{1}),' "', value{2}, '"'];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
             obj.waveformName = value; 
         end
         
@@ -806,7 +796,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', num2str(value)]);
             end
             gpib_string = ['AWGControl:CLOCk:DRATe ' num2str(value)];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
             obj.DividerRate = value; 
         end
         
@@ -821,7 +811,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', num2str(value)]);
             end
             gpib_string = ['SOURce1:ROSCillator:TYPE ' checkMapObj(value)];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
             obj.refOscType = value; 
         end
         function obj = set.refOscMultiplier(obj, value)
@@ -831,7 +821,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', num2str(value)]);
             end
             gpib_string = ['SOURce1:ROSCillator:MULTiplier ' num2str(value)];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
             obj.refOscMultiplier = value;
 		end
         function obj = set.refOscFrequency(obj, value)
@@ -844,7 +834,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', num2str(value)]);
             end
             gpib_string = ['SOURce1:ROSCillator:FREQuency ' checkMapObj(value)];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
             obj.Frequency = value; 
 		end
 		
@@ -852,7 +842,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
         function set.current_working_directory(obj, value)
 			value = ['"' value '"'];
 			gpib_string = ['MMEMory:CDIRectory ' value ];
-            fprintf(obj.deviceObj_awg, gpib_string);
+            obj.write(gpib_string);
         end
 		
     end % end methhods
