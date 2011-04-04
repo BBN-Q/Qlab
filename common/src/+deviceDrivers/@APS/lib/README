@@ -1,0 +1,43 @@
+/**********************************************
+* Module Name : Libaps README
+*
+* Author/Date : B.C. Donovan / 21-Oct-08
+*
+* Description : Readme file
+*
+* Restrictions/Limitations :
+*
+*
+* Change Descriptions :
+*
+* Classification : Unclassified
+*
+* References :
+*
+*
+*    Modified    By    Reason
+*    --------    --    ------
+*                BCD
+*
+* $Author: bdonovan $
+* $Date: 2008/11/21 19:18:52 $
+* $Locker:  $
+* $Name:  $
+* $Revision: 1.2 $
+*
+* Copyright (C) BBN Technologies Corp. 2008-2011
+**********************************************/
+
+This directory contains the code to interface to the APS board over USB 
+using the FTD2xx.dll link library. The dll may be compiled using the cygwin
+toolchain by running make. This library is currently being called from matlab
+and the output of stdout and stderr is not visable. Debug output may be written 
+to the file lidaps.log by defining DEBUG with #define DEBUG.
+
+The windows version uses the ftd2xx.h header file in ./include. Mac and linux versions 
+should use the header files from the driver install.
+
+A note on FTD2xx installation for MacOS. In addition to following the ReadMe file 
+from the dmg, copy $DMG/LibTable/build/Debug/libd2xx_table.dylib to /usr/local/lib.
+
+
