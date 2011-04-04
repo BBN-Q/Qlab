@@ -29,7 +29,7 @@ function simpleTekUpload(channel, waveform, marker1, marker2)
     fwrite(awg, ';');
     fwrite(awg,[':source' num2str(channel) ':waveform "' wname '";']);
     
-    % connect
+    % disconnect
     fclose(awg);
     delete(awg);
     clear awg;

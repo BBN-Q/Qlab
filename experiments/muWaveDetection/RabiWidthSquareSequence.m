@@ -21,7 +21,7 @@ pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'cycleLength', cycleLengt
 
 numsteps = 50;
 minWidth = 0;
-stepsize = 2;
+stepsize = 10;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 
 patseq1 = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};

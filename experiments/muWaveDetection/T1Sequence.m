@@ -15,15 +15,13 @@ bufferPadding = 20;
 fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
-%piWidth = 44;
-%piAmp = 8000;
-piAmp = 5600;
+piAmp = 4000;
 sigma = 10;
 pulseLength = 6*sigma;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
 numsteps = 100;
-stepsize = 40;
+stepsize = 10;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {...
     pg.pulse('Xp'), ...

@@ -1,4 +1,4 @@
-function [t3, t3error] = fitrabi(xdata, ydata)
+function [t3, t3error,amp] = fitrabi(xdata, ydata)
 % Fits rabi data in time range (x-axis) from start to end using a decaying
 % sine.
 
@@ -10,12 +10,17 @@ if nargin < 2
     ydata = get(line(1), 'ydata');
 end
 %y = ydata .* 1000;
-y = ydata;
+y = ydata(:);
 
 % if xdata is a single value, assume that it is the time step
 if length(xdata) == 1
     xdata = 0:xdata:xdata*(length(y)-1);
 end
+% construct finer step tdata
+xdata_finer = linspace(0, max(xdata), 4*length(xdata));
+
+xdata = xdata(:);
+xdata_finer = xdata_finer(:);
 
 % model A + B Exp(-t/tau) * cos(w t + phi)
 rabif = inline('p(1) + p(2)*exp(-tdata/p(3)).*cos(p(4)*tdata + p(5))','p','tdata');
@@ -41,7 +46,7 @@ figure
 subplot(3,1,2:3)
 plot(xdata,y,'o')
 hold on
-plot(xdata,rabif(beta,xdata),'-r')
+plot(xdata_finer,rabif(beta,xdata_finer),'-r')
 xlabel('Time [ns]')
 ylabel('Amp [V]')
 hold off

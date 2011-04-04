@@ -16,12 +16,12 @@ fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
 numsteps = 100;
-piAmp = 4200;
-pi2Amp = 2100;
+piAmp = 4000;
+pi2Amp = 2000;
 sigma = 10;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseLength', 6*sigma, 'cycleLength', cycleLength);
 
-stepsize = 4;
+stepsize = 10;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 anglepts = 0:pi/4:(numsteps-1)*pi/4;
 patseq = {...
