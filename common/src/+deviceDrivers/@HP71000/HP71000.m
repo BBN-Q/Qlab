@@ -25,6 +25,7 @@ classdef HP71000 < deviceDrivers.lib.GPIB
        video_bw
        sweep_mode
        video_averaging
+       number_averages
        sweep_points
    end
    
@@ -102,6 +103,10 @@ classdef HP71000 < deviceDrivers.lib.GPIB
         end
         
         function val = get.video_averaging(obj)
+            val = str2double(obj.Query('VAVG?;'));
+        end
+        
+        function val = get.number_averages(obj)
             val = str2double(obj.Query('VAVG?;'));
         end
         
@@ -194,6 +199,14 @@ classdef HP71000 < deviceDrivers.lib.GPIB
             
             gpib_string =[gpib_string checkMapObj(value) ';'];
             obj.Write(gpib_string);
+        end
+        
+        function set.number_averages(obj, value)
+            gpib_string = 'VAVG ';
+            if ~isnumeric(value)
+                error('Invalid input');
+            end
+            obj.Write([gpib_string num2str(value) ';']);
         end
         
         function set.sweep_points(obj, value)

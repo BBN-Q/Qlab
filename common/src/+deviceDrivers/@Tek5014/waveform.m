@@ -2,9 +2,9 @@ function waveform(obj, channel, buffer, marker1, marker2)
 
 wf_name = ['ch' num2str(channel)];
 if nargin == 5
-    obj.sendWaveform(wf_name, buffer, marker1, marker2);
+    obj.sendWaveform(wf_name, buffer(:), marker1(:), marker2(:));
 else
-    obj.sendWaveform(wf_name, buffer)
+    obj.sendWaveform(wf_name, buffer(:))
 end
 
 ch_string = ['chan_' num2str(channel)];

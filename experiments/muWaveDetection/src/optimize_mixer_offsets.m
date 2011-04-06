@@ -14,6 +14,8 @@
 %
 % File: optimize_mixer_offsets.m
 %
+% Author: Blake Johnson, BBN Technologies
+%
 % Description: Searches for optimal I/Q offset voltages to minimize carrier
 % leakage.
 %
@@ -24,7 +26,7 @@ function optimize_mixer_offsets()
     % load constants here (TO DO: load from cfg file)
     spec_analyzer_address = 17;
     spec_generator_address = 11;
-    awg_address = 2;
+    awg_address = 2;'128.33.89.94';
     spec_analyzer_span = 100e3;
     spec_resolution_bw = 10e3;
     spec_sweep_points = 20;
@@ -35,7 +37,7 @@ function optimize_mixer_offsets()
     min_step_size = 0.001;
     pthreshold = 2.0;
     dthreshold = 0.002;
-    verbose = true;
+    verbose = false;
     simulate = false;
     simul_vertex.a = 0;
     simul_vertex.b = 0;
@@ -61,9 +63,9 @@ function optimize_mixer_offsets()
 
         awg = deviceDrivers.Tek5014();
         awg.connect(awg_address);
-        awg.openConfig('U:\AWG\Trigger\Trigger.awg');
-        awg.(['chan_' num2str(awg_I_channel)]).Amplitude = 1.0;
-        awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = 1.0;
+        %awg.openConfig('U:\AWG\Trigger\Trigger.awg');
+        awg.(['chan_' num2str(awg_I_channel)]).Amplitude = 0.4;
+        awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = 0.4;
         awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
         awg.(['chan_' num2str(awg_Q_channel)]).Enabled = 1;
         awg.run();
@@ -87,6 +89,12 @@ function optimize_mixer_offsets()
         sa.sweep_points = 800;
         sa.sweep();
         sa.peakAmplitude();
+        
+        % cleanup
+        specgen.disconnect();
+        sa.disconnect();
+        awg.disconnect();
+        clear specgen sa awg
     end
     
     % local functions
@@ -130,6 +138,7 @@ function optimize_mixer_offsets()
           fprintf('Offset: (%.3f, %.3f)\n', [vertices(low).a vertices(low).b]);
           fprintf('Optimization converged in %d steps\n', steps);
           % turn on video averaging
+          sa.number_averages = 10;
           sa.video_averaging = 1;
           % start local search around minimum
           localSearch(vertices(low));

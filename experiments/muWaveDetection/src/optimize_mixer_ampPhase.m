@@ -20,24 +20,22 @@
 function optimize_mixer_ampPhase()
     % load constants here (TO DO: load from cfg file)
     spec_analyzer_address = 17;
-    spec_generator_address = 19;
-    awg_address = 2;
+    spec_generator_address = 11;
+    awg_address = 2;'128.33.89.94';
     spec_analyzer_span = 100e3;
     spec_resolution_bw = 10e3;
     spec_sweep_points = 20;
     awg_I_channel = 3;
     awg_Q_channel = 4;
+    awg_amp = 0.4;
     waveform_length = 1000;
     fssb = 10e6; % SSB modulation frequency
-    assb = 6500;
+    assb = 8000;
     simul_amp = 1.0;
     simul_phase = 0.0;
 
     verbose = true;
     simulate = false;
-    
-    % correction transformation
-    T = diag([1 1]);
     
     % initialize instruments
     if ~simulate
@@ -63,10 +61,10 @@ function optimize_mixer_ampPhase()
         awgfile = saveAWGFile(ipattern, qpattern);
         awg.openConfig(awgfile);
         awg.runMode = 'CONT';
-        awg.(['chan_' num2str(awg_I_channel)]).Amplitude = 4.0;
-        awg.(['chan_' num2str(awg_I_channel)]).offset = -0.287;
-        awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = 4.0;
-        awg.(['chan_' num2str(awg_Q_channel)]).offset = -0.077;
+        awg.(['chan_' num2str(awg_I_channel)]).Amplitude = awg_amp;
+        awg.(['chan_' num2str(awg_I_channel)]).offset = -0.027;
+        awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = awg_amp;
+        awg.(['chan_' num2str(awg_Q_channel)]).offset = -0.007;
         awg.(['chan_' num2str(awg_I_channel)]).Skew = 0.0;
         awg.(['chan_' num2str(awg_Q_channel)]).Skew = 0.0;
         awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
@@ -78,8 +76,15 @@ function optimize_mixer_ampPhase()
     % search for best I and Q values to minimize the peak amplitude
     optimizeAmp();
     optimizePhase();
-    ampFactor = optimizeAmp();
-    skew = optimizePhase();
+    ampFactor = optimizeAmp()/awg_amp;
+    skew = optimizePhase(); % in ns
+    
+    % convert skew to radians
+    skew = -skew * fssb/1e9 * 2*pi;
+    fprintf('a: %.3g, skew: %.3g degrees\n', [ampFactor, skew*180/pi]);
+    
+    % correction transformation
+    T = [ampFactor -tan(skew); 0 sec(skew)];
     
     % restore spectrum analyzer to a normal state
     if ~simulate
@@ -91,6 +96,36 @@ function optimize_mixer_ampPhase()
         sa.video_averaging = 1;
         sa.sweep();
         sa.peakAmplitude();
+        
+        % correct SSB patterns
+        iqpattern = [ipattern; qpattern];
+        iqpattern = T * iqpattern;
+        ipattern = iqpattern(1,:);
+        qpattern = iqpattern(2,:);
+        
+        %awgfile = saveAWGFile(ipattern, qpattern, 'MixerCalCorrected');
+        %awg.openConfig(awgfile);
+        %awg.runMode = 'CONT';
+        awg.(['chan_' num2str(awg_I_channel)]).Amplitude = awg_amp;
+        %awg.(['chan_' num2str(awg_I_channel)]).offset = -0.027;
+        awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = awg_amp;
+        %awg.(['chan_' num2str(awg_Q_channel)]).offset = -0.007;
+        awg.(['chan_' num2str(awg_I_channel)]).Skew = 0.0;
+        awg.(['chan_' num2str(awg_Q_channel)]).Skew = 0.0;
+        awg.waveform(3, ipattern + 8192);
+        awg.waveform(4, qpattern + 8192);
+        awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
+        awg.(['chan_' num2str(awg_Q_channel)]).Enabled = 1;
+        %awg.run();
+        
+        % cleanup
+        specgen.disconnect();
+        sa.disconnect();
+        awg.disconnect();
+        delete(specgen);
+        delete(sa);
+        delete(awg);
+        clear specgen sa awg
     end
     
     % local functions
@@ -99,8 +134,8 @@ function optimize_mixer_ampPhase()
      % amplitude in the undesired sideband.
     %%
     function a = optimizeAmp()
-        [a, minPower, success] = fminbnd(@amplitude_objective_fcn, 3.5, 4.5,...
-            optimset('TolX', 0.005));
+        [a, minPower, success] = fminbnd(@amplitude_objective_fcn, 0.9*awg_amp, 1.1*awg_amp,...
+            optimset('TolX', 0.001));
         if ~success
             error('optimizeAmp() did not converge.');
         end
@@ -114,7 +149,7 @@ function optimize_mixer_ampPhase()
     end
 
     function skew = optimizePhase()
-        [skew, minPower, success] = fminbnd(@phase_objective_fcn, -5, 5,...
+        [skew, minPower, success] = fminbnd(@phase_objective_fcn, -2, 2,...
             optimset('TolX', 0.005));
         if ~success
             error('optimizePhase() did not converge.');
@@ -144,14 +179,18 @@ function optimize_mixer_ampPhase()
         % generate SSB modulation signals
         t = 0:(waveform_length-1);
         t = t*1e-9;
-        ipat = assb * cos(2*pi*fssb.*t);
-        qpat = -assb * amp * sin(2*pi*fssb.*t + pi/180.0*phase);
+        ipat = assb * amp * cos(2*pi*fssb.*t);
+        qpat = -assb * sin(2*pi*fssb.*t + pi/180.0*phase);
     end
 
-    function fname = saveAWGFile(ipattern, qpattern)
+    function fname = saveAWGFile(ipattern, qpattern, name)
         path = 'U:\AWG\MixerCal\';
         %path = '/Volumes/mqco/AWG/MixerCal/';
-        basename = 'MixerCal';
+        if ~exist('name', 'var')
+            basename = 'MixerCal';
+        else
+            basename = name;
+        end
         fname = [path basename '.awg'];
         len = length(ipattern);
         % initialize everything to zeroes
