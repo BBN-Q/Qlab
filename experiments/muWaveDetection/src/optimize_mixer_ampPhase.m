@@ -64,7 +64,7 @@ function optimize_mixer_ampPhase()
         awg.(['chan_' num2str(awg_I_channel)]).Amplitude = awg_amp;
         awg.(['chan_' num2str(awg_I_channel)]).offset = -0.027;
         awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = awg_amp;
-        awg.(['chan_' num2str(awg_Q_channel)]).offset = -0.007;
+        awg.(['chan_' num2str(awg_Q_channel)]).offset = -0.008;
         awg.(['chan_' num2str(awg_I_channel)]).Skew = 0.0;
         awg.(['chan_' num2str(awg_Q_channel)]).Skew = 0.0;
         awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
@@ -180,7 +180,7 @@ function optimize_mixer_ampPhase()
         t = 0:(waveform_length-1);
         t = t*1e-9;
         ipat = assb * amp * cos(2*pi*fssb.*t);
-        qpat = -assb * sin(2*pi*fssb.*t + pi/180.0*phase);
+        qpat = -assb * amp * sin(2*pi*fssb.*t + pi/180.0*phase);
     end
 
     function fname = saveAWGFile(ipattern, qpattern, name)

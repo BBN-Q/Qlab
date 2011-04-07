@@ -17,15 +17,14 @@
 % Description: Searches for optimal amplitude and phase correction on an
 % I/Q mixer.
 
-function optimize_mixer_ampPhase(obj, i_offset, q_offset)
+function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
     % unpack constants from cfg file
     ExpParams = obj.inputStructure.ExpParams;
-    spec_analyzer_span = Exparams.SpecAnalyzer.span;
-    spec_resolution_bw = Exparams.SpecAnalyzer.resolution_bw;
-    spec_sweep_points = Exparams.SpecAnalyzer.sweep_points;
+    spec_analyzer_span = ExpParams.SpecAnalyzer.span;
+    spec_resolution_bw = ExpParams.SpecAnalyzer.resolution_bw;
+    spec_sweep_points = ExpParams.SpecAnalyzer.sweep_points;
     awg_I_channel = ExpParams.Mixer.I_channel;
     awg_Q_channel = ExpParams.Mixer.Q_channel;
-    awg_amp = 0.4;
     search_iterations = 2;
     fssb = 10e6; % SSB modulation frequency
 
@@ -40,6 +39,8 @@ function optimize_mixer_ampPhase(obj, i_offset, q_offset)
         % grab instrument objects
         sa = obj.sa;
         awg = obj.awg;
+        
+        awg_amp = awg.(['chan_' num2str(awg_I_channel)]).Amplitude;
 
         sa.center_frequency = obj.specgen.frequency * 1e9 + fssb;
         sa.span = spec_analyzer_span;
@@ -81,7 +82,7 @@ function optimize_mixer_ampPhase(obj, i_offset, q_offset)
     
     % restore instruments to a normal state
     if ~simulate
-        sa.center_frequency = specgen.frequency * 1e9;
+        sa.center_frequency = obj.specgen.frequency * 1e9;
         sa.span = 25e6;
         sa.sweep_mode = 'cont';
         sa.resolution_bw = 'auto';

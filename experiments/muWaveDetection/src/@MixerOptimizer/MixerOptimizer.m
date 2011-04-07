@@ -26,6 +26,7 @@ classdef MixerOptimizer < expManager.expBase
        sa % spectrum analyzer
        specgen % the LO source of the mixer to calibrate
        awg % the AWG driving the I/Q ports of the mixer
+       cfg_path;
    end
    
    methods
@@ -36,6 +37,7 @@ classdef MixerOptimizer < expManager.expBase
            end
            % call super class
            obj = obj@expManager.expBase('optimize_mixer', '', cfg_file_path, 1);
+           obj.cfg_path = fileparts(cfg_file_path);
        
            % load config
            obj.parseExpcfgFile();
@@ -55,7 +57,9 @@ classdef MixerOptimizer < expManager.expBase
             errorMsg = '';
             try
                 [i_offset, q_offset] = obj.optimize_mixer_offsets();
-                %obj.optimize_mixer_ampPhase(i_offset, q_offset);
+                T = obj.optimize_mixer_ampPhase(i_offset, q_offset);
+                % save transformation and offsets to file
+                save([obj.cfg_path '/mixercal.mat'], 'i_offset', 'q_offset', 'T');
             catch exception
                 errorMsg = exception.identifier;
             end

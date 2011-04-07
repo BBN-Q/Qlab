@@ -120,15 +120,15 @@ classdef awg_channel < handle
 		% property get functions for channel group object
 		function val = get.Amplitude(obj)
             gpib_string = ['SOURce', obj.channelName ,':VOLTage:AMPLitude?'];
-            val = obj.Query(gpib_string);
+            val = str2double(obj.Query(gpib_string));
         end
         function val = get.AnalogHigh(obj)
             gpib_string = ['SOURce', obj.channelName ,':VOLTage:HIGH?'];
-            val = obj.Query(gpib_string);
+            val = str2double(obj.Query(gpib_string));
         end
         function val = get.AnalogLow(obj)
             gpib_string = ['SOURce', obj.channelName ,':VOLTage:LOW?'];
-            val = obj.Query(gpib_string);
+            val = str2double(obj.Query(gpib_string));
         end
         function val = get.DACResolution(obj)
             gpib_string = ['SOURce', obj.channelName ,':DAC:RESolution?'];
@@ -148,27 +148,27 @@ classdef awg_channel < handle
         end
         function val = get.Marker1High(obj)
             gpib_string = ['SOURce', obj.channelName ,':MARKer1:VOLTage:HIGH?'];
-            val = obj.Query(gpib_string);
+            val = str2double(obj.Query(gpib_string));
         end
         function val = get.Marker1Low(obj)
             gpib_string = ['SOURce', obj.channelName ,':MARKer1:VOLTage:LOW?'];
-            val = obj.Query(gpib_string);
+            val = str2double(obj.Query(gpib_string));
         end
         function val = get.Marker1Offset(obj)
             gpib_string = ['SOURce', obj.channelName ,':MARKer1:VOLTage:OFFSet?'];
-            val = obj.Query(gpib_string);
+            val = str2double(obj.Query(gpib_string));
         end
         function val = get.Marker2High(obj)
             gpib_string = ['SOURce', obj.channelName ,':MARKer2:VOLTage:HIGH?'];
-            val = obj.Query(gpib_string);
+            val = str2double(obj.Query(gpib_string));
         end
         function val = get.Marker2Low(obj)
             gpib_string = ['SOURce', obj.channelName ,':MARKer2:VOLTage:LOW?'];
-            val = obj.Query(gpib_string);
+            val = str2double(obj.Query(gpib_string));
         end
         function val = get.Marker2Offset(obj)
             gpib_string = ['SOURce', obj.channelName ,':MARKer2:VOLTage:OFFSet?'];
-            val = obj.Query(gpib_string);
+            val = str2double(obj.Query(gpib_string));
         end
         function val = get.Name(obj)
             val = obj.outputWaveformName();
@@ -179,11 +179,11 @@ classdef awg_channel < handle
         end
         function val = get.offset(obj)
             gpib_string = ['SOURce', obj.channelName ,':VOLTage:OFFSet?'];
-            val = obj.Query(gpib_string);
+            val = str2double(obj.Query(gpib_string));
         end
         function val = get.Skew(obj)
             gpib_string = ['SOURce', obj.channelName ,':SKEW?'];
-            val = obj.Query(gpib_string);
+            val = str2double(obj.Query(gpib_string));
         end
      
         %	

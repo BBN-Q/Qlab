@@ -25,9 +25,9 @@
 function [i_offset, q_offset] = optimize_mixer_offsets(obj)
     % unpack constants from cfg file
     ExpParams = obj.inputStructure.ExpParams;
-    spec_analyzer_span = Exparams.SpecAnalyzer.span;
-    spec_resolution_bw = Exparams.SpecAnalyzer.resolution_bw;
-    spec_sweep_points = Exparams.SpecAnalyzer.sweep_points;
+    spec_analyzer_span = ExpParams.SpecAnalyzer.span;
+    spec_resolution_bw = ExpParams.SpecAnalyzer.resolution_bw;
+    spec_sweep_points = ExpParams.SpecAnalyzer.sweep_points;
     awg_I_channel = ExpParams.Mixer.I_channel;
     awg_Q_channel = ExpParams.Mixer.Q_channel;
     max_offset = ExpParams.Search.max_offset; % max I/Q offset voltage
@@ -120,7 +120,7 @@ function [i_offset, q_offset] = optimize_mixer_offsets(obj)
           setOffsets(vertices(low));
           fprintf('Nelder-Mead optimum: %.2f\n', values(low));
           fprintf('Offset: (%.3f, %.3f)\n', [vertices(low).a vertices(low).b]);
-          fprintf('Optimization converged in %d steps\n', steps);
+          if verbose, fprintf('Optimization converged in %d steps\n', steps); end
           % turn on video averaging
           sa.number_averages = 10;
           sa.video_averaging = 1;

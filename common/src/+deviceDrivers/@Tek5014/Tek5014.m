@@ -158,6 +158,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
         function disconnect(obj)
             flushoutput(obj.deviceObj_awg);
             fclose(obj.deviceObj_awg);
+            delete(obj.deviceObj_awg);
         end
         
         function write(obj, msg)

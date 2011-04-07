@@ -157,9 +157,7 @@ classdef  expBase < handle
 					eval(connectString);
 				end
             end
-            disp('######################################################')
             disp('########### Done connecting to instruments ###########')
-            disp('######################################################')
         end
         function errorMsg = initializeInstruments(obj,errorMsg)
             if nargin < 3
@@ -187,9 +185,7 @@ classdef  expBase < handle
 					eval(init_str);
 				end
             end
-            disp('######################################################')
             disp('############ Done initializing instruments ###########')
-            disp('######################################################')
         end
         %% Prepare for experiment
         function errorMsg = prepareForExperiment(obj,errorMsg)
