@@ -62,6 +62,9 @@ if makePlot
 	% construct x and y range from Loop objects
 	Loop = obj.populateLoopStructure(true); % true = just construct lists of points
     x_range = Loop.one.sweep.points;
+    if strcmp(Loop.one.sweep.name, 'Nothing')
+        x_range = 1:size(data.abs_Data, 1);
+    end
     
 	if ~isempty(Loop.two) && ~strcmp(Loop.two.sweep.name, 'Nothing')
         y_range = Loop.two.sweep.points;
@@ -69,13 +72,13 @@ if makePlot
     if size(data.mean_Data(:,:,index3),1) > 1
         for index3 = 1:size(data.mean_Data,3)
             h1 = figure;
-			imagesc(x_range,y_range,data.abs_Data(:,:,index3).')
+			imagesc(x_range(1:size(data.abs_Data,1)),y_range(1:size(data.abs_Data,2)),data.abs_Data(:,:,index3).')
             xlabel(['\fontname{Times}\fontsize{16}' Loop.one.sweep.name]);
             ylabel(['\fontname{Times}\fontsize{16}' Loop.two.sweep.name]);
             set(gca,'FontSize',12)
 			
 			h2 = figure;
-			imagesc(x_range,y_range,data.phase_Data(:,:,index3).')
+			imagesc(x_range(1:size(data.abs_Data,1)),y_range(1:size(data.abs_Data,2)),data.phase_Data(:,:,index3).')
             xlabel(['\fontname{Times}\fontsize{16}' Loop.one.sweep.name]);
             ylabel(['\fontname{Times}\fontsize{16}' Loop.two.sweep.name]);
             set(gca,'FontSize',12)
@@ -84,12 +87,12 @@ if makePlot
         h1 = figure;
         h2 = 0;
 		subplot(2,1,1);
-		plot(x_range,data.abs_Data,'linewidth',1.5);
+		plot(x_range(1:size(data.abs_Data,1)),data.abs_Data,'linewidth',1.5);
 		xlabel(['\fontname{Times}\fontsize{16}' Loop.one.sweep.name]);
 		ylabel(['\fontname{Times}\fontsize{16}Amplitude']);
 		set(gca,'FontSize',12);
 		subplot(2,1,2);
-		plot(x_range,data.phase_Data,'linewidth',1.5);
+		plot(x_range(1:size(data.abs_Data,1)),data.phase_Data,'linewidth',1.5);
         xlabel(['\fontname{Times}\fontsize{16}' Loop.one.sweep.name]);
 		ylabel(['\fontname{Times}\fontsize{16}Phase']);
         set(gca,'FontSize',12);

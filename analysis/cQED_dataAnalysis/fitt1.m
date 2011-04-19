@@ -9,6 +9,7 @@ if nargin < 2
     xdata = get(line(1), 'xdata');
     ydata = get(line(1), 'ydata');
 end
+xdata = xdata(:);
 y = ydata;
 
 % subtract offset
