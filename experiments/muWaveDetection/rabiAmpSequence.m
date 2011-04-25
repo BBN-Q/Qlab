@@ -11,13 +11,13 @@ delay = -10;
 measDelay = -53;
 bufferDelay = 58;
 bufferReset = 100;
-bufferPadding = 20;
+bufferPadding = 10;
 fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
 numsteps = 81;
 stepsize = 200;
-sigma = 10;
+sigma = 6;
 pulseLength = 6*sigma;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 

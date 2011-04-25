@@ -16,8 +16,8 @@ fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
 numsteps = 100;
-piAmp = 5200;
-pi2Amp = 2600;
+piAmp = 5800;
+pi2Amp = 2900;
 sigma = 6;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseLength', 6*sigma, 'cycleLength', cycleLength);
 

@@ -21,7 +21,7 @@ pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'cycleLength', cycleLengt
 
 numsteps = 50;
 minWidth = 0;
-stepsize = 10;
+stepsize = 5;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 
 patseq1 = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};
@@ -43,7 +43,7 @@ end
 
 % trigger at beginning of measurement pulse
 % measure from (6000:8000)
-measLength = 2000;
+measLength = 3000;
 measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = zeros(numsteps, cycleLength);
 ch1m2 = zeros(numsteps, cycleLength);

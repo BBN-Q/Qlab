@@ -66,10 +66,12 @@ if makePlot
         x_range = 1:size(data.abs_Data, 1);
     end
     
-	if ~isempty(Loop.two) && ~strcmp(Loop.two.sweep.name, 'Nothing')
-        y_range = Loop.two.sweep.points;
-	end
-    if size(data.mean_Data(:,:,index3),1) > 1
+    if min(size(data.abs_Data)) > 1 % is it 2D data?
+        if ~isempty(Loop.two) && ~strcmp(Loop.two.sweep.name, 'Nothing')
+            y_range = Loop.two.sweep.points;
+        else
+            y_range = 1:size(data.abs_Data, 2);
+        end
         for index3 = 1:size(data.mean_Data,3)
             h1 = figure;
 			imagesc(x_range(1:size(data.abs_Data,1)),y_range(1:size(data.abs_Data,2)),data.abs_Data(:,:,index3).')
