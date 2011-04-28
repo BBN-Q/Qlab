@@ -15,10 +15,10 @@ bufferPadding = 10;
 fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
-numsteps = 50;
+numsteps = 100;
 piAmp = 6000;
 pi2Amp = 3000;
-sigma = 8;
+sigma = 6;
 pulseLength = 6*sigma;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 

@@ -1,8 +1,8 @@
 % clear all;
 % clear classes;
 % clear import;
-addpath('../../common/src','-END');
-addpath('../../common/src/util/','-END');
+addpath('../../../common/src','-END');
+addpath('../../../common/src/util/','-END');
 
 path = 'U:\AWG\Rabi\';
 %path = '';
@@ -19,9 +19,9 @@ offset = 8192;
 piAmp = 8000;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'cycleLength', cycleLength);
 
-numsteps = 50;
+numsteps = 100;
 minWidth = 0;
-stepsize = 5;
+stepsize = 10;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 
 patseq1 = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};

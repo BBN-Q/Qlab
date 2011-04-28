@@ -10,7 +10,7 @@ if nargin < 2
     ydata = get(line(1), 'ydata');
 end
 xdata = xdata(:);
-y = ydata;
+y = ydata(:);
 
 % subtract offset
 endpoint = mean(y(end-10:end));

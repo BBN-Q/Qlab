@@ -89,12 +89,14 @@ if makePlot
         h1 = figure;
         h2 = 0;
 		subplot(2,1,1);
-		plot(x_range(1:size(data.abs_Data,1)),data.abs_Data,'linewidth',1.5);
+        amplitude = data.abs_Data(:);
+        phase = data.phase_Data(:);
+		plot(x_range(1:length(amplitude)),amplitude,'linewidth',1.5);
 		xlabel(['\fontname{Times}\fontsize{16}' Loop.one.sweep.name]);
 		ylabel(['\fontname{Times}\fontsize{16}Amplitude']);
 		set(gca,'FontSize',12);
 		subplot(2,1,2);
-		plot(x_range(1:size(data.abs_Data,1)),data.phase_Data,'linewidth',1.5);
+		plot(x_range(1:length(phase)),phase,'linewidth',1.5);
         xlabel(['\fontname{Times}\fontsize{16}' Loop.one.sweep.name]);
 		ylabel(['\fontname{Times}\fontsize{16}Phase']);
         set(gca,'FontSize',12);
