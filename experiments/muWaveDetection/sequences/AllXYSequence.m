@@ -5,9 +5,8 @@ addpath('../../common/src/util/','-END');
 
 clear patseq pg 
 
-path = 'U:\AWG\ALLXY\';
-%path = '';
-basename = 'ALLXY';
+path = 'U:\AWG\AllXY\';
+basename = 'AllXY';
 delay = -10;
 measDelay = -53;
 bufferDelay = 58;
@@ -17,12 +16,16 @@ fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
 numsteps = 50;
-piAmp = 4200;
-pi2Amp = 2100;
-sigma = 10;
+piAmp = 6000;
+pi2Amp = 3000;
+sigma = 6;
 pulseLength = 6*sigma;
 
-pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
+% load correction matrix from file
+cfg_path = '../cfg/';
+load([cfg_path 'mixercal.mat'], 'T');
+
+pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
 % ground state:
 % QId

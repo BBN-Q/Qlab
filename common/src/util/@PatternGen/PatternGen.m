@@ -1,3 +1,18 @@
+% Class PATTERNGEN is a utility class for defining time-domain experiments.
+%
+% Example usage (spin echo experiment):
+% delay = 0;
+% fixedPt = 1200;
+% cycleLen = 1500;
+% pg = PatternGen;
+% echotimes = 0:1000:10;
+% patseq = {pg.pulse('X90p'),...
+%			pg.pulse('QId', 'width', echotimes),...
+%			pg.pulse('Yp'), ...
+%			pg.pulse('QId', 'width', echotimes),...
+%			pg.pulse('X90p')};
+% [patx paty] = PatternGen.getPatternSeq(patseq, 1, delay, fixedPt, cycleLen);
+
 % Copyright 2010 Raytheon BBN Technologies
 %
 % Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,22 +26,6 @@
 % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 % See the License for the specific language governing permissions and
 % limitations under the License.
-%
-% File: PatternGen.m
-%
-% Description: class for defining time-domain experiments
-% example usage (spin echo experiment):
-% delay = 0;
-% fixedPt = 1200;
-% cycleLen = 1500;
-% pg = PatternGen;
-% echotimes = 0:1000:10;
-% patseq = {pg.pulse('X90p'),...
-%			pg.pulse('QId', 'width', echotimes),...
-%			pg.pulse('Yp'), ...
-%			pg.pulse('QId', 'width', echotimes),...
-%			pg.pulse('X90p')};
-% [patx paty] = PatternGen.getPatternSeq(patseq, 1, delay, fixedPt, cycleLen);
 
 classdef PatternGen < handle
     properties
@@ -38,6 +37,7 @@ classdef PatternGen < handle
         dDelta = 0.4;
         dBuffer = 5;
         cycleLength = 10000;
+        correctionT = eye(2,2); 
     end
     
     methods (Static)
@@ -274,9 +274,10 @@ classdef PatternGen < handle
                 
                 [xpulse, ypulse] = pf(amp, width, sigma, delta);
                 
+                % rotate and correct the pulse
                 xypairs = [xpulse ypulse].';
                 R = [cos(angle) -sin(angle); sin(angle) cos(angle)];
-                xypairs = R * xypairs;
+                xypairs = self.correctionT * R * xypairs;
                 xpulse = xypairs(1,:).';
                 ypulse = xypairs(2,:).';
                 
