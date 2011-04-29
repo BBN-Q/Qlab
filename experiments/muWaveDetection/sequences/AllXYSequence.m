@@ -24,6 +24,9 @@ pulseLength = 6*sigma;
 % load correction matrix from file
 cfg_path = '../cfg/';
 load([cfg_path 'mixercal.mat'], 'T');
+if ~exist('T', 'var') % check that it loaded
+    T = eye(2);
+end
 
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
