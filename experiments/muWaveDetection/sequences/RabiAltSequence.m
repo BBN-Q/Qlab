@@ -15,13 +15,9 @@ bufferPadding = 20;
 fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
-pg = PatternGen;
+pg = PatternGen('cycleLength', cycleLength);
 numsteps = 10;
-minWidth = 0;
-stepsize = 3;
-%sigma = 2:stepsize:(numsteps-1)*stepsize+2;
-pulseLength = [zeros(numsteps/2, 1) 3000*ones(numsteps/2, 1)];
-%amps = 0:stepsize:(numsteps-1)*stepsize;
+pulseLength = [zeros(numsteps/2, 1) 5000*ones(numsteps/2, 1)];
 patseq = {pg.pulse('Xtheta', 'amp', 8000, 'width', pulseLength, 'pType', 'square')};
 
 ch3 = zeros(numsteps, cycleLength);
@@ -29,7 +25,7 @@ ch4 = ch3;
 ch3m1 = ch3;
 
 for n = 1:numsteps;
-	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt, cycleLength);
+	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt);
 	ch3(n, :) = patx + offset;
 	ch4(n, :) = paty + offset;
     ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
@@ -43,7 +39,7 @@ ch1m1 = zeros(numsteps, cycleLength);
 ch1m2 = zeros(numsteps, cycleLength);
 for n = 1:numsteps;
 	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
-	ch1m2(n,:) = pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength, cycleLength);
+	ch1m2(n,:) = pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength);
 end
 
 myn = 10;

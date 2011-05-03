@@ -24,7 +24,7 @@ minWidth = 0;
 stepsize = 10;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 
-patseq1 = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};
+patseq1 = {pg.pulse('Yp', 'width', pulseLength, 'pType', 'square')};
 %patseq2 = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};
 
 ch3 = zeros(numsteps, cycleLength);

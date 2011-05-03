@@ -17,8 +17,8 @@ cycleLength = 10000;
 offset = 8192;
 numsteps = 81;
 stepsize = 200;
-sigma = 6;
-pulseLength = 6*sigma;
+sigma = 4;
+pulseLength = 4*sigma;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
 amps = -((numsteps-1)/2)*stepsize:stepsize:((numsteps-1)/2)*stepsize;
