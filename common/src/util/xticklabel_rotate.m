@@ -35,8 +35,6 @@ function hText = xticklabel_rotate(XTick,rot,varargin)
 % Note : you can not RE-RUN xticklabel_rotate on the same graph. 
 %
 
-
-
 % This is a modified version of xticklabel_rotate90 by Denis Gilbert
 % Modifications include Text labels (in the form of cell array)
 %                       Arbitrary angle rotation
@@ -48,30 +46,47 @@ function hText = xticklabel_rotate(XTick,rot,varargin)
 %                       Uses current XTick by default
 %                       Uses current XTickLabel is different from XTick values (meaning has been already defined)
 
-% Brian FG Katz
-% bfgkatz@hotmail.com
-% 23-05-03
-% Modified 03-11-06 after user comment
-%	Allow for exisiting XTickLabel cell array
-% Modified 03-03-2006 
-%   Allow for labels top located (after user comment)
-%   Allow case for single XTickLabelName (after user comment)
-%   Reduced the degree of resizing
-% Modified 11-jun-2010
-%   Response to numerous suggestions on MatlabCentral to improve certain
-%   errors.
-
+%
 % Other m-files required: cell2mat
 % Subfunctions: none
 % MAT-files required: none
 %
 % See also: xticklabel_rotate90, TEXT,  SET
-
+%
 % Based on xticklabel_rotate90
 %   Author: Denis Gilbert, Ph.D., physical oceanography
 %   Maurice Lamontagne Institute, Dept. of Fisheries and Oceans Canada
 %   email: gilbertd@dfo-mpo.gc.ca  Web: http://www.qc.dfo-mpo.gc.ca/iml/
 %   February 1998; Last revision: 24-Mar-2003
+
+% Copyright (c) 2003, Brian Katz (bfgkatz@hotmail.com)
+% Copyright (c) 2009, The MathWorks, Inc.
+% All rights reserved.
+%
+% Redistribution and use in source and binary forms, with or without 
+% modification, are permitted provided that the following conditions are 
+% met:
+% 
+%     * Redistributions of source code must retain the above copyright 
+%       notice, this list of conditions and the following disclaimer.
+%     * Redistributions in binary form must reproduce the above copyright 
+%       notice, this list of conditions and the following disclaimer in 
+%       the documentation and/or other materials provided with the distribution
+%     * Neither the name of the The MathWorks, Inc. nor the names 
+%       of its contributors may be used to endorse or promote products derived 
+%       from this software without specific prior written permission.
+%       
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+% AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+% IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+% ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
+% LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+% CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+% SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+% INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+% CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+% ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+% POSSIBILITY OF SUCH DAMAGE.
 
 % check to see if xticklabel_rotate has already been here (no other reason for this to happen)
 if isempty(get(gca,'XTickLabel')),
