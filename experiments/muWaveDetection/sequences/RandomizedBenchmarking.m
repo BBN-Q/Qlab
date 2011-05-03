@@ -28,7 +28,7 @@ if ~exist('T', 'var') % check that it loaded
     T = eye(2);
 end
 
-pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
+pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', 'drag', 'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
 % load in random Clifford sequences from text file
 fid = fopen('RBsequences.txt');

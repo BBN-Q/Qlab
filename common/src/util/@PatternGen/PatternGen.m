@@ -35,6 +35,7 @@ classdef PatternGen < handle
         dPiOn2Amp = 2000;
         dPiOn4Amp = 1000;
         dDelta = 0.4;
+        dPulseType = 'gaussian';
         dBuffer = 5;
         cycleLength = 10000;
         correctionT = eye(2,2); 
@@ -206,7 +207,7 @@ classdef PatternGen < handle
             params.delta = self.dDelta;
             params.angle = 0; % in radians
             if ismember(p, qubitPulses)
-                params.pType = 'gaussian';
+                params.pType = self.dPulseType;
             elseif ismember(p, measurementPulses)
                 params.pType = 'square';
             elseif ismember(p, fluxPulses)
