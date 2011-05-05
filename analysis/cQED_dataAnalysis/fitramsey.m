@@ -56,7 +56,7 @@ xlabel('Time [ns]')
 ylabel('Residuals [V]')
 axis tight
 subplot(3,1,2:3)
-ylim([-.05 1.05])
+ylim([-1.05 1.05])
 
 t2 = beta(3);
 ci = nlparci(beta,r,j);

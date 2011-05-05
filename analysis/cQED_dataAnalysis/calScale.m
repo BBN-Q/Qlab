@@ -25,11 +25,12 @@ function varargout = calScale(dupFactor, h)
     % extract calibration experiments
     zeroCal = mean(ypts(end-2*dupFactor+1:end-dupFactor));
     piCal = mean(ypts(end-dupFactor+1:end));
+    scaleFactor = (piCal - zeroCal)/2;
     xpts = xpts(1:end-2*dupFactor);
     ypts = ypts(1:end-2*dupFactor);
     
     % rescale
-    ypts = (ypts - zeroCal)./(piCal - zeroCal);
+    ypts = (ypts - zeroCal)./scaleFactor - 1;
     
     % save axis labels and figure title
     axesH = findobj(h, 'Type', 'axes');

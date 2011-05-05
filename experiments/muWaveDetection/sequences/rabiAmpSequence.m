@@ -24,14 +24,14 @@ pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dPulseL
 amps = -((numsteps-1)/2)*stepsize:stepsize:((numsteps-1)/2)*stepsize;
 patseq = {pg.pulse('Xtheta', 'amp', amps)};
 
-ch3 = zeros(numsteps, cycleLength);
-ch4 = ch3;
-ch3m1 = ch3;
+ch1 = zeros(numsteps, cycleLength);
+ch2 = ch1;
+ch3m1 = ch1;
 
 for n = 1:numsteps;
 	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt);
-	ch3(n, :) = patx + offset;
-	ch4(n, :) = paty + offset;
+	ch1(n, :) = patx + offset;
+	ch2(n, :) = paty + offset;
     ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
@@ -48,9 +48,9 @@ end
 
 myn = 25;
 figure
-plot(ch3(myn,:))
+plot(ch1(myn,:))
 hold on
-plot(ch4(myn,:), 'r')
+plot(ch2(myn,:), 'r')
 plot(5000*ch1m2(myn,:), 'g')
 plot(1000*ch3m1(myn,:), 'r')
 plot(5000*ch1m1(myn,:),'.')
@@ -58,11 +58,11 @@ grid on
 hold off
 
 % fill remaining channels with empty stuff
-ch1 = zeros(numsteps, cycleLength) + offset;
-ch2 = zeros(numsteps, cycleLength) + offset;
+ch3 = zeros(numsteps, cycleLength) + offset;
+ch4 = zeros(numsteps, cycleLength) + offset;
 ch2m1 = zeros(numsteps, cycleLength);
 ch2m2 = zeros(numsteps, cycleLength);
 
 % make TekAWG file
 TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2
+clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1 pg

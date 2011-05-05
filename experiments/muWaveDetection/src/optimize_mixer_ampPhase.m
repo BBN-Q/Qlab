@@ -25,9 +25,9 @@ function optimize_mixer_ampPhase()
     spec_analyzer_span = 100e3;
     spec_resolution_bw = 10e3;
     spec_sweep_points = 20;
-    awg_I_channel = 3;
-    awg_Q_channel = 4;
-    awg_amp = 0.4;
+    awg_I_channel = 1;
+    awg_Q_channel = 2;
+    awg_amp = 4.0;
     waveform_length = 1000;
     fssb = 10e6; % SSB modulation frequency
     assb = 8000;
@@ -62,9 +62,9 @@ function optimize_mixer_ampPhase()
         awg.openConfig(awgfile);
         awg.runMode = 'CONT';
         awg.(['chan_' num2str(awg_I_channel)]).Amplitude = awg_amp;
-        awg.(['chan_' num2str(awg_I_channel)]).offset = -0.027;
+        awg.(['chan_' num2str(awg_I_channel)]).offset = -0.251;
         awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = awg_amp;
-        awg.(['chan_' num2str(awg_Q_channel)]).offset = -0.008;
+        awg.(['chan_' num2str(awg_Q_channel)]).offset = -0.089;
         awg.(['chan_' num2str(awg_I_channel)]).Skew = 0.0;
         awg.(['chan_' num2str(awg_Q_channel)]).Skew = 0.0;
         awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
@@ -112,8 +112,8 @@ function optimize_mixer_ampPhase()
         %awg.(['chan_' num2str(awg_Q_channel)]).offset = -0.007;
         awg.(['chan_' num2str(awg_I_channel)]).Skew = 0.0;
         awg.(['chan_' num2str(awg_Q_channel)]).Skew = 0.0;
-        awg.waveform(3, ipattern + 8192);
-        awg.waveform(4, qpattern + 8192);
+        awg.waveform(awg_I_channel, ipattern + 8192);
+        awg.waveform(awg_Q_channel, qpattern + 8192);
         awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
         awg.(['chan_' num2str(awg_Q_channel)]).Enabled = 1;
         %awg.run();

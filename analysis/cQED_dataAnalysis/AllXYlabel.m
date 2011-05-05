@@ -8,6 +8,7 @@ function AllXYlabel(h)
     end
     
     a = get(gcf,'CurrentAxes');
+    xlabel(a, 'Pulse sequence')
     
     labels = {...
         'Id', ...

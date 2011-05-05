@@ -18,8 +18,8 @@ offset = 8192;
 numsteps = 100;
 piAmp = 6200;
 pi2Amp = 3100;
-sigma = 6;
-pulseLength = 6*sigma;
+sigma = 4;
+pulseLength = 4*sigma;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
 stepsize = 10;
@@ -30,22 +30,22 @@ patseq = {...
     pg.pulse('X90p')
     };
 
-ch3 = zeros(numsteps, cycleLength);
-ch4 = ch3;
-ch3m1 = ch3;
+ch1 = zeros(numsteps, cycleLength);
+ch2 = ch1;
+ch3m1 = ch1;
 
 for n = 1:numsteps;
 	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt);
-	ch3(n, :) = patx + offset;
-	ch4(n, :) = paty + offset;
+	ch1(n, :) = patx + offset;
+	ch2(n, :) = paty + offset;
     ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
 calseq = {{pg.pulse('QId')}, {pg.pulse('QId')}, {pg.pulse('Xp')}, {pg.pulse('Xp')}};
 for n = 1:length(calseq);
 	[patx paty] = pg.getPatternSeq(calseq{n}, n, delay, fixedPt);
-	ch3(numsteps+n, :) = patx + offset;
-	ch4(numsteps+n, :) = paty + offset;
+	ch1(numsteps+n, :) = patx + offset;
+	ch2(numsteps+n, :) = paty + offset;
     ch3m1(numsteps+n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
@@ -64,9 +64,9 @@ end
 
 myn = 20;
 figure
-plot(ch3(myn,:));
+plot(ch1(myn,:));
 hold on
-plot(ch4(myn,:), 'r')
+plot(ch2(myn,:), 'r')
 plot(5000*ch3m1(myn,:), 'k')
 plot(5000*ch1m2(myn,:), 'g')
 %plot(1000*ch3m1(myn,:))
@@ -75,13 +75,13 @@ grid on
 hold off
 
 % fill remaining channels with empty stuff
-ch1 = zeros(numsteps, cycleLength);
-ch2 = zeros(numsteps, cycleLength);
-ch2m1 = ch1;
-ch2m2 = ch1;
-ch1 = ch1 + offset;
-ch2 = ch2 + offset;
+ch3 = zeros(numsteps, cycleLength);
+ch4 = zeros(numsteps, cycleLength);
+ch2m1 = ch3;
+ch2m2 = ch4;
+ch3 = ch3 + offset;
+ch4 = ch4 + offset;
 
 % make TekAWG file
 TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2
+clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1

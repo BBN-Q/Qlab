@@ -15,27 +15,29 @@ bufferPadding = 20;
 fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
-piAmp = 6200;
-sigma = 6;
-pulseLength = 6*sigma;
-pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
+piAmp = 7100;
+pi2Amp = 3550;
+sigma = 4;
+pulseLength = 4*sigma;
+T = [0.90 0; 0 1.0]; % correction matrix
+pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'correctionT', T, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
 numsteps = 100;
-stepsize = 20;
+stepsize = 30;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {...
     pg.pulse('Xp'), ...
     pg.pulse('QId', 'width', delaypts) ...
     };
 
-ch3 = zeros(numsteps, cycleLength);
-ch4 = ch3;
-ch3m1 = ch3;
+ch1 = zeros(numsteps, cycleLength);
+ch2 = ch1;
+ch3m1 = ch1;
 
 for n = 1:numsteps;
 	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt);
-	ch3(n, :) = patx + offset;
-	ch4(n, :) = paty + offset;
+	ch1(n, :) = patx + offset;
+	ch2(n, :) = paty + offset;
     ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
@@ -47,14 +49,14 @@ ch1m1 = zeros(numsteps, cycleLength);
 ch1m2 = zeros(numsteps, cycleLength);
 for n = 1:numsteps;
 	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
-	ch1m2(n,:) = pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength);
+	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
 end
 
 myn = 20;
 figure
-plot(ch3(myn,:))
+plot(ch1(myn,:))
 hold on
-plot(ch4(myn,:), 'r')
+plot(ch2(myn,:), 'r')
 plot(5000*ch3m1(myn,:), 'k')
 plot(5000*ch1m2(myn,:), 'g')
 %plot(1000*ch3m1(myn,:))
@@ -63,13 +65,13 @@ grid on
 hold off
 
 % fill remaining channels with empty stuff
-ch1 = zeros(numsteps, cycleLength);
-ch2 = zeros(numsteps, cycleLength);
-ch2m1 = ch1;
-ch2m2 = ch1;
-ch1 = ch1 + offset;
-ch2 = ch2 + offset;
+ch3 = zeros(numsteps, cycleLength);
+ch4 = zeros(numsteps, cycleLength);
+ch2m1 = ch3;
+ch2m2 = ch3;
+ch3 = ch3 + offset;
+ch4 = ch4 + offset;
 
 % make TekAWG file
 TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-%clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2
+clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1 patseq pg
