@@ -53,9 +53,9 @@ function varargout = calScale(dupFactor, h)
     end
     
     if nargout == 1
-        varargout(1) = ypts;
+        varargout{1} = ypts;
     elseif nargout == 2
-        varargout(1) = xpts;
-        varargout(2) = ypts;
+        varargout{1} = xpts;
+        varargout{2} = ypts;
     end
 end

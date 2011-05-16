@@ -1,7 +1,7 @@
 function AllXYPlot(data)
     % compute scale factor
-    yscale = (max(data.phase_Data) - data.phase_Data(1))/2;
-    ypts = (data.phase_Data - data.phase_Data(1))/yscale - 1;
+    yscale = (max(data.phase_Data) - mean(data.phase_Data(1:2)))/2;
+    ypts = ( data.phase_Data - mean(data.phase_Data(1:2)) )/yscale - 1;
     
     h = gcf;
     clf
