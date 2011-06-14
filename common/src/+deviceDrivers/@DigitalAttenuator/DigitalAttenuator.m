@@ -3,16 +3,30 @@
 %
 % Author/Date : Blake R. Johnson 6/10/2011
 %
-% Description : Object to manage access to the digital attenuator.
+% Description : Object to manage access to the BBN digital attenuator.
 %               Inherits from deviceDrivers.lib.Serial. Borrows some code
 %               from DCBias driver.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Copyright 2010 Raytheon BBN Technologies
 %
+% Licensed under the Apache License, Version 2.0 (the "License");
+% you may not use this file except in compliance with the License.
+% You may obtain a copy of the License at
+%
+%     http://www.apache.org/licenses/LICENSE-2.0
+%
+% Unless required by applicable law or agreed to in writing, software
+% distributed under the License is distributed on an "AS IS" BASIS,
+% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+% See the License for the specific language governing permissions and
+% limitations under the License.
+
 classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
     properties
         ComPortName = '';
-        serial = 0;
+        serial = 0; % ID of the device to distinguish multiple instances
     end
     properties (Constant = true)
         MAX_CHANNELS  =  3;
@@ -23,14 +37,10 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
         
         %%
         % Constructor ---------------------------------
-        % must supply com port parameters such as name.
-        % We may need to specify baud rate etc later.
         function obj = DigitalAttenuator()
             % Initialize Super class
             obj = obj@deviceDrivers.lib.Serial();
             obj.Name = 'DigitalAttenuator';
-            % write an empty command at start to prevent
-            % first command "huh" response to valid command
         end
         
         % setAll is called as part of the Experiment initialize instruments
@@ -104,14 +114,7 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
         %
         % Inputs : None
         %
-        % Returns :
-        %
-        % Error Conditions :
-        %      0 SUCCESS!
-        %
-        % Unit Tested on: 13-Jul-09
-        %
-        % Unit Tested by: CBL
+        % Returns : None
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function PendingArduino(obj)
