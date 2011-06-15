@@ -163,7 +163,7 @@ classdef PatternGen < handle
                     if ismember(paramName, properties('PatternGen'))
                         obj.(paramName) = paramValue;
                     else
-                        warning(sprintf('%s Ignored not a parameter of PatternGen', paramName));
+                        warning('%s Ignored not a parameter of PatternGen', paramName);
                     end
                 end
             end
@@ -291,20 +291,22 @@ classdef PatternGen < handle
             end
         end
         
-        function [xpat, ypat] = build(obj,patListParams,numsteps, delay, fixedPoint)
+        function [xpat, ypat, patList, pulseCollection] = build(obj,patListParams,numsteps, delay, fixedPoint, pulseCollection)
             
-            duration = obj.dPulseLength + 5;
+            if ~exist('pulseCollection', 'var') || isempty(pulseCollection)
+                pulseCollection = containers.Map();
+            end
             
             % build pulse function list
             for i = 1:length(patListParams)
                 name = patListParams{i}{1};
-                if strcmp(name,'QId')
-                    continue
-                end
                 if length(patListParams{i}) > 1
                     patList{i} = obj.pulse(name, patListParams{i}{2:end});
                 else
-                    patList{i} = obj.pulse(name);
+                    if ~isKey(pulseCollection,name)
+                        pulseCollection(name) = obj.pulse(name);
+                    end
+                    patList{i} = pulseCollection(name);
                 end
             end
 
@@ -320,55 +322,101 @@ classdef PatternGen < handle
             padWaveform = [0];
             padWaveformKey = java.util.Arrays.deepHashCode(padWaveform);
             
-            function [entry, table] = buildEntry(table, pulse)
-                key = java.util.Arrays.deepHashCode(pulse);
+            if ~libisloaded('libaps')
+                md5 = java.security.MessageDigest.getInstance('MD5');
+            else
+                sha1key = libpointer('stringPtr','                                        ');
+            end
+            
+            function h = hashArray(array)
+                % this hash array function was causing performance problems
+                % original version created digest every call to hashArray
+                % and used dec2hex to convert to a hex string as a hash
+                %
+                % new version keeps one message digest per call to build
+                % and uses java to build hash string. Still need to check
+                % performance
+                if ~libisloaded('libaps')
+                    md5.reset();
+                    md5.update(array);
+                    
+                    if 0
+                        bi = java.math.BigInteger(1, md5.digest);
+                        h = bi.toString(16);
+                    else
+                        h=typecast(md5.digest,'uint8');
+                        %h=dec2hex(h)';
+                        h = mat2str(h);
+                        %if(size(h,1))==1 % remote possibility: all hash bytes < 128, so pad:
+                        %    h=[repmat('0',[1 size(h,2)]);h];
+                        %end
+                        %h=lower(h(:)');
+                    end
+                else
+                    sha1key.Value = '                                        ';
+                    calllib('libaps','APS_HashPulse', array,length(array),sha1key,length(sha1key.Value));
+                    h = sha1key.Value;
+                end
+            end
+            
+            
+            function [entry, table] = buildEntry(table, pulse, tStr)
+                
+                key = hashArray(pulse);
+                
                 if ~table.containsKey(key)
                     table.put(key, pulse);
+                    %{
+                    fprintf('%s New Key = %s\n', tStr, key);
+                    figure
+                    plot(pulse)
+                    title(key)
+                    %}
                 end;
                 entry.key = key;
                 entry.length = length(pulse);
                 entry.repeat = 1;
                 entry.isTimeAmplitude = 0;
-                entry.isZero = (key == padWaveformKey);
+                entry.isZero = strcmp(key,padWaveformKey);
                 entry.hasTrigger = 0;
                 entry.linkListRepeat = 0;
             end
             
             for n = 1:numsteps
+                
                 xLinkList = {};
                 yLinkList = {};
-                [xLinkList{1} xWaveformTable] = buildEntry(xWaveformTable, padWaveform);
-                [yLinkList{1} yWaveformTable] = buildEntry(yWaveformTable, padWaveform);
+                [xLinkList{1} xWaveformTable] = buildEntry(xWaveformTable, padWaveform, 'X');
+                [yLinkList{1} yWaveformTable] = buildEntry(yWaveformTable, padWaveform, 'Y');
                 
                 for i = 1:numPatterns
+                    
                     name = patListParams{i}{1};
                     % Hash Waveform unless it is an Identity pulse which
                     % is treated as a speacial case of time amplitude pair
                     
                     if ~strcmp(name,'QId')
                         [xpulse ypulse] = patList{i}(n);
-                        [xLinkList{i+1} xWaveformTable] = buildEntry(xWaveformTable, xpulse);
-                        [yLinkList{i+1} yWaveformTable] = buildEntry(yWaveformTable, ypulse);
+                        [xLinkList{i+1} xWaveformTable] = buildEntry(xWaveformTable, xpulse, 'X');
+                        [yLinkList{i+1} yWaveformTable] = buildEntry(yWaveformTable, ypulse, 'Y');
                     else
                         % treak QId as a seperate case
                         % use a time amplitude pair with the padWaveform
                         % delay must be a minimum of the duration amount set
                         % above
-                        [xLinkList{i+1} xWaveformTable] = buildEntry(xWaveformTable, padWaveform);
-                        [yLinkList{i+1} yWaveformTable] = buildEntry(yWaveformTable, padWaveform);
+                        [xLinkList{i+1} xWaveformTable] = buildEntry(xWaveformTable, padWaveform, 'X');
+                        [yLinkList{i+1} yWaveformTable] = buildEntry(yWaveformTable, padWaveform, 'Y');
                         
                         % find width
-                        for j = 2:2:length(patListParams)
+                        for j = 2:2:length(patListParams{i})
                             if strcmp(patListParams{i}{j},'width')
-                                r = patListParams{i}{j+1}(n);
-                                if r < duration
-                                    r = duration;
-                                end
-                                
+                                r = patListParams{i}{j+1}(n) + obj.dBuffer;
                                 xLinkList{i+1}.repeat = r;
                                 yLinkList{i+1}.repeat = r;
                                 xLinkList{i+1}.isTimeAmplitude = 1;
                                 yLinkList{i+1}.isTimeAmplitude = 1;
+                                xLinkList{i+1}.isZero = 1;
+                                yLinkList{i+1}.isZero = 1;
                                 break;
                             end
                         end
@@ -411,7 +459,16 @@ classdef PatternGen < handle
             xpat.linkLists = xLinkLists;
             ypat.waveforms = yWaveformTable;
             ypat.linkLists = yLinkLists;
+        end
             
+        function plotWaveformTable(obj,table)
+            wavefrms = [];
+            keys = table.keys;
+            while keys.hasMoreElements()
+                key = keys.nextElement();
+                wavefrms = [wavefrms table.get(key)'];
+            end
+            plot(wavefrms)
         end
         
         function [pattern] = linkListToPattern(obj, linkListPattern, n)
