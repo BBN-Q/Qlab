@@ -72,6 +72,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         %% ELL Linklist Masks and Contants
         ELL_ADDRESS            = hex2dec('07FF');
         ELL_TIME_AMPLITUDE     = hex2dec('8000');
+        ELL_LL_TRIGGER         = hex2dec('8000');
         ELL_ZERO               = hex2dec('4000');
         ELL_VALID_TRIGGER      = hex2dec('2000');
         ELL_FIRST_ENTRY        = hex2dec('1000');
@@ -91,6 +92,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         TRIGGER_HARDWARE = 2;
         
         ALL_DACS = -1;
+        FORCE_OPEN = 1;
     end
     
     methods
@@ -136,7 +138,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if ~isempty(aps.message_manager)
                 aps.message_manager.disp(line)
             else
-                disp(line)
+                if aps.verbose
+                    disp(line)
+                end
             end
         end
         
@@ -151,10 +155,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             
             % build library path
-            script_path = mfilename('fullpath');
-            schString = [filesep 'APS'];
-            idx = strfind(script_path,schString);
-            d.library_path = [script_path(1:idx) filesep 'lib' filesep];
+            script = mfilename('fullpath');
+            script = java.io.File(script);
+            path = char(script.getParent());
+            d.library_path = [path filesep 'lib' filesep];
             if ~libisloaded('libaps')
                 [notfound warnings] = loadlibrary([d.library_path libfname], ...
                     [d.library_path 'libaps.h']);
@@ -200,7 +204,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        function val = open(aps,id)
+        function val = open(aps,id, force)
             if (aps.is_open)
                 aps.close()
             end
@@ -209,7 +213,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 aps.device_id = id;
             end
             
-            val = calllib('libaps','APS_Open' ,aps.device_id);
+            if ~exist('force','var')
+                force = 0;
+            end
+            
+            val = calllib('libaps','APS_Open' ,aps.device_id, force);
             if (val == 0)
                 aps.log(sprintf('APS USB Connection Opened'));
                 aps.is_open = 1;
@@ -257,6 +265,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function val = readBitFileVersion(aps)
+            if aps.mock_aps
+                 val = aps.ELL_VERSION;
+                 return
+            end
             val = calllib('libaps','APS_ReadBitFileVersion', aps.device_id);
             aps.bit_file_version = val;
             if val >= aps.ELL_VERSION
@@ -376,7 +388,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 validate = 0;
             end
             
-            aps.log(sprintf('Loading Link List length: %i into DAC%i ', ll_len,id));
+            aps.log(sprintf('Loading Link List length: %i into DAC%i bank %i ', ll_len,id, bank));
             val = calllib('libaps','APS_LoadLinkList',aps.device_id, offsets,counts,trigger,repeat,ll_len,id,bank, validate);
             if (val < 0)
                 errordlg(sprintf('APS_LoadLinkList returned an error code of: %i\n', val), ...
@@ -384,6 +396,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             aps.log('Done');
         end
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        function clearLinkListELL(aps,id)
+            aps.librarycall('Clear Bank 0','APS_ClearLinkListELL',id,0); % bank 0
+            aps.librarycall('Clear Bank 1','APS_ClearLinkListELL',id,1); % bank 1
+        end
+        
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -401,8 +419,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 val = -1;
                 return
             end
-            aps.log(mesg)
-            
+            if (aps.verbose)
+                aps.log(mesg);
+            end
+                        
             switch size(varargin,2)
                 case 0
                     val = calllib('libaps',func,aps.device_id);
@@ -415,7 +435,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 otherwise
                     error('More than 3 varargin arguments to librarycall are not supported\n');
             end
-            aps.log('Done');
+            if (aps.verbose)
+                aps.log('Done');
+            end
         end
         
         function triggerWaveform(aps,id,trigger_type)
@@ -477,6 +499,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 'APS_TestWaveformMemory',id,numBytes);
         end
         
+        function val =  readLinkListStatus(aps,id)
+            val = aps.librarycall(sprintf('Read Link List Status'), ...
+                'APS_ReadLinkListStatus',id);
+        end
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %% Link List Format Conversion
@@ -492,12 +519,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function library = buildWaveformLibrary(aps, waveforms, useVarients)
             % convert baseWaveforms to waveform array suitable for the APS
             
-            offsets = containers.Map('KeyType','double','ValueType','any');
-            lengths = containers.Map('KeyType','double','ValueType','any');
-            varients = containers.Map('KeyType','double','ValueType','any');
+            offsets = containers.Map('KeyType','char','ValueType','any');
+            lengths = containers.Map('KeyType','char','ValueType','any');
+            varients = containers.Map('KeyType','char','ValueType','any');
             
             % allocate space for data;
-            data = zeros([1, aps.max_waveform_points],'uint16');
+            data = zeros([1, aps.max_waveform_points],'int16');
             
             idx = 1;
             
@@ -506,6 +533,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             while keys.hasMoreElements()
                 key = keys.nextElement();
                 orgWF = waveforms.get(key);
+                
+
+                
                 varientWFs = {};
                 if useVarients
                     endPad = 3;
@@ -522,6 +552,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         wf(end+1) = 0;
                     end
                     wf(end+1:end+length(orgWF)) = orgWF;
+
                     % test for padding to mod 4
                     if length(wf) == 1
                         % time amplitude pair
@@ -531,13 +562,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     pad = aps.ADDRESS_UNIT - mod(length(wf),aps.ADDRESS_UNIT);
                     if pad ~= 0 && pad < aps.ADDRESS_UNIT
                         % pad to length 4
-                        wf(end+1:end+pad) = zeros([1,pad],'uint16');
+                        wf(end+1:end+pad) = zeros([1,pad],'int16');
                     end
                     
                     assert(mod(length(wf),aps.ADDRESS_UNIT) == 0, 'WF Padding Failed')
                     
                     %insert into global waveform array
-                    data(idx:idx+length(wf)-1) = uint16(wf);
+                    data(idx:idx+length(wf)-1) = wf;
                     
                     if leadPad == 0
                         offsets(key) = idx;
@@ -647,12 +678,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             if firstEntry  % start of link list
                 %TODO hard code firstEntry
+                % currently not using
                 %offsetVal = bitor(offsetVal, aps.ELL_FIRST_ENTRY);                
             end
             
             if lastEntry % end of link list
                 %TODO hard code lastEntry
-                %offsetVal = bitor(offsetVal, aps.ELL_LAST_ENTRY);
+                offsetVal = bitor(offsetVal, aps.ELL_LAST_ENTRY);
             end
             
             % use entryData to get length as it includes the padded
@@ -704,22 +736,49 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function [wf, banks] = convertLinkListFormat(aps, pattern, useVarients)
+        function [wf, banks] = convertLinkListFormat(aps, pattern, useVarients, waveformLibrary)
+            if aps.verbose
+               fprintf('APS::convertLinkListFormat useVarients = %i\n', useVarients) 
+            end
+            
             if ~exist('useVarients','var') || isempty(useVarients)
                 useVarients = 0;
             end
             
-            library = aps.buildWaveformLibrary(pattern.waveforms, useVarients);
+            if ~exist('waveformLibrary','var') || isempty(waveformLibrary)
+                waveformLibrary = aps.buildWaveformLibrary(pattern.waveforms, useVarients);
+            end
             
             wf = APSWaveform();
-            wf.data = library.waveforms;
+            wf.data = waveformLibrary.waveforms;
             
-            function bank = allocateBank()
+            function [bank, idx] = allocateBank()
                 bank.offset = zeros([1,aps.max_ll_length],'uint16');
                 bank.count = zeros([1,aps.max_ll_length],'uint16');
                 bank.trigger = zeros([1,aps.max_ll_length],'uint16');
                 bank.repeat = zeros([1,aps.max_ll_length],'uint16');
                 bank.length = aps.max_ll_length;
+                
+                idx = 1;
+                % force Qid at start with ls set to setup mini link list
+                
+                %{
+                offsetVal = 0;
+                offsetVal = bitor(offsetVal, aps.ELL_ZERO);
+                offsetVal = bitor(offsetVal, aps.ELL_FIRST_ENTRY); 
+                offsetVal = bitor(offsetVal, aps.ELL_TIME_AMPLITUDE);
+                
+                triggerVal = 0;
+                countVal = 0;
+                
+                bank.offset(1) = uint16(offsetVal);
+                bank.count(1) = uint16(countVal);
+                bank.trigger(1) = uint16(triggerVal);
+                
+                repeat = uint16(1000);
+                bank.repeat(1) = repeat;
+                idx = 2;
+                %}
             end
             
             function bank = trimBank(bank,len)
@@ -731,10 +790,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             
             curBank = 1;
-            banks{curBank} = allocateBank();
-            
-            % loop through link lists
-            idx = 1;
+            [banks{curBank} idx] = allocateBank();
             
             % clear padding adjust variables
             aps.pendingLength = 0;
@@ -751,22 +807,45 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     error('Individual Link List %i exceeds APS maximum link list length', i)
                 end
                 
-                if (idx + lenLL) > aps.max_ll_length
-                    banks{curBank} = trimBank(banks{curBank},idx-1);
-                    curBank = curBank + 1;
-                    banks{curBank} = allocateBank();
-                    idx = 1;
-                end
                 
+                if 1 % WARNING forcing new bank for every entry
+                if (idx + lenLL) > aps.max_ll_length
+                    [banks{curBank} idx] = trimBank(banks{curBank},idx-1);
+                    curBank = curBank + 1;
+                    [banks{curBank} idx] = allocateBank();
+                end
+                else
+                    %if curBank ~= 1
+                    if curBank > 0
+                        banks{curBank} = trimBank(banks{curBank},idx-1);
+                    end
+                        curBank = curBank + 1;
+                        [banks{curBank} idx] = allocateBank();
+                   % end
+                end
+
                 for j = 1:lenLL
                     entry = linkList{j};
                     
                     if aps.verbose
-                        fprintf('Entry %i: key: %10i length: %2i repeat: %4i \n', j, entry.key, entry.length, ...
+                        fprintf('Entry %i: key: %s length: %2i repeat: %4i \n', j, entry.key, entry.length, ...
                             entry.repeat);
                     end
                     
-                    [offsetVal countVal] = entryToOffsetCount(aps,entry,library, j == 1, j == lenLL);
+                    if j == 1
+                        entry.hasTrigger = 1;
+                    end
+                    
+                    [offsetVal countVal] = entryToOffsetCount(aps,entry,waveformLibrary, j == 1, j == lenLL - 1);
+                    
+                    
+                    
+                    % if we are at end end of the link list entry but this is
+                    % not the last of the link list entries set the mini link
+                    % list start flag
+                    if (i < length(pattern.linkLists)) && (j == lenLL)
+                        offsetVal = bitor(offsetVal, aps.ELL_FIRST_ENTRY);   
+                    end
                     
                     if aps.verbose
                         fprintf('\tLink List Offset: %4i Length: %4i Expanded Length: %4i TA: %i Zero:%i\n', ...
@@ -775,18 +854,48 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                             entry.isTimeAmplitude, entry.isZero);
                     end
                     
-                    triggerVal = aps.entryToTrigger(entry);
+                     if idx == 1
+                        offsetVal = bitor(offsetVal, aps.ELL_FIRST_ENTRY); 
+                     end
+                    
+                    triggerVal = aps.entryToTrigger(j == lenLL);
                     
                     banks{curBank}.offset(idx) = uint16(offsetVal);
                     banks{curBank}.count(idx) = uint16(countVal);
                     banks{curBank}.trigger(idx) = uint16(triggerVal);
                     
+                   
+                    
                     % TODO: hard coded repeat count of 10000
-                    banks{curBank}.repeat(1) = 0;%uint16(10000);
+                    if j == lenLL
+                        repeat = uint16(1000);
+                        banks{curBank}.repeat(idx) = repeat;
+                    else
+                        banks{curBank}.repeat(idx) = 0;
+                    end
                     
                     idx = idx + 1;
                 end
             end
+            
+            %{
+            for qq = 1:10
+            offsetVal = 0;
+            offsetVal = bitor(offsetVal, aps.ELL_ZERO);
+            offsetVal = bitor(offsetVal, aps.ELL_TIME_AMPLITUDE);
+            
+            triggerVal = 0;
+            countVal = 0;
+            repeatVal = 0;
+            
+            bank.offset(idx) = uint16(offsetVal);
+            bank.count(idx) = uint16(countVal);
+            bank.trigger(idx) = uint16(triggerVal);
+            bank.repeat(idx) = uint16(repeatVal);
+            
+            idx = idx + 1;
+            end
+            %}
             
             % trim last bank
             banks{curBank} = trimBank(banks{curBank},idx-1);
@@ -794,6 +903,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function [pattern] = linkListToPattern(aps,wf, banks)
+            if aps.verbose
+               fprintf('APS::linkListToPattern\n') 
+            end
             pattern = [];
             if iscell(banks)
                 nBanks = length(banks);
@@ -834,18 +946,54 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         if aps.verbose
                             fprintf('Using zeros: %i\n', expandedCount);
                         end
-                        newPat = zeros([1, expandedCount],'uint16');
+                        newPat = zeros([1, expandedCount],'int16');
                     elseif TA
                         if aps.verbose
                             fprintf('Using TA: %i@%i\n', expandedCount, wf.data(idx));
                         end
-                        newPat = wf.data(idx)*ones([1, expandedCount],'uint16');
+                        newPat = wf.data(idx)*ones([1, expandedCount],'int16');
                     end
                     
                     pattern = [pattern newPat];
                 end
             end
         end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        function [unifiedX unifiedY] = unifySequenceLibraryWaveforms(aps,sequences)
+            unifiedX = java.util.Hashtable();
+            unifiedY = java.util.Hashtable();
+            h = waitbar(0,'Unifying Waveform Tables');
+            n = length(sequences);
+            for seq = 1:n
+                waitbar(seq/n,h);
+                sequence = sequences{seq};
+                xwaveforms = sequence.llpatx.waveforms;
+                ywaveforms = sequence.llpaty.waveforms;
+                
+                xkeys = xwaveforms.keys;
+                ykeys = ywaveforms.keys;
+                
+                while xkeys.hasMoreElements()
+                    key = xkeys.nextElement();
+                    if ~unifiedX.containsKey(key)
+                        unifiedX.put(key,xwaveforms.get(key));
+                    end
+                end
+                
+                while ykeys.hasMoreElements()
+                    key = ykeys.nextElement();
+                    if ~unifiedY.containsKey(key)
+                        unifiedY.put(key,ywaveforms.get(key));
+                    end
+                end
+            end
+            
+            close(h);
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         function setModeR5(aps)
             aps.bit_file = 'cbl_aps2_r5_d6ma_fx.bit';
@@ -890,7 +1038,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         %% See: LinkListFormatUnitTest.m
         LinkListFormatUnitTest(sequence)
         
-        LinkListUnitTest(sequence)
+        LinkListUnitTest(sequence, dc_offset)
         
         sequence = LinkListSequences(sequence)
         

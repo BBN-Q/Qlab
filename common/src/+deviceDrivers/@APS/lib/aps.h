@@ -78,6 +78,10 @@
 #define FPGA2_PLL_BYPASS_ADDR 0x197
 #define FPGA2_ENABLE_ADDR     0xF4
 
+#define FPGA_PLL_RESET_ADDR 0x0
+#define FPGA1_PLL_RESET_BIT 0x2
+#define FPGA2_PLL_RESET_BIT 0x200
+
 #define MAX_PHASE_TEST_CNT 10
 
 typedef struct

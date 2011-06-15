@@ -7,13 +7,13 @@ function LinkListFormatUnitTest(sequence)
 %% May be Called Using Some Varient of deviceDrivers.APS.LinkListFormatUnitTest
 
 %% Test Status
-%% Last Tested: 2/2/2011
+%% Last Tested: 4/19/2011
 %% $Rev$
 %%
-%% Sequence 1: Echo: Passed
-%% Sequence 2: Rabi Amp: Passed
-%% Sequence 3: Ramsey: Passed
-%% Sequency 4: URamseySequence Failed:Both PatternGen LL and DacLL show errors
+%% Sequence 1: Echo: Passed 5/4/11
+%% Sequence 2: Rabi Amp: Passed 5/4/11
+%% Sequence 3: Ramsey: Passed 5/4/11
+%% Sequency 4: URamseySequence Failed: Passed 5/4/11
 
 % Uses PatternGen Link List Generator to develop link lists
 
@@ -25,65 +25,10 @@ d.dbgForceELLMode();
 d.verbose = 0;
 
 if ~exist('sequence', 'var') || isempty(sequence)
- sequence = 1;
+    sequence = 1;
 end
 
-sequence = deviceDrivers.APS.LinkListSequences(sequence);
-
-%% Allocate memory
-patternGenX = zeros(sequence.numsteps, sequence.cycleLength);
-patLinkListX = patternGenX;
-devLinkListX = patternGenX;
-
-patternGenY = patternGenX;
-patLinkListY = patternGenX;
-devLinkListY = patternGenX;
-
-patternGenMarker = patternGenX;
-patLinkListMarker = patternGenX;
-devLinkListMarker = patternGenX;
-
-useVarients = 1;
-
-
-[wf, banks] = d.convertLinkListFormat(sequence.llpatx,useVarients);
-patternX = d.linkListToPattern(wf, banks);
-
-[wf, banks] = d.convertLinkListFormat(sequence.llpaty,useVarients);
-patternY = d.linkListToPattern(wf, banks);
-
-for n = 1:sequence.numsteps;
-    [patx paty] = sequence.pg.getPatternSeq(sequence.patseq, n, sequence.delay, sequence.fixedPt);
-    patternGenX(n, :) = patx + sequence.offset;
-    patternGenY(n, :) = paty + sequence.offset;
-    
-    patLinkListX(n, :) = sequence.pg.linkListToPattern(sequence.llpatx,n)+sequence.offset;
-    patLinkListY(n, :) = sequence.pg.linkListToPattern(sequence.llpaty,n)+sequence.offset;
-    
-    
-    st = fix((n-1)*sequence.cycleLength+1);
-    en = fix(n*sequence.cycleLength);
-    devLinkListX(n, :) = patternX(st:en) + sequence.offset;
-    devLinkListY(n, :) = patternY(st:en) + sequence.offset;
-    
-    pattenGenMarker(n, :) = sequence.pg.bufferPulse(patx, 0, sequence.bufferPadding, sequence.bufferReset, sequence.bufferDelay);
-end
-
-%{
-
-Not currently working on triggers
-
-% trigger at beginning of measurement pulse
-% measure from (6000:8000)
-measLength = 2000;
-measSeq = {pg.pulse('M', 'width', measLength)};
-ch1m1 = zeros(numsteps, cycleLength);
-ch1m2 = zeros(numsteps, cycleLength);
-for n = 1:numsteps;
-	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
-	ch1m2(n,:) = pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength);
-end
-%}
+sequences = deviceDrivers.APS.LinkListSequences(sequence);
 
 
     function plotPatterns(patternGenX, patLinkListX, devLinkListX, ...
@@ -106,13 +51,29 @@ end
             plot(patLinkListX(i,:),'g'); title('PGLL X')
             
             subplot(5,3,7)
-            plot(patternGenX(i,:) - patLinkListX(i,:), 'g'); title('PGLL X Error')
+            error1 = patternGenX(i,:) - patLinkListX(i,:);
+            error1 = error1 ./ patternGenX(i,:);
+            plot(error1, 'g'); title('PGLL X Percent Error')
+            ylim([-1 1])
             
             subplot(5,3,10)
             plot(devLinkListX(i,:),'b'); title('APSLL X')
             
             subplot(5,3,13)
-            plot(patternGenX(i,:) - devLinkListX(i,:), 'b'); title('APSLL X Error')
+            error2 = patternGenX(i,:) - devLinkListX(i,:);
+            error2 = error2./ patternGenX(i,:);
+            plot(error2 , 'b'); title('APSLL X Percent Error')
+            
+            hold on
+            error3 = patLinkListX(i,:) - devLinkListX(i,:);
+            error3 = error3./ patternGenX(i,:);
+            plot(error3 , 'r'); title('APSLL X Percent Error')
+            ylim([-1 1])
+            
+            if (max(abs(error1)) > .1 || max(abs(error2)) > .1)
+                %drawnow
+                %keyboard
+            end
             
             %%%%%%%%%% Y Channel %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
@@ -123,13 +84,17 @@ end
             plot(patLinkListY(i,:),'g'); title('PGLL Y')
             
             subplot(5,3,8)
-            plot(patternGenY(i,:) - patLinkListY(i,:), 'g'); title('PGLL Y Error')
+            error1 = patternGenY(i,:) - patLinkListY(i,:);
+            plot(error1 ./ patternGenY(i,:), 'g'); title('PGLL Y Percent Error')
+            ylim([-1 1])
             
             subplot(5,3,11)
             plot(devLinkListY(i,:),'b'); title('APSLL Y')
             
             subplot(5,3,14)
-            plot(patternGenY(i,:) - devLinkListY(i,:), 'b'); title('APSLL Y Error')
+            error2 = patternGenY(i,:) - devLinkListY(i,:);
+            plot(error2 ./ patternGenY(i,:), 'b'); title('APSLL Y Percent Error')
+            ylim([-1 1])
             
             %%%%%%%%%% Marker %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
@@ -140,20 +105,103 @@ end
             plot(patLinkListMarker(i,:),'g'); title('PGLL M')
             
             subplot(5,3,9)
-            plot(patternGenMarker(i,:) - patLinkListMarker(i,:), 'g'); title('PGLL M Error')
+            error1 = patternGenMarker(i,:) - patLinkListMarker(i,:);
+            plot(error1 ./ patternGenMarker(i,:), 'g'); title('PGLL M Percent Error')
+            ylim([-1 1])
             
             subplot(5,3,12)
             plot(devLinkListMarker(i,:),'b'); title('APSLL M')
             
             subplot(5,3,15)
-            plot(patternGenMarker(i,:) - devLinkListMarker(i,:), 'b'); title('APSLL M Error')
+            error2 = patternGenMarker(i,:) - devLinkListMarker(i,:);
+            plot(error2 ./ patternGenMarker(i,:), 'b'); title('APSLL M Percent Error')
+            ylim([-1 1])
             drawnow()
             pause(.1);
+            %keyboard
+            %{
+            figure(2);
+            clf
+            plot(patLinkListX(i,:),'g');
+            hold on
+            plot(devLinkListX(i,:),'b');
+            
+            %keyboard
+            %}
         end
     end
 
-plotPatterns(patternGenX, patLinkListX, devLinkListX, ...
-    patternGenY, patLinkListY, devLinkListY,...
-    patternGenMarker, patLinkListMarker, devLinkListMarker)
+useVarients = 1;
+
+numSequences = length(sequences);
+
+% unify sequce waveform libraries
+[unifiedX unifiedY] = d.unifySequenceLibraryWaveforms(sequences);
+
+unifiedX = d.buildWaveformLibrary(unifiedX, useVarients);
+unifiedY = d.buildWaveformLibrary(unifiedY, useVarients);
+
+for seq = 1:numSequences
+    sequence = sequences{seq};
+    patternGenX = zeros(sequence.numsteps, sequence.cycleLength);
+    patLinkListX = patternGenX;
+    devLinkListX = patternGenX;
+    
+    patternGenY = patternGenX;
+    patLinkListY = patternGenX;
+    devLinkListY = patternGenX;
+    
+    patternGenMarker = patternGenX;
+    patLinkListMarker = patternGenX;
+    devLinkListMarker = patternGenX;
+    
+    
+    d.verbose = 0;
+    
+    [wf, banks] = d.convertLinkListFormat(sequence.llpatx,useVarients,unifiedX);
+    patternX = d.linkListToPattern(wf, banks);
+    
+    [wf, banks] = d.convertLinkListFormat(sequence.llpaty,useVarients,unifiedY);
+    patternY = d.linkListToPattern(wf, banks);
+    
+    for n = 1:sequence.numsteps;
+        
+        [patx paty] = sequence.pg.getPatternSeq(sequence.patseq, n, sequence.delay, sequence.fixedPt);
+        patternGenX(n, :) = patx + sequence.offset;
+        patternGenY(n, :) = paty + sequence.offset;
+        
+        patLinkListX(n, :) = sequence.pg.linkListToPattern(sequence.llpatx,n)+sequence.offset;
+        patLinkListY(n, :) = sequence.pg.linkListToPattern(sequence.llpaty,n)+sequence.offset;
+        
+        
+        st = fix((n-1)*sequence.cycleLength+1);
+        en = fix(n*sequence.cycleLength);
+        devLinkListX(n, :) = patternX(st:en) + sequence.offset;
+        devLinkListY(n, :) = patternY(st:en) + sequence.offset;
+        
+        % force paty to 0
+        pattenGenMarker(n, :) = sequence.pg.bufferPulse(patx, 0, sequence.offset,sequence.bufferPadding, sequence.bufferReset, sequence.bufferDelay);
+    end
+    
+    %{
+
+Not currently working on triggers
+
+% trigger at beginning of measurement pulse
+% measure from (6000:8000)
+measLength = 2000;
+measSeq = {pg.pulse('M', 'width', measLength)};
+ch1m1 = zeros(numsteps, cycleLength);
+ch1m2 = zeros(numsteps, cycleLength);
+for n = 1:numsteps;
+	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
+	ch1m2(n,:) = pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength);
+end
+    %}
+    
+    plotPatterns(patternGenX, patLinkListX, devLinkListX, ...
+        patternGenY, patLinkListY, devLinkListY,...
+        patternGenMarker, patLinkListMarker, devLinkListMarker)
+end
 end
 

@@ -31,8 +31,12 @@
 #include <strings.h>
 #include "aps.h"
 #include "libaps.h"
+#include "fpga.h"
 #include "ftd2xx.h"
+#include "sha1.h"
 #include <stdio.h>
+
+extern gRegRead; // external global reg read value from fpga.c
 
 #ifdef WIN32
 	#include <windows.h>
@@ -164,10 +168,15 @@ int APS_Init()
 
 	DLL_FT_ListDevices = (pFT_ListDevices) GetFunction(hdll,"FT_ListDevices");
 
+	// zero handles
+	int cnt;
+	for(cnt = 0; cnt < MAX_APS_DEVICES; cnt++)
+	  usb_handles[cnt] = 0;
+
 	return 0;
 }
 
-EXPORT int APS_Open(int device)
+EXPORT int APS_Open(int device, int force)
 /******************************************************************
  *
  * Function Name : APS_Open()
@@ -194,7 +203,6 @@ EXPORT int APS_Open(int device)
 {
 	// Global FTDI Device usb_handle, must be set by call to FT_Open()
 	FT_STATUS status;
-	FT_HANDLE usb_device;
 
 	if (device > MAX_APS_DEVICES) {
 		return -1;
@@ -205,6 +213,11 @@ EXPORT int APS_Open(int device)
 		if (APS_Init() != 0) {
 			return -2;
 		};
+	}
+
+	// allow a forced reopen of the device
+	if (usb_handles[device] != 0 && force) {
+	  return 0;
 	}
 
 	usb_handles[device] = 0;
@@ -282,8 +295,7 @@ EXPORT int APS_OpenByID(int device)
 {
 	// Global FTDI Device usb_handle, must be set by call to FT_Open()
 	FT_STATUS status;
-	FT_HANDLE usb_device;
-	int device_idx;
+
 	int cnt, numdevices, found;
 	char * serial;
 	char testSerial[64];
@@ -319,7 +331,7 @@ EXPORT int APS_OpenByID(int device)
 
 	dlog(DEBUG_INFO,"Found device ID: %i Serial %s @ Index %i\n",device, serial,cnt );
 
-	status = APS_Open(cnt);
+	status = APS_Open(cnt, 0);
 	if (status == FT_OK) {
 		return cnt;
 	} else {
@@ -349,8 +361,7 @@ EXPORT int APS_OpenBySerialNum(char * serialNum)
 {
 	// Global FTDI Device usb_handle, must be set by call to FT_Open()
 	FT_STATUS status;
-	FT_HANDLE usb_device;
-	int device_idx;
+
 	int cnt, numdevices, found;
 
 	char testSerial[64];
@@ -381,7 +392,7 @@ EXPORT int APS_OpenBySerialNum(char * serialNum)
 
 	dlog(DEBUG_INFO,"Found device ID: Serial %s @ Index %i\n", serialNum,cnt );
 
-	status = APS_Open(cnt);
+	status = APS_Open(cnt, 0);
 	if (status == FT_OK) {
 		return cnt;
 	} else {
@@ -470,6 +481,7 @@ EXPORT int APS_Close(int device)
 	dlog(DEBUG_INFO,"Closing: %i Handle %x\n", device, usb_handles[device]);
 
 	DLL_FT_Close(usb_handles[device]);
+	usb_handles[device] = 0;
 	return 0;
 }
 
@@ -507,14 +519,8 @@ int APS_ReadReg
 *
 ********************************************************************/
 {
-  UCHAR CmdByte,
-        Buf[256],
-        pbuf[256],
-        Packet[256];
-  ULONG i,
-        out,
-        Length,
-        WriteData,
+  UCHAR Packet[256];
+  ULONG Length,
         BytesRead,
         BytesWritten;
   FT_HANDLE usb_handle;
@@ -603,14 +609,9 @@ int APS_WriteReg
 *
 ********************************************************************/
 {
-  UCHAR CmdByte,
-        Buf[256],
-        pbuf[256],
-        Packet[256];
+  UCHAR Packet[256];
   ULONG i,
-        out,
         Length,
-        WriteData,
         BytesWritten;
   FT_HANDLE usb_handle;
   FT_STATUS status;
@@ -749,14 +750,11 @@ int APS_WriteSPI
 ********************************************************************/
 {
   FT_STATUS status;
-  UCHAR CmdByte,
-        Buf[256],
-        pbuf[256],
+  UCHAR Buf[256],
         Packet[256];
   ULONG i,
         out,
         Length,
-        WriteData,
         BytesWritten;
   FT_HANDLE usb_handle;
 
@@ -837,14 +835,11 @@ int APS_ReadSPI
 *
 ********************************************************************/
 {
-  UCHAR CmdByte,
-        Buf[256],
-        pbuf[256],
+  UCHAR Buf[256],
         Packet[256];
   ULONG i,
         out,
         Length,
-        WriteData,
         BytesRead,
         BytesWritten;
   FT_HANDLE usb_handle;
@@ -955,10 +950,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
         ReadByte,
         WriteByte,
         LastBuf[64];
-  char pbuf[256];
-  int i, j,cnt;
-
-  FILE * test;
+  int i, j;
 
   // To configure the FPGAs, you initialize them, send the byte stream, and
   // then wait for the DONE flag to be asserted.
@@ -1157,11 +1149,13 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq)
 {
   ULONG pll_cycles_addr, pll_bypass_addr;
   UCHAR pll_cycles_val, pll_bypass_val;
-  UCHAR pll_output_enable, pll_enable_addr;
-  UCHAR ReadByte,WriteByte;
-  int cnt, xor_flag_cnt;
+  UCHAR pll_enable_addr;
+  UCHAR pll_reset_addr, pll_reset_bit;
+  UCHAR WriteByte, ReadByte;
+  //int cnt, xor_flag_cnt;
   int fpga;
   int sync_status;
+  int pll_bit;
 
   dlog(DEBUG_INFO, "Setting PLL DAC: %i Freq: %i\n", dac, freq);
 
@@ -1170,6 +1164,8 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq)
 		return -1;
   }
 
+  pll_reset_addr = FPGA_PLL_RESET_ADDR;
+
   switch(dac) {
     case 0:
 		// fall through
@@ -1177,6 +1173,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq)
 		pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
 		pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
 		pll_enable_addr = FPGA1_ENABLE_ADDR;
+		pll_reset_bit   = FPGA1_PLL_RESET_BIT;
 		break;
 	case 2:
 		// fall through
@@ -1184,6 +1181,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq)
 		pll_cycles_addr = FPGA2_PLL_CYCLES_ADDR;
 		pll_bypass_addr = FPGA2_PLL_BYPASS_ADDR;
 		pll_enable_addr = FPGA2_ENABLE_ADDR;
+		pll_reset_bit   = FPGA2_PLL_RESET_BIT;
 	  break;
 	default:
 	  return -1;
@@ -1237,41 +1235,44 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq)
 
   sync_status = 0;
 
- /* // Test for PLL Lock
+  // Test for PLL Lock
 
-  APS_ReadReg(device, APS_STATUS_CTRL, 1, 0, &ReadByte);
+  //APS_ReadReg(device, APS_STATUS_CTRL, 1, 0, &ReadByte);
+  //dlog("APS PLL Lock Bit = %i\n", ((ReadByte && APS_LOCK_BIT) == APS_LOCK_BIT));
+  /*
   if (ReadByte && APS_LOCK_BIT != APS_LOCK_BIT) {
     // We do not have a PLL Lock
 	sync_status |= 2;
   }
 */
   // Test for DAC clock phase match
-  /*
 
-  sync_status |= 4;
-  test_cnt = 0;
-  while (test_cnt < MAX_PHASE_TEST_CNT) {
-	  test_cnt++;
-	  xor_flag_cnt = 0;
+#if 0
+  //sync_status |= 4;
+  int test_cnt, cnt;
+
+  for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
+
+	  int xor_flag_cnt = 0;
 	  for(cnt = 0; cnt < 10; cnt++) {
-		xor_flag_cnt += APS_ReadFPGA(gRegRead | FPGA_OFF_VERSION, fpga);
+	    pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
+	    // pll xor bit in bit 15
+		  xor_flag_cnt += (pll_bit >> 15);
 	  }
 
 	  if (xor_flag_cnt > 5) {
 		// DAC outputs are out of sync
 		// disable output of clock to DAC
-		pll_output_enable = 0x2;
-		APS_WriteSPI(APS_PLL_SPI, pll_enable_addr, &pll_output_enable);
-		// re-enable otput of clock to DAC
-		pll_output_enable = 0x0;
-		APS_WriteSPI(APS_PLL_SPI, pll_enable_addr, &pll_output_enable);
+      dlog(DEBUG_INFO,"Resetting PLLs are in sync\n");
+      APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reset_bit, fpga);
 	  } else {
+	    dlog(DEBUG_INFO,"APS PLLs are in sync\n");
 	    sync_status = sync_status & ~4;
 	    break;
 	  }
 
   }
-  */
+#endif
 
   return sync_status;
 }
@@ -1301,7 +1302,20 @@ EXPORT int APS_SetupVCXO(int device)
 }
 
 EXPORT void APS_ReadLibraryVersion(void *buffer, int maxlen) {
-	snprintf(buffer, maxlen, "Libaps $Revision$");
+	snprintf(buffer, maxlen, "Libaps $Revision - GIT $");
 }
 
+EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int maxlen ){
+  SHA1Context_t sha;
+  uint8_t HASH[20];
+  //freopen("libaps.log","w+", stderr);
+  //dlog(DEBUG_INFO,"Start sha %i len pulse str len %i\n", len, maxlen);
+  sha1_init(&sha);
+  sha1_update(&sha,(uint8_t*)pulse,len);
+  sha1_finish(&sha,HASH);
+  snprintf(hashStr,maxlen, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+      HASH[0],HASH[1],HASH[2],HASH[3],HASH[4],HASH[5],HASH[6],HASH[7],HASH[8],HASH[9],HASH[10],
+      HASH[11],HASH[12],HASH[13],HASH[14],HASH[15],HASH[16],HASH[17],HASH[18],HASH[19]);
+  //dlog(DEBUG_INFO,"HASH %s\n",(char*) hashStr);
+}
 

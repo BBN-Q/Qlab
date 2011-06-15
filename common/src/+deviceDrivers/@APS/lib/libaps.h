@@ -50,7 +50,7 @@
 
 EXPORT int APS_NumDevices();
 EXPORT int APS_GetSerialNumbers();
-EXPORT int APS_Open(int device);
+EXPORT int APS_Open(int device, int force);
 EXPORT int APS_OpenByID(int device);
 EXPORT int APS_ListSerials();
 EXPORT int APS_Close(int device);
@@ -85,5 +85,8 @@ EXPORT void APS_ReadLibraryVersion(void * buffer, int maxlen);
 EXPORT int APS_ReadAllRegisters(int device);
 EXPORT int APS_TestWaveformMemory(int device, int dac, int byteCount);
 EXPORT int APS_SetDebugLevel(int level);
+EXPORT int APS_ReadLinkListStatus(int device, int dac);
 
+EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int maxlen );
+EXPORT int APS_ClearLinkListELL(int device,int dac, int bank);
 #endif

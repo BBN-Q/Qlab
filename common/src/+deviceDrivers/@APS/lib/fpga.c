@@ -226,27 +226,28 @@ EXPORT int APS_LoadWaveform(int device, unsigned short *Data,
 	int fpga;
 	int cnt;
 	char * dac_type;
-	int cmd, addr, curData;
 
 	#ifdef LOG_WAVEFORM
 	FILE * logwaveform;
 	#endif
 
-	ULONG write_addr;
 	ULONG data;
 	ULONG wf_length;
+	ULONG max_wf_length;
 	ULONG formated_length;
 	
 	BYTE * formatedData;
 	BYTE * formatedDataIdx;
 
-	if(gBitFileVersion < VERSION_ELL && ByteCount > K4 ) {
-		dlog(DEBUG_INFO,"[WARNING] Waveform length > 4K. Truncating waveform");
-		ByteCount = K4;
+	if(gBitFileVersion < VERSION_ELL) {
+	  max_wf_length = K4;
+	} else {
+	  max_wf_length = K8;
+	}
 
-	} else if(gBitFileVersion >= VERSION_ELL && ByteCount > K8 ) {
-		dlog(DEBUG_INFO,"[WARNING] Waveform length > 8K. Truncating waveform");
-		ByteCount = K8;
+	if(ByteCount > max_wf_length ) {
+		dlog(DEBUG_INFO,"[WARNING] Waveform length > Maximum. Truncating waveform");
+		ByteCount = max_wf_length;
 	}
 
 	// waveform length used by FPGA must be ByteCount /4  - 1
@@ -303,12 +304,12 @@ EXPORT int APS_LoadWaveform(int device, unsigned short *Data,
 
 	dac_read = gRegRead | dac_write;
 
-	if (offset < 0 || offset > MAX_WF_OFFSET) {
+	if (offset < 0 || offset > max_wf_length) {
 		return -3;
 	}
 
 	// check to make sure that waveform will fit
-	if ((offset + ByteCount) > MAX_WF_OFFSET) {
+	if ((offset + ByteCount) > max_wf_length) {
 		return -4;
 	}
 
@@ -498,7 +499,7 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 	int fpga;
 	char * dac_type;
 	int dac_sm_enable, dac_sw_led, dac_trig_src, dac_sw_trig, dac_sm_reset;
-	int current_state;
+
 
 	dlog(DEBUG_VERBOSE,"Trigger DAC%i type %i \n", dac, trigger_type);
 
@@ -606,7 +607,7 @@ EXPORT int APS_PauseDac(int device, int dac)
 {
 	int fpga;
 	char * dac_type;
-	int dac_sw_trig, dac_trig_src, dac_sm_reset, dac_sm_enable, current_state;
+	int dac_sw_trig, dac_trig_src, dac_sm_reset, dac_sm_enable;
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -679,7 +680,7 @@ EXPORT int APS_DisableDac(int device, int dac)
 
 	int fpga;
 	char *dac_type;
-	int dac_sm_reset, dac_offset, dac_sm_enable, current_state, dac_sw_trig;
+	int dac_sm_reset, dac_offset, dac_sm_enable, dac_sw_trig;
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -766,10 +767,6 @@ int LoadLinkList_V5(int device, unsigned short *OffsetData, unsigned short *Coun
 	char * dac_type;
 	int ctrl_reg;
 
-	ULONG write_addr;
-	ULONG data;
-	ULONG wf_length;
-
 	BYTE * formatedData;
 	BYTE * formatedDataIdx;
 	int formated_length;
@@ -827,7 +824,7 @@ int LoadLinkList_V5(int device, unsigned short *OffsetData, unsigned short *Coun
 	// write control reg
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_LLCTRL, ctrl_reg, fpga);
 
-	// load current cntrl reg
+	// load current ctrl reg
 	ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_LLCTRL, fpga);
 
 	dlog(DEBUG_VERBOSE,"Written Link List Control Reg: 0x%x\n", ctrl_reg);
@@ -888,18 +885,18 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	int fpga;
 	int cnt;
 	char * dac_type;
-	int ctrl_reg;
+	int ctrl_reg, ctrl_reg_read;
 	int readVal;
 
+	/*
 	int lastEntryAddress;
 
 	ULONG write_addr;
-	ULONG data;
 	ULONG wf_length;
 
 	BYTE * formatedData;
 	BYTE * formatedDataIdx;
-	int formated_length;
+	 */
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -913,7 +910,9 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 		return -1;
 	}
 
-	dlog(DEBUG_VERBOSE,"Loading LinkList length %i into FPGA%i DAC%i \n", length, fpga, dac);
+	const char * banks[] = {"A","B"};
+	dlog(DEBUG_VERBOSE,"Loading LinkList length %i into FPGA%i DAC%i Bank %s\n",
+	    length, fpga, dac, banks[bank]);
 
 	// setup register addressing based on DAC
 	switch(dac) {
@@ -960,15 +959,24 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	// ELL Mode does not require shift due to different control registers
 	ctrl_reg = (length-1) & 0x3FFF;
 
+	// if bank is Bank B need to add based 0x200 to length
+	if (bank == 1) {
+		ctrl_reg = ctrl_reg + 0x200;  // Link List B offset is 0x200 (on DAC side)
+	}
+
 	dlog(DEBUG_VERBOSE,"Writing Link List Control Reg: 0x%x = 0x%x\n", dac_ctrl_reg,ctrl_reg);
 
 	// write control reg
 	APS_WriteFPGA(device, dac_ctrl_reg, ctrl_reg, fpga);
 
-	// load current cntrl reg
-	ctrl_reg = APS_ReadFPGA(device, gRegRead | dac_ctrl_reg, fpga);
+	// load current ctrl reg
+	ctrl_reg_read = APS_ReadFPGA(device, gRegRead | dac_ctrl_reg, fpga);
 
-  dlog(DEBUG_VERBOSE,"Loading Link List %s DAC%i...\n", dac_type, dac);
+  dlog(DEBUG_VERBOSE,"Loaded Link List %s DAC%i... Ctrl Reg = 0x%x\n", dac_type, dac, ctrl_reg_read);
+
+  if (ctrl_reg_read != ctrl_reg) {
+    dlog(DEBUG_VERBOSE, "WARNING: LinkList Control Reg Did Not Write Correctly\n");
+  }
 
 #if 1
   for(cnt = 0; cnt < length; cnt++) {
@@ -1063,10 +1071,89 @@ EXPORT int APS_LoadLinkList(int device,
 	}
 }
 
+EXPORT int APS_ClearLinkListELL(int device,int dac, int bank)
+{
+  dlog(DEBUG_INFO,"APS_ClearLinkList\n");
+  int dac_write;
+    int dac_ctrl_reg, dac_rpt_reg;
+    int fpga;
+    int ctrl_reg;
+    char * dac_type;
+
+    fpga = dac2fpga(dac);
+    if (fpga < 0) {
+      return -1;
+    }
+
+    dlog(DEBUG_INFO,"Load Link List ELL\n");
+
+    if (gBitFileVersion < VERSION_ELL) {
+      dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
+      return -1;
+    }
+
+    const char * banks[] = {"A","B"};
+    dlog(DEBUG_VERBOSE,"Clearign LinkList FPGA%i DAC%i Bank %s\n", fpga, dac, banks[bank]);
+
+    // setup register addressing based on DAC
+    switch(dac) {
+      case 0:
+        // fall through
+      case 2:
+        dac_type = ENVELOPE;
+        if (bank == 0) {
+          dac_write = FPGA_ADDR_ELL_ENVLL_A_WRITE;
+          dac_ctrl_reg = FGPA_OFF_ELL_ENVLL_A_CTRL;
+        } else {
+          dac_write = FPGA_ADDR_ELL_ENVLL_B_WRITE;
+          dac_ctrl_reg = FGPA_OFF_ELL_ENVLL_B_CTRL;
+        }
+        dac_rpt_reg  = FGPA_OFF_ELL_ENVLL_REPEAT;
+        break;
+      case 1:
+        // fall through
+      case 3:
+        dac_type = PHASE;
+        if (bank == 0) {
+          dac_write    = FPGA_ADDR_ELL_PHSLL_A_WRITE;
+          dac_ctrl_reg = FGPA_OFF_ELL_PHSLL_A_CTRL;
+        } else {
+          dac_write = FPGA_ADDR_ELL_PHSLL_B_WRITE;
+          dac_ctrl_reg = FGPA_OFF_ELL_PHSLL_B_CTRL;
+        }
+        dac_rpt_reg  = FGPA_OFF_ELL_PHSLL_REPEAT;
+        break;
+      default:
+        return -2;
+    }
+
+    //set link list size
+    // for zero length to clear Link List
+    ctrl_reg = 0;
+
+    // if bank is Bank B need to add based 0x200 to length
+    // for the mgth
+    //if (bank == 1) {
+    // ctrl_reg = ctrl_reg + 0x200;  // Link List B offset is 0x200 (on DAC side)
+    //}
+
+    dlog(DEBUG_VERBOSE,"Writing Link List Control Reg: 0x%x = 0x%x\n", dac_ctrl_reg,ctrl_reg);
+
+    // write control reg
+    APS_WriteFPGA(device, dac_ctrl_reg, ctrl_reg, fpga);
+
+    // zero repeat register
+    APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_rpt_reg, 0, fpga);
+
+    dlog(DEBUG_VERBOSE,"Done\n");
+    return 0;
+
+}
+
 EXPORT int APS_SetLinkListRepeat(int device, unsigned short repeat, int dac) {
 	int dac_rpt_reg;
 	int fpga;
-	int cnt;
+
 	char * dac_type;
 
 	fpga = dac2fpga(dac);
@@ -1213,7 +1300,7 @@ int SetLinkListMode_ELL(int device, int enable, int mode, int dac)
 {
   int fpga;
   int dac_enable_mask, dac_mode_mask, ctrl_reg;
-  int csr;
+
   char *dac_type;
 
   fpga = dac2fpga(dac);
@@ -1227,16 +1314,16 @@ int SetLinkListMode_ELL(int device, int enable, int mode, int dac)
       // fall through
     case 2:
       dac_type      = ENVELOPE;
-      dac_enable_mask = LLMSK_ENVENABLE;
-      dac_mode_mask   = LLMSK_ENVMODE;
+      dac_enable_mask = CSRMSK_ENVOUTMODE_ELL;
+      dac_mode_mask   = CSRMSK_ENVLLMODE_ELL;
 
       break;
     case 1:
       // fall through
     case 3:
       dac_type      = PHASE;
-      dac_enable_mask = LLMSK_PHSENABLE;
-      dac_mode_mask   = LLMSK_PHSMODE;
+      dac_enable_mask = CSRMSK_PHSOUTMODE_ELL;
+      dac_mode_mask   = CSRMSK_PHSLLMODE_ELL;
       break;
     default:
       return -2;
@@ -1260,17 +1347,17 @@ int SetLinkListMode_ELL(int device, int enable, int mode, int dac)
 
   if (enable) {
     // set bit to turn on link list mode
-    APS_SetBit(device, fpga, FPGA_OFF_CSR, CSRMSK_ENVOUTMODE_ELL);
+    APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_enable_mask);
   } else {
-    APS_ClearBit(device, fpga, FPGA_OFF_CSR, CSRMSK_ENVOUTMODE_ELL);
+    APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_enable_mask);
   }
 
   dlog(DEBUG_VERBOSE, "Setting Link List Mode ==> FPGA: %i DAC: %i Mode: %i\n", fpga, dac, mode);
 
   if (mode) {
-    APS_SetBit(device, fpga, FPGA_OFF_CSR, CSRMSK_ENVLLMODE_ELL);
+    APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_mode_mask);
   } else {
-    APS_ClearBit(device, fpga, FPGA_OFF_CSR, CSRMSK_ENVLLMODE_ELL);
+    APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_mode_mask);
   }
 
   return 0;
@@ -1309,7 +1396,6 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 	int fpga;
 	char * dac_type;
 	int dac_sm_enable, dac_sw_led, dac_trig_src, dac_sw_trig, dac_sm_reset;
-	int current_state;
 
   dlog(DEBUG_VERBOSE,"Trigger FPGA DAC%i type %i \n", dac, trigger_type);
 
@@ -1408,7 +1494,7 @@ EXPORT int APS_PauseFpga(int device, int dac)
 {
 	int fpga;
 	char * dac_type;
-	int dac_sw_trig, dac_trig_src, dac_sm_reset, dac_sm_enable, current_state;
+	int dac_sw_trig, dac_trig_src, dac_sm_reset, dac_sm_enable;
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -1472,7 +1558,7 @@ EXPORT int APS_DisableFpga(int device, int dac)
 
 	int fpga;
 	char *dac_type;
-	int dac_sm_reset, dac_sm_enable, current_state, dac_sw_trig;
+	int dac_sm_reset, dac_sm_enable, dac_sw_trig;
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -1579,16 +1665,14 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 	int fpga;
 	int cnt;
 	char * dac_type;
-	int cmd, addr, curData;
 
 	#ifdef LOG_WAVEFORM
 	FILE * logwaveform;
 	#endif
 
-	ULONG write_addr;
 	ULONG data;
 	ULONG wf_length;
-	ULONG formated_length;
+
 
 	if(gBitFileVersion < VERSION_ELL && ByteCount > K4 ) {
 		dlog(DEBUG_INFO,"[WARNING] Waveform length > 4K. Truncating waveform\n");
@@ -1721,5 +1805,51 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 	dlog(DEBUG_INFO,"Total Number of Errors: %i\n",num_errors);
 
 	return 0;
+}
+
+EXPORT int APS_ReadLinkListStatus(int device, int dac) {
+  int csr, link_list_status;
+  int fpga;
+
+  int val;
+  int status;
+  char * dac_type;
+
+  fpga = dac2fpga(dac);
+  if (fpga < 0) {
+    return -1;
+  }
+
+  if (gBitFileVersion < VERSION_ELL) {
+    dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
+    return -1;
+  }
+
+  csr = FPGA_OFF_CSR;
+
+  // setup register addressing based on DAC
+  switch(dac) {
+    case 0:
+      // fall through
+    case 2:
+      dac_type = ENVELOPE;
+      link_list_status  = CSRMSK_ENVLLSTATUS_ELL;
+      break;
+    case 1:
+      // fall through
+    case 3:
+      dac_type = PHASE;
+      link_list_status  = CSRMSK_PHSLLSTATUS_ELL;
+      break;
+    default:
+      return -2;
+  }
+  // read CSR
+  val = APS_ReadFPGA(device, gRegRead | csr, fpga);
+  status = (val & link_list_status) == link_list_status;
+
+  dlog(DEBUG_INFO,"CSR = 0x%x LL Status = %i\n", val,status);
+
+  return status;
 }
 
