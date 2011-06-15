@@ -46,11 +46,9 @@ function LinkListUnitTest2
     validate = 0;
     
     %% Get Link List Sequence and Convert To APS Format
-    sequence = aps.LinkListSequences(4);
+    sequence = aps.LinkListSequences(1);
     [wf1, banks1] = aps.convertLinkListFormat(sequence{1}.llpatx,useVarients);
     %[wf2, banks2] = aps.convertLinkListFormat(sequence.llpaty,useVarients);
-    
-    aps.verbose = 1;
     
     % erase any existing link list memory
     aps.clearLinkListELL(0);
@@ -65,6 +63,8 @@ function LinkListUnitTest2
     % copy same LL into channel 1 for test
     aps.setFrequency(1, wf1.sample_rate);
     aps.loadWaveform(1, wf1.data, wf1.offset);
+    
+    aps.verbose = 1;
     
     fprintf('Sequence has %d bank(s)\n', length(banks1));
     for i = 1:length(banks1)
@@ -94,7 +94,7 @@ function LinkListUnitTest2
     scope.acquire();
     %aps.triggerFpga(0,aps.TRIGGER_HARDWARE);
     aps.triggerWaveform(0,aps.TRIGGER_HARDWARE);
-    aps.triggerWaveform(1,aps.TRIGGER_HARDWARE);
+    %aps.triggerWaveform(1,aps.TRIGGER_HARDWARE);
     success = scope.wait_for_acquisition(10);
     if success ~= 0
         error('failed to acquire waveform')

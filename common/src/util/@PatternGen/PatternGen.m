@@ -320,13 +320,15 @@ classdef PatternGen < handle
             yWaveformTable = java.util.Hashtable;
             
             padWaveform = [0];
-            padWaveformKey = java.util.Arrays.deepHashCode(padWaveform);
+            %padWaveformKey = java.util.Arrays.deepHashCode(padWaveform);
             
             if ~libisloaded('libaps')
                 md5 = java.security.MessageDigest.getInstance('MD5');
             else
                 sha1key = libpointer('stringPtr','                                        ');
             end
+            
+            padWaveformKey = hashArray(padWaveform);
             
             function h = hashArray(array)
                 % this hash array function was causing performance problems

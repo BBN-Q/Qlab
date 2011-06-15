@@ -42,7 +42,7 @@ switch sequence
         pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dPulseLength', piWidth, 'cycleLength', cycleLength);
         
         numsteps = 50;
-        %numsteps = 1;
+        %numsteps = 4;
         stepsize = 15;
         delaypts = 0:stepsize:(numsteps-1)*stepsize;
         

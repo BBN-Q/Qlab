@@ -833,13 +833,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                             entry.repeat);
                     end
                     
+                    % for test, put trigger on first entry of every mini-LL
                     if j == 1
                         entry.hasTrigger = 1;
                     end
                     
                     [offsetVal countVal] = entryToOffsetCount(aps,entry,waveformLibrary, j == 1, j == lenLL - 1);
-                    
-                    
                     
                     % if we are at end end of the link list entry but this is
                     % not the last of the link list entries set the mini link
@@ -855,9 +854,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                             entry.isTimeAmplitude, entry.isZero);
                     end
                     
-                     if idx == 1
+                    % for first mini-LL entry only, set LS bit
+                    if idx == 1
                         offsetVal = bitor(offsetVal, aps.ELL_FIRST_ENTRY); 
-                     end
+                    end
                     
                     triggerVal = aps.entryToTrigger(j == lenLL);
                     
@@ -867,9 +867,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     
                    
                     
-                    % TODO: hard coded repeat count of 10000
+                    % TODO: hard coded repeat count of 1
                     if j == lenLL
-                        repeat = uint16(1000);
+                        repeat = uint16(1);
                         banks{curBank}.repeat(idx) = repeat;
                     else
                         banks{curBank}.repeat(idx) = 0;
