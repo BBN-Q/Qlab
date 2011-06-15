@@ -49,11 +49,18 @@ classdef APSWaveform < handle
        link_list_enable = 0;  % 1 -- Enable 2 -- Disable
        link_list_mode = 0;    % 1 -- DC 2 -- waveform
        
-       have_link_list = 0;
+       have_link_list = false;
        link_list_offset = [];
        link_list_counts = [];
        
-       have_time_amplitude
+       % MQCO APS 0x10 additions
+       link_list_trigger = [];
+       link_list_repeat = [];
+       ell = false;
+       ellData = [];
+       link_list_repeatCount = 0;
+       
+       have_time_amplitude = false;
        time_pairs = [];
        amplitude_pairs = [];
        
@@ -271,13 +278,18 @@ classdef APSWaveform < handle
          
            load(UImatFile)
            
+           %% Check for standard waveform vec
+           
            if (exist('WFVec', 'var'))
                wf.data = WFVec;
-           else
+           elseif ~(exist('linkList16','var'))
                wf.log('Waveform file does not have WFVec variable');
                wf.data = [];
            end;
 
+           %% Look for link list / time amplitude file version
+           %% prior to MQCO APS version 0x10
+           
            if (exist('ll_offsets','var'))
                wf.log('Loaded Link List Offsets');
                wf.link_list_offset = ll_offsets;
@@ -330,8 +342,72 @@ classdef APSWaveform < handle
                end
            end  
            
+           %% Test for MQCO APS Version 0x10 file format
+           
+           wf.ell = false;
+           if exist('linkList16','var')
+               wf.data = linkList16.waveformLibrary;
+               wf.ellData = linkList16;
+               wf.ell = true;
+                if ~wf.check_ell_format()
+                  wf.log('Warning APS 0x10 Link List is not in the correct format');
+               else
+                   
+                   wf.have_link_list = 1;
+                   wf.log('Found APS 0x10 Link List');
+               end
+           end
+           
        end
        
+        function valid = check_ell_format(wf)
+            valid = 0;
+            
+            requiredFields = {'offset', 'count', 'trigger', 'repeat', 'length'};
+            
+            matchingLengthIdx = [1 2 3 4];
+            
+            if isempty(wf.ellData)
+                wf.log('ELL link list is empty');
+                return
+            end
+            
+            if ~isfield(wf.ellData,'bankA')
+                wf.log('ELL link list is required to have a bank A')
+                return
+            end
+            
+            if ~isfield(wf.ellData,'repeatCount')
+                wf.log('ELL link list is required to have a repeat count');
+                return
+            end
+            
+            for i = 1:length(requiredFields)
+                if ~isfield(wf.ellData.bankA,requiredFields{i})
+                    wf.log(sprintf('ELL Bank is required to have field %s', requiredFields{i}))
+                end
+                if isfield(wf.ellData,'bankB')
+                    if ~isfield(wf.ellData.bankB,requiredFields{i})
+                        wf.log(sprintf('ELL Bank is required to have field %s', requiredFields{i}))
+                    end
+                end
+            end
+            
+            for i = matchingLengthIdx
+                if length(wf.ellData.bankA.(requiredFields{1})) ~= length(wf.ellData.bankA.(requiredFields{i}))
+                    wf.log(sprintf('ELL Bank Fields must match length'))
+                end
+                if isfield(wf.ellData,'bankB')
+                    if length(wf.ellData.bankB.(requiredFields{1})) ~= length(wf.ellData.bankB.(requiredFields{i}))
+                        wf.log(sprintf('ELL Bank Fields must match length'))
+                    end
+                end
+            end
+            
+            valid = 1;
+        end
+        
+        
        
        function prep_time_amplitude_pairs(wf)
             amps = [];
@@ -370,6 +446,17 @@ classdef APSWaveform < handle
             wf.have_link_list = 1;
        end
        	   
+       function ell = get_ell_link_list(wf)
+           if ~wf.ell
+               ell = [];
+               ell.len = 0;
+               return
+           end
+           
+           ell =  wf.ellData;
+            ell.len = length(wf.ellData.bankA.offset);
+       end
+       
        function [offsets, counts, link_list_length] = get_link_list(wf)
             
             offsets = wf.link_list_offset;

@@ -62,13 +62,18 @@ classdef guifunctions < handle
         
         last_file_path = '';
        
+        handles = [];
     end
     
     properties %(Access = 'private')
-        ll_gui_enable = 'Off';
+        ll_gui_enable = {'Off','Off' ,'Off','Off'};
+        ll_dc_enable = {'Off','Off' ,'Off','Off' };
+        
+        ll_ell = false;
         
         bitFileVersion_8K = 5;
         bitFileVersion_link_list = 4;
+        bitFileVersion_ell = 16;
     end
     
     properties (Transient=true)
@@ -83,6 +88,7 @@ classdef guifunctions < handle
             % mainwindow.m to populate the Device popup menu.
             gf.message_manager = msgmanager(handles);
             
+            gf.handles = handles;
             
             % handle being inside and outside experiment framework
             
@@ -120,11 +126,9 @@ classdef guifunctions < handle
         
         function open_dac(gui, id,versionHandle)
             % Open the dac device (index 0) based on GUI id (index 1)
-            gui.dac.open(id-1);
+            gui.dac.open(id-1, gui.dac.FORCE_OPEN);
             if (gui.dac.is_open)
-                ver = gui.dac.readBitFileVersion();
-                gui.bit_file_version = ver;
-                set(versionHandle,'String', sprintf('%i', ver));
+                gui.getBitFileVersion(versionHandle);
             end
         end
         
@@ -150,6 +154,22 @@ classdef guifunctions < handle
             end
             gui.waveforms(id+1).set_file(file_name,file_path);
             set(gui_handle,'String',file_name)
+        end
+        
+        function set_aps_R16_mode(gui)
+            gui.ll_ell = true; % enable enhanced link list mode
+            for id = 0:3
+                ll = sprintf('cb_ll_dc_%i', id);
+                set(gui.handles.(ll), 'String', 'One Shot');
+            end
+        end
+        
+        function set_aps_R5_mode(gui)
+            gui.ll_ell = false; % disable enhanced link list mode
+            for id = 0:3
+                ll = sprintf('cb_ll_dc_%i', id);
+                set(gui.handles.(ll), 'String', 'DC Mode');
+            end
         end
         
         function set_wf_scale_factor(gui,id,hObject)
@@ -214,21 +234,27 @@ classdef guifunctions < handle
             set(versionHandle,'String', sprintf('Loading ...'));
             gui.dac.loadBitFile(filename);
             
-            ver = gui.dac.readBitFileVersion();
+            gui.getBitFileVersion(versionHandle);
             
+        end
+        
+        function getBitFileVersion(gui,versionHandle)
+            ver = gui.dac.readBitFileVersion();
+            gui.bit_file_version = ver;
+            set(versionHandle,'String', sprintf('%i', ver));
+           
             if (ver >= gui.bitFileVersion_8K)
                 for i = 1:4
                     gui.waveforms(i).set_8k_mode()
                 end
             end
             
-            set(versionHandle,'String', sprintf('%i', ver));
+            if ver >= gui.bitFileVersion_ell
+                gui.set_aps_R16_mode();
+            else
+                gui.set_aps_R5_mode();
+            end
             
-        end
-        
-        function getBitFileVersion(gui,handle)
-            ver = gui.dac.readBitFileVersion();
-            set(handle,'String',num2str(ver));
         end
         
         function load(gui,filename)
@@ -288,8 +314,7 @@ classdef guifunctions < handle
                 else
                     gui.set_waveform_buttons_enable(handles,id,'Off');
                 end
-                
-                
+
             end
         end
         
@@ -309,8 +334,14 @@ classdef guifunctions < handle
             vec = wf.get_vector();
             offset = 0;  % force offset to be zero
                          % as the wf.offset is now being used for a DC level
-           
-            gui.dac.loadWaveform(id,vec, offset)
+            if ~wf.ell
+                gui.dac.loadWaveform(id,vec, offset)
+            else
+                %% ell link lists use wf.data not wf.get_vector
+                %% need to understand why
+                gui.dac.clearLinkListELL(id); 
+                gui.dac.loadWaveform(id,wf.data,0);
+            end
             
             gui.set_ctrl_enable(handles,id,'pb_trigger_wf', 'On');
             
@@ -319,22 +350,53 @@ classdef guifunctions < handle
             gui.set_ctrl_enable(handles,id,'cb_simultaneous', 'On');
             
             if (gui.bit_file_version >= gui.bitFileVersion_link_list)
-                [offsets, counts, ll_len] = wf.get_link_list();
-                if (ll_len > 0)
-                    gui.dac.loadLinkList(id,offsets,counts,ll_len);
-                    
-                    gui.ll_gui_enable = 'On';
-                else
-                    gui.ll_gui_enable = 'Off';
-                    
-                end
+               
+                gui.ll_gui_enable{id+1} = 'Off';
+                gui.ll_dc_enable{id+1} = 'Off';
                 
+                if ~wf.ell
+                    
+                    [offsets, counts, ll_len] = wf.get_link_list();
+                    if (ll_len > 0)
+                        if gui.bit_file_version >= gui.bitFileVersion_ell
+                            errordlg('APS Bitfile does not support R5 version link list files');
+                        else
+                            gui.dac.loadLinkList(id,offsets,counts,ll_len);
+                            
+                            gui.ll_gui_enable{id+1} = 'On';
+                            gui.ll_dc_enable{id+1} = 'On';
+                        end
+                    end
+                else
+                    ell = wf.get_ell_link_list();
+                    if isfield(ell,'bankA') && ell.bankA.length > 0
+                        if (gui.bit_file_version < gui.bitFileVersion_ell)
+                            errordlg('APS Bitfile does not support R16 version link list files');
+                        else
+                            
+                            bankA = ell.bankA;
+                            
+                            gui.dac.loadLinkListELL(id,bankA.offset,bankA.count, ...
+                                bankA.trigger, bankA.repeat, bankA.length, 0);
+                            
+                            if isfield(ell,'bankB')
+                                bankB = ell.bankB;
+                                gui.dac.loadLinkListELL(id,bankB.offset,bankB.count, ...
+                                    bankB.trigger, bankB.repeat, bankB.length, 1);
+                            end
+                                
+                            gui.dac.setLinkListRepeat(id,ell.repeatCount);
+                            gui.ll_gui_enable{id+1} = 'On';
+                            gui.ll_dc_enable{id+1} = 'On';
+                        end
+                    end
+                end
                 % enable link list controls
                 ll = eval(sprintf('handles.cb_ll_enable_%i', id));
-                set(ll, 'Enable', gui.ll_gui_enable);
+                set(ll, 'Enable', gui.ll_gui_enable{id+1});
                 
                 ll = eval(sprintf('handles.cb_ll_dc_%i', id));
-                set(ll, 'Enable', gui.ll_gui_enable);
+                set(ll, 'Enable', gui.ll_gui_enable{id+1});
             end
         end
         
@@ -397,8 +459,8 @@ classdef guifunctions < handle
                 gui.set_ctrl_enable(handles,id,'pm_wf_trigger', 'On');
                 gui.set_ctrl_enable(handles,id,'pm_wf_sample_rate', 'On');
                 
-                gui.set_ctrl_enable(handles,id,'cb_ll_enable',  gui.ll_gui_enable);
-                gui.set_ctrl_enable(handles,id,'cb_ll_dc',  gui.ll_gui_enable);
+                gui.set_ctrl_enable(handles,id,'cb_ll_enable',  gui.ll_gui_enable{id+1});
+                gui.set_ctrl_enable(handles,id,'cb_ll_dc',  gui.ll_gui_enable{id+1});
             end
         end
         
@@ -415,8 +477,8 @@ classdef guifunctions < handle
                 gui.set_ctrl_enable(handles,id,'pm_wf_sample_rate', 'On');
                 gui.set_ctrl_enable(handles,id,'pb_load_wf', 'On');
                 
-                gui.set_ctrl_enable(handles,id,'cb_ll_enable', gui.ll_gui_enable);
-                gui.set_ctrl_enable(handles,id,'cb_ll_dc',  gui.ll_gui_enable);
+                gui.set_ctrl_enable(handles,id,'cb_ll_enable', gui.ll_gui_enable{id+1});
+                gui.set_ctrl_enable(handles,id,'cb_ll_dc',  gui.ll_dc_enable{id+1});
                 
             end
         end
@@ -428,12 +490,14 @@ classdef guifunctions < handle
             
             if (gui.bit_file_version >= gui.bitFileVersion_link_list)
                 % setup link list
-                enable = eval(sprintf('handles.cb_ll_enable_%i', id));
-                dc = eval(sprintf('handles.cb_ll_dc_%i', id));
-                enable = get(enable, 'Value');
-                dc = get(dc, 'Value');
-                
                 if (gui.waveforms(id+1).have_link_list)
+                    enable = eval(sprintf('handles.cb_ll_enable_%i', id));
+                    dc = eval(sprintf('handles.cb_ll_dc_%i', id));
+                    
+                    
+                    enable = get(enable, 'Value');
+                    dc = get(dc, 'Value');
+                
                     gui.dac.setLinkListMode(id, enable,dc);
                 end
             end
