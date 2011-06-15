@@ -67,11 +67,11 @@ aps.verbose = 1;
 %% Load Bit File
 ver = aps.readBitFileVersion();
 fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
-%if ver ~= aps.expected_bit_file_ver
+if ver ~= aps.expected_bit_file_ver
 aps.loadBitFile();
 ver = aps.readBitFileVersion();
 fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
-%end
+end
 
 aps.verbose = 0;
 
@@ -157,7 +157,7 @@ for seq = 1:length(sequences)
         for i = 1:length(banks)
             cb = banks{i};
             
-            cb.offset(end) = bitxor(cb.offset(end), aps.ELL_FIRST_ENTRY);
+            %cb.offset(end) = bitxor(cb.offset(end), aps.ELL_FIRST_ENTRY);
             
             aps.loadLinkListELL(0,cb.offset,cb.count, cb.trigger, cb.repeat, cb.length, 0, validate)
             aps.loadLinkListELL(0,cb.offset,cb.count, cb.trigger, cb.repeat, cb.length, 1, validate)
@@ -175,7 +175,7 @@ for seq = 1:length(sequences)
             cb1 = banks1{1};
             cb2 = banks2{1};
             linkList16 = convertGUIFormat(wf, cb1, cb2);
-            keyboard
+            
 
             % fill bank A and bank B on channel 0
             aps.loadLinkListELL(0,cb1.offset,cb1.count, cb1.trigger, cb1.repeat, cb1.length, 0, validate)

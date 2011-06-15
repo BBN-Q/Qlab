@@ -328,6 +328,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.log(sprintf('Read %i bytes.', DataCount));
             
             aps.programFPGA(DataVec, DataCount,Sel);
+            fclose(DataFileID);
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -810,7 +811,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 
                 if 1 % WARNING forcing new bank for every entry
                 if (idx + lenLL) > aps.max_ll_length
-                    [banks{curBank} idx] = trimBank(banks{curBank},idx-1);
+                    banks{curBank} = trimBank(banks{curBank},idx-1);
                     curBank = curBank + 1;
                     [banks{curBank} idx] = allocateBank();
                 end
@@ -1039,6 +1040,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         LinkListFormatUnitTest(sequence)
         
         LinkListUnitTest(sequence, dc_offset)
+        LinkListUnitTest2
         
         sequence = LinkListSequences(sequence)
         
