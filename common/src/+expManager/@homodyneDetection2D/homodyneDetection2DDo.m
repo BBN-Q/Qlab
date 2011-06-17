@@ -35,10 +35,15 @@ end
 % Loop is a reparsing of the strucutres LoopParams and TaskParams that we
 % will use in this method
 Loop = obj.populateLoopStructure;
-if isempty(Loop.one)
-    Loop.one.steps = 1;
+
+% Loop 1 contains the time step information in the pattern file segments
+times = Loop.one.points;
+
+% Loop 2 is what we iterate over
+if isempty(Loop.two)
+    Loop.two.steps = 1;
 else
-    setLoop1Params = true;
+    setLoop2Params = true;
     if isempty(figureHandle2D), figureHandle2D = figure; end
 end
 
@@ -92,10 +97,12 @@ end
 %         Q2D = zeroes(xpts,Loop.one.steps);
 I2D = [];
 Q2D = [];
-for loop1_index = 1:Loop.one.steps
-    if setLoop1Params
-        Loop.one.sweep.step(loop1_index);
-        fprintf('Loop 1: Step %d of %d\n', [loop1_index, Loop.one.steps]);
+% loop "1" contains the time step information in the pattern file segments
+% so, we iterate over loop 2
+for loop2_index = 1:Loop.two.steps
+    if setLoop2Params
+        Loop.two.sweep.step(loop2_index);
+        fprintf('Loop 1: Step %d of %d\n', [loop2_index, Loop.two.steps]);
     end
     
     if ~SD_mode
@@ -183,14 +190,14 @@ for loop1_index = 1:Loop.one.steps
             figure(figureHandle);
             subplot(2,1,1)
             %plot(iavg);
-            plot(amp);
+            plot(times, amp);
             ylabel('I Voltage');
             grid on
             %axis tight
             subplot(2,1,2)
             %cla
             %plot(qavg);
-            plot(phase);
+            plot(times, phase);
             ylabel('Q Voltage');
             grid on
             
@@ -208,25 +215,25 @@ for loop1_index = 1:Loop.one.steps
         Q2D = [Q2D phase];
         
         % display 2D data sets if there is a loop
-        if Loop.one.steps > 1
-            y_range = Loop.one.sweep.points;
+        if Loop.two.steps > 1
+            y_range = Loop.two.sweep.points;
             figure(figureHandle2D);
             subplot(2,1,1);
-            imagesc(1:length(iavg), y_range(1:loop1_index), I2D');
+            imagesc(times, y_range(1:loop2_index), I2D');
             title('I')
-            xlabel('Segment number')
-            ylabel(Loop.one.sweep.name)
+            xlabel('Time (ns)')
+            ylabel(Loop.two.sweep.name)
             axis tight;
             subplot(2,1,2);
-            imagesc(1:length(iavg), y_range(1:loop1_index), Q2D');
+            imagesc(times, y_range(1:loop2_index), Q2D');
             title('Q')
-            xlabel('Segment number')
-            ylabel(Loop.one.sweep.name)
+            xlabel('Time (ns)')
+            ylabel(Loop.two.sweep.name)
             axis tight;
         end
         
     else
-        percentComplete = 100*(loop1_index-1 + (loop2_index)/Loop.two.steps)/Loop.one.steps;
+        percentComplete = 100*(loop2_index-1 + (loop2_index)/Loop.two.steps)/Loop.one.steps;
         fprintf(fid,'%d\n',percentComplete);
     end
 end

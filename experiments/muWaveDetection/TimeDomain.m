@@ -125,11 +125,13 @@ FreqAtab = uitab('parent', sweepsTabGroup, 'title', 'Freq A');
 Powertab = uitab('parent', sweepsTabGroup, 'title', 'Power');
 Phasetab = uitab('parent', sweepsTabGroup, 'title', 'Phase');
 DCtab = uitab('parent', sweepsTabGroup, 'title', 'DC');
+Timetab = uitab('parent', sweepsTabGroup, 'title', 'Time');
 
 get_freqA_settings = sweepGUIs.FrequencySweepGUI(FreqAtab, 5, 2, 'A');
 get_power_settings = sweepGUIs.PowerSweepGUI(Powertab, 5, 2, '');
 get_phase_settings = sweepGUIs.PhaseSweepGUI(Phasetab, 5, 2, '');
 get_dc_settings = sweepGUIs.DCSweepGUI(DCtab, 5, 2, '');
+get_time_settings = sweepGUIs.TimeSweepGUI(Timetab, 5, 2, '');
 
 % add sweep/loop selector
 fastLoop = labeledDropDown(mainWindow, [775 550 120 25], 'Fast Loop', ...
@@ -197,17 +199,20 @@ set(mainWindow, 'Visible', 'on');
 		settings.SweepParams.power = get_power_settings();
 		settings.SweepParams.phase = get_phase_settings();
 		settings.SweepParams.dc = get_dc_settings();
+        settings.SweepParams.time = get_time_settings();
 		% add 'nothing' sweep
 		settings.SweepParams.nothing = struct('type', 'sweeps.Nothing');
 		
-		% label fast and slop loops as sweeps 1 and 2
-		settings.SweepParams.(get_selected(fastLoop)).number = 1;
+        % time is always sweep number 1
+        % label fast loop as sweep 2
+        settings.SweepParams.time.number = 1;
+		settings.SweepParams.(get_selected(fastLoop)).number = 2;
 		
 		% get other experiment settings
 		settings.ExpParams.digitalHomodyne = get_digitalHomodyne_settings();
         settings.ExpParams.filter = get_boxcarFilter_settings();
         settings.ExpParams.softAvgs = str2double(get(softAvgs, 'String'));
-		settings.displayScope = get(scopeButton, 'Value');;
+		settings.displayScope = get(scopeButton, 'Value');
 		settings.SoftwareDevelopmentMode = 0;
         
         % get file path, counter, device name, and experiment name
