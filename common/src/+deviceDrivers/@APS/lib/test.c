@@ -34,7 +34,7 @@
 #ifdef __CYGWIN__
 	#include "windows.h"
 #elif __APPLE__
-	#include "wintypes.h"
+	#include "WinTypes.h"
 	#include <dlfcn.h>
 #else
 	#include "WinTypes.h"
@@ -259,13 +259,13 @@ int main (int argc, char** argv) {
 
 	int id;
 	for(cnt = 0; cnt < argc; cnt++) {
-		if (strcmpi(argv[cnt],"-t") == 0)
+		if (strcmp(argv[cnt],"-t") == 0)
 			doToggleTest(hdll,argv[cnt+1]);
-		if (strcmpi(argv[cnt],"-ks") == 0)
+		if (strcmp(argv[cnt],"-ks") == 0)
 			listserials();
-		if (strcmpi(argv[cnt],"-s") == 0)
+		if (strcmp(argv[cnt],"-s") == 0)
 			serials();
-		if (strcmpi(argv[cnt],"-h") == 0)
+		if (strcmp(argv[cnt],"-h") == 0)
 			printHelp();
 	}
 

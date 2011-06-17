@@ -17,7 +17,7 @@
 #endif
 
 #ifdef __APPLE__
-	#include "wintypes.h"
+	#include "WinTypes.h"
 #endif
 
 #ifdef __linux__

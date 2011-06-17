@@ -35,6 +35,7 @@
 #include "ftd2xx.h"
 #include "sha1.h"
 #include <stdio.h>
+#include <stdarg.h>
 
 extern gRegRead; // external global reg read value from fpga.c
 
@@ -69,7 +70,7 @@ extern gRegRead; // external global reg read value from fpga.c
 	#define LIBFILE "ftd2xx.dll"
 #elif __APPLE__
 	#define LIBFILE "libftd2xx.dylib"
-	#include <wintypes.h>
+	#include <WinTypes.h>
 #else
 	#define LIBFILE "libftd2xx.so"
 	#include <WinTypes.h>

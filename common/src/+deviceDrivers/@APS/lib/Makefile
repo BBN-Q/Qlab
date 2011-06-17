@@ -75,5 +75,5 @@ clean:
 	rm -f *.o *.dylib *.dll test *.exe *.a
 	
 test: test.c ${LIBNAME}
-	${CC} ${OSFLAG} ${LFLAGS} -I./include -o test test.c
+	${CC} ${CFLAGS3} ${LFLAGS} -o test test.c
 	
