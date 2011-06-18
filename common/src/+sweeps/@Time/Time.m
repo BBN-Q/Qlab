@@ -38,7 +38,7 @@ classdef Time < sweeps.Sweep
 			% generate time points
 			start = SweepParams.start;
 			step = SweepParams.step;
-            stop = start + obj.numSegments * step;
+            stop = start + (obj.numSegments - 1) * step;
 
 			obj.points = start:step:stop;
 			

@@ -37,7 +37,7 @@ end
 Loop = obj.populateLoopStructure;
 
 % Loop 1 contains the time step information in the pattern file segments
-times = Loop.one.points;
+times = Loop.one.plotRange;
 
 % Loop 2 is what we iterate over
 if isempty(Loop.two)
@@ -191,6 +191,7 @@ for loop2_index = 1:Loop.two.steps
             subplot(2,1,1)
             %plot(iavg);
             plot(times, amp);
+            xlabel('Time (ns)')
             ylabel('I Voltage');
             grid on
             %axis tight
@@ -198,6 +199,7 @@ for loop2_index = 1:Loop.two.steps
             %cla
             %plot(qavg);
             plot(times, phase);
+            xlabel('Time (ns)')
             ylabel('Q Voltage');
             grid on
             
