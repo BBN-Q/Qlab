@@ -25,7 +25,7 @@ classdef Time < sweeps.Sweep
 			end
 			obj.name = 'Time';
             
-            if ~sweepPtsOnly
+            %if ~sweepPtsOnly
                 % look for an instrument with the name 'scope'
                 if isfield(Instr, 'scope')
                     settings = Instr.scope.averager;
@@ -33,7 +33,7 @@ classdef Time < sweeps.Sweep
                 else
                     error('Could not infer number of segments');
                 end
-            end
+            %end
 			
 			% generate time points
 			start = SweepParams.start;

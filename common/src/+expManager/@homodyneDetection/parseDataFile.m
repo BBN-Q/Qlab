@@ -3,6 +3,7 @@ function [data, h1, h2] = parseDataFile(obj,makePlot)
 filename = [obj.DataPath '/' obj.DataFileName];
 % process header
 obj.inputStructure = parseParamFile(filename,1);
+obj.Instr = obj.inputStructure.InstrParams;
 
 % read data
 fid = fopen(filename);
