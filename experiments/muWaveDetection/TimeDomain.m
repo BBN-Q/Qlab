@@ -206,7 +206,9 @@ set(mainWindow, 'Visible', 'on');
         % time is always sweep number 1
         % label fast loop as sweep 2
         settings.SweepParams.time.number = 1;
-		settings.SweepParams.(get_selected(fastLoop)).number = 2;
+        if ~strcmp(get_selected(fastLoop), 'Nothing')
+            settings.SweepParams.(get_selected(fastLoop)).number = 2;
+        end
 		
 		% get other experiment settings
 		settings.ExpParams.digitalHomodyne = get_digitalHomodyne_settings();
