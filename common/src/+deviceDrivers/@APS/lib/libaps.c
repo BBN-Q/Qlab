@@ -1146,12 +1146,12 @@ APS_SPI_REC PllFinish[] =
   0x232, 0x1   // Set bit 0 to 1 to simultaneously update all registers with pending writes.
 };
 
-EXPORT int APS_SetPllFreq(int device, int dac, int freq)
+EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 {
   ULONG pll_cycles_addr, pll_bypass_addr;
   UCHAR pll_cycles_val, pll_bypass_val;
   UCHAR pll_enable_addr;
-  UCHAR pll_reset_addr, pll_reset_bit;
+  UINT pll_reset_addr, pll_reset_bit;
   UCHAR WriteByte, ReadByte;
   //int cnt, xor_flag_cnt;
   int fpga;
@@ -1248,33 +1248,37 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq)
 */
   // Test for DAC clock phase match
 
-#if 0
-  //sync_status |= 4;
   int test_cnt, cnt;
+  int inSync = 0;
 
-  for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
+  if (testLock) {
+    sync_status |= 4;
+    for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
 
-	  int xor_flag_cnt = 0;
-	  for(cnt = 0; cnt < 10; cnt++) {
-	    pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
-	    // pll xor bit in bit 15
-		  xor_flag_cnt += (pll_bit >> 15);
-	  }
+      int xor_flag_cnt = 0;
+      for(cnt = 0; cnt < 10; cnt++) {
+        pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
+        // pll xor bit in bit 15
+        xor_flag_cnt += (pll_bit >> 15);
+      }
 
-	  if (xor_flag_cnt > 5) {
-		// DAC outputs are out of sync
-		// disable output of clock to DAC
-      dlog(DEBUG_INFO,"Resetting PLLs are in sync\n");
-      APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reset_bit, fpga);
-	  } else {
-	    dlog(DEBUG_INFO,"APS PLLs are in sync\n");
-	    sync_status = sync_status & ~4;
-	    break;
-	  }
+      if (xor_flag_cnt > 5) {
+      // DAC outputs are out of sync
+      // disable output of clock to DAC
+        dlog(DEBUG_INFO,"PLLs not in sync resetting\n");
+        APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reset_bit, fpga);
+      } else {
+        dlog(DEBUG_INFO,"APS PLLs are in sync\n");
+        sync_status = sync_status & ~4;
+        inSync = 1;
+        break;
+      }
 
-  }
-#endif
+    }
+	}
 
+  if (inSync == 0) dlog(DEBUG_INFO,"Warning: PLLs are not in sync\n");
+  dlog(DEBUG_INFO,"Warning: sync_status %i\n", sync_status);
   return sync_status;
 }
 

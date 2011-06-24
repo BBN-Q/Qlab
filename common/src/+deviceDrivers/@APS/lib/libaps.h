@@ -78,7 +78,7 @@ EXPORT int APS_PauseFpga(int device, int dac);
 EXPORT int APS_DisableFpga(int device, int dac);
 
 EXPORT int APS_SetLinkListMode(int device, int enable, int mode, int dac);
-EXPORT int APS_SetPllFreq(int device, int dac, int freq);
+EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock);
 
 EXPORT int APS_ReadBitFileVersion(int device);
 EXPORT void APS_ReadLibraryVersion(void * buffer, int maxlen);
