@@ -44,8 +44,8 @@ LFLAGS=-ldl
 CC=gcc-3
 else
 CFLAGS=
-CFLAGS2=-mno-cygwin -DBUILD_DLL -I./include -Wunused-variable
-CFLAGS3=-mno-cygwin -I./include
+CFLAGS2=-mno-cygwin -D__CYGWIN__ -DBUILD_DLL -I./include -Wunused-variable
+CFLAGS3=-mno-cygwin -D__CYGWIN__ -I./include
 LIBNAME=libaps.dll
 EXFLAGS=-Wl,--out-implib,libaps.a
 LFLAGS=
