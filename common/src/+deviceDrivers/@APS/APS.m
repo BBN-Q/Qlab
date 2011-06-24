@@ -478,8 +478,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         function setFrequency(aps,id, freq)
+            testLock = 1;
             val = aps.librarycall(sprintf('Dac: %i Freq : %i', id, freq), ...
-                'APS_SetPllFreq',id,freq);
+                'APS_SetPllFreq',id,freq,testLock);
+            if val ~= 0
+                fprintf('Warning: APS::setFrequency returned %i\n', val);
+            end
+            
         end
         
         function setupPLL(aps)
@@ -737,7 +742,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function [wf, banks] = convertLinkListFormat(aps, pattern, useVarients, waveformLibrary)
+        function [wf, banks] = convertLinkListFormat(aps, pattern, useVarients, waveformLibrary, miniLinkRepeat)
             if aps.verbose
                fprintf('APS::convertLinkListFormat useVarients = %i\n', useVarients) 
             end
@@ -748,6 +753,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             if ~exist('waveformLibrary','var') || isempty(waveformLibrary)
                 waveformLibrary = aps.buildWaveformLibrary(pattern.waveforms, useVarients);
+            end
+            
+            if ~exist('miniLinkRepeat', 'var') || isempty(miniLinkRepeat)
+                miniLinkRepeat = 1;
             end
             
             wf = APSWaveform();
@@ -869,7 +878,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     
                     % TODO: hard coded repeat count of 1
                     if j == lenLL
-                        repeat = uint16(1);
+                        repeat = uint16(miniLinkRepeat);
                         banks{curBank}.repeat(idx) = repeat;
                     else
                         banks{curBank}.repeat(idx) = 0;
