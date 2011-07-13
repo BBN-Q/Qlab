@@ -209,9 +209,11 @@ classdef guifunctions < handle
             if (id == 0 || id == 1)
                 id1 = 0;
                 id2 = 1;
+                gui.dac.setFrequency(id1,val); % added BRJ
             elseif (id == 2 || id == 3)
                 id1 = 2;
                 id2 = 3;
+                gui.dac.setFrequency(id1,val);
             else
                 error('Bad DAC ID')
             end
@@ -343,6 +345,9 @@ classdef guifunctions < handle
                 gui.dac.loadWaveform(id,wf.data,0);
             end
             
+            % set frequency now
+            gui.dac.setFrequency(id,wf.sample_rate);
+            
             gui.set_ctrl_enable(handles,id,'pb_trigger_wf', 'On');
             
             set(handles.pb_trigger_all, 'Enable', 'On');
@@ -403,7 +408,7 @@ classdef guifunctions < handle
         function trigger_all(gui,handles)
             for id = 0:3
                  wf = gui.waveforms(id+1);
-                 gui.dac.setFrequency(id,wf.sample_rate);
+                 %gui.dac.setFrequency(id,wf.sample_rate);
             
                  if (gui.bit_file_version >= gui.bitFileVersion_link_list)
                      % setup link list
@@ -483,24 +488,28 @@ classdef guifunctions < handle
             end
         end
         
-        function trigger_waveform(gui,id, handles)
-            
-            wf = gui.waveforms(id+1);
-            gui.dac.setFrequency(id,wf.sample_rate);
-            
-            if (gui.bit_file_version >= gui.bitFileVersion_link_list)
+        function set_waveform_link_list(gui,id,handles)
+             if (gui.bit_file_version >= gui.bitFileVersion_link_list)
                 % setup link list
                 if (gui.waveforms(id+1).have_link_list)
                     enable = eval(sprintf('handles.cb_ll_enable_%i', id));
-                    dc = eval(sprintf('handles.cb_ll_dc_%i', id));
+                    mode = eval(sprintf('handles.cb_ll_dc_%i', id));
                     
                     
                     enable = get(enable, 'Value');
-                    dc = get(dc, 'Value');
+                    mode = get(mode, 'Value');
                 
-                    gui.dac.setLinkListMode(id, enable,dc);
+                    gui.dac.setLinkListMode(id, enable, mode);
                 end
             end
+        end
+        
+        function trigger_waveform(gui,id, handles)
+            
+            wf = gui.waveforms(id+1);
+            
+            % set link bit for triggering waveform
+            gui.set_waveform_link_list(id,handles)
             
             cb = eval(sprintf('handles.cb_simultaneous_%i', id));
             trigger_both = get(cb, 'Value');
@@ -509,8 +518,10 @@ classdef guifunctions < handle
                 gui.dac.triggerWaveform(id,wf.trigger_type);
                 handle_ids = [id];
             else
-                gui.dac.triggerFpga(id,wf.trigger_type);
                 id2 = gui.matching_dac(id+1);
+                % set link bit for matching waveform
+                gui.set_waveform_link_list(id2,handles)
+                gui.dac.triggerFpga(id,wf.trigger_type);
                 handle_ids = [id, id2];
             end
             
