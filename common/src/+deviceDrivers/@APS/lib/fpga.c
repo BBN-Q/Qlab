@@ -470,7 +470,7 @@ int APS_ClearBit(int device, int fpga, int addr, int mask)
 	int current_state;
 	current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
   if (gDebugLevel >= DEBUG_VERBOSE) {
-	  dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Writing 0x%x\n", current_state, current_state & ~mask);
+	  dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Writing 0x%x\n", addr, current_state, current_state & ~mask);
 	}
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state & ~mask, fpga);
 }
