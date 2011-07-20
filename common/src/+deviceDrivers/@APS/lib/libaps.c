@@ -1251,6 +1251,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
   int test_cnt, cnt;
   int inSync = 0;
 
+#if 1
   if (testLock) {
     sync_status |= 4;
     for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
@@ -1279,6 +1280,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 
   if (inSync == 0) dlog(DEBUG_INFO,"Warning: PLLs are not in sync\n");
   dlog(DEBUG_INFO,"Warning: sync_status %i\n", sync_status);
+#endif
   return sync_status;
 }
 

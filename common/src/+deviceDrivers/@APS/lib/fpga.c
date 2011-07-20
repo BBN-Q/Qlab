@@ -1469,6 +1469,13 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 		return -1;
 	}
 
+	if (gDebugLevel >= DEBUG_VERBOSE) {
+	    dlog(DEBUG_VERBOSE,"New CSR: %x TRIGLED %i\n",
+	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
+	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
+	    );
+	  }
+
 
 	return 0;
 }
