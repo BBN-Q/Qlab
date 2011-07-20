@@ -470,7 +470,7 @@ int APS_ClearBit(int device, int fpga, int addr, int mask)
 	int current_state;
 	current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
   if (gDebugLevel >= DEBUG_VERBOSE) {
-	  dlog(DEBUG_VERBOSE,"Current State: 0x%x Writing 0x%x\n", current_state, current_state & ~mask);
+	  dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Writing 0x%x\n", current_state, current_state & ~mask);
 	}
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state & ~mask, fpga);
 }
@@ -557,7 +557,7 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 	APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
 
   if (gDebugLevel >= DEBUG_VERBOSE) {
-	  dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED %i\n",
+	  dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
 		);
@@ -1444,7 +1444,7 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 	APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
 
 	if (gDebugLevel >= DEBUG_VERBOSE) {
-	  dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED %i\n",
+	  dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
 		);
