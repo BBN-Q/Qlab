@@ -352,9 +352,7 @@ classdef guifunctions < handle
             % set frequency now
             gui.dac.setFrequency(id,wf.sample_rate);
             
-            gui.set_ctrl_enable(handles,id,'pb_trigger_wf', 'On');
             
-            set(handles.pb_trigger_all, 'Enable', 'On');
             
             gui.set_ctrl_enable(handles,id,'cb_simultaneous', 'On');
             
@@ -400,6 +398,11 @@ classdef guifunctions < handle
                         end
                     end
                 end
+
+                % enable Trigger Controls
+                gui.set_ctrl_enable(handles,id,'pb_trigger_wf', 'On');
+                set(handles.pb_trigger_all, 'Enable', 'On');
+                
                 % enable link list controls
                 ll = eval(sprintf('handles.cb_ll_enable_%i', id));
                 set(ll, 'Enable', gui.ll_gui_enable{id+1});
