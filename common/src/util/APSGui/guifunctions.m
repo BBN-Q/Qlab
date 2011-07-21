@@ -336,6 +336,10 @@ classdef guifunctions < handle
             vec = wf.get_vector();
             offset = 0;  % force offset to be zero
                          % as the wf.offset is now being used for a DC level
+                         
+            gui.set_ctrl_enable(handles,id,'pb_trigger_wf', 'Off');
+            set(handles.pb_trigger_all, 'Enable', 'Off');
+            
             if ~wf.ell
                 gui.dac.loadWaveform(id,vec, offset)
             else
