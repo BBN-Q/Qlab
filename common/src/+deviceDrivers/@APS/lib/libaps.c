@@ -1152,6 +1152,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
   UCHAR pll_cycles_val, pll_bypass_val;
   UCHAR pll_enable_addr;
   UINT pll_reset_addr, pll_reset_bit;
+  UINT pll_reg_value;
   UCHAR WriteByte, ReadByte;
   //int cnt, xor_flag_cnt;
   int fpga;
@@ -1174,7 +1175,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 		pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
 		pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
 		pll_enable_addr = FPGA1_ENABLE_ADDR;
-		pll_reset_bit   = FPGA1_PLL_RESET_BIT;
+		pll_reset_bit   = CSRMSK_PHSPLLRST_ELL | CSRMSK_ENVPLLRST_ELL;
 		break;
 	case 2:
 		// fall through
@@ -1182,7 +1183,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 		pll_cycles_addr = FPGA2_PLL_CYCLES_ADDR;
 		pll_bypass_addr = FPGA2_PLL_BYPASS_ADDR;
 		pll_enable_addr = FPGA2_ENABLE_ADDR;
-		pll_reset_bit   = FPGA2_PLL_RESET_BIT;
+		pll_reset_bit   = CSRMSK_PHSPLLRST_ELL | CSRMSK_ENVPLLRST_ELL;
 	  break;
 	default:
 	  return -1;
@@ -1209,9 +1210,9 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 
   // by pass divider if freq == 1200
   if (freq == 1200) {
-	pll_bypass_val = 0x80;
+    pll_bypass_val = 0x80;
   } else {
-	pll_bypass_val = 0x00;
+    pll_bypass_val = 0x00;
   }
 
   dlog(DEBUG_INFO, "Setting PLL cycles addr: 0x%x val: 0x%x\n", pll_cycles_addr, pll_cycles_val);
@@ -1236,22 +1237,11 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 
   sync_status = 0;
 
-  // Test for PLL Lock
-
-  //APS_ReadReg(device, APS_STATUS_CTRL, 1, 0, &ReadByte);
-  //dlog("APS PLL Lock Bit = %i\n", ((ReadByte && APS_LOCK_BIT) == APS_LOCK_BIT));
-  /*
-  if (ReadByte && APS_LOCK_BIT != APS_LOCK_BIT) {
-    // We do not have a PLL Lock
-	sync_status |= 2;
-  }
-*/
   // Test for DAC clock phase match
 
   int test_cnt, cnt;
   int inSync = 0;
 
-#if 1
   if (testLock) {
     sync_status |= 4;
     for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
@@ -1267,7 +1257,13 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
       // DAC outputs are out of sync
       // disable output of clock to DAC
         dlog(DEBUG_INFO,"PLLs not in sync resetting\n");
-        APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reset_bit, fpga);
+
+        // Read PLL reg
+        pll_reg_value = APS_ReadFPGA(device, gRegRead | pll_reset_addr, fpga);
+        // Write PLL with bit set
+        APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reg_value | pll_reset_bit, fpga);
+        // Write original value
+        APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reg_value, fpga);
       } else {
         dlog(DEBUG_INFO,"APS PLLs are in sync\n");
         sync_status = sync_status & ~4;
@@ -1279,8 +1275,9 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 	}
 
   if (inSync == 0) dlog(DEBUG_INFO,"Warning: PLLs are not in sync\n");
+
   dlog(DEBUG_INFO,"Warning: sync_status %i\n", sync_status);
-#endif
+
   return sync_status;
 }
 

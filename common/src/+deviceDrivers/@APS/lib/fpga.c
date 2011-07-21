@@ -551,12 +551,6 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 	APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
 
   if (gDebugLevel >= DEBUG_VERBOSE) {
-	  dlog(DEBUG_VERBOSE,"Enable %s State Machine ... \n", dac_type);
-  }
-
-	APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
-
-  if (gDebugLevel >= DEBUG_VERBOSE) {
 	  dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
@@ -582,6 +576,11 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 		return -1;
 	}
 
+	if (gDebugLevel >= DEBUG_VERBOSE) {
+	    dlog(DEBUG_VERBOSE,"Enable %s State Machine ... \n", dac_type);
+	}
+
+	APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
 
 	return 0;
 }
@@ -1439,10 +1438,6 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 
 	APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
 
-	dlog(DEBUG_VERBOSE,"Enable %s State Machine ... \n", dac_type);
-
-	APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
-
 	if (gDebugLevel >= DEBUG_VERBOSE) {
 	  dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
@@ -1475,6 +1470,10 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
 	    );
 	  }
+
+	dlog(DEBUG_VERBOSE,"Enable %s State Machine ... \n", dac_type);
+
+	APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
 
 
 	return 0;
