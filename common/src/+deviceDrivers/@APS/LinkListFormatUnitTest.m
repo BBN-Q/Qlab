@@ -1,4 +1,4 @@
-function LinkListFormatUnitTest(sequence)
+function LinkListFormatUnitTest(sequence, useEndPadding)
 
 %% APS Enhanced Link List Unit Test
 %%
@@ -22,10 +22,15 @@ addpath('../../common/src/util/','-END');
 
 d = deviceDrivers.APS();
 d.dbgForceELLMode();
-d.verbose = 0;
+d.verbose = 1;
 
 if ~exist('sequence', 'var') || isempty(sequence)
     sequence = 1;
+end
+
+
+if ~exist('useEndPadding', 'var') || isempty(useEndPadding)
+    useEndPadding = 0;
 end
 
 sequences = deviceDrivers.APS.LinkListSequences(sequence);
@@ -120,13 +125,13 @@ sequences = deviceDrivers.APS.LinkListSequences(sequence);
             pause(.1);
             %keyboard
             %{
-            figure(2);
+            figure(3);
             clf
             plot(patLinkListX(i,:),'g');
             hold on
             plot(devLinkListX(i,:),'b');
             
-            %keyboard
+            keyboard
             %}
         end
     end
@@ -138,8 +143,14 @@ numSequences = length(sequences);
 % unify sequce waveform libraries
 [unifiedX unifiedY] = d.unifySequenceLibraryWaveforms(sequences);
 
-unifiedX = d.buildWaveformLibrary(unifiedX, useVarients);
-unifiedY = d.buildWaveformLibrary(unifiedY, useVarients);
+unifiedX = d.buildWaveformLibrary(unifiedX, useVarients, useEndPadding);
+unifiedY = d.buildWaveformLibrary(unifiedY, useVarients, useEndPadding);
+
+%{
+figure(2);
+plot(unifiedX.waveforms)
+%}
+
 
 for seq = 1:numSequences
     sequence = sequences{seq};
@@ -157,11 +168,10 @@ for seq = 1:numSequences
     
     
     d.verbose = 0;
-    
-    [wf, banks] = d.convertLinkListFormat(sequence.llpatx,useVarients,unifiedX);
+    [wf, banks] = d.convertLinkListFormat(sequence.llpatx,useVarients,unifiedX,1,useEndPadding);
     patternX = d.linkListToPattern(wf, banks);
     
-    [wf, banks] = d.convertLinkListFormat(sequence.llpaty,useVarients,unifiedY);
+    [wf, banks] = d.convertLinkListFormat(sequence.llpaty,useVarients,unifiedY,1,useEndPadding);
     patternY = d.linkListToPattern(wf, banks);
     
     for n = 1:sequence.numsteps;
@@ -199,9 +209,11 @@ for n = 1:numsteps;
 end
     %}
     
+    figure(1);
     plotPatterns(patternGenX, patLinkListX, devLinkListX, ...
         patternGenY, patLinkListY, devLinkListY,...
         patternGenMarker, patLinkListMarker, devLinkListMarker)
+    
 end
 end
 

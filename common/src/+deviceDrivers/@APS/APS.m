@@ -65,6 +65,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
     
     properties (Constant)
         ADDRESS_UNIT = 4;
+        MIN_PAD_SIZE = 4;
         
         ELL_MAX_WAVFORM = 8192;
         ELL_MAX_LL = 512;
@@ -522,7 +523,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         %% TODO: Clean up verbose messages
         
-        function library = buildWaveformLibrary(aps, waveforms, useVarients)
+        function library = buildWaveformLibrary(aps, waveforms, useVarients, useEndPadding)
             % convert baseWaveforms to waveform array suitable for the APS
             
             offsets = containers.Map('KeyType','char','ValueType','any');
@@ -534,13 +535,17 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             idx = 1;
             
+            if useEndPadding
+                endPadding = 4;
+            else
+                endPadding = 0;
+            end
+            
             % loop through waveform library
             keys = waveforms.keys();
             while keys.hasMoreElements()
                 key = keys.nextElement();
                 orgWF = waveforms.get(key);
-                
-
                 
                 varientWFs = {};
                 if useVarients
@@ -558,6 +563,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         wf(end+1) = 0;
                     end
                     wf(end+1:end+length(orgWF)) = orgWF;
+                    % add 8 extra zero points to handle
+                    % TA pairs of 0 and 1
+                    if useEndPadding
+                    for i = 1:endPadding
+                        wf(end+1) = 0;
+                    end
+                    end
 
                     % test for padding to mod 4
                     if length(wf) == 1
@@ -566,7 +578,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         wf = ones([1,aps.ADDRESS_UNIT]) * wf;
                     end
                     pad = aps.ADDRESS_UNIT - mod(length(wf),aps.ADDRESS_UNIT);
-                    if pad ~= 0 && pad < aps.ADDRESS_UNIT
+                    if pad ~= 0 && pad < aps.MIN_PAD_SIZE
                         % pad to length 4
                         wf(end+1:end+pad) = zeros([1,pad],'int16');
                     end
@@ -582,7 +594,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     end
                     if useVarients
                         varient.offset = idx;
-                        varient.length = length(wf);
+                        % set length of wf remove extra 8 points that
+                        % are used to handle 0 and 1 count TA
+                        varient.length = length(wf) - endPadding;
                         varient.pad = leadPad;
                         varientWFs{end+1} = varient;
                     end
@@ -594,7 +608,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             
             if idx > aps.max_waveform_points
-                throw(MException('APS:OutOfMemory','Waveform memory exceeds APS maximum'));
+                throw(MException('APS:OutOfMemory',sprintf('Waveform memory %i exceeds APS maximum of %i', idx, aps.max_waveform_points)));
             end
             
             % trim data to only points used
@@ -611,7 +625,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function [offsetVal countVal] = entryToOffsetCount(aps,entry,library, firstEntry, lastEntry)
+        function [offsetVal countVal ] = entryToOffsetCount(aps,entry,library, firstEntry, lastEntry)
             
             entryData.offset = library.offsets(entry.key);
             entryData.length = library.lengths(entry.key);
@@ -631,7 +645,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if aps.pendingLength > 0 && ~isempty(entryData.varientWFs)
                 % attempt to us a varient
                 padIdx = aps.pendingLength + 1;
-                assert(padIdx > 0 && padIdx <= 4,sprintf('Padding Index %i Out of Range', padIdx));
+                assert(padIdx > 0 && padIdx <= aps.ADDRESS_UNIT,sprintf('Padding Index %i Out of Range', padIdx));
                 if length(entryData.varientWFs) >= padIdx   % matlab index offset
                     varient = entryData.varientWFs(padIdx);
                     if iscell(varient), varient = varient{1}; end; % remove cell wrapper
@@ -698,7 +712,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if ~entry.isTimeAmplitude
                 countVal = fix(entryData.length/aps.ADDRESS_UNIT);
             else
-                countVal = fix(floor(entry.repeat / entryData.length));
+                countVal = fix(floor(entry.repeat / aps.ADDRESS_UNIT));
                 diff = entry.repeat - countVal * aps.ADDRESS_UNIT;
                 aps.pendingValue = library.waveforms(entryData.offset);
             end
@@ -718,6 +732,72 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 fprintf('\tExpected Length: %i Actual Length: %i Pending: %i \n',  ...
                     aps.expectedLength, aps.currentLength, aps.pendingLength);
             end
+        end
+        
+        function [offsetVal countVal ] = peakEntryToOffsetCount(aps,entry,library)            
+            entryData.offset = library.offsets(entry.key);
+            entryData.length = library.lengths(entry.key);
+            
+            if library.varients.isKey(entry.key)
+                entryData.varientWFs = library.varients(entry.key);
+            else
+                entryData.varientWFs = [];
+            end
+            
+            expectedLength = aps.expectedLength + entry.length * entry.repeat;
+            
+            % correct for changing in padding
+            
+            adjustNegative = 0;
+            
+            if aps.pendingLength > 0 && ~isempty(entryData.varientWFs)
+                % attempt to us a varient
+                padIdx = aps.pendingLength + 1;
+                assert(padIdx > 0 && padIdx <= aps.ADDRESS_UNIT,sprintf('Padding Index %i Out of Range', padIdx));
+                if length(entryData.varientWFs) >= padIdx   % matlab index offset
+                    varient = entryData.varientWFs(padIdx);
+                    if iscell(varient), varient = varient{1}; end; % remove cell wrapper
+                    entryData.offset = varient.offset;
+                    entryData.length = varient.length;
+                    assert(varient.pad == aps.pendingLength,'Pending length pad does not match');
+                    if aps.verbose
+                        fprintf('\tUsing WF varient with pad: %i\n', padIdx - 1);
+                    end
+                end
+            elseif aps.pendingLength < 0
+                % if pattern is running long and output is zero trim the length
+                % may get bumped back up
+                if entry.isZero
+                    entry.repeat = entry.repeat + aps.pendingLength;
+                    adjustNegative = 1;
+                    if aps.verbose
+                        fprintf('\tTrimming zero pad by: %i from %i\n', aps.pendingLength);
+                    end
+                end
+            end
+            
+            %% convert from 1 based count to 0 based count
+            %% div by 4 required for APS addresses
+            address = (entryData.offset - 1) / aps.ADDRESS_UNIT;
+            
+            offsetVal = bitand(address, aps.ELL_ADDRESS);  % address
+            
+            % use entryData to get length as it includes the padded
+            % length
+            if ~entry.isTimeAmplitude
+                countVal = fix(entryData.length/aps.ADDRESS_UNIT);
+            else
+                countVal = fix(floor(entry.repeat / aps.ADDRESS_UNIT));
+                diff = entry.repeat - countVal * aps.ADDRESS_UNIT;
+                aps.pendingValue = library.waveforms(entryData.offset);
+            end
+            if (~entry.isTimeAmplitude && countVal > aps.ELL_ADDRESS) || ...
+                    (entry.isTimeAmplitude && countVal > aps.ELL_TA_MAX)
+                error('Link List countVal %i is too large', countVal);
+            end
+            
+            currentLength = aps.currentLength + countVal * aps.ADDRESS_UNIT;
+            
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -742,7 +822,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function [wf, banks] = convertLinkListFormat(aps, pattern, useVarients, waveformLibrary, miniLinkRepeat)
+        function [wf, banks] = convertLinkListFormat(aps, pattern, useVarients, waveformLibrary, miniLinkRepeat, useEndPadding)
             if aps.verbose
                fprintf('APS::convertLinkListFormat useVarients = %i\n', useVarients) 
             end
@@ -750,6 +830,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if ~exist('useVarients','var') || isempty(useVarients)
                 useVarients = 0;
             end
+            
+            if ~exist('useEndPadding','var') || isempty(useVarients)
+                useEndPadding = 0;
+            end
+            
             
             if ~exist('waveformLibrary','var') || isempty(waveformLibrary)
                 waveformLibrary = aps.buildWaveformLibrary(pattern.waveforms, useVarients);
@@ -833,7 +918,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         [banks{curBank} idx] = allocateBank();
                    % end
                 end
-
+                
+                skipNext = 0;
                 for j = 1:lenLL
                     entry = linkList{j};
                     
@@ -848,6 +934,38 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     end
                     
                     [offsetVal countVal] = entryToOffsetCount(aps,entry,waveformLibrary, j == 1, j == lenLL - 1);
+
+                    if skipNext
+                        % skip after processing entryToOffsetCount
+                        % to make sure aps.pending* is set correctly
+                        skipNext = 0;
+                        continue
+                    end
+                    
+                    % get a peek at the next entry
+                    if useEndPadding && j ~= lenLL
+                        nextEntry = linkList{j+1};
+                        [offsetVal2 countVal2] = peakEntryToOffsetCount(aps,nextEntry,waveformLibrary);
+
+                        if countVal2 < 2      
+                            % if TA pair is less than 2 use extra padding at end
+                            % of waveform in library
+                            if nextEntry.isTimeAmplitude && nextEntry.isZero
+                                if aps.verbose
+                                    fprintf('Found TA & Z with count = %i. Adjusting waveform end.\n', countVal2);
+                                end
+                                countVal = countVal + countVal2;
+                                
+                                skipNext = 1;                            
+                            else
+                                fprintf('Warning: countVal2 < 2 but not TAZ\n')
+                            end
+                        end
+                    end
+                    
+                    if countVal < 2
+                        fprintf('Warning entry count < 2. This causes problems with APS\n')
+                    end
                     
                     % if we are at end end of the link list entry but this is
                     % not the last of the link list entries set the mini link
@@ -1046,7 +1164,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         %% UnitTest of Link List Format Conversion
         %% See: LinkListFormatUnitTest.m
-        LinkListFormatUnitTest(sequence)
+        LinkListFormatUnitTest(sequence,useEndPadding)
         
         LinkListUnitTest(sequence, dc_offset)
         LinkListUnitTest2
