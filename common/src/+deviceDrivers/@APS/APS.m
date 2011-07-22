@@ -255,7 +255,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function close(aps)
-            val = calllib('libaps','APS_Close',aps.device_id);
+            try
+                val = calllib('libaps','APS_Close',aps.device_id);
+            catch
+                val = 0;
+            end
             if (val == 0)
                 aps.log(sprintf('APS USB Connection Closed\n'));
             else

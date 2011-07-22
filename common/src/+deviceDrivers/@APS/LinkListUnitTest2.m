@@ -92,6 +92,7 @@ function LinkListUnitTest2
     scope = deviceDrivers.AgilentAP120();
     scope.setAll(settings.scope);
     scope.acquire();
+    pause(0.5);
     %aps.triggerFpga(0,aps.TRIGGER_HARDWARE);
     aps.triggerWaveform(0,aps.TRIGGER_HARDWARE);
     %aps.triggerWaveform(1,aps.TRIGGER_HARDWARE);
@@ -113,6 +114,7 @@ function LinkListUnitTest2
     
     aps.disableFpga(0);
     aps.close();
+    scope.disconnect();
 end
 
 % utility function for writing out bank memory to a mat file for
