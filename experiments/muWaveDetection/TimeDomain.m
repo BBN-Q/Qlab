@@ -125,17 +125,19 @@ FreqAtab = uitab('parent', sweepsTabGroup, 'title', 'Freq A');
 Powertab = uitab('parent', sweepsTabGroup, 'title', 'Power');
 Phasetab = uitab('parent', sweepsTabGroup, 'title', 'Phase');
 DCtab = uitab('parent', sweepsTabGroup, 'title', 'DC');
+TekChtab = uitab('parent', sweepsTabGroup, 'title', 'TekCh');
 Timetab = uitab('parent', sweepsTabGroup, 'title', 'Time');
 
 get_freqA_settings = sweepGUIs.FrequencySweepGUI(FreqAtab, 5, 2, 'A');
 get_power_settings = sweepGUIs.PowerSweepGUI(Powertab, 5, 2, '');
 get_phase_settings = sweepGUIs.PhaseSweepGUI(Phasetab, 5, 2, '');
 get_dc_settings = sweepGUIs.DCSweepGUI(DCtab, 5, 2, '');
+get_tekChannel_settings = sweepGUIs.TekChannelSweepGUI(TekChtab, 5, 2, '');
 get_time_settings = sweepGUIs.TimeSweepGUI(Timetab, 5, 2, '');
 
 % add sweep/loop selector
 fastLoop = labeledDropDown(mainWindow, [775 550 120 25], 'Fast Loop', ...
-	{'frequencyA', 'power', 'phase', 'dc', 'nothing'});
+	{'frequencyA', 'power', 'phase', 'dc', 'TekCh', 'nothing'});
 
 % add path and file controls
 get_path_and_file = path_and_file_controls(mainWindow, [910 525], commonSettings, prevSettings);
@@ -200,6 +202,7 @@ set(mainWindow, 'Visible', 'on');
 		settings.SweepParams.phase = get_phase_settings();
 		settings.SweepParams.dc = get_dc_settings();
         settings.SweepParams.time = get_time_settings();
+        settings.SweepParams.TekCh = get_tekChannel_settings();
 		% add 'nothing' sweep
 		settings.SweepParams.nothing = struct('type', 'sweeps.Nothing');
 		
