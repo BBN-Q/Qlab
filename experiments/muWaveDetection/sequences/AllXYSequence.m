@@ -16,22 +16,22 @@ fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
 numsteps = 50;
-piAmp = 7100;
-pi2Amp = 3550;
+piAmp = 7875;
+pi2Amp = 3200;
 sigma = 4;
-pulseType = 'gaussian';
-delta = -0.1; % DRAG parameter
+pulseType = 'drag';
+delta = -1.5; % DRAG parameter
 pulseLength = 4*sigma;
 
 % load correction matrix from file
-%cfg_path = '../cfg/';
-cfg_path = 'cfg/';
+cfg_path = '../cfg/';
+%cfg_path = 'cfg/';
 load([cfg_path 'mixercal.mat'], 'T');
 if ~exist('T', 'var') % check that it loaded
     T = eye(2);
 end
 %T = eye(2);
-T = [0.90 0; 0 1.0];
+T = [0.970 0; 0 1.0];
 
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
@@ -139,6 +139,10 @@ patseq{35} = {pg.pulse('Y90m'),pg.pulse('Y90m')};
 % double every pulse
 nbrPatterns = 2*length(patseq);
 
+ch1 = zeros(numsteps, cycleLength);
+ch2 = ch1;
+ch3m1 = ch1;
+
 for kindex = 1:nbrPatterns;
 	[patx paty] = pg.getPatternSeq(patseq{floor((kindex-1)/2)+1}, 1, delay, fixedPt);
 	ch1(kindex, :) = patx + offset;
@@ -147,8 +151,8 @@ for kindex = 1:nbrPatterns;
 end
 
 % trigger at beginning of measurement pulse
-% measure from (6000:8000)
-measLength = 2000;
+% measure from (6000:9000)
+measLength = 3000;
 measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = zeros(nbrPatterns, cycleLength);
 ch1m2 = zeros(nbrPatterns, cycleLength);

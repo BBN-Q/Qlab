@@ -15,23 +15,24 @@ bufferPadding = 20;
 fixedPt = 7000;
 cycleLength = 10000;
 offset = 8192;
-numsteps = 50;
-piAmp = 7100;
-pi2Amp = 3550;
+numsteps = 356;
+piAmp = 7875;
+pi2Amp = 3200;
 sigma = 4;
-pulseType = 'gaussian';
-delta = -0.1; % DRAG parameter
+pulseType = 'drag';
+delta = -1.5; % DRAG parameter
 pulseLength = 4*sigma;
 
 % load correction matrix from file
-cfg_path = 'cfg/';
+cfg_path = '../cfg/';
+%cfg_path = 'cfg/';
 load([cfg_path 'mixercal.mat'], 'T');
 if ~exist('T', 'var') % check that it loaded
     T = eye(2);
 end
-T = [0.90 0; 0 1.0];
+T = [0.970 0; 0 1.0];
 
-pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
+pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
 % load in random Clifford sequences from text file
 fid = fopen('RBsequences.txt');
@@ -84,8 +85,8 @@ end
 nbrPatterns = nbrPatterns + calsteps;
 
 % trigger at beginning of measurement pulse
-% measure from (6000:8000)
-measLength = 2000;
+% measure from (6000:9000)
+measLength = 3000;
 measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = zeros(nbrPatterns, cycleLength);
 ch1m2 = zeros(nbrPatterns, cycleLength);

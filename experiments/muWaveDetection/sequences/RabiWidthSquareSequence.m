@@ -24,20 +24,19 @@ minWidth = 0;
 stepsize = 10;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 
-patseq1 = {pg.pulse('Yp', 'width', pulseLength, 'pType', 'square')};
-%patseq2 = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};
+%patseq1 = {pg.pulse('Yp', 'width', pulseLength, 'pType', 'square')};
+patseq = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};
 
-ch3 = zeros(numsteps, cycleLength);
-ch4 = ch3;
-ch4m1 = ch3;
-ch3m1 = ch3;
+ch1 = zeros(numsteps, cycleLength);
+ch2 = ch1;
+ch4m1 = ch1;
+ch3m1 = ch1;
 
 for n = 1:numsteps;
-	[patx1 paty1] = pg.getPatternSeq(patseq1, n, delay, fixedPt);
-    %[patx2 paty2] = pg.getPatternSeq(patseq2, n, delay, fixedPt);
-	ch3(n, :) = patx1 + offset;
-	ch4(n, :) = paty1 + offset;
-    ch3m1(n, :) = pg.bufferPulse(patx1, paty1, 0, bufferPadding, bufferReset, bufferDelay);
+	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt);
+	ch1(n, :) = patx + offset;
+	ch2(n, :) = paty + offset;
+    ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
     %ch4m1(n, :) = pg.bufferPulse(patx2, paty2, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
@@ -49,29 +48,29 @@ ch1m1 = zeros(numsteps, cycleLength);
 ch1m2 = zeros(numsteps, cycleLength);
 for n = 1:numsteps;
 	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
-	ch1m2(n,:) = pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength);
+	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
 end
 
 myn = 10;
 figure
-plot(ch3(myn,:))
+plot(ch1(myn,:))
 hold on
-plot(ch4(myn,:), 'r')
+plot(ch2(myn,:), 'r')
 plot(5000*ch3m1(myn,:), 'k')
 plot(5000*ch1m2(myn,:), 'g')
-plot(5000*ch4m1(myn,:),'c')
+%plot(5000*ch4m1(myn,:),'c')
 plot(5000*ch1m1(myn,:),'.')
 grid on
 hold off
 
 % fill remaining channels with empty stuff
-ch1 = zeros(numsteps, cycleLength);
-ch2 = zeros(numsteps, cycleLength);
-ch2m1 = ch1;
-ch2m2 = ch1;
-ch1 = ch1 + offset;
-ch2 = ch2 + offset;
+ch3 = zeros(numsteps, cycleLength);
+ch4 = zeros(numsteps, cycleLength);
+ch2m1 = ch3;
+ch2m2 = ch3;
+ch3 = ch3 + offset;
+ch4 = ch4 + offset;
 
 % make TekAWG file
 TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-%clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 myn
+clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1

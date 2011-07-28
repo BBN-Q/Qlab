@@ -12,17 +12,19 @@ measDelay = -53;
 bufferDelay = 58;
 bufferReset = 100;
 bufferPadding = 10;
-fixedPt = 6000;
-cycleLength = 10000;
+fixedPt = 8000;
+cycleLength = 12000;
 offset = 8192;
-numsteps = 100;
-piAmp = 6200;
-pi2Amp = 3100;
+piAmp = 7875;
+pi2Amp = 3225;
 sigma = 4;
 pulseLength = 4*sigma;
-pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
+T = [0.970 0; 0 1.0];
+%T = eye(2);
+pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseLength', pulseLength, 'correctionT', T, 'cycleLength', cycleLength);
 
-stepsize = 10;
+numsteps = 100;
+stepsize = 25;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {...
     pg.pulse('X90p'), ...
@@ -59,7 +61,7 @@ ch1m1 = zeros(numsteps, cycleLength);
 ch1m2 = zeros(numsteps, cycleLength);
 for n = 1:numsteps;
 	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
-	ch1m2(n,:) = pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength);
+	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
 end
 
 myn = 20;
@@ -84,4 +86,4 @@ ch4 = ch4 + offset;
 
 % make TekAWG file
 TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1
+%clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1

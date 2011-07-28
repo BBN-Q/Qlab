@@ -11,99 +11,103 @@ delay = -10;
 measDelay = -53;
 bufferDelay = 58;
 bufferReset = 100;
-bufferPadding = 10;
+bufferPadding = 20;
 fixedPt = 6000;
 cycleLength = 10000;
 offset = 8192;
+pulseOffset = offset;
 numsteps = 50;
-piAmp = 6800;
-pi2Amp = 3450;
+piAmp = 7800;
+pi2Amp = 3200;
 sigma = 4;
-pulseType = 'gaussian';
-delta = -0.1; % DRAG parameter
+pulseType = 'drag';
+delta = -1.5; % DRAG parameter
 pulseLength = 4*sigma;
 
 % load correction matrix from file
-%cfg_path = '../cfg/';
-cfg_path = 'cfg/';
-load([cfg_path 'mixercal.mat'], 'T');
-if ~exist('T', 'var') % check that it loaded
-    T = eye(2);
-end
+cfg_path = '../cfg/';
+%cfg_path = 'cfg/';
+% load([cfg_path 'mixercal.mat'], 'T');
+% if ~exist('T', 'var') % check that it loaded
+%     T = eye(2);
+% end
 %T = eye(2);
-T = [0.90 0; 0 1.0];
-
+T = [0.970  0; 0 1.0];
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
+pulseLib = containers.Map();
+pulses = {'QId', 'X90p', 'X90m', 'Y90p', 'Y90m'};
+for p = pulses
+    pname = cell2mat(p);
+    pulseLib(pname) = pg.pulse(pname);
+end
+
+sindex = 1;
+numPi2s = 10; % number of odd numbered pi/2 sequences for each rotation direction
 
 % +X rotations
 % QId
-% X90p
-% X90p X90p
-% X90p X90p X90p
-% X90p X90p X90p
-% X90p X90p X90p X90p
-patseq{1}={pg.pulse('QId')};
-patseq{2}={pg.pulse('X90p')};
-patseq{3}={pg.pulse('X90p'),pg.pulse('X90p')};
-patseq{4}={pg.pulse('X90p'),pg.pulse('X90p'),pg.pulse('X90p')};
-patseq{5}={pg.pulse('X90p'),pg.pulse('X90p'),pg.pulse('X90p'),pg.pulse('X90p')};
-patseq{6}={pg.pulse('X90p'),pg.pulse('X90p'),pg.pulse('X90p'),pg.pulse('X90p'),pg.pulse('X90p')};
+% (1, 3, 5, 7, 9, 11, 13, 15, 17, 19) x X90p
+patseq{sindex} = {pulseLib('QId')};
+for j = 1:numPi2s
+    for k = 1:(1+2*(j-1))
+        patseq{sindex + j}{k} = pulseLib('X90p');
+    end
+end
+sindex = sindex + numPi2s;
 
 % -X rotations
 % QId
-% X90m
-% X90m X90m
-% X90m X90m X90m
-% X90m X90m X90m
-% X90m X90m X90m X90m
-patseq{7}={pg.pulse('QId')};
-patseq{8}={pg.pulse('X90m')};
-patseq{9}={pg.pulse('X90m'),pg.pulse('X90m')};
-patseq{10}={pg.pulse('X90m'),pg.pulse('X90m'),pg.pulse('X90m')};
-patseq{11}={pg.pulse('X90m'),pg.pulse('X90m'),pg.pulse('X90m'),pg.pulse('X90m')};
-patseq{12}={pg.pulse('X90m'),pg.pulse('X90m'),pg.pulse('X90m'),pg.pulse('X90m'),pg.pulse('X90m')};
+% (1, 3, 5, 7, 9, 11, ...) x X90m
+patseq{sindex} = {pulseLib('QId')};
+for j = 1:numPi2s
+    for k = 1:(1+2*(j-1))
+        patseq{sindex + j}{k} = pulseLib('X90m');
+    end
+end
+sindex = sindex + numPi2s;
 
 % +Y rotations
 % QId
-% Y90p
-% Y90p Y90p
-% Y90p Y90p Y90p
-% Y90p Y90p Y90p Y90p
-% Y90p Y90p Y90p Y90p Y90p
-patseq{13}={pg.pulse('QId')};
-patseq{14}={pg.pulse('Y90p')};
-patseq{15}={pg.pulse('Y90p'),pg.pulse('Y90p')};
-patseq{16}={pg.pulse('Y90p'),pg.pulse('Y90p'),pg.pulse('Y90p')};
-patseq{17}={pg.pulse('Y90p'),pg.pulse('Y90p'),pg.pulse('Y90p'),pg.pulse('Y90p')};
-patseq{18}={pg.pulse('Y90p'),pg.pulse('Y90p'),pg.pulse('Y90p'),pg.pulse('Y90p'),pg.pulse('Y90p')};
+% (1, 3, 5, 7, 9, 11) x Y90p
+patseq{sindex} = {pulseLib('QId')};
+for j = 1:numPi2s
+    for k = 1:(1+2*(j-1))
+        patseq{sindex + j}{k} = pulseLib('Y90p');
+    end
+end
+sindex = sindex + numPi2s;
 
 % -Y rotations
 % QId
-% Y90m
-% Y90m Y90m
-% Y90m Y90m Y90m
-% Y90m Y90m Y90m Y90m
-% Y90m Y90m Y90m Y90m Y90m
-patseq{19}={pg.pulse('QId')};
-patseq{20}={pg.pulse('Y90m')};
-patseq{21}={pg.pulse('Y90m'),pg.pulse('Y90m')};
-patseq{22}={pg.pulse('Y90m'),pg.pulse('Y90m'),pg.pulse('Y90m')};
-patseq{23}={pg.pulse('Y90m'),pg.pulse('Y90m'),pg.pulse('Y90m'),pg.pulse('Y90m')};
-patseq{24}={pg.pulse('Y90m'),pg.pulse('Y90m'),pg.pulse('Y90m'),pg.pulse('Y90m'),pg.pulse('Y90m')};
+% (1, 3, 5, 7, 9, 11) x Y90m
+patseq{sindex} = {pulseLib('QId')};
+for j = 1:numPi2s
+    for k = 1:(1+2*(j-1))
+        patseq{sindex + j}{k} = pulseLib('Y90m');
+    end
+end
+sindex = sindex + numPi2s;
+
+% just a pi pulse for scaling
+patseq{sindex}={pg.pulse('Xp')};
 
 % double every pulse
 nbrPatterns = 2*length(patseq);
+fprintf('Number of sequences: %i\n', nbrPatterns);
+ch1 = zeros(nbrPatterns, cycleLength);
+ch2 = ch1;
+ch3m1 = ch1;
 
 for kindex = 1:nbrPatterns;
 	[patx paty] = pg.getPatternSeq(patseq{floor((kindex-1)/2)+1}, 1, delay, fixedPt);
-	ch1(kindex, :) = patx + offset;
-	ch2(kindex, :) = paty + offset;
+	ch1(kindex, :) = patx + pulseOffset;
+	ch2(kindex, :) = paty + pulseOffset;
     ch3m1(kindex, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
 % trigger at beginning of measurement pulse
-% measure from (6000:8000)
-measLength = 2000;
+% measure from (6000:9000)
+measLength = 3000;
 measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = zeros(nbrPatterns, cycleLength);
 ch1m2 = zeros(nbrPatterns, cycleLength);

@@ -11,21 +11,21 @@ delay = -10;
 measDelay = -53;
 bufferDelay = 58;
 bufferReset = 100;
-bufferPadding = 10;
-fixedPt = 6000;
-cycleLength = 10000;
+bufferPadding = 20;
+fixedPt = 16000;
+cycleLength = 20000;
 offset = 8192;
-piAmp = 7100;
-pi2Amp = 3550;
-sigma = 4;
+piAmp = 7000;
+pi2Amp = 1800;
+sigma = 6;
 pulseLength = 4*sigma;
-T = [0.90 0; 0 1.0]; % correction matrix
+T = [0.963  0; 0 1.0]; % correction matrix
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'correctionT', T, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
-numsteps = 100;
-stepsize = 20;
+numsteps = 300;
+stepsize = 25;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
-anglepts = 0:pi/4:(numsteps-1)*pi/4;
+anglepts = 0:pi/8:(numsteps-1)*pi/8;
 patseq = {...
     pg.pulse('X90p'), ...
     pg.pulse('QId', 'width', delaypts), ...
@@ -57,7 +57,7 @@ end
 
 % trigger at beginning of measurement pulse
 % measure from (6000:8000)
-measLength = 2000;
+measLength = 3000;
 measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = zeros(numsteps+calsteps, cycleLength);
 ch1m2 = zeros(numsteps+calsteps, cycleLength);

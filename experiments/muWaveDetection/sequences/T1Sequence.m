@@ -12,18 +12,18 @@ measDelay = -53;
 bufferDelay = 58;
 bufferReset = 100;
 bufferPadding = 20;
-fixedPt = 6000;
-cycleLength = 10000;
+fixedPt = 26000;
+cycleLength = 30000;
 offset = 8192;
-piAmp = 7100;
-pi2Amp = 3550;
-sigma = 4;
+piAmp = 7000;
+pi2Amp = 1800;
+sigma = 6;
 pulseLength = 4*sigma;
-T = [0.90 0; 0 1.0]; % correction matrix
+T = [0.963 0; 0 1.0]; % correction matrix
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'correctionT', T, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
-numsteps = 100;
-stepsize = 30;
+numsteps = 250;
+stepsize = 100;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {...
     pg.pulse('Xp'), ...

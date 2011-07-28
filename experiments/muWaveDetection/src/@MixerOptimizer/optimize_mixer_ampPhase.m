@@ -108,7 +108,7 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
      % amplitude in the undesired sideband.
     %%
     function a = optimizeAmp()
-        [a, minPower, success] = fminbnd(@amplitude_objective_fcn, 0.9*awg_amp, 1.1*awg_amp,...
+        [a, minPower, success] = fminbnd(@amplitude_objective_fcn, 0.8*awg_amp, 1.2*awg_amp,...
             optimset('TolX', 0.001));
         if ~success
             error('optimizeAmp() did not converge.');
@@ -123,7 +123,7 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
     end
 
     function skew = optimizePhase()
-        [skew, minPower, success] = fminbnd(@phase_objective_fcn, -2, 2,...
+        [skew, minPower, success] = fminbnd(@phase_objective_fcn, -5, 5,...
             optimset('TolX', 0.005));
         if ~success
             error('optimizePhase() did not converge.');
