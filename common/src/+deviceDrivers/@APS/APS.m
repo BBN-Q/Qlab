@@ -94,6 +94,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         ALL_DACS = -1;
         FORCE_OPEN = 1;
+        
+        FPGA0 = 0;
+        FPGA1 = 2;
     end
     
     methods
