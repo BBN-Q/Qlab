@@ -7,6 +7,9 @@ classdef msgmanager < handle
        message_buffer_max = 25;
        num_display_lines = 4;
        handles;
+       type;
+       TYPE_APSGUI = 0;
+       TYPE_APSINSERT = 1;
    end
 
    methods 
@@ -16,10 +19,15 @@ classdef msgmanager < handle
             for idx = 1:mm.message_buffer_max
                 mm.message_buffer{idx} = '';
             end
-            set(handles.sl_msg,'Max',mm.message_buffer_max);
-            set(handles.sl_msg,'Min',1);
-            set(handles.sl_msg,'Value',1);
-            mm.update_controls(1);
+            if isfield(handles, 'sl_msg')
+                set(handles.sl_msg,'Max',mm.message_buffer_max);
+                set(handles.sl_msg,'Min',1);
+                set(handles.sl_msg,'Value',1);
+                mm.update_controls(1);
+                mm.type = mm.TYPE_APSGUI;
+            else
+                mm.type = mm.TYPE_APSINSERT;
+            end
         end
         
         function disp(self, line)
@@ -29,8 +37,12 @@ classdef msgmanager < handle
                 self.message_buffer{idx} = self.message_buffer{idx-1};
             end
             self.message_buffer{1} = line;
-            self.update_controls(1);
-            set(self.handles.sl_msg,'Value',1);
+            if self.type == self.TYPE_APSGUI
+                self.update_controls(1);
+                set(self.handles.sl_msg,'Value',1);
+            else
+                set(self.handles.message_window, 'String',self.message_buffer)
+            end
             drawnow();
         end
         

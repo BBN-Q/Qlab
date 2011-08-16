@@ -462,7 +462,7 @@ end
     'Tag','sl_msg');
 
 hsingleton = mainFig;
-
+mainwindow('mainwindow_OpeningFcn', mainFig, [], guihandles(mainFig));
 end
 
 % --- Set application data first then calling the CreateFcn.

@@ -58,6 +58,8 @@ else
     feval(@mainwindow_OpeningFcn, gui, [], guihandles(gui), varargin{:});
 end
 
+
+
 % --- Executes just before mainwindow is made visible.
 function mainwindow_OpeningFcn(hObject, eventdata, handles, varargin)
 % This function has no output args, see OutputFcn.
@@ -326,4 +328,23 @@ function cb_ll_enable_Callback(hObject, eventdata, handles)
 
 % --- Executes on button press in cb_ll_dc_0.
 function cb_ll_dc_Callback(hObject, eventdata, handles)
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APSInsert Run / Stop Callbacks
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function pb_run_Callback(hObject, eventdata, handles)
+handles.guifunctions.run(handles);
+set(handles.pb_run,'Enable','Off');
+set(handles.pb_stop,'Enable','On');
+
+
+function pb_stop_Callback(hObject, eventdata, handles)
+handles.guifunctions.dac.disableFpga(-1);
+set(handles.pb_run,'Enable','On');
+set(handles.pb_stop,'Enable','Off');
+
+function empty(hObject, eventdata, handles)
+% do nothing callback
 

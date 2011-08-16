@@ -121,7 +121,6 @@ classdef guifunctions < handle
             gf.dac.message_manager = gf.message_manager;
             gf.dac.enumerate();
             gf.waveforms =  [APSWaveform(),APSWaveform(),APSWaveform(),APSWaveform()];
-            message_manager = msgmanager(handles);
         end
         
         function open_dac(gui, id,versionHandle)
@@ -160,7 +159,9 @@ classdef guifunctions < handle
             gui.ll_ell = true; % enable enhanced link list mode
             for id = 0:3
                 ll = sprintf('cb_ll_dc_%i', id);
-                set(gui.handles.(ll), 'String', 'One Shot');
+                if isfield(gui.handles,ll)
+                    set(gui.handles.(ll), 'String', 'One Shot');
+                end
             end
         end
         
@@ -321,12 +322,18 @@ classdef guifunctions < handle
         end
         
         function set_waveform_buttons_enable(gui,handles,id,val)
-            gui.set_ctrl_enable(handles,id,'pb_load_wf', val);
-            gui.set_ctrl_enable(handles,id,'pb_plot_wf', val);
-            set(handles.pb_load_all, 'Enable', val);
+            if isfield(handles, 'pb_load_wf_0')
+                % Set APS GUI Controls
+                gui.set_ctrl_enable(handles,id,'pb_load_wf', val);
+                gui.set_ctrl_enable(handles,id,'pb_plot_wf', val);
+                set(handles.pb_load_all, 'Enable', val);
+            end
         end
         
         function load_waveform(gui,id, handles)
+            
+            gui.set_ctrl_enable(handles,id,'pb_trigger_wf', 'Off');
+            
             % Load Waveform into FPGA by calling load_wave_form method of aps
             % with correct waveform object
             wf = gui.waveforms(id+1);
@@ -336,9 +343,12 @@ classdef guifunctions < handle
             vec = wf.get_vector();
             offset = 0;  % force offset to be zero
                          % as the wf.offset is now being used for a DC level
-                         
-            gui.set_ctrl_enable(handles,id,'pb_trigger_wf', 'Off');
-            set(handles.pb_trigger_all, 'Enable', 'Off');
+            
+            if isfield(handles,'pb_trigger_wf_0')
+                % update APS Gui Controls
+                gui.set_ctrl_enable(handles,id,'pb_trigger_wf', 'Off');
+                set(handles.pb_trigger_all, 'Enable', 'Off');
+            end
             
             if ~wf.ell
                 gui.dac.loadWaveform(id,vec, offset)
@@ -351,9 +361,6 @@ classdef guifunctions < handle
             
             % set frequency now
             gui.dac.setFrequency(id,wf.sample_rate);
-            
-            
-            
             gui.set_ctrl_enable(handles,id,'cb_simultaneous', 'On');
             
             if (gui.bit_file_version >= gui.bitFileVersion_link_list)
@@ -399,16 +406,19 @@ classdef guifunctions < handle
                     end
                 end
 
-                % enable Trigger Controls
-                gui.set_ctrl_enable(handles,id,'pb_trigger_wf', 'On');
-                set(handles.pb_trigger_all, 'Enable', 'On');
-                
-                % enable link list controls
-                ll = eval(sprintf('handles.cb_ll_enable_%i', id));
-                set(ll, 'Enable', gui.ll_gui_enable{id+1});
-                
-                ll = eval(sprintf('handles.cb_ll_dc_%i', id));
-                set(ll, 'Enable', gui.ll_gui_enable{id+1});
+                if isfield(handles,'pb_trigger_all')
+                    % update APS Gui Controls
+                    % enable Trigger Controls
+                    gui.set_ctrl_enable(handles,id,'pb_trigger_wf', 'On');
+                    set(handles.pb_trigger_all, 'Enable', 'On');
+                    
+                    % enable link list controls
+                    ll = eval(sprintf('handles.cb_ll_enable_%i', id));
+                    set(ll, 'Enable', gui.ll_gui_enable{id+1});
+                    
+                    ll = eval(sprintf('handles.cb_ll_dc_%i', id));
+                    set(ll, 'Enable', gui.ll_gui_enable{id+1});
+                end
             end
         end
         
@@ -419,6 +429,7 @@ classdef guifunctions < handle
             
                  if (gui.bit_file_version >= gui.bitFileVersion_link_list)
                      % setup link list
+                     
                      enable = eval(sprintf('handles.cb_ll_enable_%i', id));
                      dc = eval(sprintf('handles.cb_ll_dc_%i', id));
                      enable = get(enable, 'Value');
@@ -477,6 +488,7 @@ classdef guifunctions < handle
         end
         
         function update_waveform_controls_disable(gui,handles,handle_ids)
+                % disable APSGuiControls
             for i = 1:length(handle_ids)
                 id = handle_ids(i);
                 gui.set_ctrl_enable(handles,id,'pb_trigger_wf', 'On');
@@ -493,6 +505,7 @@ classdef guifunctions < handle
                 gui.set_ctrl_enable(handles,id,'cb_ll_dc',  gui.ll_dc_enable{id+1});
                 
             end
+            
         end
         
         function set_waveform_link_list(gui,id,handles)
@@ -536,8 +549,10 @@ classdef guifunctions < handle
         end
         
         function set_ctrl_enable(gui,handles,id, ctrl, val)
-            c = eval(sprintf('handles.%s_%i', ctrl, id));
-            set(c, 'Enable', val);
+            extended_str = sprintf('%s_%i', ctrl, id);
+            if isfield(handles,extended_str)
+                set(handles.(extended_str), 'Enable', val);
+            end
         end
         
         function pause_all(gui, handles)
@@ -589,6 +604,74 @@ classdef guifunctions < handle
             end
             
             gui.update_waveform_controls_disable(handles,handle_ids);
+            
+        end
+        
+        function run(gui,handles)
+            % run function for APS Insert control
+            freq_selection = get(handles.pm_wf_sample_rate, 'Value');
+            
+            % set both FPGA outputs to same frequency
+            gui.set_wf_sample_rate(0,freq_selection);
+            gui.set_wf_sample_rate(2,freq_selection);
+            gui.message_manager.disp(sprintf('Set frequnecy to: %i',  ...
+                gui.pmval_to_sample_rate(freq_selection)));
+            
+            mode = get(handles.cb_ll_dc,'Value');
+            if mode == 1
+                mode = 0;  % set mode to 0 for continuous
+                gui.message_manager.disp('Continous Mode');
+            else
+                mode = 1;  % set mode to 1 for one shot
+                gui.message_manager.disp('One Shot Mode');
+            end
+            
+            % trigger type is 1 -- software (interval) 2 -- hardware (external)
+            trigger_type = get(handles.pm_wf_trigger,'Value');
+            
+            trigger = [false false false false];
+            allTrigger = true;
+            triggeredFPGA = [false false];
+            
+            for channel = 1:4
+                cb_str = sprintf('rb_on_off_%i',channel-1);
+                trigger(channel) = get(handles.(cb_str),'Value');
+                if trigger(channel)
+                    text_str = sprintf('txt_wf_file_%i',channel-1);
+                    file_name = get(handles.(text_str),'String');
+                    gui.waveforms(channel).file_name = file_name;
+                    gui.load_waveform(channel-1,handles)
+
+                    if gui.waveforms(channel).have_link_list
+                        % waveform is a link list need to enable
+                        gui.dac.setLinkListMode(channel - 1, true,mode)
+                    end
+                end
+                allTrigger = allTrigger & trigger(channel);
+            end
+            
+            if allTrigger
+                gui.message_manager.disp('Trigger All');
+                gui.dac.triggerFpga(-1,trigger_type); % -1 to trigger both FPGAs
+                triggeredFPGA = [true true];
+            elseif trigger(1) && trigger(2)
+                    triggeredFPGA(1) = true;
+                    gui.message_manager.disp('Trigger FPGA 0')
+                    gui.dac.triggerFpga(gui.dac.FPGA0,trigger_type)
+            elseif trigger(3) && trigger(4)
+                triggeredFPGA(1) = true;
+                gui.message_manager.disp('Trigger FPGA 1')
+                gui.dac.triggerFpga(gui.dac.FPGA1,trigger_type)
+            end
+            
+            for channel = 1:4
+                if ~triggeredFPGA(ceil(channel / 2)) && trigger(channel)
+                    gui.message_manager.disp(sprintf('Trigger Channel %i',(channel)))
+                    gui.dac.triggerWaveform(channel-1,trigger_type)
+                end
+            end
+           
+            gui.message_manager.disp('Running')
             
         end
         
