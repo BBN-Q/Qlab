@@ -12,18 +12,18 @@ measDelay = -53;
 bufferDelay = 58;
 bufferReset = 100;
 bufferPadding = 20;
-fixedPt = 26000;
-cycleLength = 30000;
+fixedPt = 16000;
+cycleLength = 20000;
 offset = 8192;
-piAmp = 7000;
-pi2Amp = 1800;
-sigma = 6;
+piAmp = 3400; %6400
+pi2Amp = 1600;
+sigma = 4; %4
 pulseLength = 4*sigma;
-T = [0.963 0; 0 1.0]; % correction matrix
+T = [1.05 0; 0 1.0]; % correction matrix
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'correctionT', T, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
-numsteps = 250;
-stepsize = 100;
+numsteps = 200; %250
+stepsize = 15; %24
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {...
     pg.pulse('Xp'), ...
@@ -40,7 +40,14 @@ for n = 1:numsteps;
 	ch2(n, :) = paty + offset;
     ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
 end
-
+calseq = {{pg.pulse('QId')}, {pg.pulse('QId')}, {pg.pulse('Xp')}, {pg.pulse('Xp')}};
+for n = 1:length(calseq);
+	[patx paty] = pg.getPatternSeq(calseq{n}, n, delay, fixedPt);
+	ch1(numsteps+n, :) = patx + offset;
+	ch2(numsteps+n, :) = paty + offset;
+    ch3m1(numsteps+n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
+end
+numsteps = numsteps + length(calseq);
 % trigger at beginning of measurement pulse
 % measure from (6000:8000)
 measLength = 3000;

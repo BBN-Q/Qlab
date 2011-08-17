@@ -17,10 +17,10 @@ cycleLength = 10000;
 offset = 8192;
 pulseOffset = offset;
 numsteps = 50;
-piAmp = 7800;
-pi2Amp = 3200;
+piAmp = 3400;
+pi2Amp = 1700;
 sigma = 4;
-pulseType = 'drag';
+pulseType = 'gaussian';
 delta = -1.5; % DRAG parameter
 pulseLength = 4*sigma;
 
@@ -32,7 +32,7 @@ cfg_path = '../cfg/';
 %     T = eye(2);
 % end
 %T = eye(2);
-T = [0.970  0; 0 1.0];
+T = [1.05 0; 0 1.0];
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 pulseLib = containers.Map();
 pulses = {'QId', 'X90p', 'X90m', 'Y90p', 'Y90m'};
@@ -137,4 +137,4 @@ ch4 = ch4 + offset;
 
 % make TekAWG file
 TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1 pg
+%clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1 pg

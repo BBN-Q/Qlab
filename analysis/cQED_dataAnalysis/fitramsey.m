@@ -54,7 +54,7 @@ subplot(3,1,1)
 bar(xdata,r);
 xlabel('Time [ns]')
 ylabel('Residuals [V]')
-axis tight
+
 subplot(3,1,2:3)
 ylim([-1.05 1.05])
 
@@ -68,7 +68,7 @@ text(xdata(end-1), max(y), ...
     sprintf(['T_{2}^{*} = %.0f +/- %.0f ns \n' ...
         '\\delta/2\\pi = %.2f MHz'], t2, t2error, detuning*1e3), ...
     'HorizontalAlignment', 'right', 'VerticalAlignment', 'top');
-
+axis tight
 % if you want confidence bands, use something like:
 % ci = nlparci(beta,r,j);
 % [ypred,delta] = nlpredci(rabif,x,beta,r,j);

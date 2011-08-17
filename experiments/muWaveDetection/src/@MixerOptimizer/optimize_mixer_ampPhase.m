@@ -42,7 +42,7 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
         
         awg_amp = awg.(['chan_' num2str(awg_I_channel)]).Amplitude;
 
-        sa.center_frequency = obj.specgen.frequency * 1e9 + fssb;
+        sa.center_frequency = obj.specgen.frequency * 1e9 - fssb;
         sa.span = spec_analyzer_span;
         sa.sweep_mode = 'single';
         sa.resolution_bw = spec_resolution_bw;

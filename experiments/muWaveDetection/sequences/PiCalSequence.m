@@ -17,22 +17,22 @@ cycleLength = 10000;
 offset = 8192;
 pulseOffset = offset ;
 numsteps = 42;
-piAmp = 7875;
-pi2Amp = 3225;
+piAmp = 4500;
+pi2Amp = 2080;
 sigma = 4;
 pulseType = 'drag';
 delta = -1.5; % DRAG parameter
 pulseLength = 4*sigma;
 
 % load correction matrix from file
-cfg_path = '../cfg/';
-%cfg_path = 'cfg/';
+%cfg_path = '../cfg/';
+cfg_path = 'cfg/';
 load([cfg_path 'mixercal.mat'], 'T');
 if ~exist('T', 'var') % check that it loaded
     T = eye(2);
 end
 %T = eye(2);
-T = [0.970  0; 0 1.0];
+T = [0.805 0; 0 1.0];
 
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
@@ -43,10 +43,10 @@ pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseTy
 % X90p Xp Xp Xp
 % X90p Xp Xp Xp Xp
 patseq{1}={pg.pulse('QId')};
-patseq{2}={pg.pulse('X90p'),pg.pulse('Xp')};
-patseq{3}={pg.pulse('X90p'),pg.pulse('Xp'),pg.pulse('Xp')};
-patseq{4}={pg.pulse('X90p'),pg.pulse('Xp'),pg.pulse('Xp'),pg.pulse('Xp')};
-patseq{5}={pg.pulse('X90p'),pg.pulse('Xp'),pg.pulse('Xp'),pg.pulse('Xp'),pg.pulse('Xp')};
+patseq{2}={pg.pulse('X90p')};
+patseq{3}={pg.pulse('X90p'),pg.pulse('Xp')};
+patseq{4}={pg.pulse('X90p'),pg.pulse('Xp'),pg.pulse('Xp')};
+patseq{5}={pg.pulse('X90p'),pg.pulse('Xp'),pg.pulse('Xp'),pg.pulse('Xp')};
 
 % -X rotations
 % QId
@@ -55,10 +55,10 @@ patseq{5}={pg.pulse('X90p'),pg.pulse('Xp'),pg.pulse('Xp'),pg.pulse('Xp'),pg.puls
 % X90m Xm Xm Xm
 % X90m Xm Xm Xm Xm
 patseq{6}={pg.pulse('QId')};
-patseq{7}={pg.pulse('X90m'),pg.pulse('Xm')};
-patseq{8}={pg.pulse('X90m'),pg.pulse('Xm'),pg.pulse('Xm')};
-patseq{9}={pg.pulse('X90m'),pg.pulse('Xm'),pg.pulse('Xm'),pg.pulse('Xm')};
-patseq{10}={pg.pulse('X90m'),pg.pulse('Xm'),pg.pulse('Xm'),pg.pulse('Xm'),pg.pulse('Xm')};
+patseq{7}={pg.pulse('X90m')};
+patseq{8}={pg.pulse('X90m'),pg.pulse('Xm')};
+patseq{9}={pg.pulse('X90m'),pg.pulse('Xm'),pg.pulse('Xm')};
+patseq{10}={pg.pulse('X90m'),pg.pulse('Xm'),pg.pulse('Xm'),pg.pulse('Xm')};
 
 % +Y rotations
 % QId
@@ -67,10 +67,10 @@ patseq{10}={pg.pulse('X90m'),pg.pulse('Xm'),pg.pulse('Xm'),pg.pulse('Xm'),pg.pul
 % Y90p Yp Yp Yp
 % Y90p Yp Yp Yp Yp
 patseq{11}={pg.pulse('QId')};
-patseq{12}={pg.pulse('Y90p'),pg.pulse('Yp')};
-patseq{13}={pg.pulse('Y90p'),pg.pulse('Yp'),pg.pulse('Yp')};
-patseq{14}={pg.pulse('Y90p'),pg.pulse('Yp'),pg.pulse('Yp'),pg.pulse('Yp')};
-patseq{15}={pg.pulse('Y90p'),pg.pulse('Yp'),pg.pulse('Yp'),pg.pulse('Yp'),pg.pulse('Yp')};
+patseq{12}={pg.pulse('Y90p')};
+patseq{13}={pg.pulse('Y90p'),pg.pulse('Yp')};
+patseq{14}={pg.pulse('Y90p'),pg.pulse('Yp'),pg.pulse('Yp')};
+patseq{15}={pg.pulse('Y90p'),pg.pulse('Yp'),pg.pulse('Yp'),pg.pulse('Yp')};
 
 % -Y rotations
 % QId
@@ -79,10 +79,10 @@ patseq{15}={pg.pulse('Y90p'),pg.pulse('Yp'),pg.pulse('Yp'),pg.pulse('Yp'),pg.pul
 % Y90m Ym Ym Ym
 % Y90m Ym Ym Ym Ym
 patseq{16}={pg.pulse('QId')};
-patseq{17}={pg.pulse('Y90m'),pg.pulse('Ym')};
-patseq{18}={pg.pulse('Y90m'),pg.pulse('Ym'),pg.pulse('Ym')};
-patseq{19}={pg.pulse('Y90m'),pg.pulse('Ym'),pg.pulse('Ym'),pg.pulse('Ym')};
-patseq{20}={pg.pulse('Y90m'),pg.pulse('Ym'),pg.pulse('Ym'),pg.pulse('Ym'),pg.pulse('Ym')};
+patseq{17}={pg.pulse('Y90m')};
+patseq{18}={pg.pulse('Y90m'),pg.pulse('Ym')};
+patseq{19}={pg.pulse('Y90m'),pg.pulse('Ym'),pg.pulse('Ym')};
+patseq{20}={pg.pulse('Y90m'),pg.pulse('Ym'),pg.pulse('Ym'),pg.pulse('Ym')};
 
 % just a pi pulse for scaling
 patseq{21}={pg.pulse('Xp')};

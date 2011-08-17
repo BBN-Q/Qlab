@@ -22,14 +22,14 @@ sigma = 4; %6
 pulseLength = 4*sigma;
 
 % load correction matrix from file
-cfg_path = '../cfg/';
+cfg_path = 'cfg/';
 %cfg_path = 'cfg/';
 load([cfg_path 'mixercal.mat'], 'T');
 if ~exist('T', 'var') % check that it loaded
     T = eye(2);
 end
 %T = eye(2);
-T = [0.970 0; 0 1.0];
+T = [1.05 0; 0 1.0];
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dPulseLength', pulseLength, 'correctionT', T, 'cycleLength', cycleLength);
 
 amps = -((numsteps-1)/2)*stepsize:stepsize:((numsteps-1)/2)*stepsize;

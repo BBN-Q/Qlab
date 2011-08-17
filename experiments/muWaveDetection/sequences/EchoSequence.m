@@ -15,15 +15,15 @@ bufferPadding = 20;
 fixedPt = 16000;
 cycleLength = 20000;
 offset = 8192;
-piAmp = 7000;
-pi2Amp = 1800;
-sigma = 6;
+piAmp = 4500;
+pi2Amp = 2080;
+sigma = 4;
 pulseLength = 4*sigma;
-T = [0.963  0; 0 1.0]; % correction matrix
+T = [0.805  0; 0 1.0]; % correction matrix
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'correctionT', T, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
-numsteps = 300;
-stepsize = 25;
+numsteps = 250;
+stepsize = 20;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 anglepts = 0:pi/8:(numsteps-1)*pi/8;
 patseq = {...
@@ -31,7 +31,7 @@ patseq = {...
     pg.pulse('QId', 'width', delaypts), ...
     pg.pulse('Yp') ...
     pg.pulse('QId', 'width', delaypts), ...
-    pg.pulse('U90p', 'angle', anglepts), ...
+    pg.pulse('X90p'), ...
     };
 
 calseq = {{pg.pulse('QId')},{pg.pulse('QId')},{pg.pulse('Xp')},{pg.pulse('Xp')}};
