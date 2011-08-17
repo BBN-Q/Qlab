@@ -198,7 +198,7 @@ classdef PatternGen < handle
             
             qubitPulses = {'QId' 'Xp' 'Xm' 'X90p' 'X90m' 'X45p' 'X45m' 'Xtheta' 'Yp' 'Ym' 'Y90p' 'Y90m' 'Y45p' 'Y45m' 'Ytheta' 'Up' 'Um' 'U90p' 'U90m' 'Utheta'};
             measurementPulses = {'M' 'MId'};
-            fluxPulses = {'Zf' 'ZId'};
+            fluxPulses = {'Zf' 'ZId' 'Zp' 'Z90p', 'Zm', 'Z90m'};
             
             % set default pulse parameters
             params.amp = 0;
@@ -206,6 +206,7 @@ classdef PatternGen < handle
             params.sigma = self.dSigma;
             params.delta = self.dDelta;
             params.angle = 0; % in radians
+            params.duration = params.width + self.dBuffer;
             if ismember(p, qubitPulses)
                 params.pType = self.dPulseType;
             elseif ismember(p, measurementPulses)
@@ -214,12 +215,11 @@ classdef PatternGen < handle
                 params.pType = 'square';
             end
             params = parseargs(params, varargin{:});
-            % if duration not specified, use the default (has to come after
-            % because the default can depend on a specified width)
-            if ~isfield(params, 'duration')
+            % if only a width was specified (not a duration), need to update the duration
+            % parameter
+            if ismember('width', varargin(1:2:end)) && ~ismember('duration', varargin(1:2:end))
                 params.duration = params.width + self.dBuffer;
             end
-            
             
             % extract additional parameters from pulse name
             
@@ -233,12 +233,12 @@ classdef PatternGen < handle
             end
             
             % pi pulses
-            if (strcmp(p, 'Xp') || strcmp(p, 'Yp') || strcmp(p, 'Up')), params.amp = self.dPiAmp; end
-            if (strcmp(p, 'Xm') || strcmp(p, 'Ym') || strcmp(p, 'Um')), params.amp = -self.dPiAmp; end
+            if (strcmp(p, 'Xp') || strcmp(p, 'Yp') || strcmp(p, 'Up') || strcmp(p, 'Zp')), params.amp = self.dPiAmp; end
+            if (strcmp(p, 'Xm') || strcmp(p, 'Ym') || strcmp(p, 'Um') || strcmp(p, 'Zm')), params.amp = -self.dPiAmp; end
             
             % pi/2 pulses
-            if (strcmp(p, 'X90p') || strcmp(p, 'Y90p') || strcmp(p, 'U90p')), params.amp = self.dPiOn2Amp; end
-            if (strcmp(p, 'X90m') || strcmp(p, 'Y90m') || strcmp(p, 'U90m')), params.amp = -self.dPiOn2Amp; end
+            if (strcmp(p, 'X90p') || strcmp(p, 'Y90p') || strcmp(p, 'U90p') || strcmp(p, 'Z90p')), params.amp = self.dPiOn2Amp; end
+            if (strcmp(p, 'X90m') || strcmp(p, 'Y90m') || strcmp(p, 'U90m') || strcmp(p, 'Z90m')), params.amp = -self.dPiOn2Amp; end
             
             % pi/4 pulses
             if (strcmp(p, 'X45p') || strcmp(p, 'Y45p') || strcmp(p, 'U45p')), params.amp = self.dPiOn4Amp; end
