@@ -53,10 +53,17 @@ CC=gcc-3
 endif
 endif
 
+OBJECTS=aps.o fpga.o sha1.o common.o waveform.o
+
 all: ${LIBNAME} test
 	
-${LIBNAME}: aps.o fpga.o sha1.o
-	${CC}  ${CFLAGS} ${CFLAGS2} -shared  -o ${LIBNAME} aps.o fpga.o sha1.o ${EXFLAGS} 
+${LIBNAME}: ${OBJECTS}
+	${CC}  ${CFLAGS} ${CFLAGS2} -shared  -o ${LIBNAME} ${OBJECTS} ${EXFLAGS} 
+	
+
+
+waveform.o: waveform.c waveform.h
+	${CC}  ${CFLAGS2} -c  waveform.c -o waveform.o
 	
 sha1.o: sha1.c sha1.h
 	${CC}  ${CFLAGS2} -c  sha1.c -o sha1.o 
@@ -67,10 +74,9 @@ aps.o: libaps.c aps.h
 fpga.o: fpga.c fpga.h aps.h
 	${CC}  ${CFLAGS2} -c  fpga.c -o fpga.o
 	
-pyaps: aps.i aps.o
-	swig -python aps.i
-	${CC} ${CFLAGS3} -c aps_wrap.c -I/usr/include/python2.6 -I/usr/lib/python2.6/config/ -I/usr/include
-	
+common.o: common.c common.h	
+	${CC}  ${CFLAGS2} -c  common.c -o common.o	
+		
 clean:
 	rm -f *.o *.dylib *.dll test *.exe *.a
 	

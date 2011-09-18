@@ -48,6 +48,7 @@
 
 #define MAX_APS_DEVICES 10
 
+
 EXPORT int APS_NumDevices();
 EXPORT int APS_GetSerialNumbers();
 EXPORT int APS_Open(int device, int force);
@@ -78,7 +79,9 @@ EXPORT int APS_PauseFpga(int device, int dac);
 EXPORT int APS_DisableFpga(int device, int dac);
 
 EXPORT int APS_SetLinkListMode(int device, int enable, int mode, int dac);
+EXPORT int APS_TestPllSync(int device, int dac);
 EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock);
+
 
 EXPORT int APS_ReadBitFileVersion(int device);
 EXPORT void APS_ReadLibraryVersion(void * buffer, int maxlen);
@@ -89,4 +92,14 @@ EXPORT int APS_ReadLinkListStatus(int device, int dac);
 
 EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int maxlen );
 EXPORT int APS_ClearLinkListELL(int device,int dac, int bank);
+
+// Waveform related functions
+
+EXPORT int APS_SetWaveform(int device, int channel, float * data, int length);
+EXPORT int APS_SetWaveformOffset(int device, int channel, float offset);
+EXPORT float APS_GetWaveformOffset(int device, int channel);
+EXPORT int APS_SetWaveformScale(int device, int channel, float scale);
+EXPORT float APS_GetWaveformScale(int device, int channel);
+EXPORT int APS_LoadStoredWaveform(int device, int channel);
+
 #endif

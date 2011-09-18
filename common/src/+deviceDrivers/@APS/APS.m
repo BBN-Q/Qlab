@@ -60,7 +60,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         pendingValue = 0;
         expectedLength = 0;
         currentLength = 0;
-        
+              
     end
     
     properties (Constant)
@@ -485,8 +485,20 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 'APS_SetLinkListRepeat',repeat,id);
         end
         
-        function setFrequency(aps,id, freq)
-            testLock = 1;
+        function val = testPllSync(aps,id)
+            if ~exist('id','var')
+                id = 0;
+            end
+            val = aps.librarycall('Test Pll Sync: DAC: %i','APS_TestPllSync',id);
+            if val ~= 0
+                fprintf('Warning: APS::testPllSync returned %i\n', val);
+            end
+        end
+        
+        function val = setFrequency(aps,id, freq, testLock)
+            if ~exist('testLock','var')
+                testLock = 1;
+            end
             val = aps.librarycall(sprintf('Dac: %i Freq : %i', id, freq), ...
                 'APS_SetPllFreq',id,freq,testLock);
             if val ~= 0
@@ -532,6 +544,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         function library = buildWaveformLibrary(aps, waveforms, useVarients, useEndPadding)
             % convert baseWaveforms to waveform array suitable for the APS
+            
+            if ~exist('useVarients','var')
+                useVarients = 1;
+            end
+            
+            if ~exist('useEndPadding','var')
+                useEndPadding = 1;
+            end
             
             offsets = containers.Map('KeyType','char','ValueType','any');
             lengths = containers.Map('KeyType','char','ValueType','any');
@@ -835,11 +855,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             
             if ~exist('useVarients','var') || isempty(useVarients)
-                useVarients = 0;
+                useVarients = 1;
             end
             
             if ~exist('useEndPadding','var') || isempty(useVarients)
-                useEndPadding = 0;
+                useEndPadding = 1;
             end
             
             
@@ -1186,7 +1206,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             % tests channel 0 & 1 output for basic bit file testing
             aps = eval(sprintf('%s();', classname));
-            
+            aps.verbose = 1;
             apsId = 0;
             
             aps.open(apsId);

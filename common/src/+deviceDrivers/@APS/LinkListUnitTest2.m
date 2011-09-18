@@ -78,7 +78,7 @@ function LinkListUnitTest2
         aps.loadLinkListELL(0,cb.offset,cb.count, cb.trigger, cb.repeat, cb.length, 1, validate)
         aps.setLinkListRepeat(0,100);
         aps.setLinkListMode(0,aps.LL_ENABLE,aps.LL_CONTINUOUS);
-        
+        keyboard
         % same for channel 1 for test
         % fill bank A
         aps.loadLinkListELL(1,cb.offset,cb.count, cb.trigger, cb.repeat, cb.length, 0, validate)

@@ -23,8 +23,6 @@
 #ifndef FPGA_H
 #define FPGA_H
 
-extern int gDebugLevel; // access global debug level
-
 #define VERSION_R5  0x5
 #define VERSION_ELL 0x10
 #define ERROR_READ  65535
@@ -149,6 +147,13 @@ extern int gDebugLevel; // access global debug level
 #define BOTH_DACS "Envelope & Phase"
 
 #define ELL_ENTRY_LENGTH 4
+
+#define PLL_GLOBAL_XOR_BIT 15
+#define PLL_02_XOR_BIT     14
+#define PLL_13_XOR_BIT     13
+#define PLL_02_LOCK_BIT 12
+#define PLL_13_LOCK_BIT 11
+#define REFERENCE_PLL_LOCK_BIT 10
 
 int APS_WriteFPGA(int device, ULONG addr, ULONG data, UCHAR fpga);
 ULONG APS_ReadFPGA(int device,ULONG addr, UCHAR fpga);

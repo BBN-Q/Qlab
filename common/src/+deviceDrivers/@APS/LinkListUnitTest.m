@@ -11,6 +11,8 @@ function LinkListUnitTest(sequence, dc_offset)
 
 % Uses PatternGen Link List Generator to develop link lists
 
+forceProgram = 0;
+
 %% Open APS Device
 
 % work around for not knowing full name
@@ -55,25 +57,21 @@ end
     end
 
 apsId = 0;
-
 aps.open(apsId, aps.FORCE_OPEN);
-
-% Pause APS if left running at end of last test
-aps.pauseFpga(0);
-aps.pauseFpga(2);
-
-aps.verbose = 1;
+aps.verbose = 0;
 
 %% Load Bit File
 ver = aps.readBitFileVersion();
 fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
-if ver ~= aps.expected_bit_file_ver
-aps.loadBitFile();
-ver = aps.readBitFileVersion();
-fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
+if forceProgram || ver ~= aps.expected_bit_file_ver
+    aps.loadBitFile();
+    ver = aps.readBitFileVersion();
+    fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
 end
 
-aps.verbose = 0;
+% Pause APS if left running at end of last test
+aps.pauseFpga(0);
+aps.pauseFpga(2);
 
 %% Get Link List Sequency and Convert To APS Format
 % this is currently ignored 
@@ -89,7 +87,9 @@ end
 wf2 = APSWaveform();
 wf2.data = [ones([1,100]) zeros([1,3000])];
 
-aps.setFrequency(3,60);
+if (aps.setFrequency(3,100) ~= 0) 
+    keyboard
+end
 aps.loadWaveform(3,wf2.get_vector(),0);
 
 %%
@@ -126,19 +126,21 @@ end
 % build the library
 unifiedX = aps.buildWaveformLibrary(unifiedX, useVarients);
 
+miniLinkRepeat = 1000;
+
 for seq = 1:length(sequences)
     
     if ~hardCodeSeq
         sequence = sequences{seq};
-        [wf, banks] = aps.convertLinkListFormat(sequence.llpatx,useVarients);
+        [wf, banks] = aps.convertLinkListFormat(sequence.llpatx,useVarients,miniLinkRepeat);
         banks1 = banks;
         banks2 = banks;
         wf2 = wf;
     else
         sequence1 = sequences1{seq};
         sequence2 = sequences2{seq};
-        [wf, banks1] = aps.convertLinkListFormat(sequence1.llpatx,useVarients,unifiedX);
-        [wf2, banks2] = aps.convertLinkListFormat(sequence2.llpatx,useVarients,unifiedX);
+        [wf, banks1] = aps.convertLinkListFormat(sequence1.llpatx,useVarients,unifiedX,miniLinkRepeat);
+        [wf2, banks2] = aps.convertLinkListFormat(sequence2.llpatx,useVarients,unifiedX,miniLinkRepeat);
     end
     drawnow
     
@@ -151,6 +153,8 @@ for seq = 1:length(sequences)
     
     aps.setFrequency(1,wf2.sample_rate);
     aps.loadWaveform(1, wf2.data, wf2.offset);
+    
+    aps.testPllSync();
     
     if singleBankTest
         
@@ -176,23 +180,29 @@ for seq = 1:length(sequences)
             cb2 = banks2{1};
             linkList16 = convertGUIFormat(wf, cb1, cb2);
             
-
             % fill bank A and bank B on channel 0
             aps.loadLinkListELL(0,cb1.offset,cb1.count, cb1.trigger, cb1.repeat, cb1.length, 0, validate)
             aps.loadLinkListELL(0,cb2.offset,cb2.count, cb2.trigger, cb2.repeat, cb2.length, 1, validate)
             
             % fill bank A only on channel 1
-            aps.loadLinkListELL(1,cb2.offset,cb2.count, cb2.trigger, cb2.repeat, cb2.length, 0, validate)
+            %aps.loadLinkListELL(1,cb1.offset,cb1.count, cb1.trigger, cb1.repeat, cb1.length, 0, validate)
+            %aps.loadLinkListELL(1,cb2.offset,cb2.count, cb2.trigger, cb2.repeat, cb2.length, 0, validate)
+            
             curBank = 0;
             
             if ~setTrigger
                 aps.setLinkListRepeat(0,10);
                 aps.setLinkListMode(0,aps.LL_ENABLE,aps.LL_CONTINUOUS);
-                aps.triggerWaveform(0,aps.TRIGGER_HARDWARE);
                 
-                aps.setLinkListRepeat(1,10);
-                aps.setLinkListMode(1,aps.LL_ENABLE,aps.LL_CONTINUOUS);
-                aps.triggerWaveform(1,aps.TRIGGER_HARDWARE);
+                
+                %aps.setLinkListRepeat(1,10);
+                %aps.setLinkListMode(1,aps.LL_ENABLE,aps.LL_CONTINUOUS);
+                
+                aps.triggerWaveform(0,aps.TRIGGER_HARDWARE);
+                %aps.triggerWaveform(1,aps.TRIGGER_HARDWARE);
+                %keyboard
+                %aps.triggerFpga(0,aps.TRIGGER_HARDWARE);
+                
                 aps.triggerWaveform(3,aps.TRIGGER_SOFTWARE);
                 setTrigger = 1;
             end

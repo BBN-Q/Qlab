@@ -92,12 +92,6 @@ typedef struct
 
 FT_HANDLE device2handle(int device);
 
-#define DEBUG_INFO 0
-#define DEBUG_VERBOSE 1
-#define DEBUG_VERBOSE2 2
-
-void dlog(int level, char * fmt, ...);
-
 int APS_ReadReg
 (
   int device,

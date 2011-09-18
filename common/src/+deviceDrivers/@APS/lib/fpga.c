@@ -37,6 +37,7 @@
 #include "aps.h"
 #include "fpga.h"
 #include "libaps.h"
+#include "common.h"
 
 #ifdef LOG_WRITE_FPGA
 FILE * outfile = 0;
@@ -318,7 +319,7 @@ EXPORT int APS_LoadWaveform(int device, unsigned short *Data,
 
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_CSR, 0x0, fpga);
 
-	if (gDebugLevel >= DEBUG_VERBOSE) {
+	if (getDebugLevel() >= DEBUG_VERBOSE) {
 	  data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
 	  dlog(DEBUG_VERBOSE,"CSR set to: %i\n", data);
 	  dlog(DEBUG_VERBOSE,"Initializing %s (%i) Offset and Size\n", dac_type, dac);
@@ -327,7 +328,7 @@ EXPORT int APS_LoadWaveform(int device, unsigned short *Data,
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_offset, offset, fpga);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_size,   wf_length, fpga);
 
-	if (gDebugLevel >= DEBUG_VERBOSE) {
+	if (getDebugLevel() >= DEBUG_VERBOSE) {
 	  data = APS_ReadFPGA(device, gRegRead | dac_offset, fpga);
 	  dlog(DEBUG_VERBOSE,"Offset set to: %i\n", data);
 
@@ -402,7 +403,7 @@ EXPORT int APS_LoadWaveform(int device, unsigned short *Data,
 	fclose(logwaveform);
 	#endif
 
-  if (gDebugLevel >= DEBUG_VERBOSE) {
+  if (getDebugLevel() >= DEBUG_VERBOSE) {
 	  data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
 	  dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
   }
@@ -439,10 +440,9 @@ int APS_SetBit(int device, int fpga, int addr, int mask)
 {
 	int current_state;
 	current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
-  if (gDebugLevel >= DEBUG_VERBOSE) {
-	  dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Mask: 0x%x Writing 0x%x\n",
+  dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Mask: 0x%x Writing 0x%x\n",
 	      addr, current_state, mask, current_state | mask);
-	}
+
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state | mask, fpga);
 }
 
@@ -469,9 +469,9 @@ int APS_ClearBit(int device, int fpga, int addr, int mask)
 {
 	int current_state;
 	current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
-  if (gDebugLevel >= DEBUG_VERBOSE) {
-	  dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Writing 0x%x\n", addr, current_state, current_state & ~mask);
-	}
+
+	dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Writing 0x%x\n", addr, current_state, current_state & ~mask);
+
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state & ~mask, fpga);
 }
 
@@ -550,12 +550,11 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 
 	APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
 
-  if (gDebugLevel >= DEBUG_VERBOSE) {
-	  dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
+	dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
 		);
-	}
+
 
 	if (trigger_type == SOFTWARE_TRIGGER) {
 		dlog(DEBUG_VERBOSE, "Trigger %s State Machine ... \n", dac_type);
@@ -576,9 +575,7 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 		return -1;
 	}
 
-	if (gDebugLevel >= DEBUG_VERBOSE) {
-	    dlog(DEBUG_VERBOSE,"Enable %s State Machine ... \n", dac_type);
-	}
+  dlog(DEBUG_VERBOSE,"Enable %s State Machine ... \n", dac_type);
 
 	APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
 
@@ -1438,7 +1435,7 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 
 	APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
 
-	if (gDebugLevel >= DEBUG_VERBOSE) {
+	if (getDebugLevel() >= DEBUG_VERBOSE) {
 	  dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
@@ -1464,7 +1461,7 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 		return -1;
 	}
 
-	if (gDebugLevel >= DEBUG_VERBOSE) {
+	if (getDebugLevel() >= DEBUG_VERBOSE) {
 	    dlog(DEBUG_VERBOSE,"New CSR: %x TRIGLED %i\n",
 	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
 	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)

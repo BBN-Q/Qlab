@@ -34,10 +34,12 @@
 #include "fpga.h"
 #include "ftd2xx.h"
 #include "sha1.h"
-#include <stdio.h>
-#include <stdarg.h>
+#include "waveform.h"
+#include "common.h"
 
-extern gRegRead; // external global reg read value from fpga.c
+#include <stdio.h>
+
+extern gRegRead; // external global reg read value from common.c
 
 #ifdef WIN32
 	#include <windows.h>
@@ -79,6 +81,8 @@ extern gRegRead; // external global reg read value from fpga.c
 
 FT_HANDLE usb_handles[MAX_APS_DEVICES];
 
+waveform_t * waveforms[MAX_APS_DEVICES];
+
 char *dac_devices[] = APS_SERIAL_NUMS;
 #define MAX_DEVICES sizeof(dac_devices) / sizeof(char *)
 
@@ -90,8 +94,6 @@ pFT_Read DLL_FT_Read;
 pFT_ListDevices DLL_FT_ListDevices;
 pFT_SetBaudRate DLL_FT_SetBaudRate;
 
-int gDebugLevel = DEBUG_VERBOSE;
-
 #define DEBUG
 
 FT_HANDLE device2handle(int device) {
@@ -101,21 +103,9 @@ FT_HANDLE device2handle(int device) {
 	return usb_handles[device];
 }
 
-void dlog(int level, char * fmt, ...) {
-  // wrap fprintf to force a flush after every write
-
-  if (level > gDebugLevel) return;
-
-  va_list args;
-  va_start(args,fmt);
-  vfprintf(stderr, fmt,args);
-  fflush(stderr);
-  va_end(args);
-}
-
 EXPORT int APS_SetDebugLevel(int level) {
     if (level < 0) level = 0;
-    gDebugLevel = level;
+    setDebugLevel(level);
 }
 
 int APS_Init()
@@ -171,8 +161,10 @@ int APS_Init()
 
 	// zero handles
 	int cnt;
-	for(cnt = 0; cnt < MAX_APS_DEVICES; cnt++)
+	for(cnt = 0; cnt < MAX_APS_DEVICES; cnt++) {
 	  usb_handles[cnt] = 0;
+	  waveforms[cnt] = 0;
+	}
 
 	return 0;
 }
@@ -228,6 +220,15 @@ EXPORT int APS_Open(int device, int force)
 	#ifdef DEBUG
 		dlog(DEBUG_INFO,"FTD2 Open\n");
 	#endif
+
+		// destroy old memory if it exists
+		if (waveforms[device]) {
+		  WF_Destroy(waveforms[device]);
+		}
+		// allocate new memory
+
+		waveforms[device] = WF_Init();
+
 	} else {
 	#ifdef DEBUG
 		dlog(DEBUG_INFO,"FTD_Open returned: %i\n", status);
@@ -483,6 +484,9 @@ EXPORT int APS_Close(int device)
 
 	DLL_FT_Close(usb_handles[device]);
 	usb_handles[device] = 0;
+
+	WF_Destroy(waveforms[device]);
+
 	return 0;
 }
 
@@ -1113,7 +1117,7 @@ APS_SPI_REC PllSetup[] =
   0xF5, 0x00,  // Enable un-inverted 400mv clock on OUT5
   0x190, 0x55, //	6 high, 6 low = channel 0 divide by 12
   0x191, 0x00, //	Clear divider 0 bypass
-  0x193, 0x22, //	3 high, 3 low = channel 1 divide by 6
+  0x193, 0x11, //	(1.2 GHz / 4 = 300 MHz = Reference 300 MHz)
   0x196, 0x55, //	6 high, 6 low = channel 2 divide by 12
   0x1E0, 0x0,  // Set VCO post divide to 2
   0x1E1, 0x2,  // Select VCO as clock source for VCO divider
@@ -1146,18 +1150,18 @@ APS_SPI_REC PllFinish[] =
   0x232, 0x1   // Set bit 0 to 1 to simultaneously update all registers with pending writes.
 };
 
+
+
+
 EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 {
   ULONG pll_cycles_addr, pll_bypass_addr;
   UCHAR pll_cycles_val, pll_bypass_val;
   UCHAR pll_enable_addr;
-  UINT pll_reset_addr, pll_reset_bit;
-  UINT pll_reg_value;
-  UCHAR WriteByte, ReadByte;
-  //int cnt, xor_flag_cnt;
+
+  UCHAR WriteByte;
   int fpga;
   int sync_status;
-  int pll_bit;
 
   dlog(DEBUG_INFO, "Setting PLL DAC: %i Freq: %i\n", dac, freq);
 
@@ -1166,46 +1170,42 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 		return -1;
   }
 
-  pll_reset_addr = FPGA_PLL_RESET_ADDR;
-
   switch(dac) {
     case 0:
 		// fall through
-	case 1:
-		pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
-		pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
-		pll_enable_addr = FPGA1_ENABLE_ADDR;
-		pll_reset_bit   = CSRMSK_PHSPLLRST_ELL | CSRMSK_ENVPLLRST_ELL;
-		break;
-	case 2:
-		// fall through
-	case 3:
-		pll_cycles_addr = FPGA2_PLL_CYCLES_ADDR;
-		pll_bypass_addr = FPGA2_PLL_BYPASS_ADDR;
-		pll_enable_addr = FPGA2_ENABLE_ADDR;
-		pll_reset_bit   = CSRMSK_PHSPLLRST_ELL | CSRMSK_ENVPLLRST_ELL;
-	  break;
-	default:
-	  return -1;
+    case 1:
+      pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
+      pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
+      pll_enable_addr = FPGA1_ENABLE_ADDR;
+      break;
+    case 2:
+      // fall through
+    case 3:
+      pll_cycles_addr = FPGA2_PLL_CYCLES_ADDR;
+      pll_bypass_addr = FPGA2_PLL_BYPASS_ADDR;
+      pll_enable_addr = FPGA2_ENABLE_ADDR;
+      break;
+    default:
+      return -1;
   }
 
   switch(freq) {
-	case 40:
-		pll_cycles_val = 0xEE; //  6 high / 6 low (divide by 12)
-		break;
-	case 100:
-		pll_cycles_val = 0x55; //  4 high / 2 low (divide by 6)
-		break;
-	case 300:
-		pll_cycles_val = 0x11; // 1 high /1 low (divide by 2)
-		break;
-	case 600:				   // implicit divide by 2 if divider is not bypassed
-		// fall through
-	case 1200:
-		pll_cycles_val = 0x00;
-	  break;
-	default:
-	  return -2;
+    case 40:
+      pll_cycles_val = 0xEE; //  6 high / 6 low (divide by 12)
+      break;
+    case 100:
+      pll_cycles_val = 0x55; //  4 high / 2 low (divide by 6)
+      break;
+    case 300:
+      pll_cycles_val = 0x11; // 1 high /1 low (divide by 2)
+      break;
+    case 600:				   // implicit divide by 2 if divider is not bypassed
+      // fall through
+    case 1200:
+      pll_cycles_val = 0x00;
+      break;
+    default:
+      return -2;
   }
 
   // by pass divider if freq == 1200
@@ -1230,55 +1230,143 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
      APS_WriteSPI(device, APS_PLL_SPI, PllFinish[i].Address, &PllFinish[i].Data);
   }
 
-  //Enable Oscillator
+  // Enable Oscillator
   WriteByte = APS_OSCEN_BIT;
   if(APS_WriteReg(device, APS_STATUS_CTRL, 1, 0, &WriteByte) != 1)
     return(-4);
 
   sync_status = 0;
 
-  // Test for DAC clock phase match
-
-  int test_cnt, cnt;
-  int inSync = 0;
-
   if (testLock) {
-    sync_status |= 4;
-    for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
+    sync_status = APS_TestPllSync(device, dac);
 
+  }
+
+  return sync_status;
+}
+
+EXPORT int APS_TestPllSync(int device, int dac) {
+
+  // Test for DAC clock phase match
+  int inSync, globalSync;
+  int test_cnt, cnt, pll;
+  int pll_1_unlock, pll_2_unlock, pll_3_unlock;
+
+  int fpga;
+  int pll_bit;
+  UINT pll_reg_value;
+  UINT pll_reset_addr, pll_reset_bit;
+
+  pll_reset_addr = FPGA_PLL_RESET_ADDR;
+
+  fpga = dac2fpga(dac);
+  if (fpga < 0) {
+    return -1;
+  }
+
+  switch(dac) {
+      case 0:
+      // fall through
+    case 1:
+      pll_reset_bit   = CSRMSK_PHSPLLRST_ELL | CSRMSK_ENVPLLRST_ELL;
+      break;
+    case 2:
+      // fall through
+    case 3:
+      pll_reset_bit   = CSRMSK_PHSPLLRST_ELL | CSRMSK_ENVPLLRST_ELL;
+      break;
+    default:
+      return -1;
+    }
+
+  dlog(DEBUG_INFO,"Waiting for PLLs to lock\n");
+  for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
+    pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
+    pll_1_unlock = (pll_bit >> PLL_02_LOCK_BIT) & 0x1;
+    pll_2_unlock = (pll_bit >> PLL_13_LOCK_BIT) & 0x1;
+    pll_3_unlock = (pll_bit >> REFERENCE_PLL_LOCK_BIT) & 0x1;
+    // lock bit == 1 means not-locked
+    if (!pll_1_unlock && !pll_2_unlock && !pll_3_unlock) {
+      inSync = 1;
+      break;
+    }
+  }
+
+  if (!inSync) {
+    dlog(DEBUG_INFO,"Reference PLL failed to lock\n");
+    return -5;
+  }
+
+  inSync = 0;
+  globalSync = 0;
+
+  int PLL_XOR_TEST[3] = {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT,0};
+  int PLL_LOCK_TEST[3] = {PLL_02_XOR_BIT, PLL_13_XOR_BIT,PLL_GLOBAL_XOR_BIT};
+  int PLL_RESET[3] = {CSRMSK_PHSPLLRST_ELL , CSRMSK_ENVPLLRST_ELL, 0};
+  char * pllStr;
+
+  dlog(DEBUG_INFO,"Testing for channel phase lock\n");
+
+  for (pll = 0; pll < 3; pll++) {
+
+    switch (pll) {
+      case 0: pllStr = "02"; break;
+      case 1: pllStr = "13"; break;
+      case 2: pllStr = "Global"; break;
+    }
+
+    dlog(DEBUG_INFO,"Testing channel %s\n", pllStr);
+    for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
       int xor_flag_cnt = 0;
+
       for(cnt = 0; cnt < 10; cnt++) {
         pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
-        // pll xor bit in bit 15
-        xor_flag_cnt += (pll_bit >> 15);
+        xor_flag_cnt += (pll_bit >> PLL_XOR_TEST[pll]) & 0x1;
       }
 
-      if (xor_flag_cnt > 5) {
-      // DAC outputs are out of sync
-      // disable output of clock to DAC
-        dlog(DEBUG_INFO,"PLLs not in sync resetting\n");
+      if (xor_flag_cnt <= 5) {
+        globalSync = 1;
+      } else {
+        // DAC outputs are out of sync
+        // disable output of clock to DAC
+        dlog(DEBUG_INFO,"Channel %s PLLs not in sync resetting\n", pllStr);
+
+        globalSync = 0;
+
+        if (pll == 2) { // global pll compare did not sync
+          dlog(DEBUG_INFO,"Error could not sync plls\n");
+          return -6;
+        }
 
         // Read PLL reg
         pll_reg_value = APS_ReadFPGA(device, gRegRead | pll_reset_addr, fpga);
         // Write PLL with bit set
-        APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reg_value | pll_reset_bit, fpga);
+        APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reg_value | PLL_RESET[pll], fpga);
         // Write original value
         APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reg_value, fpga);
-      } else {
-        dlog(DEBUG_INFO,"APS PLLs are in sync\n");
-        sync_status = sync_status & ~4;
-        inSync = 1;
-        break;
+
+        // wait for lock
+        inSync =  0;
+        for(cnt = 0; cnt < 10; cnt++) {
+          pll_1_unlock = (pll_bit >> PLL_LOCK_TEST[pll]) & 0x1;
+          if (!pll_1_unlock) {
+            inSync = 1;
+            break;
+          }
+        }
+        if (!inSync) {
+          dlog(DEBUG_INFO,"PLL %s did not re-sync after reset\n", pllStr);
+          return -7;
+        }
       }
-
     }
-	}
+  }
 
-  if (inSync == 0) dlog(DEBUG_INFO,"Warning: PLLs are not in sync\n");
-
-  dlog(DEBUG_INFO,"Warning: sync_status %i\n", sync_status);
-
-  return sync_status;
+  if (!globalSync) {
+    dlog(DEBUG_INFO,"Warning: PLLs are not in sync\n");
+    return -8;
+  }
+  return 0;
 }
 
 
@@ -1322,4 +1410,60 @@ EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int ma
       HASH[11],HASH[12],HASH[13],HASH[14],HASH[15],HASH[16],HASH[17],HASH[18],HASH[19]);
   //dlog(DEBUG_INFO,"HASH %s\n",(char*) hashStr);
 }
+
+
+EXPORT int APS_SetWaveform(int device, int channel, float * data, int length) {
+  waveform_t * wfArray;
+  wfArray = waveforms[device];
+  if (!wfArray) return -1;
+
+  return WF_SetWaveform(wfArray, channel, data, length);
+}
+
+EXPORT int APS_SetWaveformOffset(int device, int channel, float offset) {
+  waveform_t * wfArray;
+  wfArray = waveforms[device];
+  if (!wfArray) return -1;
+  WF_SetOffset(wfArray,channel,offset);
+  return 0;
+}
+
+EXPORT float APS_GetWaveformOffset(int device, int channel) {
+  waveform_t * wfArray;
+  wfArray = waveforms[device];
+  if (!wfArray) return -1;
+  return WF_GetOffset(wfArray,channel);
+}
+
+EXPORT int APS_SetWaveformScale(int device, int channel, float scale) {
+  waveform_t * wfArray;
+  wfArray = waveforms[device];
+  if (!wfArray) return -1;
+  WF_SetScale(wfArray,channel,scale);
+  return 0;
+}
+
+EXPORT float APS_GetWaveformScale(int device, int channel){
+  waveform_t * wfArray;
+  wfArray = waveforms[device];
+  if (!wfArray) return -1;
+  return WF_GetScale(wfArray,channel);
+}
+
+
+EXPORT int APS_LoadStoredWaveform(int device, int channel) {
+  waveform_t * wfArray;
+  wfArray = waveforms[device];
+  if (!wfArray) return -1;
+  uint16_t *dataPtr;
+  uint16_t length;
+
+  if (!WF_GetIsLoaded(wfArray,channel)) {
+    dataPtr = WF_GetDataPtr(wfArray, channel);
+    length = WF_GetLength(wfArray, channel);
+    APS_LoadWaveform(device, dataPtr, length, 0 ,channel - 1, 0, 0);
+    WF_SetIsLoaded(wfArray,  channel,1);
+  }
+}
+
 
