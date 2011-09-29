@@ -1,38 +1,26 @@
-% clear classes;
-% clear import;
-addpath('../../common/src','-END');
-addpath('../../common/src/util/','-END');
+function PiCalSequence(makePlot)
 
-clear patseq pg 
+if ~exist('makePlot', 'var')
+    makePlot = true;
+end
+script = java.io.File(mfilename('fullpath'));
+path = char(script.getParentFile().getParentFile().getParentFile().getParent());
+addpath([path '/common/src'],'-END');
+addpath([path '/common/src/util/'],'-END');
 
 path = 'U:\AWG\PiCal\';
 basename = 'PiCal';
-delay = -10;
-measDelay = -53;
-bufferDelay = 58;
-bufferReset = 100;
-bufferPadding = 20;
+
 fixedPt = 6000;
 cycleLength = 10000;
-offset = 8192;
-pulseOffset = offset ;
 numsteps = 42;
-piAmp = 4500;
-pi2Amp = 2080;
-sigma = 4;
-pulseType = 'drag';
-delta = -1.5; % DRAG parameter
-pulseLength = 4*sigma;
 
-% load correction matrix from file
-%cfg_path = '../cfg/';
-cfg_path = 'cfg/';
-load([cfg_path 'mixercal.mat'], 'T');
-if ~exist('T', 'var') % check that it loaded
-    T = eye(2);
-end
-%T = eye(2);
-T = [0.805 0; 0 1.0];
+% load config parameters from file
+parent_path = char(script.getParentFile.getParent());
+cfg_path = [parent_path '/cfg/'];
+load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bufferReset', 'bufferPadding', 'offset', 'piAmp', 'pi2Amp', 'sigma', 'pulseType', 'delta', 'buffer', 'pulseLength');
+
+pulseOffset = offset;
 
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
@@ -89,6 +77,7 @@ patseq{21}={pg.pulse('Xp')};
 
 % double every pulse
 nbrPatterns = 2*length(patseq);
+fprintf('Number of sequences: %i\n', nbrPatterns);
 ch1 = zeros(nbrPatterns, cycleLength);
 ch2 = ch1;
 ch3m1 = ch1;
@@ -101,8 +90,8 @@ for kindex = 1:nbrPatterns;
 end
 
 % trigger at beginning of measurement pulse
-% measure from (6000:8000)
-measLength = 2000;
+% measure from (6000:9500)
+measLength = 3500;
 measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = zeros(nbrPatterns, cycleLength);
 ch1m2 = zeros(nbrPatterns, cycleLength);
@@ -111,16 +100,18 @@ for n = 1:nbrPatterns;
 	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
 end
 
-myn = 20;
-figure
-plot(ch1(myn,:))
-hold on
-plot(ch2(myn,:), 'r')
-plot(5000*ch3m1(myn,:), 'k')
-plot(5000*ch1m1(myn,:),'.')
-plot(5000*ch1m2(myn,:), 'g')
-grid on
-hold off
+if makePlot
+    myn = 20;
+    figure
+    plot(ch1(myn,:))
+    hold on
+    plot(ch2(myn,:), 'r')
+    plot(5000*ch3m1(myn,:), 'k')
+    plot(5000*ch1m1(myn,:),'.')
+    plot(5000*ch1m2(myn,:), 'g')
+    grid on
+    hold off
+end
 
 % fill remaining channels with empty stuff
 ch3 = zeros(nbrPatterns, cycleLength);
@@ -132,4 +123,6 @@ ch4 = ch4 + offset;
 
 % make TekAWG file
 TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-%clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1 pg
+clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1 pg
+
+end

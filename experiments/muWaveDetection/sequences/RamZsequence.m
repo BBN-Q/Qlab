@@ -17,19 +17,19 @@ fixedPt = 8000;
 cycleLength = 12000;
 offset = 8192;
 piAmp = 3400;
-pi2Amp = 1700;
+pi2Amp = 1500;
 sigma = 4;
 pulseLength = 4*sigma;
 fluxsigma = 5;
 fluxpulseLength = 100;
 ramZdelay = fluxpulseLength+30;
-T = [1.05 0; 0 1.0];
+T = [.801 0; 0 1.0];
 %T = eye(2);
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseLength', pulseLength, 'correctionT', T, 'cycleLength', cycleLength);
 zpg = PatternGen('dSigma', fluxsigma, 'dPulseLength', fluxpulseLength, 'cycleLength', cycleLength);
 
 numsteps = 100;
-stepsize = -80;
+stepsize = -10;
 ampPts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {...
     pg.pulse('X90p'), ...

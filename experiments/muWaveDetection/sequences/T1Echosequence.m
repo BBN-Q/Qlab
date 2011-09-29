@@ -17,33 +17,31 @@ fixedPt = 8000;
 cycleLength = 12000;
 offset = 8192;
 piAmp = 3400;
-pi2Amp = 1700;
+pi2Amp = 1500;
 sigma = 4;
 pulseLength = 4*sigma;
 fluxsigma = 5;
 fluxpulseLength = 100;
-piZAmp = -4200;
-pi2ZAmp = -3000;
+piZAmp = -250;
+pi2ZAmp = -120;
 %ramZdelay = fluxpulseLength+30;
-T = [1.05 0; 0 1.0];
+T = [.801 0; 0 1.0];
 %T = eye(2);
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseLength', pulseLength, 'correctionT', T, 'cycleLength', cycleLength);
 zpg = PatternGen('dSigma', fluxsigma, 'dPulseLength', fluxpulseLength, 'cycleLength', cycleLength);
 
-numsteps = 200; %200
-stepsize = 15; %15
+numsteps = 250; %200
+stepsize = 25; %15
 ramZdelay = 0:stepsize:(numsteps-1)*stepsize;
 ramZdelay = ramZdelay + fluxpulseLength + 10;
 patseq = {...
     pg.pulse('Xp'), ...
-    pg.pulse('QId', 'width', ramZdelay)
+    pg.pulse('QId', 'duration', ramZdelay)
     };
 
 zseq = {...
     zpg.pulse('ZId', 'width', pulseLength), ...
-    zpg.pulse('ZId', 'width', floor((ramZdelay-fluxpulseLength)/2) - 5), ...
-    zpg.pulse('Zf', 'amp', piZAmp, 'pType', 'tanh'),...
-    zpg.pulse('ZId', 'width', ceil((ramZdelay-fluxpulseLength)/2) - 5), ...
+    zpg.pulse('Zf', 'amp', piZAmp, 'duration', ramZdelay, 'pType', 'tanh'),...
     };
 
 ch1 = zeros(numsteps + 4, cycleLength);
@@ -84,7 +82,7 @@ for n = 1:numsteps;
 	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
 end
 
-myn = 1;
+myn = 10;
 figure
 plot(ch1(myn,:));
 hold on

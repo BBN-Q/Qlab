@@ -12,16 +12,16 @@ measDelay = -53;
 bufferDelay = 58;
 bufferReset = 100;
 bufferPadding = 20;
-fixedPt = 6000;
-cycleLength = 10000;
+fixedPt = 7000;
+cycleLength = 14000;
 offset = 8192;
 
 piAmp = 8000;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'cycleLength', cycleLength);
 
-numsteps = 100;
+numsteps = 150;
 minWidth = 0;
-stepsize = 10;
+stepsize = 40;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 
 %patseq1 = {pg.pulse('Yp', 'width', pulseLength, 'pType', 'square')};
@@ -42,7 +42,7 @@ end
 
 % trigger at beginning of measurement pulse
 % measure from (6000:8000)
-measLength = 3000;
+measLength = 5000;
 measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = zeros(numsteps, cycleLength);
 ch1m2 = zeros(numsteps, cycleLength);
