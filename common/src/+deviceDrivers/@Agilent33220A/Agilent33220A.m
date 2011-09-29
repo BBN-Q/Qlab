@@ -36,6 +36,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
         burstMode       % {TRIGgered|GATed}
         burstState      % {ON|OFF}
         offset          % in Volts
+        period          % in seconds
         
     end % end device properties
  
@@ -91,6 +92,11 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
         function val = get.offset(obj)
             gpib_string = 'VOLT:OFFSET';
             temp = obj.Query([gpib_string '?']);
+            val = str2double(temp);
+        end
+        function val = get.period(obj)
+            gpib_string = 'PULSE:PERIOD?';
+            temp = obj.Query(gpib_string);
             val = str2double(temp);
         end
         %% set
@@ -193,6 +199,16 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
             gpib_string = [gpib_string ' ' valueStr];
             obj.Write(gpib_string);
         end
-
+        function obj = set.period(obj, value)
+            gpib_string = 'PULSE:PERIOD';
+            % validate input
+            if ~(isnumeric(value) && isscalar(value))
+                error('value must be a numeric scalar')
+            else
+                valueStr = num2str(value);
+            end
+            gpib_string = [gpib_string ' ' valueStr];
+            obj.Write(gpib_string);
+        end
     end
 end % end class definition
