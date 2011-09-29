@@ -59,7 +59,7 @@ classdef MixerOptimizer < expManager.expBase
                 [i_offset, q_offset] = obj.optimize_mixer_offsets();
                 T = obj.optimize_mixer_ampPhase(i_offset, q_offset);
                 % save transformation and offsets to file
-                save([obj.cfg_path '/mixercal.mat'], 'i_offset', 'q_offset', 'T');
+                save([obj.cfg_path '/mixercal.mat'], 'i_offset', 'q_offset', 'T', '-v7.3');
             catch exception
                 errorMsg = exception.identifier;
             end
