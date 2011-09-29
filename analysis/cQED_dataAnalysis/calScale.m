@@ -1,10 +1,14 @@
-function varargout = calScale(dupFactor, h)
+function varargout = calScale(ampPhase, dupFactor, h)
     % FUNCTION calScale(dupFactor, handle h)
     % Rescales the data in figure h by the pi and 0 calibration experiments at the end.
     % Inputs:
+    % ampPhase - choose the amplitude or phase data subplot (optional)
     % dupFactor - number of times calibration experiments are repeated (default: 2)
     % h - handle with the data, if not given assume the current figure
     
+    if ~exist('ampPhase', 'var')
+        ampPhase = 'amp';
+    end
     if ~exist('dupFactor', 'var')
         dupFactor = 2;
     end
@@ -12,8 +16,23 @@ function varargout = calScale(dupFactor, h)
         h = gcf;
     end
     
+    % choose the amplitude or phase axis (if there are two)
+    objs = findobj(gcf, 'Type', 'Axes');
+    if length(objs) == 1
+        axesH = objs(1);
+        titleH = axesH;
+    elseif length(objs) == 2
+        titleH = subplot(2,1,1);
+        if strcmp(ampPhase, 'amp')
+            axesH = subplot(2,1,1);
+        else strcmp(ampPhase, 'phase')
+            axesH = subplot(2,1,2);
+        end
+    else
+        error('More than two subplots')
+    end
     % grab the line handle
-    lineHandle = findobj(h, 'Type', 'Line');
+    lineHandle = findobj(axesH, 'Type', 'Line');
     
     if isempty(lineHandle)
         error('NO DATA: Could not find an line object in the figure.')
@@ -33,13 +52,13 @@ function varargout = calScale(dupFactor, h)
     ypts = (ypts - zeroCal)./scaleFactor - 1;
     
     % save axis labels and figure title
-    axesH = findobj(h, 'Type', 'axes');
     xlab = get(get(axesH, 'XLabel'), 'String');
     ylab = get(get(axesH, 'YLabel'), 'String');
-    figTitle = get(get(axesH, 'Title'), 'String');
+    figTitle = get(get(titleH, 'Title'), 'String');
     
     % create the new plot
     figure(h)
+    clf(h);
     plot(xpts, ypts);
     set(gca, 'YDir', 'normal');
     if ~isempty(xlab)

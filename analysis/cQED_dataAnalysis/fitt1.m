@@ -8,14 +8,18 @@ if nargin < 2
     line = findall(h, 'Type', 'Line');
     xdata = get(line(1), 'xdata');
     ydata = get(line(1), 'ydata');
+    % save figure title
+    plotTitle = get(get(gca, 'Title'), 'String');
+else
+    h = figure;
+    plotTitle = '';
 end
 xdata = xdata(:);
 y = ydata(:);
 
 % subtract offset
-endpoint = mean(y(end-10:end));
-
-y(:) = y(:) - endpoint;
+%endpoint = mean(y(end-10:end));
+%y(:) = y(:) - endpoint;
 
 % Model: A Exp(-t/tau) + offset
 t1f = inline('p(1)*exp(-tdata/p(2)) + p(3)','p','tdata');
@@ -30,20 +34,22 @@ tic
 [beta,r,j,cov] = nlinfit(xdata, y, t1f, p);
 toc
 
-figure
+figure(h)
+clf
 subplot(3,1,2:3)
 plot(xdata,y,'o')
 hold on
 plot(xdata,t1f(beta,xdata),'-r')
 xlabel('Time [ns]')
-ylabel('Amp [V]')
+ylabel('<\sigma_z>')
 hold off
 %plot residuals
 subplot(3,1,1)
 bar(xdata, r)
 axis tight
-ylabel('Residuals [V]')
+ylabel('<\sigma_z>')
 xlabel('Time [ns]')
+title(plotTitle)
 
 t1 = beta(2);
 ci = nlparci(beta,r,j);

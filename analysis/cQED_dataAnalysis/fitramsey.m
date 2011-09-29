@@ -8,6 +8,10 @@ if nargin < 2
     line = findall(h, 'Type', 'Line');
     xdata = get(line(1), 'xdata');
     ydata = get(line(1), 'ydata');
+    % save figure title
+    plotTitle = get(get(gca, 'Title'), 'String');
+else
+    h = figure;
 end
 %y = ydata .* 1000;
 y = ydata(:);
@@ -25,8 +29,8 @@ xdata_finer = xdata_finer(:);
 % model A + B Exp(-t/tau) * cos(w t + phi)
 rabif = inline('p(1) + p(2)*exp(-tdata/p(3)).*cos(p(4)*tdata + p(5))','p','tdata');
 
-% initial guess for amplitude is y(1) - mean
-amp = y(1) - mean(y);
+% initial guess for amplitude is max - mean
+amp = max(y) - mean(y);
 
 % initial guess for Rabi time is length/3
 trabi = max(xdata)/3.;
@@ -42,7 +46,7 @@ tic
 [beta,r,j] = nlinfit(xdata, y, rabif, p);
 toc
 
-figure
+figure(h)
 subplot(3,1,2:3)
 plot(xdata,y,'o')
 hold on
@@ -51,9 +55,11 @@ xlabel('Time [ns]')
 ylabel('<\sigma_z>')
 hold off
 subplot(3,1,1)
-bar(xdata,r);
+bar(xdata,r)
+axis tight
 xlabel('Time [ns]')
 ylabel('Residuals [V]')
+title(plotTitle)
 
 subplot(3,1,2:3)
 ylim([-1.05 1.05])
