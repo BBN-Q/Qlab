@@ -8,9 +8,9 @@ path = char(script.getParentFile().getParentFile().getParentFile().getParent());
 addpath([path '/common/src'],'-END');
 addpath([path '/common/src/util/'],'-END');
 
+temppath = [char(script.getParent()) '\'];
 path = 'U:\AWG\Ramsey\';
-%path = '';
-basename = 'RamseyCal';
+basename = 'Ramsey';
 
 fixedPt = 12500; %8000
 cycleLength = 17000; %12000
@@ -23,7 +23,7 @@ load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bu
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseLength', pulseLength, 'correctionT', T, 'cycleLength', cycleLength);
 
 numsteps = 200;
-stepsize = 60;
+stepsize = 40;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {...
     pg.pulse('X90p'), ...
@@ -86,5 +86,7 @@ ch3 = ch3 + offset;
 ch4 = ch4 + offset;
 
 % make TekAWG file
-TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
+TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
+disp('Moving AWG file to destination');
+movefile([temppath basename '.awg'], [path basename '.awg']);
 end

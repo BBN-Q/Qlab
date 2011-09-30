@@ -4,8 +4,8 @@
 addpath('../../../common/src','-END');
 addpath('../../../common/src/util/','-END');
 
+temppath = [char(script.getParent()) '\'];
 path = 'U:\AWG\Rabi\';
-%path = '';
 basename = 'RabiWidthSquare';
 delay = -10;
 measDelay = -53;
@@ -13,18 +13,17 @@ bufferDelay = 58;
 bufferReset = 100;
 bufferPadding = 20;
 fixedPt = 7000;
-cycleLength = 14000;
+cycleLength = 12000;
 offset = 8192;
 
 piAmp = 8000;
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'cycleLength', cycleLength);
 
-numsteps = 150;
+numsteps = 100;
 minWidth = 0;
-stepsize = 40;
+stepsize = 10;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 
-%patseq1 = {pg.pulse('Yp', 'width', pulseLength, 'pType', 'square')};
 patseq = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};
 
 ch1 = zeros(numsteps, cycleLength);
@@ -42,7 +41,7 @@ end
 
 % trigger at beginning of measurement pulse
 % measure from (6000:8000)
-measLength = 5000;
+measLength = 4000;
 measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = zeros(numsteps, cycleLength);
 ch1m2 = zeros(numsteps, cycleLength);
@@ -72,5 +71,7 @@ ch3 = ch3 + offset;
 ch4 = ch4 + offset;
 
 % make TekAWG file
-TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
+TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
+disp('Moving AWG file to destination');
+movefile([temppath basename '.awg'], [path basename '.awg']);
 clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1

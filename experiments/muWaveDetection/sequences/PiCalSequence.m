@@ -8,6 +8,7 @@ path = char(script.getParentFile().getParentFile().getParentFile().getParent());
 addpath([path '/common/src'],'-END');
 addpath([path '/common/src/util/'],'-END');
 
+temppath = [char(script.getParent()) '\'];
 path = 'U:\AWG\PiCal\';
 basename = 'PiCal';
 
@@ -122,7 +123,7 @@ ch3 = ch3 + offset;
 ch4 = ch4 + offset;
 
 % make TekAWG file
-TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1 pg
-
+TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
+disp('Moving AWG file to destination');
+movefile([temppath basename '.awg'], [path basename '.awg']);
 end
