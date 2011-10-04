@@ -1,9 +1,24 @@
-function optimize_mixers
+function optimize_mixers(channel)
+    % channel 0 = all channels
+    cfg_files = {'optimize_mixer.cfg', 'optimize_mixer2.cfg'};
+    if ~exist('channel', 'var')
+        channel = 1;
+    end
+    if channel > length(cfg_files)
+        error('Unknown channel number');
+    end
     % create a mixer optimizer object
     [base_path] = fileparts(mfilename('fullpath'));
-    cfg_path = [parent_dir(base_path, 1) '/cfg/optimize_mixer.cfg'];
-    optimizer = MixerOptimizer(cfg_path);
-    optimizer.Run();
+    cfg_path = [parent_dir(base_path, 1) '/cfg/'];
+    if channel == 0
+        for i = 1:length(cfg_files)
+            optimizer = MixerOptimizer([cfg_path cfg_files{channel}]);
+            optimizer.Run();
+        end
+    else
+        optimizer = MixerOptimizer([cfg_path cfg_files{channel}]);
+        optimizer.Run();
+    end
 end
 
 % find the nth parent of directory given in 'path'

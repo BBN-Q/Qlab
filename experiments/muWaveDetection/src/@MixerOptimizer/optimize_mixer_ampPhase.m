@@ -51,7 +51,7 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
         sa.sweep();
         sa.peakAmplitude();
 
-        awgfile = 'U:\AWG\MixerCal\MixerCal.awg';
+        awgfile = ExpParams.SSBAWGFile;
         awg.openConfig(awgfile);
         awg.runMode = 'CONT';
         awg.(['chan_' num2str(awg_I_channel)]).Amplitude = awg_amp;
