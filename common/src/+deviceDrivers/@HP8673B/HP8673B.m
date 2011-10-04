@@ -28,6 +28,7 @@ classdef (Sealed) HP8673B < deviceDrivers.lib.GPIB
         output
         frequency
         power
+        pulse
     end % end device properties
     
     
@@ -124,6 +125,22 @@ classdef (Sealed) HP8673B < deviceDrivers.lib.GPIB
             end
             
             gpib_string = sprintf(gpib_string, checkMapObj(value));
+            obj.Write(gpib_string);
+        end
+        function obj = set.pulse(obj, value)
+            gpib_string = 'P';
+            if isnumeric(value)
+                value = num2str(value);
+            end
+            
+            % Validate input
+            checkMapObj = containers.Map({'on','1','off','0'},...
+                {'2','2','0','0'});
+            if not (checkMapObj.isKey( lower(value) ))
+                error('Invalid input');
+            end
+            
+            gpib_string = [gpib_string checkMapObj(value) ';'];
             obj.Write(gpib_string);
         end
     end % end instrument parameter accessors
