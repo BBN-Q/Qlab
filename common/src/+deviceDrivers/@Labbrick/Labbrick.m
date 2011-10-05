@@ -34,13 +34,6 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
         min_freq = 5; % GHz
     end % end private properties
     
-    
-    % Class-specific public properties
-    properties (Access = public)
-        
-    end % end public properties
-    
-    
     % Device properties correspond to instrument parameters
     properties (Access = public)
         output
@@ -174,6 +167,8 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             val = 0;
         end
         function val = get.pulse(obj)
+            % warning, only returns information about whether internal
+            % pulse mode is active
             val = calllib('vnx_fmsynth', 'fnLMS_GetPulseMode', obj.devID);
         end
         function val = get.pulseSource(obj)

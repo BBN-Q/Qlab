@@ -18,12 +18,15 @@
 %
 classdef TekPattern < handle
 	methods (Static)
-		function status = exportTekSequence(path, basename, patCh1, m11, m12, patCh2, m21, m22, patCh3, m31, m32, patCh4, m41, m42)
+		function status = exportTekSequence(path, basename, patCh1, m11, m12, patCh2, m21, m22, patCh3, m31, m32, patCh4, m41, m42, options)
 			% error check
 			dims = size(patCh1);
 			if (~isequal(size(m11), dims) || ~isequal(size(m12), dims) || ~isequal(size(patCh2), dims) || ~isequal(size(m21), dims) || ~isequal(size(m22), dims) || ~isequal(size(patCh3), dims) || ~isequal(size(m31), dims) || ~isequal(size(m32), dims) || ~isequal(size(patCh4), dims) || ~isequal(size(m41), dims) || ~isequal(size(m42), dims))
 				error('inputs must all have the same dimensions');
-			end
+            end
+            if ~exist('options', 'var')
+                options = struct();
+            end
 			
 			self = TekPattern;
 
@@ -45,7 +48,7 @@ classdef TekPattern < handle
 
 			% write header information
             numsteps = size(patCh1,1);
-			self.writeTekHeader(fid, numsteps, basename); % TODO: allow optional params here
+			self.writeTekHeader(fid, numsteps, basename, options);
 
 			% write patterns
 			for i = 1:numsteps
@@ -81,7 +84,7 @@ classdef TekPattern < handle
 			out = bitor(pattern, bitor(bitshift(marker1, 14), bitshift(marker2, 15)));
 		end
 		
-		function writeTekHeader(fid, numsteps, basename)
+		function writeTekHeader(fid, numsteps, basename, options)
 			% writes the file header for the binary AWG format of the Tek AWG5000 series
 			% magic number to determine endian-ness
 			self = TekPattern;
@@ -120,10 +123,33 @@ classdef TekPattern < handle
 				self.writeField(fid, strcat('MARKER2_METHOD_', num2str(i)), 2, 'int16');
 
 				% marker high/low
-				self.writeField(fid, strcat('MARKER1_HIGH_', num2str(i)), 1.0, 'double');
-				self.writeField(fid, strcat('MARKER1_LOW_', num2str(i)), 0.0, 'double');
-				self.writeField(fid, strcat('MARKER2_HIGH_', num2str(i)), 1.0, 'double');
-				self.writeField(fid, strcat('MARKER2_LOW_', num2str(i)), 0.0, 'double');
+                marker_name = ['m' num2str(i) '1'];
+                if ismember([marker_name '_high'], fieldnames(options))
+                    marker_high = options.([marker_name '_high']);
+                else
+                    marker_high = 1.0;
+                end
+                if ismember([marker_name '_low'], fieldnames(options))
+                    marker_low = options.([marker_name '_low']);
+                else
+                    marker_low = 0.0;
+                end
+				self.writeField(fid, strcat('MARKER1_HIGH_', num2str(i)), marker_high, 'double');
+				self.writeField(fid, strcat('MARKER1_LOW_', num2str(i)), marker_low, 'double');
+                
+                marker_name = ['m' num2str(i) '2'];
+                if ismember([marker_name '_high'], fieldnames(options))
+                    marker_high = options.([marker_name '_high']);
+                else
+                    marker_high = 1.0;
+                end
+                if ismember([marker_name '_low'], fieldnames(options))
+                    marker_low = options.([marker_name '_low']);
+                else
+                    marker_low = 0.0;
+                end
+				self.writeField(fid, strcat('MARKER2_HIGH_', num2str(i)), marker_high, 'double');
+				self.writeField(fid, strcat('MARKER2_LOW_', num2str(i)), marker_low, 'double');
 
 				% channel skew
 				%self.writeField(fid, strcat('CHANNEL_SKEW_', num2str(i)), 0.0, 'double');

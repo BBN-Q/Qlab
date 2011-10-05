@@ -334,7 +334,7 @@ setting_fcn = @get_settings;
 			'FontName', 'Helvetica', ...
 			'FontSize', 10, ...
 			'BackgroundColor', [1 1 1], ...
-			'String', {'AgilentN5183A','AgilentE8267D','AnritsuMG3692B','HP8673B','HP8340B'});
+			'String', {'AgilentN5183A','AgilentE8267D','AnritsuMG3692B','HP8673B','HP8340B','Labbrick'});
 
 
 	end
@@ -385,7 +385,7 @@ setting_fcn = @get_settings;
 		defaults.power = -110;
 		defaults.phase = 0;
 		defaults.Address = '';
-		defaults.deviceName = 'AgilentE8267D';
+		defaults.deviceName = 'AgilentN5183A';
 		defaults.enable = 0;
 		defaults.output = 0;
 		defaults.mod = 0;

@@ -191,12 +191,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % setAll is called as part of the Experiment initialize instruments
         function setAll(obj,init_params)
-            fs = fields(init_params);
-            for i = 1:length(fs)
-                initStr = sprintf('obj.%s = init_params.%s;',fs{i},fs{i});
-                eval(initStr);
-            end
-            
             % Determine if it needs to be programmed
             bitFileVer = obj.readBitFileVersion();
             if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver
@@ -204,6 +198,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             
             obj.bit_file_programmed = 1;
+
+            fs = fields(init_params);
+            for i = 1:length(fs)
+                initStr = sprintf('obj.%s = init_params.%s;',fs{i},fs{i});
+                eval(initStr);
+            end
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -269,6 +269,22 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 aps.log(sprintf('Error closing APS USB Connection: %i\n', val));
             end
             aps.is_open = 0;
+        end
+        
+        function setDefaultState(obj)
+            % Determine if it needs to be programmed
+            bitFileVer = obj.readBitFileVersion();
+            if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver
+                obj.loadBitFile();
+            end
+            
+            obj.bit_file_programmed = 1;
+            % set all channels to 1.2 GS/s
+            for ch = 1:3
+                obj.setFrequency(ch-1, 1200, 0);
+            end
+            % for channel 4 (DAC3), check the PLL sync
+            obj.setFrequency(3, 1200, 1);
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -344,6 +360,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         %% Waveform / Link List Load Functions
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function loadWaveform(aps,id,waveform,offset,validate, useSlowWrite)
+            % id - channel (0-3)
+            % waveform - int16 format waveform data (-8192, 8191)
+            % offset - waveform memory offset (think memory location, not
+            %   shift of zero), integer multiple of 4
+            % validate - bool, reads back waveform data
+            % useSlowWrite - bool, when false uses a faster buffered write
             if aps.mock_aps
                 aps.log('Mock load waveform')
                 return 
@@ -1236,7 +1258,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             for ch = 0:3
                 aps.setFrequency(ch, 1200)
-                aps.loadWaveform(ch, wf.get_vector(), wf.offset, validate,useSlowWrite);
+                aps.loadWaveform(ch, wf.get_vector(), 0, validate,useSlowWrite);
                 
             end
             

@@ -2,7 +2,7 @@ function varargout = calScale(ampPhase, dupFactor, h)
     % FUNCTION calScale(dupFactor, handle h)
     % Rescales the data in figure h by the pi and 0 calibration experiments at the end.
     % Inputs:
-    % ampPhase - choose the amplitude or phase data subplot (optional)
+    % ampPhase - choose the amplitude (amp) or phase (phase) data subplot (optional, default: 'amp')
     % dupFactor - number of times calibration experiments are repeated (default: 2)
     % h - handle with the data, if not given assume the current figure
     

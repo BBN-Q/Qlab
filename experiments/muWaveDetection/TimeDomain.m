@@ -54,7 +54,7 @@ cfg_path = [base_path '/experiments/muWaveDetection/cfg/'];
 basename = 'TimeDomain';
 
 if nargin < 1
-	cfg_file_name = [cfg_path 'homodyneDetection_v1_005.cfg'];
+	cfg_file_name = [cfg_path 'TimeDomain.cfg'];
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -82,7 +82,7 @@ mainWindow = figure( ...
 	'Visible', 'off');
 
 % list of instruments expected in the settings structs
-instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'TekAWG', 'BBNdc'};
+instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'Spec3gen', 'TekAWG', 'BBNdc'};
 % load previous settings structs
 [commonSettings, prevSettings] = get_previous_settings('TimeDomain', cfg_path, instrumentNames);
 
@@ -90,6 +90,7 @@ instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'TekAWG', '
 get_acqiris_settings = deviceGUIs.acqiris_settings_gui(mainWindow, 10, 155, prevSettings.InstrParams.scope);
 
 % create tab group for microwave sources
+warning('off','MATLAB:uitabgroup:OldVersion');
 muWaveTabGroupPanel = uipanel('parent', mainWindow, ...
 	'units', 'pixels', 'position', [350, 490, 405, 290]);
 muWaveTabGroup = uitabgroup('parent', muWaveTabGroupPanel, ...
@@ -98,23 +99,33 @@ RFtab = uitab('parent', muWaveTabGroup, 'title', 'RF');
 LOtab = uitab('parent', muWaveTabGroup, 'title', 'LO');
 Spectab = uitab('parent', muWaveTabGroup, 'title', 'Spec');
 Spec2tab = uitab('parent', muWaveTabGroup, 'title', 'Spec 2');
+Spec3tab = uitab('parent', muWaveTabGroup, 'title', 'Spec 3');
 
 get_rf_settings = deviceGUIs.uW_source_settings_GUI(RFtab, 10, 10, 'RF', prevSettings.InstrParams.RFgen);
 get_lo_settings = deviceGUIs.uW_source_settings_GUI(LOtab, 10, 10, 'LO', prevSettings.InstrParams.LOgen);
 get_spec_settings = deviceGUIs.uW_source_settings_GUI(Spectab, 10, 10, 'Spec', prevSettings.InstrParams.Specgen);
 get_spec2_settings = deviceGUIs.uW_source_settings_GUI(Spec2tab, 10, 10, 'Spec2', prevSettings.InstrParams.Spec2gen);
+get_spec3_settings = deviceGUIs.uW_source_settings_GUI(Spec3tab, 10, 10, 'Spec3', prevSettings.InstrParams.Spec3gen);
 
 % add AWGs
-get_tekAWG_settings = deviceGUIs.AWG5014_settings_GUI(mainWindow, 240, 350, 'TekAWG', prevSettings.InstrParams.TekAWG);
+AWGPanel = uipanel('parent', mainWindow, ...
+	'units', 'pixels', 'position', [350, 235, 405, 260]);
+AWGTabGroup = uitabgroup('parent', AWGPanel, ...
+	'units', 'pixels', 'position', [2, 2, 400, 255]);
+TekTab = uitab('parent', AWGTabGroup, 'title', 'Tek');
+APSTab = uitab('parent', AWGTabGroup, 'title', 'APS');
+
+get_tekAWG_settings = deviceGUIs.AWG5014_settings_GUI(TekTab, 5, 5, 'TekAWG', prevSettings.InstrParams.TekAWG);
+get_APS_settings = deviceGUIs.APS_settings_GUI(APSTab, 5, 5, 'BBN APS');
 
 % add DC sources
 get_DCsource_settings = deviceGUIs.DCBias_settings_GUI(mainWindow, 240, 775, prevSettings.InstrParams.BBNdc);
 
 % add digital Homodyne
-get_digitalHomodyne_settings = digitalHomodyne_GUI(mainWindow, 140, 350);
+get_digitalHomodyne_settings = digitalHomodyne_GUI(mainWindow, 140, 350, prevSettings.ExpParams.digitalHomodyne);
 
 % add filter settings
-get_boxcarFilter_settings = boxcarFilter_GUI(mainWindow, 50, 350);
+get_boxcarFilter_settings = boxcarFilter_GUI(mainWindow, 50, 350, prevSettings.ExpParams.filter);
 
 % add tab group for sweeps
 sweepsTabGroupPanel = uipanel('parent', mainWindow, ...
@@ -193,6 +204,7 @@ set(mainWindow, 'Visible', 'on');
 		settings.InstrParams.LOgen = get_lo_settings();
 		settings.InstrParams.Specgen = get_spec_settings();
         settings.InstrParams.Spec2gen = get_spec2_settings();
+        settings.InstrParams.Spec3gen = get_spec3_settings();
 		settings.InstrParams.TekAWG = get_tekAWG_settings();
 		settings.InstrParams.BBNdc = get_DCsource_settings();
 		
@@ -275,7 +287,7 @@ end
 function str = parent_dir(path, n)
 	str = path;
 	if nargin < 2
-		n = 1
+		n = 1;
 	end
 	for j = 1:n
 		pos = find(str == filesep, 1, 'last');

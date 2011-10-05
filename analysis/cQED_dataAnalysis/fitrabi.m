@@ -8,6 +8,10 @@ if nargin < 2
     line = findall(h, 'Type', 'Line');
     xdata = get(line(1), 'xdata');
     ydata = get(line(1), 'ydata');
+    % save figure title
+    plotTitle = get(get(gca, 'Title'), 'String');
+else
+    h = figure;
 end
 %y = ydata .* 1000;
 y = ydata(:);
@@ -42,7 +46,7 @@ tic
 [beta,r,j] = nlinfit(xdata, y, rabif, p);
 toc
 
-figure
+figure(h)
 subplot(3,1,2:3)
 plot(xdata,y,'o')
 hold on
@@ -55,14 +59,19 @@ bar(xdata,r);
 xlabel('Time [ns]')
 ylabel('Residuals [V]')
 axis tight
+title(plotTitle)
 
 t3 = beta(3);
 ci = nlparci(beta,r,j);
 t3error = (ci(3,2)-ci(3,1))/2;
+frabi = abs(beta(4))/2/pi; % in GHz, assuming time is in ns
+frabi_error = abs(ci(4,2)-ci(4,1))/4/pi; %in GHZ
 
 % annotate the graph with T_Rabi result
 subplot(3,1,2:3)
-text(xdata(end-1), max(y), sprintf('T_{Rabi} = %.0f +/- %.0f ns', t3, t3error), ...
+text(xdata(end-1), max(y),...
+    sprintf(['T_{Rabi} = %.0f +/- %.0f ns\n'...
+    '\\Omega_{R}/2\\pi = %.2f +/- %.2f MHz'], t3, t3error, frabi*1e3, frabi_error*1e3), ...
     'HorizontalAlignment', 'right');
 
 % if you want confidence bands, use something like:
