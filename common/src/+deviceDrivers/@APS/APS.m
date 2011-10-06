@@ -226,7 +226,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 obj.(ch).offset = settings.(ch).offset;
                 obj.(ch).enabled = settings.(ch).enabled;
             end
-            settings = settings.rmfield(settings, ch_fields);
+            settings = rmfield(settings, ch_fields);
             
 			% load AWG file before doing anything else
 			if isfield(settings, 'seqfile')
@@ -506,10 +506,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             for ch = 1:length(WaveformLibs)
                 % load and scale/shift waveform data
-                wf = getNewWaveform();
-                wf.data = WaveformLibs(ch);
-                wf.set_offset = aps.(['chan_' ch]).offset;
-                wf.set_scale_factor = aps.(['chan_' ch]).amplitude;
+                wf = WaveformLibs{ch};
+                wf.set_offset(aps.(['chan_' num2str(ch)]).offset);
+                wf.set_scale_factor(aps.(['chan_' num2str(ch)]).amplitude);
                 aps.loadWaveform(ch-1, wf.prep_vector());
                 
                 % clear old link list data
@@ -517,30 +516,31 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 
                 % load link list data (if any)
                 if ch <= length(LinkLists)
-                    wf.ellData = LinkLists(ch);
+                    wf.ellData = LinkLists{ch};
                     wf.ell = true;
                     if wf.check_ell_format()
                         wf.have_link_list = 1;
-                    end
-                    ell = wf.get_ell_link_list();
-                    if isfield(ell,'bankA') && ell.bankA.length > 0
+                    
+                        ell = wf.get_ell_link_list();
+                        if isfield(ell,'bankA') && ell.bankA.length > 0
                             bankA = ell.bankA;
-                            
-                            aps.loadLinkListELL(id,bankA.offset,bankA.count, ...
+
+                            aps.loadLinkListELL(ch-1,bankA.offset,bankA.count, ...
                                 bankA.trigger, bankA.repeat, bankA.length, 0);
-                            
-                            if isfield(ell,'bankB')
-                                bankB = ell.bankB;
-                                aps.loadLinkListELL(id,bankB.offset,bankB.count, ...
-                                    bankB.trigger, bankB.repeat, bankB.length, 1);
-                            end
-                                
-                            aps.setLinkListRepeat(id,ell.repeatCount);
+                        end
+
+                        if isfield(ell,'bankB')
+                            bankB = ell.bankB;
+                            aps.loadLinkListELL(ch-1,bankB.offset,bankB.count, ...
+                                bankB.trigger, bankB.repeat, bankB.length, 1);
+                        end
+
+                        aps.setLinkListRepeat(ch-1,ell.repeatCount);
                     end
                     aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                 end
                 
-                aps.(['chan_' ch]).waveform = wf;
+                aps.(['chan_' num2str(ch)]).waveform = wf;
             end
         end
         

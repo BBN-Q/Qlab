@@ -45,6 +45,7 @@ classdef APSWaveform < handle
        sample_rate = 1200;
 
        data = [];
+       dataMode = 1;        % 1 -- int16 (-8192, 8191), 2 -- floats (-1.0, 1.0)
        
        link_list_enable = 0;  % 1 -- Enable 2 -- Disable
        link_list_mode = 0;    % 1 -- DC 2 -- waveform
@@ -79,6 +80,8 @@ classdef APSWaveform < handle
        wf_modulus = 4;
        
        max_ll_length = 64;
+       INT_DATA = 1;
+       REAL_DATA = 2;
    end
 
    methods
@@ -185,18 +188,13 @@ classdef APSWaveform < handle
                 NSampsToCreate =  wf.wf_modulus - DSLengthMod4;
                 data(DSLength+1:DSLength+NSampsToCreate) = 0;
             end;
-           
             
-            % The waveform amplitude could be anything,
-            % so we need to scale it to full scale voltage (1 Volt),
-            %  and apply the user input scale factor (0 to 1)
-                       
-            % The DAC Board will want the waveform voltage specified
-            % as a Hex value from 0x0 to 0x1FFF (or MaxWFAmpSamps-1)
-            % positive.
-            
-            scale = wf.scale_factor * 1/(max(abs(data)));
-            scale = scale * wf.max_wf_amp_value;
+            % if waveform data is reals, scale and convert to int16s
+            if wf.dataMode == wf.REAL_DATA
+                scale = wf.scale_factor * wf.max_wf_amp_value;
+            else
+                scale = wf.scale_factor;
+            end
 
             % convert offset to ADC counts
             offset = wf.offset * wf.max_wf_amp_value;
@@ -210,7 +208,7 @@ classdef APSWaveform < handle
             data(find(data > wf.max_wf_amp_value)) = wf.max_wf_amp_value;
             data(find(data < -wf.max_wf_amp_value)) = -wf.max_wf_amp_value;
             
-            % ensure uint16 data storage 
+            % ensure int16 data storage
             data = int16(data);
        end
        

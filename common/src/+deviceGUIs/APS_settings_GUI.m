@@ -346,7 +346,7 @@ settings_fcn = @get_settings;
 		settings = struct();
 		
 		settings.enable = get(handles.enable, 'Value');
-		settings.deviceName = 'Tek5014';
+		settings.deviceName = 'APS';
 		settings.Address = get(handles.devID, 'String');
 
 		settings.chan_1.amplitude = get_numeric(handles.ch1amp);

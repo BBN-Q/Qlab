@@ -206,6 +206,7 @@ set(mainWindow, 'Visible', 'on');
         settings.InstrParams.Spec2gen = get_spec2_settings();
         settings.InstrParams.Spec3gen = get_spec3_settings();
 		settings.InstrParams.TekAWG = get_tekAWG_settings();
+        settings.InstrParams.BBNAPS = get_APS_settings();
 		settings.InstrParams.BBNdc = get_DCsource_settings();
 		
 		% get sweep settings
