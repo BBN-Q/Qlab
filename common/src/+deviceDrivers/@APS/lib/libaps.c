@@ -1155,6 +1155,9 @@ APS_SPI_REC PllFinish[] =
 
 EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 {
+
+  static int fpgaFrequencies[2] = {1200,1200};
+
   ULONG pll_cycles_addr, pll_bypass_addr;
   UCHAR pll_cycles_val, pll_bypass_val;
   UCHAR pll_enable_addr;
@@ -1162,6 +1165,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
   UCHAR WriteByte;
   int fpga;
   int sync_status;
+  int numSyncChannels;
 
   dlog(DEBUG_INFO, "Setting PLL DAC: %i Freq: %i\n", dac, freq);
 
@@ -1218,6 +1222,10 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
   dlog(DEBUG_INFO, "Setting PLL cycles addr: 0x%x val: 0x%x\n", pll_cycles_addr, pll_cycles_val);
   dlog(DEBUG_INFO, "Setting PLL bypass addr: 0x%x val: 0x%x\n", pll_bypass_addr, pll_bypass_val);
 
+  // fpga = 1 or 2 save frequency for later comparison to decide to use
+  // 4 channel sync or 2 channel sync
+  fpgaFrequencies[fpga - 1] = freq;
+
   WriteByte = 0;
   if(APS_WriteReg(device,APS_STATUS_CTRL, 1, 0, &WriteByte) != 1)
     return(-4);
@@ -1238,14 +1246,16 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
   sync_status = 0;
 
   if (testLock) {
-    sync_status = APS_TestPllSync(device, dac);
-
+    // if both channels are running at 1200 sync all four channels
+    // otherwise just sync the pair on the same fpga
+    numSyncChannels = (fpgaFrequencies[0] == 1200 && fpgaFrequencies[1] == 1200) ? 4 : 2;
+    sync_status = APS_TestPllSync(device, dac, numSyncChannels);
   }
 
   return sync_status;
 }
 
-EXPORT int APS_TestPllSync(int device, int dac) {
+EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
   // Test for DAC clock phase match
   int inSync, globalSync;
@@ -1257,6 +1267,8 @@ EXPORT int APS_TestPllSync(int device, int dac) {
   UINT pll_reg_value;
   UINT pll_reset_addr, pll_reset_bit;
 
+  dlog(DEBUG_INFO,"Running %i Channel Sync\n", numSyncChannels);
+
   pll_reset_addr = FPGA_PLL_RESET_ADDR;
 
   fpga = dac2fpga(dac);
@@ -1265,7 +1277,7 @@ EXPORT int APS_TestPllSync(int device, int dac) {
   }
 
   switch(dac) {
-      case 0:
+    case 0:
       // fall through
     case 1:
       pll_reset_bit   = CSRMSK_PHSPLLRST_ELL | CSRMSK_ENVPLLRST_ELL;
@@ -1307,7 +1319,19 @@ EXPORT int APS_TestPllSync(int device, int dac) {
 
   dlog(DEBUG_INFO,"Testing for channel phase lock\n");
 
-  for (pll = 0; pll < 3; pll++) {
+  // default to four channel sync
+  int maxTestPll = 3;
+  int minTestPll = 0;
+
+  if (numSyncChannels != 4) {
+    // not doing the four channel sync
+    // only test one of the two plls 02 or 13
+
+    minTestPll = (fpga == 1) ? 0 : 1;
+    maxTestPll = minTestPll + 1;
+  }
+
+  for (pll = minTestPll; pll < maxTestPll; pll++) {
 
     switch (pll) {
       case 0: pllStr = "02"; break;
@@ -1366,6 +1390,7 @@ EXPORT int APS_TestPllSync(int device, int dac) {
     dlog(DEBUG_INFO,"Warning: PLLs are not in sync\n");
     return -8;
   }
+  dlog(DEBUG_INFO,"Sync test complete\n");
   return 0;
 }
 

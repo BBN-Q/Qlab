@@ -87,6 +87,7 @@
 #define FGPA_OFF_ELL_PHSLL_A_CTRL 0xA  // A Control Register
 #define FGPA_OFF_ELL_PHSLL_B_CTRL 0xB  // B Control Register
 #define FGPA_OFF_ELL_PHSLL_REPEAT 0xC  // Repeat Count
+#define FPGA_OFF_ELL_CHECKSUM     0xD  // Checksum Register
 
 #define LL_SIZE_PHSSHIFT	8
 #define LL_SIZE_ENVSHIFT	0

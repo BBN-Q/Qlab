@@ -45,6 +45,7 @@ FILE * outfile = 0;
 
 int gBitFileVersion = 0; // set default version to 0 as all valid version numbers are > 0
 int gRegRead =  FPGA_ADDR_REGREAD; // register read address to or
+unsigned int gCheckSum[MAX_APS_DEVICES][2] = {0}; // checksum for data written to each fpga
 
 int APS_FormatForFPGA(BYTE * buffer, ULONG addr, ULONG data, UCHAR fpga)
 {
@@ -114,10 +115,44 @@ EXPORT int APS_WriteFPGA(int device, ULONG addr, ULONG data, UCHAR fpga)
 	outdata[2] = (data >> 8) & LSB_MASK;
 	outdata[3] = data & LSB_MASK;
 
+	if (fpga == 3) {
+	  gCheckSum[device][0] += addr;
+	  gCheckSum[device][0] += data;
+	  gCheckSum[device][1] += addr;
+	  gCheckSum[device][1] += data;
+	} else {
+    gCheckSum[device][fpga - 1] += addr;
+    gCheckSum[device][fpga - 1] += data;
+	}
+
 	dlog(DEBUG_VERBOSE2,"Writting Addr 0x%x Data 0x%x\n", addr, data);
 
 	APS_WriteReg(device, APS_FPGA_IO, 2, fpga, outdata);
 }
+
+EXPORT int APS_CompareCheckSum(int device, int dac) {
+  unsigned int checksum;
+  int fpga;
+  fpga = dac2fpga(dac);
+  if (fpga < 0 || fpga == 3) {
+    return -1;
+  }
+  checksum = APS_ReadFPGA(device, gRegRead | FPGA_OFF_ELL_CHECKSUM, fpga);
+  return (checksum == gCheckSum[device][fpga - 1]);
+}
+
+EXPORT UINT APS_ResetCheckSum(int device, int dac) {
+  gCheckSum[device][dac2fpga(dac) - 1] = 0;
+}
+
+EXPORT UINT APS_ResetAllCheckSum() {
+  int i;
+  for (i = 0; i < MAX_APS_DEVICES; i++) {
+    gCheckSum[i][0] = 0;
+    gCheckSum[i][1] = 0;
+  }
+}
+
 
 EXPORT ULONG APS_ReadFPGA(int device, ULONG addr, UCHAR fpga)
 /********************************************************************
@@ -130,6 +165,7 @@ EXPORT ULONG APS_ReadFPGA(int device, ULONG addr, UCHAR fpga)
  *              FPGA - FPGA selection bit (1 or 2)
  *
  * Returns : Data at address
+ *
  *
  * Error Conditions :
  *
