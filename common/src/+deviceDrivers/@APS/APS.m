@@ -47,11 +47,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         verbose = 0;
         
         mock_aps = 0;
-        
-        chan_1 = APS.channelStruct;
-        chan_2 = APS.channelStruct;
-        chan_3 = APS.channelStruct;
-        chan_4 = APS.channelStruct;
+
+        chan_1;
+        chan_2;
+        chan_3;
+        chan_4;
         
         samplingRate = 1200;   % Global sampling rate in units of MHz (1200, 600, 300, 100, 40)
         triggerSource = 'internal';  % Global trigger source ('internal', or 'external')
@@ -94,7 +94,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         ELL_TRIGGER_DELAY_UNIT = 3.333e-9;
         
         LL_ENABLE = 1;
-        LL_DISABLE = 1;
+        LL_DISABLE = 0;
         LL_CONTINUOUS = 0;
         LL_ONESHOT = 1;
         LL_DC = 1;
@@ -108,7 +108,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         FPGA0 = 0;
         FPGA1 = 2;
         
-        channelStruct = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'LL', []);
+        channelStruct = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
     end
     
     methods
@@ -127,6 +127,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             baseIdx = strfind(script_path,extended_path);
             
             d.bit_file_path = script_path(1:baseIdx);
+            
+            % init channel structs
+            d.chan_1 = d.channelStruct;
+            d.chan_2 = d.channelStruct;
+            d.chan_3 = d.channelStruct;
+            d.chan_4 = d.channelStruct;
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -491,12 +497,51 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             %   set link list mode
             
             % clear existing variable names
-            waveform_vars = {'WaveformLibCh1', 'WaveformLibCh2', 'WaveformLibCh3', 'WaveformLibCh4'};
-            LL_vars = {'LinkListCh1', 'LinkListCh2', 'LinkListCh3', 'LinkListCh4'};
-            clear version
-            clear(waveform_vars{:});
-            clear(LL_vars{:});
+            clear version WaveformLibs LinkLists
             load(filename)
+            % if any channel has a link list, all channels must have a link
+            % list
+            if length(LinkLists) > 1 && (length(WaveformLibs) ~= length(LinkLists))
+                error('Malformed config file')
+            end
+            for ch = 1:length(WaveformLibs)
+                % load and scale/shift waveform data
+                wf = getNewWaveform();
+                wf.data = WaveformLibs(ch);
+                wf.set_offset = aps.(['chan_' ch]).offset;
+                wf.set_scale_factor = aps.(['chan_' ch]).amplitude;
+                aps.loadWaveform(ch-1, wf.prep_vector());
+                
+                % clear old link list data
+                aps.clearLinkListELL(ch-1);
+                
+                % load link list data (if any)
+                if ch <= length(LinkLists)
+                    wf.ellData = LinkLists(ch);
+                    wf.ell = true;
+                    if wf.check_ell_format()
+                        wf.have_link_list = 1;
+                    end
+                    ell = wf.get_ell_link_list();
+                    if isfield(ell,'bankA') && ell.bankA.length > 0
+                            bankA = ell.bankA;
+                            
+                            aps.loadLinkListELL(id,bankA.offset,bankA.count, ...
+                                bankA.trigger, bankA.repeat, bankA.length, 0);
+                            
+                            if isfield(ell,'bankB')
+                                bankB = ell.bankB;
+                                aps.loadLinkListELL(id,bankB.offset,bankB.count, ...
+                                    bankB.trigger, bankB.repeat, bankB.length, 1);
+                            end
+                                
+                            aps.setLinkListRepeat(id,ell.repeatCount);
+                    end
+                    aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
+                end
+                
+                aps.(['chan_' ch]).waveform = wf;
+            end
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -574,7 +619,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             trigger = [false false false false];
             channels = {'chan_1','chan_2','chan_3','chan_4'};
             for i = 1:4
-                trigger(i) = obj.(channels{i}).enabled;
+                trigger(i) = aps.(channels{i}).enabled;
             end
             
             triggeredFPGA = [false false];
@@ -617,9 +662,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
         end
         
-        function setLinkListMode(aps,id, enable,dc)
-            val = aps.librarycall(sprintf('Dac: %i Link List Enable: %i Mode: %i', id, enable,dc), ...
-                'APS_SetLinkListMode',enable,dc,id);
+        function setLinkListMode(aps, id, enable, mode)
+            % id : DAC channel (0-3)
+            % enable : 1 = on, 0 = off
+            % mode : 1 = one shot, 0 = continuous
+            val = aps.librarycall(sprintf('Dac: %i Link List Enable: %i Mode: %i', id, enable, mode), ...
+                'APS_SetLinkListMode',enable,mode,id);
         end
         
         function setLinkListRepeat(aps,id, repeat)
@@ -627,11 +675,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 'APS_SetLinkListRepeat',repeat,id);
         end
         
-        function val = testPllSync(aps,id)
+        function val = testPllSync(aps, id, numSyncChannels)
             if ~exist('id','var')
                 id = 0;
             end
-            val = aps.librarycall('Test Pll Sync: DAC: %i','APS_TestPllSync',id);
+            if ~exist('numSyncChannels', 'var')
+                numSyncChannels = 4;
+            end
+            val = aps.librarycall('Test Pll Sync: DAC: %i','APS_TestPllSync',id, numSyncChannels);
             if val ~= 0
                 fprintf('Warning: APS::testPllSync returned %i\n', val);
             end
