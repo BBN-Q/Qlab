@@ -349,8 +349,6 @@ settings_fcn = @get_settings;
 		settings.deviceName = 'Tek5014';
 		settings.Address = get(handles.devID, 'String');
 
-		settings.scaleMode = get_selected(handles.scaleMode);
-
 		settings.chan_1.amplitude = get_numeric(handles.ch1amp);
 		settings.chan_1.offset = get_numeric(handles.ch1off);
 		settings.chan_1.enabled = get(handles.ch1enable, 'Value');

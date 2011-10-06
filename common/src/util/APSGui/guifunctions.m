@@ -659,7 +659,7 @@ classdef guifunctions < handle
                     gui.message_manager.disp('Trigger FPGA 0')
                     gui.dac.triggerFpga(gui.dac.FPGA0,trigger_type)
             elseif trigger(3) && trigger(4)
-                triggeredFPGA(1) = true;
+                triggeredFPGA(2) = true;
                 gui.message_manager.disp('Trigger FPGA 1')
                 gui.dac.triggerFpga(gui.dac.FPGA1,trigger_type)
             end

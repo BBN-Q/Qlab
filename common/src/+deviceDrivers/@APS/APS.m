@@ -21,6 +21,7 @@
 %    Modified    By    Reason
 %    --------    --    ------
 %                BCD
+%    10/5/2011   BRJ   Making compatible with expManager init sequence
 %
 % $Author: bdonovan $
 % $Date$
@@ -46,6 +47,15 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         verbose = 0;
         
         mock_aps = 0;
+        
+        chan_1 = APS.channelStruct;
+        chan_2 = APS.channelStruct;
+        chan_3 = APS.channelStruct;
+        chan_4 = APS.channelStruct;
+        
+        samplingRate = 1200;   % Global sampling rate in units of MHz (1200, 600, 300, 100, 40)
+        triggerSource = 'internal';  % Global trigger source ('internal', or 'external')
+        is_running = false;
     end
     properties %(Access = 'private')
         is_open = 0;
@@ -60,7 +70,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         pendingValue = 0;
         expectedLength = 0;
         currentLength = 0;
-              
+
     end
     
     properties (Constant)
@@ -97,6 +107,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         FPGA0 = 0;
         FPGA1 = 2;
+        
+        channelStruct = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'LL', []);
     end
     
     methods
@@ -190,19 +202,51 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % setAll is called as part of the Experiment initialize instruments
-        function setAll(obj,init_params)
+        function setAll(obj,settings)
             % Determine if it needs to be programmed
             bitFileVer = obj.readBitFileVersion();
             if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver
-                obj.loadBitFile();
+                obj.init();
             end
             
             obj.bit_file_programmed = 1;
 
-            fs = fields(init_params);
-            for i = 1:length(fs)
-                initStr = sprintf('obj.%s = init_params.%s;',fs{i},fs{i});
-                eval(initStr);
+            % read in channel settings so we know how to scale waveform
+            % data
+            ch_fields = {'chan_1', 'chan_2', 'chan_3', 'chan_4'};
+            for i = 1:length(ch_fields)
+                ch = ch_fields{i};
+                obj.(ch).amplitude = settings.(ch).amplitude;
+                obj.(ch).offset = settings.(ch).offset;
+                obj.(ch).enabled = settings.(ch).enabled;
+            end
+            settings = settings.rmfield(settings, ch_fields);
+            
+			% load AWG file before doing anything else
+			if isfield(settings, 'seqfile')
+				if ~isfield(settings, 'seqforce')
+					settings.seqforce = false;
+                end
+                if ~isfield(settings, 'lastseqfile')
+                    settings.lastseqfile = '';
+                end
+				
+				% load an AWG file if the settings file is changed or if force == true
+				if (~strcmp(settings.lastseqfile, settings.seqfile) || settings.seqforce)
+					obj.loadConfig(settings.seqfile); % TODO
+				end
+			end
+			settings = rmfield(settings, {'lastseqfile', 'seqfile', 'seqforce'});
+			
+            % parse remaining settings
+			fields = fieldnames(settings);
+			for j = 1:length(fields);
+				name = fields{j};
+                if ismember(name, methods(obj))
+                    feval(['obj.' name], settings.(name));
+                elseif ismember(name, properties(obj))
+                    obj.(name) = settings.(name);
+                end
             end
         end
         
@@ -271,8 +315,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.is_open = 0;
         end
         
-        function setDefaultState(obj)
-            % Determine if it needs to be programmed
+        function init(obj)
+            % bare minimum commands to make the APS usable
+            % Determine if APS needs to be programmed
             bitFileVer = obj.readBitFileVersion();
             if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver
                 obj.loadBitFile();
@@ -280,11 +325,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             obj.bit_file_programmed = 1;
             % set all channels to 1.2 GS/s
-            for ch = 1:3
+            for ch = 1:4
                 obj.setFrequency(ch-1, 1200, 0);
             end
-            % for channel 4 (DAC3), check the PLL sync
-            obj.setFrequency(3, 1200, 1);
+            obj.testPllSync();
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -433,6 +477,27 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.librarycall('Clear Bank 1','APS_ClearLinkListELL',id,1); % bank 1
         end
         
+        function loadConfig(aps, filename)
+            % loads a complete, 4 channel configuration file
+            
+            % pseudocode:
+            % open file
+            % foreach channel
+            %   load and scale/shift waveform data
+            %   save channel waveform lib in chan_i struct
+            %   clear old link list data
+            %   load link list data (if any)
+            %   save channel LL data in chan_i struct
+            %   set link list mode
+            
+            % clear existing variable names
+            waveform_vars = {'WaveformLibCh1', 'WaveformLibCh2', 'WaveformLibCh3', 'WaveformLibCh4'};
+            LL_vars = {'LinkListCh1', 'LinkListCh2', 'LinkListCh3', 'LinkListCh4'};
+            clear version
+            clear(waveform_vars{:});
+            clear(LL_vars{:});
+            load(filename)
+        end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -497,6 +562,61 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             val = aps.librarycall(sprintf('Disable Waveform %i', id), 'APS_DisableFpga',id);
         end
         
+        function run(aps)
+            % global run method
+            trigger_type = aps.TRIGGER_SOFTWARE;
+            if strcmp(aps.triggerSource, 'external')
+                trigger_type = aps.TRIGGER_HARDWARE;
+            end
+            
+            % based upon enabled channels, trigger both FPGAs, a single
+            % FPGA, or individuals DACs
+            trigger = [false false false false];
+            channels = {'chan_1','chan_2','chan_3','chan_4'};
+            for i = 1:4
+                trigger(i) = obj.(channels{i}).enabled;
+            end
+            
+            triggeredFPGA = [false false];
+            if trigger % all channels enabled
+                aps.triggerFpga(aps.ALL_DACS, trigger_type);
+                triggeredFPGA = [true true];
+            elseif trigger(1:2) %FPGA0
+                triggeredFPGA(1) = true;
+                aps.triggerFpga(aps.FPGA0, trigger_type)
+            elseif trigger(3:4) %FPGA1
+                triggeredFPGA(2) = true;
+                aps.triggerFpga(aps.FPGA1, trigger_type)
+            end
+            
+            % look at individual channels
+            % NOTE: Poorly defined syncronization between channels in this
+            % case.
+            for channel = 1:4
+                if ~triggeredFPGA(ceil(channel / 2)) && trigger(channel)
+                    aps.triggerWaveform(channel-1,trigger_type)
+                end
+            end
+            aps.is_running = true;
+        end
+        
+        function stop(aps)
+            % global stop method
+            aps.disableFpga(aps.ALL_DACS);
+        end
+        
+        function waitForAWGtoStartRunning(aps)
+            % for compatibility with Tek driver
+            % checks the state of the CSR to verify that a state machine
+            % is running
+        
+            % TODO!! Needs an appropriate method in C library.
+            % Kludgy workaround for now.
+            if ~aps.is_running
+                aps.run();
+            end
+        end
+        
         function setLinkListMode(aps,id, enable,dc)
             val = aps.librarycall(sprintf('Dac: %i Link List Enable: %i Mode: %i', id, enable,dc), ...
                 'APS_SetLinkListMode',enable,dc,id);
@@ -535,6 +655,17 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         function setupVCX0(aps)
             val = aps.librarycall('Setup VCX0', 'APS_SetupVCXO');
+        end
+        
+        function aps = set.samplingRate(aps, rate)
+            % sets the sampling rate for all channels
+            % rate - sampling rate in MHz (1200, 600, 300, 100, 40)
+            if aps.samplingRate ~= rate
+                for ch = 1:4
+                    aps.setFrequency(ch-1, rate, 0);
+                end
+                aps.testPllSync();
+            end
         end
         
         function readAllRegisters(aps)
