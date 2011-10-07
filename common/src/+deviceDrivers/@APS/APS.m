@@ -61,7 +61,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         is_open = 0;
         bit_file_programmed = 0;
         max_waveform_points = 4096;
-        max_ll_length = 64;
+        max_ll_length = 512;
         bit_file_version = 0;
         ELL_VERSION = hex2dec('10');
         
@@ -497,34 +497,45 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             %   set link list mode
             
             % clear existing variable names
-            clear version WaveformLibs LinkLists
+            clear Version WaveformLibs LinkLists
             load(filename)
             % if any channel has a link list, all channels must have a link
             % list
+            % TODO: add more error checking
             if length(LinkLists) > 1 && (length(WaveformLibs) ~= length(LinkLists))
                 error('Malformed config file')
             end
+            
+            aps.clearLinkListELL(0);
+            aps.clearLinkListELL(1);
+            %aps.clearLinkListELL(2);
+            %aps.clearLinkListELL(3);
+            
             for ch = 1:length(WaveformLibs)
-                % load and scale/shift waveform data
-                wf = WaveformLibs{ch};
-                wf.set_offset(aps.(['chan_' num2str(ch)]).offset);
-                wf.set_scale_factor(aps.(['chan_' num2str(ch)]).amplitude);
-                aps.loadWaveform(ch-1, wf.prep_vector());
-                
+                if ch <= length(WaveformLibs)
+                    % load and scale/shift waveform data
+                    wf = WaveformLibs{ch};
+                    wf.set_offset(aps.(['chan_' num2str(ch)]).offset);
+                    wf.set_scale_factor(aps.(['chan_' num2str(ch)]).amplitude);
+                    aps.loadWaveform(ch-1, wf.prep_vector());
+                end
+            end
+            
+            for ch = 1:length(WaveformLibs)
                 % clear old link list data
-                aps.clearLinkListELL(ch-1);
                 
                 % load link list data (if any)
                 if ch <= length(LinkLists)
                     wf.ellData = LinkLists{ch};
                     wf.ell = true;
                     if wf.check_ell_format()
+                        
                         wf.have_link_list = 1;
                     
                         ell = wf.get_ell_link_list();
                         if isfield(ell,'bankA') && ell.bankA.length > 0
+                            
                             bankA = ell.bankA;
-
                             aps.loadLinkListELL(ch-1,bankA.offset,bankA.count, ...
                                 bankA.trigger, bankA.repeat, bankA.length, 0);
                         end
@@ -542,6 +553,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 
                 aps.(['chan_' num2str(ch)]).waveform = wf;
             end
+            
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -609,6 +621,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         function run(aps)
             % global run method
+            
             trigger_type = aps.TRIGGER_SOFTWARE;
             if strcmp(aps.triggerSource, 'external')
                 trigger_type = aps.TRIGGER_HARDWARE;

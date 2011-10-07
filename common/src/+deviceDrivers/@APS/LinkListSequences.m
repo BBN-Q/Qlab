@@ -266,6 +266,23 @@ switch sequence
             patSeqLL{end+1} = pulseList;
             %allPatseq{end+1} = pulseFunctions;
         end
+    case 7
+        % Rabi width sequence        
+        fixedPt = 7000;
+        cycleLength = 12000;
+        piAmp = 8000;
+        buffer = 4;
+
+        pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dBuffer', buffer, 'cycleLength', cycleLength);
+
+        numsteps = 10;
+        minWidth = 0;
+        stepsize = 8;
+        pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
+
+        patSeqLL = {...
+            {{'Xp', 'width', pulseLength, 'pType', 'square'}}...
+            };
         
         
 end

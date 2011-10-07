@@ -1,6 +1,6 @@
 function exportAPSConfig(path, basename, ch1seq, ch2seq, ch3seq, ch4seq)
     Version = 1.0;
-    useVarients = false;
+    useVarients = 1;
     aps = deviceDrivers.APS();
     
     % construct filename
@@ -10,7 +10,7 @@ function exportAPSConfig(path, basename, ch1seq, ch2seq, ch3seq, ch4seq)
         mkdir(path);
     end
     
-    miniLinkRepeat = 1;
+    miniLinkRepeat = 1000;
     WaveformLibs = [];
     LinkLists = [];
     
@@ -21,10 +21,13 @@ function exportAPSConfig(path, basename, ch1seq, ch2seq, ch3seq, ch4seq)
             % set up struct
             LinkLists{i} = struct('bankA', [], 'repeatCount', 1);
             seq = eval(varname);
-            [WaveformLibs{i}, banks] = aps.convertLinkListFormat(seq, useVarients);
+            wfLib = aps.buildWaveformLibrary(seq.waveforms, useVarients);
+            [WaveformLibs{i}, banks] = aps.convertLinkListFormat(seq, useVarients, wfLib, miniLinkRepeat);
             LinkLists{i}.bankA = banks{1};
             if length(banks) > 1
                 LinkLists{i}.bankB = banks{2};
+            else
+                LinkLists{i}.bankB = banks{1}; % workaround for not handling empty bankB
             end
         end
     end

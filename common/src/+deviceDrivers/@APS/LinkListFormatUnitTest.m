@@ -122,7 +122,7 @@ sequences = deviceDrivers.APS.LinkListSequences(sequence);
             plot(error2 ./ patternGenMarker(i,:), 'b'); title('APSLL M Percent Error')
             ylim([-1 1])
             drawnow()
-            pause(.1);
+            pause(.2);
             %keyboard
             %{
             figure(3);
@@ -213,7 +213,6 @@ end
     plotPatterns(patternGenX, patLinkListX, devLinkListX, ...
         patternGenY, patLinkListY, devLinkListY,...
         patternGenMarker, patLinkListMarker, devLinkListMarker)
-    
 end
 end
 

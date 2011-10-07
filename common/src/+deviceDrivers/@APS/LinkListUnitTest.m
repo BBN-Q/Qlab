@@ -108,39 +108,43 @@ if standalone
     sequences1 = LinkListSequences(1);
     sequences2 = LinkListSequences(4);
 else
-    sequences = deviceDrivers.APS.LinkListSequences(sequence);
-    sequences1 = deviceDrivers.APS.LinkListSequences(1);
-    sequences2 = deviceDrivers.APS.LinkListSequences(4);
+    %sequences = deviceDrivers.APS.LinkListSequences(sequence);
+    sequences1 = deviceDrivers.APS.LinkListSequences(sequence);
+    %sequences2 = deviceDrivers.APS.LinkListSequences(sequence);
 end
 
 % group sequences together and then merge waveform library
 % so that both sequences may be programmed into link list without
 % changing the memory
-unifySecs = sequences1;
-for i = 1:length(sequences2)
-    unifySecs{end+1} = sequences2{i};
-end
+%unifySecs = sequences1;
+%for i = 1:length(sequences2)
+%    unifySecs{end+1} = sequences2{i};
+%end
 
 % merge sequence
-[unifiedX unifiedY] = aps.unifySequenceLibraryWaveforms(unifySecs);
+%[unifiedX unifiedY] = aps.unifySequenceLibraryWaveforms(unifySecs);
 % build the library
-unifiedX = aps.buildWaveformLibrary(unifiedX, useVarients);
+%unifiedX = aps.buildWaveformLibrary(unifiedX, useVarients);
 
-miniLinkRepeat = 1000;
+miniLinkRepeat = 1000; %1000
 
-for seq = 1:length(sequences)
+for seq = 1:length(sequences1)
     
     if ~hardCodeSeq
-        sequence = sequences{seq};
+        sequence = sequences1{seq};
         [wf, banks] = aps.convertLinkListFormat(sequence.llpatx,useVarients,miniLinkRepeat);
         banks1 = banks;
         banks2 = banks;
         wf2 = wf;
     else
         sequence1 = sequences1{seq};
-        sequence2 = sequences2{seq};
-        [wf, banks1] = aps.convertLinkListFormat(sequence1.llpatx,useVarients,unifiedX,miniLinkRepeat);
-        [wf2, banks2] = aps.convertLinkListFormat(sequence2.llpatx,useVarients,unifiedX,miniLinkRepeat);
+        %sequence2 = sequences2{seq};
+        %[wf, banks1] = aps.convertLinkListFormat(sequence1.llpatx,useVarients,unifiedX,miniLinkRepeat);
+        %[wf2, banks2] = aps.convertLinkListFormat(sequence2.llpatx,useVarients,unifiedX,miniLinkRepeat);
+        wfLib = aps.buildWaveformLibrary(sequence1.llpatx.waveforms, useVarients); % added by BRJ
+        [wf, banks1] = aps.convertLinkListFormat(sequence1.llpatx,useVarients,wfLib,miniLinkRepeat);
+        wf2 = wf;
+        banks2 = banks1;
     end
     drawnow
     
@@ -148,24 +152,25 @@ for seq = 1:length(sequences)
     aps.clearLinkListELL(0);
     aps.clearLinkListELL(1);
     
-    aps.setFrequency(0,wf.sample_rate);
+    %aps.setFrequency(0,wf.sample_rate, 0);
     aps.loadWaveform(0, wf.data, wf.offset);
     
-    aps.setFrequency(1,wf2.sample_rate);
+    %aps.setFrequency(1,wf2.sample_rate, 0);
     aps.loadWaveform(1, wf2.data, wf2.offset);
     
-    aps.testPllSync();
+    %aps.testPllSync();
     
     if singleBankTest
         
-        for i = 1:length(banks)
-            cb = banks{i};
+        for i = 1:length(banks1)
+            cb = banks1{i};
             
             %cb.offset(end) = bitxor(cb.offset(end), aps.ELL_FIRST_ENTRY);
             
             aps.loadLinkListELL(0,cb.offset,cb.count, cb.trigger, cb.repeat, cb.length, 0, validate)
             aps.loadLinkListELL(0,cb.offset,cb.count, cb.trigger, cb.repeat, cb.length, 1, validate)
-            aps.setLinkListRepeat(0,10000);
+            %aps.setLinkListRepeat(0,10000);
+            aps.setLinkListRepeat(0,1);
             aps.setLinkListMode(0,aps.LL_ENABLE,aps.LL_CONTINUOUS);
             aps.triggerWaveform(0,aps.TRIGGER_HARDWARE);
             keyboard
@@ -179,7 +184,7 @@ for seq = 1:length(sequences)
             cb1 = banks1{1};
             cb2 = banks2{1};
             linkList16 = convertGUIFormat(wf, cb1, cb2);
-            
+            %keyboard
             % fill bank A and bank B on channel 0
             aps.loadLinkListELL(0,cb1.offset,cb1.count, cb1.trigger, cb1.repeat, cb1.length, 0, validate)
             aps.loadLinkListELL(0,cb2.offset,cb2.count, cb2.trigger, cb2.repeat, cb2.length, 1, validate)
@@ -191,11 +196,11 @@ for seq = 1:length(sequences)
             curBank = 0;
             
             if ~setTrigger
-                aps.setLinkListRepeat(0,10);
+                aps.setLinkListRepeat(0,1);
                 aps.setLinkListMode(0,aps.LL_ENABLE,aps.LL_CONTINUOUS);
                 
                 
-                %aps.setLinkListRepeat(1,10);
+                %aps.setLinkListRepeat(1,1);
                 %aps.setLinkListMode(1,aps.LL_ENABLE,aps.LL_CONTINUOUS);
                 
                 aps.triggerWaveform(0,aps.TRIGGER_HARDWARE);

@@ -292,6 +292,11 @@ classdef PatternGen < handle
         end
         
         function [xpat, ypat, patList, pulseCollection] = build(obj,patListParams,numsteps, delay, fixedPoint, pulseCollection)
+            % xpat - struct(waveforms, linkLists) with hashtable of
+            %   x waveforms and the link list that references the hashtable
+            % ypat - same for y waveforms
+            % patList - sequential references to pulseCollection entries
+            % pulseCollection - hashtable of pulse() closures
             
             if ~exist('pulseCollection', 'var') || isempty(pulseCollection)
                 pulseCollection = containers.Map();
