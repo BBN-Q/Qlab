@@ -546,7 +546,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                                 bankB.trigger, bankB.repeat, bankB.length, 1);
                         end
 
-                        aps.setLinkListRepeat(ch-1,ell.repeatCount);
+                        %aps.setLinkListRepeat(ch-1,ell.repeatCount);
+                        fprintf('Ch %i repeat count: %d\n', ch, ell.repeatCount);
+                        aps.setLinkListRepeat(ch-1,1000);
                     end
                     aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                 end
