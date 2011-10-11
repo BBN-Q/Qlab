@@ -28,7 +28,11 @@ function exportAPSConfig(path, basename, ch1seq, ch2seq, ch3seq, ch4seq)
                 LinkLists{i}.bankB = banks{2};
             else
                 LinkLists{i}.bankB = banks{1}; % workaround for not handling empty bankB
+           
             end
+        else
+            WaveformLibs{i} = [];
+            LinkLists{i} = [];
         end
     end
     
