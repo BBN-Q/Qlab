@@ -48,6 +48,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         mock_aps = 0;
 
+        num_channels = 4;
         chan_1;
         chan_2;
         chan_3;
@@ -60,7 +61,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
     properties %(Access = 'private')
         is_open = 0;
         bit_file_programmed = 0;
-        max_waveform_points = 4096;
+        max_waveform_points = 8192;
         max_ll_length = 512;
         bit_file_version = 0;
         ELL_VERSION = hex2dec('10');
@@ -506,26 +507,29 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 error('Malformed config file')
             end
             
+            % clear old link list data
             aps.clearLinkListELL(0);
             aps.clearLinkListELL(1);
-            %aps.clearLinkListELL(2);
-            %aps.clearLinkListELL(3);
+            aps.clearLinkListELL(2);
+            aps.clearLinkListELL(3);
             
-            for ch = 1:length(WaveformLibs)
-                if ch <= length(WaveformLibs)
+            % load waveform data
+            for ch = 1:aps.num_channels
+                if ch <= length(WaveformLibs) && ~empty(WaveformLibs{ch})
                     % load and scale/shift waveform data
                     wf = WaveformLibs{ch};
                     wf.set_offset(aps.(['chan_' num2str(ch)]).offset);
                     wf.set_scale_factor(aps.(['chan_' num2str(ch)]).amplitude);
                     aps.loadWaveform(ch-1, wf.prep_vector());
+                    aps.(['chan_' num2str(ch)]).waveform = wf;
                 end
             end
             
-            for ch = 1:length(WaveformLibs)
-                % clear old link list data
+            % load LL data (if any)
+            for ch = 1:aps.num_channels
+                wf = aps.(['chan_' num2str(ch)]).waveform;
                 
-                % load link list data (if any)
-                if ch <= length(LinkLists)
+                if ch <= length(LinkLists) && ~empty(LinkLists{ch})
                     wf.ellData = LinkLists{ch};
                     wf.ell = true;
                     if wf.check_ell_format()
@@ -553,6 +557,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                 end
                 
+                % update channel waveform object
                 aps.(['chan_' num2str(ch)]).waveform = wf;
             end
             
