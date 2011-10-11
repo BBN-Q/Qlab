@@ -515,7 +515,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             % load waveform data
             for ch = 1:aps.num_channels
-                if ch <= length(WaveformLibs) && ~empty(WaveformLibs{ch})
+                if ch <= length(WaveformLibs) && ~isempty(WaveformLibs{ch})
                     % load and scale/shift waveform data
                     wf = WaveformLibs{ch};
                     wf.set_offset(aps.(['chan_' num2str(ch)]).offset);
@@ -529,7 +529,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             for ch = 1:aps.num_channels
                 wf = aps.(['chan_' num2str(ch)]).waveform;
                 
-                if ch <= length(LinkLists) && ~empty(LinkLists{ch})
+                if ch <= length(LinkLists) && ~isempty(LinkLists{ch})
                     wf.ellData = LinkLists{ch};
                     wf.ell = true;
                     if wf.check_ell_format()
