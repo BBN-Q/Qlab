@@ -1262,8 +1262,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     
                    
                     
-                    % TODO: hard coded repeat count of 1
-                    if j == lenLL
+                    % set repeat at end of LL list, unless this is the
+                    % first mini-LL, in which case we also set the repeat
+                    if j == lenLL || idx == 1
                         repeat = uint16(miniLinkRepeat);
                         banks{curBank}.repeat(idx) = repeat;
                     else
