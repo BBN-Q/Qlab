@@ -3,9 +3,7 @@ function [errorMsg] = homodyneDetection2DDo(obj)
 % USAGE: [errorMsg] = homodyneDetection2DDo(obj)
 %
 % Description: This method conducts an experiemnt of the type
-% homodyneDetection.  Note that the only instrument we have hard coded in
-% is triggerSource.  If there is not an instrument called triggerSource
-% with a method 'trigger' the experiment will not start.
+% homodyneDetection.
 %
 % v1.1 25 JUNE 2009 William Kelly <wkelly@bbn.com>
 % v1.2 25 JULY 2010 Tom Ohki
@@ -120,8 +118,6 @@ for loop2_index = 1:Loop.two.steps
             Instr.(tekInstrName).run();
             pause(0.5);
 
-            % triggerSource is still hard coded
-            %Instr.triggerSource.trigger();
             success = scope.wait_for_acquisition(30);
             if success ~= 0
                 error('failed to acquire waveform')

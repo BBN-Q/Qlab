@@ -31,7 +31,7 @@ classdef TekChannel < sweeps.Sweep
             channel_str = sprintf('chan_%d', SweepParams.channel);
 			
             if ~sweepPtsOnly
-                % look for an instrument with the name 'genID'
+                % look for an instrument with the name 'TekAWG'
                 if isfield(Instr, 'TekAWG')
                     obj.Instr = Instr.TekAWG.(channel_str);
                     obj.ampOffset = SweepParams.ampOffset;

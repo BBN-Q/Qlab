@@ -32,6 +32,7 @@ function Loop = populateLoopStructure(obj, sweepPtsOnly)
                     end
             end
         end
+    end
 
     % now generate the sweep objects
     for i_loop_cell = fieldnames(Loop)'

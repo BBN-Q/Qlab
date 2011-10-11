@@ -1,3 +1,8 @@
+% File: TekPattern.m
+%
+% Description: class wrapper for functions that generate Tek AWG 5000 pattern files
+%
+
 % Copyright 2010 Raytheon BBN Technologies
 %
 % Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,11 +16,7 @@
 % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 % See the License for the specific language governing permissions and
 % limitations under the License.
-%
-% File: TekPattern.m
-%
-% Description: class wrapper for functions that generate Tek AWG 5000 pattern files
-%
+
 classdef TekPattern < handle
 	methods (Static)
 		function status = exportTekSequence(path, basename, patCh1, m11, m12, patCh2, m21, m22, patCh3, m31, m32, patCh4, m41, m42, options)
@@ -61,7 +62,7 @@ classdef TekPattern < handle
 			end
 
 			% write sequence table
-			self.writeTekSeqTable(fid, basename, numsteps);
+			self.writeTekSeqTable(fid, basename, numsteps, options);
 
 			% close file
 			fclose(fid);
@@ -186,14 +187,18 @@ classdef TekPattern < handle
 			fwrite(fid, packedPattern, 'uint16');
 		end
 		
-		function writeTekSeqTable(fid, basename, numsteps)
+		function writeTekSeqTable(fid, basename, numsteps, options)
 			self = TekPattern;
 			for i = 1:numsteps
 				% sequence wait: 1 = on, 0 = off
 				self.writeField(fid, strcat('SEQUENCE_WAIT_', num2str(i)), 1, 'int16');
 				
-				% sequence loop: 0 = infinite
-				self.writeField(fid, strcat('SEQUENCE_LOOP_', num2str(i)), 1, 'int32');
+				% sequence loop: 0 = infinite (default = 1)
+                num_repeats = 1;
+                if ismember('num_repeats', fieldnames(options)) && isnumeric(options.num_repeats) && option.num_repeats >= 0
+                    num_repeats = options.num_repeats;
+                end
+				self.writeField(fid, strcat('SEQUENCE_LOOP_', num2str(i)), num_repeats+1, 'int32');
 				
 				% sequence jump: 0 = off, -1 = next, n = element #
 				self.writeField(fid, strcat('SEQUENCE_JUMP_', num2str(i)), 0, 'int16');
