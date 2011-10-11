@@ -596,7 +596,7 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 		dlog(DEBUG_VERBOSE, "Trigger %s State Machine ... \n", dac_type);
 
 		APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
-	    APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
+	  APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
 
 	} else if (trigger_type == HARDWARE_TRIGGER) {
 
@@ -1892,3 +1892,42 @@ EXPORT int APS_ReadLinkListStatus(int device, int dac) {
   return status;
 }
 
+EXPORT int APS_IsRunning(int device)
+/********************************************************************
+ *
+ * Function Name : APS_IsRunning()
+ *
+ * Description : Returns 1 if APS is running 0 otherwise
+ *
+ * Inputs : device device id
+ *
+ * APS is running if any of the channels are enableddevice
+ *
+ ********************************************************************/
+{
+  int csrReg1, csrReg2;
+  int dac_sm_enable;
+  int running;
+  // load current cntrl reg
+  csrReg1 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 1);
+  csrReg2 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 2);
+
+  if (gBitFileVersion < VERSION_ELL) {
+      dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
+
+    } else {
+      dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL ;
+
+    }
+
+  // test for output enable on each channel
+  csrReg1 &= dac_sm_enable;
+  csrReg2 &= dac_sm_enable;
+
+  // or each channel together to determine if the aps is running
+  running = csrReg1 | csrReg2;
+  if (running)
+    running = 1;  // return 1 if running otherwise return 0;
+
+  return running;
+}

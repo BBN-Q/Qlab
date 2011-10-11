@@ -1394,7 +1394,6 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   return 0;
 }
 
-
 // Register 00 VCXO value, MS Byte First
 UCHAR Reg00Bytes[4] =
 {

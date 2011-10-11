@@ -70,6 +70,8 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel);
 EXPORT int APS_SetupPLL(int device);
 EXPORT int APS_SetupVCXO(int device);
 
+EXPORT int APS_IsRunning(int device);
+
 EXPORT int APS_TriggerDac(int device, int dac, int trigger_type);
 EXPORT int APS_PauseDac(int device, int dac);
 EXPORT int APS_DisableDac(int device, int dac);

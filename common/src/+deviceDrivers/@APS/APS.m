@@ -357,6 +357,16 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
         end
         
+        function isr = isRunning(aps)
+            isr = false;
+            if aps.is_open
+                val = calllib('libaps','APS_IsRunning',aps.device_id);
+                if val > 0
+                    isr = true;
+                end
+            end
+        end
+        
         function dbgForceELLMode(aps)
             %% Force constants to ELL mode for debug testing
             aps.max_waveform_points = aps.ELL_MAX_WAVFORM;
@@ -773,6 +783,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         function library = buildWaveformLibrary(aps, waveforms, useVarients, useEndPadding)
             % convert baseWaveforms to waveform array suitable for the APS
+            
+            %% Todo: Square pulses as time amplitude pair
             
             if ~exist('useVarients','var')
                 useVarients = 1;
@@ -1424,7 +1436,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         LinkListUnitTest(sequence, dc_offset)
         LinkListUnitTest2
-        
+                
         sequence = LinkListSequences(sequence)
         
         function aps = UnitTest(skipLoad)
