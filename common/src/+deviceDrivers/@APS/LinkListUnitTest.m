@@ -60,18 +60,11 @@ apsId = 0;
 aps.open(apsId, aps.FORCE_OPEN);
 aps.verbose = 0;
 
-%% Load Bit File
-ver = aps.readBitFileVersion();
-fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
-if forceProgram || ver ~= aps.expected_bit_file_ver
-    aps.loadBitFile();
-    ver = aps.readBitFileVersion();
-    fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
-end
+% initialize
+aps.init(forceProgram);
 
-% Pause APS if left running at end of last test
-aps.pauseFpga(0);
-aps.pauseFpga(2);
+% Stop APS if left running at end of last test
+aps.stop();
 
 %% Get Link List Sequency and Convert To APS Format
 % this is currently ignored 
@@ -126,7 +119,7 @@ end
 % build the library
 %unifiedX = aps.buildWaveformLibrary(unifiedX, useVarients);
 
-miniLinkRepeat = 1000; %1000
+miniLinkRepeat = 10; %1000
 
 for seq = 1:length(sequences1)
     

@@ -322,11 +322,16 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.is_open = 0;
         end
         
-        function init(obj)
+        function init(obj, force)
             % bare minimum commands to make the APS usable
+            % if force = true, always load bit file
+            if ~exist('force', 'var')
+                force = false;
+            end
+            
             % Determine if APS needs to be programmed
             bitFileVer = obj.readBitFileVersion();
-            if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver
+            if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver || force
                 obj.loadBitFile();
             end
             
