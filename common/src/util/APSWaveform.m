@@ -71,7 +71,7 @@ classdef APSWaveform < handle
    end
    
    properties %(Access = 'private')
-       max_wf_len_samples = 4096;
+       max_wf_len_samples = 8192; %4096
        max_wf_amp_samples = 8192;
        max_wf_amp_value = 8191; % max positive value for 13 bits
        

@@ -340,7 +340,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             for ch = 1:4
                 obj.setFrequency(ch-1, 1200, 0);
             end
-            obj.testPllSync();
+            status = obj.testPllSync();
+            if status ~= 0
+                error('APS failed to initialize');
+            end
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
