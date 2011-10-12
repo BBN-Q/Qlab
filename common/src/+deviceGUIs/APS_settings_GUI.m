@@ -5,6 +5,7 @@ function settings_fcn = APS_settings_GUI(parent, bottom, left, name, settings)
 %-------------------------------------------------------------------------------
 
 pmval_to_sample_rate = [1200,600,300,100,40];
+trigSourceMap = containers.Map({'Ext','Int'}, {'external', 'internal'});
 
 % Initialize handles structure
 handles = struct();
@@ -363,7 +364,7 @@ settings_fcn = @get_settings;
 		settings.chan_4.enabled = get(handles.ch4enable, 'Value');
 		settings.seqfile = get(handles.seqfile, 'String');
 		settings.seqforce = get(handles.seqforce, 'Value');
-		settings.triggerSource = get_selected(handles.triggerSource);
+		settings.triggerSource = trigSourceMap(get_selected(handles.triggerSource));
 		settings.samplingRate = pmval_to_sample_rate(get(handles.samplingRate, 'Value'));
 		
     end

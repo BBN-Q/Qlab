@@ -82,7 +82,7 @@ mainWindow = figure( ...
 	'Visible', 'off');
 
 % list of instruments expected in the settings structs
-instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'Spec3gen', 'TekAWG', 'BBNdc'};
+instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'Spec3gen', 'TekAWG', 'BBNAPS', 'BBNdc'};
 % load previous settings structs
 [commonSettings, prevSettings] = get_previous_settings('TimeDomain', cfg_path, instrumentNames);
 
@@ -116,7 +116,7 @@ TekTab = uitab('parent', AWGTabGroup, 'title', 'Tek');
 APSTab = uitab('parent', AWGTabGroup, 'title', 'APS');
 
 get_tekAWG_settings = deviceGUIs.AWG5014_settings_GUI(TekTab, 5, 5, 'TekAWG', prevSettings.InstrParams.TekAWG);
-get_APS_settings = deviceGUIs.APS_settings_GUI(APSTab, 5, 5, 'BBN APS');
+get_APS_settings = deviceGUIs.APS_settings_GUI(APSTab, 5, 5, 'BBN APS', prevSettings.InstrParams.BBNAPS);
 
 % add DC sources
 get_DCsource_settings = deviceGUIs.DCBias_settings_GUI(mainWindow, 240, 775, prevSettings.InstrParams.BBNdc);

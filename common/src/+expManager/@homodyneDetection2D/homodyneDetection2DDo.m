@@ -68,16 +68,16 @@ end
 
 % start and stop every AWG to make sure the sequence files are loaded
 for i = 1:length(obj.awg)
-    awg = obj.awg(i);
+    awg = obj.awg{i};
     awg.run();
     [success_flag_AWG] = awg.waitForAWGtoStartRunning();
     if success_flag_AWG ~= 1, error('AWG %d timed out', i), end
     awg.stop(); % to sync AWGs with experiment start
 end
-masterAWG = obj.awg(1);
+masterAWG = obj.awg{1};
 % start all the slave AWGs
 for i = 2:length(obj.awg)
-    awg = obj.awg(i);
+    awg = obj.awg{i};
     awg.run();
     [success_flag_AWG] = awg.waitForAWGtoStartRunning();
     if success_flag_AWG ~= 1, error('AWG %d timed out', i), end
@@ -199,7 +199,7 @@ for loop2_index = 1:Loop.two.steps
             masterAWG.stop();
             % restart the slave AWGs so we can resync
             for i = 2:length(obj.awg)
-                awg = obj.awg(i);
+                awg = obj.awg{i};
                 awg.stop();
                 awg.run();
             end

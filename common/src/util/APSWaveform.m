@@ -161,7 +161,7 @@ classdef APSWaveform < handle
        
        function data = prep_vector(wf)
            
-            wf.log(sprintf('Preparing waveform scale_factor = %.3f\n', wf.scale_factor));
+            %wf.log(sprintf('Preparing waveform scale_factor = %.3f\n', wf.scale_factor));
            
             %  If the Waveform Length is Greater Than MaxWFLenSamps,
             %  We Would Like to Downsample to fit into the DAC Memory,

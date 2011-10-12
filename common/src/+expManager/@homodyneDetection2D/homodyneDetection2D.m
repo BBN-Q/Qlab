@@ -36,6 +36,7 @@
 
 classdef homodyneDetection2D < expManager.expBase
     properties %This is only for properties not defined in the 'experiment' superlcass
+        awg = [];
     end
     methods (Static)
         %% Class constructor
@@ -74,7 +75,7 @@ classdef homodyneDetection2D < expManager.expBase
                 DriverName = class(obj.Instr.(InstrName));
                 if strcmp(DriverName, 'deviceDrivers.Tek5014') || strcmp(DriverName, 'deviceDrivers.APS')
                     numAWGs = numAWGs + 1;
-                    obj.awg(numAWGs) = obj.Instr.(InstrName);
+                    obj.awg{numAWGs} = obj.Instr.(InstrName);
                 end
             end
         end

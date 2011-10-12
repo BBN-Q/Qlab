@@ -566,8 +566,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         end
 
                         %aps.setLinkListRepeat(ch-1,ell.repeatCount);
-                        fprintf('Ch %i repeat count: %d\n', ch, ell.repeatCount);
-                        aps.setLinkListRepeat(ch-1,10000); %1000
+                        aps.setLinkListRepeat(ch-1,10000);
                     end
                     aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                 end
@@ -685,7 +684,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.disableFpga(aps.ALL_DACS);
         end
         
-        function waitForAWGtoStartRunning(aps)
+        function out = waitForAWGtoStartRunning(aps)
             % for compatibility with Tek driver
             % checks the state of the CSR to verify that a state machine
             % is running
@@ -695,6 +694,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if ~aps.is_running
                 aps.run();
             end
+            out = true;
         end
         
         function setLinkListMode(aps, id, enable, mode)
@@ -751,6 +751,20 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     aps.setFrequency(ch-1, rate, 0);
                 end
                 aps.testPllSync();
+            end
+        end
+        
+        function aps = set.triggerSource(aps, trig)
+            checkMap = containers.Map({...
+	            'internal','external',...
+                'int', 'ext'
+	            },{'internal','external','internal','external'});
+            
+            trig = lower(trig);
+            if not(checkMap.isKey(trig))
+                error(['APS: Unrecognized trigger source value: ', trig]);
+            else
+                aps.triggerSource = checkMap(trig);
             end
         end
         
