@@ -65,6 +65,18 @@ classdef homodyneDetection2D < expManager.expBase
             errorMsg = obj.initializeInstruments(errorMsg);
             % Set initial Exp parameters
             errorMsg = obj.prepareForExperiment(errorMsg);
+            
+            % find AWG instrument(s)
+            numAWGs = 0;
+            InstrumentNames = fieldnames(obj.Instr);
+            for Instr_index = 1:numel(InstrumentNames)
+                InstrName = InstrumentNames{Instr_index};
+                DriverName = class(obj.Instr.(InstrName));
+                if strcmp(DriverName, 'deviceDrivers.Tek5014') || strcmp(DriverName, 'deviceDrivers.APS')
+                    numAWGs = numAWGs + 1;
+                    obj.awg(numAWGs) = obj.Instr.(InstrName);
+                end
+            end
         end
         function errorMsg = Do(obj)
             fprintf(obj.DataFileHandle,'$$$ Beginning of Data\n');

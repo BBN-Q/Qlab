@@ -8,6 +8,7 @@ function [errorMsg] = homodyneDetection2DDo(obj)
 % v1.1 25 JUNE 2009 William Kelly <wkelly@bbn.com>
 % v1.2 25 JULY 2010 Tom Ohki
 % v1.3 08 OCT 2010 Blake Johnson
+% v1.4 12 OCT 2011 Blake Johnson
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 TaskParams = obj.inputStructure.TaskParams;
@@ -57,35 +58,31 @@ if ~SD_mode
     for Instr_index = 1:numel(InstrumentNames)
         InstrName = InstrumentNames{Instr_index};
         switch class(Instr.(InstrName))
-            case 'deviceDrivers.Tek5014'
-                tekInstrName = InstrName; % so we have this later
-				% set the tek awg running, and make sure that it actually
-                % starts running.
-				Instr.(tekInstrName).run();
-                [success_flag_AWG] = Instr.(tekInstrName).waitForAWGtoStartRunning();
-                if success_flag_AWG ~= 1, error('AWG timed out'), end
-                
-                Instr.(tekInstrName).stop(); % to sync Tek and Acqiris card
-                pause(0.5);
-            case 'deviceDrivers.Agilent33220A'
-            case 'deviceDrivers.AgilentE8363C'
-                %Instr.(InstrName).output = 'on'; % this is necessary
-                % turning on the cwSources could be done in Init, but for 
-                % now, I prefer to do it here.
-            case 'deviceDrivers.HP8673B'
-                %Instr.(InstrName).output = 'on'; % this is necessary
-            case 'deviceDrivers.HP8340B'
-                %Instr.(InstrName).output = 'on'; % this is necessary
-            %case 'deviceDrivers.TekTDS784A'
-               % scopeInstrName = InstrName; % we're going to need this later
             case 'deviceDrivers.AgilentAP120'
                 scope = Instr.(InstrName); % we're going to need this later
-			case 'deviceDrivers.DCBias'
             otherwise
                 % unknown instrument type, for now do nothing
         end
     end
 end
+
+% start and stop every AWG to make sure the sequence files are loaded
+for i = 1:length(obj.awg)
+    awg = obj.awg(i);
+    awg.run();
+    [success_flag_AWG] = awg.waitForAWGtoStartRunning();
+    if success_flag_AWG ~= 1, error('AWG %d timed out', i), end
+    awg.stop(); % to sync AWGs with experiment start
+end
+masterAWG = obj.awg(1);
+% start all the slave AWGs
+for i = 2:length(obj.awg)
+    awg = obj.awg(i);
+    awg.run();
+    [success_flag_AWG] = awg.waitForAWGtoStartRunning();
+    if success_flag_AWG ~= 1, error('AWG %d timed out', i), end
+end
+%pause(0.5);
 
 %%
 % for each loop we use the function iterateLoop to set the relevent
@@ -115,7 +112,7 @@ for loop2_index = 1:Loop.two.steps
             success = scope.acquire();
 
             % set the Tek to run
-            Instr.(tekInstrName).run();
+            masterAWG.run();
             pause(0.5);
 
             success = scope.wait_for_acquisition(30);
@@ -199,8 +196,13 @@ for loop2_index = 1:Loop.two.steps
             ylabel('Q Voltage');
             grid on
             
-            % stop the Tek so we can resync
-            Instr.(tekInstrName).stop();
+            masterAWG.stop();
+            % restart the slave AWGs so we can resync
+            for i = 2:length(obj.awg)
+                awg = obj.awg(i);
+                awg.stop();
+                awg.run();
+            end
             pause(0.2);
         end
 
