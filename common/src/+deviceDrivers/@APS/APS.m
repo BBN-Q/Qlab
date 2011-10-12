@@ -71,6 +71,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         pendingValue = 0;
         expectedLength = 0;
         currentLength = 0;
+        zeroKey = 'LLZero';
 
     end
     
@@ -820,6 +821,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             idx = 1;
             
+            % add a TA entry to represent zero
+            waveforms.put(aps.zeroKey, zeros([1,aps.ADDRESS_UNIT]));
+            
             if useEndPadding
                 endPadding = 4;
             else
@@ -967,6 +971,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             %  T       - Entry has valid output trigger delay
             %  LS      - Start of Mini Link List
             %  LE      - End of Mini Link List
+            
+            % point zero entries to the special zero waveform which is a TA
+            % pair
+            if entry.isZero
+                address = library.offsets(aps.zeroKey);
+                entry.isTimeAmplitude = 1;
+                entry.isZero = 0;
+            end
             
             offsetVal = bitand(address, aps.ELL_ADDRESS);  % address
             if entry.isTimeAmplitude
