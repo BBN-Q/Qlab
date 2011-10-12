@@ -10,7 +10,7 @@ function exportAPSConfig(path, basename, ch1seq, ch2seq, ch3seq, ch4seq)
         mkdir(path);
     end
     
-    miniLinkRepeat = 1000;
+    miniLinkRepeat = 0; %1
     WaveformLibs = [];
     LinkLists = [];
     
@@ -25,10 +25,7 @@ function exportAPSConfig(path, basename, ch1seq, ch2seq, ch3seq, ch4seq)
             [WaveformLibs{i}, banks] = aps.convertLinkListFormat(seq, useVarients, wfLib, miniLinkRepeat);
             LinkLists{i}.bankA = banks{1};
             if length(banks) > 1
-                LinkLists{i}.bankB = banks{2};
-            else
-                LinkLists{i}.bankB = banks{1}; % workaround for not handling empty bankB
-           
+                LinkLists{i}.bankB = banks{2};          
             end
         else
             WaveformLibs{i} = [];

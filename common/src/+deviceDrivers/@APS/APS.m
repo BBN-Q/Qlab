@@ -567,7 +567,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
 
                         %aps.setLinkListRepeat(ch-1,ell.repeatCount);
                         fprintf('Ch %i repeat count: %d\n', ch, ell.repeatCount);
-                        aps.setLinkListRepeat(ch-1,1000);
+                        aps.setLinkListRepeat(ch-1,10000); %1000
                     end
                     aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                 end
@@ -1215,8 +1215,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         nextEntry = linkList{j+1};
                         [offsetVal2 countVal2] = peakEntryToOffsetCount(aps,nextEntry,waveformLibrary);
 
-                        if countVal2 < 2      
-                            % if TA pair is less than 2 use extra padding at end
+                        if countVal2 < 3      
+                            % if pulse length is less than 3, use extra padding at end
                             % of waveform in library
                             if nextEntry.isTimeAmplitude && nextEntry.isZero
                                 if aps.verbose
@@ -1231,8 +1231,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         end
                     end
                     
-                    if countVal < 2
-                        fprintf('Warning entry count < 2. This causes problems with APS\n')
+                    if countVal < 3
+                        fprintf('Warning entry count < 3. This causes problems with APS\n')
                     end
                     
                     % if we are at end end of the link list entry but this is
@@ -1249,7 +1249,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                             entry.isTimeAmplitude, entry.isZero);
                     end
                     
-                    % for first mini-LL entry only, set LS bit
+                    % also need to set the LS bit on the first mini-LL
+                    % entry
                     if idx == 1
                         offsetVal = bitor(offsetVal, aps.ELL_FIRST_ENTRY); 
                     end

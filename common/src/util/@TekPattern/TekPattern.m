@@ -194,11 +194,11 @@ classdef TekPattern < handle
 				self.writeField(fid, strcat('SEQUENCE_WAIT_', num2str(i)), 1, 'int16');
 				
 				% sequence loop: 0 = infinite (default = 1)
-                num_repeats = 0; % set to -1 to loop indefinitely
+                num_repeats = 1;
                 if ismember('num_repeats', fieldnames(options)) && isnumeric(options.num_repeats) && options.num_repeats >= 0
                     num_repeats = options.num_repeats;
                 end
-				self.writeField(fid, strcat('SEQUENCE_LOOP_', num2str(i)), num_repeats+1, 'int32');
+				self.writeField(fid, strcat('SEQUENCE_LOOP_', num2str(i)), num_repeats, 'int32');
 				
 				% sequence jump: 0 = off, -1 = next, n = element #
 				self.writeField(fid, strcat('SEQUENCE_JUMP_', num2str(i)), 0, 'int16');

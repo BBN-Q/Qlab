@@ -58,10 +58,10 @@ handles.output = hObject;
 % Update handles structure
 guidata(hObject, handles);
 
-base_path = 'C:\Documents and Settings\QLab\Desktop\SVN\qlab\';
-restoredefaultpath
-addpath([ base_path 'common/src/'],'-END');
-addpath([ base_path 'common/src/util/'],'-END');
+%base_path = 'C:\Documents and Settings\QLab\Desktop\SVN\qlab\';
+%restoredefaultpath
+%addpath([ base_path 'common/src/'],'-END');
+%addpath([ base_path 'common/src/util/'],'-END');
 
 % UIWAIT makes acqiris_2Dscope wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
@@ -586,7 +586,7 @@ function runbutton_Callback(hObject, eventdata, handles)
 	% acquire data'
 	disp('Acqiring');
 	scope.acquire();
-	scope.wait_for_acquisition();
+	scope.wait_for_acquisition(10);
 	
 	idata = scope.transfer_waveform(1);
 	qdata = scope.transfer_waveform(2);
