@@ -29,20 +29,21 @@ function optimize_mixer_offsets_APS()
     spec_analyzer_span = 100e3;
     spec_resolution_bw = 10e3;
     spec_sweep_points = 20;
-    awg_I_channel = 0;
-    awg_Q_channel = 1;
-    max_offset = 410; % 100 mV max I/Q offset voltage = 409.6 DAC levels
+    awg_I_channel = 1;
+    awg_Q_channel = 2;
+    max_offset = 0.1; % 100 mV max I/Q offset voltage ~ 410 DAC levels
     max_steps = 50;
-    min_step_size = 1;
+    min_step_size = 0.0005;
     pthreshold = 2.0;
-    dthreshold = 2; % 0.002
-    verbose = false;
+    dthreshold = 0.001; % 2
+    verbose = true;
     simulate = false;
     simul_vertex.a = 0;
     simul_vertex.b = 0;
     fevals = 0;
     fevals2 = 0;
-    zeroWaveform = int16(zeros(1,1000));
+    zeroWaveform = APSWaveform();
+    zeroWaveform.data = int16(zeros(1,1000));
     
     % initialize instruments
     if ~simulate
@@ -71,11 +72,13 @@ function optimize_mixer_offsets_APS()
             end
         end
         
-        awg.disableFpga(-1);
-        for ch = 0:3
-            awg.loadWaveform(ch, zeroWaveform);
+        awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
+        awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
+        awg.stop();
+        for ch = 1:4
+            awg.loadWaveform(ch-1, zeroWaveform.prep_vector());
         end
-        awg.triggerFpga(-1,1);
+        awg.run();
         pause(0.02);
     end
     
@@ -137,12 +140,12 @@ function optimize_mixer_offsets_APS()
         dtol = sqrt( (vertices(low).a - vertices(high).a)^2 + (vertices(low).b - vertices(high).b)^2);
         if (verbose)
             fprintf('High: %.2f, Middle: %.2f, Low: %.2f\n', values([high middle low]));
-            fprintf('Power difference: %.2f, High-Low distance: %.3f\n', [ptol dtol]);
+            fprintf('Power difference: %.2f, High-Low distance: %.4f\n', [ptol dtol]);
         end
         if (ptol < pthreshold && dtol < dthreshold)
           setOffsets(vertices(low));
           fprintf('Nelder-Mead optimum: %.2f\n', values(low));
-          fprintf('Offset: (%.0f, %.0f)\n', [vertices(low).a vertices(low).b]);
+          fprintf('Offset: (%.4f, %.4f)\n', [vertices(low).a vertices(low).b]);
           fprintf('Optimization converged in %d steps\n', steps);
           % turn on video averaging
           sa.number_averages = 10;
@@ -181,7 +184,7 @@ function optimize_mixer_offsets_APS()
       end
 
       setOffsets(vertices(low));
-      fprintf('Offset: (%.0f, %.0f)\n', [vertices(low).a vertices(low).b]);
+      fprintf('Offset: (%.4f, %.4f)\n', [vertices(low).a vertices(low).b]);
       warning('N-M optimization timed out, starting local search.');
       localSearch(vertices(low));     
     end
@@ -221,7 +224,7 @@ function optimize_mixer_offsets_APS()
               setOffsets(v);
               p = readPower();
               if (verbose)
-                  fprintf('Offset: (%.0f, %.0f), Power: %.2f\n', [v.a v.b p]);
+                  fprintf('Offset: (%.4f, %.4f), Power: %.2f\n', [v.a v.b p]);
               end
               if p < p_best
                 v_best = v;
@@ -232,7 +235,7 @@ function optimize_mixer_offsets_APS()
 
       setOffsets(v_best);
       fprintf('Local search finished with power = %.2f dBm\n', p_best);
-      fprintf('Offset: (%.0f, %.0f)\n', [v_best.a v_best.b]);
+      fprintf('Offset: (%.4f, %.4f)\n', [v_best.a v_best.b]);
     end
 
     function power = readPower()
@@ -249,10 +252,12 @@ function optimize_mixer_offsets_APS()
 
     function setOffsets(vertex)
         if ~simulate
-            awg.disableFpga(-1);
-            awg.loadWaveform(awg_I_channel, int16(zeroWaveform + vertex.a));
-            awg.loadWaveform(awg_Q_channel, int16(zeroWaveform + vertex.b));
-            awg.triggerFpga(-1,1);
+            awg.stop();
+            zeroWaveform.set_offset(vertex.a);
+            awg.loadWaveform(awg_I_channel-1, zeroWaveform.prep_vector());
+            zeroWaveform.set_offset(vertex.b);
+            awg.loadWaveform(awg_Q_channel-1, zeroWaveform.prep_vector());
+            awg.run();
             pause(0.02);
             sa.sweep();
         else
