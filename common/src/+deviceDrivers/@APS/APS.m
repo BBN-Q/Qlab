@@ -919,6 +919,15 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             entryData.offset = library.offsets(entry.key);
             entryData.length = library.lengths(entry.key);
             
+            % Note: hack to support zero offsets before it is implemented in
+            % firmware. Point zero entries to the special zero waveform which is
+            % a TA pair.
+            if entry.isZero
+                entryData.offset = library.offsets(aps.zeroKey);
+                entry.isTimeAmplitude = 1;
+                entry.isZero = 0;
+            end
+            
             if library.varients.isKey(entry.key)
                 entryData.varientWFs = library.varients(entry.key);
             else
@@ -971,14 +980,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             %  T       - Entry has valid output trigger delay
             %  LS      - Start of Mini Link List
             %  LE      - End of Mini Link List
-            
-            % point zero entries to the special zero waveform which is a TA
-            % pair
-            if entry.isZero
-                address = library.offsets(aps.zeroKey);
-                entry.isTimeAmplitude = 1;
-                entry.isZero = 0;
-            end
             
             offsetVal = bitand(address, aps.ELL_ADDRESS);  % address
             if entry.isTimeAmplitude
