@@ -11,9 +11,20 @@ const byte CHANNEL = 2;
 const byte IDENTIFY = 3;
 const byte SETID = 4;
 const byte DONE = 10;
-const boolean VERBOSE = false;
+const boolean VERBOSE = true;
 
 const int attenuatorPins[3][6] = {{A5,A4,A3,A2,A1,A0}, {7,6,5,4,3,2}, {13,12,11,10,9,8}};
+
+/**
+ * EEPROM memory map (total size = 1024 bytes)
+ * bytes 0-1: serial number
+ *       2-3: channel 1 attenuator doubled value (int between 0-63)
+ *       4-5: channel 2 attenuator doubled value
+ *       6-7: channel 3 attenuator doubled value
+ */
+ 
+ const int ID_OFFSET = 0;
+ const int CH_OFFSETS[3] = {2, 4, 6};
 
 /**
  * MAIN PROGRAM
@@ -25,6 +36,13 @@ void setup() {
     for (int j = 0; j <= 5; j++ ) {
       pinMode( attenuatorPins[i][j], OUTPUT );
     }
+  }
+  
+  // load stored channel values from EEPROM
+  float val;
+  for (int ch = 1; ch <= 3; ch++ ) {
+    val = readStoredChannelValue(ch);
+    setAttenuator(ch, val);
   }
   Serial.begin(9600);
 }
@@ -110,6 +128,7 @@ int processInput(char* input) {
     Serial << "Setting channel " << channel << " to " << value;
     Serial.println();
     setAttenuator(channel, value);
+    writeStoredChannelValue(channel, value);
     Serial.println("END");
     return DONE;
   } else if (mode == IDENTIFY) {
@@ -148,7 +167,7 @@ void setAttenuator(int channel, double val) {
 
 // get first two bytes from EEPROM memory
 unsigned int getID(void) {
-  unsigned int id = word( EEPROM.read(1), EEPROM.read(0) );
+  unsigned int id = word( EEPROM.read(ID_OFFSET+1), EEPROM.read(ID_OFFSET) );
   return id;
 }
 
@@ -158,6 +177,28 @@ void setID(unsigned int id) {
     Serial << "Low Byte 0: " << (id & 0xFF) << "\n";
     Serial << "High Byte 1: " << (id >> 7) << "\n";
   }
-  EEPROM.write(0, id & 0xFF);
-  EEPROM.write(1, (id >> 7) );
+  EEPROM.write(ID_OFFSET, id & 0xFF);
+  EEPROM.write(ID_OFFSET+1, (id >> 7) );
 }
+
+float readStoredChannelValue(int channel) {
+  channel = constrain(channel, 1, 3);
+  int value = word( EEPROM.read(CH_OFFSETS[channel-1]+1), EEPROM.read(CH_OFFSETS[channel-1]) );
+  value = constrain(value, 0, 63);
+  if (VERBOSE) {
+    Serial << "Read stored value " << (float) value / 2.0 << ".\n";
+  }
+  return (float) value / 2.0;
+}
+
+void writeStoredChannelValue(int channel, float value) {
+  channel = constrain(channel, 1, 3);
+  int writeVal = constrain( (int) (value * 2.0), 0, 63 );
+  if (VERBOSE) {
+    Serial << "Low Byte " << CH_OFFSETS[channel-1] << ": " << (writeVal & 0xFF) << "\n";
+    Serial << "High Byte " << CH_OFFSETS[channel-1]+1 << ": " << (writeVal >> 7) << "\n";
+  }
+  EEPROM.write(CH_OFFSETS[channel-1], writeVal & 0xFF);
+  EEPROM.write(CH_OFFSETS[channel-1]+1, writeVal >> 7);
+}
+
