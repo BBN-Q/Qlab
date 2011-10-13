@@ -11,7 +11,7 @@ const byte CHANNEL = 2;
 const byte IDENTIFY = 3;
 const byte SETID = 4;
 const byte DONE = 10;
-const boolean VERBOSE = true;
+const boolean VERBOSE = false;
 
 const int attenuatorPins[3][6] = {{A5,A4,A3,A2,A1,A0}, {7,6,5,4,3,2}, {13,12,11,10,9,8}};
 
@@ -194,11 +194,14 @@ float readStoredChannelValue(int channel) {
 void writeStoredChannelValue(int channel, float value) {
   channel = constrain(channel, 1, 3);
   int writeVal = constrain( (int) (value * 2.0), 0, 63 );
-  if (VERBOSE) {
-    Serial << "Low Byte " << CH_OFFSETS[channel-1] << ": " << (writeVal & 0xFF) << "\n";
-    Serial << "High Byte " << CH_OFFSETS[channel-1]+1 << ": " << (writeVal >> 7) << "\n";
+  // only write if the value is different from memory
+  if (writeVal != (int) (readStoredChannelValue(channel)*2.0) ) {
+    if (VERBOSE) {
+      Serial << "Low Byte " << CH_OFFSETS[channel-1] << ": " << (writeVal & 0xFF) << "\n";
+      Serial << "High Byte " << CH_OFFSETS[channel-1]+1 << ": " << (writeVal >> 7) << "\n";
+    }
+    EEPROM.write(CH_OFFSETS[channel-1], writeVal & 0xFF);
+    EEPROM.write(CH_OFFSETS[channel-1]+1, writeVal >> 7);
   }
-  EEPROM.write(CH_OFFSETS[channel-1], writeVal & 0xFF);
-  EEPROM.write(CH_OFFSETS[channel-1]+1, writeVal >> 7);
 }
 
