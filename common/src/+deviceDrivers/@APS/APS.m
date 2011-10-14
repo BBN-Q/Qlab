@@ -1009,6 +1009,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % length
             if ~entry.isTimeAmplitude
                 countVal = fix(entryData.length/aps.ADDRESS_UNIT);
+                %% HACKY HACK HACK (think count is off by one) %%
+                if countVal >= 4
+                    countVal = countVal - 1;
+                end
             else
                 countVal = fix(floor(entry.repeat / aps.ADDRESS_UNIT));
                 diff = entry.repeat - countVal * aps.ADDRESS_UNIT;

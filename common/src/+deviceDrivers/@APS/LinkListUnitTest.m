@@ -87,7 +87,7 @@ aps.loadWaveform(3,wf2.get_vector(),0);
 
 %%
 
-useVarients = 1;
+useVarients = 0; %1
 validate = 0;
 singleBankTest = 0;
 hardCodeSeq = 1;
@@ -119,7 +119,7 @@ end
 % build the library
 %unifiedX = aps.buildWaveformLibrary(unifiedX, useVarients);
 
-miniLinkRepeat = 10; %1000
+miniLinkRepeat = 0; %10
 
 for seq = 1:length(sequences1)
     

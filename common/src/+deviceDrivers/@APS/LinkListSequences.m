@@ -276,7 +276,7 @@ switch sequence
         pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dBuffer', buffer, 'cycleLength', cycleLength);
 
         numsteps = 10;
-        minWidth = 8;
+        minWidth = 0;
         stepsize = 8;
         pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 

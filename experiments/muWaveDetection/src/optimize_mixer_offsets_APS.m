@@ -36,7 +36,7 @@ function optimize_mixer_offsets_APS()
     min_step_size = 0.0005;
     pthreshold = 2.0;
     dthreshold = 0.001; % 2
-    verbose = true;
+    verbose = false;
     simulate = false;
     simul_vertex.a = 0;
     simul_vertex.b = 0;
