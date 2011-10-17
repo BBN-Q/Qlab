@@ -1008,22 +1008,19 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % use entryData to get length as it includes the padded
             % length
             if ~entry.isTimeAmplitude
-                countVal = fix(entryData.length/aps.ADDRESS_UNIT);
-                %% HACKY HACK HACK (think count is off by one) %%
-                if countVal >= 4
-                    countVal = countVal - 1;
-                end
+                % count val is (length in 4 sample units) - 1
+                countVal = fix(entryData.length/aps.ADDRESS_UNIT) - 1;
             else
-                countVal = fix(floor(entry.repeat / aps.ADDRESS_UNIT));
-                diff = entry.repeat - countVal * aps.ADDRESS_UNIT;
-                aps.pendingValue = library.waveforms(entryData.offset);
+                countVal = fix(floor(entry.repeat / aps.ADDRESS_UNIT)) - 1;
+                %diff = entry.repeat - (countVal+1) * aps.ADDRESS_UNIT;
+                %aps.pendingValue = library.waveforms(entryData.offset);
             end
             if (~entry.isTimeAmplitude && countVal > aps.ELL_ADDRESS) || ...
                     (entry.isTimeAmplitude && countVal > aps.ELL_TA_MAX)
                 error('Link List countVal %i is too large', countVal);
             end
             
-            aps.currentLength = aps.currentLength + countVal * aps.ADDRESS_UNIT;
+            aps.currentLength = aps.currentLength + (countVal+1) * aps.ADDRESS_UNIT;
             
             % test to see if the pattern is running long and we need to trim
             % pendingLength
@@ -1087,18 +1084,18 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % use entryData to get length as it includes the padded
             % length
             if ~entry.isTimeAmplitude
-                countVal = fix(entryData.length/aps.ADDRESS_UNIT);
+                countVal = fix(entryData.length/aps.ADDRESS_UNIT) - 1;
             else
-                countVal = fix(floor(entry.repeat / aps.ADDRESS_UNIT));
-                diff = entry.repeat - countVal * aps.ADDRESS_UNIT;
-                aps.pendingValue = library.waveforms(entryData.offset);
+                countVal = fix(floor(entry.repeat / aps.ADDRESS_UNIT)) - 1;
+                %diff = entry.repeat - (countVal+1) * aps.ADDRESS_UNIT;
+                %aps.pendingValue = library.waveforms(entryData.offset);
             end
             if (~entry.isTimeAmplitude && countVal > aps.ELL_ADDRESS) || ...
                     (entry.isTimeAmplitude && countVal > aps.ELL_TA_MAX)
                 error('Link List countVal %i is too large', countVal);
             end
             
-            currentLength = aps.currentLength + countVal * aps.ADDRESS_UNIT;
+            %currentLength = aps.currentLength + (countVal+1) * aps.ADDRESS_UNIT;
             
         end
         
@@ -1256,7 +1253,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                                 if aps.verbose
                                     fprintf('Found TA & Z with count = %i. Adjusting waveform end.\n', countVal2);
                                 end
-                                countVal = countVal + countVal2;
+                                % remember, count is length-1
+                                countVal = countVal + (countVal2+1);
                                 
                                 skipNext = 1;                            
                             else
@@ -1357,7 +1355,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 for j = 1:bank.length
                     
                     offset = bank.offset(j);
-                    count = bank.count(j);
+                    count = bank.count(j) + 1; % length = (count+1)*ADDRESS_UNIT
                     TA = bitand(offset, aps.ELL_TIME_AMPLITUDE) == aps.ELL_TIME_AMPLITUDE;
                     zero = bitand(offset, aps.ELL_ZERO) == aps.ELL_ZERO;
                     
