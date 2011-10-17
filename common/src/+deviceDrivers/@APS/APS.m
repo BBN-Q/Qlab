@@ -1254,6 +1254,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                                     fprintf('Found TA & Z with count = %i. Adjusting waveform end.\n', countVal2);
                                 end
                                 % remember, count is length-1
+                                % BUG ALERT: Isn' this only valid if the
+                                % current entry is a Time/Amplitude zero?
                                 countVal = countVal + (countVal2+1);
                                 
                                 skipNext = 1;                            
@@ -1457,6 +1459,23 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 path = [path(1:idx+length(spath)) 'util'];
                 addpath(path);
                 wf = APSWaveform();
+            end
+        end
+        
+        function unifiedX = unifySequenceLibraryWaveformsSingle(sequences)
+            unifiedX = java.util.Hashtable();
+            n = length(sequences);
+            for seq = 1:n
+                xwaveforms = sequences{seq}.waveforms;
+                
+                xkeys = xwaveforms.keys;
+                
+                while xkeys.hasMoreElements()
+                    key = xkeys.nextElement();
+                    if ~unifiedX.containsKey(key)
+                        unifiedX.put(key,xwaveforms.get(key));
+                    end
+                end
             end
         end
         

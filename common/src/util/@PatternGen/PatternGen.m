@@ -402,31 +402,30 @@ classdef PatternGen < handle
                     % Hash Waveform unless it is an Identity pulse which
                     % is treated as a speacial case of time amplitude pair
                     
+                    [xpulse ypulse] = patList{i}(n);
+                    if (~xpulse & ~ypulse) % null pulses are effectively QId's
+                        name = 'QId';
+                    end
                     if ~strcmp(name,'QId')
-                        [xpulse ypulse] = patList{i}(n);
+                        
                         [xLinkList{i+1} xWaveformTable] = buildEntry(xWaveformTable, xpulse, 'X');
                         [yLinkList{i+1} yWaveformTable] = buildEntry(yWaveformTable, ypulse, 'Y');
                     else
-                        % treak QId as a seperate case
+                        % treat QId as a special case
                         % use a time amplitude pair with the padWaveform
                         % delay must be a minimum of the duration amount set
                         % above
                         [xLinkList{i+1} xWaveformTable] = buildEntry(xWaveformTable, padWaveform, 'X');
                         [yLinkList{i+1} yWaveformTable] = buildEntry(yWaveformTable, padWaveform, 'Y');
+                        xLinkList{i+1}.isTimeAmplitude = 1;
+                        yLinkList{i+1}.isTimeAmplitude = 1;
+                        xLinkList{i+1}.isZero = 1;
+                        yLinkList{i+1}.isZero = 1;
                         
-                        % find width
-                        for j = 2:2:length(patListParams{i})
-                            if strcmp(patListParams{i}{j},'width')
-                                r = patListParams{i}{j+1}(n) + obj.dBuffer;
-                                xLinkList{i+1}.repeat = r;
-                                yLinkList{i+1}.repeat = r;
-                                xLinkList{i+1}.isTimeAmplitude = 1;
-                                yLinkList{i+1}.isTimeAmplitude = 1;
-                                xLinkList{i+1}.isZero = 1;
-                                yLinkList{i+1}.isZero = 1;
-                                break;
-                            end
-                        end
+                        % repeat = width
+                        r = length(xpulse);
+                        xLinkList{i+1}.repeat = r;
+                        yLinkList{i+1}.repeat = r;
                     end
                 end
 
