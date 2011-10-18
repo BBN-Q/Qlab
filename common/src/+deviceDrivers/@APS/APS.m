@@ -926,6 +926,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 entryData.offset = library.offsets(aps.zeroKey);
                 entry.isTimeAmplitude = 1;
                 entry.isZero = 0;
+                entry.isPseudoZero = 1;
             end
             
             if library.varients.isKey(entry.key)
@@ -957,7 +958,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             elseif aps.pendingLength < 0
                 % if pattern is running long and output is zero trim the length
                 % may get bumped back up
-                if entry.isZero
+                if entry.isZero || entry.isPseudoZero
                     entry.repeat = entry.repeat + aps.pendingLength;
                     adjustNegative = 1;
                     if aps.verbose
@@ -1219,6 +1220,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 end
                 
                 skipNext = 0;
+                
                 for j = 1:lenLL
                     entry = linkList{j};
                     
