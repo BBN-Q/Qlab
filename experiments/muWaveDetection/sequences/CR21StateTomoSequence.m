@@ -22,20 +22,20 @@ load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bu
 load([cfg_path 'pulseParams.mat'], 'T2', 'delay2', 'bufferDelay2', 'bufferReset2', 'bufferPadding2', 'offset2', 'piAmp2', 'pi2Amp2', 'sigma2', 'pulseType2', 'delta2', 'buffer2', 'pulseLength2');
 load([cfg_path 'pulseParams.mat'], 'T3', 'delay3', 'bufferDelay3', 'bufferReset3', 'bufferPadding3', 'offset3', 'piAmp3', 'pi2Amp3', 'sigma3', 'pulseType3', 'delta3', 'buffer3', 'pulseLength3');
 
-pg1 = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', buffer, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
-pg21 = PatternGen('dPiAmp', piAmp2, 'dPiOn2Amp', pi2Amp2, 'dSigma', sigma2, 'dPulseType', pulseType2, 'dDelta', delta2, 'correctionT', T2, 'dBuffer', buffer2, 'dPulseLength', pulseLength2, 'cycleLength', cycleLength);
+pg21 = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', buffer, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
+pg1 = PatternGen('dPiAmp', piAmp2, 'dPiOn2Amp', pi2Amp2, 'dSigma', sigma2, 'dPulseType', pulseType2, 'dDelta', delta2, 'correctionT', T2, 'dBuffer', buffer2, 'dPulseLength', pulseLength2, 'cycleLength', cycleLength);
 % jerry had the CR21 pulse type as 'dragSq'
 pg2 = PatternGen('dPiAmp', piAmp3, 'dPiOn2Amp', pi2Amp3, 'dSigma', sigma3, 'dPulseType', pulseType3, 'dDelta', delta3, 'correctionT', T3, 'dBuffer', buffer3, 'dPulseLength', pulseLength3, 'cycleLength', cycleLength);
 
 %AWG5014 CHs (3,4) is Q1 single-qubit (pg1)
 %APS CHs (1,2) is Q2 single-qubit (pg2)
 %AWG5014 CHs (1,2) is drive Q1 at Q2 cross resonance (pg21)
-delayQ1 = delay;
-offsetQ1 = offset;
+delayQ1 = delay2;
+offsetQ1 = offset2;
 delayQ2 = delay3;
 offsetQ2 = offset3;
-delayCR21 = delay2;
-offsetCR21 = offset2;
+delayCR21 = delay;
+offsetCR21 = offset;
 
 PosPulsesQ1{1} = pg1.pulse('QId');
 PosPulsesQ1{2} = pg1.pulse('Xp');
@@ -55,7 +55,7 @@ nbrPosPulses = length(PosPulsesQ1);
 
 numsteps = 1;
 crossresstep = 10;
-crossreswidths = 200+(0:crossresstep:(numsteps-1)*crossresstep);
+crossreswidths = 228+(0:crossresstep:(numsteps-1)*crossresstep);
 
 ampCR = 8000;
 %angle = 102*(pi/180);
@@ -81,7 +81,7 @@ for nindex = 1:numsteps
 %     processPulseQ2 = pg2.pulse('QId', 'width', currcrossreswidth);
     processPulseQ2 = {'QId', 'width', currcrossreswidth};
     processPulseCR21 = pg21.pulse('Utheta', 'amp', ampCR, ...
-        'angle', angle, 'width', currcrossreswidth);
+        'angle', angle, 'width', currcrossreswidth, 'pType', 'square');
     
     %ADD IN CALIBRATIONS
 
@@ -168,7 +168,7 @@ for nindex = 1:numsteps
         [patx paty] = pg1.getPatternSeq(patseqQ1{n}, n, delayQ1, fixedPt);
         Q1_I(n, :) = patx + offsetQ1;
         Q1_Q(n, :) = paty + offsetQ1;
-        Q1buffer(n, :) = pg1.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
+        Q1buffer(n, :) = pg1.bufferPulse(patx, paty, 0, bufferPadding2, bufferReset2, bufferDelay2);
         
         % Q2
         %[patx paty] = pg2.getPatternSeq(patseqQ2{n}, n, delayQ2, fixedPt);
@@ -186,7 +186,7 @@ for nindex = 1:numsteps
         [patx paty] = pg21.getPatternSeq(patseqCR21{n}, n, delayCR21, fixedPt);
         CR21_I(n, :) = patx + offsetCR21;
         CR21_Q(n, :) = paty + offsetCR21;
-        CR21buffer(n, :) = pg21.bufferPulse(patx, paty, 0, bufferPadding2, bufferReset2, bufferDelay2);
+        CR21buffer(n, :) = pg21.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
     end
     
     % trigger slave AWG (the APS) at beginning
@@ -234,12 +234,12 @@ for nindex = 1:numsteps
     % make APS file
     exportAPSConfig(temppath, basename, ch5seq, ch6seq);
     disp('Moving APS file to destination');
-    %movefile([temppath basename '.mat'], [pathAPS basename '.mat']);
+    movefile([temppath basename '.mat'], [pathAPS basename '.mat']);
     % make TekAWG file
     options = struct('m21_high', 2.0, 'm41_high', 2.0);
     TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
     disp('Moving AWG file to destination');
-    %movefile([temppath basename '.awg'], [path basename '.awg']);
+    movefile([temppath basename '.awg'], [pathAWG basename '.awg']);
 end
 
     
