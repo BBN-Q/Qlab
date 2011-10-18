@@ -1223,6 +1223,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 
                 for j = 1:lenLL
                     entry = linkList{j};
+                    % add isPseudoZero field to entry to support zero
+                    % offset hack
+                    entry.isPseudoZero = 0;
                     
                     if aps.verbose
                         fprintf('Entry %i: key: %s length: %2i repeat: %4i \n', j, entry.key, entry.length, ...
