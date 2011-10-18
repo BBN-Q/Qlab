@@ -1,6 +1,6 @@
 function [betas Pauli] = PauliTomo(stomodat)
 
-b = BetaExtract(stomodat)
+b = BetaExtract(stomodat);
 % b0 II +b1 ZI + b2 IZ + b3 ZZ
 b0 = b(1);
 b1 = b(2);
