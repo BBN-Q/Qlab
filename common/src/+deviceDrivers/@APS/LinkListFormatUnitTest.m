@@ -30,7 +30,7 @@ end
 
 
 if ~exist('useEndPadding', 'var') || isempty(useEndPadding)
-    useEndPadding = 0;
+    useEndPadding = 1;
 end
 
 sequences = deviceDrivers.APS.LinkListSequences(sequence);

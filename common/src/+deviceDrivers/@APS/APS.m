@@ -78,6 +78,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
     properties (Constant)
         ADDRESS_UNIT = 4;
         MIN_PAD_SIZE = 4;
+        MIN_LL_ENTRY_COUNT = 3;
         
         ELL_MAX_WAVFORM = 8192;
         ELL_MAX_LL = 512;
@@ -825,7 +826,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             waveforms.put(aps.zeroKey, zeros([1,aps.ADDRESS_UNIT]));
             
             if useEndPadding
-                endPadding = 4;
+                endPadding = 12;
             else
                 endPadding = 0;
             end
@@ -839,6 +840,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 varientWFs = {};
                 if useVarients
                     endPad = 3;
+                    % TODO add check for lenght(orgWF) < 16
                 else
                     endPad = 0;
                 end
@@ -848,16 +850,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 
                 for leadPad = 0:endPad
                     wf = [];  % clear waveform
-                    for i = 1:leadPad
-                        wf(end+1) = 0;
+                    if leadPad
+                        wf = zeros([1,leadPad]);
                     end
                     wf(end+1:end+length(orgWF)) = orgWF;
-                    % add 8 extra zero points to handle
-                    % TA pairs of 0 and 1
+                    % add 12 extra zero points to handle
+                    % TAZ entries with count < 3
                     if useEndPadding
-                    for i = 1:endPadding
-                        wf(end+1) = 0;
-                    end
+                        wf(end+1:end+endPadding - leadPad) = zeros([1, endPadding-leadPad]);
                     end
 
                     % test for padding to mod 4
@@ -866,7 +866,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         % example to save value repeated four times
                         wf = ones([1,aps.ADDRESS_UNIT]) * wf;
                     end
-                    pad = aps.ADDRESS_UNIT - mod(length(wf),aps.ADDRESS_UNIT);
+                    pad = mod(-length(wf),aps.ADDRESS_UNIT);
                     if pad ~= 0 && pad < aps.MIN_PAD_SIZE
                         % pad to length 4
                         wf(end+1:end+pad) = zeros([1,pad],'int16');
@@ -887,7 +887,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         % are used to handle 0 and 1 count TA
                         varient.length = length(wf) - endPadding;
                         varient.pad = leadPad;
-                        varientWFs{end+1} = varient;
+                        varientWFs{end+1} = varient; % store the varient at position varientWFs{leadPad+1}
                     end
                     idx = idx + length(wf);
                 end
@@ -944,7 +944,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if aps.pendingLength > 0 && ~isempty(entryData.varientWFs)
                 % attempt to us a varient
                 padIdx = aps.pendingLength + 1;
-                assert(padIdx > 0 && padIdx <= aps.ADDRESS_UNIT,sprintf('Padding Index %i Out of Range', padIdx));
+                assert(padIdx > 0 && padIdx <= (aps.MIN_LL_ENTRY_COUNT+1) * aps.ADDRESS_UNIT,sprintf('Padding Index %i Out of Range', padIdx));
                 if length(entryData.varientWFs) >= padIdx   % matlab index offset
                     varient = entryData.varientWFs(padIdx);
                     if iscell(varient), varient = varient{1}; end; % remove cell wrapper
@@ -1009,8 +1009,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % use entryData to get length as it includes the padded
             % length
             if ~entry.isTimeAmplitude
+                % waveforms might have extra end padding; take min length
+                entrylen = min(entry.length, entryData.length);
                 % count val is (length in 4 sample units) - 1
-                countVal = fix(entryData.length/aps.ADDRESS_UNIT) - 1;
+                countVal = fix(entrylen/aps.ADDRESS_UNIT) - 1;
             else
                 countVal = fix(floor(entry.repeat / aps.ADDRESS_UNIT)) - 1;
                 %diff = entry.repeat - (countVal+1) * aps.ADDRESS_UNIT;
@@ -1085,7 +1087,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % use entryData to get length as it includes the padded
             % length
             if ~entry.isTimeAmplitude
-                countVal = fix(entryData.length/aps.ADDRESS_UNIT) - 1;
+                % waveforms might have extra end padding; take min length
+                entrylen = min(entry.length, entryData.length);
+                % count val is (length in 4 sample units) - 1
+                countVal = fix(entrylen/aps.ADDRESS_UNIT) - 1;
             else
                 countVal = fix(floor(entry.repeat / aps.ADDRESS_UNIT)) - 1;
                 %diff = entry.repeat - (countVal+1) * aps.ADDRESS_UNIT;
@@ -1220,6 +1225,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 end
                 
                 skipNext = 0;
+                aps.pendingLength = 0;
+                %aps.pendingValue = 0;
+                aps.expectedLength = 0;
+                aps.currentLength = 0;
                 
                 for j = 1:lenLL
                     entry = linkList{j};
@@ -1251,7 +1260,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         nextEntry = linkList{j+1};
                         [offsetVal2 countVal2] = peakEntryToOffsetCount(aps,nextEntry,waveformLibrary);
 
-                        if countVal2 < 3      
+                        if countVal2 < 3
                             % if pulse length is less than 3, use extra padding at end
                             % of waveform in library
                             if nextEntry.isTimeAmplitude && nextEntry.isZero
@@ -1259,8 +1268,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                                     fprintf('Found TA & Z with count = %i. Adjusting waveform end.\n', countVal2);
                                 end
                                 % remember, count is length-1
-                                % BUG ALERT: Isn' this only valid if the
-                                % current entry is a Time/Amplitude zero?
                                 countVal = countVal + (countVal2+1);
                                 
                                 skipNext = 1;                            
