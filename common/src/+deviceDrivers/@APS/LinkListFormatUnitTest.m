@@ -51,9 +51,11 @@ sequences = deviceDrivers.APS.LinkListSequences(sequence);
             
             subplot(5,3,1)
             plot(patternGenX(i,:),'r'); title('PG X')
+            ylim([0 2^14])
             
             subplot(5,3,4)
             plot(patLinkListX(i,:),'g'); title('PGLL X')
+            ylim([0 2^14])
             
             subplot(5,3,7)
             error1 = patternGenX(i,:) - patLinkListX(i,:);
@@ -63,11 +65,13 @@ sequences = deviceDrivers.APS.LinkListSequences(sequence);
             
             subplot(5,3,10)
             plot(devLinkListX(i,:),'b'); title('APSLL X')
+            ylim([0 2^14])
             
             subplot(5,3,13)
             error2 = patternGenX(i,:) - devLinkListX(i,:);
             error2 = error2./ patternGenX(i,:);
             plot(error2 , 'b'); title('APSLL X Percent Error')
+            ylim([-1 1])
             
             hold on
             error3 = patLinkListX(i,:) - devLinkListX(i,:);
@@ -84,9 +88,11 @@ sequences = deviceDrivers.APS.LinkListSequences(sequence);
             
             subplot(5,3,2)
             plot(patternGenY(i,:),'r'); title('PG Y')
+            ylim([0 2^14])
             
             subplot(5,3,5)
             plot(patLinkListY(i,:),'g'); title('PGLL Y')
+            ylim([0 2^14])
             
             subplot(5,3,8)
             error1 = patternGenY(i,:) - patLinkListY(i,:);
@@ -95,6 +101,7 @@ sequences = deviceDrivers.APS.LinkListSequences(sequence);
             
             subplot(5,3,11)
             plot(devLinkListY(i,:),'b'); title('APSLL Y')
+            ylim([0 2^14])
             
             subplot(5,3,14)
             error2 = patternGenY(i,:) - devLinkListY(i,:);

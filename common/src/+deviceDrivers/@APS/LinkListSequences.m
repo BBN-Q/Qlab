@@ -116,11 +116,13 @@ switch sequence
         pi2Amp = 3150;
         sigma = 4;
         pulseLength = 4*sigma;
+        delay = -12; % unit test fails with delay = -10
+        buffer = 4;
         
         T = [1 0; 0 1.15];
         
         pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, ...
-            'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, ...
+            'correctionT', T, 'dBuffer', buffer, 'dPulseLength', pulseLength, ...
             'cycleLength', cycleLength);
         
         % ground state:

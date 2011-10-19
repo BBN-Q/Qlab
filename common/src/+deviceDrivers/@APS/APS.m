@@ -826,7 +826,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             waveforms.put(aps.zeroKey, zeros([1,aps.ADDRESS_UNIT]));
             
             if useEndPadding
-                endPadding = 12;
+                endPadding = 3;
             else
                 endPadding = 0;
             end
@@ -839,7 +839,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 
                 varientWFs = {};
                 if useVarients
-                    endPad = 3;
+                    endPad = 15;
                     % TODO add check for lenght(orgWF) < 16
                 else
                     endPad = 0;
@@ -856,9 +856,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     wf(end+1:end+length(orgWF)) = orgWF;
                     % add 12 extra zero points to handle
                     % TAZ entries with count < 3
-                    if useEndPadding
-                        wf(end+1:end+endPadding - leadPad) = zeros([1, endPadding-leadPad]);
-                    end
+                    %if useEndPadding
+                    %    wf(end+1:end+endPadding - leadPad) = zeros([1, endPadding-leadPad]);
+                    %end
 
                     % test for padding to mod 4
                     if length(wf) == 1
@@ -885,7 +885,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         varient.offset = idx;
                         % set length of wf remove extra 8 points that
                         % are used to handle 0 and 1 count TA
-                        varient.length = length(wf) - endPadding;
+                        varient.length = length(wf);
                         varient.pad = leadPad;
                         varientWFs{end+1} = varient; % store the varient at position varientWFs{leadPad+1}
                     end
@@ -937,10 +937,15 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             aps.expectedLength = aps.expectedLength + entry.length * entry.repeat;
             
+            if (entry.isZero || entry.isPseudoZero) && (aps.pendingLength + entry.repeat < (aps.MIN_LL_ENTRY_COUNT+1) * aps.ADDRESS_UNIT)
+                aps.pendingLength = aps.expectedLength - aps.currentLength;
+                countVal = [];
+                offsetVal = [];
+                return;
+            end
+            
             % correct for changing in padding
-            
-            adjustNegative = 0;
-            
+                        
             if aps.pendingLength > 0 && ~isempty(entryData.varientWFs)
                 % attempt to us a varient
                 padIdx = aps.pendingLength + 1;
@@ -955,16 +960,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         fprintf('\tUsing WF varient with pad: %i\n', padIdx - 1);
                     end
                 end
-            elseif aps.pendingLength < 0
-                % if pattern is running long and output is zero trim the length
-                % may get bumped back up
-                if entry.isZero || entry.isPseudoZero
-                    entry.repeat = entry.repeat + aps.pendingLength;
-                    adjustNegative = 1;
-                    if aps.verbose
-                        fprintf('\tTrimming zero pad by: %i from %i\n', aps.pendingLength);
-                    end
-                end
+            elseif (entry.isZero || entry.isPseudoZero)
+                % use TAZ entries to get back on track
+                entry.repeat = entry.repeat + aps.pendingLength;
             end
             
             %% convert from 1 based count to 0 based count
@@ -1010,7 +1008,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % length
             if ~entry.isTimeAmplitude
                 % waveforms might have extra end padding; take min length
-                entrylen = min(entry.length, entryData.length);
+                %entrylen = min(entry.length, entryData.length);
+                entrylen = entryData.length;
                 % count val is (length in 4 sample units) - 1
                 countVal = fix(entrylen/aps.ADDRESS_UNIT) - 1;
             else
@@ -1050,8 +1049,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             % correct for changing in padding
             
-            adjustNegative = 0;
-            
             if aps.pendingLength > 0 && ~isempty(entryData.varientWFs)
                 % attempt to us a varient
                 padIdx = aps.pendingLength + 1;
@@ -1066,16 +1063,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         fprintf('\tUsing WF varient with pad: %i\n', padIdx - 1);
                     end
                 end
-            elseif aps.pendingLength < 0
-                % if pattern is running long and output is zero trim the length
-                % may get bumped back up
-                if entry.isZero
-                    entry.repeat = entry.repeat + aps.pendingLength;
-                    adjustNegative = 1;
-                    if aps.verbose
-                        fprintf('\tTrimming zero pad by: %i from %i\n', aps.pendingLength);
-                    end
-                end
+            elseif (entry.isZero || entry.isPseudoZero)
+                % use TAZ entries to get back on track
+                entry.repeat = entry.repeat + aps.pendingLength;
             end
             
             %% convert from 1 based count to 0 based count
@@ -1088,7 +1078,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % length
             if ~entry.isTimeAmplitude
                 % waveforms might have extra end padding; take min length
-                entrylen = min(entry.length, entryData.length);
+                %entrylen = min(entry.length, entryData.length);
+                entrylen = entryData.length;
                 % count val is (length in 4 sample units) - 1
                 countVal = fix(entrylen/aps.ADDRESS_UNIT) - 1;
             else
@@ -1245,8 +1236,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     if j == 1
                         entry.hasTrigger = 1;
                     end
-                    
+                                        
                     [offsetVal countVal] = entryToOffsetCount(aps,entry,waveformLibrary, j == 1, j == lenLL - 1);
+                    
+                    if isempty(offsetVal) % TAZ of count < 3, skip it
+                        skipNext = 0;
+                        continue
+                    end
 
                     if skipNext
                         % skip after processing entryToOffsetCount
@@ -1256,26 +1252,27 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     end
                     
                     % get a peek at the next entry
-                    if useEndPadding && j ~= lenLL
-                        nextEntry = linkList{j+1};
-                        [offsetVal2 countVal2] = peakEntryToOffsetCount(aps,nextEntry,waveformLibrary);
-
-                        if countVal2 < 3
-                            % if pulse length is less than 3, use extra padding at end
-                            % of waveform in library
-                            if nextEntry.isTimeAmplitude && nextEntry.isZero
-                                if aps.verbose
-                                    fprintf('Found TA & Z with count = %i. Adjusting waveform end.\n', countVal2);
-                                end
-                                % remember, count is length-1
-                                countVal = countVal + (countVal2+1);
-                                
-                                skipNext = 1;                            
-                            else
-                                fprintf('Warning: countVal2 < 2 but not TAZ\n')
-                            end
-                        end
-                    end
+%                     if useEndPadding && j ~= lenLL
+%                         nextEntry = linkList{j+1};
+%                         [offsetVal2 countVal2] = peakEntryToOffsetCount(aps,nextEntry,waveformLibrary);
+% 
+%                         % I don't think we are using this anymore
+%                         if countVal2 < 3
+%                             % if pulse length is less than 3, use extra padding at end
+%                             % of waveform in library
+%                             if nextEntry.isTimeAmplitude && nextEntry.isZero
+%                                 if aps.verbose
+%                                     fprintf('Found TA & Z with count = %i. Adjusting waveform end.\n', countVal2);
+%                                 end
+%                                 % remember, count is length-1
+%                                 countVal = countVal + (countVal2+1);
+%                                 
+%                                 skipNext = 1;                            
+%                             else
+%                                 fprintf('Warning: countVal2 < 2 but not TAZ\n')
+%                             end
+%                         end
+%                     end
                     
                     if countVal < 3
                         fprintf('Warning entry count < 3. This causes problems with APS\n')
@@ -1397,8 +1394,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         end
                         newPat = wf.data(idx)*ones([1, expandedCount],'int16');
                     end
-                    
                     pattern = [pattern newPat];
+                    %keyboard
                 end
             end
         end
