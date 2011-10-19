@@ -10,7 +10,7 @@ function exportAPSConfig(path, basename, ch1seq, ch2seq, ch3seq, ch4seq)
         mkdir(path);
     end
     
-    miniLinkRepeat = 0; %1
+    miniLinkRepeat = 0;
     WaveformLibs = [];
     LinkLists = [];
     

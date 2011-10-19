@@ -407,9 +407,11 @@ classdef APSWaveform < handle
                 wf.log(sprintf('ELL minimum count field value is 3'));
                 return
             end
-            if isfield(wf.ellData,'bankB') && (wf.ellData.bankB.count(wf.ellData.bankB.count < 3))
-                wf.log(sprintf('ELL minimum count field value is 3'));
-                return
+            if isfield(wf.ellData,'bankB')
+                if (wf.ellData.bankB.count(wf.ellData.bankB.count < 3))
+                    wf.log(sprintf('ELL minimum count field value is 3'));
+                    return
+                end
             end
             
             valid = 1;
