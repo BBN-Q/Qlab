@@ -32,6 +32,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
         min_power = -40; % dBm
         max_freq = 10; % GHz
         min_freq = 5; % GHz
+        pulseModeEnabled = 0;
     end % end private properties
     
     % Device properties correspond to instrument parameters
@@ -43,7 +44,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
         mod
         alc
         pulse
-        pulseSource
+        pulseSource = 'ext';
         IQ
         IQ_Adjust
         IQ_IOffset
@@ -167,14 +168,19 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             val = 0;
         end
         function val = get.pulse(obj)
-            % warning, only returns information about whether internal
+            % warning, driver only returns information about whether internal
             % pulse mode is active
-            val = calllib('vnx_fmsynth', 'fnLMS_GetPulseMode', obj.devID);
+            if strcmp(obj.pulseSource, 'int')
+                val = calllib('vnx_fmsynth', 'fnLMS_GetPulseMode', obj.devID);
+            else
+                val = obj.pulseModeEnabled;
+            end
         end
         function val = get.pulseSource(obj)
-            val = calllib('vnx_fmsynth', 'fnLMS_GetUseInternalPulseMod', obj.devID);
-            if val == false, val = 'int'; end
-            if val == true, val = 'ext'; end
+            devVal = calllib('vnx_fmsynth', 'fnLMS_GetUseInternalPulseMod', obj.devID);
+            %if val == false, val = 'int'; end
+            %if val == true, val = 'ext'; end
+            val = obj.pulseSource;
         end
         
         % IQ options not supported by the hardware
@@ -254,6 +260,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             %not supported by hardware
         end
         function obj = set.alc(obj, value)
+            %not supported by hardware
         end
         
         function obj = set.pulse(obj, value)
@@ -267,8 +274,18 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             if not (checkMapObj.isKey( lower(value) ))
                 error('Invalid input');
             end
+            obj.pulseModeEnabled = checkMapObj(value);
             
-            calllib('vnx_fmsynth', 'fnLMS_EnableInternalPulseMod', obj.devID, checkMapObj(value));
+            if obj.pulseModeEnabled
+                switch obj.pulseSource
+                    case 'int'
+                        calllib('vnx_fmsynth', 'fnLMS_EnableInternalPulseMod', obj.devID, checkMapObj(value));
+                    case 'ext'
+                        calllib('vnx_fmsynth', 'fnLMS_SetUseExternalPulseMod', obj.devID, useExternalPulseMod);
+                    otherwise
+                        disp('Labbrick: Unknown pulse source');
+                end
+            end
         end
         function obj = set.pulseSource(obj, value)            
             % Validate input
@@ -277,8 +294,15 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             if not (checkMapObj.isKey( lower(value) ))
                 error('Invalid input');
             end
+            if checkMapObj(value)
+                obj.pulseSource = 'ext';
+            else
+                obj.pulseSource = 'int';
+            end
             
-            calllib('vnx_fmsynth', 'fnLMS_SetUseExternalPulseMod', obj.devID, checkMapObj(value));
+            if obj.pulseModeEnabled
+                obj.pulse = 1; % set the pulse parameter to update the device
+            end
         end
         function obj = set.IQ(obj, value)
         end
