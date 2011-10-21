@@ -276,15 +276,15 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             end
             obj.pulseModeEnabled = checkMapObj(value);
             
-            if obj.pulseModeEnabled
-                switch obj.pulseSource
-                    case 'int'
-                        calllib('vnx_fmsynth', 'fnLMS_EnableInternalPulseMod', obj.devID, checkMapObj(value));
-                    case 'ext'
-                        calllib('vnx_fmsynth', 'fnLMS_SetUseExternalPulseMod', obj.devID, useExternalPulseMod);
-                    otherwise
-                        disp('Labbrick: Unknown pulse source');
-                end
+            switch obj.pulseSource
+                case 'int'
+                    calllib('vnx_fmsynth', 'fnLMS_SetUseExternalPulseMod', obj.devID, false);
+                    calllib('vnx_fmsynth', 'fnLMS_EnableInternalPulseMod', obj.devID, obj.pulseModeEnabled);
+                case 'ext'
+                    calllib('vnx_fmsynth', 'fnLMS_EnableInternalPulseMod', obj.devID, false);
+                    calllib('vnx_fmsynth', 'fnLMS_SetUseExternalPulseMod', obj.devID, obj.pulseModeEnabled);
+                otherwise
+                    disp('Labbrick: Unknown pulse source');
             end
         end
         function obj = set.pulseSource(obj, value)            
