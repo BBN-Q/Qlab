@@ -83,6 +83,7 @@ EXPORT int APS_DisableFpga(int device, int dac);
 EXPORT int APS_SetLinkListMode(int device, int enable, int mode, int dac);
 EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock);
 EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels);
+EXPORT int APS_ReadPllStatus(int device, int fpga);
 
 
 EXPORT int APS_ReadBitFileVersion(int device);

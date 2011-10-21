@@ -1260,7 +1260,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   // Test for DAC clock phase match
   int inSync, globalSync;
   int test_cnt, cnt, pll;
-  int pll_1_unlock, pll_2_unlock, pll_3_unlock;
+  int pll_1_unlock;
 
   int fpga;
   int pll_bit;
@@ -1293,15 +1293,10 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
   dlog(DEBUG_INFO,"Waiting for PLLs to lock\n");
   for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
-    pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
-    pll_1_unlock = (pll_bit >> PLL_02_LOCK_BIT) & 0x1;
-    pll_2_unlock = (pll_bit >> PLL_13_LOCK_BIT) & 0x1;
-    pll_3_unlock = (pll_bit >> REFERENCE_PLL_LOCK_BIT) & 0x1;
-    // lock bit == 1 means not-locked
-    if (!pll_1_unlock && !pll_2_unlock && !pll_3_unlock) {
-      inSync = 1;
-      break;
-    }
+    if (APS_ReadPllStatus(device, fpga) == 0) {
+	  inSync = 1;
+	  break;
+	}
   }
 
   if (!inSync) {
@@ -1312,9 +1307,9 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   inSync = 0;
   globalSync = 0;
 
-  int PLL_XOR_TEST[3] = {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT,0};
-  int PLL_LOCK_TEST[3] = {PLL_02_XOR_BIT, PLL_13_XOR_BIT,PLL_GLOBAL_XOR_BIT};
-  int PLL_RESET[3] = {CSRMSK_PHSPLLRST_ELL , CSRMSK_ENVPLLRST_ELL, 0};
+  int PLL_XOR_TEST[3] = {PLL_02_XOR_BIT, PLL_13_XOR_BIT,PLL_GLOBAL_XOR_BIT};
+  int PLL_LOCK_TEST[3] = {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT};
+  int PLL_RESET[3] = {CSRMSK_ENVPLLRST_ELL, CSRMSK_PHSPLLRST_ELL, 0};
   char * pllStr;
 
   dlog(DEBUG_INFO,"Testing for channel phase lock\n");
@@ -1348,7 +1343,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
         xor_flag_cnt += (pll_bit >> PLL_XOR_TEST[pll]) & 0x1;
       }
 
-      if (xor_flag_cnt <= 5) {
+      if (xor_flag_cnt < 5) {
         globalSync = 1;
       } else {
         // DAC outputs are out of sync
@@ -1371,7 +1366,8 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
         // wait for lock
         inSync =  0;
-        for(cnt = 0; cnt < 10; cnt++) {
+        for(cnt = 0; cnt < 100; cnt++) {
+		  pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
           pll_1_unlock = (pll_bit >> PLL_LOCK_TEST[pll]) & 0x1;
           if (!pll_1_unlock) {
             inSync = 1;
@@ -1393,6 +1389,28 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   dlog(DEBUG_INFO,"Sync test complete\n");
   return 0;
 }
+
+int APS_ReadPllStatus(int device, int fpga) {
+  int pll_1_unlock, pll_2_unlock, pll_3_unlock;
+  int pll_bit;
+
+  if (fpga < 0 || fpga > 2) {
+    return -1;
+  }
+  
+  pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
+  pll_1_unlock = (pll_bit >> PLL_02_LOCK_BIT) & 0x1;
+  pll_2_unlock = (pll_bit >> PLL_13_LOCK_BIT) & 0x1;
+  pll_3_unlock = (pll_bit >> REFERENCE_PLL_LOCK_BIT) & 0x1;
+  // lock bit == 1 means not-locked
+  if (!pll_1_unlock && !pll_2_unlock && !pll_3_unlock) {
+	dlog(DEBUG_INFO,"PLLs locked\n");
+    return 0;
+  }
+  //return -1;
+  return pll_bit;
+}
+
 
 // Register 00 VCXO value, MS Byte First
 UCHAR Reg00Bytes[4] =

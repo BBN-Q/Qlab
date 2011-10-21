@@ -1,0 +1,36 @@
+P156
+- Corrected data_fix() to match schematic
+P155
+- Rebuilt with pll200_int = 220 MHz defined
+- Improved write reliability.
+P154
+- Fixed external trigger logic for P151
+P151
+- Fixed the hardware trigger logic to P150
+P150
+P149
+- Changed Phase data to work with existing system software. 
+P146
+- Has new 300-to-200 MHz PLL added
+- 300 MHz used for phase test reference
+- 200 MHz used for second stage synchronous logic
+P138
+- DDR Reset changed to be set to the inverse of PLL Reset
+P137
+- tied DDR reset to PLL reset, so that the DDR block is reset whenever the PLLs are reset.
+Note: PLL Reset is active low, DDR Reset is active high. Build did not work.
+P136
+- removed clearing of a trigger if it wasn't processed.
+- when both are restarted, they may start at the wrong time relative to the first trigger, but will synch up on the next one.
+P134
+- isolated channel 02 and 13 trigger inputs.
+- removed 2 stage (one for each clock) trigger pipeline logic
+- changed the CSR synch latch logic to a single latch
+Changes in inter-channel phase skew was evident when the combined channels were disabled and re-triggered
+P130
+- added both trig_02_en AND trig_13_en to the External Trigger Pulse logic for both channels
+This change was made to insure that one channel was not missing a trigger while the other channel caught it, due to asynchronous first trigger.  Didn't make any noticable improvements.
+P127
+- disconnected the ddr reset lines from the state machine enable bit
+- tied the ddr reset lines to an inverted version of FPGA_RSTN
+When state machine was in reset, DDR logic drove 0x0000 to DAC, causing DC offsets on the DAC outputs due to FPGA +/- pin swaps implemented during board routing

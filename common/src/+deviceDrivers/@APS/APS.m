@@ -215,7 +215,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % Determine if it needs to be programmed
             bitFileVer = obj.readBitFileVersion();
             if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver
-                obj.init();
+                obj.init(1);
             end
             
             obj.bit_file_programmed = 1;
@@ -333,7 +333,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             % Determine if APS needs to be programmed
             bitFileVer = obj.readBitFileVersion();
-            if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver || force
+            if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver || obj.readPllStatus() ~= 0 || force
                 obj.loadBitFile();
             end
             
@@ -342,7 +342,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             for ch = 1:4
                 obj.setFrequency(ch-1, 1200, 0);
             end
-            status = obj.testPllSync();
+            % test PLL sync on each FPGA
+            status = obj.testPllSync(0) || obj.testPllSync(2);
             if status ~= 0
                 error('APS failed to initialize');
             end
@@ -728,6 +729,15 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
         end
         
+        function val = readPllStatus(aps)
+           % read FPGA1
+           val1 = aps.librarycall('Read PLL Sync FPGA1','APS_ReadPllStatus', 1);
+           % read FPGA2
+           val2 = aps.librarycall('Read PLL Sync FPGA2','APS_ReadPllStatus', 2);
+           % functions return 0 on success;
+           val = val1 && val2;
+        end
+        
         function val = setFrequency(aps,id, freq, testLock)
             if ~exist('testLock','var')
                 testLock = 1;
@@ -755,7 +765,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 for ch = 1:4
                     aps.setFrequency(ch-1, rate, 0);
                 end
-                aps.testPllSync();
+                aps.testPllSync(0);
+                aps.testPllSync(2);
             end
         end
         
