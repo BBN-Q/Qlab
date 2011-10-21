@@ -1267,14 +1267,14 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   UINT pll_reg_value;
   UINT pll_reset_addr, pll_reset_bit;
 
-  dlog(DEBUG_INFO,"Running %i Channel Sync\n", numSyncChannels);
-
   pll_reset_addr = FPGA_PLL_RESET_ADDR;
 
   fpga = dac2fpga(dac);
   if (fpga < 0) {
     return -1;
   }
+  
+  dlog(DEBUG_INFO,"Running %i Channel Sync on FPGA%i\n", numSyncChannels, fpga);
 
   switch(dac) {
     case 0:
@@ -1291,8 +1291,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
       return -1;
     }
 
-  dlog(DEBUG_INFO,"Waiting for PLLs to lock\n");
-  for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
+  for (test_cnt = 0; test_cnt < 50; test_cnt++) {
     if (APS_ReadPllStatus(device, fpga) == 0) {
 	  inSync = 1;
 	  break;
@@ -1343,7 +1342,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
         xor_flag_cnt += (pll_bit >> PLL_XOR_TEST[pll]) & 0x1;
       }
 
-      if (xor_flag_cnt < 5) {
+      if (xor_flag_cnt < 2) {
         globalSync = 1;
       } else {
         // DAC outputs are out of sync
@@ -1404,7 +1403,7 @@ int APS_ReadPllStatus(int device, int fpga) {
   pll_3_unlock = (pll_bit >> REFERENCE_PLL_LOCK_BIT) & 0x1;
   // lock bit == 1 means not-locked
   if (!pll_1_unlock && !pll_2_unlock && !pll_3_unlock) {
-	dlog(DEBUG_INFO,"PLLs locked\n");
+	dlog(DEBUG_INFO,"PLLs locked on FPGA%i\n", fpga);
     return 0;
   }
   //return -1;

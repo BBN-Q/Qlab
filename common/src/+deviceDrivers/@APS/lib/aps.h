@@ -82,7 +82,7 @@
 #define FPGA1_PLL_RESET_BIT 0x2
 #define FPGA2_PLL_RESET_BIT 0x200
 
-#define MAX_PHASE_TEST_CNT 10
+#define MAX_PHASE_TEST_CNT 20
 
 typedef struct
 {

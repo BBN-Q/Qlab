@@ -212,13 +212,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % setAll is called as part of the Experiment initialize instruments
         function setAll(obj,settings)
-            % Determine if it needs to be programmed
-            bitFileVer = obj.readBitFileVersion();
-            if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver
-                obj.init(1);
-            end
-            
-            obj.bit_file_programmed = 1;
+            obj.init();
 
             % read in channel settings so we know how to scale waveform
             % data
@@ -242,7 +236,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
 				
 				% load an AWG file if the settings file is changed or if force == true
 				if (~strcmp(settings.lastseqfile, settings.seqfile) || settings.seqforce)
-					obj.loadConfig(settings.seqfile); % TODO
+                    % TODO pass in last sequence file used
+					obj.loadConfig(settings.seqfile);
 				end
 			end
 			settings = rmfield(settings, {'lastseqfile', 'seqfile', 'seqforce'});
@@ -335,18 +330,18 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             bitFileVer = obj.readBitFileVersion();
             if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver || obj.readPllStatus() ~= 0 || force
                 obj.loadBitFile();
+                % set all channels to 1.2 GS/s
+                obj.setFrequency(0, 1200, 0);
+                obj.setFrequency(2, 1200, 0);
+                
+                % test PLL sync on each FPGA
+                status = obj.testPllSync(0) || obj.testPllSync(2);
+                if status ~= 0
+                    error('APS failed to initialize');
+                end
             end
             
             obj.bit_file_programmed = 1;
-            % set all channels to 1.2 GS/s
-            for ch = 1:4
-                obj.setFrequency(ch-1, 1200, 0);
-            end
-            % test PLL sync on each FPGA
-            status = obj.testPllSync(0) || obj.testPllSync(2);
-            if status ~= 0
-                error('APS failed to initialize');
-            end
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -759,15 +754,15 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         function aps = set.samplingRate(aps, rate)
-            % sets the sampling rate for all channels
+            % sets the sampling rate for all channels/FPGAs
             % rate - sampling rate in MHz (1200, 600, 300, 100, 40)
             if aps.samplingRate ~= rate
-                for ch = 1:4
-                    aps.setFrequency(ch-1, rate, 0);
-                end
+                aps.setFrequency(0, rate, 0);
+                aps.setFrequency(2, rate, 0);
                 aps.testPllSync(0);
                 aps.testPllSync(2);
             end
+            aps.samplingRate = rate;
         end
         
         function aps = set.triggerSource(aps, trig)
