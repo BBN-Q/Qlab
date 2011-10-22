@@ -62,8 +62,8 @@ void doToggleTest(HANDLE hdll, char * bitFile) {
 	pfunc setup_pll;
 	pfunc read_version;
 
-	int waveformLen = 4000;
-	int pulseLen = 10;
+	int waveformLen = 1000;
+	int pulseLen = 500;
 	int cnt;
 	int ask;
 	int ret;
@@ -91,7 +91,9 @@ void doToggleTest(HANDLE hdll, char * bitFile) {
 		return;
 	}
 
-	fp = fopen(bitFile,"r");
+	printf("Reading bitfile from %s.\n", bitFile);
+
+	fp = fopen(bitFile,"rb");
 	if (!fp) {
 		printf("Error opening bit file: %s\n", bitFile);
 		return;
@@ -116,7 +118,7 @@ void doToggleTest(HANDLE hdll, char * bitFile) {
 
 	fclose(fp);
 
-	printf("Openning Dac 0: ");
+	printf("Opening Dac 0: ");
 	fflush(stdout);
 	if (open(0) < 0)  {
 		printf("Error\n");
@@ -203,9 +205,9 @@ dealloc:
 
 void printHelp(){
 	printf("BBN APS C Test Bench $Rev$\n");
-	printf("   -t Trigger Loop Test\n");
-	printf("   -s List Available Dac Serial Numbers\n");
-	printf("   -ks List Known Dac Serial Numbers\n");
+	printf("   -t <bitfile> Trigger Loop Test\n");
+	printf("   -s List Available APS Serial Numbers\n");
+	printf("   -ks List Known APS Serial Numbers\n");
 	printf("   -h Print This Help Message\n");
 }
 
