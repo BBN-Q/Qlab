@@ -808,7 +808,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function library = buildWaveformLibrary(aps, waveforms, useVarients, useEndPadding)
             % convert baseWaveforms to waveform array suitable for the APS
             
-            %% Todo: Square pulses as time amplitude pair
+            % Todo: Square pulses as time amplitude pair
             
             if ~exist('useVarients','var')
                 useVarients = 1;

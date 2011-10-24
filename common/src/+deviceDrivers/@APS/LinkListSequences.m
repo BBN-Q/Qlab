@@ -38,11 +38,13 @@ switch sequence
         piAmp = 8000;
         piWidth = 40;
         pi2Width = 20;
+        buffer = 0;
         
-        pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dPulseLength', piWidth, 'cycleLength', cycleLength);
+        pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dPulseLength', piWidth, 'dBuffer', buffer, 'cycleLength', cycleLength);
         
         numsteps = 50;
         %numsteps = 4;
+        %delay = -12;
         stepsize = 15;
         delaypts = 0:stepsize:(numsteps-1)*stepsize;
         
