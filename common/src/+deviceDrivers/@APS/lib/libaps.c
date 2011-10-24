@@ -1321,7 +1321,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
     // not doing the four channel sync
     // only test one of the two plls 02 or 13
 
-    minTestPll = (fpga == 1) ? 0 : 1;
+    minTestPll = (dac == 0 || dac == 2) ? 0 : 1;
     maxTestPll = minTestPll + 1;
   }
 

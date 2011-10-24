@@ -14,8 +14,9 @@ settings.chan_4.amplitude = 1.0;
 settings.chan_4.offset = 0;
 settings.samplingRate = 1200;
 settings.triggerSource = 'external';
-settings.seqfile = 'C:\Qlab software\experiments\muWaveDetection\sequences\Rabi56.mat';
-%settings.seqfile = 'C:\Qlab software\experiments\muWaveDetection\sequences\EchoTest.mat';
+%settings.seqfile = 'U:\APS\Rabi\Rabi56.mat';
+%settings.seqfile = 'U:\APS\PiCal\PiCal56.mat';
+settings.seqfile = 'C:\Qlab software\experiments\muWaveDetection\sequences\EchoTest.mat';
 settings.seqforce = true;
 
 awg = deviceDrivers.APS();

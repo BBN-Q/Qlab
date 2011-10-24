@@ -24,7 +24,6 @@ load([cfg_path 'pulseParams.mat'], 'T3', 'delay3', 'bufferDelay3', 'bufferReset3
 
 pg21 = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', buffer, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 pg1 = PatternGen('dPiAmp', piAmp2, 'dPiOn2Amp', pi2Amp2, 'dSigma', sigma2, 'dPulseType', pulseType2, 'dDelta', delta2, 'correctionT', T2, 'dBuffer', buffer2, 'dPulseLength', pulseLength2, 'cycleLength', cycleLength);
-% jerry had the CR21 pulse type as 'dragSq'
 pg2 = PatternGen('dPiAmp', piAmp3, 'dPiOn2Amp', pi2Amp3, 'dSigma', sigma3, 'dPulseType', pulseType3, 'dDelta', delta3, 'correctionT', T3, 'dBuffer', buffer3, 'dPulseLength', pulseLength3, 'cycleLength', cycleLength);
 
 %AWG5014 CHs (3,4) is Q1 single-qubit (pg1)
@@ -55,7 +54,7 @@ nbrPosPulses = length(PosPulsesQ1);
 
 numsteps = 1;
 crossresstep = 10;
-crossreswidths = 228+(0:crossresstep:(numsteps-1)*crossresstep);
+crossreswidths = 240+(0:crossresstep:(numsteps-1)*crossresstep);
 
 ampCR = 8000;
 %angle = 102*(pi/180);
@@ -82,6 +81,7 @@ for nindex = 1:numsteps
     processPulseQ2 = {'QId', 'width', currcrossreswidth};
     processPulseCR21 = pg21.pulse('Utheta', 'amp', ampCR, ...
         'angle', angle, 'width', currcrossreswidth, 'pType', 'square');
+    % jerry had the CR21 pulse type as 'dragSq'
     
     %ADD IN CALIBRATIONS
 
@@ -214,10 +214,10 @@ for nindex = 1:numsteps
     ch2m1 = Q2buffer;
     ch2m2 = slaveTrigger;
     ch3 = Q1_I;
-    ch3m1 = Q1buffer;
+    ch3m1 = CR21buffer;
     ch3m2 = zeros(nbrPulses, cycleLength);
     ch4 = Q1_Q;
-    ch4m1 = CR21buffer;
+    ch4m1 = Q1buffer;
     ch4m2 = slaveTrigger;
 
     % unify LLs and waveform libs

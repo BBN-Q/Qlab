@@ -236,7 +236,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
 				
 				% load an AWG file if the settings file is changed or if force == true
 				if (~strcmp(settings.lastseqfile, settings.seqfile) || settings.seqforce)
-                    % TODO pass in last sequence file used
 					obj.loadConfig(settings.seqfile);
 				end
 			end

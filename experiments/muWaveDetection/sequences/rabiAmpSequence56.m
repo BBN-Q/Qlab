@@ -25,11 +25,12 @@ load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bu
 load([cfg_path 'pulseParams.mat'], 'offset2');
 load([cfg_path 'pulseParams.mat'], 'T3', 'delay3', 'bufferDelay3', 'bufferReset3', 'bufferPadding3', 'offset3', 'piAmp3', 'pi2Amp3', 'sigma3', 'pulseType3', 'delta3', 'buffer3', 'pulseLength3');
 
-pg = PatternGen('dPiAmp', piAmp3, 'dPiOn2Amp', pi2Amp3, 'dSigma', sigma3, 'dPulseLength', pulseLength3, 'correctionT', T3, 'cycleLength', cycleLength);
+pg = PatternGen('dPiAmp', piAmp3, 'dPiOn2Amp', pi2Amp3, 'dSigma', sigma3, 'dPulseLength', pulseLength3, 'correctionT', T3, 'dBuffer', buffer3, 'cycleLength', cycleLength);
 
 amps = -((numsteps-1)/2)*stepsize:stepsize:((numsteps-1)/2)*stepsize;
 patseq = {{'Xtheta', 'amp', amps}};
-patseq2 = {pg.pulse('Xtheta', 'amp', amps)};
+%patseq2 = {pg.pulse('Xtheta', 'amp', amps)};
+patseq2 = {pg.pulse('QId')};
 
 % pre-allocate space
 ch1 = zeros(numsteps, cycleLength);
@@ -54,8 +55,6 @@ end
 % trigger digitizer at beginning of measurement pulse
 measLength = 3000;
 measSeq = {pg.pulse('M', 'width', measLength)};
-ch1m1 = zeros(numsteps, cycleLength);
-ch1m2 = zeros(numsteps, cycleLength);
 for n = 1:numsteps;
 	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
 	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
@@ -84,7 +83,8 @@ ch3 = ch3 + offset2;
 ch4 = ch4 + offset2;
 
 % make APS file
-exportAPSConfig(temppath, basename, ch5seq, ch6seq);
+%exportAPSConfig(temppath, basename, ch5seq, ch6seq);
+exportAPSConfig(temppath, basename, ch5seq, ch5seq, ch5seq, ch5seq);
 disp('Moving APS file to destination');
 movefile([temppath basename '.mat'], [pathAPS basename '.mat']);
 % make TekAWG file

@@ -18,5 +18,5 @@
         save([cfg_path 'pulseParams.mat'], p, '-append', '-v7.3');
     end
     
-    clear params cfg_path i p
+    clear params script parent_path cfg_path i p
 %end
