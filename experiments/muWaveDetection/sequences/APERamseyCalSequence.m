@@ -60,7 +60,7 @@ ch1 = zeros(nbrPatterns, cycleLength);
 ch2 = ch1;
 ch3m1 = ch1;
 
-for n = 1:numsteps;
+for n = 1:nbrPatterns;
 	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt);
 	ch1(n, :) = patx + offset;
 	ch2(n, :) = paty + offset;
@@ -70,19 +70,19 @@ end
 calseq = {{pg.pulse('QId')}, {pg.pulse('QId')}, {pg.pulse('Xp')}, {pg.pulse('Xp')}};
 for n = 1:length(calseq);
 	[patx paty] = pg.getPatternSeq(calseq{n}, n, delay, fixedPt);
-	ch1(numsteps+n, :) = patx + offset;
-	ch2(numsteps+n, :) = paty + offset;
-    ch3m1(numsteps+n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
+	ch1(nbrPatterns+n, :) = patx + offset;
+	ch2(nbrPatterns+n, :) = paty + offset;
+    ch3m1(nbrPatterns+n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
-numsteps = numsteps + length(calseq);
+nbrPatterns = nbrPatterns + length(calseq);
 
 % trigger at beginning of measurement pulse
 % measure from (6000:9000)
 measLength = 3000;
 measSeq = {pg.pulse('M', 'width', measLength)};
-ch1m1 = zeros(numsteps, cycleLength);
-ch1m2 = zeros(numsteps, cycleLength);
+ch1m1 = zeros(nbrPatterns, cycleLength);
+ch1m2 = zeros(nbrPatterns, cycleLength);
 for n = 1:numsteps;
 	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
 	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
@@ -101,8 +101,8 @@ grid on
 hold off
 
 % fill remaining channels with empty stuff
-ch3 = zeros(numsteps, cycleLength);
-ch4 = zeros(numsteps, cycleLength);
+ch3 = zeros(nbrPatterns, cycleLength);
+ch4 = zeros(nbrPatterns, cycleLength);
 ch2m1 = ch3;
 ch2m2 = ch3;
 ch3 = ch3 + offset;
