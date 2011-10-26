@@ -20,7 +20,7 @@ pi2Amp = 3600;
 sigma = 6;
 pulseLength = 4*sigma;
 T = [1.145  0; 0 1.0];
-anglepts = pi/4;
+angle = pi/4;
 numPsQId = 10; % number pseudoidentities
 numsteps = 10; %number of drag parameters
 deltamax=2;
@@ -35,11 +35,12 @@ pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseTy
 %     pname = cell2mat(p);
 %     pulseLib(pname) = pg.pulse(pname);
 % end
-sindex = 1;
+sindex = 0;
 % N applications of psuedoidentity
 % QId, X90p,  (sequence of +/-Xp), U90p
 % (1-numPsQId) of +/-Xp
 for i=1:numsteps
+sindex=sindex+1;
 patseq{sindex} = {pg.pulse('QId')};
 sindex=sindex+1;
 patseq{sindex} = {pg.pulse('X90p', 'delta', delta(i))};
@@ -49,8 +50,9 @@ for j = 1:numPsQId
     end
 end
 sindex = sindex + numPsQId+1;
+patseq{sindex} = {pg.pulse('U90p', 'angle', angle)};
 end
-sindex = sindex-1;
+
 
 nbrPatterns = length(patseq);
 fprintf('Number of sequences: %i\n', nbrPatterns);
