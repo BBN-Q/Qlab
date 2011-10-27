@@ -1,4 +1,4 @@
-function CR21StateTomoSequence(makePlot)
+function StateTomoSequence(makePlot)
 
 if ~exist('makePlot', 'var')
     makePlot = true;
@@ -9,8 +9,9 @@ addpath([path '/common/src'],'-END');
 addpath([path '/common/src/util/'],'-END');
 
 temppath = [char(script.getParent()) '\'];
-pathAWG = 'U:\AWG\CrossRes\';
-pathAPS = 'U:\APS\CrossRes\';
+pathAWG = 'U:\AWG\StateTomo\';
+pathAPS = 'U:\APS\StateTomo\';
+basename = 'Xp';
 
 fixedPt = 13000;
 cycleLength = 16000;
@@ -57,32 +58,19 @@ crossresstep = 10;
 crossreswidths = 152+(0:crossresstep:(numsteps-1)*crossresstep);
 
 ampCR = 5800; %8000
-%angle = 102*(pi/180);
 angle = 0;
-%deltastep=0.1;
-%delta4s=-2.5-(0:deltastep:(numsteps-1)*deltastep);
 
 for nindex = 1:numsteps
     currcrossreswidth = crossreswidths(nindex);  
-    %currcrossreswidth = 236;
-    %currdeltaCR12 = delta4s(nindex);
-    %stringcurrdelta4 = 10*currdeltaCR12;
-    currdeltaCR12 = delta3;
-    basename = sprintf('CR21_%d',currcrossreswidth);
+    %basename = sprintf('CR21_%d',currcrossreswidth);
     
-    %basename = sprintf('CR21Dm%d',nindex);
-    prepPulseQ1 = pg1.pulse('X90p');
+    prepPulseQ1 = pg1.pulse('QId');
     prepPulseQ2 = pg2.pulse('QId');
-%     prepPulseQ2 = {'QId'};
-%     prepPulseCR21 = pg21.pulse('QId');
     prepPulseCR21 = {'QId'};
     
-    processPulseQ1 = pg1.pulse('QId', 'width', currcrossreswidth);
-    processPulseQ2 = pg2.pulse('QId', 'width', currcrossreswidth);
-%     processPulseCR21 = pg21.pulse('Utheta', 'amp', ampCR, ...
-%         'angle', angle, 'width', currcrossreswidth, 'pType', 'square');
-    processPulseCR21 = {'Utheta', 'amp', ampCR, 'angle', angle, 'width', currcrossreswidth, 'pType', 'square'};
-    % jerry had the CR21 pulse type as 'dragSq'
+    processPulseQ1 = pg1.pulse('Xp');
+    processPulseQ2 = pg2.pulse('QId');
+    processPulseCR21 = {'QId'};
     
     %ADD IN CALIBRATIONS
 
@@ -132,12 +120,10 @@ for nindex = 1:numsteps
                 patseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ1,processPulseQ1,PosPulsesQ1{iindex}};
                 patseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ2,processPulseQ2,PosPulsesQ2{jindex}};
                 patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseCR21,processPulseCR21,{'QId'}};
-%                 patseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ1,processPulseQ1,processPulseQ1,processPulseQ1...
-%                     processPulseQ1,processPulseQ1,processPulseQ1,processPulseQ1,processPulseQ1,processPulseQ1,PosPulsesQ1{iindex}};
-%                 patseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulse7052,processPulseQ2,processPulseQ2,processPulseQ2...
-%                     processPulseQ2,processPulseQ2,processPulseQ2,processPulseQ2,processPulseQ2,processPulseQ2,PosPulses7052{jindex}};
-%                 patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseCR21,processPulseCR21,processPulseCR21,processPulseCR21...
-%                     processPulseCR21,processPulseCR21,processPulseCR21,processPulseCR21,processPulseCR21,processPulseCR21,pg21.pulse('QId')};
+                % swapped jindex and iindex below
+                %patseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ1,processPulseQ1,PosPulsesQ1{jindex}};
+                %patseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ2,processPulseQ2,PosPulsesQ2{iindex}};
+                %patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseCR21,processPulseCR21,{'QId'}};
             end
         end
     end
@@ -241,5 +227,3 @@ for nindex = 1:numsteps
     disp('Moving AWG file to destination');
     movefile([temppath basename '.awg'], [pathAWG basename '.awg']);
 end
-
-    

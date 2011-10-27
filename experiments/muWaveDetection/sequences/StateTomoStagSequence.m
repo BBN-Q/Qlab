@@ -1,4 +1,4 @@
-function CR21StateTomoSequence(makePlot)
+function StateTomoStagSequence(makePlot)
 
 if ~exist('makePlot', 'var')
     makePlot = true;
@@ -9,8 +9,13 @@ addpath([path '/common/src'],'-END');
 addpath([path '/common/src/util/'],'-END');
 
 temppath = [char(script.getParent()) '\'];
-pathAWG = 'U:\AWG\CrossRes\';
-pathAPS = 'U:\APS\CrossRes\';
+pathAWG = 'U:\AWG\StateTomo\';
+pathAPS = 'U:\APS\StateTomo\';
+
+Q1pulse = 'QId';
+Q2pulse = 'Y90p';
+
+basename = [Q1pulse Q2pulse 'Stag'];
 
 fixedPt = 13000;
 cycleLength = 16000;
@@ -57,32 +62,19 @@ crossresstep = 10;
 crossreswidths = 152+(0:crossresstep:(numsteps-1)*crossresstep);
 
 ampCR = 5800; %8000
-%angle = 102*(pi/180);
 angle = 0;
-%deltastep=0.1;
-%delta4s=-2.5-(0:deltastep:(numsteps-1)*deltastep);
 
 for nindex = 1:numsteps
     currcrossreswidth = crossreswidths(nindex);  
-    %currcrossreswidth = 236;
-    %currdeltaCR12 = delta4s(nindex);
-    %stringcurrdelta4 = 10*currdeltaCR12;
-    currdeltaCR12 = delta3;
-    basename = sprintf('CR21_%d',currcrossreswidth);
+    %basename = sprintf('CR21_%d',currcrossreswidth);
     
-    %basename = sprintf('CR21Dm%d',nindex);
-    prepPulseQ1 = pg1.pulse('X90p');
+    prepPulseQ1 = pg1.pulse('QId');
     prepPulseQ2 = pg2.pulse('QId');
-%     prepPulseQ2 = {'QId'};
-%     prepPulseCR21 = pg21.pulse('QId');
     prepPulseCR21 = {'QId'};
     
-    processPulseQ1 = pg1.pulse('QId', 'width', currcrossreswidth);
-    processPulseQ2 = pg2.pulse('QId', 'width', currcrossreswidth);
-%     processPulseCR21 = pg21.pulse('Utheta', 'amp', ampCR, ...
-%         'angle', angle, 'width', currcrossreswidth, 'pType', 'square');
-    processPulseCR21 = {'Utheta', 'amp', ampCR, 'angle', angle, 'width', currcrossreswidth, 'pType', 'square'};
-    % jerry had the CR21 pulse type as 'dragSq'
+    processPulseQ1 = pg1.pulse(Q1pulse);
+    processPulseQ2 = pg2.pulse(Q2pulse);
+    processPulseCR21 = {'QId'};
     
     %ADD IN CALIBRATIONS
 
@@ -90,18 +82,18 @@ for nindex = 1:numsteps
     patseqQ1{2}={pg1.pulse('QId')};
     patseqQ1{3}={pg1.pulse('QId')};
     patseqQ1{4}={pg1.pulse('QId')};
-    patseqQ1{5}={pg1.pulse('Xp')};
-    patseqQ1{6}={pg1.pulse('Xp')};
-    patseqQ1{7}={pg1.pulse('Xp')};
-    patseqQ1{8}={pg1.pulse('Xp')};
+    patseqQ1{5}={pg1.pulse('Xp'),pg1.pulse('QId')};
+    patseqQ1{6}={pg1.pulse('Xp'),pg1.pulse('QId')};
+    patseqQ1{7}={pg1.pulse('Xp'),pg1.pulse('QId')};
+    patseqQ1{8}={pg1.pulse('Xp'),pg1.pulse('QId')};
     patseqQ1{9}={pg1.pulse('QId')};
     patseqQ1{10}={pg1.pulse('QId')};
     patseqQ1{11}={pg1.pulse('QId')};
     patseqQ1{12}={pg1.pulse('QId')};
-    patseqQ1{13}={pg1.pulse('Xp')};
-    patseqQ1{14}={pg1.pulse('Xp')};
-    patseqQ1{15}={pg1.pulse('Xp')};
-    patseqQ1{16}={pg1.pulse('Xp')};
+    patseqQ1{13}={pg1.pulse('Xp'),pg1.pulse('QId')};
+    patseqQ1{14}={pg1.pulse('Xp'),pg1.pulse('QId')};
+    patseqQ1{15}={pg1.pulse('Xp'),pg1.pulse('QId')};
+    patseqQ1{16}={pg1.pulse('Xp'),pg1.pulse('QId')};
 
     patseqQ2{1}= {pg2.pulse('QId')};
     patseqQ2{2}= {pg2.pulse('QId')};
@@ -111,14 +103,14 @@ for nindex = 1:numsteps
     patseqQ2{6}= {pg2.pulse('QId')};
     patseqQ2{7}= {pg2.pulse('QId')};
     patseqQ2{8}= {pg2.pulse('QId')};
-    patseqQ2{9}= {pg2.pulse('Xp')};
-    patseqQ2{10}={pg2.pulse('Xp')};
-    patseqQ2{11}={pg2.pulse('Xp')};
-    patseqQ2{12}={pg2.pulse('Xp')};
-    patseqQ2{13}={pg2.pulse('Xp')};
-    patseqQ2{14}={pg2.pulse('Xp')};
-    patseqQ2{15}={pg2.pulse('Xp')};
-    patseqQ2{16}={pg2.pulse('Xp')};
+    patseqQ2{9}= {pg2.pulse('QId'),pg2.pulse('Xp')};
+    patseqQ2{10}={pg2.pulse('QId'),pg2.pulse('Xp')};
+    patseqQ2{11}={pg2.pulse('QId'),pg2.pulse('Xp')};
+    patseqQ2{12}={pg2.pulse('QId'),pg2.pulse('Xp')};
+    patseqQ2{13}={pg2.pulse('QId'),pg2.pulse('Xp')};
+    patseqQ2{14}={pg2.pulse('QId'),pg2.pulse('Xp')};
+    patseqQ2{15}={pg2.pulse('QId'),pg2.pulse('Xp')};
+    patseqQ2{16}={pg2.pulse('QId'),pg2.pulse('Xp')};
 
     for dumindex = 1:16
         % patseqCR21{dumindex} = {pg21.pulse('QId')};
@@ -129,15 +121,13 @@ for nindex = 1:numsteps
     for iindex = 1:nbrPosPulses
         for jindex = 1:nbrPosPulses
             for kindex=1:nbrRepeats
-                patseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ1,processPulseQ1,PosPulsesQ1{iindex}};
-                patseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ2,processPulseQ2,PosPulsesQ2{jindex}};
+                patseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ1,processPulseQ1,PosPulsesQ1{iindex},pg1.pulse('QId')   };
+                patseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ2,processPulseQ2,pg2.pulse('QId')   ,PosPulsesQ2{jindex}};
                 patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseCR21,processPulseCR21,{'QId'}};
-%                 patseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ1,processPulseQ1,processPulseQ1,processPulseQ1...
-%                     processPulseQ1,processPulseQ1,processPulseQ1,processPulseQ1,processPulseQ1,processPulseQ1,PosPulsesQ1{iindex}};
-%                 patseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulse7052,processPulseQ2,processPulseQ2,processPulseQ2...
-%                     processPulseQ2,processPulseQ2,processPulseQ2,processPulseQ2,processPulseQ2,processPulseQ2,PosPulses7052{jindex}};
-%                 patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseCR21,processPulseCR21,processPulseCR21,processPulseCR21...
-%                     processPulseCR21,processPulseCR21,processPulseCR21,processPulseCR21,processPulseCR21,processPulseCR21,pg21.pulse('QId')};
+                % swapped jindex and iindex below
+                %patseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ1,processPulseQ1,PosPulsesQ1{jindex}};
+                %patseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ2,processPulseQ2,PosPulsesQ2{iindex}};
+                %patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseCR21,processPulseCR21,{'QId'}};
             end
         end
     end
@@ -241,5 +231,3 @@ for nindex = 1:numsteps
     disp('Moving AWG file to destination');
     movefile([temppath basename '.awg'], [pathAWG basename '.awg']);
 end
-
-    

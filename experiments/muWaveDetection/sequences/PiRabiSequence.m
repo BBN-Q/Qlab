@@ -17,7 +17,7 @@ fixedPt = 6000;
 cycleLength = 10000;
 
 numsteps = 125; % 200
-minWidth = 16; % 0
+minWidth = 12; % 0
 stepsize = 4; % 5
 
 % load config parameters from file

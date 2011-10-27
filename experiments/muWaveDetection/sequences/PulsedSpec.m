@@ -1,24 +1,31 @@
-% clear all;
-% clear classes;
-% clear import;
-addpath('../../common/src','-END');
-addpath('../../common/src/util/','-END');
+function PulsedSpec(makePlot)
 
+if ~exist('makePlot', 'var')
+    makePlot = true;
+end
+script = java.io.File(mfilename('fullpath'));
+path = char(script.getParentFile().getParentFile().getParentFile().getParent());
+addpath([path '/common/src'],'-END');
+addpath([path '/common/src/util/'],'-END');
+
+temppath = [char(script.getParent()) '\'];
 path = 'U:\AWG\PulsedSpec\';
-%path = '';
 basename = 'PulsedSpec';
-delay = -10;
-measDelay = -53;
-bufferDelay = 58;
-bufferReset = 100;
-bufferPadding = 10;
-fixedPt = 6000;
-cycleLength = 12000;
-offset = 8192;
-pg = PatternGen('cycleLength', cycleLength);
+
+fixedPt = 10000;
+cycleLength = 16000;
 numsteps = 1;
-pulseLength = 5000;
-patseq = {pg.pulse('Xtheta', 'amp', 8000, 'width', pulseLength, 'pType', 'square')};
+specLength = 8000;
+specAmp = 4000;
+
+% load config parameters from file
+parent_path = char(script.getParentFile.getParent());
+cfg_path = [parent_path '/cfg/'];
+load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bufferReset', 'bufferPadding', 'offset', 'piAmp', 'pi2Amp', 'sigma', 'pulseType', 'delta', 'buffer', 'pulseLength');
+
+pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', buffer, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
+
+patseq = {pg.pulse('Xtheta', 'amp', specAmp, 'width', specLength, 'pType', 'square')};
 
 ch1 = zeros(numsteps, cycleLength);
 ch2 = ch1;
@@ -41,16 +48,18 @@ for n = 1:numsteps;
 	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
 end
 
-myn = 1;
-startx = 1800; stopx = 3100;
-figure
-plot(ch1(myn,:))
-hold on
-plot(ch2(myn,:), 'r')
-plot(500*ch1m2(myn,:), 'g')
-plot(1000*ch3m1(myn,:))
-grid on
-hold off
+if makePlot
+    myn = 1;
+    figure
+    plot(ch1(myn,:))
+    hold on
+    plot(ch2(myn,:), 'r')
+    plot(5000*ch3m1(myn,:), 'k')
+    plot(5000*ch1m1(myn,:),'.')
+    plot(5000*ch1m2(myn,:), 'g')
+    grid on
+    hold off
+end
 
 % fill remaining channels with empty stuff
 ch3 = zeros(numsteps, cycleLength) + offset;
@@ -59,5 +68,7 @@ ch2m1 = zeros(numsteps, cycleLength);
 ch2m2 = zeros(numsteps, cycleLength);
 
 % make TekAWG file
-TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2
+TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
+disp('Moving AWG file to destination');
+movefile([temppath basename '.awg'], [path basename '.awg']);
+end

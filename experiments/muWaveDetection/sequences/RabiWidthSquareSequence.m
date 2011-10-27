@@ -1,8 +1,7 @@
-% clear all;
-% clear classes;
-% clear import;
-addpath('../../../common/src','-END');
-addpath('../../../common/src/util/','-END');
+script = java.io.File(mfilename('fullpath'));
+path = char(script.getParentFile().getParentFile().getParentFile().getParent());
+addpath([path '/common/src'],'-END');
+addpath([path '/common/src/util/'],'-END');
 
 temppath = [char(script.getParent()) '\'];
 path = 'U:\AWG\Rabi\';
