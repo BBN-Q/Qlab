@@ -38,7 +38,8 @@ classdef PatternGen < handle
         dPulseType = 'gaussian';
         dBuffer = 5;
         cycleLength = 10000;
-        correctionT = eye(2,2); 
+        correctionT = eye(2,2);
+        arbPulses = containers.Map();
     end
     
     methods (Static)
@@ -64,31 +65,49 @@ classdef PatternGen < handle
         end
         
         %%%% pulse shapes %%%%%
-        function [outx, outy] = squarePulse(amp, n, varargin)
+        function [outx, outy] = squarePulse(params)
+            amp = params.amp;
+            n = params.width;
+            
             outx = amp * ones(n, 1);
             outy = zeros(n, 1);
         end
         
-        function [outx, outy] = gaussianPulse(amp, n, sigma, varargin)
+        function [outx, outy] = gaussianPulse(params)
+            amp = params.amp;
+            n = params.width;
+            sigma = params.sigma;
+            
             midpoint = (n+1)/2;
             t = 1:n;
             outx = round(amp * exp(-(t - midpoint).^2./(2 * sigma^2))).';
             outy = zeros(n, 1);
         end
         
-        function [outx, outy] = gaussOnPulse(amp, n, sigma, varargin)
+        function [outx, outy] = gaussOnPulse(params)
+            amp = params.amp;
+            n = params.width;
+            sigma = params.sigma;
+            
             t = 1:n;
             outx = round(amp * exp(-(t - n).^2./(2 * sigma^2))).';
             outy = zeros(n, 1);
         end
         
-        function [outx, outy] = gaussOffPulse(amp, n, sigma, varargin)
+        function [outx, outy] = gaussOffPulse(params)
+            amp = params.amp;
+            n = params.width;
+            sigma = params.sigma;
+            
             t = 1:n;
             outx = round(amp * exp(-(t-1).^2./(2 * sigma^2))).';
             outy = zeros(n, 1);
         end
         
-        function [outx, outy] = tanhPulse(amp, n, sigma, varargin)
+        function [outx, outy] = tanhPulse(params)
+            amp = params.amp;
+            n = params.width;
+            sigma = params.sigma;
             if (n < 6*sigma)
                 warning('tanhPulse:params', 'Tanh pulse length is shorter than rise+fall time');
             end
@@ -99,17 +118,42 @@ classdef PatternGen < handle
             outy = zeros(n, 1);
         end
         
-        function [outx, outy] = derivGaussianPulse(amp, n, sigma, varargin)
+        function [outx, outy] = derivGaussianPulse(params)
+            amp = params.amp;
+            n = params.width;
+            sigma = params.sigma;
+            
             midpoint = (n+1)/2;
             t = 1:n;
             outx = round(amp .* (t - midpoint)./sigma^2 .* exp(-(t - midpoint).^2./(2 * sigma^2))).';
             outy = zeros(n, 1);
         end
         
-        function [outx, outy] = dragPulse(amp, n, sigma, delta)
+        function [outx, outy] = dragPulse(params)
             self = PatternGen;
-            [outx, tmp] = self.gaussianPulse(amp, n, sigma);
-            [outy, tmp] = self.derivGaussianPulse(amp*delta, n, sigma);
+            yparams = params;
+            yparams.amp = params.amp * params.delta;
+            
+            [outx, tmp] = self.gaussianPulse(params);
+            [outy, tmp] = self.derivGaussianPulse(yparams);
+        end
+        
+        function [outx, outy] = arbitraryPulse(params)
+            persistent arbPulses;
+            if isempty(arbPulses)
+                arbPulses = containers.Map();
+            end
+            amp = params.amp;
+            fname = params.arbfname;
+            
+            if ~ismember(fname, keys(arbPulses))
+                % need to load the pulse from file
+                % TODO check for existence of file before loading it
+                arbPulses(fname) = load(fname);
+            end
+            pulseData = arbPulses(fname);
+            outx = round(amp*pulseData(:,1));
+            outy = round(amp*pulseData(:,2));
         end
         
         % buffer pulse generator
@@ -214,6 +258,7 @@ classdef PatternGen < handle
             elseif ismember(p, fluxPulses)
                 params.pType = 'square';
             end
+            params.arbfname = ''; % for arbitrary pulse shapes
             params = parseargs(params, varargin{:});
             % if only a width was specified (not a duration), need to update the duration
             % parameter
@@ -259,21 +304,26 @@ classdef PatternGen < handle
             function [xpulse, ypulse] = pulseFunction(n)
                 % if amp, width, sigma, or angle is a vector, get the nth entry
                 function out = getelement(x)
-                    if isscalar(x)
+                    if isscalar(x) || ischar(x)
                         out = x;
                     else
                         out = x(n);
                     end
                 end
                 
-                amp = getelement(params.amp);
-                width = getelement(params.width);
-                sigma = getelement(params.sigma);
-                delta = getelement(params.delta);
-                angle = getelement(params.angle);
-                duration = getelement(params.duration);
+                % pick out the nth element of parameters provided as
+                % vectors
+                elementParams = params;
+                fields = fieldnames(params);
+                for ii = 1:length(fields)
+                    field = fields{ii};
+                    elementParams.(field) = getelement(params.(field));
+                end
+                angle = elementParams.angle;
+                duration = elementParams.duration;
+                width = elementParams.width;
                 
-                [xpulse, ypulse] = pf(amp, width, sigma, delta);
+                [xpulse, ypulse] = pf(elementParams);
                 
                 % rotate and correct the pulse
                 xypairs = [xpulse ypulse].';
