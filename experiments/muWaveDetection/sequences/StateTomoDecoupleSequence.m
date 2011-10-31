@@ -41,21 +41,28 @@ offsetQ2 = offset2;
 delayCR21 = delay3;
 offsetCR21 = offset3;
 
+% use a pulse window of 4*pulseLength, with decoupling pulses center at 1/4
+% and 3/4
+decouplingWidth = round(2*pulseLength);
+pulseWidth = 4*pulseLength;
+
 % decoupling pulses to sandwich around all single-qubit operations
-decoupleQ1{1} = pg1.pulse('QId');
-decoupleQ1{2} = pg1.pulse('QId');
-decoupleQ2{1} = pg2.pulse('Xm');
-decoupleQ2{2} = pg2.pulse('Xp');
+decoupleQ1{1} = pg1.pulse('QId', 'duration', decouplingWidth);
+decoupleQ1{2} = pg1.pulse('QId', 'duration', decouplingWidth);
+decoupleQ2{1} = pg2.pulse('Xm', 'duration', decouplingWidth);
+decoupleQ2{2} = pg2.pulse('Xp', 'duration', decouplingWidth);
+decoupleQ2{3} = pg2.pulse('Ym', 'duration', decouplingWidth);
+decoupleQ2{4} = pg2.pulse('Yp', 'duration', decouplingWidth);
 
-PosPulsesQ1{1} = pg1.pulse('QId');
-PosPulsesQ1{2} = pg1.pulse('Xp');
-PosPulsesQ1{3} = pg1.pulse('X90p');
-PosPulsesQ1{4} = pg1.pulse('Y90p');
+PosPulsesQ1{1} = pg1.pulse('QId', 'duration', pulseWidth);
+PosPulsesQ1{2} = pg1.pulse('Xp', 'duration', pulseWidth);
+PosPulsesQ1{3} = pg1.pulse('X90p', 'duration', pulseWidth);
+PosPulsesQ1{4} = pg1.pulse('Y90p', 'duration', pulseWidth);
 
-PosPulsesQ2{1} = pg2.pulse('QId');
-PosPulsesQ2{2} = pg2.pulse('Xp');
-PosPulsesQ2{3} = pg2.pulse('X90p');
-PosPulsesQ2{4} = pg2.pulse('Y90p');
+PosPulsesQ2{1} = pg2.pulse('QId', 'duration', pulseWidth);
+PosPulsesQ2{2} = pg2.pulse('Xp', 'duration', pulseWidth);
+PosPulsesQ2{3} = pg2.pulse('X90p', 'duration', pulseWidth);
+PosPulsesQ2{4} = pg2.pulse('Y90p', 'duration', pulseWidth);
 
 nbrPosPulses = length(PosPulsesQ1);
 
@@ -74,9 +81,9 @@ for nindex = 1:numsteps
     prepPulseQ2 = pg2.pulse('QId');
     prepPulseCR21 = {'QId'};
     
-    processPulseQ1 = pg1.pulse(Q1pulse);
-    processPulseQ2 = pg2.pulse(Q2pulse);
-    processPulseCR21 = {'QId'};
+    processPulseQ1 = pg1.pulse(Q1pulse, 'duration', pulseWidth);
+    processPulseQ2 = pg2.pulse(Q2pulse, 'duration', pulseWidth);
+    processPulseCR21 = {'QId', 'duration', pulseWidth};
     
     %ADD IN CALIBRATIONS
 
@@ -116,23 +123,39 @@ for nindex = 1:numsteps
 
     for dumindex = 1:16
         patseqCR21{dumindex} = {{'QId'}};
+        decoupleseqQ1{dumindex} = {pg1.pulse('QId')};
+        decoupleseqQ2{dumindex} = {pg2.pulse('QId')};
     end
     
     nbrRepeats = 4;
     for iindex = 1:nbrPosPulses
         for jindex = 1:nbrPosPulses
             for kindex=1:nbrRepeats
-                patseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}=...
-                    {prepPulseQ1,... % prepare (do nothing in this case)
-                    decoupleQ1{1},processPulseQ1,decoupleQ1{2},... % process
-                    decoupleQ1{1},PosPulsesQ1{iindex},decoupleQ1{2},... % Q1 tomography pulse
-                    decoupleQ1{1},pg1.pulse('QId'),decoupleQ1{2}}; % Q2 tomography pulse
-                patseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}=...
-                    {prepPulseQ2,... % prepare (do nothing in this case)
-                    decoupleQ2{1},processPulseQ2,decoupleQ2{2},... % process
-                    decoupleQ2{1},pg2.pulse('QId'),decoupleQ2{2},... % Q1 tomography pulse
-                    decoupleQ2{1},PosPulsesQ2{jindex},decoupleQ2{2},... % Q2 tomography pulse
-                    };
+                patseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={...
+                    prepPulseQ1,... % prepare (do nothing in this case)
+                    processPulseQ1,... % process
+                    PosPulsesQ1{iindex},... % Q1 tomography pulse
+                    pg1.pulse('QId', 'duration', pulseWidth)}; % Q2 tomography pulse
+                decoupleseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={...
+                    decoupleQ1{1}, decoupleQ1{2},... % process
+                    decoupleQ1{1}, decoupleQ1{2},... % Q1 tomography pulse
+                    decoupleQ1{1}, decoupleQ1{2}}; % Q2 tomography pulse
+                patseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={...
+                    prepPulseQ2,... % prepare (do nothing in this case)
+                    processPulseQ2,... % process
+                    pg2.pulse('QId', 'duration', pulseWidth),... % Q1 tomography pulse
+                    PosPulsesQ2{jindex}};... % Q2 tomography pulse
+                if jindex == 4 % when doing tomography pulses around Y, also decouple on Y
+                    decoupleseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={...
+                        decoupleQ2{1}, decoupleQ2{2},... % process
+                        decoupleQ2{1}, decoupleQ2{2},... % Q1 tomography pulse
+                        decoupleQ2{3}, decoupleQ2{4}}; % Q2 tomography pulse
+                else
+                    decoupleseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={...
+                        decoupleQ2{1}, decoupleQ2{2},... % process
+                        decoupleQ2{1}, decoupleQ2{2},... % Q1 tomography pulse
+                        decoupleQ2{1}, decoupleQ2{2}}; % Q2 tomography pulse
+                end
                 patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseCR21,processPulseCR21,{'QId'}};
             end
         end
@@ -153,6 +176,16 @@ for nindex = 1:numsteps
     patseqCR21{83} = {{'QId'}};
     patseqCR21{84} = {{'QId'}};
     
+    decoupleseqQ1{81} = {pg1.pulse('QId')};
+    decoupleseqQ1{82} = {pg1.pulse('QId')};
+    decoupleseqQ1{83} = {pg1.pulse('QId')};
+    decoupleseqQ1{84} = {pg1.pulse('QId')};
+
+    decoupleseqQ2{81} = {pg2.pulse('QId')};
+    decoupleseqQ2{82} = {pg2.pulse('QId')};
+    decoupleseqQ2{83} = {pg2.pulse('QId')};
+    decoupleseqQ2{84} = {pg2.pulse('QId')};
+    
     nbrPulses = 4+16+nbrPosPulses^2*nbrRepeats;
     
     % pre-allocate space
@@ -166,14 +199,16 @@ for nindex = 1:numsteps
     for n = 1:nbrPulses
         % Q1
         [patx paty] = pg1.getPatternSeq(patseqQ1{n}, n, delayQ1, fixedPt);
-        Q1_I(n, :) = patx + offsetQ1;
-        Q1_Q(n, :) = paty + offsetQ1;
+        [decouplex decoupley] = pg1.getPatternSeq(decoupleseqQ1{n}, n, delayQ1, fixedPt);
+        Q1_I(n, :) = patx + decouplex + offsetQ1;
+        Q1_Q(n, :) = paty + decoupley + offsetQ1;
         Q1buffer(n, :) = pg1.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
         
         % Q2
         [patx paty] = pg2.getPatternSeq(patseqQ2{n}, n, delayQ2, fixedPt);
-        Q2_I(n, :) = patx + offsetQ2;
-        Q2_Q(n, :) = paty + offsetQ2;
+        [decouplex decoupley] = pg2.getPatternSeq(decoupleseqQ2{n}, n, delayQ2, fixedPt);
+        Q2_I(n, :) = patx + decouplex + offsetQ2;
+        Q2_Q(n, :) = paty + decoupley + offsetQ2;
         Q2buffer(n, :) = pg1.bufferPulse(patx, paty, 0, bufferPadding2, bufferReset2, bufferDelay2);
         
         % CR21, build for APS
@@ -200,7 +235,7 @@ for nindex = 1:numsteps
     end
     
     if makePlot
-        myn = 38;
+        myn = 41;
         figure
         plot(Q1_I(myn,:))
         hold on
