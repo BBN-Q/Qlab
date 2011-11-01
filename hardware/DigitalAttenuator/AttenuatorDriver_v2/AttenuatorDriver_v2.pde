@@ -5,12 +5,21 @@ template<class T> inline Print &operator <<(Print &obj, T arg) {
 #include <EEPROM.h>
 
 const int NO_MESSAGE = -1;
+
+// processInput state machine modes
 const byte COMMAND = 0;
-const byte NUMBER = 1;
-const byte CHANNEL = 2;
-const byte IDENTIFY = 3;
-const byte SETID = 4;
+const byte CHANNEL = 1;
+const byte REALNUMBER = 2;
+const byte INTNUMBER = 3;
 const byte DONE = 10;
+
+// command modes
+const byte GET = 1; // get attenuator value
+const byte SET = 2; // set attenuator value
+const byte GETID = 3; // get device ID
+const byte SETID = 4; // set device ID
+const byte UNKNOWN = -1;
+
 const boolean VERBOSE = false;
 
 const int attenuatorPins[3][6] = {{A5,A4,A3,A2,A1,A0}, {7,6,5,4,3,2}, {13,12,11,10,9,8}};
@@ -88,7 +97,8 @@ void readString(char* s) {
 }
 
 int processInput(char* input) {
-  byte mode = COMMAND;
+  byte mode = COMMAND; // processInput() state machine mode
+  byte command = UNKNOWN; // the interpretted command mode
   int channel = 1;
   double value = 0.0;
   unsigned int uvalue = 0;
@@ -97,50 +107,73 @@ int processInput(char* input) {
     switch (mode) {
       case COMMAND:
         if (!strcasecmp(token, "SET")) {
+          command = SET;
+          mode = CHANNEL;
+        }
+        if (!strcasecmp(token, "GET")) {
+          command = GET;
           mode = CHANNEL;
         }
         if (!strcasecmp(token, "ID?")) {
-          mode = IDENTIFY;
+          command = GETID;
+          mode = DONE;
         }
         if (!strcasecmp(token, "ID")) {
-          mode = SETID;
+          command = SETID;
+          mode = INTNUMBER;
         }
         break;
       case CHANNEL:
         if (!strcasecmp(token, "1") || !strcasecmp(token, "2") || !strcasecmp(token, "3")) {
           channel = atoi(token);
-          mode = NUMBER;
+          // if we are getting the current value, we are done
+          // otherwise, we need another number
+          if (command == SET)
+            mode = REALNUMBER;
+          else
+            mode = DONE;
         }
         break; 
-      case NUMBER:
+      case REALNUMBER:
         value = atof(token);
         mode = DONE;
         break;
-      case SETID:
+      case INTNUMBER:
         uvalue = atoi(token);
+        mode = DONE;
         break;
     }
     
     token = strtok(NULL, " ");
   }
   
-  if (mode == DONE) {
+  if (mode != DONE) {
+    return NO_MESSAGE;
+  }
+  
+  if (command == SET) {
     Serial << "Setting channel " << channel << " to " << value;
     Serial.println();
     setAttenuator(channel, value);
     writeStoredChannelValue(channel, value);
     Serial.println("END");
     return DONE;
-  } else if (mode == IDENTIFY) {
+  } else if (command == GET) {
+    Serial << readStoredChannelValue(channel);
+    Serial.println();
+    Serial.println("END");
+    return DONE;
+  } else if (command == GETID) {
     Serial << getID();
     Serial.println();
     Serial.println("END");
     return DONE;
-  } else if (mode == SETID) {
+  } else if (command == SETID) {
     Serial << "Setting board ID to " << uvalue;
     Serial.println();
     setID(uvalue);
     Serial.println("END");
+    return DONE;
   } else {
     return NO_MESSAGE;
   }
