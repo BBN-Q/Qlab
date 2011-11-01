@@ -1296,6 +1296,11 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 	  inSync = 1;
 	  break;
 	}
+	// clear PLL reset bits
+	
+	pll_reg_value = APS_ReadFPGA(device, gRegRead | pll_reset_addr, fpga);
+    // Write original value with PLL reset bits cleared
+    APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reg_value & ~pll_reset_bit, fpga);
   }
 
   if (!inSync) {
@@ -1347,7 +1352,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
       } else {
         // DAC outputs are out of sync
         // disable output of clock to DAC
-        dlog(DEBUG_INFO,"Channel %s PLLs not in sync resetting\n", pllStr);
+        dlog(DEBUG_INFO,"Channel %s PLL not in sync resetting\n", pllStr);
 
         globalSync = 0;
 
@@ -1360,8 +1365,8 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
         pll_reg_value = APS_ReadFPGA(device, gRegRead | pll_reset_addr, fpga);
         // Write PLL with bit set
         APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reg_value | PLL_RESET[pll], fpga);
-        // Write original value
-        APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reg_value, fpga);
+        // Write original value (making sure to clear the PLL reset bit)
+        APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reg_value & ~PLL_RESET[pll], fpga);
 
         // wait for lock
         inSync =  0;

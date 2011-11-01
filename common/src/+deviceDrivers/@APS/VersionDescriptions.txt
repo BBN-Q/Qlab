@@ -1,5 +1,11 @@
+P161
+- Ties DDR reset to "csr(0)" (State Machine Reset)
+P160
+- Ties DDR reset to "pllxx_lock"
+P159
+- Ties DDR reset to FPGA_RSTN versus "not pll_rst"
 P156
-- Corrected data_fix() to match schematic
+- Fixed data_fix() to match schematic (schematic is not up to date)
 P155
 - Rebuilt with pll200_int = 220 MHz defined
 - Improved write reliability.
