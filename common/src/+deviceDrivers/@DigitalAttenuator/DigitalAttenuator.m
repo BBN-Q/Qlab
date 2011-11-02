@@ -89,6 +89,16 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
             %fprintf([msg '\n']);
         end
         
+        function out = getAttenuation(obj, channel)
+            % error check inputs
+            if (channel < 1 || channel > obj.MAX_CHANNELS)
+                error('DigitalAttenuator:getAttenuation:channel', 'Invalid channel number %d', channel);
+            end
+            cmd = sprintf('GET %d', channel);
+            obj.Write(cmd);
+            out = obj.ReadUntilEND();
+        end
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Function Name : ZeroAll
         %
