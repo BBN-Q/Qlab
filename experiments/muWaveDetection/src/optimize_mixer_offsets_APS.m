@@ -24,7 +24,7 @@
 
 function optimize_mixer_offsets_APS()
     spec_analyzer_address = 17;
-    spec_generator_address = 1691;
+    spec_generator_address = 1698;
     awg_address = 0;
     spec_analyzer_span = 100e3;
     spec_resolution_bw = 10e3;
@@ -49,7 +49,8 @@ function optimize_mixer_offsets_APS()
     if ~simulate
         specgen = deviceDrivers.Labbrick();
         specgen.connect(spec_generator_address);
-        specgen.pulseSource = 'int'; % turns off external pulse mode
+        specgen.pulseSource = 'ext';
+        specgen.pulse = 0; % turn off external pulse mode
 
         sa = deviceDrivers.HP71000();
         sa.connect(spec_analyzer_address);
@@ -71,6 +72,7 @@ function optimize_mixer_offsets_APS()
                 error('Could not open aps')
             end
         end
+        awg.init();
         
         awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
         awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;

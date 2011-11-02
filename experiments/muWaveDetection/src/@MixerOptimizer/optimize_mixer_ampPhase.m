@@ -78,7 +78,7 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
     fprintf('a: %.3g, skew: %.3g degrees\n', [ampFactor, skew*180/pi]);
     
     % correction transformation
-    T = [ampFactor -tan(skew); 0 sec(skew)];
+    T = [ampFactor -ampFactor*tan(skew); 0 sec(skew)];
     
     % restore instruments to a normal state
     if ~simulate
