@@ -128,7 +128,10 @@ classdef guifunctions < handle
             gui.dac.open(id-1, gui.dac.FORCE_OPEN);
             if (gui.dac.is_open)
                 gui.message_manager.disp('Initializing.');
-                gui.dac.init();
+                try %wrap init it try block to make sure gui gets initialized
+                    gui.dac.init();
+                catch
+                end
                 gui.getBitFileVersion(versionHandle);
             end
         end
