@@ -127,6 +127,8 @@ classdef guifunctions < handle
             % Open the dac device (index 0) based on GUI id (index 1)
             gui.dac.open(id-1, gui.dac.FORCE_OPEN);
             if (gui.dac.is_open)
+                gui.message_manager.disp('Initializing.');
+                gui.dac.init();
                 gui.getBitFileVersion(versionHandle);
             end
         end
@@ -238,6 +240,8 @@ classdef guifunctions < handle
             gui.dac.loadBitFile(filename);
             
             gui.getBitFileVersion(versionHandle);
+            gui.message_manager.disp('Initializing.');
+            gui.dac.init();
             
         end
         
@@ -360,7 +364,7 @@ classdef guifunctions < handle
             end
             
             % set frequency now
-            gui.dac.setFrequency(id,wf.sample_rate);
+            % gui.dac.setFrequency(id,wf.sample_rate);
             gui.set_ctrl_enable(handles,id,'cb_simultaneous', 'On');
             
             if (gui.bit_file_version >= gui.bitFileVersion_link_list)

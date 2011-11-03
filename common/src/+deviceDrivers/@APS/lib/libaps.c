@@ -1226,6 +1226,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
   // 4 channel sync or 2 channel sync
   fpgaFrequencies[fpga - 1] = freq;
 
+  // Disable oscillator?
   WriteByte = 0;
   if(APS_WriteReg(device,APS_STATUS_CTRL, 1, 0, &WriteByte) != 1)
     return(-4);
