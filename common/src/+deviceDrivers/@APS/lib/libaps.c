@@ -227,7 +227,7 @@ EXPORT int APS_Open(int device, int force)
 		}
 		// allocate new memory
 
-		waveforms[device] = WF_Init();
+		//waveforms[device] = WF_Init();
 
 	} else {
 	#ifdef DEBUG
@@ -485,7 +485,7 @@ EXPORT int APS_Close(int device)
 	DLL_FT_Close(usb_handles[device]);
 	usb_handles[device] = 0;
 
-	WF_Destroy(waveforms[device]);
+	//WF_Destroy(waveforms[device]);
 
 	return 0;
 }
