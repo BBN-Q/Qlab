@@ -190,7 +190,7 @@ classdef APSWaveform < handle
             end;
             
             % if waveform data is reals, scale and convert to int16s
-            if wf.dataMode == wf.REAL_DATA
+            if wf.dataMode == wf.REAL_DATA || isreal(wf.data(1))  
                 scale = wf.scale_factor * wf.max_wf_amp_value;
             else
                 scale = wf.scale_factor;
