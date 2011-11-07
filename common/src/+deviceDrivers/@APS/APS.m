@@ -1040,67 +1040,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
         end
         
-        function [offsetVal countVal ] = peakEntryToOffsetCount(aps,entry,library)            
-            entryData.offset = library.offsets(entry.key);
-            entryData.length = library.lengths(entry.key);
-            
-            if library.varients.isKey(entry.key)
-                entryData.varientWFs = library.varients(entry.key);
-            else
-                entryData.varientWFs = [];
-            end
-            
-            expectedLength = aps.expectedLength + entry.length * entry.repeat;
-            
-            % correct for changing in padding
-            
-            if aps.pendingLength > 0 && ~isempty(entryData.varientWFs)
-                % attempt to us a varient
-                padIdx = aps.pendingLength + 1;
-                assert(padIdx > 0 && padIdx <= aps.ADDRESS_UNIT,sprintf('Padding Index %i Out of Range', padIdx));
-                if length(entryData.varientWFs) >= padIdx   % matlab index offset
-                    varient = entryData.varientWFs(padIdx);
-                    if iscell(varient), varient = varient{1}; end; % remove cell wrapper
-                    entryData.offset = varient.offset;
-                    entryData.length = varient.length;
-                    assert(varient.pad == aps.pendingLength,'Pending length pad does not match');
-                    if aps.verbose
-                        fprintf('\tUsing WF varient with pad: %i\n', padIdx - 1);
-                    end
-                end
-            elseif (entry.isZero || entry.isPseudoZero)
-                % use TAZ entries to get back on track
-                entry.repeat = entry.repeat + aps.pendingLength;
-            end
-            
-            %% convert from 1 based count to 0 based count
-            %% div by 4 required for APS addresses
-            address = (entryData.offset - 1) / aps.ADDRESS_UNIT;
-            
-            offsetVal = bitand(address, aps.ELL_ADDRESS);  % address
-            
-            % use entryData to get length as it includes the padded
-            % length
-            if ~entry.isTimeAmplitude
-                % waveforms might have extra end padding; take min length
-                %entrylen = min(entry.length, entryData.length);
-                entrylen = entryData.length;
-                % count val is (length in 4 sample units) - 1
-                countVal = fix(entrylen/aps.ADDRESS_UNIT) - 1;
-            else
-                countVal = fix(floor(entry.repeat / aps.ADDRESS_UNIT)) - 1;
-                %diff = entry.repeat - (countVal+1) * aps.ADDRESS_UNIT;
-                %aps.pendingValue = library.waveforms(entryData.offset);
-            end
-            if (~entry.isTimeAmplitude && countVal > aps.ELL_ADDRESS) || ...
-                    (entry.isTimeAmplitude && countVal > aps.ELL_TA_MAX)
-                error('Link List countVal %i is too large', countVal);
-            end
-            
-            %currentLength = aps.currentLength + (countVal+1) * aps.ADDRESS_UNIT;
-            
-        end
-        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         function triggerVal = entryToTrigger(aps,entry)
@@ -1255,29 +1194,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         skipNext = 0;
                         continue
                     end
-                    
-                    % get a peek at the next entry
-%                     if useEndPadding && j ~= lenLL
-%                         nextEntry = linkList{j+1};
-%                         [offsetVal2 countVal2] = peakEntryToOffsetCount(aps,nextEntry,waveformLibrary);
-% 
-%                         % I don't think we are using this anymore
-%                         if countVal2 < 3
-%                             % if pulse length is less than 3, use extra padding at end
-%                             % of waveform in library
-%                             if nextEntry.isTimeAmplitude && nextEntry.isZero
-%                                 if aps.verbose
-%                                     fprintf('Found TA & Z with count = %i. Adjusting waveform end.\n', countVal2);
-%                                 end
-%                                 % remember, count is length-1
-%                                 countVal = countVal + (countVal2+1);
-%                                 
-%                                 skipNext = 1;                            
-%                             else
-%                                 fprintf('Warning: countVal2 < 2 but not TAZ\n')
-%                             end
-%                         end
-%                     end
                     
                     if countVal < 3
                         fprintf('Warning entry count < 3. This causes problems with APS\n')

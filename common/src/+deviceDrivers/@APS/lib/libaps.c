@@ -1097,13 +1097,13 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 
 
 
-// Setup modified for low clock rate
+// Setup modified for 1.2 GHz clock rate
 APS_SPI_REC PllSetup[] =
 {
   0x0,  0x99,  // Use SDO, Long instruction mode
   0x10, 0x7C,  // Enable PLL , set charge pump to 4.8ma
   0x11, 0x5,   // Set reference divider R to 5 to divide 125 MHz reference to 25 MHz
-  0x14, 0x06,  // Set B divider to 6 to divide 1200 MHz to 25 MHz
+  0x14, 0x06,  // Set B divider to 96 to divide 1200 MHz to 25 MHz (isn't this 12.5 MHz??)
   0x16, 0x5,   // Set P divider to 16 and enable B counter
   0x17, 0x4,   // Selects readback of N divider on STATUS bit in Status/Control register
   0x18, 0x60,  // Calibrate VCO with 2 divider, set lock detect count to 255, set high range
@@ -1115,10 +1115,11 @@ APS_SPI_REC PllSetup[] =
   0xF3, 0x00,  // Enable un-inverted 400mv clock on OUT3
   0xF4, 0x00,  // Enable un-inverted 400mv clock on OUT4
   0xF5, 0x00,  // Enable un-inverted 400mv clock on OUT5
-  0x190, 0x55, //	6 high, 6 low = channel 0 divide by 12
-  0x191, 0x00, //	Clear divider 0 bypass
+  0x190, 0x00, //	No division on channel 0
+  0x191, 0x80, //	Bypass 0 divider
   0x193, 0x11, //	(1.2 GHz / 4 = 300 MHz = Reference 300 MHz)
-  0x196, 0x55, //	6 high, 6 low = channel 2 divide by 12
+  0x196, 0x00, //	No division on channel 2
+  0x197, 0x80, //   Bypass 2 divider
   0x1E0, 0x0,  // Set VCO post divide to 2
   0x1E1, 0x2,  // Select VCO as clock source for VCO divider
   0x232, 0x1,  // Set bit 0 to 1 to simultaneously update all registers with pending writes.
@@ -1212,7 +1213,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
       return -2;
   }
 
-  // by pass divider if freq == 1200
+  // bypass divider if freq == 1200
   if (freq == 1200) {
     pll_bypass_val = 0x80;
   } else {
