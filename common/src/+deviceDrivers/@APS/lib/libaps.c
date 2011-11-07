@@ -1341,7 +1341,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 	  xor_flag_cnt += (pll_bit >> PLL_XOR_TEST[2]) & 0x1;
 	}
 	
-	if ( xor_flag_cnt < 3 || xor_flag_cnt > 7 ) {
+	if ( xor_flag_cnt < 2 || xor_flag_cnt > 8 ) {
 	  // 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase, so 600 MHz clocks
 	  // from DAC must be in phase. Move on.
 	  break;
