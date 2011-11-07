@@ -1351,9 +1351,11 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
       if (xor_flag_cnt < 2) {
         globalSync = 1;
+		break; // passed, move on to next channel
       } else {
         // DAC outputs are out of sync
         // disable output of clock to DAC
+		dlog(DEBUG_INFO,"PLL XOR count %i\n", xor_flag_cnt);
         dlog(DEBUG_INFO,"Channel %s PLL not in sync resetting\n", pllStr);
 
         globalSync = 0;
