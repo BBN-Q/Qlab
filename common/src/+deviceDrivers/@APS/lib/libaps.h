@@ -85,7 +85,6 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock);
 EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels);
 EXPORT int APS_ReadPllStatus(int device, int fpga);
 
-
 EXPORT int APS_ReadBitFileVersion(int device);
 EXPORT void APS_ReadLibraryVersion(void * buffer, int maxlen);
 EXPORT int APS_ReadAllRegisters(int device);

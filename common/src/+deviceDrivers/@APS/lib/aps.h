@@ -64,7 +64,7 @@
 #define APS_DRST01_BIT 0x4
 #define APS_DRST23_BIT 0x8
 #define APS_PRST_BIT 0x2
-#define APS_SYNC_BIT 0x2
+#define APS_SYNC_BIT 0x1
 #define APS_OSCEN_BIT 0x10
 #define APS_STATUS_BIT 0x20
 #define APS_LOCK_BIT 0x40
@@ -76,13 +76,13 @@
 
 #define FPGA2_PLL_CYCLES_ADDR 0x196
 #define FPGA2_PLL_BYPASS_ADDR 0x197
-#define FPGA2_ENABLE_ADDR     0xF4
+#define FPGA2_ENABLE_ADDR     0xF5
 
 #define FPGA_PLL_RESET_ADDR 0x0
 #define FPGA1_PLL_RESET_BIT 0x2
 #define FPGA2_PLL_RESET_BIT 0x200
 
-#define MAX_PHASE_TEST_CNT 50
+#define MAX_PHASE_TEST_CNT 25
 
 typedef struct
 {
@@ -132,5 +132,7 @@ int APS_WriteBlock
   ULONG Size,    // Transfer size bytes. 
   UCHAR *Data    // Data bytes to be written.  Must match length/transfer type
 );
+
+void APS_UpdatePllReg(int device);
 
 #endif // APS_H
