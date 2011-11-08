@@ -1962,8 +1962,6 @@ EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
   
   dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, offset);
   
-  if (APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset & 0x4000, fpga) != 0) {
-    return -3;
-  }
+  APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset & 0x4000, fpga);
   return 0;
 }

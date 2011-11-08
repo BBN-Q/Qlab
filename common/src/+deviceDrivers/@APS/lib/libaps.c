@@ -1277,13 +1277,13 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
   // Test for DAC clock phase match
   int inSync, globalSync;
-  int test_cnt, cnt, pll, xor_flag_cnt;
+  int test_cnt, cnt, pll, xor_flag_cnt, xor_flag_cnt2;
   int pll_1_unlock;
 
   int fpga;
   int pll_bit;
   UINT pll_reg_value;
-  UINT pll_reset_addr, pll_reset_bit, pll_enable_addr;
+  UINT pll_reset_addr, pll_reset_bit, pll_enable_addr, pll_enable_addr2;
 
   pll_reset_addr = FPGA_PLL_RESET_ADDR;
   pll_reset_bit   = CSRMSK_PHSPLLRST_ELL | CSRMSK_ENVPLLRST_ELL;
@@ -1300,18 +1300,20 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
       // fall through
     case 1:
       pll_enable_addr = DAC0_ENABLE_ADDR;
+      pll_enable_addr2 = DAC1_ENABLE_ADDR;
       break;
     case 2:
       // fall through
     case 3:
 	    pll_enable_addr = DAC2_ENABLE_ADDR;
+      pll_enable_addr2 = DAC3_ENABLE_ADDR;
       break;
     default:
       return -1;
     }
 
   // test for PLL lock
-  for (test_cnt = 0; test_cnt < 50; test_cnt++) {
+  for (test_cnt = 0; test_cnt < 20; test_cnt++) {
     if (APS_ReadPllStatus(device, fpga) == 0) {
 	    inSync = 1;
 	    break;
@@ -1339,25 +1341,31 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   dlog(DEBUG_INFO,"Testing for DAC clock phase sync\n");
   for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
     xor_flag_cnt = 0;
+    xor_flag_cnt2 = 0;
 
-	  for(cnt = 0; cnt < 10; cnt++) {
+	  for(cnt = 0; cnt < 20; cnt++) {
   	  pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
   	  xor_flag_cnt += (pll_bit >> PLL_GLOBAL_XOR_BIT) & 0x1;
+      xor_flag_cnt2 += (pll_bit >> PLL_02_XOR_BIT) & 0x1;
   	}
 	
-  	if ( xor_flag_cnt < 2 || xor_flag_cnt > 8 ) {
+    //if ( (xor_flag_cnt < 2) && (xor_flag_cnt2 < 2) ) {
+  	if ( (xor_flag_cnt < 2 || xor_flag_cnt > 18) && (xor_flag_cnt2 < 2 || xor_flag_cnt2 > 18) ) {
   	  // 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase, so 600 MHz clocks
   	  // from DAC must be in phase. Move on.
+      dlog(DEBUG_INFO,"DAC clocks in phase with reference (XOR counts %i and %i)\n", xor_flag_cnt, xor_flag_cnt2);
   	  break;
   	}
   	else {
   	  // 600 MHz clocks out of phase, reset one of the DACs
-  	  dlog(DEBUG_INFO,"DAC clocks out of phase; resetting (XOR count %i)\n", xor_flag_cnt);
-  	  UCHAR WriteByte = 0x2; //disable clock output
+  	  dlog(DEBUG_INFO,"DAC clocks out of phase; resetting (XOR counts %i and %i)\n", xor_flag_cnt, xor_flag_cnt2);
+  	  UCHAR WriteByte = 0x2; //disable clock outputs
   	  APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
+      APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr2, &WriteByte);
   	  APS_UpdatePllReg(device);
-  	  WriteByte = 0x0; // enable clock output
+  	  WriteByte = 0x0; // enable clock outputs
   	  APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
+      APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr2, &WriteByte);
   	  APS_UpdatePllReg(device);
 	  
   	  // reset FPGA PLLs
@@ -1369,7 +1377,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 	  
   	  // wait for lock
   	  inSync =  0;
-  	  for(cnt = 0; cnt < 100; cnt++) {
+  	  for(cnt = 0; cnt < 20; cnt++) {
   	    if (APS_ReadPllStatus(device, fpga) == 0) {
   		    inSync = 1;
     		  break;
@@ -1401,7 +1409,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
         xor_flag_cnt += (pll_bit >> PLL_XOR_TEST[pll]) & 0x1;
       }
 
-      if (xor_flag_cnt < 2) {
+      if (xor_flag_cnt < 5) {
         globalSync = 1;
     		break; // passed, move on to next channel
       } else {
@@ -1424,7 +1432,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
         // wait for lock
         inSync =  0;
-        for(cnt = 0; cnt < 100; cnt++) {
+        for(cnt = 0; cnt < 20; cnt++) {
     		  pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
           pll_1_unlock = (pll_bit >> PLL_LOCK_TEST[pll]) & 0x1;
           if (!pll_1_unlock) {
@@ -1462,7 +1470,7 @@ int APS_ReadPllStatus(int device, int fpga) {
   pll_3_unlock = (pll_bit >> REFERENCE_PLL_LOCK_BIT) & 0x1;
   // lock bit == 1 means not-locked
   if (!pll_1_unlock && !pll_2_unlock && !pll_3_unlock) {
-	dlog(DEBUG_INFO,"PLLs locked on FPGA%i\n", fpga);
+	//dlog(DEBUG_INFO,"PLLs locked on FPGA%i\n", fpga);
     return 0;
   }
   //return -1;

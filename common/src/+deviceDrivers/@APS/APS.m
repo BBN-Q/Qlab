@@ -744,6 +744,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
         end
         
+        function val = setOffset(aps, id, offset)
+            val = aps.librarycall('Set channel offset','APS_SetChannelOffset', id, offset);
+        end
+        
         function setupPLL(aps)
             val = aps.librarycall('Setup PLL', 'APS_SetupPLL');
         end
