@@ -87,7 +87,10 @@
 #define FGPA_OFF_ELL_PHSLL_A_CTRL 0xA  // A Control Register
 #define FGPA_OFF_ELL_PHSLL_B_CTRL 0xB  // B Control Register
 #define FGPA_OFF_ELL_PHSLL_REPEAT 0xC  // Repeat Count
-#define FPGA_OFF_ELL_CHECKSUM     0xD  // Checksum Register
+#define FPGA_OFF_ADDR_CHECKSUM    0xD  // Address Checksum Register
+#define FPGA_OFF_DATA_CHECKSUM    0xE  // Data Checksum Register
+#define FPGA_OFF_DAC02_ZERO       0x10 // DAC0/2 zero offset register
+#define FPGA_OFF_DAC13_ZERO       0x11 // DAC1/3 zero offset register
 
 #define LL_SIZE_PHSSHIFT	8
 #define LL_SIZE_ENVSHIFT	0

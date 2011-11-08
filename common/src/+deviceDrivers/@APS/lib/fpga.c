@@ -137,7 +137,7 @@ EXPORT int APS_CompareCheckSum(int device, int dac) {
   if (fpga < 0 || fpga == 3) {
     return -1;
   }
-  checksum = APS_ReadFPGA(device, gRegRead | FPGA_OFF_ELL_CHECKSUM, fpga);
+  checksum = APS_ReadFPGA(device, gRegRead | FPGA_OFF_DATA_CHECKSUM, fpga);
   return (checksum == gCheckSum[device][fpga - 1]);
 }
 
@@ -236,7 +236,7 @@ int dac2fpga(int dac)
 	}
 }
 
-EXPORT int APS_LoadWaveform(int device, unsigned short *Data,
+EXPORT int APS_LoadWaveform(int device, short *Data,
 		                      int ByteCount, int offset,int dac,
 		                      int validate, int useSlowWrite)
 /********************************************************************
@@ -1930,4 +1930,40 @@ EXPORT int APS_IsRunning(int device)
     running = 1;  // return 1 if running otherwise return 0;
 
   return running;
+}
+
+EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
+/* APS_SetChannelOffset
+ * Write the zero register for the associated channel
+ * offset - signed 14-bit value (-8192, 8192) representing the channel offset
+ */
+{
+  int fpga, zero_register_addr;
+  
+  fpga = dac2fpga(dac);
+  if (fpga < 0) {
+    return -1;
+  }
+  
+  switch (dac) {
+    case 0:
+      // fall through
+    case 2:
+      zero_register_addr = FPGA_OFF_DAC02_ZERO;
+      break;
+    case 1:
+      // fall through
+    case 3:
+      zero_register_addr = FPGA_OFF_DAC13_ZERO;
+      break;
+    default:
+      return -2;
+  }
+  
+  dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, offset);
+  
+  if (APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset & 0x4000, fpga) != 0) {
+    return -3;
+  }
+  return 0;
 }

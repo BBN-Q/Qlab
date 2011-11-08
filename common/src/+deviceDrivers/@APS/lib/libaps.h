@@ -57,7 +57,7 @@ EXPORT int APS_ListSerials();
 EXPORT int APS_Close(int device);
 EXPORT int APS_OpenBySerialNum(char * serialNum);
 
-EXPORT int APS_LoadWaveform(int device, unsigned short *Data, int ByteCount, int offset, int dac,
+EXPORT int APS_LoadWaveform(int device, short *Data, int ByteCount, int offset, int dac,
                             int validate, int useSlowWrite);
 
 EXPORT int APS_LoadLinkList(int device, unsigned short *OffsetData, unsigned short *CountData,
@@ -94,6 +94,8 @@ EXPORT int APS_ReadLinkListStatus(int device, int dac);
 
 EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int maxlen );
 EXPORT int APS_ClearLinkListELL(int device,int dac, int bank);
+
+EXPORT int APS_SetChannelOffset(int device, int dac, short offset);
 
 // Waveform related functions
 

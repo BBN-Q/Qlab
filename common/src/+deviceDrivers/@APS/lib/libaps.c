@@ -1097,14 +1097,14 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 
 
 
-// Setup modified for 1.2 GHz clock rate
+// Setup modified for 300 MHz FPGA clock rate
 APS_SPI_REC PllSetup[] =
 {
   0x0,  0x99,  // Use SDO, Long instruction mode
   0x10, 0x7C,  // Enable PLL , set charge pump to 4.8ma
   0x11, 0x5,   // Set reference divider R to 5 to divide 125 MHz reference to 25 MHz
-  0x14, 0x06,  // Set B divider to 96 to divide 1200 MHz to 25 MHz (isn't this 12.5 MHz??)
-  0x16, 0x5,   // Set P divider to 16 and enable B counter
+  0x14, 0x06,  // Set B counter to 6
+  0x16, 0x5,   // Set P prescaler to 16 and enable B counter (N = P*B = 96 to divide 2400 MHz to 25 MHz)
   0x17, 0x4,   // Selects readback of N divider on STATUS bit in Status/Control register
   0x18, 0x60,  // Calibrate VCO with 2 divider, set lock detect count to 255, set high range
   0x1A, 0x2D,  // Selects readback of PLL Lock status on LOCK bit in Status/Control register
@@ -1117,7 +1117,7 @@ APS_SPI_REC PllSetup[] =
   0xF5, 0x00,  // Enable un-inverted 400mv clock on OUT5
   0x190, 0x00, //	No division on channel 0
   0x191, 0x80, //	Bypass 0 divider
-  0x193, 0x11, //	(1.2 GHz / 4 = 300 MHz = Reference 300 MHz)
+  0x193, 0x11, //	(2 high, 2 low = 1.2 GHz / 4 = 300 MHz = Reference 300 MHz)
   0x196, 0x00, //	No division on channel 2
   0x197, 0x80, //   Bypass 2 divider
   0x1E0, 0x0,  // Set VCO post divide to 2
@@ -1196,18 +1196,25 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 
   switch(freq) {
     case 40:
-      pll_cycles_val = 0xEE; //  6 high / 6 low (divide by 12)
+      pll_cycles_val = 0xEE; // 15 high / 15 low (divide by 30)
+      break;
+    case 50:
+      pll_cycles_val = 0xBB; // 12 high / 12 low (divide by 24)
       break;
     case 100:
-      pll_cycles_val = 0x55; //  4 high / 2 low (divide by 6)
+      pll_cycles_val = 0x55; // 6 high / 6 low (divide by 12)
+      break;
+    case 200:
+      pll_cycles_val = 0x22; // 3 high / 3 low (divide by 6)
       break;
     case 300:
-      pll_cycles_val = 0x11; // 1 high /1 low (divide by 2)
+      pll_cycles_val = 0x11; // 2 high /2 low (divide by 4)
       break;
-    case 600:				   // implicit divide by 2 if divider is not bypassed
-      // fall through
+    case 600:
+      pll_cycles_val = 0x00; // 1 high / 1 low (divide by 2)
+      break;
     case 1200:
-      pll_cycles_val = 0x00;
+      pll_cycles_val = 0x00; // value ignored, set bypass below
       break;
     default:
       return -2;
@@ -1295,12 +1302,12 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
     case 0:
       // fall through
     case 1:
-	  pll_enable_addr = FPGA1_ENABLE_ADDR;
+      pll_enable_addr = DAC0_ENABLE_ADDR;
       break;
     case 2:
       // fall through
     case 3:
-	  pll_enable_addr = FPGA2_ENABLE_ADDR;
+	    pll_enable_addr = DAC2_ENABLE_ADDR;
       break;
     default:
       return -1;
@@ -1309,11 +1316,11 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   // test for PLL lock
   for (test_cnt = 0; test_cnt < 50; test_cnt++) {
     if (APS_ReadPllStatus(device, fpga) == 0) {
-	  inSync = 1;
-	  break;
-	}
-	// clear PLL reset bits
-	pll_reg_value = APS_ReadFPGA(device, gRegRead | pll_reset_addr, fpga);
+	    inSync = 1;
+	    break;
+	  }
+	  // clear PLL reset bits
+	  pll_reg_value = APS_ReadFPGA(device, gRegRead | pll_reset_addr, fpga);
     APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reg_value & ~pll_reset_bit, fpga);
   }
 
@@ -1336,46 +1343,46 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
     xor_flag_cnt = 0;
 
-	for(cnt = 0; cnt < 10; cnt++) {
-	  pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
-	  xor_flag_cnt += (pll_bit >> PLL_XOR_TEST[2]) & 0x1;
-	}
+	  for(cnt = 0; cnt < 10; cnt++) {
+  	  pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
+  	  xor_flag_cnt += (pll_bit >> PLL_GLOBAL_XOR_BIT) & 0x1;
+  	}
 	
-	if ( xor_flag_cnt < 2 || xor_flag_cnt > 8 ) {
-	  // 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase, so 600 MHz clocks
-	  // from DAC must be in phase. Move on.
-	  break;
-	}
-	else {
-	  // 600 MHz clocks out of phase, reset one of the DACs
-	  dlog(DEBUG_INFO,"DAC clocks out of phase; resetting (XOR count %i)\n", xor_flag_cnt);
-	  UCHAR WriteByte = 0x2; //disable clock output
-	  APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
-	  APS_UpdatePllReg(device);
-	  WriteByte = 0x0; // enable clock output
-	  APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
-	  APS_UpdatePllReg(device);
+  	if ( xor_flag_cnt < 2 || xor_flag_cnt > 8 ) {
+  	  // 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase, so 600 MHz clocks
+  	  // from DAC must be in phase. Move on.
+  	  break;
+  	}
+  	else {
+  	  // 600 MHz clocks out of phase, reset one of the DACs
+  	  dlog(DEBUG_INFO,"DAC clocks out of phase; resetting (XOR count %i)\n", xor_flag_cnt);
+  	  UCHAR WriteByte = 0x2; //disable clock output
+  	  APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
+  	  APS_UpdatePllReg(device);
+  	  WriteByte = 0x0; // enable clock output
+  	  APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
+  	  APS_UpdatePllReg(device);
 	  
-	  // reset FPGA PLLs
-	  pll_reg_value = APS_ReadFPGA(device, gRegRead | pll_reset_addr, fpga);
-	  // Write PLL with bits set
-      APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reg_value | pll_reset_bit, fpga);
+  	  // reset FPGA PLLs
+  	  pll_reg_value = APS_ReadFPGA(device, gRegRead | pll_reset_addr, fpga);
+  	  // Write PLL with bits set
+  	  APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reg_value | pll_reset_bit, fpga);
       // Clear reset bits
       APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | pll_reset_addr, pll_reg_value & ~pll_reset_bit, fpga);
 	  
-	  // wait for lock
-	  inSync =  0;
-	  for(cnt = 0; cnt < 100; cnt++) {
-	    if (APS_ReadPllStatus(device, fpga) == 0) {
-		  inSync = 1;
-		  break;
-		}
-	  }
-	  if (!inSync) {
-	    dlog(DEBUG_INFO,"PLLs did not re-sync after reset\n");
-	    return -7;
-	  }
-	}
+  	  // wait for lock
+  	  inSync =  0;
+  	  for(cnt = 0; cnt < 100; cnt++) {
+  	    if (APS_ReadPllStatus(device, fpga) == 0) {
+  		    inSync = 1;
+    		  break;
+    		}
+  	  }
+  	  if (!inSync) {
+  	    dlog(DEBUG_INFO,"PLLs did not re-sync after reset\n");
+  	    return -7;
+  	  }
+  	}
   }
 
   int maxTestPll = 3;
@@ -1399,7 +1406,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
       if (xor_flag_cnt < 2) {
         globalSync = 1;
-		break; // passed, move on to next channel
+    		break; // passed, move on to next channel
       } else {
         // PLLs out of sync, reset
         dlog(DEBUG_INFO,"Channel %s PLL not in sync resetting (XOR count %i)\n", pllStr, xor_flag_cnt);
@@ -1421,7 +1428,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
         // wait for lock
         inSync =  0;
         for(cnt = 0; cnt < 100; cnt++) {
-		  pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
+    		  pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
           pll_1_unlock = (pll_bit >> PLL_LOCK_TEST[pll]) & 0x1;
           if (!pll_1_unlock) {
             inSync = 1;
