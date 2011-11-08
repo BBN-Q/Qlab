@@ -1161,7 +1161,6 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 
   ULONG pll_cycles_addr, pll_bypass_addr;
   UCHAR pll_cycles_val, pll_bypass_val;
-  UCHAR pll_enable_addr;
 
   UCHAR WriteByte;
   int fpga;
@@ -1181,14 +1180,12 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
     case 1:
       pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
       pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
-      pll_enable_addr = FPGA1_ENABLE_ADDR;
       break;
     case 2:
       // fall through
     case 3:
       pll_cycles_addr = FPGA2_PLL_CYCLES_ADDR;
       pll_bypass_addr = FPGA2_PLL_BYPASS_ADDR;
-      pll_enable_addr = FPGA2_ENABLE_ADDR;
       break;
     default:
       return -1;
