@@ -1,3 +1,12 @@
+P166
+- Added missing bit flipping for Zero Output registers.
+P165
+- Changed CSR bits 3 and 10 from "Output Enable" to "DDR Enable"
+P162
+- Added Write Cycle Address Checksum register to CSR offset 0x00D
+- Added Write Cycle Data Checksum register to CSR offset 0x00E
+- Added Zero Output register for channels 02 to CSR offset 0x010
+- Added Zero Output register for channels 13 to CSR offset 0x011
 P161
 - Ties DDR reset to "csr(0)" (State Machine Reset)
 P160
