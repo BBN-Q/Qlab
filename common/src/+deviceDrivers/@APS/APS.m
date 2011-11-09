@@ -537,6 +537,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     wf.set_scale_factor(aps.(['chan_' num2str(ch)]).amplitude);
                     aps.loadWaveform(ch-1, wf.prep_vector());
                     aps.(['chan_' num2str(ch)]).waveform = wf;
+                    
+                    % set zero register value
+                    offset = aps.(['chan_' num2str(ch)]).offset * 8191;
+                    aps.setOffset(ch-1, offset);
                 end
             end
             
