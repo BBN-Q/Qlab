@@ -96,6 +96,7 @@ EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int ma
 EXPORT int APS_ClearLinkListELL(int device,int dac, int bank);
 
 EXPORT int APS_SetChannelOffset(int device, int dac, short offset);
+EXPORT int APS_ReadChannelOffset(int device, int dac);
 
 // Waveform related functions
 

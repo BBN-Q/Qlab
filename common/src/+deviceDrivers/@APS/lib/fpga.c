@@ -1960,8 +1960,43 @@ EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
       return -2;
   }
   
+  // clip the offset value to the allowed range
+  if (offset > 8191)
+    offset = 8191;
+  if (offset < -8191)
+    offset = -8191;
   dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, offset);
   
-  APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset & 0x4000, fpga);
+  APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset, fpga);
   return 0;
+}
+
+EXPORT int APS_ReadChannelOffset(int device, int dac)
+/* APS_SetChannelOffset
+ * Read the zero register for the associated channel
+ */
+{
+  int fpga, zero_register_addr;
+  
+  fpga = dac2fpga(dac);
+  if (fpga < 0) {
+    return -1;
+  }
+  
+  switch (dac) {
+    case 0:
+      // fall through
+    case 2:
+      zero_register_addr = FPGA_OFF_DAC02_ZERO;
+      break;
+    case 1:
+      // fall through
+    case 3:
+      zero_register_addr = FPGA_OFF_DAC13_ZERO;
+      break;
+    default:
+      return -2;
+  }
+  
+  return APS_ReadFPGA(device, FPGA_ADDR_REGREAD | zero_register_addr, fpga);
 }
