@@ -1264,11 +1264,14 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 /*
 	APS_TestPllSync synchronized the phases of the DAC clocks with the following procedure:
 	1) Make sure all PLLs have locked.
-	2) Test for sync of 600 MHz clocks from DACs. If these are out of sync, 
-	  the 300 MHz clocks in the FPGA will come up 90 or 270 degrees out of phase.
-	  This has a test signature of the global XOR bit set roughly half the time.
-		- If out of phase, disable and re-enable the PLL output to one of the DACs
-		connected to the FPGA. Reset the FPGA PLLs, wait for lock, then loop.
+	2) Test for sync of 600 MHz clocks from DACs. They must be in sync with each other
+    and in sync with the 300 MHz reference. If they are out of sync with each other, 
+	  the 300 MHz DDR PLLs in the FPGA will come up 90 or 270 degrees out of phase.
+	  This has a test signature of the global XOR bit set roughly half the time. If they
+    are in sync but out of phase with the reference, then both DDR PLLs will be 90/270
+    degrees out of phase with the reference (it is sufficient to test only one DDR PLL)
+		- If either of these conditions exist, disable and re-enable the PLL output to one
+    of the DACs connected to the FPGA. Reset the FPGA PLLs, wait for lock, then loop.
 	3) Test channel 0/2 PLL against reference PLL. Reset until in phase.
 	4) Test channel 1/3 PLL against reference PLL. Reset until in phase.
 	5) Verify that sync worked by testing 0/2 XOR 1/3 (global phase).
@@ -1336,7 +1339,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   int PLL_RESET[3] = {CSRMSK_ENVPLLRST_ELL, CSRMSK_PHSPLLRST_ELL, 0};
   char * pllStr;
   
-  // start by testing for a global XOR count near 50%, which indicates
+  // start by testing for a global or channel XOR count near 50%, which indicates
   // that DAC 600 MHz clocks have come up out of phase.
   dlog(DEBUG_INFO,"Testing for DAC clock phase sync\n");
   for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
@@ -1349,7 +1352,6 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
       xor_flag_cnt2 += (pll_bit >> PLL_02_XOR_BIT) & 0x1;
   	}
 	
-    //if ( (xor_flag_cnt < 2) && (xor_flag_cnt2 < 2) ) {
   	if ( (xor_flag_cnt < 2 || xor_flag_cnt > 18) && (xor_flag_cnt2 < 2 || xor_flag_cnt2 > 18) ) {
   	  // 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase, so 600 MHz clocks
   	  // from DAC must be in phase. Move on.
@@ -1357,7 +1359,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   	  break;
   	}
   	else {
-  	  // 600 MHz clocks out of phase, reset one of the DACs
+  	  // 600 MHz clocks out of phase, reset DAC clocks
   	  dlog(DEBUG_INFO,"DAC clocks out of phase; resetting (XOR counts %i and %i)\n", xor_flag_cnt, xor_flag_cnt2);
   	  UCHAR WriteByte = 0x2; //disable clock outputs
   	  APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
