@@ -1,3 +1,5 @@
+P167
+- Corrected reset state of Zero Output registers
 P166
 - Added missing bit flipping for Zero Output registers.
 P165
