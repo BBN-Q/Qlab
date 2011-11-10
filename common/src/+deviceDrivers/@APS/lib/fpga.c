@@ -313,7 +313,6 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 			if (gBitFileVersion < VERSION_ELL) {
 				dac_mem_lock = CSRMSK_ENVMEMLCK;
 				dac_write = FPGA_ADDR_ENVWRITE;
-
 			} else {
 				dac_mem_lock = CSRMSK_ENVMEMLCK_ELL;
 				dac_write =  FPGA_ADDR_ELL_ENVWRITE;
@@ -350,14 +349,15 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 		return -4;
 	}
 
-	dlog(DEBUG_VERBOSE,"Clearing Control and Status Register ...\n");
-  int ddr_enable = CSRMSK_ENVSMEN_ELL & CSRMSK_PHSSMEN_ELL;
+  dlog(DEBUG_VERBOSE,"Initialize Control and Status Register to initial state\n");
+  // State machines should be reset and DDRs enabled
+  int csr_init = CSRMSK_ENVSMRST_ELL | CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMRST_ELL | CSRMSK_PHSSMEN_ELL;
 
-	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_CSR, ddr_enable, fpga);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_CSR, csr_init, fpga);
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
 	  data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
-	  dlog(DEBUG_VERBOSE,"CSR set to: %i\n", data);
+	  dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
 	  dlog(DEBUG_VERBOSE,"Initializing %s (%i) Offset and Size\n", dac_type, dac);
 	}
 

@@ -1137,7 +1137,7 @@ EXPORT int APS_SetupPLL(int device)
   dlog(DEBUG_INFO,"Setting PLL\n");
   
   // Disable DDRs
-  int ddr_mask = CSRMSK_ENVSMEN_ELL & CSRMSK_PHSSMEN_ELL;
+  int ddr_mask = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
   APS_ClearBit(device, 3, FPGA_OFF_CSR, ddr_mask);
 
   for(i = 0; i <  sizeof(PllSetup)/sizeof(APS_SPI_REC); i++) {
@@ -1240,7 +1240,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
   fpgaFrequencies[fpga - 1] = freq;
   
   // Disable DDRs
-  int ddr_mask = CSRMSK_ENVSMEN_ELL & CSRMSK_PHSSMEN_ELL;
+  int ddr_mask = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
   APS_ClearBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
 
   // Disable oscillator by clearing APS_STATUS_CTRL register
@@ -1262,7 +1262,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
     return(-4);
   
   // Enable DDRs
-  APS_ClearBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
+  APS_SetBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
 
   sync_status = 0;
 
@@ -1331,7 +1331,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   }
   
   // Disable DDRs
-  int ddr_mask = CSRMSK_ENVSMEN_ELL & CSRMSK_PHSSMEN_ELL;
+  int ddr_mask = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
   APS_ClearBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
 
   // test for PLL lock

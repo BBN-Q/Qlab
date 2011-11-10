@@ -329,6 +329,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             bitFileVer = obj.readBitFileVersion();
             if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver || obj.readPllStatus() ~= 0 || force
                 obj.loadBitFile();
+
                 % set all channels to 1.2 GS/s
                 obj.setFrequency(0, 1200, 0);
                 obj.setFrequency(2, 1200, 0);
@@ -338,6 +339,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 if status ~= 0
                     error('APS failed to initialize');
                 end
+                
+                % set all channel offsets to zero
+                for ch=1:4, obj.setOffset(ch-1, 0); end
             end
             
             obj.bit_file_programmed = 1;
