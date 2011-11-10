@@ -1135,10 +1135,18 @@ EXPORT int APS_SetupPLL(int device)
 
   int i;
   dlog(DEBUG_INFO,"Setting PLL\n");
+  
+  // Disable DDRs
+  int ddr_mask = CSRMSK_ENVSMEN_ELL & CSRMSK_PHSSMEN_ELL;
+  APS_ClearBit(device, 3, FPGA_OFF_CSR, ddr_mask);
 
   for(i = 0; i <  sizeof(PllSetup)/sizeof(APS_SPI_REC); i++) {
      APS_WriteSPI(device, APS_PLL_SPI, PllSetup[i].Address, &PllSetup[i].Data);
   }
+  
+  // Enable DDRs
+  APS_SetBit(device, 3, FPGA_OFF_CSR, ddr_mask);
+  
   return 0;
 }
 
@@ -1230,8 +1238,12 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
   // fpga = 1 or 2 save frequency for later comparison to decide to use
   // 4 channel sync or 2 channel sync
   fpgaFrequencies[fpga - 1] = freq;
+  
+  // Disable DDRs
+  int ddr_mask = CSRMSK_ENVSMEN_ELL & CSRMSK_PHSSMEN_ELL;
+  APS_ClearBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
 
-  // Disable oscillator?
+  // Disable oscillator by clearing APS_STATUS_CTRL register
   WriteByte = 0;
   if(APS_WriteReg(device,APS_STATUS_CTRL, 1, 0, &WriteByte) != 1)
     return(-4);
@@ -1248,6 +1260,9 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
   WriteByte = APS_OSCEN_BIT;
   if(APS_WriteReg(device, APS_STATUS_CTRL, 1, 0, &WriteByte) != 1)
     return(-4);
+  
+  // Enable DDRs
+  APS_ClearBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
 
   sync_status = 0;
 
@@ -1313,7 +1328,11 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
       break;
     default:
       return -1;
-    }
+  }
+  
+  // Disable DDRs
+  int ddr_mask = CSRMSK_ENVSMEN_ELL & CSRMSK_PHSSMEN_ELL;
+  APS_ClearBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
 
   // test for PLL lock
   for (test_cnt = 0; test_cnt < 20; test_cnt++) {
@@ -1449,6 +1468,9 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
       }
     }
   }
+  
+  // Enable DDRs
+  APS_SetBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
 
   if (!globalSync) {
     dlog(DEBUG_INFO,"Warning: PLLs are not in sync\n");

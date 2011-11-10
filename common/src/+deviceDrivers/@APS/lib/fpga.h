@@ -115,7 +115,7 @@
 
 #define CSRMSK_ENVSMRST_ELL 	 0x1 // state machine reset
 #define CSRMSK_ENVPLLRST_ELL 	 0x2 // pll reset
-#define CSRMSK_ENVSMEN_ELL		 0x4
+#define CSRMSK_ENVSMEN_ELL		 0x4 // DDR enable
 #define CSRMSK_ENVMEMLCK_ELL 	 0x8
 #define CSRMSK_ENVTRIGSRC_ELL  0x10
 #define CSRMSK_ENVOUTMODE_ELL  0x20
@@ -124,7 +124,7 @@
 
 #define CSRMSK_PHSSMRST_ELL 	 0x100 // state machine reset
 #define CSRMSK_PHSPLLRST_ELL 	 0x200 // pll reset
-#define CSRMSK_PHSSMEN_ELL		 0x400
+#define CSRMSK_PHSSMEN_ELL		 0x400 // DDR enable
 #define CSRMSK_PHSMEMLCK_ELL 	 0x800
 #define CSRMSK_PHSTRIGSRC_ELL  0x1000
 #define CSRMSK_PHSOUTMODE_ELL  0x2000

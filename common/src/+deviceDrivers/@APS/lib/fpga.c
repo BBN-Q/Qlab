@@ -351,9 +351,9 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	}
 
 	dlog(DEBUG_VERBOSE,"Clearing Control and Status Register ...\n");
+  int ddr_enable = CSRMSK_ENVSMEN_ELL & CSRMSK_PHSSMEN_ELL;
 
-
-	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_CSR, 0x0, fpga);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_CSR, ddr_enable, fpga);
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
 	  data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
@@ -584,13 +584,10 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 			return -2;
 	}
 
-	APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
-
 	dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
 		);
-
 
 	if (trigger_type == SOFTWARE_TRIGGER) {
 		dlog(DEBUG_VERBOSE, "Trigger %s State Machine ... \n", dac_type);
@@ -612,8 +609,9 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 	}
 
   dlog(DEBUG_VERBOSE,"Enable %s State Machine ... \n", dac_type);
-
-	APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
+  
+  APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
+	//APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
 
 	return 0;
 }
@@ -757,10 +755,10 @@ EXPORT int APS_DisableDac(int device, int dac)
 	}
 
 
-	dlog(DEBUG_VERBOSE,"Disable %s State Machine ... \n", dac_type);
+	//dlog(DEBUG_VERBOSE,"Disable %s State Machine ... \n", dac_type);
 
 	APS_ClearBit(device, fpga,FPGA_OFF_TRIGLED, dac_sw_trig);
-	APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
+	//APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
 
 	dlog(DEBUG_VERBOSE, "Reset %s State Machine ... \n", dac_type);
 
@@ -1469,8 +1467,6 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 			return -2;
 	}
 
-	APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
-
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
 	  dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
 		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
@@ -1506,7 +1502,8 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 
 	dlog(DEBUG_VERBOSE,"Enable %s State Machine ... \n", dac_type);
 
-	APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
+  APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
+	//APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
 
 
 	return 0;
@@ -1632,10 +1629,10 @@ EXPORT int APS_DisableFpga(int device, int dac)
 			return -2;
 	}
 
-	dlog(DEBUG_VERBOSE, "Disable %s State Machine ... \n", dac_type);
+	//dlog(DEBUG_VERBOSE, "Disable %s State Machine ... \n", dac_type);
 
 	APS_ClearBit(device, fpga,FPGA_OFF_TRIGLED, dac_sw_trig);
-	APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
+	//APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
 
 	dlog(DEBUG_VERBOSE,"Reset %s State Machine ... \n", dac_type);
 
