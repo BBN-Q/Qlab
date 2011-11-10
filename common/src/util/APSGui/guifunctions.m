@@ -197,6 +197,9 @@ classdef guifunctions < handle
             
             wf = gui.waveforms(id+1);
             wf.set_offset(val);
+            % set zero register value for the channel to match the waveform
+            % offset
+            gui.dac.setOffset(id, wf.offset*wf.max_wf_amp_value);
             if (wf.offset ~= val)
                 beep;
                 gui.message_manager.disp('Offset was out of range and has been put into range.');
@@ -348,8 +351,6 @@ classdef guifunctions < handle
             % for the data to be reload from disk
             wf.data = [];
             vec = wf.get_vector();
-            offset = 0;  % force offset to be zero
-                         % as the wf.offset is now being used for a DC level
             
             if isfield(handles,'pb_trigger_wf_0')
                 % update APS Gui Controls
@@ -358,12 +359,12 @@ classdef guifunctions < handle
             end
             
             if ~wf.ell
-                gui.dac.loadWaveform(id,vec, offset)
+                gui.dac.loadWaveform(id,vec)
             else
                 %% ell link lists use wf.data not wf.get_vector
                 %% need to understand why
-                gui.dac.clearLinkListELL(id); 
-                gui.dac.loadWaveform(id,wf.data,0);
+                gui.dac.clearLinkListELL(id);
+                gui.dac.loadWaveform(id,vec);
             end
             
             % set frequency now
@@ -375,20 +376,7 @@ classdef guifunctions < handle
                 gui.ll_gui_enable{id+1} = 'Off';
                 gui.ll_dc_enable{id+1} = 'Off';
                 
-                if ~wf.ell
-                    
-                    [offsets, counts, ll_len] = wf.get_link_list();
-                    if (ll_len > 0)
-                        if gui.bit_file_version >= gui.bitFileVersion_ell
-                            errordlg('APS Bitfile does not support R5 version link list files');
-                        else
-                            gui.dac.loadLinkList(id,offsets,counts,ll_len);
-                            
-                            gui.ll_gui_enable{id+1} = 'On';
-                            gui.ll_dc_enable{id+1} = 'On';
-                        end
-                    end
-                else
+                if wf.ell
                     ell = wf.get_ell_link_list();
                     if isfield(ell,'bankA') && ell.bankA.length > 0
                         if (gui.bit_file_version < gui.bitFileVersion_ell)

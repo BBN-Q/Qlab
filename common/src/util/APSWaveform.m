@@ -190,7 +190,7 @@ classdef APSWaveform < handle
             end;
             
             % if waveform data is reals, scale and convert to int16s
-            if wf.dataMode == wf.REAL_DATA || isreal(wf.data(1))  
+            if wf.dataMode == wf.REAL_DATA || isreal(wf.data(1)) 
                 scale = wf.scale_factor * wf.max_wf_amp_value;
             else
                 scale = wf.scale_factor;
@@ -255,22 +255,6 @@ classdef APSWaveform < handle
            if (exist('WFVec','var'))
                clear WFVec;
            end
-           
-           if (exist('ll_offsets','var'))
-               clear ll_offsets;
-           end
-
-           if (exist('ll_counts','var'))
-               clear ll_counts;
-           end
-           
-           if (exist('time_pairs','var'))
-               clear time_pairs;
-           end
-
-           if (exist('amplitude_pairs','var'))
-               clear amplitude_pairs;
-           end
           
            % Read in the waveform file
          
@@ -284,64 +268,10 @@ classdef APSWaveform < handle
                wf.log('Waveform file does not have WFVec variable');
                wf.data = [];
            end;
-
-           %% Look for link list / time amplitude file version
-           %% prior to MQCO APS version 0x10
-           
-           if (exist('ll_offsets','var'))
-               wf.log('Loaded Link List Offsets');
-               wf.link_list_offset = ll_offsets;
-           else
-               wf.link_list_offset = [];
-           end
-           
-           if (exist('ll_counts','var'))
-               wf.log('Loaded Link List Counts');
-               wf.link_list_counts = ll_counts;
-           else
-               wf.link_list_counts = [];
-           end
-           
-           if (exist('time_pairs','var'))
-               wf.log('Loaded Time Pairs');
-               wf.time_pairs = time_pairs;
-           else
-               wf.time_pairs = [];
-           end
-           
-           if (exist('amplitude_pairs','var'))
-               wf.log('Loaded Amplitude Pairs');
-               wf.amplitude_pairs = amplitude_pairs;
-           else
-               wf.amplitude_pairs = [];
-           end
-           
-           wf.have_link_list = 0;
-           if (length(wf.link_list_offset) ~= length(wf.link_list_counts)) 
-               wf.log('Waveform Link List incorrectly formatted\n');
-           else
-               if ~isempty(wf.link_list_offset)
-                   wf.have_link_list = 1;
-               else
-                   wf.log('Link list data not found');
-               end
-           end               
-           
-           wf.have_time_amplitude = 0;
-           if (length(wf.time_pairs) ~= length(wf.amplitude_pairs)) 
-               wf.log('Waveform Time Amplitude incorrectly formatted\n');
-           else
-               if ~isempty(wf.time_pairs)
-                   wf.have_time_amplitude = 1;
-                   wf.log('Converting time amplitude to wf offset count');
-                   wf.prep_time_amplitude_pairs()
-               else
-                   wf.log('Time Amplitude data not found');
-               end
-           end  
            
            %% Test for MQCO APS Version 0x10 file format
            
+           wf.have_link_list = 0;
            wf.ell = false;
            if exist('linkList16','var')
                wf.data = linkList16.waveformLibrary;
@@ -350,7 +280,6 @@ classdef APSWaveform < handle
                 if ~wf.check_ell_format()
                   wf.log('Warning APS 0x10 Link List is not in the correct format');
                else
-                   
                    wf.have_link_list = 1;
                    wf.log('Found APS 0x10 Link List');
                end

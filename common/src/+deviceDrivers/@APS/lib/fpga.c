@@ -1968,7 +1968,7 @@ EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
   return 0;
 }
 
-EXPORT int APS_ReadChannelOffset(int device, int dac)
+EXPORT short APS_ReadChannelOffset(int device, int dac)
 /* APS_SetChannelOffset
  * Read the zero register for the associated channel
  */
@@ -1995,5 +1995,5 @@ EXPORT int APS_ReadChannelOffset(int device, int dac)
       return -2;
   }
   
-  return APS_ReadFPGA(device, FPGA_ADDR_REGREAD | zero_register_addr, fpga);
+  return APS_ReadFPGA(device, gRegRead | zero_register_addr, fpga);
 }
