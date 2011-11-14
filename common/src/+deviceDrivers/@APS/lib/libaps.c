@@ -1295,7 +1295,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
   // Test for DAC clock phase match
   int inSync, globalSync;
-  int test_cnt, cnt, pll, xor_flag_cnt, xor_flag_cnt2;
+  int test_cnt, cnt, pll, xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3;
   int pll_1_unlock;
 
   int fpga;
@@ -1364,22 +1364,33 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
     xor_flag_cnt = 0;
     xor_flag_cnt2 = 0;
+    xor_flag_cnt3 = 0;
 
 	  for(cnt = 0; cnt < 20; cnt++) {
   	  pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
   	  xor_flag_cnt += (pll_bit >> PLL_GLOBAL_XOR_BIT) & 0x1;
       xor_flag_cnt2 += (pll_bit >> PLL_02_XOR_BIT) & 0x1;
+      xor_flag_cnt3 += (pll_bit >> PLL_13_XOR_BIT) & 0x1;
   	}
 	
-  	if ( (xor_flag_cnt < 2 || xor_flag_cnt > 18) && (xor_flag_cnt2 < 2 || xor_flag_cnt2 > 18) ) {
+    /*if ( (xor_flag_cnt < 2 || xor_flag_cnt >> 18) &&
+         (xor_flag_cnt2 < 2 || xor_flag_cnt2 > 18) &&
+         (xor_flag_cnt3 > 2 && xor_flag_cnt3 < 18) ) {
+      // this should be impossible... how did I get here??
+      dlog(DEBUG_INFO,"Found impossible condition (XOR counts %i and %i and %i). Repeating\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
+      continue;
+    }*/
+  	if ( (xor_flag_cnt < 2 || xor_flag_cnt > 18) && 
+         (xor_flag_cnt2 < 2 || xor_flag_cnt2 > 18) &&
+         (xor_flag_cnt3 < 2 || xor_flag_cnt3 > 18) ) {
   	  // 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase, so 600 MHz clocks
   	  // from DAC must be in phase. Move on.
-      dlog(DEBUG_INFO,"DAC clocks in phase with reference (XOR counts %i and %i)\n", xor_flag_cnt, xor_flag_cnt2);
+      dlog(DEBUG_INFO,"DAC clocks in phase with reference (XOR counts %i and %i and %i)\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
   	  break;
   	}
   	else {
   	  // 600 MHz clocks out of phase, reset DAC clocks
-  	  dlog(DEBUG_INFO,"DAC clocks out of phase; resetting (XOR counts %i and %i)\n", xor_flag_cnt, xor_flag_cnt2);
+  	  dlog(DEBUG_INFO,"DAC clocks out of phase; resetting (XOR counts %i and %i and %i)\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
   	  UCHAR WriteByte = 0x2; //disable clock outputs
   	  APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
       APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr2, &WriteByte);
@@ -1430,7 +1441,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
         xor_flag_cnt += (pll_bit >> PLL_XOR_TEST[pll]) & 0x1;
       }
 
-      if (xor_flag_cnt < 5) {
+      if (xor_flag_cnt < 3) {
         globalSync = 1;
     		break; // passed, move on to next channel
       } else {

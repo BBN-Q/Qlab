@@ -840,7 +840,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             idx = 1;
             
             % add a TA entry to represent zero
-            waveforms.put(aps.zeroKey, zeros([1,aps.ADDRESS_UNIT]));
+            % waveforms.put(aps.zeroKey, zeros([1,aps.ADDRESS_UNIT]));
             
             if useEndPadding
                 endPadding = 3;
@@ -936,16 +936,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             entryData.offset = library.offsets(entry.key);
             entryData.length = library.lengths(entry.key);
             
-            % Note: hack to support zero offsets before it is implemented in
-            % firmware. Point zero entries to the special zero waveform which is
-            % a TA pair.
-            if entry.isZero
-                entryData.offset = library.offsets(aps.zeroKey);
-                entry.isTimeAmplitude = 1;
-                entry.isZero = 0;
-                entry.isPseudoZero = 1;
-            end
-            
             if library.varients.isKey(entry.key)
                 entryData.varientWFs = library.varients(entry.key);
             else
@@ -954,7 +944,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             aps.expectedLength = aps.expectedLength + entry.length * entry.repeat;
             
-            if (entry.isZero || entry.isPseudoZero) && (aps.pendingLength + entry.repeat < (aps.MIN_LL_ENTRY_COUNT+1) * aps.ADDRESS_UNIT)
+            if entry.isZero && (aps.pendingLength + entry.repeat < (aps.MIN_LL_ENTRY_COUNT+1) * aps.ADDRESS_UNIT)
                 aps.pendingLength = aps.expectedLength - aps.currentLength;
                 countVal = [];
                 offsetVal = [];
@@ -977,7 +967,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         fprintf('\tUsing WF varient with pad: %i\n', padIdx - 1);
                     end
                 end
-            elseif (entry.isZero || entry.isPseudoZero)
+            elseif entry.isZero
                 % use TAZ entries to get back on track
                 entry.repeat = entry.repeat + aps.pendingLength;
             end
@@ -1179,9 +1169,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 
                 for j = 1:lenLL
                     entry = linkList{j};
-                    % add isPseudoZero field to entry to support zero
-                    % offset hack
-                    entry.isPseudoZero = 0;
                     
                     if aps.verbose
                         fprintf('Entry %i: key: %s length: %2i repeat: %4i \n', j, entry.key, entry.length, ...
