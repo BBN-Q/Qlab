@@ -121,16 +121,38 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
         end
         
         % get a list of connected Labbricks
-        function [devIDs, serial_nums] = enumerate(obj)
-            num_devices = calllib('vnx_fmsynth','fnLMS_GetNumDevices');
-            
-            devIDs = zeros(1, num_devices);
-            serial_nums = zeros(1, num_devices);
-            [~, devIDs] = calllib('vnx_fmsynth', 'fnLMS_GetDevInfo', devIDs);
-            for i = 1:num_devices
-                id = devIDs(i);
-                serial_nums(i) = calllib('vnx_fmsynth', 'fnLMS_GetSerialNumber', id);
+        % NB: There is a bug in the Labbrick DLL that causes
+        % fnLMS_GetDevInfo to only return device IDs in order until it
+        % encounters an opened device. Device IDs seem to be assigned in
+        % serial number order, so for example, if you open 1690 (devID = 1), then a
+        % device with serial number 1691 (devID = 2) will not show up in a subsequent
+        % call to fnLMS_GetDevInfo. To deal with this, we store the IDs and
+        % serial numbers in persistent variables, and only update them if
+        % these lists are empty or if the number of connected devices
+        % increases
+        function [ids, serials] = enumerate(obj)
+            persistent previous_num_devices devIDs serial_nums
+            if isempty(previous_num_devices)
+                previous_num_devices = 0;
             end
+            
+            %num_devices = calllib('vnx_fmsynth','fnLMS_GetNumDevices');
+            
+            %if (num_devices > previous_num_devices) || isempty(devIDs)
+            if isempty(devIDs)
+                num_devices = calllib('vnx_fmsynth','fnLMS_GetNumDevices');
+                devIDs = zeros(1, num_devices);
+                serial_nums = zeros(1, num_devices);
+                [~, devIDs] = calllib('vnx_fmsynth', 'fnLMS_GetDevInfo', devIDs);
+                for i = 1:num_devices
+                    id = devIDs(i);
+                    serial_nums(i) = calllib('vnx_fmsynth', 'fnLMS_GetSerialNumber', id);
+                end
+                previous_num_devices = num_devices;
+            end
+            %previous_num_devices = num_devices;
+            ids = devIDs;
+            serials = serial_nums;
         end
         
         % get model name
@@ -250,7 +272,11 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
                 error('Invalid input');
             end
 
+            % don't know why I need them, but without the pause commands
+            % the SetRFOn command is occasionally ignored
+            pause(0.1);
             calllib('vnx_fmsynth', 'fnLMS_SetRFOn', obj.devID, checkMapObj(value));
+            pause(0.1);
         end
         % set phase in degrees
         function obj = set.phase(obj, value)
