@@ -1373,13 +1373,6 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
       xor_flag_cnt3 += (pll_bit >> PLL_13_XOR_BIT) & 0x1;
   	}
 	
-    /*if ( (xor_flag_cnt < 2 || xor_flag_cnt >> 18) &&
-         (xor_flag_cnt2 < 2 || xor_flag_cnt2 > 18) &&
-         (xor_flag_cnt3 > 2 && xor_flag_cnt3 < 18) ) {
-      // this should be impossible... how did I get here??
-      dlog(DEBUG_INFO,"Found impossible condition (XOR counts %i and %i and %i). Repeating\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
-      continue;
-    }*/
   	if ( (xor_flag_cnt < 2 || xor_flag_cnt > 18) && 
          (xor_flag_cnt2 < 2 || xor_flag_cnt2 > 18) &&
          (xor_flag_cnt3 < 2 || xor_flag_cnt3 > 18) ) {

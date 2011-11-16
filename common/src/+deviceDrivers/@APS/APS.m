@@ -68,10 +68,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         % variables used to adjust link list padding
         pendingLength = 0;
-        pendingValue = 0;
         expectedLength = 0;
         currentLength = 0;
-        zeroKey = 'LLZero';
 
     end
     
@@ -810,7 +808,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         %% Link List Format Conversion
         %%
         %% Converts link lists produced by PaternGen to a format suitable for use with the
-        %% APS. Enforces length of waveform mod 4 = 0. Attempts to addjust padding to
+        %% APS. Enforces length of waveform mod 4 = 0. Attempts to adjust padding to
         %% compenstate.
         %%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -838,9 +836,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             data = zeros([1, aps.max_waveform_points],'int16');
             
             idx = 1;
-            
-            % add a TA entry to represent zero
-            % waveforms.put(aps.zeroKey, zeros([1,aps.ADDRESS_UNIT]));
             
             if useEndPadding
                 endPadding = 3;
@@ -1021,8 +1016,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 countVal = fix(entrylen/aps.ADDRESS_UNIT) - 1;
             else
                 countVal = fix(floor(entry.repeat / aps.ADDRESS_UNIT)) - 1;
-                %diff = entry.repeat - (countVal+1) * aps.ADDRESS_UNIT;
-                %aps.pendingValue = library.waveforms(entryData.offset);
             end
             if (~entry.isTimeAmplitude && countVal > aps.ELL_ADDRESS) || ...
                     (entry.isTimeAmplitude && countVal > aps.ELL_TA_MAX)
@@ -1097,25 +1090,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 bank.length = aps.max_ll_length;
                 
                 idx = 1;
-                % force Qid at start with ls set to setup mini link list
-                
-                %{
-                offsetVal = 0;
-                offsetVal = bitor(offsetVal, aps.ELL_ZERO);
-                offsetVal = bitor(offsetVal, aps.ELL_FIRST_ENTRY); 
-                offsetVal = bitor(offsetVal, aps.ELL_TIME_AMPLITUDE);
-                
-                triggerVal = 0;
-                countVal = 0;
-                
-                bank.offset(1) = uint16(offsetVal);
-                bank.count(1) = uint16(countVal);
-                bank.trigger(1) = uint16(triggerVal);
-                
-                repeat = uint16(1000);
-                bank.repeat(1) = repeat;
-                idx = 2;
-                %}
             end
             
             function bank = trimBank(bank,len)
@@ -1131,7 +1105,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             % clear padding adjust variables
             aps.pendingLength = 0;
-            aps.pendingValue = 0;
             aps.expectedLength = 0;
             aps.currentLength = 0;
             
@@ -1144,26 +1117,16 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     error('Individual Link List %i exceeds APS maximum link list length', i)
                 end
                 
-                
-                if 1 % WARNING forcing new bank for every entry
+                % if we are going to fall off the end of the current LL
+                % bank, allocate a new one
                 if (idx + lenLL) > aps.max_ll_length
                     banks{curBank} = trimBank(banks{curBank},idx-1);
                     curBank = curBank + 1;
                     [banks{curBank} idx] = allocateBank();
                 end
-                else
-                    %if curBank ~= 1
-                    if curBank > 0
-                        banks{curBank} = trimBank(banks{curBank},idx-1);
-                    end
-                        curBank = curBank + 1;
-                        [banks{curBank} idx] = allocateBank();
-                   % end
-                end
                 
                 skipNext = 0;
                 aps.pendingLength = 0;
-                %aps.pendingValue = 0;
                 aps.expectedLength = 0;
                 aps.currentLength = 0;
                 
