@@ -26,8 +26,8 @@ pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseTy
 angle = pi/2;
 numPsQId = 5; % number pseudoidentities
 numsteps = 11; %number of drag parameters
-deltamax=2;
-deltamin=-2;
+deltamax=-0.5;
+deltamin=-1.5;
 delta=linspace(deltamin,deltamax,numsteps);
 
 sindex = 0;
@@ -52,14 +52,14 @@ for i=1:numsteps
     sindex = sindex + numPsQId;
 end
 
-nbrPatterns = length(patseq);
-fprintf('Number of sequences: %i\n', nbrPatterns);
+% double every pulse
+nbrPatterns = 2*length(patseq);
 ch1 = zeros(nbrPatterns, cycleLength);
 ch2 = ch1;
 ch3m1 = ch1;
 
 for n = 1:nbrPatterns;
-	[patx paty] = pg.getPatternSeq(patseq{n}, 1, delay, fixedPt);
+	[patx paty] = pg.getPatternSeq(patseq{floor((n-1)/2)+1}, 1, delay, fixedPt);
 	ch1(n, :) = patx + offset;
 	ch2(n, :) = paty + offset;
     ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
@@ -74,6 +74,7 @@ for n = 1:length(calseq);
 end
 
 nbrPatterns = nbrPatterns + length(calseq);
+fprintf('Number of sequences: %i\n', nbrPatterns);
 
 % trigger at beginning of measurement pulse
 % measure from (6000:9000)
@@ -81,7 +82,7 @@ measLength = 3000;
 measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = zeros(nbrPatterns, cycleLength);
 ch1m2 = zeros(nbrPatterns, cycleLength);
-for n = 1:numsteps;
+for n = 1:nbrPatterns;
 	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
 	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
 end

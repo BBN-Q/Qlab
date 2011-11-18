@@ -12,6 +12,7 @@ if nargin < 2
     plotTitle = get(get(gca, 'Title'), 'String');
 else
     h = figure;
+    plotTitle = '';
 end
 %y = ydata .* 1000;
 y = ydata(:);

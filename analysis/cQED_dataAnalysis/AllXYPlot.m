@@ -8,9 +8,11 @@ function AllXYPlot(data, ampPhase)
         plotData = data.phase_Data;
     end
     
+    % average together pairs of data points
+    plotData = (plotData(1:2:end) + plotData(2:2:end))/2;
     % compute scale factor
-    yscale = (max(plotData) - mean(plotData(1:2)))/2;
-    ypts = ( plotData - mean(plotData(1:2)) )/yscale - 1;
+    yscale = (max(plotData) - plotData(1))/2;
+    ypts = ( plotData - plotData(1) )/yscale - 1;
     
     h = gcf;
     clf

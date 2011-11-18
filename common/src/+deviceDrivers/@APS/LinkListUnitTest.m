@@ -119,7 +119,7 @@ end
 % build the library
 %unifiedX = aps.buildWaveformLibrary(unifiedX, useVarients);
 
-miniLinkRepeat = 0; %10
+miniLinkRepeat = 1000; %10
 
 for seq = 1:length(sequences1)
     

@@ -20,10 +20,10 @@ pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'cycleLength', cycleLengt
 
 numsteps = 100;
 minWidth = 0;
-stepsize = 10;
+stepsize = 6; % 12
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 
-patseq = {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')};
+patseq = {pg.pulse('Xtheta', 'amp', 2000, 'width', pulseLength, 'pType', 'square')};
 
 ch1 = zeros(numsteps, cycleLength);
 ch2 = ch1;

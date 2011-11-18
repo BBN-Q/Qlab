@@ -24,7 +24,8 @@
 
 function optimize_mixer_offsets_APS()
     spec_analyzer_address = 17;
-    spec_generator_address = 1698;
+    %spec_generator_address = 1698;
+    spec_generator_address = 11;
     awg_address = 0;
     spec_analyzer_span = 100e3;
     spec_resolution_bw = 10e3;
@@ -47,10 +48,12 @@ function optimize_mixer_offsets_APS()
     
     % initialize instruments
     if ~simulate
-        specgen = deviceDrivers.Labbrick();
+        %specgen = deviceDrivers.Labbrick();
+        specgen = deviceDrivers.AgilentN5183A();
         specgen.connect(spec_generator_address);
-        specgen.pulseSource = 'ext';
-        specgen.pulse = 0; % turn off external pulse mode
+        %specgen.pulseSource = 'ext';
+        %specgen.pulse = 0; % turn off external pulse mode
+        specgen.mod = 0;
 
         sa = deviceDrivers.HP71000();
         sa.connect(spec_analyzer_address);

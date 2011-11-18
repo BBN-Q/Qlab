@@ -184,6 +184,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
 				% load an AWG file if the settings file is changed or if force == true
 				if (~strcmp(obj.getSetupFileName(), settings.seqfile) || settings.seqforce)
 					obj.openConfig(settings.seqfile);
+                    obj.operationComplete(); % wait until we're done with the load to continue
 				end
 			end
 			settings = rmfield(settings, 'seqfile');
@@ -362,6 +363,16 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
             % possibly be turned off by issuing a reset() command.
             gpib_string = '*OPC';
             obj.write(gpib_string);
+        end
+        
+        function operationComplete(obj)
+           val = 0;
+           max_count = 3;
+           count = 1;
+           while ~(val == 1 || count > max_count)
+               val = str2double(obj.query('*OPC?'));
+               count = count + 1;
+           end
         end
         
         function clearSeq(obj)

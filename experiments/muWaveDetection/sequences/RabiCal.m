@@ -69,4 +69,4 @@ ch2 = ch2 + offset;
 
 % make TekAWG file
 TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2
+%clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2

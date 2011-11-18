@@ -17,6 +17,7 @@ classdef Frequency < sweeps.Sweep
 		LOInstr
 		IFfreq
 		lockLO = false
+        longSettle = 0
 	end
 	
 	methods
@@ -52,6 +53,11 @@ classdef Frequency < sweeps.Sweep
                         warning('Could not find Instr.LOgen and IF frequency. Just sweeping RF.');
                     end
                 end
+                
+                % if pulse mode is enabled, wait longer to settle
+                if obj.Instr.pulse
+                    obj.longSettle = 1;
+                end
             end
 			
 			% generate frequency points
@@ -68,7 +74,11 @@ classdef Frequency < sweeps.Sweep
 				obj.LOInstr.frequency = obj.points(index) + obj.IFfreq;
 			end
 			% wait for the instrument to settle
-			pause(.05);
+            if obj.longSettle
+                pause(0.2)
+            else
+                pause(.05);
+            end
 		end
 	end
 end

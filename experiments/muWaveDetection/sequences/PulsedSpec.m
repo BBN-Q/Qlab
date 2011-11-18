@@ -15,7 +15,7 @@ basename = 'PulsedSpec';
 fixedPt = 10000;
 cycleLength = 16000;
 numsteps = 1;
-specLength = 8000;
+specLength = 9600;
 specAmp = 4000;
 
 % load config parameters from file

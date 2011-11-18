@@ -126,8 +126,9 @@ patseq{35} = {pg.pulse('Y90m'),pg.pulse('Y90m')};
 
 % double every pulse
 nbrPatterns = 2*length(patseq);
+fprintf('Number of sequences: %i\n', nbrPatterns);
 
-ch1 = zeros(numsteps, cycleLength);
+ch1 = zeros(nbrPatterns, cycleLength);
 ch2 = ch1;
 ch3m1 = ch1;
 
@@ -161,11 +162,11 @@ if makePlot
     grid on
     hold off
 
-    figure
-    subplot(2,1,1)
-    imagesc(ch1);
-    subplot(2,1,2)
-    imagesc(ch2);
+%     figure
+%     subplot(2,1,1)
+%     imagesc(ch1);
+%     subplot(2,1,2)
+%     imagesc(ch2);
 end
 
 % fill remaining channels with empty stuff

@@ -12,8 +12,8 @@ temppath = [char(script.getParent()) '\'];
 path = 'U:\AWG\Ramsey\';
 basename = 'Ramsey';
 
-fixedPt = 8000; %12500
-cycleLength = 12000; %17000
+fixedPt = 10000; %12500
+cycleLength = 13500; %17000
 
 % load config parameters from file
 parent_path = char(script.getParentFile.getParent());
@@ -22,8 +22,8 @@ load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bu
 
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', buffer, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
-numsteps = 100;
-stepsize = 24;
+numsteps = 200;
+stepsize = 48; %24
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {...
     pg.pulse('X90p'), ...
