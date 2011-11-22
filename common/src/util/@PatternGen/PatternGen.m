@@ -37,7 +37,9 @@ classdef PatternGen < handle
         dDelta = 0.4;
         dPulseType = 'gaussian';
         dBuffer = 5;
+        dmodFrequency = 0; % SSB modulation frequency (sign matters!!)
         cycleLength = 10000;
+        samplingRate = 1e9; % in samples per second
         correctionT = eye(2,2);
         arbPulses = containers.Map();
     end
@@ -267,6 +269,7 @@ classdef PatternGen < handle
             params.delta = self.dDelta;
             params.angle = 0; % in radians
             params.rotAngle = 0;
+            params.modFrequency = self.dmodFrequency;
             params.duration = params.width + self.dBuffer;
             if ismember(p, qubitPulses)
                 params.pType = self.dPulseType;
@@ -353,9 +356,11 @@ classdef PatternGen < handle
                 [xpulse, ypulse] = pf(elementParams);
                 
                 % rotate and correct the pulse
-                xypairs = [xpulse ypulse].';
-                R = [cos(angle) -sin(angle); sin(angle) cos(angle)];
-                xypairs = self.correctionT * R * xypairs;
+                complexPulse = xpulse +1j*ypulse;
+                timeStep = 1/self.samplingRate;
+                tmpAngles = angle + 2*pi*params.modFrequency*timeStep*(0:(width-1))';
+                complexPulse = complexPulse.*exp(1j*tmpAngles);
+                xypairs = self.correctionT*[real(complexPulse) imag(complexPulse)].';
                 xpulse = xypairs(1,:).';
                 ypulse = xypairs(2,:).';
                 
