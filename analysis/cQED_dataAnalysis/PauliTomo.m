@@ -30,15 +30,10 @@ M = [b0   0  0   b1  0   0   b2  0   0   0   0   0   0   0   0   b3; %Id Id
  
  %IdVal = (stomodat(1)+stomodat(2)+stomodat(3)+stomodat(4)+stomodat(84)+stomodat(84)+stomodat(83)+stomodat(82))/8;
 fullmeas = stomodat(17:80);%-IdVal;
- for m=1:16
-     measvec(m)=0;
-     for n = 1:4
-        % if (n == 2 || 3)
-            measvec(m)= measvec(m)+ fullmeas((m-1)*4+n);
-        % end
-     end
-     measvec(m) = measvec(m)/4;
- end
+
+%Take the mean of every 4 points
+measvec = mean(reshape(fullmeas,4,16));
+
  
  %measvec(11)=(stomodat(19)+stomodat(25))/2;
  %measvec(12)=(stomodat(20)+stomodat(26))/2;
