@@ -69,7 +69,8 @@ while remaining>=2
 		X.(fieldname) = newvalue;
         modified(fieldind) = 1;
     else
-        error(['Not a valid field name: ' fieldname]);
+        %error(['Not a valid field name: ' fieldname]);
+        X.(fieldname) = varargin{count+1};
     end
     remaining = remaining - 2;
     count = count + 2;

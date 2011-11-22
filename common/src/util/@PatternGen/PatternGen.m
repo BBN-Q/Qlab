@@ -138,6 +138,22 @@ classdef PatternGen < handle
             [outy, tmp] = self.derivGaussianPulse(yparams);
         end
         
+        function [outx, outy] = hermitePulse(params)
+            %Broadband excitation pulse based on Hermite polynomials. 
+            numPoints = params.width;
+            timePts = linspace(-numPoints/2,numPoints/2,numPoints)';
+            switch params.rotAngle
+                case pi/2
+                    A1 = -0.677;
+                case pi
+                    A1 = -0.956;
+                otherwise
+                    error('Unknown rotation angle for Hermite pulse.  Currently only handle pi/2 and pi.');
+            end
+            outx = params.amp*(1+A1*(timePts/params.sigma).^2).*exp(-((timePts/params.sigma).^2));
+            outy = zeros(numPoints,1);
+        end
+        
         function [outx, outy] = arbitraryPulse(params)
             persistent arbPulses;
             if isempty(arbPulses)
@@ -250,6 +266,7 @@ classdef PatternGen < handle
             params.sigma = self.dSigma;
             params.delta = self.dDelta;
             params.angle = 0; % in radians
+            params.rotAngle = 0;
             params.duration = params.width + self.dBuffer;
             if ismember(p, qubitPulses)
                 params.pType = self.dPulseType;
@@ -278,16 +295,26 @@ classdef PatternGen < handle
             end
             
             % pi pulses
-            if (strcmp(p, 'Xp') || strcmp(p, 'Yp') || strcmp(p, 'Up') || strcmp(p, 'Zp')), params.amp = self.dPiAmp; end
-            if (strcmp(p, 'Xm') || strcmp(p, 'Ym') || strcmp(p, 'Um') || strcmp(p, 'Zm')), params.amp = -self.dPiAmp; end
-            
-            % pi/2 pulses
-            if (strcmp(p, 'X90p') || strcmp(p, 'Y90p') || strcmp(p, 'U90p') || strcmp(p, 'Z90p')), params.amp = self.dPiOn2Amp; end
-            if (strcmp(p, 'X90m') || strcmp(p, 'Y90m') || strcmp(p, 'U90m') || strcmp(p, 'Z90m')), params.amp = -self.dPiOn2Amp; end
-            
-            % pi/4 pulses
-            if (strcmp(p, 'X45p') || strcmp(p, 'Y45p') || strcmp(p, 'U45p')), params.amp = self.dPiOn4Amp; end
-            if (strcmp(p, 'X45m') || strcmp(p, 'Y45m') || strcmp(p, 'U45m')), params.amp = -self.dPiOn4Amp; end
+            switch p
+                case {'Xp','Yp','Up','Zp'}
+                    params.amp = self.dPiAmp;
+                    params.rotAngle = pi;
+                case {'Xm','Ym','Um','Zm'}
+                    params.amp = -self.dPiAmp;
+                    params.rotAngle = pi;
+                case {'X90p','Y90p','U90p','Z90p'}
+                    params.amp = self.dPiOn2Amp;
+                    params.rotAngle = pi/2;
+                case {'X90m','Y90m','U90m','Z90m'}
+                    params.amp = -self.dPiOn2Amp;
+                    params.rotAngle = pi/2;
+                case {'X45p','Y45p','U45p','Z45p'}
+                    params.amp = self.dPiOn4Amp;
+                    params.rotAngle = pi/4;
+                case {'X45m','Y45m','U45m','Z45m'}
+                    params.amp = -self.dPiOn4Amp;
+                    params.rotAngle = pi/4;
+            end       
             
             if ismethod(self, [params.pType 'Pulse'])
                 pf = eval(['@self.' params.pType 'Pulse']);
