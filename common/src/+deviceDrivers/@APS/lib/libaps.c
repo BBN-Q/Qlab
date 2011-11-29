@@ -1267,10 +1267,15 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
   sync_status = 0;
 
   if (testLock) {
-    // if both channels are running at 1200 sync all four channels
-    // otherwise just sync the pair on the same fpga
+    // We have reset the global oscillator, so should sync both FPGAs, but the current
+    // test only works for channels running at 1.2 GHz
     numSyncChannels = (fpgaFrequencies[0] == 1200 && fpgaFrequencies[1] == 1200) ? 4 : 2;
-    sync_status = APS_TestPllSync(device, dac, numSyncChannels);
+    if (numSyncChannels == 4) {
+      APS_TestPllSync(device, 0, numSyncChannels);
+      sync_status = APS_TestPllSync(device, 2, numSyncChannels);
+    }
+    else if (fpgaFrequencies[fpga] == 1200)
+      sync_status = APS_TestPllSync(device, dac, numSyncChannels);
   }
 
   return sync_status;
@@ -1296,7 +1301,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   // Test for DAC clock phase match
   int inSync, globalSync;
   int test_cnt, cnt, pll, xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3;
-  int pll_1_unlock;
+  int pll_unlock;
 
   int fpga;
   int pll_bit;
@@ -1367,15 +1372,16 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
     xor_flag_cnt3 = 0;
 
 	  for(cnt = 0; cnt < 20; cnt++) {
-  	  pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
+  	  pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
   	  xor_flag_cnt += (pll_bit >> PLL_GLOBAL_XOR_BIT) & 0x1;
       xor_flag_cnt2 += (pll_bit >> PLL_02_XOR_BIT) & 0x1;
       xor_flag_cnt3 += (pll_bit >> PLL_13_XOR_BIT) & 0x1;
   	}
 	
-  	if ( (xor_flag_cnt < 2 || xor_flag_cnt > 18) && 
-         (xor_flag_cnt2 < 2 || xor_flag_cnt2 > 18) &&
-         (xor_flag_cnt3 < 2 || xor_flag_cnt3 > 18) ) {
+    // due to clock skews, need to accept a range of counts as "0" and "1"
+  	if ( (xor_flag_cnt < 5 || xor_flag_cnt > 15) && 
+         (xor_flag_cnt2 < 5 || xor_flag_cnt2 > 15) &&
+         (xor_flag_cnt3 < 5 || xor_flag_cnt3 > 15) ) {
   	  // 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase, so 600 MHz clocks
   	  // from DAC must be in phase. Move on.
       dlog(DEBUG_INFO,"DAC clocks in phase with reference (XOR counts %i and %i and %i)\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
@@ -1415,9 +1421,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   	}
   }
 
-  int maxTestPll = 3;
-
-  for (pll = 0; pll < maxTestPll; pll++) {
+  for (pll = 0; pll < 3; pll++) {
 
     switch (pll) {
       case 0: pllStr = "02"; break;
@@ -1430,11 +1434,13 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
       xor_flag_cnt = 0;
 
       for(cnt = 0; cnt < 10; cnt++) {
-        pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
+        pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
         xor_flag_cnt += (pll_bit >> PLL_XOR_TEST[pll]) & 0x1;
       }
 
-      if (xor_flag_cnt < 3) {
+      // here we are just looking for in-phase or 180 degrees out of phase, so we accept a large
+      // range around "0"
+      if (xor_flag_cnt < 5) {
         globalSync = 1;
     		break; // passed, move on to next channel
       } else {
@@ -1459,8 +1465,8 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
         inSync =  0;
         for(cnt = 0; cnt < 20; cnt++) {
     		  pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
-          pll_1_unlock = (pll_bit >> PLL_LOCK_TEST[pll]) & 0x1;
-          if (!pll_1_unlock) {
+          pll_unlock = (pll_bit >> PLL_LOCK_TEST[pll]) & 0x1;
+          if (!pll_unlock) {
             inSync = 1;
             break;
           }

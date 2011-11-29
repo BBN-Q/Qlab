@@ -58,6 +58,7 @@
 // Version 0x10 ELL Memory Map Additions
 
 #define FPGA_ADDR_ELL_REGREAD   0x8000
+#define FPGA_ADDR_SYNC_REGREAD  0XF000
 
 #define FPGA_ADDR_ELL_ENVWRITE  0x1000
 #define FPGA_ADDR_ELL_PHSWRITE  0x4000
