@@ -1301,6 +1301,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   // Test for DAC clock phase match
   int inSync, globalSync;
   int test_cnt, cnt, pll, xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3;
+  int dac02_reset, dac13_reset;
   int pll_unlock;
 
   int fpga;
@@ -1370,6 +1371,8 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
     xor_flag_cnt = 0;
     xor_flag_cnt2 = 0;
     xor_flag_cnt3 = 0;
+    dac02_reset = 0;
+    dac13_reset = 0;
 
 	  for(cnt = 0; cnt < 20; cnt++) {
   	  pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
@@ -1388,15 +1391,23 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
   	  break;
   	}
   	else {
-  	  // 600 MHz clocks out of phase, reset DAC clocks
+  	  // 600 MHz clocks out of phase, reset DAC clocks that are 90/270 degrees out of phase with reference
   	  dlog(DEBUG_INFO,"DAC clocks out of phase; resetting (XOR counts %i and %i and %i)\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
   	  UCHAR WriteByte = 0x2; //disable clock outputs
-  	  APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
-      APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr2, &WriteByte);
+      if (xor_flag_cnt2 >= 5 || xor_flag_cnt2 <= 15) {
+        dac02_reset = 1;
+        APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
+      }
+      if (xor_flag_cnt3 >= 5 || xor_flag_cnt3 <= 15) {
+        dac13_reset = 1;
+        APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr2, &WriteByte);
+      }
   	  APS_UpdatePllReg(device);
   	  WriteByte = 0x0; // enable clock outputs
-  	  APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
-      APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr2, &WriteByte);
+      if (dac02_reset)
+        APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
+      if (dac13_reset)
+        APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr2, &WriteByte);
   	  APS_UpdatePllReg(device);
 	  
   	  // reset FPGA PLLs
