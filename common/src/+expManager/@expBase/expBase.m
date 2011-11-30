@@ -227,9 +227,7 @@ classdef  expBase < handle
                         taskParams_i,pInstr,SD_mode);
                 end
             end
-            disp('######################################################')
             disp('############ Done preparing for experiment ###########')
-            disp('######################################################')
         end
         %% Close Instruments
         function [errorMsg] = closeInstruments(obj)

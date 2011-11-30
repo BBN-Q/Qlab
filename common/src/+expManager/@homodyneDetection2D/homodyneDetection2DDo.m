@@ -47,8 +47,6 @@ else
 end
 
 %% Main Loop
-
-fprintf('\n******BEGINNING OF EXPERIMENT*****\n\n')
 tic
 
 %% If there's anything thats particular to any device do it here
