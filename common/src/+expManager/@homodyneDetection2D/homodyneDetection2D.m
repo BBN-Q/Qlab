@@ -64,8 +64,6 @@ classdef homodyneDetection2D < expManager.expBase
             errorMsg = obj.errorCheckExpParams(errorMsg);
             % Prepare all instruments for measurement
             errorMsg = obj.initializeInstruments(errorMsg);
-            % Set initial Exp parameters
-            errorMsg = obj.prepareForExperiment(errorMsg);
             
             % find AWG instrument(s)
             numAWGs = 0;

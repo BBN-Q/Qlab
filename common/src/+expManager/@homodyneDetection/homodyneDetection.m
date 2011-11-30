@@ -64,8 +64,6 @@ classdef homodyneDetection < expManager.expBase
             errorMsg = obj.errorCheckExpParams(errorMsg);
             % Prepare all instruments for measurement
             errorMsg = obj.initializeInstruments(errorMsg);
-            % Set initial Exp parameters
-            errorMsg = obj.prepareForExperiment(errorMsg);
         end
         function errorMsg = Do(obj)
             fprintf(obj.DataFileHandle,'$$$ Beginning of Data\n');

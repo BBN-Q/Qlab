@@ -194,41 +194,7 @@ classdef  expBase < handle
             end
             disp('############ Done initializing instruments ###########')
         end
-        %% Prepare for experiment
-        function errorMsg = prepareForExperiment(obj,errorMsg)
-            if ~exist('errorMsg','var')
-                errorMsg = '';
-            end
-            TaskParams = obj.inputStructure.TaskParams;
-            % Now we must set all of the parameters in TaskParameters to
-            % their start values
-            Tasks = fieldnames(TaskParams);
-            numTasks = numel(Tasks);
-            for task_index = 1:numTasks % for each task
-                taskName_i = Tasks{task_index};
-                taskParams_i  = TaskParams.(taskName_i);
-                deviceTag_i   = taskParams_i.taskParameters.deviceTag;
-                % now we find all of the field names that aren't 
-                % 'taskParmeters'. 'taskParameters' are just helper
-                % parameters that are required by instrument methods.
-                fNames = fieldnames(taskParams_i);
-                temp = strcmp(fNames,'taskParameters');
-                parameterNames = fNames(~temp);
-                % also we include the task name in taskParameters
-                taskParams_i.taskParameters.taskName = taskName_i;
-                SD_mode = obj.inputStructure.SoftwareDevelopmentMode;
-                for param_index = 1:numel(parameterNames)
-                    % finally, we call setParameter with pValue set to the
-                    % start value.
-                    pName = parameterNames{param_index};
-                    pValue = taskParams_i.(pName).start;
-                    pInstr = obj.Instr.(deviceTag_i);
-                    setParameter(pName,pValue,...
-                        taskParams_i,pInstr,SD_mode);
-                end
-            end
-            disp('############ Done preparing for experiment ###########')
-        end
+
         %% Close Instruments
         function [errorMsg] = closeInstruments(obj)
             errorMsg = '';

@@ -82,8 +82,6 @@ classdef switchingCurve < expManager.expBase
             errorMsg = obj.errorCheckExpParams(TaskParams,InitParams,errorMsg);
             %Prepare all instruments for measurement, this routine uses only ExpParams
             errorMsg = obj.initializeInstruments(errorMsg);
-            %Set initial Exp parameters
-            errorMsg = obj.prepareForExperiment(errorMsg);
         end
         function errorMsg = Do(obj)
             fprintf(obj.DataFileHandle,'$$$ Beginning of Data\n');

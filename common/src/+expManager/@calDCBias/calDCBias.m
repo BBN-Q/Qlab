@@ -124,8 +124,6 @@ classdef calDCBias < expManager.expBase
             
             %Prepare all instruments for measurement, this routine uses only ExpParams
             errorMsg = obj.initializeInstruments(errorMsg);
-            %Set initial Exp parameters
-            errorMsg = obj.prepareForExperiment(errorMsg);
         end
         
         function errorMsg = Do(obj)
