@@ -358,11 +358,11 @@ classdef PatternGen < handle
                 % rotate and correct the pulse
                 complexPulse = xpulse +1j*ypulse;
                 timeStep = 1/self.samplingRate;
-                tmpAngles = angle - 2*pi*params.modFrequency*timeStep*(0:(width-1))';
+                tmpAngles = angle + 2*pi*params.modFrequency*timeStep*(0:(width-1))';
                 complexPulse = complexPulse.*exp(1j*tmpAngles);
                 xypairs = self.correctionT*[real(complexPulse) imag(complexPulse)].';
                 xpulse = xypairs(1,:).';
-                ypulse = xypairs(2,:).';
+                ypulse = -xypairs(2,:).'; % fix basis with the transformation Y => -Y
                 
                 if (duration > width)
                     padleft = floor((duration - width)/2);
