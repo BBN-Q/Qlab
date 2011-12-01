@@ -79,16 +79,10 @@ function value_fcn = path_selector(parent, position, pathname)
     function choose_callback(hObject, eventData)
         % if there is already a path in the box, change to that directory
         % first
-        pname = get_path();
-        if ~strcmp(pname, '')
-            savedir = pwd;
-            cd(pname);
-            pathname = uigetdir();
-            cd(savedir); % go back to the former path
-        else
-            pathname = uigetdir();
+        pathname = uigetdir(get_path());
+        if pathname ~= 0
+            set(editbox, 'String', pathname);
         end
-        set(editbox, 'String', pathname);
     end
     
 end
