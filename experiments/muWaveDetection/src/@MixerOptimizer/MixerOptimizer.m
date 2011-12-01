@@ -44,35 +44,31 @@ classdef MixerOptimizer < expManager.expBase
        end
        
        %% class methods
-       function errorMsg = Init(obj)
-            errorMsg = '';
-            errorMsg = obj.openInstruments(errorMsg);
-            errorMsg = obj.initializeInstruments(errorMsg);
+       function Init(obj)
+            obj.openInstruments();
+            obj.initializeInstruments();
             
             obj.sa = obj.Instr.spectrum_analyzer;
             obj.specgen = obj.Instr.Specgen;
             obj.awg = obj.Instr.AWG;
         end
-        function errorMsg = Do(obj)
-            errorMsg = '';
+        function Do(obj)
             try
                 [i_offset, q_offset] = obj.optimize_mixer_offsets();
                 T = obj.optimize_mixer_ampPhase(i_offset, q_offset);
                 % save transformation and offsets to file
                 save([obj.cfg_path '/mixercal.mat'], 'i_offset', 'q_offset', 'T', '-v7.3');
             catch exception
-                errorMsg = exception.identifier;
+                warning(exception.identifier);
             end
         end
-        function errorMsg = CleanUp(obj)
+        function CleanUp(obj)
             %Close all instruments
-            errorMsg = obj.closeInstruments();
+            obj.closeInstruments();
         end
-        function errorMsg = Run(obj)
-            errorMsg = obj.Init();
-            if strcmp(errorMsg, '')
-                obj.Do();
-            end
+        function Run(obj)
+            obj.Init();
+            obj.Do();
             obj.CleanUp();
         end
 
