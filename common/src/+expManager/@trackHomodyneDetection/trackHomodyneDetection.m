@@ -60,29 +60,29 @@ classdef trackHomodyneDetection < expManager.expBase
     end
     methods
         %% Base functions
-        function errorMsg = Init(obj)
-            errorMsg = '';
-            % Open all instruments
-            errorMsg = obj.openInstruments(errorMsg);
-            %%% The next two functions are experiment specific %%%
+        function Init(obj)
             % Check params for errors
-            errorMsg = obj.errorCheckExpParams(errorMsg);
+            obj.errorCheckExpParams();
+            
+            % Open all instruments
+            obj.openInstruments();
+            
             % Prepare all instruments for measurement
-            errorMsg = obj.initializeInstruments(errorMsg);
+            obj.initializeInstruments();
         end
-        function errorMsg = Do(obj)
+        function Do(obj)
             fprintf(obj.DataFileHandle,'$$$ Beginning of Data\n');
 			obj.trackHomodyneDetectionDo;
         end
-        function errorMsg = CleanUp(obj)
+        function CleanUp(obj)
             %Close all instruments
-            errorMsg = obj.closeInstruments;
+            obj.closeInstruments;
         end
         %% Class destructor
-        function delete(obj) %#ok<MANU>
+        function delete(obj)
         end
         %% error checking method
-        function errorMsg = errorCheckExpParams(obj,errorMsg) %#ok<INUSL,MANU>
+        function errorCheckExpParams(obj)
             % Error checking goes here or in homodyneDetection.init.
             ExpParams = obj.inputStructure.ExpParams;
             if ~isfield(ExpParams, 'digitalHomodyne')

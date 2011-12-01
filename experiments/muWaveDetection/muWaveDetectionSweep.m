@@ -86,6 +86,7 @@ instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'TekAWG', '
 get_acqiris_settings = deviceGUIs.acqiris_settings_gui(mainWindow, 10, 155, prevSettings.InstrParams.scope);
 
 % create tab group for microwave sources
+warning('off','MATLAB:uitabgroup:OldVersion');
 muWaveTabGroupPanel = uipanel('parent', mainWindow, ...
 	'units', 'pixels', 'position', [350, 490, 405, 290]);
 muWaveTabGroup = uitabgroup('parent', muWaveTabGroupPanel, ...

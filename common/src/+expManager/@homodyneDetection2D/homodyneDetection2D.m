@@ -62,7 +62,7 @@ classdef homodyneDetection2D < expManager.expBase
 
             % Open all instruments
             obj.openInstruments();
-            %%% The next function is experiment specific %%%
+
             % Prepare all instruments for measurement
             obj.initializeInstruments();
             
