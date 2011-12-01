@@ -1,3 +1,4 @@
+function RabiWidthSquareSequence()
 script = java.io.File(mfilename('fullpath'));
 path = char(script.getParentFile().getParentFile().getParentFile().getParent());
 addpath([path '/common/src'],'-END');
@@ -20,10 +21,10 @@ pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'cycleLength', cycleLengt
 
 numsteps = 100;
 minWidth = 0;
-stepsize = 6; % 12
+stepsize = 12; % 12
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 
-patseq = {pg.pulse('Xtheta', 'amp', 2000, 'width', pulseLength, 'pType', 'square')};
+patseq = {pg.pulse('Xtheta', 'amp', 4000, 'width', pulseLength, 'pType', 'square')};
 
 ch1 = zeros(numsteps, cycleLength);
 ch2 = ch1;
@@ -73,4 +74,4 @@ ch4 = ch4 + offset;
 TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
 disp('Moving AWG file to destination');
 movefile([temppath basename '.awg'], [path basename '.awg']);
-clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1
+end
