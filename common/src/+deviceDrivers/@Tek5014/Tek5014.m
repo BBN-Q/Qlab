@@ -271,9 +271,12 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
 			%
 			%		myAWG.openConfig('foo.awg'); 
             %
-			if not(isa(name, 'char'))
-				error('');
-			end
+			if ~isa(name, 'char')
+				error('Invalid file name');
+            end
+            if ~exist(name, 'file')
+                error('Could not find %s');
+            end
 			name = ['"' name '"'];
             gpib_string = ['AWGControl:SREStore ' name];
             obj.write(gpib_string);

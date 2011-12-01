@@ -114,7 +114,7 @@ classdef  expBase < handle
             end
         end
         %% methods related to handling instruments
-        function [errorMsg] = openInstruments(obj,errorMsg)
+        function openInstruments(obj)
             % clean up all instrument objects
             openInstruments = instrfind;
             if ~isempty(openInstruments)
@@ -126,9 +126,6 @@ classdef  expBase < handle
 			obj.removeDisabledInstr();
             InstrParams = obj.inputStructure.InstrParams;
             
-            if ~exist('errorMsg','var')
-                errorMsg = '';
-            end
             % obtain a list of all the types of instruments we need to 
             % connect to.
             InstrNames = fieldnames(InstrParams);
@@ -166,10 +163,7 @@ classdef  expBase < handle
             end
             disp('########### Done connecting to instruments ###########')
         end
-        function errorMsg = initializeInstruments(obj,errorMsg)
-            if nargin < 3
-                errorMsg = '';
-            end
+        function initializeInstruments(obj)
             % for each device we are going to call methods and set
             % properties using the values stored in InitParams
             InitParams = obj.inputStructure.InstrParams;
@@ -196,8 +190,7 @@ classdef  expBase < handle
         end
 
         %% Close Instruments
-        function [errorMsg] = closeInstruments(obj)
-            errorMsg = '';
+        function closeInstruments(obj)
             % it's assumed that each instrument has a method called
             % disconnect.
             SD_mode = obj.inputStructure.SoftwareDevelopmentMode;

@@ -55,15 +55,16 @@ classdef homodyneDetection2D < expManager.expBase
     end
     methods
         %% Base functions
-        function errorMsg = Init(obj)
-            errorMsg = '';
-            % Open all instruments
-            errorMsg = obj.openInstruments(errorMsg);
-            %%% The next two functions are experiment specific %%%
+        function Init(obj)
+            %%% The next function is experiment specific %%%
             % Check params for errors
-            errorMsg = obj.errorCheckExpParams(errorMsg);
+            obj.errorCheckExpParams();
+
+            % Open all instruments
+            obj.openInstruments();
+            %%% The next function is experiment specific %%%
             % Prepare all instruments for measurement
-            errorMsg = obj.initializeInstruments(errorMsg);
+            obj.initializeInstruments();
             
             % find AWG instrument(s)
             numAWGs = 0;
@@ -77,24 +78,34 @@ classdef homodyneDetection2D < expManager.expBase
                 end
             end
         end
-        function errorMsg = Do(obj)
+        function Do(obj)
             fprintf(obj.DataFileHandle,'$$$ Beginning of Data\n');
 			obj.homodyneDetection2DDo;
         end
-        function errorMsg = CleanUp(obj)
+        function CleanUp(obj)
             %Close all instruments
-            errorMsg = obj.closeInstruments;
+            obj.closeInstruments;
         end
         %% Class destructor
         function delete(obj)
         end
         %% error checking method
-        function errorMsg = errorCheckExpParams(obj,errorMsg)
+        function errorCheckExpParams(obj)
             % Error checking goes here or in homodyneDetection.init.
             ExpParams = obj.inputStructure.ExpParams;
             if ~isfield(ExpParams, 'digitalHomodyne')
                 ExpParams.digitalHomodyne = struct({'DHmode', 'IFfreq'},{'OFF', 0});
             end
+            
+            %Check whether the AWG file exists before we start things up
+            if(obj.inputStructure.InstrParams.TekAWG.enable)
+                assert(logical(exist(obj.inputStructure.InstrParams.TekAWG.seqfile,'file')), 'Oops! The AWG file for the TekAWG does not exist.')
+            end
+            if(obj.inputStructure.InstrParams.BBNAPS.enable)
+                assert(logical(exist(obj.inputStructure.InstrParams.BBNAPS.seqfile,'file')), 'Oops! The AWG file for the BBNAWG does not exist.')
+            end
+            
+            
         end
     end
 end
