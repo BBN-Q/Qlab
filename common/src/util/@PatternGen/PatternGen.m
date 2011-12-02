@@ -42,6 +42,7 @@ classdef PatternGen < handle
         samplingRate = 1e9; % in samples per second
         correctionT = eye(2,2);
         arbPulses = containers.Map();
+        dArbfname = '';
     end
     
     methods (Static)
@@ -258,9 +259,10 @@ classdef PatternGen < handle
             self = obj;
             pHandle = @pulseFunction;
             
-            qubitPulses = {'QId' 'Xp' 'Xm' 'X90p' 'X90m' 'X45p' 'X45m' 'Xtheta' 'Yp' 'Ym' 'Y90p' 'Y90m' 'Y45p' 'Y45m' 'Ytheta' 'Up' 'Um' 'U90p' 'U90m' 'Utheta'};
-            measurementPulses = {'M' 'MId'};
-            fluxPulses = {'Zf' 'ZId' 'Zp' 'Z90p', 'Zm', 'Z90m'};
+            identityPulses = {'QId' 'MId' 'ZId'};
+            qubitPulses = {'Xp' 'Xm' 'X90p' 'X90m' 'X45p' 'X45m' 'Xtheta' 'Yp' 'Ym' 'Y90p' 'Y90m' 'Y45p' 'Y45m' 'Ytheta' 'Up' 'Um' 'U90p' 'U90m' 'Utheta'};
+            measurementPulses = {'M'};
+            fluxPulses = {'Zf' 'Zp' 'Z90p' 'Zm' 'Z90m'};
             
             % set default pulse parameters
             params.amp = 0;
@@ -273,12 +275,10 @@ classdef PatternGen < handle
             params.duration = params.width + self.dBuffer;
             if ismember(p, qubitPulses)
                 params.pType = self.dPulseType;
-            elseif ismember(p, measurementPulses)
-                params.pType = 'square';
-            elseif ismember(p, fluxPulses)
+            elseif ismember(p, measurementPulses) || ismember(p, fluxPulses) || ismember(p, identityPulses)
                 params.pType = 'square';
             end
-            params.arbfname = ''; % for arbitrary pulse shapes
+            params.arbfname = self.dArbfname; % for arbitrary pulse shapes
             params = parseargs(params, varargin{:});
             % if only a width was specified (not a duration), need to update the duration
             % parameter
