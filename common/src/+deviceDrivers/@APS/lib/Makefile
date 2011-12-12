@@ -61,7 +61,7 @@ OBJECTS64=aps64.o fpga64.o sha164.o common64.o waveform64.o
 all: ${LIBNAME} test
 
 all64: ${LIBNAME64}
-	
+
 ${LIBNAME}: ${OBJECTS}
 	${CC}  ${CFLAGS} ${CFLAGS2} -shared  -o ${LIBNAME} ${OBJECTS} ${EXFLAGS}
 
@@ -70,37 +70,37 @@ ${LIBNAME64}: ${OBJECTS64}
 
 waveform.o: waveform.c waveform.h
 	${CC}  ${CFLAGS2} -c  waveform.c -o waveform.o
-	
+
 sha1.o: sha1.c sha1.h
 	${CC}  ${CFLAGS2} -c  sha1.c -o sha1.o 
-	
+
 aps.o: libaps.c aps.h
 	${CC}  ${CFLAGS2} -c  libaps.c -o aps.o
-	
+
 fpga.o: fpga.c fpga.h aps.h
 	${CC}  ${CFLAGS2} -c  fpga.c -o fpga.o
-	
+
 common.o: common.c common.h	
 	${CC}  ${CFLAGS2} -c  common.c -o common.o
 
 waveform64.o: waveform.c waveform.h
 	${CC64}  ${CFLAGS2} -c  waveform.c -o waveform64.o
-	
+
 sha164.o: sha1.c sha1.h
 	${CC64}  ${CFLAGS2} -c  sha1.c -o sha164.o 
-	
+
 aps64.o: libaps.c aps.h
 	${CC64}  ${CFLAGS2} -c  libaps.c -o aps64.o
-	
+
 fpga64.o: fpga.c fpga.h aps.h
 	${CC64}  ${CFLAGS2} -c  fpga.c -o fpga64.o
-	
+
 common64.o: common.c common.h	
 	${CC64}  ${CFLAGS2} -c  common.c -o common64.o
-		
+
 clean:
 	rm -f *.o *.dylib *.dll test *.exe *.a
-	
+
 test: test.c ${LIBNAME}
 	${CC} ${CFLAGS3} ${LFLAGS} -o test test.c
-	
+

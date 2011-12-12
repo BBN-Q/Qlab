@@ -175,6 +175,9 @@ classdef PatternGen < handle
             outy = round(amp*pulseData(:,2));
         end
         
+        % pulses defined in external files
+        [outx, outy] = dragSqPulse(params);
+        
         % buffer pulse generator
 		function out = bufferPulse(patx, paty, zeroLevel, padding, reset, delay)
 			self = PatternGen;
