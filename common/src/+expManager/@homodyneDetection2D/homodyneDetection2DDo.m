@@ -80,7 +80,6 @@ for i = 2:length(obj.awg)
     [success_flag_AWG] = awg.waitForAWGtoStartRunning();
     if success_flag_AWG ~= 1, error('AWG %d timed out', i), end
 end
-%pause(0.5);
 
 %%
 % for each loop we use the function iterateLoop to set the relevent

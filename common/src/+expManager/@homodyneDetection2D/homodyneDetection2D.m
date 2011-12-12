@@ -41,8 +41,12 @@ classdef homodyneDetection2D < expManager.expBase
     methods (Static)
         %% Class constructor
         function obj = homodyneDetection2D(data_path, cfgFileName, basename, filenumber)
+            script = mfilename('fullpath');
+            sindex = strfind(script, 'common');
+            script = [script(1:sindex) 'experiments/muWaveDetection/'];
+            
             if ~exist('data_path','var')
-                data_path = 'C:\Documents and Settings\Administrator\My Documents\DR_Exp\SVN\qlab\'; % default value
+                data_path = [script 'data/'];
             end
             
             if ~exist('basename', 'var')
