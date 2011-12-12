@@ -21,8 +21,12 @@ fprintf('\n******BEGINNING OF EXPERIMENT*****\n\n')
 %% Ramsey
 if ExpParams.DoRamsey
     % generate Ramsey sequence
-    filename = RamseySequence();
+    filename = RamseySequence(ExpParams.IQchannels);
     obj.loadSequence(filename);
+    
+    % adjust drive frequency
+    freq = QubitSpec.frequency + ExpParams.RamseyDetuning;
+    QubitSpec.frequency = freq;
 
     % measure
     obj.homodyneDetection2DDo();
@@ -31,30 +35,15 @@ if ExpParams.DoRamsey
     detuning = obj.analyzeRamsey();
 
     % adjust drive frequency
-    freq = QubitSpec.frequency + detuning;
+    freq = QubitSpec.frequency - detuning;
     QubitSpec.frequency = freq;
-end
-
-%% Pi Calibration
-if ExpParams.DoPiCal
-    for loop_index = 1:Loop.PiCal.steps
-        % generate Pi calibration sequence
-        filename = PiCalSequence();
-        obj.loadSequence(filename);
-
-        % measure
-        obj.homodyneDetection2DDo();
-    end
-    % analyze
-    piAmp = obj.analyzePiCal();
-    save(obj.pulseParamPath, 'piAmp', '-append', '-v7.3');
 end
 
 %% Pi/2 Calibration
 if ExpParams.DoPi2Cal
     for loop_index = 1:Loop.Pi2Cal.steps
         % generate Pi/2 calibration sequence
-        filename = Pi2CalSequence();
+        filename = Pi2CalSequence(ExpParams.IQchannels, Loop.Pi2Cal.points(loop_index));
         obj.loadSequence(filename);
 
         % measure
@@ -65,11 +54,26 @@ if ExpParams.DoPi2Cal
     save(obj.pulseParamPath, 'pi2Amp', '-append', '-v7.3');
 end
 
+%% Pi Calibration
+if ExpParams.DoPiCal
+    for loop_index = 1:Loop.PiCal.steps
+        % generate Pi calibration sequence
+        filename = PiCalSequence(ExpParams.IQchannels, Loop.PiCal.points(loop_index));
+        obj.loadSequence(filename);
+
+        % measure
+        obj.homodyneDetection2DDo();
+    end
+    % analyze
+    piAmp = obj.analyzePiCal();
+    save(obj.pulseParamPath, 'piAmp', '-append', '-v7.3');
+end
+
 %% DRAG calibration    
 if ExpParams.DoDRAGCal
     for loop_index = 1:Loop.DRAGCal.steps
         % generate DRAG calibration sequence
-        filename = DRAGSequence();
+        filename = DRAGSequence(ExpParams.IQchannels);
         obj.loadSequence(filename);
 
         % measure
