@@ -65,8 +65,8 @@ patseq{9}={pg.pulse('Xp'),pg.pulse('Ym')};
 % Yp X90p
 % Xp Y90m
 % Yp X90m
-% X90p Yp
-% Y90p Xp
+% X90p Yp (phase sensitive)
+% Y90p Xp (phase sensitive)
 
 % +3 * eps error
 % Xp X90p

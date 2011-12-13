@@ -13,7 +13,7 @@ pathAWG = 'U:\AWG\StateTomo\';
 pathAPS = 'U:\APS\StateTomo\';
 
 Q1pulse = 'QId';
-Q2pulse = 'Y90p';
+Q2pulse = 'Xp';
 
 basename = [Q1pulse Q2pulse 'Stag'];
 
@@ -58,15 +58,8 @@ PosPulsesQ2{4} = pg2.pulse('Y90p');
 nbrPosPulses = length(PosPulsesQ1);
 
 numsteps = 1;
-crossresstep = 10;
-crossreswidths = 152+(0:crossresstep:(numsteps-1)*crossresstep);
-
-ampCR = 5800; %8000
-angle = 0;
 
 for nindex = 1:numsteps
-    currcrossreswidth = crossreswidths(nindex);  
-    %basename = sprintf('CR21_%d',currcrossreswidth);
     
     prepPulseQ1 = pg1.pulse('QId');
     prepPulseQ2 = pg2.pulse('QId');
@@ -172,11 +165,11 @@ for nindex = 1:numsteps
         
         % CR21, build for APS
         numsteps = 1;
-        [CR21_I_seq{n}, CR21_Q_seq{n}, ~, PulseCollectionCR] = pg21.build(patseqCR21{n}, numsteps, delayCR21, fixedPt, PulseCollectionCR);
+        %[CR21_I_seq{n}, CR21_Q_seq{n}, ~, PulseCollectionCR] = pg21.build(patseqCR21{n}, numsteps, delayCR21, fixedPt, PulseCollectionCR);
     
-        patx = pg21.linkListToPattern(CR21_I_seq{n}, 1)';
-        paty = pg21.linkListToPattern(CR21_Q_seq{n}, 1)';
-        CR21buffer(n, :) = pg21.bufferPulse(patx, paty, 0, bufferPadding3, bufferReset3, bufferDelay3);
+        %patx = pg21.linkListToPattern(CR21_I_seq{n}, 1)';
+        %paty = pg21.linkListToPattern(CR21_Q_seq{n}, 1)';
+        %CR21buffer(n, :) = pg21.bufferPulse(patx, paty, 0, bufferPadding3, bufferReset3, bufferDelay3);
     end
     
     % trigger slave AWG (the APS) at beginning
@@ -201,7 +194,7 @@ for nindex = 1:numsteps
     ch1m1 = measTrigger;
     ch1m2 = measCH;
     ch2 = Q1_Q;
-    ch2m1 = CR21buffer;
+    ch2m1 = zeros(nbrPulses, cycleLength);
     ch2m2 = slaveTrigger;
     ch3 = Q2_I;
     ch3m1 = Q1buffer;
@@ -211,20 +204,20 @@ for nindex = 1:numsteps
     ch4m2 = slaveTrigger;
 
     % unify LLs and waveform libs
-    ch5seq = CR21_I_seq{1}; ch6seq = CR21_Q_seq{1};
-    for n = 2:nbrPulses
-        for m = 1:length(CR21_I_seq{n}.linkLists)
-            ch5seq.linkLists{end+1} = CR21_I_seq{n}.linkLists{m};
-            ch6seq.linkLists{end+1} = CR21_Q_seq{n}.linkLists{m};
-        end
-    end
-    ch5seq.waveforms = deviceDrivers.APS.unifySequenceLibraryWaveformsSingle(CR21_I_seq);
-    ch6seq.waveforms = deviceDrivers.APS.unifySequenceLibraryWaveformsSingle(CR21_Q_seq);
+%     ch5seq = CR21_I_seq{1}; ch6seq = CR21_Q_seq{1};
+%     for n = 2:nbrPulses
+%         for m = 1:length(CR21_I_seq{n}.linkLists)
+%             ch5seq.linkLists{end+1} = CR21_I_seq{n}.linkLists{m};
+%             ch6seq.linkLists{end+1} = CR21_Q_seq{n}.linkLists{m};
+%         end
+%     end
+%     ch5seq.waveforms = deviceDrivers.APS.unifySequenceLibraryWaveformsSingle(CR21_I_seq);
+%     ch6seq.waveforms = deviceDrivers.APS.unifySequenceLibraryWaveformsSingle(CR21_Q_seq);
 
     % make APS file
-    exportAPSConfig(temppath, basename, ch5seq, ch6seq, ch5seq, ch6seq);
-    disp('Moving APS file to destination');
-    movefile([temppath basename '.mat'], [pathAPS basename '.mat']);
+%     exportAPSConfig(temppath, basename, ch5seq, ch6seq, ch5seq, ch6seq);
+%     disp('Moving APS file to destination');
+%     movefile([temppath basename '.mat'], [pathAPS basename '.mat']);
     % make TekAWG file
     options = struct('m21_high', 2.0, 'm41_high', 2.0);
     TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);

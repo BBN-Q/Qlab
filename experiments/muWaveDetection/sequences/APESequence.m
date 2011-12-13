@@ -26,8 +26,8 @@ pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseTy
 angle = pi/2;
 numPsQId = 5; % number pseudoidentities
 numsteps = 11; %number of drag parameters
-deltamax=-0.5;
-deltamin=-1.5;
+deltamax=-0;
+deltamin=-2;
 delta=linspace(deltamin,deltamax,numsteps);
 
 sindex = 0;
