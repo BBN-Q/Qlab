@@ -61,6 +61,10 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             obj.channelMap('q1q2') = {5,6,'2m1'};
         end
         
+        % externally defined static methods
+        cost = Pi2CostFunction(data);
+        cost = PiCostFunction(data);
+        
         function UnitTest()
             script = java.io.File(mfilename('fullpath'));
             path = char(script.getParent());
@@ -69,10 +73,27 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             
             pulseCal.pulseParams = struct('piAmp', 6000, 'pi2Amp', 3000, 'delta', -0.5, 'T', eye(2,2), 'pulseType', 'drag',...
                                      'i_offset', 0, 'q_offset', 0);
+            pulseCal.rabiAmpChannelSequence('q1', false);
+            pulseCal.rabiAmpChannelSequence('q2', false);
             pulseCal.Pi2CalChannelSequence('q1', 'X', false);
             pulseCal.Pi2CalChannelSequence('q2', 'Y', false);
-            pulseCal.PiCalChannelSequence('q1', 'Y', true);
-            pulseCal.PiCalChannelSequence('q2', 'X', true);
+            pulseCal.PiCalChannelSequence('q1', 'Y', false);
+            pulseCal.PiCalChannelSequence('q2', 'X', false);
+            
+            % perfect Pi2Cal data
+            data = [0 0 .5*ones(1,36)];
+            cost = pulseCal.Pi2CostFunction(data);
+            fprintf('Pi2Cost for ''perfect'' data: %f\n', cost);
+            
+            % data representing amplitude error
+            n = 1:9;
+            data = 0.65 + 0.1*(-1).^n .* n./10;
+            data = data(floor(1:.5:9.5));
+            data = [0.5 0.5 data data];
+            cost = pulseCal.Pi2CostFunction(data);
+            fprintf('Pi2Cost for more realistic data: %f\n', cost);
+            cost = pulseCal.PiCostFunction(data);
+            fprintf('PiCost for more realistic data: %f\n', cost);
         end
     end
     methods

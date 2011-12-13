@@ -7,7 +7,7 @@ elseif ~strcmp(direction, 'X') && ~strcmp(direction, 'Y')
     direction = 'X';
 end
 if ~exist('makePlot', 'var')
-    makePlot = true;
+    makePlot = false;
 end
 script = java.io.File(mfilename('fullpath'));
 path = char(script.getParentFile().getParentFile().getParent());
@@ -46,31 +46,33 @@ bufferPadding = bufferPaddings(IQkey);
 bufferReset = bufferResets(IQkey);
 bufferDelay = bufferDelays(IQkey);
 
+patseq{1} = {pg.pulse('QId')};
+
 % +X/Y rotations
 X90p = pg.pulse([direction '90p']);
 Xp   = pg.pulse([direction 'p']);
-patseq{1}={X90p};
-patseq{2}={X90p, Xp};
-patseq{3}={X90p, Xp, Xp};
-patseq{4}={X90p, Xp, Xp, Xp};
-patseq{5}={X90p, Xp, Xp, Xp, Xp};
-patseq{6}={X90p, Xp, Xp, Xp, Xp, Xp};
-patseq{7}={X90p, Xp, Xp, Xp, Xp, Xp, Xp};
-patseq{8}={X90p, Xp, Xp, Xp, Xp, Xp, Xp, Xp};
-patseq{9}={X90p, Xp, Xp, Xp, Xp, Xp, Xp, Xp, Xp};
+patseq{2}={X90p};
+patseq{3}={X90p, Xp};
+patseq{4}={X90p, Xp, Xp};
+patseq{5}={X90p, Xp, Xp, Xp};
+patseq{6}={X90p, Xp, Xp, Xp, Xp};
+patseq{7}={X90p, Xp, Xp, Xp, Xp, Xp};
+patseq{8}={X90p, Xp, Xp, Xp, Xp, Xp, Xp};
+patseq{9}={X90p, Xp, Xp, Xp, Xp, Xp, Xp, Xp};
+patseq{10}={X90p, Xp, Xp, Xp, Xp, Xp, Xp, Xp, Xp};
 
 % -X/Y rotations
 X90m = pg.pulse([direction '90m']);
 Xm   = pg.pulse([direction 'm']);
-patseq{10}={X90m};
-patseq{11}={X90m, Xm};
-patseq{12}={X90m, Xm, Xm};
-patseq{13}={X90m, Xm, Xm, Xm};
-patseq{14}={X90m, Xm, Xm, Xm, Xm};
-patseq{15}={X90m, Xm, Xm, Xm, Xm, Xm};
-patseq{16}={X90m, Xm, Xm, Xm, Xm, Xm, Xm};
-patseq{17}={X90m, Xm, Xm, Xm, Xm, Xm, Xm, Xm};
-patseq{18}={X90m, Xm, Xm, Xm, Xm, Xm, Xm, Xm, Xm};
+patseq{11}={X90m};
+patseq{12}={X90m, Xm};
+patseq{13}={X90m, Xm, Xm};
+patseq{14}={X90m, Xm, Xm, Xm};
+patseq{15}={X90m, Xm, Xm, Xm, Xm};
+patseq{16}={X90m, Xm, Xm, Xm, Xm, Xm};
+patseq{17}={X90m, Xm, Xm, Xm, Xm, Xm, Xm};
+patseq{18}={X90m, Xm, Xm, Xm, Xm, Xm, Xm, Xm};
+patseq{19}={X90m, Xm, Xm, Xm, Xm, Xm, Xm, Xm, Xm};
 
 % double every pulse
 nbrPatterns = 2*length(patseq);

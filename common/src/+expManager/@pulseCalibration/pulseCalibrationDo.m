@@ -16,9 +16,6 @@ function [errorMsg] = pulseCalibrationDo(obj)
 ExpParams = obj.inputStructure.ExpParams;
 InstrParams = obj.inputStructure.InstrParams;
 QubitSpec = obj.Instr.(ExpParams.QubitSpec);
-Loop = obj.populateLoopStructure;
-
-QubitNum = double(ExpParams.Qubit(end-1:end));
 QubitNumStr = ExpParams.Qubit(end-1:end);
 
 % load pulse parameters for the relevant qubit
@@ -33,12 +30,13 @@ obj.pulseParams = struct('piAmp', piAmp, 'pi2Amp', pi2Amp, 'delta', delta, 'T', 
 
 if ExpParams.DoMixerCal
     % TODO update parameter passing to optimize_mixers
+    QubitNum = double(ExpParams.Qubit(end-1:end));
     optimize_mixers(QubitNum);
     % update pulseParams
     load(obj.mixerCalPath, 'i_offset', 'q_offset', 'T');
-    pulseParams.T = T;
-    pulseParams.i_offset = i_offset;
-    pulseParams.q_offfset = q_offset;
+    obj.pulseParams.T = T;
+    obj.pulseParams.i_offset = i_offset;
+    obj.pulseParams.q_offfset = q_offset;
     
     % update channel offsets
     InstrParams.awg.(['chan_' num2str(IQchannles(1))]).offset = i_offset;
@@ -46,18 +44,18 @@ if ExpParams.DoMixerCal
 end
 
 if ExpParams.DoRabiAmp
-   filename = RabiAmpChannelSequence(ExpParams.Qubit, pulseParams);
+   filename = obj.rabiAmpChannelSequence(ExpParams.Qubit);
    obj.loadSequence(filename);
    
    obj.homodyneDetection2DDo();
-   pulseParams.piAmp = obj.analyzeRabiAmp();
-   pulseParams.pi2Amp = pulseParams.piAmp/2;
+   obj.pulseParams.piAmp = obj.analyzeRabiAmp();
+   obj.pulseParams.pi2Amp = obj.pulseParams.piAmp/2;
 end
 
 %% Ramsey
 if ExpParams.DoRamsey
-    % generate Ramsey sequence
-    filename = RamseyChannelSequence(ExpParams.Qubit);
+    % generate Ramsey sequence (TODO)
+    filename = obj.RamseyChannelSequence(ExpParams.Qubit);
     obj.loadSequence(filename);
     
     % adjust drive frequency
@@ -78,7 +76,7 @@ end
 %% Pi/2 Calibration
 if ExpParams.DoPi2Cal
     % calibrate amplitude and offset for +/- X90
-    filename = Pi2CalChannelSequence(ExpParams.Qubit, pulseParams, 'X');
+    filename = obj.Pi2CalChannelSequence(ExpParams.Qubit, 'X');
     obj.loadSequence(filename);
 
     % measure
@@ -87,7 +85,7 @@ if ExpParams.DoPi2Cal
     X90Amp = obj.analyzePi2Cal();
     
     % calibrate amplitude and offset for +/- Y90
-    filename = Pi2CalChannelSequence(ExpParams.Qubit, pulseParams, 'Y');
+    filename = obj.Pi2CalChannelSequence(ExpParams.Qubit, 'Y');
     obj.loadSequence(filename);
     
     % measure
@@ -102,7 +100,7 @@ end
 %% Pi Calibration
 if ExpParams.DoPiCal
     % calibrate amplitude and offset for +/- X180
-    filename = PiCalChannelSequence(ExpParams.Qubit, pulseParams, 'X');
+    filename = obj.PiCalChannelSequence(ExpParams.Qubit, 'X');
     obj.loadSequence(filename);
 
     % measure
@@ -111,7 +109,7 @@ if ExpParams.DoPiCal
     X180Amp = obj.analyzePiCal();
     
     % calibrate amplitude and offset for +/- Y180
-    filename = PiCalChannelSequence(ExpParams.Qubit, pulseParams, 'Y');
+    filename = obj.PiCalChannelSequence(ExpParams.Qubit, 'Y');
     obj.loadSequence(filename);
     
     % measure
@@ -126,14 +124,14 @@ end
 if ExpParams.DoDRAGCal
     for loop_index = 1:Loop.DRAGCal.steps
         % generate DRAG calibration sequence
-        filename = DRAGSequence(ExpParams.Qubit, pulseParams);
+        filename = obj.DRAGSequence(ExpParams.Qubit);
         obj.loadSequence(filename);
 
         % measure
         obj.homodyneDetection2DDo();
     end
     % analyze
-    pulseParams.delta = obj.analyzeDRAG();
+    obj.pulseParams.delta = obj.analyzeDRAG();
 end
 
 % TODO: save updated parameters to file

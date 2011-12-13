@@ -54,10 +54,12 @@ for p = pulses
     pulseLib(pname) = pg1.pulse(pname);
 end
 
-sindex = 0;
+patseq{1} = {pulseLib('QId')};
+
+sindex = 1;
 
 % +X rotations
-% (1, 3, 5, 7, 9, 11, 13, 15, 17, 19) x X90p
+% (1, 3, 5, 7, 9, 11, 13, 15, 17) x X90p
 for j = 1:numPi2s
     for k = 1:(1+2*(j-1))
         patseq{sindex + j}{k} = pulseLib([direction '90p']);

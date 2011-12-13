@@ -1,76 +1,100 @@
-function rabiAmpSequence(makePlot)
+function rabiAmpChannelSequence(obj, qubit, makePlot)
 
 if ~exist('makePlot', 'var')
-    makePlot = true;
+    makePlot = false;
 end
 script = java.io.File(mfilename('fullpath'));
-path = char(script.getParentFile().getParentFile().getParentFile().getParent());
-addpath([path '/common/src'],'-END');
-addpath([path '/common/src/util/'],'-END');
+path = char(script.getParentFile().getParentFile().getParent());
+addpath(path,'-END');
+addpath([path '/util/'],'-END');
 
 temppath = [char(script.getParent()) '\'];
 path = 'U:\AWG\Rabi\';
-basename = 'Rabi';
+basename = 'RabiChannel';
+
+IQchannels = obj.channelMap(qubit);
+IQkey = [num2str(IQchannels{1}) num2str(IQchannels{2})];
 
 fixedPt = 6000;
 cycleLength = 10000;
-numsteps = 81;
+numsteps = 41;
 stepsize = 200;
 
-% load config parameters from file
-parent_path = char(script.getParentFile.getParent());
-cfg_path = [parent_path '/cfg/'];
-load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bufferReset', 'bufferPadding', 'offset', 'piAmp', 'pi2Amp', 'sigma', 'pulseType', 'delta', 'buffer', 'pulseLength');
-pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'dPulseLength', pulseLength, 'correctionT', T, 'cycleLength', cycleLength);
+% load config parameters dictionaries
+load(obj.pulseParamPath, 'measDelay', 'delays',  'bufferDelays',  'bufferResets',  'bufferPaddings',  'offsets',  'sigmas',  'deltas', 'buffers',  'pulseLengths');
 
-amps = -((numsteps-1)/2)*stepsize:stepsize:((numsteps-1)/2)*stepsize;
-%amps = 0:stepsize:(numsteps-1)*stepsize;
+pg = PatternGen(...
+    'dPiAmp', obj.pulseParams.piAmp, ...
+    'dPiOn2Amp', obj.pulseParams.pi2Amp, ...
+    'dSigma', sigmas(qubit), ...
+    'dPulseType', obj.pulseParams.pulseType, ...
+    'dDelta', obj.pulseParams.delta, ...
+    'correctionT', obj.pulseParams.T, ...
+    'dBuffer', buffers(qubit), ...
+    'dPulseLength', pulseLengths(qubit), ...
+    'cycleLength', cycleLength ...
+    );
+
+delay = delays(IQkey);
+offset = offsets(IQkey);
+bufferPadding = bufferPaddings(IQkey);
+bufferReset = bufferResets(IQkey);
+bufferDelay = bufferDelays(IQkey);
+
+amps = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {pg.pulse('Xtheta', 'amp', amps)};
 
+% pre-allocate space
 ch1 = zeros(numsteps, cycleLength);
-ch2 = ch1;
-ch4m1 = ch1;
-ch3m1 = ch1;
+ch2 = ch1; ch3 = ch1; ch4 = ch1;
+ch1m1 = ch1; ch1m2 = ch1; ch2m1 = ch1; ch2m2 = ch1;
+ch3m1 = ch1; ch3m2 = ch1; ch4m1 = ch1; ch4m2 = ch1;
+chI = ch1; chQ = ch1; chBuffer = ch1;
 
 for n = 1:numsteps;
 	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt);
-	ch1(n, :) = patx + offset;
-	ch2(n, :) = paty + offset;
-    ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
+	chI(n, :) = patx + offset;
+	chQ(n, :) = paty + offset;
+    chBuffer(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
 % trigger at fixedPt-500
 % measure from (fixedPt:fixedPt+measLength)
 measLength = 3000;
 measSeq = {pg.pulse('M', 'width', measLength)};
-ch1m1 = zeros(numsteps, cycleLength);
-ch1m2 = zeros(numsteps, cycleLength);
 for n = 1:numsteps;
 	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
 	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
 end
 
+% add channel offsets
+ch1 = ch1 + offsets('12');
+ch2 = ch2 + offsets('12');
+ch3 = ch3 + offsets('34');
+ch4 = ch4 + offsets('34');
+
+% map control onto the physical channel
+eval(['ch' num2str(IQchannels{1}) ' = chI;']);
+eval(['ch' num2str(IQchannels{2}) ' = chQ;']);
+eval(['ch' IQchannels{3} ' = chBuffer;']);
+
 if makePlot
-    myn = 25;
+    myn = 30;
     figure
     plot(ch1(myn,:))
     hold on
     plot(ch2(myn,:), 'r')
-    plot(5000*ch1m2(myn,:), 'g')
-    plot(1000*ch3m1(myn,:), 'r')
-    plot(5000*ch1m1(myn,:),'.')
+    plot(ch3(myn,:), ':')
+    plot(ch4(myn,:), 'r:')
+    plot(5000*ch3m1(myn,:), 'g')
+    plot(5000*ch4m1(myn,:), 'k')
     grid on
     hold off
 end
 
-% fill remaining channels with empty stuff
-ch3 = zeros(numsteps, cycleLength) + offset;
-ch4 = zeros(numsteps, cycleLength) + offset;
-ch2m1 = zeros(numsteps, cycleLength);
-ch2m2 = zeros(numsteps, cycleLength);
-
 % make TekAWG file
-TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-disp('Moving AWG file to destination');
-movefile([temppath basename '.awg'], [path basename '.awg']);
+% options = struct('m21_high', 2.0, 'm41_high', 2.0);
+% TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
+% disp('Moving AWG file to destination');
+% movefile([temppath basename '.awg'], [pathAWG basename '.awg']);
 end
