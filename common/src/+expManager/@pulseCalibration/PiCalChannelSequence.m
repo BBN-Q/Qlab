@@ -1,93 +1,76 @@
-function PiCalSequence34(makePlot)
+function PiCalChannelSequence(obj, qubit, direction, makePlot)
 
+if ~exist('direction', 'var')
+    direction = 'X';
+elseif ~strcmp(direction, 'X') && ~strcmp(direction, 'Y')
+    warning('Unknown direction, assuming X');
+    direction = 'X';
+end
 if ~exist('makePlot', 'var')
     makePlot = true;
 end
 script = java.io.File(mfilename('fullpath'));
-path = char(script.getParentFile().getParentFile().getParentFile().getParent());
-addpath([path '/common/src'],'-END');
-addpath([path '/common/src/util/'],'-END');
+path = char(script.getParentFile().getParentFile().getParent());
+addpath(path,'-END');
+addpath([path '/util/'],'-END');
 
 temppath = [char(script.getParent()) '\'];
 pathAWG = 'U:\AWG\PiCal\';
-basename = 'PiCal34';
+basename = 'PiCalChannel';
+
+IQchannels = obj.channelMap(qubit);
+IQkey = [num2str(IQchannels{1}) num2str(IQchannels{2})];
 
 fixedPt = 6000;
 cycleLength = 10000;
 numsteps = 42;
 
-% load config parameters from file
-parent_path = char(script.getParentFile.getParent());
-cfg_path = [parent_path '/cfg/'];
-load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bufferReset', 'bufferPadding', 'offset', 'piAmp', 'pi2Amp', 'sigma', 'pulseType', 'delta', 'buffer', 'pulseLength');
-load([cfg_path 'pulseParams.mat'], 'T2', 'delay2', 'bufferDelay2', 'bufferReset2', 'bufferPadding2', 'offset2', 'piAmp2', 'pi2Amp2', 'sigma2', 'pulseType2', 'delta2', 'buffer2', 'pulseLength2');
-load([cfg_path 'pulseParams.mat'], 'T3', 'delay3', 'bufferDelay3', 'bufferReset3', 'bufferPadding3', 'offset3', 'piAmp3', 'pi2Amp3', 'sigma3', 'pulseType3', 'delta3', 'buffer3', 'pulseLength3');
+% load config parameters dictionaries
+load(obj.pulseParamPath, 'measDelay', 'delays',  'bufferDelays',  'bufferResets',  'bufferPaddings',  'offsets',  'sigmas',  'deltas', 'buffers',  'pulseLengths');
 
-pg1 = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', buffer, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
-pg2 = PatternGen('dPiAmp', piAmp2, 'dPiOn2Amp', pi2Amp2, 'dSigma', sigma2, 'dPulseType', pulseType2, 'dDelta', delta2, 'correctionT', T2, 'dBuffer', buffer2, 'dPulseLength', pulseLength2, 'cycleLength', cycleLength);
-pg21 = PatternGen('dPiAmp', piAmp3, 'dPiOn2Amp', pi2Amp3, 'dSigma', sigma3, 'dPulseType', pulseType3, 'dDelta', delta3, 'correctionT', T3, 'dBuffer', buffer3, 'dPulseLength', pulseLength3, 'cycleLength', cycleLength);
-delayQ1 = delay;
-offsetQ1 = offset;
-delayQ2 = delay2;
-offsetQ2 = offset2;
-delayCR21 = delay3;
-offsetCR21 = offset3;
-pg = pg2;
+pg = PatternGen(...
+    'dPiAmp', obj.pulseParams.piAmp, ...
+    'dPiOn2Amp', obj.pulseParams.pi2Amp, ...
+    'dSigma', sigmas(qubit), ...
+    'dPulseType', obj.pulseParams.pulseType, ...
+    'dDelta', obj.pulseParams.delta, ...
+    'correctionT', obj.pulseParams.T, ...
+    'dBuffer', buffers(qubit), ...
+    'dPulseLength', pulseLengths(qubit), ...
+    'cycleLength', cycleLength ...
+    );
 
-% +X rotations
-% QId
-% X90p Xp
-% X90p Xp Xp
-% X90p Xp Xp Xp
-% X90p Xp Xp Xp Xp
-patseq{1}={pg.pulse('QId')};
-patseq{2}={pg.pulse('X90p')};
-patseq{3}={pg.pulse('X90p'),pg.pulse('Xp')};
-patseq{4}={pg.pulse('X90p'),pg.pulse('Xp'),pg.pulse('Xp')};
-patseq{5}={pg.pulse('X90p'),pg.pulse('Xp'),pg.pulse('Xp'),pg.pulse('Xp')};
-patseq{6}={pg.pulse('X90p'),pg.pulse('Xp'),pg.pulse('Xp'),pg.pulse('Xp'),pg.pulse('Xp')};
+delay = delays(IQkey);
+offset = offsets(IQkey);
+bufferPadding = bufferPaddings(IQkey);
+bufferReset = bufferResets(IQkey);
+bufferDelay = bufferDelays(IQkey);
 
-% -X rotations
-% QId
-% X90m Xm
-% X90m Xm Xm
-% X90m Xm Xm Xm
-% X90m Xm Xm Xm Xm
-patseq{7}={pg.pulse('QId')};
-patseq{8}={pg.pulse('X90m')};
-patseq{9}={pg.pulse('X90m'),pg.pulse('Xm')};
-patseq{10}={pg.pulse('X90m'),pg.pulse('Xm'),pg.pulse('Xm')};
-patseq{11}={pg.pulse('X90m'),pg.pulse('Xm'),pg.pulse('Xm'),pg.pulse('Xm')};
-patseq{12}={pg.pulse('X90m'),pg.pulse('Xm'),pg.pulse('Xm'),pg.pulse('Xm'),pg.pulse('Xm')};
+% +X/Y rotations
+X90p = pg.pulse([direction '90p']);
+Xp   = pg.pulse([direction 'p']);
+patseq{1}={X90p};
+patseq{2}={X90p, Xp};
+patseq{3}={X90p, Xp, Xp};
+patseq{4}={X90p, Xp, Xp, Xp};
+patseq{5}={X90p, Xp, Xp, Xp, Xp};
+patseq{6}={X90p, Xp, Xp, Xp, Xp, Xp};
+patseq{7}={X90p, Xp, Xp, Xp, Xp, Xp, Xp};
+patseq{8}={X90p, Xp, Xp, Xp, Xp, Xp, Xp, Xp};
+patseq{9}={X90p, Xp, Xp, Xp, Xp, Xp, Xp, Xp, Xp};
 
-% +Y rotations
-% QId
-% Y90p Yp
-% Y90p Yp Yp
-% Y90p Yp Yp Yp
-% Y90p Yp Yp Yp Yp
-patseq{13}={pg.pulse('QId')};
-patseq{14}={pg.pulse('Y90p')};
-patseq{15}={pg.pulse('Y90p'),pg.pulse('Yp')};
-patseq{16}={pg.pulse('Y90p'),pg.pulse('Yp'),pg.pulse('Yp')};
-patseq{17}={pg.pulse('Y90p'),pg.pulse('Yp'),pg.pulse('Yp'),pg.pulse('Yp')};
-patseq{18}={pg.pulse('Y90p'),pg.pulse('Yp'),pg.pulse('Yp'),pg.pulse('Yp'),pg.pulse('Yp')};
-
-% -Y rotations
-% QId
-% Y90m Ym
-% Y90m Ym Ym
-% Y90m Ym Ym Ym
-% Y90m Ym Ym Ym Ym
-patseq{19}={pg.pulse('QId')};
-patseq{20}={pg.pulse('Y90m')};
-patseq{21}={pg.pulse('Y90m'),pg.pulse('Ym')};
-patseq{22}={pg.pulse('Y90m'),pg.pulse('Ym'),pg.pulse('Ym')};
-patseq{23}={pg.pulse('Y90m'),pg.pulse('Ym'),pg.pulse('Ym'),pg.pulse('Ym')};
-patseq{24}={pg.pulse('Y90m'),pg.pulse('Ym'),pg.pulse('Ym'),pg.pulse('Ym'),pg.pulse('Ym')};
-
-% just a pi pulse for scaling
-patseq{25}={pg.pulse('Xp')};
+% -X/Y rotations
+X90m = pg.pulse([direction '90m']);
+Xm   = pg.pulse([direction 'm']);
+patseq{10}={X90m};
+patseq{11}={X90m, Xm};
+patseq{12}={X90m, Xm, Xm};
+patseq{13}={X90m, Xm, Xm, Xm};
+patseq{14}={X90m, Xm, Xm, Xm, Xm};
+patseq{15}={X90m, Xm, Xm, Xm, Xm, Xm};
+patseq{16}={X90m, Xm, Xm, Xm, Xm, Xm, Xm};
+patseq{17}={X90m, Xm, Xm, Xm, Xm, Xm, Xm, Xm};
+patseq{18}={X90m, Xm, Xm, Xm, Xm, Xm, Xm, Xm, Xm};
 
 % double every pulse
 nbrPatterns = 2*length(patseq);
@@ -98,47 +81,52 @@ ch1 = zeros(nbrPatterns, cycleLength);
 ch2 = ch1; ch3 = ch1; ch4 = ch1;
 ch1m1 = ch1; ch1m2 = ch1; ch2m1 = ch1; ch2m2 = ch1;
 ch3m1 = ch1; ch3m2 = ch1; ch4m1 = ch1; ch4m2 = ch1;
+chI = ch1; chQ = ch1; chBuffer = ch1;
 
 for kindex = 1:nbrPatterns;
-	[patx paty] = pg.getPatternSeq(patseq{floor((kindex-1)/2)+1}, 1, delayQ2, fixedPt);
-	ch3(kindex, :) = patx + offsetQ1;
-	ch4(kindex, :) = paty + offsetQ1;
-    ch4m1(kindex, :) = pg.bufferPulse(patx, paty, 0, bufferPadding2, bufferReset2, bufferDelay2);
+	[patx paty] = pg.getPatternSeq(patseq{floor((kindex-1)/2)+1}, 1, delay, fixedPt);
+	chI(kindex, :) = patx + offset;
+	chQ(kindex, :) = paty + offset;
+    chBuffer(kindex, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
 % trigger at beginning of measurement pulse
 % measure from (6000:9500)
-measLength = 3500;
+measLength = 3000;
 measSeq = {pg.pulse('M', 'width', measLength)};
-ch1m1 = zeros(nbrPatterns, cycleLength);
-ch1m2 = zeros(nbrPatterns, cycleLength);
 for n = 1:nbrPatterns;
 	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
 	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
 end
 
+% add channel offsets
+ch1 = ch1 + offsets('12');
+ch2 = ch2 + offsets('12');
+ch3 = ch3 + offsets('34');
+ch4 = ch4 + offsets('34');
+
+% map control onto the physical channel
+eval(['ch' num2str(IQchannels{1}) ' = chI;']);
+eval(['ch' num2str(IQchannels{2}) ' = chQ;']);
+eval(['ch' IQchannels{3} ' = chBuffer;']);
+
 if makePlot
-    myn = 20;
+    myn = 18;
     figure
-    plot(ch3(myn,:))
+    plot(ch1(myn,:))
     hold on
-    plot(ch4(myn,:), 'r')
+    plot(ch2(myn,:), 'r')
+    plot(ch3(myn,:), ':')
+    plot(ch4(myn,:), 'r:')
+    plot(5000*ch3m1(myn,:), 'g')
     plot(5000*ch4m1(myn,:), 'k')
-    plot(5000*ch1m1(myn,:),'.')
-    plot(5000*ch1m2(myn,:), 'g')
     grid on
     hold off
 end
 
-% add offsets to unused channels
-ch1 = ch1 + offset;
-ch2 = ch2 + offset;
-%ch3 = ch3 + offset2;
-%ch4 = ch4 + offset2;
-
 % make TekAWG file
-options = struct('m21_high', 2.0, 'm41_high', 2.0);
-TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
-disp('Moving AWG file to destination');
-movefile([temppath basename '.awg'], [pathAWG basename '.awg']);
+% options = struct('m21_high', 2.0, 'm41_high', 2.0);
+% TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
+% disp('Moving AWG file to destination');
+% movefile([temppath basename '.awg'], [pathAWG basename '.awg']);
 end

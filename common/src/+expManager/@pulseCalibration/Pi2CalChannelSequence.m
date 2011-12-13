@@ -82,6 +82,7 @@ ch1 = zeros(nbrPatterns, cycleLength);
 ch2 = ch1; ch3 = ch1; ch4 = ch1;
 ch1m1 = ch1; ch1m2 = ch1; ch2m1 = ch1; ch2m2 = ch1;
 ch3m1 = ch1; ch3m2 = ch1; ch4m1 = ch1; ch4m2 = ch1;
+chI = ch1; chQ = ch1; chBuffer = ch1;
 
 for kindex = 1:nbrPatterns;
 	[patx paty] = pg1.getPatternSeq(patseq{floor((kindex-1)/2)+1}, 1, delay, fixedPt);
@@ -109,7 +110,6 @@ ch4 = ch4 + offsets('34');
 eval(['ch' num2str(IQchannels{1}) ' = chI;']);
 eval(['ch' num2str(IQchannels{2}) ' = chQ;']);
 eval(['ch' IQchannels{3} ' = chBuffer;']);
-
 
 if makePlot
     myn = 18;

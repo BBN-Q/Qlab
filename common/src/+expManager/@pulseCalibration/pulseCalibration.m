@@ -69,8 +69,10 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             
             pulseCal.pulseParams = struct('piAmp', 6000, 'pi2Amp', 3000, 'delta', -0.5, 'T', eye(2,2), 'pulseType', 'drag',...
                                      'i_offset', 0, 'q_offset', 0);
-            pulseCal.Pi2CalChannelSequence('q1', 'X', true);
+            pulseCal.Pi2CalChannelSequence('q1', 'X', false);
             pulseCal.Pi2CalChannelSequence('q2', 'Y', false);
+            pulseCal.PiCalChannelSequence('q1', 'Y', true);
+            pulseCal.PiCalChannelSequence('q2', 'X', true);
         end
     end
     methods
