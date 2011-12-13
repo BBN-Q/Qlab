@@ -36,7 +36,10 @@
 
 classdef pulseCalibration < expManager.homodyneDetection2D
     properties
+        pulseParams
         pulseParamPath
+        mixerCalPath
+        channelMap
     end
     methods (Static)
         %% Class constructor
@@ -46,9 +49,28 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             
             script = mfilename('fullpath');
             sindex = strfind(script, 'common');
-            script = [script(1:sindex) 'experiments/muWaveDetection/'];
+            script = [script(1:sindex-1) 'experiments/muWaveDetection/'];
             
-            obj.pulseParamPath = [script 'cfg/pulseParams.mat'];
+            obj.mixerCalPath = [script 'cfg/mixercal.mat'];
+            obj.pulseParamPath = [script 'cfg/pulseParamBundles.mat'];
+            
+            % to do: load channel mapping from file
+            obj.channelMap = containers.Map();
+            obj.channelMap('q1') = {1,2,'3m1'};
+            obj.channelMap('q2') = {3,4,'4m1'};
+            obj.channelMap('q1q2') = {5,6,'2m1'};
+        end
+        
+        function UnitTest()
+            script = java.io.File(mfilename('fullpath'));
+            path = char(script.getParent());
+            % create object instance
+            pulseCal = expManager.pulseCalibration(path, '', 'unit_test', 1);
+            
+            pulseCal.pulseParams = struct('piAmp', 6000, 'pi2Amp', 3000, 'delta', -0.5, 'T', eye(2,2), 'pulseType', 'drag',...
+                                     'i_offset', 0, 'q_offset', 0);
+            pulseCal.Pi2CalChannelSequence('q1', 'X', true);
+            pulseCal.Pi2CalChannelSequence('q2', 'Y', false);
         end
     end
     methods
