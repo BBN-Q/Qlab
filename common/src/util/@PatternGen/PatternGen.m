@@ -34,7 +34,7 @@ classdef PatternGen < handle
         dPiAmp = 4000;
         dPiOn2Amp = 2000;
         dPiOn4Amp = 1000;
-        dDelta = 0.4;
+        dDelta = -0.5;
         dPulseType = 'gaussian';
         dBuffer = 5;
         dmodFrequency = 0; % SSB modulation frequency (sign matters!!)
@@ -164,6 +164,7 @@ classdef PatternGen < handle
             end
             amp = params.amp;
             fname = params.arbfname;
+            delta = params.delta;
             
             if ~ismember(fname, keys(arbPulses))
                 % need to load the pulse from file
@@ -172,7 +173,7 @@ classdef PatternGen < handle
             end
             pulseData = arbPulses(fname);
             outx = round(amp*pulseData(:,1));
-            outy = round(amp*pulseData(:,2));
+            outy = round(delta*amp*pulseData(:,2));
         end
         
         % pulses defined in external files
@@ -361,11 +362,11 @@ classdef PatternGen < handle
                 % rotate and correct the pulse
                 complexPulse = xpulse +1j*ypulse;
                 timeStep = 1/self.samplingRate;
-                tmpAngles = angle + 2*pi*params.modFrequency*timeStep*(0:(width-1))';
+                tmpAngles = angle - 2*pi*params.modFrequency*timeStep*(0:(width-1))';
                 complexPulse = complexPulse.*exp(1j*tmpAngles);
                 xypairs = self.correctionT*[real(complexPulse) imag(complexPulse)].';
                 xpulse = xypairs(1,:).';
-                ypulse = -xypairs(2,:).'; % fix basis with the transformation Y => -Y
+                ypulse = xypairs(2,:).';
                 
                 if (duration > width)
                     padleft = floor((duration - width)/2);
