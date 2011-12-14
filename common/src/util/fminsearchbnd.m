@@ -1,4 +1,4 @@
-function [x,fval,exitflag,output]=fminsearchbnd3(fun,x0,LB,UB,options,varargin)
+function [x,fval,exitflag,output]=fminsearchbnd(fun,x0,LB,UB,options,varargin)
 % FMINSEARCHBND: FMINSEARCH, but with bound constraints by transformation
 % usage: x=FMINSEARCHBND(fun,x0)
 % usage: x=FMINSEARCHBND(fun,x0,LB)
