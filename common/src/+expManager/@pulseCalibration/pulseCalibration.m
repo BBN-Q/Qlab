@@ -44,6 +44,12 @@ classdef pulseCalibration < expManager.homodyneDetection2D
     methods (Static)
         %% Class constructor
         function obj = pulseCalibration(data_path, cfgFileName, basename, filenumber)
+            if ~exist('filenumber', 'var')
+                filenumber = 1;
+            end
+            if ~exist('basename', 'var')
+                basename = 'pulseCalibration';
+            end
 			% superclass constructor
             obj = obj@expManager.homodyneDetection2D(data_path, cfgFileName, basename, filenumber);
             
@@ -64,19 +70,6 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         % externally defined static methods
         cost = Pi2CostFunction(data);
         cost = PiCostFunction(data);
-        
-        function cost = Xpi2ObjectiveFnc(obj, x0)
-            cost = obj.pi2ObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'X');
-        end
-        function cost = Ypi2ObjectiveFnc(obj, x0)
-            cost = obj.pi2ObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'Y');
-        end
-        function cost = XpiObjectiveFnc(obj, x0)
-            cost = obj.piObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'X');
-        end
-        function cost = YpiObjectiveFnc(obj, x0)
-            cost = obj.piObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'Y');
-        end
         
         function UnitTest()
             script = java.io.File(mfilename('fullpath'));
@@ -110,6 +103,43 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         end
     end
     methods
+        function out = homodyneMeasurement(obj)
+            % homodyneMeasurement calls homodyneDetection2DDo and returns
+            % the amplitude data
+            
+            % create file
+            obj.openDataFile();
+            fprintf(obj.DataFileHandle,'$$$ Beginning of Data\n');
+            obj.homodyneDetection2DDo();
+            % finish and close file
+            fprintf(obj.DataFileHandle,'\n$$$ End of Data\n');
+            fclose(obj.DataFileHandle);
+            data = obj.parseDataFile(false);
+            
+            % delete the file
+            filename = [obj.DataPath '/' obj.DataFileName];
+            delete(filename);
+            
+            % return the amplitude data
+            out = data.abs_Data;
+        end
 
+        function cost = Xpi2ObjectiveFnc(obj, x0)
+            cost = obj.pi2ObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'X');
+        end
+        function cost = Ypi2ObjectiveFnc(obj, x0)
+            cost = obj.pi2ObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'Y');
+        end
+        function cost = XpiObjectiveFnc(obj, x0)
+            cost = obj.piObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'X');
+        end
+        function cost = YpiObjectiveFnc(obj, x0)
+            cost = obj.piObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'Y');
+        end
+        
+        function Init(obj)
+            obj.parseExpcfgFile();
+            Init@super(obj);
+        end
     end
 end

@@ -95,10 +95,9 @@ classdef  expBase < handle
                 errorMsg = 'FileNameNotFound';
                 return
             end
-            % Now we change directories
-            %cd(obj.DataPath);
+            % construct full path
 			fullname = [obj.DataPath '/' obj.DataFileName];
-            % Finally we open up the file with write/create permission
+            % open up the file with write/create permission
             [obj.DataFileHandle errorMsg] = fopen(fullname,'w');
             % If the file was opened sucessfully then errorMsg will be
             % empty.

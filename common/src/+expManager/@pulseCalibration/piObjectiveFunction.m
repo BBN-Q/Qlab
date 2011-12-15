@@ -18,7 +18,7 @@ function cost = piObjectiveFunction(obj, x, qubit, direction)
     obj.Instr.awg.(['chan_' chan]).offset = offset;
     
     % measure
-    data = obj.homodyneDetection2DDo();
+    data = obj.homodyneMeasurement();
     
     % evaluate cost
     cost = obj.PiCostFunction(data);

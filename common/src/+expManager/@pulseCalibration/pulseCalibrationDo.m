@@ -48,8 +48,8 @@ if ExpParams.DoRabiAmp
    filename = obj.rabiAmpChannelSequence(ExpParams.Qubit);
    obj.loadSequence(filename);
    
-   obj.homodyneDetection2DDo();
-   obj.pulseParams.piAmp = obj.analyzeRabiAmp();
+   data = obj.homodyneMeasurement();
+   obj.pulseParams.piAmp = obj.analyzeRabiAmp(data);
    obj.pulseParams.pi2Amp = obj.pulseParams.piAmp/2;
 end
 
@@ -64,10 +64,10 @@ if ExpParams.DoRamsey
     QubitSpec.frequency = freq;
 
     % measure
-    obj.homodyneDetection2DDo();
+    data = obj.homodyneMeasurement();
 
     % analyze
-    detuning = obj.analyzeRamsey();
+    detuning = obj.analyzeRamsey(data);
 
     % adjust drive frequency
     freq = QubitSpec.frequency - detuning;
@@ -80,16 +80,16 @@ if ExpParams.DoPi2Cal
     % Todo: test and adjust these parameters
     options = optimset('TolX', 1e-3, 'TolFun', 1e-2, 'MaxIter', 20, 'Display', 'iter');
     x0 = [obj.pulseParams.pi2Amp, obj.pulseParams.i_offset];
-    lowerBound = [0.5*x0(1) -1];
-    upperBound = [1.5*x0(1) +1];
+    lowerBound = [0.5*x0(1), -1];
+    upperBound = [min(1.5*x0(1), 8192), +1];
     
     [X90Amp, i_offset] = fminsearchbnd(@obj.Xpi2ObjectiveFnc, x0, lowerBound, upperBound, options);
     
     % calibrate amplitude and offset for +/- Y90
     % assume a tighter search range for Y since we have already calibrated X
     x0(1) = [X90Amp, obj.pulseParams.q_offset];
-    lowerBound = [0.75*x0(1) -1];
-    upperBound = [1.25*x0(1) +1];
+    lowerBound = [0.75*x0(1), -1];
+    upperBound = [min(1.25*x0(1), 8192), +1];
     
     [Y90Amp, q_offset] = fminsearchbnd(@obj.Ypi2ObjectiveFnc, x0, lowerBound, upperBound, options);
     
@@ -109,17 +109,17 @@ if ExpParams.DoPiCal
     % calibrate amplitude and offset for +/- X180
     % Todo: test and adjust these parameters
     options = optimset('TolX', 1e-3, 'TolFun', 1e-2, 'MaxIter', 20, 'Display', 'iter');
-    x0 = [obj.pulseParams.pi2Amp, obj.pulseParams.i_offset];
-    lowerBound = [0.5*x0(1) -1];
-    upperBound = [1.5*x0(1) +1];
+    x0 = [obj.pulseParams.piAmp, obj.pulseParams.i_offset];
+    lowerBound = [0.5*x0(1), -1];
+    upperBound = [min(1.5*x0(1), 8192), +1];
     
     [X180Amp, i_offset] = fminsearchbnd(@obj.XpiObjectiveFnc, x0, lowerBound, upperBound, options);
     
     % calibrate amplitude and offset for +/- Y180
     % assume a tighter search range for Y since we have already calibrated X
     x0(1) = [X90Amp, obj.pulseParams.q_offset];
-    lowerBound = [0.75*x0(1) -1];
-    upperBound = [1.25*x0(1) +1];
+    lowerBound = [0.75*x0(1), -1];
+    upperBound = [min(1.25*x0(1), 8192), +1];
     
     [Y180Amp, q_offset] = fminsearchbnd(@obj.YpiObjectiveFnc, x0, lowerBound, upperBound, options);
     
@@ -136,16 +136,14 @@ end
 
 %% DRAG calibration    
 if ExpParams.DoDRAGCal
-    for loop_index = 1:Loop.DRAGCal.steps
-        % generate DRAG calibration sequence
-        filename = obj.DRAGSequence(ExpParams.Qubit);
-        obj.loadSequence(filename);
+    % generate DRAG calibration sequence
+    filename = obj.DRAGSequence(ExpParams.Qubit);
+    obj.loadSequence(filename);
 
-        % measure
-        obj.homodyneDetection2DDo();
-    end
+    % measure
+    data = obj.homodyneMeasurement();
     % analyze
-    obj.pulseParams.delta = obj.analyzeDRAG();
+    obj.pulseParams.delta = obj.analyzeDRAG(data);
 end
 
 % TODO: save updated parameters to file
