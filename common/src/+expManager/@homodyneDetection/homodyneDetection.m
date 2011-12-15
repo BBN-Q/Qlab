@@ -81,7 +81,7 @@ classdef homodyneDetection < expManager.expBase
             % Error checking goes here or in homodyneDetection.init.
             ExpParams = obj.inputStructure.ExpParams;
             if ~isfield(ExpParams, 'digitalHomodyne')
-                ExpParams.digitalHomodyne = struct({'DHmode', 'IFfreq'},{'OFF', 0});
+                ExpParams.digitalHomodyne = struct('DHmode', 'OFF', 'IFfreq', 0);
             end
         end
     end

@@ -98,14 +98,14 @@ classdef homodyneDetection2D < expManager.expBase
             % Error checking goes here or in homodyneDetection.init.
             ExpParams = obj.inputStructure.ExpParams;
             if ~isfield(ExpParams, 'digitalHomodyne')
-                ExpParams.digitalHomodyne = struct({'DHmode', 'IFfreq'},{'OFF', 0});
+                ExpParams.digitalHomodyne = struct('DHmode', 'OFF', 'IFfreq', 0);
             end
             
             %Check whether the AWG file exists before we start things up
-            if(obj.inputStructure.InstrParams.TekAWG.enable)
+            if (isfield(obj.inputStructure.InstrParams, 'TekAWG') && obj.inputStructure.InstrParams.TekAWG.enable)
                 assert(logical(exist(obj.inputStructure.InstrParams.TekAWG.seqfile,'file')), 'Oops! The AWG file for the TekAWG does not exist.')
             end
-            if(obj.inputStructure.InstrParams.BBNAPS.enable)
+            if (isfield(obj.inputStructure.InstrParams, 'BBNAPS') && obj.inputStructure.InstrParams.BBNAPS.enable)
                 assert(logical(exist(obj.inputStructure.InstrParams.BBNAPS.seqfile,'file')), 'Oops! The AWG file for the BBNAWG does not exist.')
             end
             

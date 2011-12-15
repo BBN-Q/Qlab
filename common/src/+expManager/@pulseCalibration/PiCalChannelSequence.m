@@ -1,4 +1,4 @@
-function PiCalChannelSequence(obj, qubit, direction, makePlot)
+function [filename, nbrPatterns] = PiCalChannelSequence(obj, qubit, direction, makePlot)
 
 if ~exist('direction', 'var')
     direction = 'X';
@@ -76,7 +76,7 @@ patseq{19}={X90m, Xm, Xm, Xm, Xm, Xm, Xm, Xm, Xm};
 
 % double every pulse
 nbrPatterns = 2*length(patseq);
-fprintf('Number of sequences: %i\n', nbrPatterns);
+%fprintf('Number of sequences: %i\n', nbrPatterns);
 
 % pre-allocate space
 ch1 = zeros(nbrPatterns, cycleLength);
@@ -127,8 +127,11 @@ if makePlot
 end
 
 % make TekAWG file
-% options = struct('m21_high', 2.0, 'm41_high', 2.0);
-% TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
-% disp('Moving AWG file to destination');
-% movefile([temppath basename '.awg'], [pathAWG basename '.awg']);
+filename{1} = [pathAWG basename '.awg'];
+if ~obj.testMode
+    options = struct('m21_high', 2.0, 'm41_high', 2.0);
+    TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
+    disp('Moving AWG file to destination');
+    movefile([temppath basename '.awg'], [pathAWG basename '.awg']);
+end
 end

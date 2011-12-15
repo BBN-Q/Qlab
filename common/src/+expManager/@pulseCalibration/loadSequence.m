@@ -8,7 +8,7 @@ function loadSequence(obj, paths)
     
     for i = 1:length(paths)
         % load sequence
-        obj.awg(i).seqfile = paths(i);
+        obj.awg(i).seqfile = paths{i};
         % TODO: update other config data
     end
 end

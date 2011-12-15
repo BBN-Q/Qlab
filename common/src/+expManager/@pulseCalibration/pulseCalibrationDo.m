@@ -11,20 +11,7 @@ function [errorMsg] = pulseCalibrationDo(obj)
 %
 % v1.0 Aug 24, 2011 Blake Johnson
 
-ExpParams = obj.inputStructure.ExpParams;
-InstrParams = obj.inputStructure.InstrParams;
-QubitSpec = obj.Instr.(ExpParams.QubitSpec);
-QubitNumStr = ExpParams.Qubit(end-1:end);
-
-% load pulse parameters for the relevant qubit
-load(obj.pulseParamPath, ['piAmp' QubitNumStr], ['pi2Amp' QubitNumStr], ['delta' QubitNumStr], ['T' QubitNumStr]);
-piAmp  = eval(['piAmp' QubitNumStr]);
-pi2Amp = eval(['pi2Amp' QubitNumStr]);
-delta  = eval(['delta' QubitNumSTr]);
-T      = eval(['T' QubitNumStr]);
-
-obj.pulseParams = struct('piAmp', piAmp, 'pi2Amp', pi2Amp, 'delta', delta, 'T', T, 'pulseType', 'drag',...
-    'i_offset', 0, 'q_offset', 0);
+ExpParams = obj.ExpParams;
 
 %% MixerCal
 if ExpParams.DoMixerCal
@@ -38,9 +25,9 @@ if ExpParams.DoMixerCal
     obj.pulseParams.q_offfset = q_offset;
     
     % update channel offsets
-    IQchannels = obj.channelMap(qubit);
-    Instr.awg.(['chan_' num2str(IQchannels(1))]).offset = i_offset;
-    Instr.awg.(['chan_' num2str(IQchannels(2))]).offset = q_offset;
+    IQchannels = obj.channelMap(ExpParams.Qubit);
+    Instr.awg.(['chan_' num2str(IQchannels{1})]).offset = i_offset;
+    Instr.awg.(['chan_' num2str(IQchannels{2})]).offset = q_offset;
 end
 
 %% Rabi
@@ -61,6 +48,7 @@ if ExpParams.DoRamsey
     
     % adjust drive frequency
     freq = QubitSpec.frequency + ExpParams.RamseyDetuning;
+    QubitSpec = obj.Instr.(ExpParams.QubitSpec);
     QubitSpec.frequency = freq;
 
     % measure
@@ -78,20 +66,27 @@ end
 if ExpParams.DoPi2Cal
     % calibrate amplitude and offset for +/- X90
     % Todo: test and adjust these parameters
-    options = optimset('TolX', 1e-3, 'TolFun', 1e-2, 'MaxIter', 20, 'Display', 'iter');
+    options = optimset('TolX', 1e-2, 'TolFun', 1e-3, 'MaxIter', 40, 'Display', 'iter');
     x0 = [obj.pulseParams.pi2Amp, obj.pulseParams.i_offset];
-    lowerBound = [0.5*x0(1), -1];
-    upperBound = [min(1.5*x0(1), 8192), +1];
+    lowerBound = [0.5*x0(1), max(x0(2)-0.05, -0.5)];
+    upperBound = [min(1.5*x0(1), 8192), min(x0(2)+0.05, 0.5)];
     
-    [X90Amp, i_offset] = fminsearchbnd(@obj.Xpi2ObjectiveFnc, x0, lowerBound, upperBound, options);
+    x0 = fminsearchbnd(@obj.Xpi2ObjectiveFnc, x0, lowerBound, upperBound, options);
+    X90Amp = x0(1);
+    i_offset = x0(2);
+    fprintf('Found X90Amp: %.0f\n', X90Amp);
+    fprintf('Found I offset: %.3f\n', i_offset);
     
     % calibrate amplitude and offset for +/- Y90
-    % assume a tighter search range for Y since we have already calibrated X
-    x0(1) = [X90Amp, obj.pulseParams.q_offset];
-    lowerBound = [0.75*x0(1), -1];
-    upperBound = [min(1.25*x0(1), 8192), +1];
+    x0(2) = obj.pulseParams.q_offset;
+    lowerBound = [0.5*x0(1), max(x0(2)-0.05, -0.5)];
+    upperBound = [min(1.5*x0(1), 8192), min(x0(2)+0.05, 0.5)];
     
-    [Y90Amp, q_offset] = fminsearchbnd(@obj.Ypi2ObjectiveFnc, x0, lowerBound, upperBound, options);
+    x0 = fminsearchbnd(@obj.Ypi2ObjectiveFnc, x0, lowerBound, upperBound, options);
+    Y90Amp = x0(1);
+    q_offset = x0(2);
+    fprintf('Found Y90Amp: %.0f\n', Y90Amp);
+    fprintf('Found Q offset: %.3f\n', q_offset);
     
     % update pulseParams
     obj.pulseParams.pi2Amp = Y90Amp;
@@ -108,20 +103,27 @@ end
 if ExpParams.DoPiCal
     % calibrate amplitude and offset for +/- X180
     % Todo: test and adjust these parameters
-    options = optimset('TolX', 1e-3, 'TolFun', 1e-2, 'MaxIter', 20, 'Display', 'iter');
+    options = optimset('TolX', 1e-2, 'TolFun', 1e-3, 'MaxIter', 40, 'Display', 'iter');
     x0 = [obj.pulseParams.piAmp, obj.pulseParams.i_offset];
-    lowerBound = [0.5*x0(1), -1];
-    upperBound = [min(1.5*x0(1), 8192), +1];
+    lowerBound = [0.5*x0(1), max(x0(2)-0.05, -0.5)];
+    upperBound = [min(1.5*x0(1), 8192), min(x0(2)+0.05, 0.5)];
     
-    [X180Amp, i_offset] = fminsearchbnd(@obj.XpiObjectiveFnc, x0, lowerBound, upperBound, options);
+    x0 = fminsearchbnd(@obj.XpiObjectiveFnc, x0, lowerBound, upperBound, options);
+    X180Amp = x0(1);
+    i_offset = x0(2);
+    fprintf('Found X180Amp: %.0f\n', X180Amp);
+    fprintf('Found I offset: %.3f\n', i_offset);
     
     % calibrate amplitude and offset for +/- Y180
-    % assume a tighter search range for Y since we have already calibrated X
-    x0(1) = [X90Amp, obj.pulseParams.q_offset];
-    lowerBound = [0.75*x0(1), -1];
-    upperBound = [min(1.25*x0(1), 8192), +1];
+    x0(2) = obj.pulseParams.q_offset;
+    lowerBound = [0.5*x0(1), max(x0(2)-0.05, -0.5)];
+    upperBound = [min(1.5*x0(1), 8192), min(x0(2)+0.05, 0.5)];
     
-    [Y180Amp, q_offset] = fminsearchbnd(@obj.YpiObjectiveFnc, x0, lowerBound, upperBound, options);
+    x0 = fminsearchbnd(@obj.YpiObjectiveFnc, x0, lowerBound, upperBound, options);
+    Y180Amp = x0(1);
+    q_offset = x0(2);
+    fprintf('Found Y180Amp: %.0f\n', Y180Amp);
+    fprintf('Found Q offset: %.3f\n', q_offset);
     
     % update pulseParams
     obj.pulseParams.piAmp = Y180Amp;

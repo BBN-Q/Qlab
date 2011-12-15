@@ -50,7 +50,7 @@ classdef  expBase < handle
         DataFileHandle
         %HomeDirectory
         DataPath
-        Instr %This field will hold the Instrument objects used in running the experiment
+        Instr = struct()%This field will hold the Instrument objects used in running the experiment
         DataStruct
     end
     methods (Abstract)

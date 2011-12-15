@@ -40,6 +40,8 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         pulseParamPath
         mixerCalPath
         channelMap
+        ExpParams
+        testMode = false;
     end
     methods (Static)
         %% Class constructor
@@ -74,32 +76,51 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         function UnitTest()
             script = java.io.File(mfilename('fullpath'));
             path = char(script.getParent());
-            % create object instance
-            pulseCal = expManager.pulseCalibration(path, '', 'unit_test', 1);
             
-            pulseCal.pulseParams = struct('piAmp', 6000, 'pi2Amp', 3000, 'delta', -0.5, 'T', eye(2,2), 'pulseType', 'drag',...
-                                     'i_offset', 0, 'q_offset', 0);
-            pulseCal.rabiAmpChannelSequence('q1', false);
-            pulseCal.rabiAmpChannelSequence('q2', false);
-            pulseCal.Pi2CalChannelSequence('q1', 'X', false);
-            pulseCal.Pi2CalChannelSequence('q2', 'Y', false);
-            pulseCal.PiCalChannelSequence('q1', 'Y', false);
-            pulseCal.PiCalChannelSequence('q2', 'X', false);
+            % construct minimal cfg file
+            ExpParams = struct();
+            ExpParams.Qubit = 'q1';
+            ExpParams.DoMixerCal = 0;
+            ExpParams.DoRabiAmp = 0;
+            ExpParams.DoRamsey = 0;
+            ExpParams.DoPi2Cal = 1;
+            ExpParams.DoPiCal = 1;
+            ExpParams.DoDRAGCal = 0;
+            
+            cfg = struct('ExpParams', ExpParams, 'SoftwareDevelopmentMode', 1, 'InstrParams', struct());
+            cfg_path = [path '/unit_test.cfg'];
+            writeCfgFromStruct(cfg_path, cfg);
+            
+            % create object instance
+            pulseCal = expManager.pulseCalibration(path, cfg_path, 'unit_test', 1);
+            
+            %pulseCal.pulseParams = struct('piAmp', 6000, 'pi2Amp', 2800, 'delta', -0.5, 'T', eye(2,2), 'pulseType', 'drag',...
+            %                         'i_offset', 0.110, 'q_offset', 0.138);
+            %pulseCal.rabiAmpChannelSequence('q1', false);
+            %pulseCal.rabiAmpChannelSequence('q2', false);
+            %pulseCal.Pi2CalChannelSequence('q1', 'X', false);
+            %pulseCal.Pi2CalChannelSequence('q2', 'Y', false);
+            %pulseCal.PiCalChannelSequence('q1', 'Y', false);
+            %pulseCal.PiCalChannelSequence('q2', 'X', false);
             
             % perfect Pi2Cal data
-            data = [0 0 .5*ones(1,36)];
-            cost = pulseCal.Pi2CostFunction(data);
-            fprintf('Pi2Cost for ''perfect'' data: %f\n', cost);
+            %data = [0 0 .5*ones(1,36)];
+            %cost = pulseCal.Pi2CostFunction(data);
+            %fprintf('Pi2Cost for ''perfect'' data: %f\n', cost);
             
             % data representing amplitude error
-            n = 1:9;
-            data = 0.65 + 0.1*(-1).^n .* n./10;
-            data = data(floor(1:.5:9.5));
-            data = [0.5 0.5 data data];
-            cost = pulseCal.Pi2CostFunction(data);
-            fprintf('Pi2Cost for more realistic data: %f\n', cost);
-            cost = pulseCal.PiCostFunction(data);
-            fprintf('PiCost for more realistic data: %f\n', cost);
+            %n = 1:9;
+            %data = 0.65 + 0.1*(-1).^n .* n./10;
+            %data = data(floor(1:.5:9.5));
+            %data = [0.5 0.5 data data];
+            %cost = pulseCal.Pi2CostFunction(data);
+            %fprintf('Pi2Cost for more realistic data: %f\n', cost);
+            %cost = pulseCal.PiCostFunction(data);
+            %fprintf('PiCost for more realistic data: %f\n', cost);
+            
+            pulseCal.Init();
+            pulseCal.Do();
+            pulseCal.CleanUp();
         end
     end
     methods
@@ -125,21 +146,47 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         end
 
         function cost = Xpi2ObjectiveFnc(obj, x0)
-            cost = obj.pi2ObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'X');
+            cost = obj.pi2ObjectiveFunction(x0, obj.inputStructure.ExpParams.Qubit, 'X');
         end
         function cost = Ypi2ObjectiveFnc(obj, x0)
-            cost = obj.pi2ObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'Y');
+            cost = obj.pi2ObjectiveFunction(x0, obj.inputStructure.ExpParams.Qubit, 'Y');
         end
         function cost = XpiObjectiveFnc(obj, x0)
-            cost = obj.piObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'X');
+            cost = obj.piObjectiveFunction(x0, obj.inputStructure.ExpParams.Qubit, 'X');
         end
         function cost = YpiObjectiveFnc(obj, x0)
-            cost = obj.piObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'Y');
+            cost = obj.piObjectiveFunction(x0, obj.inputStructure.ExpParams.Qubit, 'Y');
         end
         
         function Init(obj)
             obj.parseExpcfgFile();
-            Init@super(obj);
+            obj.ExpParams = obj.inputStructure.ExpParams;
+            if isfield(obj.inputStructure, 'SoftwareDevelopmentMode') && obj.inputStructure.SoftwareDevelopmentMode
+                obj.testMode = true;
+            end
+            Init@expManager.homodyneDetection2D(obj);
+            
+            % load pulse parameters for the relevant qubit
+            load(obj.pulseParamPath, 'piAmps', 'pi2Amps', 'deltas', 'Ts');
+            piAmp  = piAmps(obj.ExpParams.Qubit);
+            pi2Amp = pi2Amps(obj.ExpParams.Qubit);
+            delta  = deltas(obj.ExpParams.Qubit);
+            
+            IQchannels = obj.channelMap(obj.ExpParams.Qubit);
+            IQkey = [num2str(IQchannels{1}) num2str(IQchannels{2})];
+            T      = Ts(IQkey);
+
+            if ~obj.testMode
+                obj.pulseParams = struct('piAmp', piAmp, 'pi2Amp', pi2Amp, 'delta', delta, 'T', T,...
+                    'pulseType', 'drag', 'i_offset', 0, 'q_offset', 0);
+            else
+                obj.pulseParams = struct('piAmp', 6000, 'pi2Amp', 2800, 'delta', -0.5, 'T', eye(2,2),...
+                    'pulseType', 'drag', 'i_offset', 0.110, 'q_offset', 0.138);
+            end
+        end
+        
+        function Do(obj)
+            obj.pulseCalibrationDo();
         end
     end
 end
