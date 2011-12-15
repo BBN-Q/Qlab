@@ -4,7 +4,8 @@ function settings_fcn = acqiris_settings_gui(parent, left, bottom, settings)
 % File name   : acqiris_settings_guid.m       
 % Generated on: 05-Oct-2010 14:11:12          
 % Description :
-%-------------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+%-----
 
 % Copyright 2010 Raytheon BBN Technologies
 %
@@ -465,7 +466,7 @@ settings_fcn = @get_settings;
 
         % order scale choices by the numerical values
         scaleNames = keys(scales);
-        [~, scaleOrder] = sort(cell2mat(values(scales)));
+        [junk, scaleOrder] = sort(cell2mat(values(scales)));
 		handles.vert_scale = uicontrol( ...
 			'Parent', handles.uipanel1, ...
 			'Tag', 'vert_scale', ...
