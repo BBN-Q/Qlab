@@ -65,6 +65,19 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         cost = Pi2CostFunction(data);
         cost = PiCostFunction(data);
         
+        function cost = Xpi2ObjectiveFnc(obj, x0)
+            cost = obj.pi2ObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'X');
+        end
+        function cost = Ypi2ObjectiveFnc(obj, x0)
+            cost = obj.pi2ObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'Y');
+        end
+        function cost = XpiObjectiveFnc(obj, x0)
+            cost = obj.piObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'X');
+        end
+        function cost = YpiObjectiveFnc(obj, x0)
+            cost = obj.piObjectiveFnc(x0, obj.inputStructure.ExpParams.Qubit, 'Y');
+        end
+        
         function UnitTest()
             script = java.io.File(mfilename('fullpath'));
             path = char(script.getParent());
