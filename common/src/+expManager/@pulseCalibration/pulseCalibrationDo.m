@@ -23,19 +23,14 @@ if ExpParams.DoMixerCal
     obj.pulseParams.T = T;
     obj.pulseParams.i_offset = i_offset;
     obj.pulseParams.q_offfset = q_offset;
-    
-    % update channel offsets
-    IQchannels = obj.channelMap(ExpParams.Qubit);
-    Instr.awg.(['chan_' num2str(IQchannels{1})]).offset = i_offset;
-    Instr.awg.(['chan_' num2str(IQchannels{2})]).offset = q_offset;
 end
 
 %% Rabi
 if ExpParams.DoRabiAmp
-   filename = obj.rabiAmpChannelSequence(ExpParams.Qubit);
-   obj.loadSequence(filename);
+   [filenames, nbrSegments] = obj.rabiAmpChannelSequence(ExpParams.Qubit);
+   obj.loadSequence(filenames);
    
-   data = obj.homodyneMeasurement();
+   data = obj.homodyneMeasurement(nbrSegments);
    obj.pulseParams.piAmp = obj.analyzeRabiAmp(data);
    obj.pulseParams.pi2Amp = obj.pulseParams.piAmp/2;
 end
@@ -43,7 +38,7 @@ end
 %% Ramsey
 if ExpParams.DoRamsey
     % generate Ramsey sequence (TODO)
-    filename = obj.RamseyChannelSequence(ExpParams.Qubit);
+    [filenames, nbrSegments] = obj.RamseyChannelSequence(ExpParams.Qubit);
     obj.loadSequence(filename);
     
     % adjust drive frequency
@@ -52,7 +47,7 @@ if ExpParams.DoRamsey
     QubitSpec.frequency = freq;
 
     % measure
-    data = obj.homodyneMeasurement();
+    data = obj.homodyneMeasurement(nbrSegments);
 
     % analyze
     detuning = obj.analyzeRamsey(data);
@@ -139,11 +134,11 @@ end
 %% DRAG calibration    
 if ExpParams.DoDRAGCal
     % generate DRAG calibration sequence
-    filename = obj.DRAGSequence(ExpParams.Qubit);
-    obj.loadSequence(filename);
+    [filenames, nbrSegments] = obj.DRAGSequence(ExpParams.Qubit);
+    obj.loadSequence(filenames);
 
     % measure
-    data = obj.homodyneMeasurement();
+    data = obj.homodyneMeasurement(nbrSegments);
     % analyze
     obj.pulseParams.delta = obj.analyzeDRAG(data);
 end

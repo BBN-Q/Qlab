@@ -6,9 +6,16 @@ function loadSequence(obj, paths)
         error('Must provide a sequence path for each AWG');
     end
     
+    IQchannels = obj.channelMap(obj.ExpParams.Qubit);
+    
     for i = 1:length(paths)
         % load sequence
-        obj.awg(i).seqfile = paths{i};
-        % TODO: update other config data
+        params = obj.awgParams{i};
+        awg = obj.awg{i};
+        params.seqfile = paths{i};
+        params.(['chan_' num2str(IQchannels{1})]).offset = obj.pulseParams.i_offset;
+        params.(['chan_' num2str(IQchannels{2})]).offset = obj.pulseParams.q_offset;
+        awg.setAll(params);
+        obj.awgParams{i} = params;
     end
 end

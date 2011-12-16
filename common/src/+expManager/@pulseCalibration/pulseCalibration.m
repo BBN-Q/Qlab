@@ -41,6 +41,9 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         mixerCalPath
         channelMap
         ExpParams
+        awgParams
+        scope
+        scopeParams
         testMode = false;
     end
     methods (Static)
@@ -84,7 +87,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             ExpParams.DoRabiAmp = 0;
             ExpParams.DoRamsey = 0;
             ExpParams.DoPi2Cal = 1;
-            ExpParams.DoPiCal = 1;
+            ExpParams.DoPiCal = 0;
             ExpParams.DoDRAGCal = 0;
             
             cfg = struct('ExpParams', ExpParams, 'SoftwareDevelopmentMode', 1, 'InstrParams', struct());
@@ -124,11 +127,15 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         end
     end
     methods
-        function out = homodyneMeasurement(obj)
+        function out = homodyneMeasurement(obj, nbrSegments)
             % homodyneMeasurement calls homodyneDetection2DDo and returns
             % the amplitude data
             
-            % create file
+            % set digitizer with the appropriate number of segments
+            obj.scopeParams.averager.nbrSegments = nbrSegments;
+            obj.scope.averager = obj.scopeParams.averager;
+            
+            % create tmp file
             obj.openDataFile();
             fprintf(obj.DataFileHandle,'$$$ Beginning of Data\n');
             obj.homodyneDetection2DDo();
@@ -166,6 +173,24 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             end
             Init@expManager.homodyneDetection2D(obj);
             
+            % find AWG instrument parameters(s) - traverse in the same way
+            % used to find the awg objects, to try to preserve the ordering
+            % at the same time, grab the digitizer object and parameters
+            numAWGs = 0;
+            InstrumentNames = fieldnames(obj.Instr);
+            for Instr_index = 1:numel(InstrumentNames)
+                InstrName = InstrumentNames{Instr_index};
+                DriverName = class(obj.Instr.(InstrName));
+                switch DriverName
+                    case {'deviceDrivers.Tek5014', 'deviceDrivers.APS'}
+                        numAWGs = numAWGs + 1;
+                        obj.awgParams{numAWGs} = obj.inputStructure.InstrParams.(InstrName);
+                    case 'deviceDrivers.AgilentAP120'
+                        obj.scope = obj.Instr.(InstrName);
+                        obj.scopeParams = obj.inputStructure.InstrParams.(InstrName);
+                end
+            end
+            
             % load pulse parameters for the relevant qubit
             load(obj.pulseParamPath, 'piAmps', 'pi2Amps', 'deltas', 'Ts');
             piAmp  = piAmps(obj.ExpParams.Qubit);
@@ -183,6 +208,10 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                 obj.pulseParams = struct('piAmp', 6000, 'pi2Amp', 2800, 'delta', -0.5, 'T', eye(2,2),...
                     'pulseType', 'drag', 'i_offset', 0.110, 'q_offset', 0.138);
             end
+            
+            % create a generic 'time' sweep
+            timeSweep = struct('type', 'sweeps.Time', 'number', 1, 'start', 0, 'step', 1);
+            obj.inputStructure.SweepParams = struct('time', timeSweep);
         end
         
         function Do(obj)

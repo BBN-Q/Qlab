@@ -5,7 +5,7 @@ function cost = piObjectiveFunction(obj, x, qubit, direction)
     obj.pulseParams.piAmp = piAmp;
     [filenames nbrPatterns] = obj.PiCalChannelSequence(obj.ExpParams.Qubit, direction);
     if ~obj.testMode
-        obj.loadSequence(filenames, nbrPatterns);
+        obj.loadSequence(filenames);
     end
     
     % set channel offset
@@ -24,7 +24,7 @@ function cost = piObjectiveFunction(obj, x, qubit, direction)
     
     % measure
     if ~obj.testMode
-        data = obj.homodyneMeasurement();
+        data = obj.homodyneMeasurement(nbrPatterns);
     else
         data = simulateMeasurement(x);
         plot(data);
