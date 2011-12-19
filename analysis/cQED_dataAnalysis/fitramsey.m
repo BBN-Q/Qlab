@@ -48,16 +48,16 @@ toc
 
 figure(h)
 subplot(3,1,2:3)
-plot(xdata,y,'o')
+plot(xdata/1e3,y,'o')
 hold on
-plot(xdata_finer,rabif(beta,xdata_finer),'-r')
-xlabel('Time [ns]')
+plot(xdata_finer/1e3,rabif(beta,xdata_finer),'-r')
+xlabel('Time [\mus]')
 ylabel('<\sigma_z>')
 hold off
 subplot(3,1,1)
-bar(xdata,r)
+bar(xdata/1e3,r)
 axis tight
-xlabel('Time [ns]')
+xlabel('Time [\mus]')
 ylabel('Residuals [V]')
 title(plotTitle)
 
@@ -70,9 +70,9 @@ t2error = (ci(3,2)-ci(3,1))/2;
 detuning = abs(beta(4))/2/pi; % in GHz, assuming time is in ns
 
 % annotate the graph with T_Rabi result
-text(xdata(end-1), max(y), ...
-    sprintf(['T_{2}^{*} = %.0f +/- %.0f ns \n' ...
-        '\\delta/2\\pi = %.2f MHz'], t2, t2error, detuning*1e3), ...
+text(xdata(end-1)/1e3, max(y), ...
+    sprintf(['T_{2}^{*} = %.1f +/- %.1f ns \n' ...
+        '\\delta/2\\pi = %.2f MHz'], t2/1e3, t2error/1e3, detuning*1e3), ...
     'HorizontalAlignment', 'right', 'VerticalAlignment', 'top');
 axis tight
 % if you want confidence bands, use something like:

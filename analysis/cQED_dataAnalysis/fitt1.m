@@ -37,18 +37,18 @@ toc
 figure(h)
 clf
 subplot(3,1,2:3)
-plot(xdata,y,'o')
+plot(xdata/1e3,y,'o')
 hold on
-plot(xdata,t1f(beta,xdata),'-r')
-xlabel('Time [ns]')
+plot(xdata/1e3,t1f(beta,xdata),'-r')
+xlabel('Time [\mus]')
 ylabel('<\sigma_z>')
 hold off
 %plot residuals
 subplot(3,1,1)
-bar(xdata, r)
+bar(xdata/1e3, r)
 axis tight
 ylabel('<\sigma_z>')
-xlabel('Time [ns]')
+xlabel('Time [\mus]')
 title(plotTitle)
 
 t1 = beta(2);
@@ -59,8 +59,8 @@ disp(cov)
 
 % annotate the graph with T_1 result
 subplot(3,1,2:3)
-text(xdata(end-1), max(y), sprintf('T_1 = %.0f +/- %.0f ns', t1, t1error), ...
-    'HorizontalAlignment', 'right');
+text(xdata(end-1)/1e3, 0.9*max(y), sprintf('T_1 = %.1f +/- %.1f ns', t1/1e3, t1error/1e3), ...
+    'HorizontalAlignment', 'right', 'FontSize',12);
 
 % if you want confidence bands, use something like:
 % ci = nlparci(beta,r,j);
