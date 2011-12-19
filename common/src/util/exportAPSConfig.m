@@ -1,6 +1,6 @@
 function exportAPSConfig(path, basename, ch1seq, ch2seq, ch3seq, ch4seq)
     Version = 1.0;
-    useVarients = 1;
+    useVarients = 0; %1
     aps = deviceDrivers.APS();
     
     % construct filename

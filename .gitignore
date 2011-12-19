@@ -1,0 +1,12 @@
+.svn
+*.asv
+*.o
+*.a
+*.log
+.DS_Store*
+Thumbs.db
+data/
+data/*
+cfg/
+cfg/*
+*.cfg

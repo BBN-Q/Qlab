@@ -182,7 +182,7 @@ for loop2_index = 1:Loop.two.steps
             %plot(iavg);
             plot(times, amp);
             xlabel('Time (ns)')
-            ylabel('I Voltage');
+            ylabel('Voltage Amplitdue (V)');
             grid on
             %axis tight
             subplot(2,1,2)
@@ -190,7 +190,7 @@ for loop2_index = 1:Loop.two.steps
             %plot(qavg);
             plot(times, phase);
             xlabel('Time (ns)')
-            ylabel('Q Voltage');
+            ylabel('Voltage Phase (degrees)');
             grid on
             
             masterAWG.stop();
