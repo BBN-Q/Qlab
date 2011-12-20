@@ -75,6 +75,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         % externally defined static methods
         cost = Pi2CostFunction(data);
         cost = PiCostFunction(data);
+        amp  = analyzeRabiAmp(data);
         
         function UnitTest()
             script = java.io.File(mfilename('fullpath'));

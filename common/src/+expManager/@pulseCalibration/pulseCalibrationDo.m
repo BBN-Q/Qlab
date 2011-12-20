@@ -28,7 +28,9 @@ end
 %% Rabi
 if ExpParams.DoRabiAmp
    [filenames, nbrSegments] = obj.rabiAmpChannelSequence(ExpParams.Qubit);
-   obj.loadSequence(filenames);
+   if ~obj.testMode
+       obj.loadSequence(filenames);
+   end
    
    data = obj.homodyneMeasurement(nbrSegments);
    obj.pulseParams.piAmp = obj.analyzeRabiAmp(data);
