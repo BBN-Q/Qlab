@@ -146,7 +146,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             data = obj.parseDataFile(false);
             
             % delete the file
-            filename = [obj.DataPath '/' obj.DataFileName];
+            filename = [obj.DataPath '\' obj.DataFileName];
             delete(filename);
             
             % return the amplitude data
@@ -154,16 +154,16 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         end
 
         function cost = Xpi2ObjectiveFnc(obj, x0)
-            cost = obj.pi2ObjectiveFunction(x0, obj.inputStructure.ExpParams.Qubit, 'X');
+            cost = obj.pi2ObjectiveFunction(x0, obj.ExpParams.Qubit, 'X');
         end
         function cost = Ypi2ObjectiveFnc(obj, x0)
-            cost = obj.pi2ObjectiveFunction(x0, obj.inputStructure.ExpParams.Qubit, 'Y');
+            cost = obj.pi2ObjectiveFunction(x0, obj.ExpParams.Qubit, 'Y');
         end
         function cost = XpiObjectiveFnc(obj, x0)
-            cost = obj.piObjectiveFunction(x0, obj.inputStructure.ExpParams.Qubit, 'X');
+            cost = obj.piObjectiveFunction(x0, obj.ExpParams.Qubit, 'X');
         end
         function cost = YpiObjectiveFnc(obj, x0)
-            cost = obj.piObjectiveFunction(x0, obj.inputStructure.ExpParams.Qubit, 'Y');
+            cost = obj.piObjectiveFunction(x0, obj.ExpParams.Qubit, 'Y');
         end
         
         function Init(obj)
@@ -203,8 +203,11 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             T      = Ts(IQkey);
 
             if ~obj.testMode
+                channelParams = obj.awgParams{1};
+                i_offset = channelParams.(['chan_' num2str(IQchannels{1})]).offset;
+                q_offset = channelParams.(['chan_' num2str(IQchannels{2})]).offset;
                 obj.pulseParams = struct('piAmp', piAmp, 'pi2Amp', pi2Amp, 'delta', delta, 'T', T,...
-                    'pulseType', 'drag', 'i_offset', 0, 'q_offset', 0);
+                    'pulseType', 'drag', 'i_offset', i_offset, 'q_offset', q_offset);
             else
                 obj.pulseParams = struct('piAmp', 6000, 'pi2Amp', 2800, 'delta', -0.5, 'T', eye(2,2),...
                     'pulseType', 'drag', 'i_offset', 0.110, 'q_offset', 0.138);

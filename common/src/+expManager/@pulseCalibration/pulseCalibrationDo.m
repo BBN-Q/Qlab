@@ -16,8 +16,10 @@ ExpParams = obj.ExpParams;
 %% MixerCal
 if ExpParams.DoMixerCal
     % TODO update parameter passing to optimize_mixers
-    QubitNum = double(ExpParams.Qubit(end-1:end));
-    optimize_mixers(QubitNum);
+    QubitNum = str2double(ExpParams.Qubit(end:end));
+    if ~obj.testMode
+        optimize_mixers(QubitNum);
+    end
     % update pulseParams
     load(obj.mixerCalPath, 'i_offset', 'q_offset', 'T');
     obj.pulseParams.T = T;

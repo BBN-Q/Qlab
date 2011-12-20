@@ -2,8 +2,7 @@ function [data, h1, h2] = parseDataFile(obj,makePlot)
 
 filename = [obj.DataPath '/' obj.DataFileName];
 % process header
-obj.inputStructure = parseParamFile(filename,1);
-obj.Instr = obj.inputStructure.InstrParams;
+inputStructure = parseParamFile(filename,1);
 
 % read data
 fid = fopen(filename);
@@ -49,7 +48,7 @@ end
 
 fclose(fid);
 
-data.params = obj.inputStructure;
+data.params = inputStructure;
 data.Data   = Data;
 data.mean_Data = squeeze(abs(mean(data.Data)));
 data.abs_Data = squeeze(abs(data.Data));

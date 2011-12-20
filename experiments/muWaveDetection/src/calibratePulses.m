@@ -8,7 +8,7 @@ script = java.io.File(mfilename('fullpath'));
 path = char(script.getParentFile().getParent());
 cfg_path = [path '/cfg/'];
 
-cfg_name = [cfg_path 'common.cfg'];
+cfg_name = [cfg_path 'TimeDomain.cfg'];
 if exist(cfg_name, 'file')
     commonSettings = parseParamFile(cfg_name);
 else
@@ -18,14 +18,20 @@ end
 % construct minimal cfg file
 ExpParams = struct();
 ExpParams.Qubit = qubit;
-ExpParams.DoMixerCal = 1;
+ExpParams.DoMixerCal = 0;
 ExpParams.DoRabiAmp = 0;
 ExpParams.DoRamsey = 0;
 ExpParams.DoPi2Cal = 1;
 ExpParams.DoPiCal = 0;
 ExpParams.DoDRAGCal = 0;
+ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;
+ExpParams.filter = commonSettings.ExpParams.filter;
+ExpParams.softAvgs = 2;
 
-cfg = struct('ExpParams', ExpParams, 'SoftwareDevelopmentMode', 1, 'InstrParams', commonSettings.InstrParams);
+cfg = struct('ExpParams', ExpParams, ...
+    'SoftwareDevelopmentMode', 0, ...
+    'displayScope', 0, ...
+    'InstrParams', commonSettings.InstrParams);
 cfg_name = [cfg_path 'pulseCalibration.cfg'];
 writeCfgFromStruct(cfg_name, cfg);
 

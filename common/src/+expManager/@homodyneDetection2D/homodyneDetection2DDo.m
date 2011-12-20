@@ -11,7 +11,6 @@ function [errorMsg] = homodyneDetection2DDo(obj)
 % v1.4 12 OCT 2011 Blake Johnson
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-TaskParams = obj.inputStructure.TaskParams;
 ExpParams = obj.inputStructure.ExpParams;
 Instr = obj.Instr;
 fid = obj.DataFileHandle;
@@ -41,6 +40,7 @@ times = Loop.one.plotRange;
 % Loop 2 is what we iterate over
 if isempty(Loop.two)
     Loop.two.steps = 1;
+    setLoop2Params = false;
 else
     setLoop2Params = true;
     if isempty(figureHandle2D), figureHandle2D = figure; end
@@ -235,7 +235,7 @@ for loop2_index = 1:Loop.two.steps
     end
 end
 
-fprintf('\n******END OF EXPERIMENT*****\n\n')
+%fprintf('\n******END OF EXPERIMENT*****\n\n')
 %% Output Data
 
 %% If there's anything thats particular to any device do it here
