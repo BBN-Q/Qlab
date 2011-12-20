@@ -1,6 +1,7 @@
 function cost = pi2ObjectiveFunction(obj, x, qubit, direction)
     pi2Amp = x(1);
     offset = x(2);
+    fprintf('pi2Amp: %.0f, offset: %.3f\n', pi2Amp, offset);
     % create and load sequence
     obj.pulseParams.pi2Amp = pi2Amp;
     [filenames nbrPatterns] = obj.Pi2CalChannelSequence(obj.ExpParams.Qubit, direction);

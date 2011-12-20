@@ -65,10 +65,10 @@ end
 if ExpParams.DoPi2Cal
     % calibrate amplitude and offset for +/- X90
     % Todo: test and adjust these parameters
-    options = optimset('TolX', 1e-2, 'TolFun', 1e-3, 'MaxIter', 40, 'Display', 'iter');
+    options = optimset('TolX', 1e-1, 'TolFun', 1e-3, 'MaxIter', 40, 'Display', 'iter');
     x0 = [obj.pulseParams.pi2Amp, obj.pulseParams.i_offset];
-    lowerBound = [0.5*x0(1), max(x0(2)-0.05, -0.5)];
-    upperBound = [min(1.5*x0(1), 8192), min(x0(2)+0.05, 0.5)];
+    lowerBound = [0.9*x0(1), max(x0(2)-0.025, -0.5)];
+    upperBound = [min(1.1*x0(1), 8192), min(x0(2)+0.025, 0.5)];
     
     x0 = fminsearchbnd(@obj.Xpi2ObjectiveFnc, x0, lowerBound, upperBound, options);
     X90Amp = x0(1);
@@ -78,8 +78,8 @@ if ExpParams.DoPi2Cal
     
     % calibrate amplitude and offset for +/- Y90
     x0(2) = obj.pulseParams.q_offset;
-    lowerBound = [0.5*x0(1), max(x0(2)-0.05, -0.5)];
-    upperBound = [min(1.5*x0(1), 8192), min(x0(2)+0.05, 0.5)];
+    lowerBound = [0.9*x0(1), max(x0(2)-0.025, -0.5)];
+    upperBound = [min(1.1*x0(1), 8192), min(x0(2)+0.025, 0.5)];
     
     x0 = fminsearchbnd(@obj.Ypi2ObjectiveFnc, x0, lowerBound, upperBound, options);
     Y90Amp = x0(1);
@@ -92,7 +92,7 @@ if ExpParams.DoPi2Cal
     obj.pulseParams.i_offset = i_offset;
     obj.pulseParams.q_offset = q_offset;
     % update T matrix with ratio X90Amp/Y90Amp
-    ampFactor = X90Amp/Y90Amp;
+    ampFactor = obj.pulseParams.T(1,1)*X90Amp/Y90Amp;
     theta = atand(obj.pulseParams.T(2,2));
     T = [ampFactor, -ampFactor*tand(theta); 0, secd(theta)]; % check this
     obj.pulseParams.T = T;
@@ -129,7 +129,7 @@ if ExpParams.DoPiCal
     obj.pulseParams.i_offset = i_offset;
     obj.pulseParams.q_offset = q_offset;
     % update T matrix with ratio X180Amp/Y180Amp
-    ampFactor = X180Amp/Y180Amp;
+    ampFactor = obj.pulseParams.T(1,1)*X180Amp/Y180Amp;
     theta = atand(obj.pulseParams.T(2,2));
     T = [ampFactor, -ampFactor*tand(theta); 0, secd(theta)]; % check this
     obj.pulseParams.T = T;
@@ -148,6 +148,7 @@ if ExpParams.DoDRAGCal
 end
 
 % save updated parameters to file
+load(obj.pulseParamPath, 'piAmps', 'pi2Amps', 'deltas', 'Ts');
 piAmps(obj.ExpParams.Qubit)  = obj.pulseParams.piAmp;
 pi2Amps(obj.ExpParams.Qubit) = obj.pulseParams.pi2Amp;
 deltas(obj.ExpParams.Qubit)  = obj.pulseParams.delta;
