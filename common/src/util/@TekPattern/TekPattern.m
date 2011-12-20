@@ -28,19 +28,28 @@ classdef TekPattern < handle
             if ~exist('options', 'var')
                 options = struct();
             end
+            if ~isfield(options, 'verbose')
+                options.verbose = true;
+            end
 			
 			self = TekPattern;
 
 			% pack patterns and markers into 16-bit binary format
-			disp('Packing patterns');
+			if options.verbose
+                disp('Packing patterns');
+            end
 			packedCh1 = self.packPattern(patCh1, m11, m12);
 			packedCh2 = self.packPattern(patCh2, m21, m22);
 			packedCh3 = self.packPattern(patCh3, m31, m32);
 			packedCh4 = self.packPattern(patCh4, m41, m42);
-			disp('Done packing');
+            if options.verbose
+                disp('Done packing');
+            end
 
 			% open file
-			disp('Writing AWG file');
+            if options.verbose
+                disp('Writing AWG file');
+            end
 			fullpath = strcat(path, basename, '.awg');
             if ~exist(path, 'dir')
                 mkdir(path);
