@@ -73,6 +73,8 @@ for i = 1:length(obj.awg)
     awg.stop(); % to sync AWGs with experiment start
 end
 masterAWG = obj.awg{1};
+% make sure master has actually stopped
+masterAWG.operationComplete();
 % start all the slave AWGs
 for i = 2:length(obj.awg)
     awg = obj.awg{i};

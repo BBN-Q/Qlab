@@ -18,7 +18,10 @@ if ExpParams.DoMixerCal
     % TODO update parameter passing to optimize_mixers
     QubitNum = str2double(ExpParams.Qubit(end:end));
     if ~obj.testMode
+        obj.closeInstruments();
         optimize_mixers(QubitNum);
+        obj.openInstruments();
+        obj.initializeInstruments();
     end
     % update pulseParams
     load(obj.mixerCalPath, 'i_offset', 'q_offset', 'T');
@@ -93,8 +96,9 @@ if ExpParams.DoPi2Cal
     obj.pulseParams.q_offset = q_offset;
     % update T matrix with ratio X90Amp/Y90Amp
     ampFactor = obj.pulseParams.T(1,1)*X90Amp/Y90Amp;
-    theta = atand(obj.pulseParams.T(2,2));
-    T = [ampFactor, -ampFactor*tand(theta); 0, secd(theta)]; % check this
+    fprintf('ampFactor: %.3f\n', ampFactor);
+    theta = asec(obj.pulseParams.T(2,2));
+    T = [ampFactor, -ampFactor*tan(theta); 0, sec(theta)];
     obj.pulseParams.T = T;
 end
 
@@ -102,10 +106,10 @@ end
 if ExpParams.DoPiCal
     % calibrate amplitude and offset for +/- X180
     % Todo: test and adjust these parameters
-    options = optimset('TolX', 1e-2, 'TolFun', 1e-3, 'MaxIter', 40, 'Display', 'iter');
+    options = optimset('TolX', 1e-1, 'TolFun', 1e-3, 'MaxIter', 40, 'Display', 'iter');
     x0 = [obj.pulseParams.piAmp, obj.pulseParams.i_offset];
-    lowerBound = [0.5*x0(1), max(x0(2)-0.05, -0.5)];
-    upperBound = [min(1.5*x0(1), 8192), min(x0(2)+0.05, 0.5)];
+    lowerBound = [0.9*x0(1), max(x0(2)-0.025, -0.5)];
+    upperBound = [min(1.1*x0(1), 8192), min(x0(2)+0.025, 0.5)];
     
     x0 = fminsearchbnd(@obj.XpiObjectiveFnc, x0, lowerBound, upperBound, options);
     X180Amp = x0(1);
@@ -115,8 +119,8 @@ if ExpParams.DoPiCal
     
     % calibrate amplitude and offset for +/- Y180
     x0(2) = obj.pulseParams.q_offset;
-    lowerBound = [0.5*x0(1), max(x0(2)-0.05, -0.5)];
-    upperBound = [min(1.5*x0(1), 8192), min(x0(2)+0.05, 0.5)];
+    lowerBound = [0.9*x0(1), max(x0(2)-0.025, -0.5)];
+    upperBound = [min(1.1*x0(1), 8192), min(x0(2)+0.025, 0.5)];
     
     x0 = fminsearchbnd(@obj.YpiObjectiveFnc, x0, lowerBound, upperBound, options);
     Y180Amp = x0(1);
@@ -130,9 +134,10 @@ if ExpParams.DoPiCal
     obj.pulseParams.q_offset = q_offset;
     % update T matrix with ratio X180Amp/Y180Amp
     ampFactor = obj.pulseParams.T(1,1)*X180Amp/Y180Amp;
-    theta = atand(obj.pulseParams.T(2,2));
-    T = [ampFactor, -ampFactor*tand(theta); 0, secd(theta)]; % check this
-    obj.pulseParams.T = T;
+    fprintf('ampFactor: %.3f\n', ampFactor);
+    %theta = asec(obj.pulseParams.T(2,2));
+    %T = [ampFactor, -ampFactor*tan(theta); 0, sec(theta)];
+    %obj.pulseParams.T = T;
 end
 
 %% DRAG calibration    

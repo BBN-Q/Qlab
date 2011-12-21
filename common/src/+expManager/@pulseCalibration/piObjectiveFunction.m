@@ -19,7 +19,8 @@ function cost = piObjectiveFunction(obj, x, qubit, direction)
             error('Unknown direction %s', direction);
     end
     if ~obj.testMode
-        obj.Instr.awg.(['chan_' chan]).offset = offset;
+        awg = obj.awg{1};
+        awg.(['chan_' chan]).offset = offset;
     end
     
     % measure
