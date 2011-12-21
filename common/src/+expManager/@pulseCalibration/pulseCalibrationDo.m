@@ -68,7 +68,7 @@ end
 if ExpParams.DoPi2Cal
     % calibrate amplitude and offset for +/- X90
     % Todo: test and adjust these parameters
-    options = optimset('TolX', 1e-1, 'TolFun', 1e-3, 'MaxIter', 40, 'Display', 'iter');
+    options = optimset('TolX', 0.2, 'TolFun', 1e-2, 'MaxIter', 40, 'Display', 'iter');
     x0 = [obj.pulseParams.pi2Amp, obj.pulseParams.i_offset];
     lowerBound = [0.9*x0(1), max(x0(2)-0.025, -0.5)];
     upperBound = [min(1.1*x0(1), 8192), min(x0(2)+0.025, 0.5)];
@@ -106,38 +106,17 @@ end
 if ExpParams.DoPiCal
     % calibrate amplitude and offset for +/- X180
     % Todo: test and adjust these parameters
-    options = optimset('TolX', 1e-1, 'TolFun', 1e-3, 'MaxIter', 40, 'Display', 'iter');
-    x0 = [obj.pulseParams.piAmp, obj.pulseParams.i_offset];
-    lowerBound = [0.9*x0(1), max(x0(2)-0.025, -0.5)];
-    upperBound = [min(1.1*x0(1), 8192), min(x0(2)+0.025, 0.5)];
+    options = optimset('TolX', 0.2, 'TolFun', 1e-2, 'MaxIter', 40, 'Display', 'iter');
+    x0 = obj.pulseParams.piAmp;
+    lowerBound = 0.9*x0(1);
+    upperBound = min(1.1*x0(1), 8192);
     
     x0 = fminsearchbnd(@obj.XpiObjectiveFnc, x0, lowerBound, upperBound, options);
-    X180Amp = x0(1);
-    i_offset = x0(2);
+    X180Amp = x0;
     fprintf('Found X180Amp: %.0f\n', X180Amp);
-    fprintf('Found I offset: %.3f\n', i_offset);
-    
-    % calibrate amplitude and offset for +/- Y180
-    x0(2) = obj.pulseParams.q_offset;
-    lowerBound = [0.9*x0(1), max(x0(2)-0.025, -0.5)];
-    upperBound = [min(1.1*x0(1), 8192), min(x0(2)+0.025, 0.5)];
-    
-    x0 = fminsearchbnd(@obj.YpiObjectiveFnc, x0, lowerBound, upperBound, options);
-    Y180Amp = x0(1);
-    q_offset = x0(2);
-    fprintf('Found Y180Amp: %.0f\n', Y180Amp);
-    fprintf('Found Q offset: %.3f\n', q_offset);
     
     % update pulseParams
-    obj.pulseParams.piAmp = Y180Amp;
-    obj.pulseParams.i_offset = i_offset;
-    obj.pulseParams.q_offset = q_offset;
-    % update T matrix with ratio X180Amp/Y180Amp
-    ampFactor = obj.pulseParams.T(1,1)*X180Amp/Y180Amp;
-    fprintf('ampFactor: %.3f\n', ampFactor);
-    %theta = asec(obj.pulseParams.T(2,2));
-    %T = [ampFactor, -ampFactor*tan(theta); 0, sec(theta)];
-    %obj.pulseParams.T = T;
+    obj.pulseParams.piAmp = X180Amp;
 end
 
 %% DRAG calibration    

@@ -1,6 +1,6 @@
 function cost = piObjectiveFunction(obj, x, qubit, direction)
-    piAmp = x(1);
-    offset = x(2);
+    piAmp = x;
+    fprintf('piAmp: %.0f\n', piAmp);
     % create and load sequence
     obj.pulseParams.piAmp = piAmp;
     [filenames nbrPatterns] = obj.PiCalChannelSequence(obj.ExpParams.Qubit, direction);
@@ -13,8 +13,10 @@ function cost = piObjectiveFunction(obj, x, qubit, direction)
     switch direction
         case 'X'
             chan = num2str(IQchannels{1});
+            offset = obj.pulseParams.i_offset;
         case 'Y'
             chan = num2str(IQchannels{2});
+            offset = obj.pulseParams.q_offset;
         otherwise
             error('Unknown direction %s', direction);
     end
@@ -34,6 +36,7 @@ function cost = piObjectiveFunction(obj, x, qubit, direction)
     
     % evaluate cost
     cost = obj.PiCostFunction(data);
+    fprintf('Cost: %.4f\n', cost);
 end
 
 function data = simulateMeasurement(x)

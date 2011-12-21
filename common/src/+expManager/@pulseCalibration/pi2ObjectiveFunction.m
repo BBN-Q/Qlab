@@ -35,6 +35,7 @@ function cost = pi2ObjectiveFunction(obj, x, qubit, direction)
     
     % evaluate cost
     cost = obj.Pi2CostFunction(data);
+    fprintf('Cost: %.4f\n', cost);
 end
 
 function data = simulateMeasurement(x)
