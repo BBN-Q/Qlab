@@ -33,6 +33,14 @@ cfg = struct('ExpParams', ExpParams, ...
     'displayScope', 0, ...
     'InstrParams', commonSettings.InstrParams);
 
+ExpParams.DoMixerCal = 1;
+ExpParams.DoRabiAmp = 0;
+ExpParams.DoRamsey = 0;
+ExpParams.DoPi2Cal = 1;
+ExpParams.DoPiCal = 0;
+ExpParams.DoDRAGCal = 0;
+
+cfg = struct('ExpParams', ExpParams, 'SoftwareDevelopmentMode', 1, 'InstrParams', commonSettings.InstrParams);
 cfg_name = [cfg_path 'pulseCalibration.cfg'];
 writeCfgFromStruct(cfg_name, cfg);
 
