@@ -17,8 +17,8 @@ IQkey = [num2str(IQchannels{1}) num2str(IQchannels{2})];
 
 fixedPt = 6000;
 cycleLength = 10000;
-numsteps = 41;
-stepsize = 200;
+numsteps = 81;
+stepsize = 100;
 
 nbrPatterns = numsteps;
 

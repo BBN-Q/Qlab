@@ -107,6 +107,13 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             %pulseCal.PiCalChannelSequence('q1', 'Y', false);
             %pulseCal.PiCalChannelSequence('q2', 'X', false);
             
+            % rabi Amp data
+            %xpts = 0:100:80*100;
+            %piAmp = 6200;
+            %data = 0.5 - 0.1 * cos(2*pi*xpts/(2*piAmp));
+            %piAmpGuess = pulseCal.analyzeRabiAmp(data);
+            %fprintf('Initial guess for piAmp: %.1f\n', piAmpGuess);
+            
             % perfect Pi2Cal data
             %data = [0 0 .5*ones(1,36)];
             %cost = pulseCal.Pi2CostFunction(data);
