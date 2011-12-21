@@ -217,7 +217,7 @@ set(mainWindow, 'Visible', 'on');
         settings.SweepParams.time = get_time_settings();
         settings.SweepParams.TekCh = get_tekChannel_settings();
         settings.SweepParams.CrossDriveTuneUp = struct('type', 'sweeps.CrossDriveTuneUp');
-        settings.SweepParams.Repeat = struct('type', 'sweeps.Repeat', 'stop', 1000);
+        settings.SweepParams.Repeat = struct('type', 'sweeps.Repeat', 'stop', 20);
 		% add 'nothing' sweep
 		settings.SweepParams.nothing = struct('type', 'sweeps.Nothing');
 		

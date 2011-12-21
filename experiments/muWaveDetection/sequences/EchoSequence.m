@@ -12,8 +12,8 @@ temppath = [char(script.getParent()) '\'];
 path = 'U:\AWG\Echo\';
 basename = 'Echo';
 
-fixedPt = 16000;
-cycleLength = 20000;
+fixedPt = 60000;
+cycleLength = 64000;
 
 % load config parameters from file
 parent_path = char(script.getParentFile.getParent());
@@ -22,8 +22,8 @@ load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bu
 
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'correctionT', T, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
-numsteps = 200;
-stepsize = 24;
+numsteps = 160;
+stepsize = 180;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 anglepts = 0:pi/8:(numsteps-1)*pi/8;
 patseq = {...

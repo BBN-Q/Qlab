@@ -12,8 +12,8 @@ temppath = [char(script.getParent()) '\'];
 path = 'U:\AWG\T1\';
 basename = 'T1';
 
-fixedPt = 16000;
-cycleLength = 20000;
+fixedPt = 40000;
+cycleLength = 44000;
 
 % load config parameters from file
 parent_path = char(script.getParentFile.getParent());
@@ -22,8 +22,8 @@ load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bu
 
 pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'correctionT', T, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
 
-numsteps = 300; %250
-stepsize = 48; %24
+numsteps = 160 ; %250
+stepsize = 240; %24
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {...
     pg.pulse('Xp'), ...
