@@ -40,6 +40,7 @@ if ExpParams.DoRabiAmp
    data = obj.homodyneMeasurement(nbrSegments);
    obj.pulseParams.piAmp = obj.analyzeRabiAmp(data);
    obj.pulseParams.pi2Amp = obj.pulseParams.piAmp/2;
+   fprintf('Initial guess for X180Amp: %.0f\n', obj.pulseParams.piAmp);
 end
 
 %% Ramsey
@@ -91,7 +92,7 @@ if ExpParams.DoPi2Cal
     fprintf('Found Q offset: %.3f\n', q_offset);
     
     % update pulseParams
-    obj.pulseParams.pi2Amp = int32(Y90Amp);
+    obj.pulseParams.pi2Amp = Y90Amp;
     obj.pulseParams.i_offset = i_offset;
     obj.pulseParams.q_offset = q_offset;
     % update T matrix with ratio X90Amp/Y90Amp
@@ -116,7 +117,7 @@ if ExpParams.DoPiCal
     fprintf('Found X180Amp: %.0f\n', X180Amp);
     
     % update pulseParams
-    obj.pulseParams.piAmp = int32(X180Amp);
+    obj.pulseParams.piAmp = X180Amp;
 end
 
 %% DRAG calibration    

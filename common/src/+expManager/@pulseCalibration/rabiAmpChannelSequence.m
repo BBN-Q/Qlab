@@ -9,7 +9,7 @@ addpath(path,'-END');
 addpath([path '/util/'],'-END');
 
 temppath = [char(script.getParent()) '\'];
-path = 'U:\AWG\Rabi\';
+pathAWG = 'U:\AWG\Rabi\';
 basename = 'RabiChannel';
 
 IQchannels = obj.channelMap(qubit);
