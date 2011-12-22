@@ -37,6 +37,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
     %   Detailed explanation goes here
     properties
         library_path = './lib/';
+        library_name = 'libaps';
         device_id = 0;
         num_devices;
         message_manager =[];
@@ -48,6 +49,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         mock_aps = 0;
 
+        % temporary boolean to enable use of c waveforms instead of
+        % APSWaveform
+        use_c_waveforms = false; 
+        
         num_channels = 4;
         chan_1;
         chan_2;
@@ -119,7 +124,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             d.load_library();
             
             buffer = libpointer('stringPtr','                            ');
-            calllib('libaps','APS_ReadLibraryVersion', buffer,length(buffer.Value));
+            calllib(d.library_name,'APS_ReadLibraryVersion', buffer,length(buffer.Value));
             d.log(sprintf('Loaded %s', buffer.Value));
             
             % build path for bitfiles
@@ -169,7 +174,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function load_library(d)
-            if (ispc())
+            if strcmp(computer,'PCWIN64')
+                libfname = 'libaps64.dll';
+                d.library_name = 'libaps64';
+            elseif (ispc())
                 libfname = 'libaps.dll';
             elseif (ismac())
                 libfname = 'libaps.dylib';
@@ -182,7 +190,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             script = java.io.File(script);
             path = char(script.getParent());
             d.library_path = [path filesep 'lib' filesep];
-            if ~libisloaded('libaps')
+            if ~libisloaded(d.library_name)
                 [notfound warnings] = loadlibrary([d.library_path libfname], ...
                     [d.library_path 'libaps.h']);
             end
@@ -196,7 +204,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % Library may not be opened if a stale object is left in
             % memory by matlab. So we reopen on if need be.
             aps.load_library()
-            aps.num_devices = calllib('libaps','APS_NumDevices');
+            aps.num_devices = calllib(aps.library_name,'APS_NumDevices');
             
             if aps.mock_aps && aps.num_devices == 0
                 aps.num_devices = 1;
@@ -266,7 +274,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 force = 0;
             end
             
-            val = calllib('libaps','APS_Open' ,aps.device_id, force);
+            val = calllib(aps.library_name,'APS_Open' ,aps.device_id, force);
             if (val == 0)
                 aps.log(sprintf('APS USB Connection Opened'));
                 aps.is_open = 1;
@@ -286,7 +294,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 aps.close()
             end
             
-            val = calllib('libaps','APS_OpenBySerialNum' ,serialNum);
+            val = calllib(aps.library_name,'APS_OpenBySerialNum' ,serialNum);
             if (val >= 0)
                 aps.log(sprintf('APS USB Connection Opened'));
                 aps.is_open = 1;
@@ -304,7 +312,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function close(aps)
             try
-                val = calllib('libaps','APS_Close',aps.device_id);
+                val = calllib(aps.library_name,'APS_Close',aps.device_id);
             catch
                 val = 0;
             end
@@ -351,7 +359,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                  val = aps.ELL_VERSION;
                  return
             end
-            val = calllib('libaps','APS_ReadBitFileVersion', aps.device_id);
+            val = calllib(aps.library_name,'APS_ReadBitFileVersion', aps.device_id);
             aps.bit_file_version = val;
             if val >= aps.ELL_VERSION
                 aps.max_waveform_points = aps.ELL_MAX_WAVFORM;
@@ -362,7 +370,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function isr = isRunning(aps)
             isr = false;
             if aps.is_open
-                val = calllib('libaps','APS_IsRunning',aps.device_id);
+                val = calllib(aps.library_name,'APS_IsRunning',aps.device_id);
                 if val > 0
                     isr = true;
                 end
@@ -376,13 +384,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function programFPGA(aps, data, bytecount,sel)
+        function val = programFPGA(aps, data, bytecount,sel)
             if ~(aps.is_open)
                 warning('APS:ProgramFPGA','APS is not open');
                 return
             end
             aps.log('Programming FPGA ');
-            val = calllib('libaps','APS_ProgramFpga',aps.device_id,data, bytecount,sel);
+            val = calllib(aps.library_name,'APS_ProgramFpga',aps.device_id,data, bytecount,sel);
             if (val < 0)
                 errordlg(sprintf('APS_ProgramFPGA returned an error code of: %i\n', val), ...
                     'Programming Error');
@@ -391,7 +399,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function loadBitFile(aps,filename)
+        function val = loadBitFile(aps,filename)
             
             if ~exist('filename','var')
                 filename = [aps.bit_file_path aps.bit_file];
@@ -419,7 +427,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             [DataVec, DataCount] = fread(DataFileID, inf, 'uint8=>uint8');
             aps.log(sprintf('Read %i bytes.', DataCount));
             
-            aps.programFPGA(DataVec, DataCount,Sel);
+            val = aps.programFPGA(DataVec, DataCount,Sel);
             fclose(DataFileID);
         end
         
@@ -461,13 +469,38 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             
             aps.log(sprintf('Loading Waveform length: %i into DAC%i ', length(waveform),id));
-            val = calllib('libaps','APS_LoadWaveform', aps.device_id,waveform,length(waveform),offset, id, validate, useSlowWrite);
+            val = calllib(aps.library_name,'APS_LoadWaveform', aps.device_id,waveform,length(waveform),offset, id, validate, useSlowWrite);
             if (val < 0)
                 errordlg(sprintf('APS_LoadWaveform returned an error code of: %i\n', val), ...
                     'Programming Error');
             end
             aps.log('Done');
         end
+        
+        function storeAPSWaveform(aps, waveform, dac)
+            if ~strcmp(class(waveform), 'APSWaveform')
+                error('APS:storeAPSWaveform:params', 'waveform must be of class APSWaveform')
+            end
+                
+            % store waveform data
+            
+            val = calllib(aps.library_name,'APS_SetWaveform', aps.device_id, dac, ...
+                waveform.data, length(waveform));
+            if (val < 0), error('APS:storeAPSWaveform:set', 'error in set waveform'),end;
+           
+            % set offset
+            
+            val = calllib(aps.library_name,'APS_SetWaveformOffset', aps.device_id, dac, ...
+                waveform.offset);
+            
+            % set scale
+            
+            val = calllib(aps.library_name,'APS_SetWaveformOffset', aps.device_id, dac, ...
+                waveform.scale_factor);
+            
+        end
+        
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function loadLinkList(aps,id,offsets,counts, ll_len)
             trigger = [];
@@ -488,7 +521,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             
             aps.log(sprintf('Loading Link List length: %i into DAC%i bank %i ', ll_len,id, bank));
-            val = calllib('libaps','APS_LoadLinkList',aps.device_id, offsets,counts,trigger,repeat,ll_len,id,bank, validate);
+            val = calllib(aps.library_name,'APS_LoadLinkList',aps.device_id, offsets,counts,trigger,repeat,ll_len,id,bank, validate);
             if (val < 0)
                 errordlg(sprintf('APS_LoadLinkList returned an error code of: %i\n', val), ...
                     'Programming Error');
@@ -605,13 +638,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         
             switch size(varargin,2)
                 case 0
-                    val = calllib('libaps',func,aps.device_id);
+                    val = calllib(aps.library_name,func,aps.device_id);
                 case 1
-                    val = calllib('libaps',func,aps.device_id, varargin{1});
+                    val = calllib(aps.library_name,func,aps.device_id, varargin{1});
                 case 2
-                    val = calllib('libaps',func,aps.device_id, varargin{1}, varargin{2});
+                    val = calllib(aps.library_name,func,aps.device_id, varargin{1}, varargin{2});
                 case 3
-                    val = calllib('libaps',func,aps.device_id, varargin{1}, varargin{2}, varargin{3});
+                    val = calllib(aps.library_name,func,aps.device_id, varargin{1}, varargin{2}, varargin{3});
                 otherwise
                     error('More than 3 varargin arguments to librarycall are not supported\n');
             end
@@ -1079,9 +1112,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 miniLinkRepeat = 1;
             end
             
+
             wf = APSWaveform();
             wf.data = waveformLibrary.waveforms;
-            
+
             function [bank, idx] = allocateBank()
                 bank.offset = zeros([1,aps.max_ll_length],'uint16');
                 bank.count = zeros([1,aps.max_ll_length],'uint16');
@@ -1338,6 +1372,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function wf = getNewWaveform()
             % Utility function to get a APS wavform object from APS Driver
+            
+            % TODO: wrap this with the c library
             try
                 wf = APSWaveform();
             catch
@@ -1395,6 +1431,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.verbose = 1;
             apsId = 0;
             
+            fprintf('Openning Device: %i\n', apsId);
             aps.open(apsId);
             
             if (~aps.is_open)
@@ -1405,10 +1442,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 end
             end
             
+            fprintf('Reading Bitfiled Version: \n');
+            
             ver = aps.readBitFileVersion();
             fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
             if ver ~= aps.expected_bit_file_ver
-                aps.loadBitFile();
+                val = aps.loadBitFile();
                 ver = aps.readBitFileVersion();
                 fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
             end
