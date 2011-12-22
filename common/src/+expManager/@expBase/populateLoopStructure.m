@@ -38,8 +38,13 @@ function Loop = populateLoopStructure(obj, sweepPtsOnly)
     for i_loop_cell = fieldnames(Loop)'
         i_loop_str = cell2mat(i_loop_cell);
         if ~isempty(Loop.(i_loop_str))
-            Loop.(i_loop_str).sweep = feval(Loop.(i_loop_str).type, ...
-                Loop.(i_loop_str), obj.Instr, obj.inputStructure.ExpParams, sweepPtsOnly);
+            if sweepPtsOnly
+                Loop.(i_loop_str).sweep = feval(Loop.(i_loop_str).type, ...
+                    Loop.(i_loop_str), obj.inputStructure.InstrParams, obj.inputStructure.ExpParams, sweepPtsOnly);
+            else
+                Loop.(i_loop_str).sweep = feval(Loop.(i_loop_str).type, ...
+                    Loop.(i_loop_str), obj.Instr, obj.inputStructure.ExpParams, sweepPtsOnly);
+            end
             Loop.(i_loop_str).steps = length(Loop.(i_loop_str).sweep.points);
             Loop.(i_loop_str).plotRange = Loop.(i_loop_str).sweep.points;
         end
