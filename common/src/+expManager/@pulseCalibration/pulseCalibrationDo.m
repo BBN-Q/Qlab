@@ -69,10 +69,10 @@ end
 if ExpParams.DoPi2Cal
     % calibrate amplitude and offset for +/- X90
     x0 = [obj.pulseParams.pi2Amp, obj.pulseParams.i_offset];
-    % set options for Gauss-Newton method
-    %options = optimset('TolX', 2e-4, 'TolFun', 1e-4, 'Jacobian', 'on', 'LargeScale', 'off', 'LevenbergMarquardt', 'off', 'Display', 'final');
-    % options for Levenberg-Marquadt
-    options = optimset('TolX', 5e-4, 'TolFun', 1e-4, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'Display', 'final');
+
+    % options for Levenberg-Marquardt (seed small lambda to make it more
+    % like Gauss-Newton)
+    options = optimset('TolX', 5e-4, 'TolFun', 1e-4, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
     
     x0 = lsqnonlin(@obj.Xpi2ObjectiveFnc,x0,[],[],options);
     X90Amp = x0(1);
@@ -108,8 +108,8 @@ if ExpParams.DoPiCal
     % calibrate amplitude and offset for +/- X180
     x0 = [obj.pulseParams.piAmp, obj.pulseParams.i_offset];
     
-    % options for Levenberg-Marquadt
-    options = optimset('TolX', 5e-4, 'TolFun', 1e-4, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'Display', 'final');
+    % options for Levenberg-Marquardt
+    options = optimset('TolX', 5e-4, 'TolFun', 1e-4, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
     
     x0 = lsqnonlin(@obj.XpiObjectiveFnc,x0,[],[],options);
     X180Amp = x0(1);
