@@ -1,4 +1,4 @@
-function cost = pi2ObjectiveFunction(obj, x, qubit, direction)
+function [cost, J] = pi2ObjectiveFunction(obj, x, qubit, direction)
     pi2Amp = x(1);
     offset = x(2);
     fprintf('pi2Amp: %.0f, offset: %.3f\n', pi2Amp, offset);
@@ -30,16 +30,17 @@ function cost = pi2ObjectiveFunction(obj, x, qubit, direction)
     else
         data = simulateMeasurement(x);
         plot(data);
+        ylim([.49 .81])
         pause(.1);
     end
     
     % evaluate cost
-    cost = obj.Pi2CostFunction(data);
-    fprintf('Cost: %.4f\n', cost);
+    [cost, J] = obj.Pi2CostFunction(data);
+    fprintf('Cost: %.4f, Jacobian: (%.4f, %.4f)\n', cost, J(1), J(2));
 end
 
 function data = simulateMeasurement(x)
-    idealAmp = 2500;
+    idealAmp = 3400;
     idealOffset = .123;
     
     amp = x(1);
@@ -50,11 +51,13 @@ function data = simulateMeasurement(x)
     offsetError = off2Amp*(offset - idealOffset)/idealAmp;
     ampError = (amp - idealAmp)/idealAmp + offsetError;
     ampError2 = (amp - idealAmp)/idealAmp - offsetError;
+    angleError = ampError*pi/2;
+    angleError2 = ampError2*pi/2;
     
     % data representing amplitude error
     n = 1:9;
-    data = 0.65 + 0.15*(-1).^n .* sin(n * ampError);
-    data2 = 0.65 + 0.15*(-1).^n .* sin(n * ampError2);
+    data = 0.65 + 0.15*(-1).^n .* sin((2*n-1) * angleError);
+    data2 = 0.65 + 0.15*(-1).^n .* sin((2*n-1) * angleError2);
     data = data(floor(1:.5:9.5));
     data2 = data2(floor(1:.5:9.5));
     data = [0.5 0.5 data data2];

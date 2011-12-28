@@ -69,12 +69,15 @@ end
 if ExpParams.DoPi2Cal
     % calibrate amplitude and offset for +/- X90
     % Todo: test and adjust these parameters
-    options = optimset('TolX', 0.2, 'TolFun', 1e-2, 'MaxIter', 40, 'Display', 'iter');
+    %options = optimset('TolX', 0.2, 'TolFun', 1e-2, 'MaxIter', 40, 'Display', 'iter');
     x0 = [obj.pulseParams.pi2Amp, obj.pulseParams.i_offset];
-    lowerBound = [0.9*x0(1), max(x0(2)-0.025, -0.5)];
-    upperBound = [min(1.1*x0(1), 8192), min(x0(2)+0.025, 0.5)];
+    %lowerBound = [0.9*x0(1), max(x0(2)-0.025, -0.5)];
+    %upperBound = [min(1.1*x0(1), 8192), min(x0(2)+0.025, 0.5)];
+    % set options for Gauss-Newton method
+    options = optimset('TolX', 1e-4, 'TolFun', 1e-4, 'Jacobian', 'on', 'LargeScale', 'off', 'LevenbergMarquardt', 'off', 'Display', 'final');
     
-    x0 = fminsearchbnd(@obj.Xpi2ObjectiveFnc, x0, lowerBound, upperBound, options);
+    %x0 = fminsearchbnd(@obj.Xpi2ObjectiveFnc, x0, lowerBound, upperBound, options);
+    x0 = lsqnonlin(@obj.Xpi2ObjectiveFnc,x0,[],[],options);
     X90Amp = x0(1);
     i_offset = x0(2);
     fprintf('Found X90Amp: %.0f\n', X90Amp);
@@ -85,9 +88,11 @@ if ExpParams.DoPi2Cal
     lowerBound = [0.9*x0(1), max(x0(2)-0.025, -0.5)];
     upperBound = [min(1.1*x0(1), 8192), min(x0(2)+0.025, 0.5)];
     
-    x0 = fminsearchbnd(@obj.Ypi2ObjectiveFnc, x0, lowerBound, upperBound, options);
-    Y90Amp = x0(1);
-    q_offset = x0(2);
+    %x0 = fminsearchbnd(@obj.Ypi2ObjectiveFnc, x0, lowerBound, upperBound, options);
+    %Y90Amp = x0(1);
+    %q_offset = x0(2);
+    Y90Amp = X90Amp;
+    q_offset = i_offset;
     fprintf('Found Y90Amp: %.0f\n', Y90Amp);
     fprintf('Found Q offset: %.3f\n', q_offset);
     

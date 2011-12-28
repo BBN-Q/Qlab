@@ -73,7 +73,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         end
         
         % externally defined static methods
-        cost = Pi2CostFunction(data);
+        [cost, J] = Pi2CostFunction(data);
         cost = PiCostFunction(data);
         amp  = analyzeRabiAmp(data);
         
@@ -115,17 +115,17 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             %fprintf('Initial guess for piAmp: %.1f\n', piAmpGuess);
             
             % perfect Pi2Cal data
-            %data = [0 0 .5*ones(1,36)];
-            %cost = pulseCal.Pi2CostFunction(data);
-            %fprintf('Pi2Cost for ''perfect'' data: %f\n', cost);
+            data = [0 0 .5*ones(1,36)];
+            [cost, J] = pulseCal.Pi2CostFunction(data);
+            fprintf('Pi2Cost for ''perfect'' data. Cost: %.4f, Jacobian: (%.4f, %.4f)\n', cost, J(1), J(2));
             
             % data representing amplitude error
-            %n = 1:9;
-            %data = 0.65 + 0.1*(-1).^n .* n./10;
-            %data = data(floor(1:.5:9.5));
-            %data = [0.5 0.5 data data];
-            %cost = pulseCal.Pi2CostFunction(data);
-            %fprintf('Pi2Cost for more realistic data: %f\n', cost);
+            n = 1:9;
+            data = 0.65 + 0.1*(-1).^n .* n./10;
+            data = data(floor(1:.5:9.5));
+            data = [0.5 0.5 data data];
+            [cost, J] = pulseCal.Pi2CostFunction(data);
+            fprintf('Pi2Cost for more realistic data. Cost: %.4f, Jacobian: (%.4f, %.4f)\n', cost, J(1), J(2));
             %cost = pulseCal.PiCostFunction(data);
             %fprintf('PiCost for more realistic data: %f\n', cost);
             
@@ -160,8 +160,11 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             out = data.abs_Data;
         end
 
-        function cost = Xpi2ObjectiveFnc(obj, x0)
-            cost = obj.pi2ObjectiveFunction(x0, obj.ExpParams.Qubit, 'X');
+        function [cost, J] = Xpi2ObjectiveFnc(obj, x0)
+            [cost, Jtmp] = obj.pi2ObjectiveFunction(x0, obj.ExpParams.Qubit, 'X');
+            if nargout > 1
+                J = Jtmp;
+            end
         end
         function cost = Ypi2ObjectiveFnc(obj, x0)
             cost = obj.pi2ObjectiveFunction(x0, obj.ExpParams.Qubit, 'Y');
@@ -216,8 +219,8 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                 obj.pulseParams = struct('piAmp', piAmp, 'pi2Amp', pi2Amp, 'delta', delta, 'T', T,...
                     'pulseType', 'drag', 'i_offset', i_offset, 'q_offset', q_offset);
             else
-                obj.pulseParams = struct('piAmp', 6000, 'pi2Amp', 2800, 'delta', -0.5, 'T', eye(2,2),...
-                    'pulseType', 'drag', 'i_offset', 0.110, 'q_offset', 0.138);
+                obj.pulseParams = struct('piAmp', 6000, 'pi2Amp', 3280, 'delta', -0.5, 'T', eye(2,2),...
+                    'pulseType', 'drag', 'i_offset', 0.119, 'q_offset', 0.130);
             end
             
             % create a generic 'time' sweep
