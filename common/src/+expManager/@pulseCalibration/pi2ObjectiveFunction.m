@@ -35,8 +35,12 @@ function [cost, J] = pi2ObjectiveFunction(obj, x, qubit, direction)
     end
     
     % evaluate cost
-    [cost, J] = obj.Pi2CostFunction(data);
-    fprintf('Cost: %.4f, Jacobian: (%.4f, %.4f)\n', cost, J(1), J(2));
+    [cost, J] = obj.RepPulseCostFunction(data, pi/2);
+    % scale J rows by amplitude and offset->amplitude conversion factor
+    J(:,1) = J(:,1)/pi2Amp;
+    offset2amp = 8192/2.0; % replace 2.0 by the max output voltage of the AWG
+    J(:,2) = J(:,2)*offset2amp/pi2Amp;
+    fprintf('Cost: %.4f\n', sum(cost.^2/length(cost)));
 end
 
 function data = simulateMeasurement(x)
@@ -46,18 +50,19 @@ function data = simulateMeasurement(x)
     amp = x(1);
     offset = x(2);
     
-    % amp = 8192 <=> offset .5
-    off2Amp = 16000;
-    offsetError = off2Amp*(offset - idealOffset)/idealAmp;
-    ampError = (amp - idealAmp)/idealAmp + offsetError;
-    ampError2 = (amp - idealAmp)/idealAmp - offsetError;
+    % amp = 8192 <=> offset 2.0
+    off2Amp = 8192/2.0;
+    offsetError = off2Amp*(offset - idealOffset);
+    ampError = (amp + offsetError - idealAmp)/idealAmp;
+    ampError2 = (amp - offsetError - idealAmp)/idealAmp;
     angleError = ampError*pi/2;
     angleError2 = ampError2*pi/2;
     
     % data representing amplitude error
     n = 1:9;
-    data = 0.65 + 0.15*(-1).^n .* sin((2*n-1) * angleError);
-    data2 = 0.65 + 0.15*(-1).^n .* sin((2*n-1) * angleError2);
+    data = 0.65 + 0.15*(-1).^(n+1) .* sin((2*n-1) * angleError);
+    data2 = 0.65 + 0.15*(-1).^(n+1) .* sin((2*n-1) * angleError2);
+    % double every point
     data = data(floor(1:.5:9.5));
     data2 = data2(floor(1:.5:9.5));
     data = [0.5 0.5 data data2];

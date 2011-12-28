@@ -73,8 +73,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         end
         
         % externally defined static methods
-        [cost, J] = Pi2CostFunction(data);
-        cost = PiCostFunction(data);
+        [cost, J] = RepPulseCostFunction(data, angle);
         amp  = analyzeRabiAmp(data);
         
         function UnitTest()
@@ -88,7 +87,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             ExpParams.DoRabiAmp = 0;
             ExpParams.DoRamsey = 0;
             ExpParams.DoPi2Cal = 1;
-            ExpParams.DoPiCal = 0;
+            ExpParams.DoPiCal = 1;
             ExpParams.DoDRAGCal = 0;
             
             cfg = struct('ExpParams', ExpParams, 'SoftwareDevelopmentMode', 1, 'InstrParams', struct());
@@ -115,17 +114,17 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             %fprintf('Initial guess for piAmp: %.1f\n', piAmpGuess);
             
             % perfect Pi2Cal data
-            data = [0 0 .5*ones(1,36)];
-            [cost, J] = pulseCal.Pi2CostFunction(data);
-            fprintf('Pi2Cost for ''perfect'' data. Cost: %.4f, Jacobian: (%.4f, %.4f)\n', cost, J(1), J(2));
+            %data = [0 0 .5*ones(1,36)];
+            %[cost, J] = pulseCal.Pi2CostFunction(data);
+            %fprintf('Pi2Cost for ''perfect'' data. Cost: %.4f, Jacobian: (%.4f, %.4f)\n', sum(cost.^2/length(cost)), sum(J(:,1)), sum(J(:,2)));
             
             % data representing amplitude error
-            n = 1:9;
-            data = 0.65 + 0.1*(-1).^n .* n./10;
-            data = data(floor(1:.5:9.5));
-            data = [0.5 0.5 data data];
-            [cost, J] = pulseCal.Pi2CostFunction(data);
-            fprintf('Pi2Cost for more realistic data. Cost: %.4f, Jacobian: (%.4f, %.4f)\n', cost, J(1), J(2));
+            %n = 1:9;
+            %data = 0.65 + 0.1*(-1).^n .* n./10;
+            %data = data(floor(1:.5:9.5));
+            %data = [0.5 0.5 data data];
+            %[cost, J] = pulseCal.Pi2CostFunction(data);
+            %fprintf('Pi2Cost for more realistic data. Cost: %.4f, Jacobian: (%.4f, %.4f)\n', sum(cost.^2/length(cost)), sum(J(:,1)), sum(J(:,2)));
             %cost = pulseCal.PiCostFunction(data);
             %fprintf('PiCost for more realistic data: %f\n', cost);
             
@@ -166,14 +165,23 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                 J = Jtmp;
             end
         end
-        function cost = Ypi2ObjectiveFnc(obj, x0)
-            cost = obj.pi2ObjectiveFunction(x0, obj.ExpParams.Qubit, 'Y');
+        function [cost, J] = Ypi2ObjectiveFnc(obj, x0)
+            [cost, Jtmp] = obj.pi2ObjectiveFunction(x0, obj.ExpParams.Qubit, 'Y');
+            if nargout > 1
+                J = Jtmp;
+            end
         end
-        function cost = XpiObjectiveFnc(obj, x0)
-            cost = obj.piObjectiveFunction(x0, obj.ExpParams.Qubit, 'X');
+        function [cost, J] = XpiObjectiveFnc(obj, x0)
+            [cost, Jtmp] = obj.piObjectiveFunction(x0, obj.ExpParams.Qubit, 'X');
+            if nargout > 1
+                J = Jtmp;
+            end
         end
-        function cost = YpiObjectiveFnc(obj, x0)
-            cost = obj.piObjectiveFunction(x0, obj.ExpParams.Qubit, 'Y');
+        function [cost, J] = YpiObjectiveFnc(obj, x0)
+            [cost, Jtmp] = obj.piObjectiveFunction(x0, obj.ExpParams.Qubit, 'Y');
+            if nargout > 1
+                J = Jtmp;
+            end
         end
         
         function Init(obj)
@@ -219,7 +227,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                 obj.pulseParams = struct('piAmp', piAmp, 'pi2Amp', pi2Amp, 'delta', delta, 'T', T,...
                     'pulseType', 'drag', 'i_offset', i_offset, 'q_offset', q_offset);
             else
-                obj.pulseParams = struct('piAmp', 6000, 'pi2Amp', 3280, 'delta', -0.5, 'T', eye(2,2),...
+                obj.pulseParams = struct('piAmp', 6560, 'pi2Amp', 3280, 'delta', -0.5, 'T', eye(2,2),...
                     'pulseType', 'drag', 'i_offset', 0.119, 'q_offset', 0.130);
             end
             
