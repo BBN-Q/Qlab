@@ -315,9 +315,10 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
         end
         function obj = set.pulseSource(obj, value)            
             % Validate input
+            value = lower(value);
             checkMapObj = containers.Map({'int','internal','ext','external'},...
                 {false,false,true,true});
-            if not (checkMapObj.isKey( lower(value) ))
+            if not (checkMapObj.isKey(value))
                 error('Invalid input');
             end
             if checkMapObj(value)

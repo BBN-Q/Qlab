@@ -234,11 +234,12 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource
         end
         function obj = set.pulseSource(obj, value)
             gpib_string = ':pulm:source ';
+            value = lower(value);
             
             % Validate input
             checkMapObj = containers.Map({'int','internal','ext','external'},...
                 {'int','int','ext','ext'});
-            if not (checkMapObj.isKey( lower(value) ))
+            if not (checkMapObj.isKey(value))
                 error('Invalid input');
             end
             
