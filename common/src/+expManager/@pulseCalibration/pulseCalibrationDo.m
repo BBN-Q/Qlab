@@ -103,7 +103,7 @@ if ExpParams.DoPi2Cal
     % update T matrix with ratio X90Amp/Y90Amp
     ampFactor = obj.pulseParams.T(1,1)*X90Amp/Y90Amp;
     fprintf('ampFactor: %.3f\n', ampFactor);
-    theta = sign(T(1,2))*asec(obj.pulseParams.T(2,2));
+    theta = sign(obj.pulseParams.T(1,2))*asec(obj.pulseParams.T(2,2));
     T = [ampFactor, -ampFactor*tan(theta); 0, sec(theta)];
     obj.pulseParams.T = T;
 end
