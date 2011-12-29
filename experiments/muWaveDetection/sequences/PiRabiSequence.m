@@ -16,21 +16,21 @@ basename = 'PiRabi';
 fixedPt = 6000;
 cycleLength = 10000;
 
-numsteps = 120; % 125
+numsteps = 100; % 125
 minWidth = 12; % 12
-stepsize = 8; % 4
+stepsize = 12; % 4
 
 % load config parameters from file
 parent_path = char(script.getParentFile.getParent());
 cfg_path = [parent_path '/cfg/'];
-load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bufferReset', 'bufferPadding', 'offset', 'piAmp', 'pi2Amp', 'sigma', 'pulseType', 'delta', 'buffer', 'pulseLength');
-load([cfg_path 'pulseParams.mat'], 'T2', 'delay2', 'bufferDelay2', 'bufferReset2', 'bufferPadding2', 'offset2', 'piAmp2', 'pi2Amp2', 'sigma2', 'pulseType2', 'delta2', 'buffer2', 'pulseLength2');
+load([cfg_path 'pulseParamBundles.mat'], 'Ts', 'delays', 'measDelay', 'bufferDelays', 'bufferResets', 'bufferPaddings', 'offsets', 'piAmps', 'pi2Amps', 'sigmas', 'pulseTypes', 'deltas', 'buffers', 'pulseLengths');
 load([cfg_path 'pulseParams.mat'], 'T3', 'delay3', 'bufferDelay3', 'bufferReset3', 'bufferPadding3', 'offset3', 'piAmp3', 'pi2Amp3', 'sigma3', 'pulseType3', 'delta3', 'buffer3', 'pulseLength3');
 
-pg1 = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseLength', pulseLength, 'correctionT', T, 'dBuffer', buffer, 'cycleLength', cycleLength);
-pg2 = PatternGen('dPiAmp', piAmp2, 'dPiOn2Amp', pi2Amp2, 'dSigma', sigma2, 'dPulseType', pulseType2, 'dDelta', delta2, 'correctionT', T2, 'dBuffer', buffer2, 'dPulseLength', pulseLength2, 'cycleLength', cycleLength);
+pg1 = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength);
+pg2 = PatternGen('dPiAmp', piAmps('q2'), 'dPiOn2Amp', pi2Amps('q2'), 'dSigma', sigmas('q2'), 'dPulseType', pulseTypes('q2'), 'dDelta', deltas('q2'), 'correctionT', Ts('34'), 'dBuffer', buffers('q2'), 'dPulseLength', pulseLengths('q2'), 'cycleLength', cycleLength);
 pg21 = PatternGen('dPiAmp', piAmp3, 'dPiOn2Amp', pi2Amp3, 'dSigma', sigma3, 'dPulseLength', pulseLength3, 'correctionT', T3, 'dBuffer', buffer3, 'cycleLength', cycleLength, 'passThru', true);
 
+pulseLength = pulseLengths('q2');
 length = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 %patseq1   = {pg1.pulse('Xp'), pg1.pulse('QId', 'width', length), pg1.pulse('Xp')};
 patseq1   = {pg2.pulse('Xp'), pg2.pulse('QId', 'width', length), pg2.pulse('Xp')};
@@ -50,15 +50,15 @@ ch4m1 = ch1; ch4m2 = ch1;
 [ch5seq, ch6seq, ~, ~] = pg21.build(patseq21, numsteps, delay3, fixedPt);
 
 for n = 1:numsteps;
-	%[patx paty] = pg1.getPatternSeq(patseq1, n, delay, fixedPt);
-	%ch1(n, :) = patx + offset;
-	%ch2(n, :) = paty + offset;
-    %ch3m1(n, :) = pg1.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
+	%[patx paty] = pg1.getPatternSeq(patseq1, n, delays('q1'), fixedPt);
+	%ch1(n, :) = patx + offsets('12');
+	%ch2(n, :) = paty + offsets('12');
+    %ch3m1(n, :) = pg1.bufferPulse(patx, paty, 0, bufferPaddings('q1'), bufferResets('q1'), bufferDelays('q1'));
     
-    [patx paty] = pg2.getPatternSeq(patseq1, n, delay2, fixedPt);
-	ch3(n, :) = patx + offset;
-	ch4(n, :) = paty + offset;
-    ch4m1(n, :) = pg1.bufferPulse(patx, paty, 0, bufferPadding2, bufferReset2, bufferDelay2);
+    [patx paty] = pg2.getPatternSeq(patseq1, n, delays('34'), fixedPt);
+	ch3(n, :) = patx + offsets('34');
+	ch4(n, :) = paty + offsets('34');
+    ch4m1(n, :) = pg2.bufferPulse(patx, paty, 0, bufferPaddings('34'), bufferResets('34'), bufferDelays('34'));
     
     % construct buffer for APS pulses
     patx = pg21.linkListToPattern(ch5seq, n)';
@@ -96,10 +96,10 @@ if makePlot
 end
 
 % add offsets to unused channels
-ch1 = ch1 + offset;
-ch2 = ch2 + offset;
-%ch3 = ch3 + offset2;
-%ch4 = ch4 + offset2;
+ch1 = ch1 + offsets('12');
+ch2 = ch2 + offsets('12');
+%ch3 = ch3 + offsets('34');
+%ch4 = ch4 + offsets('34');
 ch2m2 = ch4m2;
 
 % make APS file

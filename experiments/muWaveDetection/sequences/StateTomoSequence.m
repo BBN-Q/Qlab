@@ -39,6 +39,7 @@ delayQ2 = delays('34');
 offsetQ2 = offsets('34');
 delayCR21 = delays('56');
 offsetCR21 = offsets('56');
+clockCycle = max(pulseLengths('q1'), pulseLengths('q2'));
 bufferPadding = bufferPaddings('12');
 bufferReset = bufferResets('12');
 bufferDelay = bufferDelays('12');
@@ -49,15 +50,15 @@ bufferPadding3 = bufferPaddings('56');
 bufferReset3 = bufferResets('56');
 bufferDelay3 = bufferDelays('56');
 
-PosPulsesQ1{1} = pg1.pulse('QId');
-PosPulsesQ1{2} = pg1.pulse('Xp');
-PosPulsesQ1{3} = pg1.pulse('X90p');
-PosPulsesQ1{4} = pg1.pulse('Y90p');
+PosPulsesQ1{1} = pg1.pulse('QId', 'duration', clockCycle);
+PosPulsesQ1{2} = pg1.pulse('Xp', 'duration', clockCycle);
+PosPulsesQ1{3} = pg1.pulse('X90p', 'duration', clockCycle);
+PosPulsesQ1{4} = pg1.pulse('Y90p', 'duration', clockCycle);
 
-PosPulsesQ2{1} = pg2.pulse('QId');
-PosPulsesQ2{2} = pg2.pulse('Xp');
-PosPulsesQ2{3} = pg2.pulse('X90p');
-PosPulsesQ2{4} = pg2.pulse('Y90p');
+PosPulsesQ2{1} = pg2.pulse('QId', 'duration', clockCycle);
+PosPulsesQ2{2} = pg2.pulse('Xp', 'duration', clockCycle);
+PosPulsesQ2{3} = pg2.pulse('X90p', 'duration', clockCycle);
+PosPulsesQ2{4} = pg2.pulse('Y90p', 'duration', clockCycle);
 
 nbrPosPulses = length(PosPulsesQ1);
 
@@ -72,13 +73,13 @@ for nindex = 1:numsteps
     currcrossreswidth = crossreswidths(nindex);  
     %basename = sprintf('CR21_%d',currcrossreswidth);
     
-    prepPulseQ1   = pg1.pulse('QId');
-    prepPulseQ2   = pg2.pulse('QId');
-    prepPulseCR21 = pg21.pulse('QId');
+    prepPulseQ1   = pg1.pulse('QId', 'duration', clockCycle);
+    prepPulseQ2   = pg2.pulse('QId', 'duration', clockCycle);
+    prepPulseCR21 = pg21.pulse('QId', 'duration', clockCycle);
     
-    processPulseQ1   = pg1.pulse(Q1pulse);
-    processPulseQ2   = pg2.pulse(Q2pulse);
-    processPulseCR21 = pg21.pulse('QId');
+    processPulseQ1   = pg1.pulse(Q1pulse, 'duration', clockCycle);
+    processPulseQ2   = pg2.pulse(Q2pulse, 'duration', clockCycle);
+    processPulseCR21 = pg21.pulse('QId', 'duration', clockCycle);
     
     %ADD IN CALIBRATIONS
 
@@ -126,7 +127,7 @@ for nindex = 1:numsteps
             for kindex=1:nbrRepeats
                 patseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ1,processPulseQ1,PosPulsesQ1{iindex}};
                 patseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ2,processPulseQ2,PosPulsesQ2{jindex}};
-                patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseCR21,processPulseCR21,pg21.pulse('QId')};
+                patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseCR21,processPulseCR21,pg21.pulse('QId', 'duration', clockCycle)};
             end
         end
     end

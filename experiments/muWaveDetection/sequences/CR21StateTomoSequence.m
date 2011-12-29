@@ -59,9 +59,9 @@ nbrPosPulses = length(PosPulsesQ1);
 
 numsteps = 1;
 crossresstep = 10;
-crossreswidths = 800+(0:crossresstep:(numsteps-1)*crossresstep);
+crossreswidths = 924+(0:crossresstep:(numsteps-1)*crossresstep);
 
-ampCR = 8000;
+ampCR = 5800; %8000
 %angle = 102*(pi/180);
 angle = 0;
 %deltastep=0.1;
