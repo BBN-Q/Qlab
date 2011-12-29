@@ -42,7 +42,7 @@ function [cost, J] = piObjectiveFunction(obj, x, qubit, direction)
     J(:,1) = J(:,1)/piAmp;
     offset2amp = 8192/2.0; % replace 2.0 by the max output voltage of the AWG
     J(:,2) = J(:,2)*offset2amp/piAmp;
-    fprintf('Cost: %.4f\n', sum(cost.^2/length(cost)));
+    fprintf('Cost: %.4f (%.4f) \n', sum(cost.^2), sum(cost.^2/length(cost)));
 end
 
 function data = simulateMeasurement(x)

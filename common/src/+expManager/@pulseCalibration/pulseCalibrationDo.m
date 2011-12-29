@@ -78,7 +78,7 @@ if ExpParams.DoPi2Cal
 
     % options for Levenberg-Marquardt (seed small lambda to make it more
     % like Gauss-Newton)
-    options = optimset('TolX', 5e-4, 'TolFun', 5e-2, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
+    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
     
     x0 = lsqnonlin(@obj.Xpi2ObjectiveFnc,x0,[],[],options);
     X90Amp = x0(1);
@@ -114,7 +114,7 @@ if ExpParams.DoPiCal
     x0 = [obj.pulseParams.piAmp, obj.pulseParams.i_offset];
     
     % options for Levenberg-Marquardt
-    options = optimset('TolX', 5e-4, 'TolFun', 5e-2, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
+    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
     
     x0 = lsqnonlin(@obj.XpiObjectiveFnc,x0,[],[],options);
     X180Amp = x0(1);

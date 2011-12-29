@@ -45,6 +45,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         scope
         scopeParams
         testMode = false;
+        costFunctionGoal = 0.075; % tweak experimentally
     end
     methods (Static)
         %% Class constructor
@@ -182,6 +183,14 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             [cost, Jtmp] = obj.piObjectiveFunction(x0, obj.ExpParams.Qubit, 'Y');
             if nargout > 1
                 J = Jtmp;
+            end
+        end
+
+        function stop = LMStoppingCondition(obj, x, optimValues, state)
+            if optimValues.resnorm < obj.costFunctionGoal
+                stop = true;
+            else
+                stop = false;
             end
         end
         

@@ -29,7 +29,7 @@ function J = PulseJacobian(data, angle)
         case pi/2
             derivScale = 2*n-1;
         case pi
-            derivScale = 1-n;
+            derivScale = n-1; %(1-n) works in simulation
         otherwise
             error('Unrecognized rotation angle');
     end
