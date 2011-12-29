@@ -17,8 +17,8 @@ IQkey = [num2str(IQchannels{1}) num2str(IQchannels{2})];
 
 fixedPt = 6000;
 cycleLength = 10000;
-numsteps = 81;
-stepsize = 100;
+numsteps = 80; %should be even
+stepsize = 200;
 
 nbrPatterns = numsteps;
 
@@ -43,7 +43,9 @@ bufferPadding = bufferPaddings(IQkey);
 bufferReset = bufferResets(IQkey);
 bufferDelay = bufferDelays(IQkey);
 
-amps = 0:stepsize:(numsteps-1)*stepsize;
+%Don't use zero because if there is a mixer offset it will be completely
+%different because the source is never pulsed
+amps = [-(numsteps/2)*stepsize:stepsize:-stepsize stepsize:stepsize:(numsteps/2)*stepsize];
 patseq = {pg.pulse('Xtheta', 'amp', amps)};
 
 % pre-allocate space

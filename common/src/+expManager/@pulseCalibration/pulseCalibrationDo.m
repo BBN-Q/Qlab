@@ -37,8 +37,14 @@ if ExpParams.DoRabiAmp
        obj.loadSequence(filenames);
    end
    
+   piAmpGuesses = zeros([3,1]);
+   offsetPhases = zeros([3,1]);
+   
+   %Run a sequence and fit it
    data = obj.homodyneMeasurement(nbrSegments);
-   obj.pulseParams.piAmp = obj.analyzeRabiAmp(data);
+   [piAmpGuesses(1), offsetPhases(1)] = obj.analyzeRabiAmp(data);
+   
+   obj.pulseParams.piAmp = piAmpGuesses(1);
    obj.pulseParams.pi2Amp = obj.pulseParams.piAmp/2;
    fprintf('Initial guess for X180Amp: %.0f\n', obj.pulseParams.piAmp);
 end

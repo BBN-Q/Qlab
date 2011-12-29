@@ -1,12 +1,13 @@
-function piAmp = analyzeRabiAmp(data)
-    xpts = 0:100:80*100; % this must match the settings of RabiChannelAmpSequence
-                         % TODO: store this in a common location
-    xpts = xpts(:);
-    data = data(:);
+function [piAmp, offsetPhase] = analyzeRabiAmp(data)
+    
+    numsteps = 80; %should be even
+    stepsize = 200;
+    xpts = [-(numsteps/2)*stepsize:stepsize:-stepsize stepsize:stepsize:(numsteps/2)*stepsize]';
+
     % use largest FFT frequency component to seed Rabi frequency
     yfft = fft(data);
-    [tmp freqpos] = max(abs( yfft(2:floor(end/2)) ));
-    frabi = max(freqpos,1)/xpts(end);
+    [~, freqpos] = max(abs( yfft(2:floor(end/2)) ));
+    frabi = 0.5*max(freqpos,1)/xpts(end);
     
     % model A + B * cos(w t + phi)
     rabif = inline('p(1) - p(2)*cos(2*pi*p(3)*xdata + p(4))','p','xdata');
@@ -21,8 +22,13 @@ function piAmp = analyzeRabiAmp(data)
     end
     
     p = [offset amp frabi phase];
-    [beta,r,j] = nlinfit(xpts, data, rabif, p);
+    [beta,~,~] = nlinfit(xpts, data, rabif, p);
     
+    %The frequency tells us something about what a pi should calibrate to
     frabi = abs(beta(3));
     piAmp = 0.5/frabi;
+    
+    %The phase tell us somethign about the offset
+    offsetPhase = beta(4);
+    
 end
