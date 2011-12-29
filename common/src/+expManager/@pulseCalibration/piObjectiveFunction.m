@@ -62,8 +62,8 @@ function data = simulateMeasurement(x)
     
     % data representing amplitude error
     n = 1:9;
-    data = 0.65 + 0.15*(-1).^n .* sin((n-1) * angleError);
-    data2 = 0.65 + 0.15*(-1).^n .* sin((n-1) * angleError2);
+    data = 0.65 + 0.15*(-1).^(n+1) .* sin((n-1) * angleError);
+    data2 = 0.65 + 0.15*(-1).^(n+1) .* sin((n-1) * angleError2);
     % double every point
     data = data(floor(1:.5:9.5));
     data2 = data2(floor(1:.5:9.5));
