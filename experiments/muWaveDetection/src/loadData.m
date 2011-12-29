@@ -6,8 +6,6 @@ function data = loadData(makePlot)
     % base_path is up two levels from this file
     [base_path] = fileparts(mfilename('fullpath'));
     base_path = parent_dir(base_path, 3);
-    % need a dummy (but valid!) cfg file
-    cfg_file_name = [base_path '/experiments/muWaveDetection/cfg/lastRun.cfg'];
 
     addpath([ base_path '/experiments/muWaveDetection/'],'-END');
     addpath([ base_path '/common/src'],'-END');
@@ -16,9 +14,10 @@ function data = loadData(makePlot)
 
     % get path of file to load
     [filename, pathname] = uigetfile('*.out');
+    fullpath = [pathname '/' filename];
 
-    % create the exp object
-    Exp = expManager.homodyneDetection(base_path,cfg_file_name, 'homodyneDetection', 1);
+    % create the exp object (use the data file itself as the cfg file)
+    Exp = expManager.homodyneDetection(base_path, fullpath, 'homodyneDetection', 1);
     % overwrite the filename to the file specified from uigetfile()
     Exp.DataPath = pathname;
     Exp.DataFileName = filename;
