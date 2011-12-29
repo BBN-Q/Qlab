@@ -18,45 +18,50 @@ cycleLength = 16000;
 % load config parameters from file
 parent_path = char(script.getParentFile.getParent());
 cfg_path = [parent_path '/cfg/'];
-load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bufferReset', 'bufferPadding', 'offset', 'piAmp', 'pi2Amp', 'sigma', 'pulseType', 'delta', 'buffer', 'pulseLength');
-load([cfg_path 'pulseParams.mat'], 'T2', 'delay2', 'bufferDelay2', 'bufferReset2', 'bufferPadding2', 'offset2', 'piAmp2', 'pi2Amp2', 'sigma2', 'pulseType2', 'delta2', 'buffer2', 'pulseLength2');
-load([cfg_path 'pulseParams.mat'], 'T3', 'delay3', 'bufferDelay3', 'bufferReset3', 'bufferPadding3', 'offset3', 'piAmp3', 'pi2Amp3', 'sigma3', 'pulseType3', 'delta3', 'buffer3', 'pulseLength3');
+load([cfg_path 'pulseParamBundles.mat'], 'Ts', 'delays', 'measDelay', 'bufferDelays', 'bufferResets', 'bufferPaddings', 'offsets', 'piAmps', 'pi2Amps', 'sigmas', 'pulseTypes', 'deltas', 'buffers', 'pulseLengths');
 
-pg1 = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', buffer, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
-pg2 = PatternGen('dPiAmp', piAmp2, 'dPiOn2Amp', pi2Amp2, 'dSigma', sigma2, 'dPulseType', pulseType2, 'dDelta', delta2, 'correctionT', T2, 'dBuffer', buffer2, 'dPulseLength', pulseLength2, 'cycleLength', cycleLength);
-pg21 = PatternGen('dPiAmp', piAmp3, 'dPiOn2Amp', pi2Amp3, 'dSigma', sigma3, 'dPulseType', pulseType3, 'dDelta', delta3, 'correctionT', T3, 'dBuffer', buffer3, 'dPulseLength', pulseLength3, 'cycleLength', cycleLength);
+pg1 = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength);
+pg2 = PatternGen('dPiAmp', piAmps('q2'), 'dPiOn2Amp', pi2Amps('q2'), 'dSigma', sigmas('q2'), 'dPulseType', pulseTypes('q2'), 'dDelta', deltas('q2'), 'correctionT', Ts('34'), 'dBuffer', buffers('q2'), 'dPulseLength', pulseLengths('q2'), 'cycleLength', cycleLength);
+pg21 = PatternGen('dPiAmp', piAmps('q1q2'), 'dPiOn2Amp', pi2Amps('q1q2'), 'dSigma', sigmas('q1q2'), 'dPulseType', pulseTypes('q1q2'), 'dDelta', deltas('q1q2'), 'correctionT', Ts('56'), 'dBuffer', buffers('q1q2'), 'dPulseLength', pulseLengths('q1q2'), 'cycleLength', cycleLength, 'passThru', true);
+%pg21 = PatternGen('dPiAmp', piAmp3, 'dPiOn2Amp', pi2Amp3, 'dSigma', sigma3, 'dPulseType', pulseType3, 'dDelta', delta3, 'correctionT', T3, 'dBuffer', buffer3, 'dPulseLength', pulseLength3, 'cycleLength', cycleLength);
 
 %AWG5014 CHs (1,2) is Q1 single-qubit (pg1)
 %AWG5014 CHs (3,4) is Q2 single-qubit (pg2)
 %APS CHs (1,2) is drive Q1 at Q2 cross resonance (pg21)
-delayQ1 = delay;
-offsetQ1 = offset;
-delayQ2 = delay2;
-offsetQ2 = offset2;
-delayCR21 = delay3;
-offsetCR21 = offset3;
+delayQ1 = delays('12');
+offsetQ1 = offsets('12');
+delayQ2 = delays('34');
+offsetQ2 = offsets('34');
+delayCR21 = delays('56');
+offsetCR21 = offsets('56');
+clockCycle = max(pulseLengths('q1'), pulseLengths('q2'));
+bufferPadding = bufferPaddings('12');
+bufferReset = bufferResets('12');
+bufferDelay = bufferDelays('12');
+bufferPadding2 = bufferPaddings('34');
+bufferReset2 = bufferResets('34');
+bufferDelay2 = bufferDelays('34');
+bufferPadding3 = bufferPaddings('56');
+bufferReset3 = bufferResets('56');
+bufferDelay3 = bufferDelays('56');
 
-PosPulsesQ1{1} = pg1.pulse('QId');
-PosPulsesQ1{2} = pg1.pulse('Xp');
-PosPulsesQ1{3} = pg1.pulse('X90p');
-PosPulsesQ1{4} = pg1.pulse('Y90p');
+PosPulsesQ1{1} = pg1.pulse('QId', 'duration', clockCycle);
+PosPulsesQ1{2} = pg1.pulse('Xp', 'duration', clockCycle);
+PosPulsesQ1{3} = pg1.pulse('X90p', 'duration', clockCycle);
+PosPulsesQ1{4} = pg1.pulse('Y90p', 'duration', clockCycle);
 
-PosPulsesQ2{1} = pg2.pulse('QId');
-PosPulsesQ2{2} = pg2.pulse('Xp');
-PosPulsesQ2{3} = pg2.pulse('X90p');
-PosPulsesQ2{4} = pg2.pulse('Y90p');
-% PosPulsesQ2{1} = {'QId'};
-% PosPulsesQ2{2} = {'Xp'};
-% PosPulsesQ2{3} = {'X90p'};
-% PosPulsesQ2{4} = {'Y90p'};
+PosPulsesQ2{1} = pg2.pulse('QId', 'duration', clockCycle);
+PosPulsesQ2{2} = pg2.pulse('Xp', 'duration', clockCycle);
+PosPulsesQ2{3} = pg2.pulse('X90p', 'duration', clockCycle);
+PosPulsesQ2{4} = pg2.pulse('Y90p', 'duration', clockCycle);
 
 nbrPosPulses = length(PosPulsesQ1);
 
 numsteps = 1;
 crossresstep = 10;
-crossreswidths = 152+(0:crossresstep:(numsteps-1)*crossresstep);
+crossreswidths = 800+(0:crossresstep:(numsteps-1)*crossresstep);
 
-ampCR = 5800; %8000
+ampCR = 8000;
 %angle = 102*(pi/180);
 angle = 0;
 %deltastep=0.1;
@@ -67,21 +72,17 @@ for nindex = 1:numsteps
     %currcrossreswidth = 236;
     %currdeltaCR12 = delta4s(nindex);
     %stringcurrdelta4 = 10*currdeltaCR12;
-    currdeltaCR12 = delta3;
+    currdeltaCR12 = deltas('q1q2');
     basename = sprintf('CR21_%d',currcrossreswidth);
     
     %basename = sprintf('CR21Dm%d',nindex);
-    prepPulseQ1 = pg1.pulse('X90p');
-    prepPulseQ2 = pg2.pulse('QId');
-%     prepPulseQ2 = {'QId'};
-%     prepPulseCR21 = pg21.pulse('QId');
-    prepPulseCR21 = {'QId'};
+    prepPulseQ1 = pg1.pulse('X90p', 'duration', clockCycle);
+    prepPulseQ2 = pg2.pulse('QId', 'duration', clockCycle);
+    prepPulseCR21 = pg21.pulse('QId', 'duration', clockCycle);
     
     processPulseQ1 = pg1.pulse('QId', 'width', currcrossreswidth);
     processPulseQ2 = pg2.pulse('QId', 'width', currcrossreswidth);
-%     processPulseCR21 = pg21.pulse('Utheta', 'amp', ampCR, ...
-%         'angle', angle, 'width', currcrossreswidth, 'pType', 'square');
-    processPulseCR21 = {'Utheta', 'amp', ampCR, 'angle', angle, 'width', currcrossreswidth, 'pType', 'square'};
+    processPulseCR21 = pg21.pulse('Utheta', 'amp', ampCR, 'angle', angle, 'width', currcrossreswidth, 'pType', 'square');
     % jerry had the CR21 pulse type as 'dragSq'
     
     %ADD IN CALIBRATIONS
@@ -121,8 +122,7 @@ for nindex = 1:numsteps
     patseqQ2{16}={pg2.pulse('Xp')};
 
     for dumindex = 1:16
-        % patseqCR21{dumindex} = {pg21.pulse('QId')};
-        patseqCR21{dumindex} = {{'QId'}};
+        patseqCR21{dumindex} = {pg21.pulse('QId')};
     end
     
     nbrRepeats = 4;
@@ -131,13 +131,7 @@ for nindex = 1:numsteps
             for kindex=1:nbrRepeats
                 patseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ1,processPulseQ1,PosPulsesQ1{iindex}};
                 patseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ2,processPulseQ2,PosPulsesQ2{jindex}};
-                patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseCR21,processPulseCR21,{'QId'}};
-%                 patseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ1,processPulseQ1,processPulseQ1,processPulseQ1...
-%                     processPulseQ1,processPulseQ1,processPulseQ1,processPulseQ1,processPulseQ1,processPulseQ1,PosPulsesQ1{iindex}};
-%                 patseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulse7052,processPulseQ2,processPulseQ2,processPulseQ2...
-%                     processPulseQ2,processPulseQ2,processPulseQ2,processPulseQ2,processPulseQ2,processPulseQ2,PosPulses7052{jindex}};
-%                 patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseCR21,processPulseCR21,processPulseCR21,processPulseCR21...
-%                     processPulseCR21,processPulseCR21,processPulseCR21,processPulseCR21,processPulseCR21,processPulseCR21,pg21.pulse('QId')};
+                patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseCR21,processPulseCR21,pg21.pulse('QId', 'duration', clockCycle)};
             end
         end
     end
@@ -152,10 +146,10 @@ for nindex = 1:numsteps
     patseqQ2{83} = {pg2.pulse('QId')};
     patseqQ2{84} = {pg2.pulse('QId')};
 
-    patseqCR21{81} = {{'QId'}};
-    patseqCR21{82} = {{'QId'}};
-    patseqCR21{83} = {{'QId'}};
-    patseqCR21{84} = {{'QId'}};
+    patseqCR21{81} = {pg21.pulse('QId')};
+    patseqCR21{82} = {pg21.pulse('QId')};
+    patseqCR21{83} = {pg21.pulse('QId')};
+    patseqCR21{84} = {pg21.pulse('QId')};
     
     nbrPulses = 4+16+nbrPosPulses^2*nbrRepeats;
     
@@ -219,6 +213,25 @@ for nindex = 1:numsteps
     ch4 = Q2_Q;
     ch4m1 = Q2buffer;
     ch4m2 = slaveTrigger;
+    
+    if makePlot
+        myn = 38;
+        figure
+        plot(ch1(myn,:))
+        hold on
+        plot(ch2(myn,:), 'r')
+        plot(ch3(myn,:), ':')
+        plot(ch4(myn,:), 'r:')
+        ch5 = pg21.linkListToPattern(CR21_I_seq{myn}, 1)';
+        ch6 = pg21.linkListToPattern(CR21_Q_seq{myn}, 1)';
+        plot(ch5, 'm')
+        plot(ch6, 'c')
+        plot(5000*ch1m2(myn,:), 'g')
+        plot(1000*ch3m1(myn,:), 'r')
+        plot(5000*ch1m1(myn,:),'.')
+        grid on
+        hold off
+    end
 
     % unify LLs and waveform libs
     ch5seq = CR21_I_seq{1}; ch6seq = CR21_Q_seq{1};

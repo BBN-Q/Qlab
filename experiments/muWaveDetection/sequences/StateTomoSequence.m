@@ -12,8 +12,8 @@ temppath = [char(script.getParent()) '\'];
 pathAWG = 'U:\AWG\StateTomo\';
 pathAPS = 'U:\APS\StateTomo\';
 
-Q1pulse = 'QId';
-Q2pulse = 'QId';
+Q1pulse = 'X90p';
+Q2pulse = 'X90p';
 
 basename = [Q1pulse Q2pulse];
 
