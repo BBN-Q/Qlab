@@ -43,6 +43,7 @@ classdef PatternGen < handle
         correctionT = eye(2,2);
         arbPulses = containers.Map();
         dArbfname = '';
+        passThru = false; % pg.pulse(...) returns its input when this is enabled
     end
     
     methods (Static)
@@ -260,6 +261,10 @@ classdef PatternGen < handle
         end
         
         function pHandle = pulse(obj, p, varargin)
+            if obj.passThru % if passthru is enabled, just return the inputs
+                pHandle = {p, varargin{:}};
+                return;
+            end
             self = obj;
             pHandle = @pulseFunction;
             
@@ -383,6 +388,8 @@ classdef PatternGen < handle
             % ypat - same for y waveforms
             % patList - sequential references to pulseCollection entries
             % pulseCollection - hashtable of pulse() closures
+            
+            obj.passThru = false;
             
             if ~exist('pulseCollection', 'var') || isempty(pulseCollection)
                 pulseCollection = containers.Map();
@@ -548,6 +555,8 @@ classdef PatternGen < handle
             xpat.linkLists = xLinkLists;
             ypat.waveforms = yWaveformTable;
             ypat.linkLists = yLinkLists;
+            
+            obj.passThru = true;
         end
             
         function plotWaveformTable(obj,table)
