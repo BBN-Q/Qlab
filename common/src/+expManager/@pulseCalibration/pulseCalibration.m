@@ -74,7 +74,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         
         % externally defined static methods
         [cost, J] = RepPulseCostFunction(data, angle);
-        amp  = analyzeRabiAmp(data);
+        [amp, offsetPhase]  = analyzeRabiAmp(data);
         
         function UnitTest()
             script = java.io.File(mfilename('fullpath'));
@@ -143,6 +143,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             obj.scope.averager = obj.scopeParams.averager;
             
             % create tmp file
+            fclose('all'); % make sure dangling file handles are closed
             obj.openDataFile();
             fprintf(obj.DataFileHandle,'$$$ Beginning of Data\n');
             obj.homodyneDetection2DDo();

@@ -17,12 +17,13 @@ function [cost, J] = RepPulseCostFunction(data, angle)
 end
 
 function J = PulseJacobian(data, angle)
-    %pdata = data(1:end/2) - 1;
-    %mdata = data(end/2+1:end) - 1;
-    
     J = zeros(18,2);
     n = 1:9;
     n = [n n];
+    
+    % make data and n column vectors
+    data = data(:);
+    n = n';
     
     switch angle
         case pi/2

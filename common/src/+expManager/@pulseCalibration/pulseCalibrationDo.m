@@ -78,7 +78,7 @@ if ExpParams.DoPi2Cal
 
     % options for Levenberg-Marquardt (seed small lambda to make it more
     % like Gauss-Newton)
-    options = optimset('TolX', 5e-4, 'TolFun', 1e-4, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
+    options = optimset('TolX', 5e-4, 'TolFun', 5e-2, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
     
     x0 = lsqnonlin(@obj.Xpi2ObjectiveFnc,x0,[],[],options);
     X90Amp = x0(1);
@@ -93,7 +93,6 @@ if ExpParams.DoPi2Cal
     Y90Amp = x0(1);
     q_offset = x0(2);
     Y90Amp = X90Amp;
-    q_offset = i_offset;
     fprintf('Found Y90Amp: %.0f\n', Y90Amp);
     fprintf('Found Q offset: %.3f\n', q_offset);
     
@@ -115,7 +114,7 @@ if ExpParams.DoPiCal
     x0 = [obj.pulseParams.piAmp, obj.pulseParams.i_offset];
     
     % options for Levenberg-Marquardt
-    options = optimset('TolX', 5e-4, 'TolFun', 1e-4, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
+    options = optimset('TolX', 5e-4, 'TolFun', 5e-2, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
     
     x0 = lsqnonlin(@obj.XpiObjectiveFnc,x0,[],[],options);
     X180Amp = x0(1);
@@ -151,6 +150,9 @@ Ts(IQkey) = obj.pulseParams.T;
 
 save(obj.pulseParamPath, 'piAmps', 'pi2Amps', 'deltas', 'Ts', '-append', '-v7.3');
 % TODO: save I/Q offsets
+
+% for now, just display the results
+obj.pulseParams
 
 end
 
