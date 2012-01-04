@@ -44,7 +44,7 @@ if ExpParams.DoRabiAmp
    data = obj.homodyneMeasurement(nbrSegments);
    [piAmpGuesses(1), offsetPhases(1)] = obj.analyzeRabiAmp(data);
    
-   obj.pulseParams.piAmp = piAmpGuesses(1);
+   obj.pulseParams.piAmp = real(piAmpGuesses(1));
    obj.pulseParams.pi2Amp = obj.pulseParams.piAmp/2;
    fprintf('Initial guess for X180Amp: %.0f\n', obj.pulseParams.piAmp);
 end
@@ -78,7 +78,7 @@ if ExpParams.DoPi2Cal
 
     % options for Levenberg-Marquardt (seed small lambda to make it more
     % like Gauss-Newton)
-    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
+    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
     
     x0 = lsqnonlin(@obj.Xpi2ObjectiveFnc,x0,[],[],options);
     X90Amp = x0(1);
@@ -92,7 +92,6 @@ if ExpParams.DoPi2Cal
     x0 = lsqnonlin(@obj.Ypi2ObjectiveFnc,x0,[],[],options);
     Y90Amp = x0(1);
     q_offset = x0(2);
-    Y90Amp = X90Amp;
     fprintf('Found Y90Amp: %.0f\n', Y90Amp);
     fprintf('Found Q offset: %.3f\n', q_offset);
     
@@ -104,7 +103,7 @@ if ExpParams.DoPi2Cal
     ampFactor = obj.pulseParams.T(1,1)*X90Amp/Y90Amp;
     fprintf('ampFactor: %.3f\n', ampFactor);
     theta = sign(obj.pulseParams.T(1,2))*asec(obj.pulseParams.T(2,2));
-    T = [ampFactor, -ampFactor*tan(theta); 0, sec(theta)];
+    T = [ampFactor, ampFactor*tan(theta); 0, sec(theta)];
     obj.pulseParams.T = T;
 end
 
@@ -114,7 +113,7 @@ if ExpParams.DoPiCal
     x0 = [obj.pulseParams.piAmp, obj.pulseParams.i_offset];
     
     % options for Levenberg-Marquardt
-    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
+    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
     
     x0 = lsqnonlin(@obj.XpiObjectiveFnc,x0,[],[],options);
     X180Amp = x0(1);
