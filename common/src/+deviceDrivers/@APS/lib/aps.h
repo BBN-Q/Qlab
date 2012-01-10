@@ -35,6 +35,9 @@
 
 // Command byte CMD field values
 
+#define APS_READTIMEOUT 1000
+#define APS_WRITETIMEOUT 500
+
 #define APS_FPGA_IO 0
 #define APS_FPGA_ADDR (1<<4)
 #define APS_DAC_SPI (2<<4)
@@ -74,13 +77,13 @@
 #define FPGA1_PLL_BYPASS_ADDR 0x191
 #define DAC0_ENABLE_ADDR	  0xF0
 #define DAC1_ENABLE_ADDR	  0xF1
-#define FGPA1_PLL_ADDR		  0xF2
+#define FPGA1_PLL_ADDR		  0xF2
 
 #define FPGA2_PLL_CYCLES_ADDR 0x196
 #define FPGA2_PLL_BYPASS_ADDR 0x197
 #define DAC2_ENABLE_ADDR     0xF5
 #define DAC3_ENABLE_ADDR     0xF4
-#define FGPA2_PLL_ADDR		 0xF3
+#define FPGA2_PLL_ADDR		 0xF3
 
 #define FPGA_PLL_RESET_ADDR 0x0
 #define FPGA1_PLL_RESET_BIT 0x2

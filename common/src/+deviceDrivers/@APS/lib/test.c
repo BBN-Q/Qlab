@@ -30,6 +30,9 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
+#include <stdint.h>
+#include <limits.h>
 
 #ifdef __CYGWIN__
 	#include "windows.h"
@@ -48,6 +51,8 @@
 #else
 	#define GetFunction dlsym
 #endif
+
+#define is64Bit (sizeof(size_t)== 8)
 
 typedef int (*pfunc)();
 
@@ -118,6 +123,8 @@ void doToggleTest(HANDLE hdll, char * bitFile) {
 
 	fclose(fp);
 
+	printf("Read %i bytes\n", numRead);
+
 	printf("Opening Dac 0: ");
 	fflush(stdout);
 	if (open(0) < 0)  {
@@ -131,13 +138,23 @@ void doToggleTest(HANDLE hdll, char * bitFile) {
 
 	printf("Programming FPGAS: ");
 	fflush(stdout);
-	prog(0, bitFileData, bitFileSize, 3);
+	int numBytesProg;
+	numBytesProg = prog(0, bitFileData, bitFileSize, 3);
 	printf("Done \n");
+
+	printf("Programmed: %i bytes\n", numBytesProg);
 
 	free(bitFileData);
 
 	// test bit file version
-	printf("Found bitfile version: %i\r\n", read_version(0));
+	int version;
+	version = read_version(0);
+	printf("Found bitfile version: %i\r\n", version);
+
+	if (version != 16) {
+		printf("Error version does not matched expected\n");
+		exit(-1);
+	}
 
 	for(cnt = 0; cnt < waveformLen; cnt++)
 		pulseMem[cnt] = (cnt < pulseLen) ? (int) floor(0.8*8192) : 0;
@@ -190,6 +207,7 @@ void doToggleTest(HANDLE hdll, char * bitFile) {
 				continue;
 			default:
 				printf("No command: %c", cmd);
+				break;
 		}
 		// written this way to handle interactive session where
 		// input is buffered until \n'
@@ -204,7 +222,8 @@ dealloc:
 }
 
 void printHelp(){
-	printf("BBN APS C Test Bench $Rev$\n");
+	int bitdepth = sizeof(size_t) == 8 ? 64 : 32;
+	printf("BBN APS C Test Bench $Rev$ %i-Bit\n", bitdepth);
 	printf("   -t <bitfile> Trigger Loop Test\n");
 	printf("   -s List Available APS Serial Numbers\n");
 	printf("   -ks List Known APS Serial Numbers\n");
@@ -225,10 +244,16 @@ int main (int argc, char** argv) {
 	pfunc getserial;
 
 	int cnt;
-	int ret;
+
+	char *libName;
 
 #ifdef __CYGWIN__
-	hdll = LoadLibrary("libaps.dll");
+	if (!is64Bit) {
+		libName = "libaps.dll";
+	} else {
+		libName = "libaps64.dll";
+	}
+	hdll = LoadLibrary(libName);
 #elif __APPLE__
 	hdll = dlopen("libaps.dylib",RTLD_LAZY);
 #else
@@ -236,7 +261,7 @@ int main (int argc, char** argv) {
 #endif
 
 #ifdef __CYGWIN__
-	if ((int)hdll <= HINSTANCE_ERROR) {
+	if ((uintptr_t)hdll <= HINSTANCE_ERROR) {
 		printf("Error opening libaps library\n");
 		return -1;
 	}
@@ -259,14 +284,15 @@ int main (int argc, char** argv) {
 
 	if (argc == 1) printHelp();
 
-	int id;
 	for(cnt = 0; cnt < argc; cnt++) {
 		if (strcmp(argv[cnt],"-t") == 0)
 			doToggleTest(hdll,argv[cnt+1]);
-		if (strcmp(argv[cnt],"-ks") == 0)
+		if (strcmp(argv[cnt],"-ks") == 0) {
 			listserials();
-		if (strcmp(argv[cnt],"-s") == 0)
+		}
+		if (strcmp(argv[cnt],"-s") == 0) {
 			serials();
+		}
 		if (strcmp(argv[cnt],"-h") == 0)
 			printHelp();
 	}

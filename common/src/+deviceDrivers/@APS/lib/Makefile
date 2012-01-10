@@ -5,102 +5,106 @@
 #
 # Description : Makefile for building libaps with cygwin
 #
-# Restrictions/Limitations :
-#
-# Change Descriptions :
-#
-# Classification : Unclassified
-#
-# References :
-#
-#    Modified    By    Reason
-#    --------    --    ------
-#                BCD
-#
 # $Author: bdonovan $
 # $Date$
 # $Locker:  $
 # $Name:  $
 # $Revision$
-# Copyright (C) BBN Technologies Corp. 2008-2011
-##############################################
+# Copyright (C) BBN Technologies Corp. 2008-2012
+########################################################
 
 OS=$(shell uname)
 
+####### Mac OS X #######
 ifeq (${OS},Darwin)
 CFLAGS=-dynamiclib 
-CFLAGS2=
 LIBNAME=libaps.dylib
 EXFLAGS=-Wl
 LFLAGS=
 CC=gcc
-else 
+else
+####### Linux ####### 
 ifeq (${OS},Linux)
 CFLAGS=
-CFLAGS2=
 LIBNAME=libaps.so
 EXFLAGS=-Wl
 LFLAGS=-ldl
 CC=gcc-3
 else
-CFLAGS=
-CFLAGS2=-mno-cygwin -D__CYGWIN__ -DBUILD_DLL -I./include -Wunused-variable
-CFLAGS3=-mno-cygwin -D__CYGWIN__ -I./include
+####### Windows #######
+CFLAGS=-mno-cygwin -D__CYGWIN__ -DBUILD_DLL -I./include -Wunused-variable
 LIBNAME=libaps.dll
 LIBNAME64=libaps64.dll
 EXFLAGS=-Wl,--out-implib,libaps.a
 LFLAGS=
+####### 64-bit #######
+ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
+CC=i686-w64-mingw32-gcc
+CC64=x86_64-w64-mingw32-gcc
+GLOBAL_ALL=all64
+else
+####### 32-bit #######
 CC=gcc-3
-CC64=i686-w64-mingw32-gcc
+endif
 endif
 endif
 
 OBJECTS=aps.o fpga.o sha1.o common.o waveform.o
 OBJECTS64=aps64.o fpga64.o sha164.o common64.o waveform64.o
 
-all: ${LIBNAME} test
+######################## Default Build ########################################
 
-all64: ${LIBNAME64}
+
+all: ${LIBNAME} test ${GLOBAL_ALL}
 
 ${LIBNAME}: ${OBJECTS}
-	${CC}  ${CFLAGS} ${CFLAGS2} -shared  -o ${LIBNAME} ${OBJECTS} ${EXFLAGS}
-
-${LIBNAME64}: ${OBJECTS64}
-	${CC64}  ${CFLAGS} ${CFLAGS2} -shared  -o ${LIBNAME64} ${OBJECTS64} ${EXFLAGS}
+	${CC}  ${CFLAGS}  -shared  -o ${LIBNAME} ${OBJECTS} ${EXFLAGS}
 
 waveform.o: waveform.c waveform.h
-	${CC}  ${CFLAGS2} -c  waveform.c -o waveform.o
+	${CC}  ${CFLAGS} -c  waveform.c -o waveform.o
 
 sha1.o: sha1.c sha1.h
-	${CC}  ${CFLAGS2} -c  sha1.c -o sha1.o 
+	${CC}  ${CFLAGS} -c  sha1.c -o sha1.o 
 
 aps.o: libaps.c aps.h
-	${CC}  ${CFLAGS2} -c  libaps.c -o aps.o
+	${CC}  ${CFLAGS} -c  libaps.c -o aps.o
 
 fpga.o: fpga.c fpga.h aps.h
-	${CC}  ${CFLAGS2} -c  fpga.c -o fpga.o
+	${CC}  ${CFLAGS} -c  fpga.c -o fpga.o
 
 common.o: common.c common.h	
-	${CC}  ${CFLAGS2} -c  common.c -o common.o
-
-waveform64.o: waveform.c waveform.h
-	${CC64}  ${CFLAGS2} -c  waveform.c -o waveform64.o
-
-sha164.o: sha1.c sha1.h
-	${CC64}  ${CFLAGS2} -c  sha1.c -o sha164.o 
-
-aps64.o: libaps.c aps.h
-	${CC64}  ${CFLAGS2} -c  libaps.c -o aps64.o
-
-fpga64.o: fpga.c fpga.h aps.h
-	${CC64}  ${CFLAGS2} -c  fpga.c -o fpga64.o
-
-common64.o: common.c common.h	
-	${CC64}  ${CFLAGS2} -c  common.c -o common64.o
-
-clean:
-	rm -f *.o *.dylib *.dll test *.exe *.a
+	${CC}  ${CFLAGS} -c  common.c -o common.o
 
 test: test.c ${LIBNAME}
-	${CC} ${CFLAGS3} ${LFLAGS} -o test test.c
+	${CC} ${CFLAGS} ${LFLAGS} -o test test.c
 
+######################## 64-Bit ########################################
+
+all64: ${LIBNAME64} test64
+
+${LIBNAME64}: ${OBJECTS64}
+	${CC64}  ${CFLAGS} -shared  -o ${LIBNAME64} ${OBJECTS64} ${EXFLAGS}
+
+waveform64.o: waveform.c waveform.h
+	${CC64}  ${CFLAGS} -c  waveform.c -o waveform64.o
+
+sha164.o: sha1.c sha1.h
+	${CC64}  ${CFLAGS} -c  sha1.c -o sha164.o 
+
+aps64.o: libaps.c aps.h
+	${CC64}  ${CFLAGS} -c  libaps.c -o aps64.o
+
+fpga64.o: fpga.c fpga.h aps.h
+	${CC64}  ${CFLAGS} -c  fpga.c -o fpga64.o
+
+common64.o: common.c common.h	
+	${CC64}  ${CFLAGS}  -c  common.c -o common64.o
+	
+test64: test.c ${LIBNAME64}
+	${CC64} ${CFLAGS} ${LFLAGS} -o test64 test.c
+	
+######################## Misc ########################################
+	
+clean:
+	rm -f *.o *.dylib *.dll test *.exe *.a
+	

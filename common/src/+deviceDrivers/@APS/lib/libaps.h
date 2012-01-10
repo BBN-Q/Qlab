@@ -27,7 +27,7 @@
     #define WINDOWS
 #endif
 
-#ifdef WIN32
+#if defined(WIN32) || defined(_WIN32)
 	#include "windows.h"
 #elif __APPLE__
 	#include "wintypes.h"
@@ -40,7 +40,7 @@
 	#ifdef BUILD_DLL
 		#define EXPORT __declspec(dllexport) /* DLL export */
 	#else
-		#define EXPORT __declspec(dllimport) /* EXE import */
+		#define EXPORT //* EXE import */
 	#endif
 #else
 	#define EXPORT
@@ -106,5 +106,9 @@ EXPORT float APS_GetWaveformOffset(int device, int channel);
 EXPORT int APS_SetWaveformScale(int device, int channel, float scale);
 EXPORT float APS_GetWaveformScale(int device, int channel);
 EXPORT int APS_LoadStoredWaveform(int device, int channel);
+EXPORT int APS_SetLinkList(int device, int channel,
+                           unsigned short *OffsetData, unsigned short *CountData,
+                           unsigned short *TriggerData, unsigned short *RepeatData,
+                           int length, int bank);
 
 #endif

@@ -952,12 +952,12 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 			dac_type = ENVELOPE;
 			if (bank == 0) {
 				dac_write = FPGA_ADDR_ELL_ENVLL_A_WRITE;
-				dac_ctrl_reg = FGPA_OFF_ELL_ENVLL_A_CTRL;
+				dac_ctrl_reg = FPGA_OFF_ELL_ENVLL_A_CTRL;
 			} else {
 				dac_write = FPGA_ADDR_ELL_ENVLL_B_WRITE;
-				dac_ctrl_reg = FGPA_OFF_ELL_ENVLL_B_CTRL;
+				dac_ctrl_reg = FPGA_OFF_ELL_ENVLL_B_CTRL;
 			}
-			dac_rpt_reg  = FGPA_OFF_ELL_ENVLL_REPEAT;
+			dac_rpt_reg  = FPGA_OFF_ELL_ENVLL_REPEAT;
 			break;
 		case 1:
 			// fall through
@@ -965,12 +965,12 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 			dac_type = PHASE;
 			if (bank == 0) {
 				dac_write    = FPGA_ADDR_ELL_PHSLL_A_WRITE;
-				dac_ctrl_reg = FGPA_OFF_ELL_PHSLL_A_CTRL;
+				dac_ctrl_reg = FPGA_OFF_ELL_PHSLL_A_CTRL;
 			} else {
 				dac_write = FPGA_ADDR_ELL_PHSLL_B_WRITE;
-				dac_ctrl_reg = FGPA_OFF_ELL_PHSLL_B_CTRL;
+				dac_ctrl_reg = FPGA_OFF_ELL_PHSLL_B_CTRL;
 			}
-			dac_rpt_reg  = FGPA_OFF_ELL_PHSLL_REPEAT;
+			dac_rpt_reg  = FPGA_OFF_ELL_PHSLL_REPEAT;
 			break;
 		default:
 			return -2;
@@ -1133,12 +1133,12 @@ EXPORT int APS_ClearLinkListELL(int device,int dac, int bank)
         dac_type = ENVELOPE;
         if (bank == 0) {
           dac_write = FPGA_ADDR_ELL_ENVLL_A_WRITE;
-          dac_ctrl_reg = FGPA_OFF_ELL_ENVLL_A_CTRL;
+          dac_ctrl_reg = FPGA_OFF_ELL_ENVLL_A_CTRL;
         } else {
           dac_write = FPGA_ADDR_ELL_ENVLL_B_WRITE;
-          dac_ctrl_reg = FGPA_OFF_ELL_ENVLL_B_CTRL;
+          dac_ctrl_reg = FPGA_OFF_ELL_ENVLL_B_CTRL;
         }
-        dac_rpt_reg  = FGPA_OFF_ELL_ENVLL_REPEAT;
+        dac_rpt_reg  = FPGA_OFF_ELL_ENVLL_REPEAT;
         break;
       case 1:
         // fall through
@@ -1146,12 +1146,12 @@ EXPORT int APS_ClearLinkListELL(int device,int dac, int bank)
         dac_type = PHASE;
         if (bank == 0) {
           dac_write    = FPGA_ADDR_ELL_PHSLL_A_WRITE;
-          dac_ctrl_reg = FGPA_OFF_ELL_PHSLL_A_CTRL;
+          dac_ctrl_reg = FPGA_OFF_ELL_PHSLL_A_CTRL;
         } else {
           dac_write = FPGA_ADDR_ELL_PHSLL_B_WRITE;
-          dac_ctrl_reg = FGPA_OFF_ELL_PHSLL_B_CTRL;
+          dac_ctrl_reg = FPGA_OFF_ELL_PHSLL_B_CTRL;
         }
-        dac_rpt_reg  = FGPA_OFF_ELL_PHSLL_REPEAT;
+        dac_rpt_reg  = FPGA_OFF_ELL_PHSLL_REPEAT;
         break;
       default:
         return -2;
@@ -1202,13 +1202,13 @@ EXPORT int APS_SetLinkListRepeat(int device, unsigned short repeat, int dac) {
 			// fall through
 		case 2:
 			dac_type = ENVELOPE;
-			dac_rpt_reg  = FGPA_OFF_ELL_ENVLL_REPEAT;
+			dac_rpt_reg  = FPGA_OFF_ELL_ENVLL_REPEAT;
 			break;
 		case 1:
 			// fall through
 		case 3:
 			dac_type = PHASE;
-			dac_rpt_reg  = FGPA_OFF_ELL_PHSLL_REPEAT;
+			dac_rpt_reg  = FPGA_OFF_ELL_PHSLL_REPEAT;
 			break;
 		default:
 			return -2;

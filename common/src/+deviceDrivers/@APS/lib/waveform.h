@@ -22,12 +22,21 @@
 #define MAX_WF_VALUE pow(2,NUM_BITS)-1
 
 typedef struct {
+  uint16_t *offset;
+  uint16_t *count;
+  uint16_t *trigger;
+  uint16_t *repeat;
+  unsigned int length;
+} bank_t;
+
+typedef struct {
   float * pData;
   uint16_t * pFormatedData;
   float offset;
   float scale;
   int allocatedLength;
   int isLoaded;
+  bank_t linkListBanks[2];
 } waveform_t;
 
 waveform_t * WF_Init();
@@ -42,5 +51,11 @@ void   WF_Prep(waveform_t * wfArray, int channel);
 
 uint16_t * WF_GetDataPtr(waveform_t * wfArray, int channel);
 int16_t WF_Getlength(waveform_t * wfArray, int channel);
+
+int WF_SetLinkList(waveform_t * wfArray, int channel,
+    uint16_t *OffsetData, uint16_t *CountData,
+    uint16_t *TriggerData, uint16_t *RepeatData,
+    int length, int bank);
+void WF_FreeBank(bank_t * bank);
 
 #endif /* WAVEFORM_H_ */

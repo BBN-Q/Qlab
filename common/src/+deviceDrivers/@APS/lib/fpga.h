@@ -82,12 +82,12 @@
 
 // Version 0x10 Additional Registers
 
-#define FGPA_OFF_ELL_ENVLL_A_CTRL 0x7  // A Control Register
-#define FGPA_OFF_ELL_ENVLL_B_CTRL 0x8  // B Control Register
-#define FGPA_OFF_ELL_ENVLL_REPEAT 0x9  // Repeat Count
-#define FGPA_OFF_ELL_PHSLL_A_CTRL 0xA  // A Control Register
-#define FGPA_OFF_ELL_PHSLL_B_CTRL 0xB  // B Control Register
-#define FGPA_OFF_ELL_PHSLL_REPEAT 0xC  // Repeat Count
+#define FPGA_OFF_ELL_ENVLL_A_CTRL 0x7  // A Control Register
+#define FPGA_OFF_ELL_ENVLL_B_CTRL 0x8  // B Control Register
+#define FPGA_OFF_ELL_ENVLL_REPEAT 0x9  // Repeat Count
+#define FPGA_OFF_ELL_PHSLL_A_CTRL 0xA  // A Control Register
+#define FPGA_OFF_ELL_PHSLL_B_CTRL 0xB  // B Control Register
+#define FPGA_OFF_ELL_PHSLL_REPEAT 0xC  // Repeat Count
 #define FPGA_OFF_ADDR_CHECKSUM    0xD  // Address Checksum Register
 #define FPGA_OFF_DATA_CHECKSUM    0xE  // Data Checksum Register
 #define FPGA_OFF_DAC02_ZERO       0x10 // DAC0/2 zero offset register
