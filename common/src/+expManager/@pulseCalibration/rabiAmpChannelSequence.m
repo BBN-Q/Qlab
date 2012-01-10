@@ -20,7 +20,7 @@ cycleLength = 10000;
 numsteps = 80; %should be even
 stepsize = 200;
 
-nbrPatterns = numsteps;
+nbrPatterns = 2*numsteps;
 
 % load config parameters dictionaries
 load(obj.pulseParamPath, 'measDelay', 'delays',  'bufferDelays',  'bufferResets',  'bufferPaddings',  'offsets',  'sigmas',  'deltas', 'buffers',  'pulseLengths');
@@ -47,9 +47,10 @@ bufferDelay = bufferDelays(IQkey);
 %different because the source is never pulsed
 amps = [-(numsteps/2)*stepsize:stepsize:-stepsize stepsize:stepsize:(numsteps/2)*stepsize];
 patseq = {pg.pulse('Xtheta', 'amp', amps)};
+patseq2 = {pg.pulse('Ytheta', 'amp', amps)};
 
 % pre-allocate space
-ch1 = zeros(numsteps, cycleLength);
+ch1 = zeros(nbrPatterns, cycleLength);
 ch2 = ch1; ch3 = ch1; ch4 = ch1;
 ch1m1 = ch1; ch1m2 = ch1; ch2m1 = ch1; ch2m2 = ch1;
 ch3m1 = ch1; ch3m2 = ch1; ch4m1 = ch1; ch4m2 = ch1;
@@ -62,11 +63,18 @@ for n = 1:numsteps;
     chBuffer(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
 end
 
+for n = 1:numsteps;
+	[patx paty] = pg.getPatternSeq(patseq2, n, delay, fixedPt);
+	chI(n+numsteps, :) = patx + offset;
+	chQ(n+numsteps, :) = paty + offset;
+    chBuffer(n+numsteps, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
+end
+
 % trigger at fixedPt-500
 % measure from (fixedPt:fixedPt+measLength)
 measLength = 3000;
 measSeq = {pg.pulse('M', 'width', measLength)};
-for n = 1:numsteps;
+for n = 1:2*numsteps;
 	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
 	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
 end

@@ -38,9 +38,9 @@ patseq = {};
 for SPAMct = 0:10
     patseq{end+1} = {pg.pulse('Y90p')};
     for ct = 0:SPAMct
-        patseq{end} = {patseq{end}{:}, SPAMBlock{:}};
+        patseq{end} = [patseq{end}, SPAMBlock];
     end
-    patseq{end} = {patseq{end}{:}, pg.pulse('X90m')};
+    patseq{end} = [patseq{end}, {pg.pulse('X90m')}];
 end
 
 patseq{end+1} = {pg.pulse('QId')};

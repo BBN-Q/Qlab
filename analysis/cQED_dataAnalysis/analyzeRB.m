@@ -1,7 +1,7 @@
-function analyzeRB(xpts, ypts)
+function analyzeRB(ypts)
     %[xpts ypts] = calScale;
     seqlengths = [2, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96];
-    xpts2 = seqlengths(1 + floor((xpts-1)./32));
+    xpts2 = seqlengths(1 + floor((0:length(ypts)-1)./32));
     
     % force long times to <sigma_z> = 0 by rescaling
     %midvalue = mean(ypts(end-32+1:end));
@@ -9,12 +9,8 @@ function analyzeRB(xpts, ypts)
     %ypts2 = (ypts+1)./scale - 1;
     ypts2 = ypts(:);
     
-    avgpts = zeros(1,11);
-    errors = zeros(1,11);
-    for i=1:length(seqlengths)
-        avgpts(i) = mean(ypts2( 1+32*(i-1):32*i ));
-        errors(i) = std( ypts2( 1+32*(i-1):32*i ));
-    end
+    avgpts = mean(reshape(ypts, 32, 11));
+    errors = std(reshape(ypts, 32, 11));
     
     fidelity = .5 * (1 - ypts2);
     avgFidelity = .5 * (1 - avgpts);

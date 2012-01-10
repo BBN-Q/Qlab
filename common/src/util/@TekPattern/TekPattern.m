@@ -77,7 +77,7 @@ classdef TekPattern < handle
 			fclose(fid);
 		end
 		
-		function out = packPattern(pattern, marker1, marker2)
+		function pattern = packPattern(pattern, marker1, marker2)
 			% AWG 5000 series binary data format
 			% m2 m1 d14 d13 d12 d11 d10 d9 d8 d7 d6 d5 d4 d3 d2 d1
 			% 16-bit format with markers occupying left 2 bits followed by the 14 bit
@@ -87,11 +87,9 @@ classdef TekPattern < handle
             pattern = uint16(pattern);
 			pattern( pattern > 2^14 - 1 ) = 2^14 - 1;
 
-			% force markers to binary
-			marker1 = uint16(bitand(1, marker1));
-			marker2 = uint16(bitand(1, marker2));
-
-			out = bitor(pattern, bitor(bitshift(marker1, 14), bitshift(marker2, 15)));
+			% integrate marker bits
+            pattern = bitset(pattern,15, logical(marker1));
+            pattern = bitset(pattern,16, logical(marker2));
 		end
 		
 		function writeTekHeader(fid, numsteps, basename, options)

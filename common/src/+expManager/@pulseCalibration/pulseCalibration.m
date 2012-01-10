@@ -90,6 +90,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             ExpParams.DoPi2Cal = 1;
             ExpParams.DoPiCal = 1;
             ExpParams.DoDRAGCal = 0;
+            ExpParams.OffsetNorm = 1;
             
             cfg = struct('ExpParams', ExpParams, 'SoftwareDevelopmentMode', 1, 'InstrParams', struct());
             cfg_path = [path '/unit_test.cfg'];
@@ -248,6 +249,16 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         
         function Do(obj)
             obj.pulseCalibrationDo();
+        end
+        
+        function errorCheckExpParams(obj)
+            % call super class method
+            errorCheckExpParams@expManager.homodyneDetection2D(obj);
+
+            ExpParams = obj.inputStructure.ExpParams;
+            if ~isfield(ExpParams, 'OffsetNorm')
+                ExpParams.OffsetNorm = 2;
+            end
         end
     end
 end

@@ -141,6 +141,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             d.chan_4 = d.channelStruct;
         end
         
+        %Destructor
+        function delete(obj)
+            if obj.is_open()
+                obj.close();
+            end
+        end
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function connect(obj,address)
             

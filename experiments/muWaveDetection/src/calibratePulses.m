@@ -24,6 +24,7 @@ ExpParams.DoRamsey = 0;
 ExpParams.DoPi2Cal = 1;
 ExpParams.DoPiCal = 1;
 ExpParams.DoDRAGCal = 0;
+ExpParams.OffsetNorm = 4;
 ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;
 ExpParams.filter = commonSettings.ExpParams.filter;
 ExpParams.softAvgs = 2;

@@ -42,18 +42,27 @@ if ExpParams.DoRabiAmp
    
    %Run a sequence and fit it
    data = obj.homodyneMeasurement(nbrSegments);
-   [piAmpGuesses(1), offsetPhases(1)] = obj.analyzeRabiAmp(data);
+   % analyze X data
+   [piAmpGuesses(1), offsetPhases(1)] = obj.analyzeRabiAmp(data(1:end/2));
+   % analyze Y data
+   [piAmpGuesses(2), offsetPhases(2)] = obj.analyzeRabiAmp(data(end/2+1:end));
+   %Arbitary extra division by two so that it doesn't push the offset too far. 
+   amp2offset = 2.0/8192/obj.ExpParams.OffsetNorm/2;
    
-   obj.pulseParams.piAmp = real(piAmpGuesses(1));
+   obj.pulseParams.piAmp = piAmpGuesses(1);
    obj.pulseParams.pi2Amp = obj.pulseParams.piAmp/2;
+   obj.pulseParams.i_offset = obj.pulseParams.i_offset + offsetPhases(1)*amp2offset;
+   obj.pulseParams.q_offset = obj.pulseParams.q_offset + offsetPhases(2)*amp2offset;
    fprintf('Initial guess for X180Amp: %.0f\n', obj.pulseParams.piAmp);
+   fprintf('Shifting i_offset by: %.3f\n', offsetPhases(1)*amp2offset);
+   fprintf('Shifting q_offset by: %.3f\n', offsetPhases(2)*amp2offset);
 end
 
 %% Ramsey
 if ExpParams.DoRamsey
     % generate Ramsey sequence (TODO)
     [filenames, nbrSegments] = obj.RamseyChannelSequence(ExpParams.Qubit);
-    obj.loadSequence(filename);
+    obj.loadSequence(filenames);
     
     % adjust drive frequency
     freq = QubitSpec.frequency + ExpParams.RamseyDetuning;
@@ -81,23 +90,23 @@ if ExpParams.DoPi2Cal
     options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
     
     x0 = lsqnonlin(@obj.Xpi2ObjectiveFnc,x0,[],[],options);
-    X90Amp = x0(1);
-    i_offset = x0(2);
+    X90Amp = real(x0(1));
+    i_offset = real(x0(2));
+    obj.pulseParams.i_offset = i_offset;
     fprintf('Found X90Amp: %.0f\n', X90Amp);
-    fprintf('Found I offset: %.3f\n', i_offset);
+    fprintf('Found I offset: %.3f\n\n\n', i_offset);
     
     % calibrate amplitude and offset for +/- Y90
     x0(2) = obj.pulseParams.q_offset;
     
     x0 = lsqnonlin(@obj.Ypi2ObjectiveFnc,x0,[],[],options);
-    Y90Amp = x0(1);
-    q_offset = x0(2);
+    Y90Amp = real(x0(1));
+    q_offset = real(x0(2));
     fprintf('Found Y90Amp: %.0f\n', Y90Amp);
-    fprintf('Found Q offset: %.3f\n', q_offset);
+    fprintf('Found Q offset: %.3f\n\n\n', q_offset);
     
     % update pulseParams
     obj.pulseParams.pi2Amp = Y90Amp;
-    obj.pulseParams.i_offset = i_offset;
     obj.pulseParams.q_offset = q_offset;
     % update T matrix with ratio X90Amp/Y90Amp
     ampFactor = obj.pulseParams.T(1,1)*X90Amp/Y90Amp;
@@ -116,9 +125,9 @@ if ExpParams.DoPiCal
     options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
     
     x0 = lsqnonlin(@obj.XpiObjectiveFnc,x0,[],[],options);
-    X180Amp = x0(1);
-    i_offset = x0(2);
-    fprintf('Found X180Amp: %.0f\n', X180Amp);
+    X180Amp = real(x0(1));
+    i_offset = real(x0(2));
+    fprintf('Found X180Amp: %.0f\n\n\n', X180Amp);
     
     % update pulseParams
     obj.pulseParams.piAmp = X180Amp;

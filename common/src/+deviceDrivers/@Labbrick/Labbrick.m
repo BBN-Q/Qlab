@@ -25,7 +25,8 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
     
     % Class-specific private properties
     properties (Access = private)
-        devID = 1;
+        devID;
+        open = 0;
         serialNum = 1;
         model = 'LMS-103';
         max_power = 10; % dBm
@@ -61,6 +62,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
     end % end private methods
     
     methods
+        %Constructor
         function obj = Labbrick()
             % load DLL
             % build library path
@@ -73,6 +75,13 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             end
         end
 
+        %Destructor
+        function delete(obj)
+            if ~isempty(obj.devID)
+                obj.disconnect();
+            end
+        end
+        
 		% instrument meta-setter
 		function setAll(obj, settings)
 			fields = fieldnames(settings);
@@ -106,6 +115,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             end
             
             % populate some device properties
+            obj.open = 1;
             obj.max_power = calllib('vnx_fmsynth', 'fnLMS_GetMaxPwr', obj.devID) / 4;
             obj.min_power = calllib('vnx_fmsynth', 'fnLMS_GetMinPwr', obj.devID) / 4;
             obj.max_freq = calllib('vnx_fmsynth', 'fnLMS_GetMaxFreq', obj.devID) / 1e8;
@@ -113,10 +123,13 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
         end
         
         function disconnect(obj)
-            status = calllib('vnx_fmsynth', 'fnLMS_CloseDevice', obj.devID);
-            if status ~= 0
-                warning('LABBRICK:DISCONNECT', ...
-                    'Error closing device id: %i, returned status: %i.', [obj.devID, status]);
+            if obj.open
+                status = calllib('vnx_fmsynth', 'fnLMS_CloseDevice', obj.devID);
+                if status ~= 0
+                    warning('LABBRICK:DISCONNECT', ...
+                        'Error closing device id: %i, returned status: %i.', [obj.devID, status]);
+                end
+            obj.open = 0;
             end
         end
         

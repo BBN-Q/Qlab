@@ -1,7 +1,7 @@
 function [cost, J] = pi2ObjectiveFunction(obj, x, qubit, direction)
     pi2Amp = x(1);
     offset = x(2);
-    fprintf('pi2Amp: %.0f, offset: %.3f\n', pi2Amp, offset);
+    fprintf('pi2Amp: %.1f, offset: %.4f\n', pi2Amp, offset);
     % create and load sequence
     obj.pulseParams.pi2Amp = pi2Amp;
     [filenames nbrPatterns] = obj.Pi2CalChannelSequence(obj.ExpParams.Qubit, direction);
@@ -39,7 +39,7 @@ function [cost, J] = pi2ObjectiveFunction(obj, x, qubit, direction)
     % scale J rows by amplitude and offset->amplitude conversion factor
     J(:,1) = J(:,1)/pi2Amp;
     offset2amp = 8192/2.0; % replace 2.0 by the max output voltage of the AWG
-    J(:,2) = 2*J(:,2)*offset2amp/pi2Amp; % factor of 2 determined experimentally (why??)
+    J(:,2) = obj.ExpParams.OffsetNorm*J(:,2)*offset2amp/pi2Amp; % offset can have a different integral norm
     fprintf('Cost: %.4f (%.4f) \n', sum(cost.^2), sum(cost.^2/length(cost)));
 end
 

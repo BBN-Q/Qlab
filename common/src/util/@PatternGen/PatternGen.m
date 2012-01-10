@@ -183,9 +183,10 @@ classdef PatternGen < handle
         % buffer pulse generator
 		function out = bufferPulse(patx, paty, zeroLevel, padding, reset, delay)
 			self = PatternGen;
-			% subtract offsets
-			patx = patx - zeroLevel;
-            paty = paty - zeroLevel;
+
+            % subtract offsets
+			patx = patx(:) - zeroLevel;
+            paty = paty(:) - zeroLevel;
             
             % find when either channel is high
             pat = double(patx | paty);

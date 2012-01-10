@@ -10,7 +10,7 @@ function [piAmp, offsetPhase] = analyzeRabiAmp(data)
     frabi = 0.5*max(freqpos,1)/xpts(end);
     
     % model A + B * cos(w t + phi)
-    rabif = inline('p(1) - p(2)*cos(2*pi*p(3)*xdata + p(4))','p','xdata');
+    rabif = inline('p(1) - p(2)*cos(2*pi*p(3)*(xdata - p(4)))','p','xdata');
 
     % initial guess for amplitude is max - min
     amp = 0.5*(max(data) - min(data));
