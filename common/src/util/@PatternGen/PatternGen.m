@@ -458,7 +458,7 @@ classdef PatternGen < handle
                 
                 entry.key = key;
                 % mark square pulses as time/amplitude
-                if strcmp(pulseType, 'square')
+                if strcmp(key, padWaveformKey) || (strcmp(pulseType, 'square') && length(pulse) > 100)
                     % repeat = width for time/amplitude pulses
                     entry.length = 1;
                     entry.repeat = length(pulse);
@@ -575,17 +575,19 @@ classdef PatternGen < handle
             wf = linkListPattern.waveforms;
             
             nEntries = length(linkList);
-            pattern = [];
+            pattern = zeros(1,obj.cycleLength);
+            idx = 1;
             for i = 1:nEntries
                 if linkList{i}.isTimeAmplitude
                     amplitude = wf.get(linkList{i}.key)';
                     amplitude = amplitude(1);
                     newPat = amplitude * ones(1,linkList{i}.repeat);
-                    pattern = [pattern newPat];
+                    pattern(idx:idx+length(newPat)-1) = newPat;
+                    idx = idx + length(newPat);
                 else
-                    for r = 1:linkList{i}.repeat
-                        pattern = [pattern wf.get(linkList{i}.key)'];
-                    end
+                    currWf = wf.get(linkList{i}.key)';
+                    pattern(idx:idx+linkList{i}.repeat*length(currWf)-1) = repmat(currWf, 1, linkList{i}.repeat);
+                    idx = idx + linkList{i}.repeat*length(currWf);
                 end
             end
         end

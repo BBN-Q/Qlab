@@ -12,18 +12,18 @@ temppath = [char(script.getParent()) '\'];
 path = 'U:\AWG\Ramsey\';
 basename = 'Ramsey';
 
-fixedPt = 54000; %12500
-cycleLength = 58000; %17000
+fixedPt = 12500; %12500 (54000)
+cycleLength = 17000; %17000 (58000)
 
 % load config parameters from file
 parent_path = char(script.getParentFile.getParent());
 cfg_path = [parent_path '/cfg/'];
-load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bufferReset', 'bufferPadding', 'offset', 'piAmp', 'pi2Amp', 'sigma', 'pulseType', 'delta', 'buffer', 'pulseLength');
+load([cfg_path 'pulseParamBundles.mat'], 'Ts', 'delays', 'measDelay', 'bufferDelays', 'bufferResets', 'bufferPaddings', 'offsets', 'piAmps', 'pi2Amps', 'sigmas', 'pulseTypes', 'deltas', 'buffers', 'pulseLengths');
 
-pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', buffer, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
+pg = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength);
 
-numsteps = 160;
-stepsize = 300; %24
+numsteps = 150;
+stepsize = 48; %24 (300)
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {...
     pg.pulse('X90p'), ...
@@ -37,17 +37,17 @@ ch2 = ch1;
 ch3m1 = ch1;
 
 for n = 1:numsteps;
-	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt);
-	ch1(n, :) = patx + offset;
-	ch2(n, :) = paty + offset;
-    ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
+	[patx paty] = pg.getPatternSeq(patseq, n, delays('12'), fixedPt);
+	ch1(n, :) = patx + offsets('12');
+	ch2(n, :) = paty + offsets('12');
+    ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPaddings('12'), bufferResets('12'), bufferDelays('12'));
 end
 
 for n = 1:length(calseq);
-	[patx paty] = pg.getPatternSeq(calseq{n}, n, delay, fixedPt);
-	ch1(numsteps+n, :) = patx + offset;
-	ch2(numsteps+n, :) = paty + offset;
-    ch3m1(numsteps+n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
+	[patx paty] = pg.getPatternSeq(calseq{n}, n, delays('12'), fixedPt);
+	ch1(numsteps+n, :) = patx + offsets('12');
+	ch2(numsteps+n, :) = paty + offsets('12');
+    ch3m1(numsteps+n, :) = pg.bufferPulse(patx, paty, 0, bufferPaddings('12'), bufferResets('12'), bufferDelays('12'));
 end
 
 numsteps = numsteps + length(calseq);
@@ -82,11 +82,12 @@ ch3 = zeros(numsteps, cycleLength);
 ch4 = zeros(numsteps, cycleLength);
 ch2m1 = ch3;
 ch2m2 = ch4;
-ch3 = ch3 + offset;
-ch4 = ch4 + offset;
+ch3 = ch3 + offsets('12');
+ch4 = ch4 + offsets('12');
 
 % make TekAWG file
-TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
+options = struct('m21_high', 2.0, 'm41_high', 2.0);
+TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2,options);
 disp('Moving AWG file to destination');
 movefile([temppath basename '.awg'], [path basename '.awg']);
 end

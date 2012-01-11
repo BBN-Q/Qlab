@@ -114,7 +114,7 @@ for loop2_index = 1:Loop.two.steps
             masterAWG.run();
             pause(0.5);
 
-            success = scope.wait_for_acquisition(30);
+            success = scope.wait_for_acquisition(60);
             if success ~= 0
                 error('failed to acquire waveform')
             end

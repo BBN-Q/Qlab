@@ -1,4 +1,4 @@
-function PiRabiSequence(makePlot)
+function PiRabiConcatSequence(makePlot)
 
 if ~exist('makePlot', 'var')
     makePlot = true;
@@ -16,26 +16,34 @@ basename = 'PiRabi';
 fixedPt = 6000;
 cycleLength = 10000;
 
-numsteps = 80; % 100
-minWidth = 12*6; % 12
-stepsize = 12; % 4
+numsteps = 27; % 100
+minWidth = 8*12; % 12
+stepsize = 48; % 4
+SSBFreq = -150e6;
+samplingRate = 1.2e9;
 
 % load config parameters from file
-parent_path = char(script.getParentFile.getParent());
-cfg_path = [parent_path '/cfg/'];
-load([cfg_path 'pulseParamBundles.mat'], 'Ts', 'delays', 'measDelay', 'bufferDelays', 'bufferResets', 'bufferPaddings', 'offsets', 'piAmps', 'pi2Amps', 'sigmas', 'pulseTypes', 'deltas', 'buffers', 'pulseLengths');
+load(getpref('qlab','pulseParamsBundleFile'), 'Ts', 'delays', 'measDelay', 'bufferDelays', 'bufferResets', 'bufferPaddings', 'offsets', 'piAmps', 'pi2Amps', 'sigmas', 'pulseTypes', 'deltas', 'buffers', 'pulseLengths');
+buffers('q1q2') = 0;
 
+sigma3 = 12;
 pg1 = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength);
-pg2 = PatternGen('dPiAmp', piAmps('q2'), 'dPiOn2Amp', pi2Amps('q2'), 'dSigma', sigmas('q2'), 'dPulseType', pulseTypes('q2'), 'dDelta', deltas('q2'), 'correctionT', Ts('34'), 'dBuffer', buffers('q2'), 'dPulseLength', pulseLengths('q2'), 'cycleLength', cycleLength);
-pg21 = PatternGen('dPiAmp', piAmps('q1q2'), 'dPiOn2Amp', pi2Amps('q1q2'), 'dSigma', sigmas('q1q2'), 'dPulseType', pulseTypes('q1q2'), 'dDelta', deltas('q1q2'), 'correctionT', Ts('56'), 'dBuffer', buffers('q1q2'), 'dPulseLength', pulseLengths('q1q2'), 'cycleLength', cycleLength, 'passThru', true);
+pg2 = PatternGen('dPiAmp', piAmps('q2'), 'dPiOn2Amp', pi2Amps('q2'), 'dSigma', sigmas('q2'), 'dPulseType', pulseTypes('q2'), 'dDelta', deltas('q2'), 'correctionT', Ts('34'), 'dBuffer', buffers('q2'), 'dPulseLength', pulseLengths('q2'), 'cycleLength', cycleLength, 'samplingRate', samplingRate, 'dmodFrequency', SSBFreq);
+pg21 = PatternGen('dPiAmp', piAmps('q1q2'), 'dPiOn2Amp', pi2Amps('q1q2'), 'dSigma', sigma3, 'dPulseType', pulseTypes('q1q2'), 'dDelta', deltas('q1q2'), 'correctionT', Ts('56'), 'dBuffer', buffers('q1q2'), 'dPulseLength', pulseLengths('q1q2'), 'cycleLength', cycleLength, 'samplingRate', samplingRate, 'dmodFrequency',SSBFreq, 'passThru', true);
 
-pulseLength = pulseLengths('q2');
-length = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
-%patseq1  = {pg1.pulse('Xp'), pg1.pulse('QId', 'width', length), pg1.pulse('Xp')};
-patseq1  = {pg2.pulse('Xp'), pg2.pulse('QId', 'width', length), pg2.pulse('Xp')};
+pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
+patseq1  = {pg2.pulse('Xp'), pg2.pulse('QId', 'width', pulseLength), pg2.pulse('Xp')};
 patseq2  = {pg2.pulse('QId')};
-%patseq2  = {pg2.pulse('QId', 'width', pulseLength), pg2.pulse('Xp', 'width', length, 'pType', 'square'), pg2.pulse('QId', 'width', pulseLength)};
-patseq21 = {pg21.pulse('Xp', 'pType', 'gaussOn', 'width', 6*sigma3, 'duration', 6*sigma3), pg21.pulse('Xp', 'width', length-12*sigma3, 'pType', 'square'), pg21.pulse('Xp', 'pType', 'gaussOff', 'width', 6*sigma3, 'duration', 6*sigma3), pg21.pulse('QId', 'width', pulseLength)};
+
+CRStep = {pg21.pulse('Xp', 'width', stepsize, 'pType', 'square')};
+
+for stepct=1:numsteps
+    patseq21{stepct} = [{pg21.pulse('Xp', 'pType', 'gaussOn', 'width', 4*sigma3)},...
+        repmat(CRStep, 1, stepct-1),...
+        {pg21.pulse('Xp', 'pType', 'gaussOff', 'width', 4*sigma3)},...
+        {pg21.pulse('QId', 'width', pulseLengths('q2')+buffers('q1') )}...
+        ];
+end
 
 ch1 = zeros(2*numsteps, cycleLength);
 ch2 = ch1;
@@ -45,8 +53,7 @@ ch1m1 = ch1; ch1m2 = ch1;
 ch2m1 = ch1; ch2m2 = ch1;
 ch3m1 = ch1; ch3m2 = ch1;
 ch4m1 = ch1; ch4m2 = ch1;
-
-[ch5seq, ch6seq, ~, ~] = pg21.build(patseq21, numsteps, delays('56'), fixedPt);
+PulseCollectionCR = [];
 
 for n = 1:numsteps;
 	%[patx paty] = pg1.getPatternSeq(patseq1, n, delays('q1'), fixedPt);
@@ -59,10 +66,10 @@ for n = 1:numsteps;
 	ch4(n, :) = paty + offsets('34');
     ch4m1(n, :) = pg2.bufferPulse(patx, paty, 0, bufferPaddings('34'), bufferResets('34'), bufferDelays('34'));
     
+    [CR_Iseq{n}, CR_Qseq{n}, ~, PulseCollectionCR] = pg21.build(patseq21{n}, 1, delays('56'), fixedPt, PulseCollectionCR);
     % construct buffer for APS pulses
-    patx = pg21.linkListToPattern(ch5seq, n)';
-    paty = pg21.linkListToPattern(ch6seq, n)';
-    %ch2m1(n, :) = pg21.bufferPulse(patx, paty, 0, bufferPadding3, bufferReset3, bufferDelay3);
+    patx = pg21.linkListToPattern(CR_Iseq{n}, 1)';
+    paty = pg21.linkListToPattern(CR_Qseq{n}, 1)';
     ch3m1(n, :) = pg21.bufferPulse(patx, paty, 0, bufferPaddings('12'), bufferResets('12'), bufferDelays('12'));
     
     % second sequence without the pi's
@@ -85,8 +92,17 @@ for n = 1:2*numsteps;
     ch4m2(n,:) = pg1.makePattern([], 5, ones(100,1), cycleLength);
 end
 
+% unify LLs and waveform libs
+ch5seq = CR_Iseq{1}; ch6seq = CR_Qseq{1};
+for n = 2:numsteps
+    ch5seq.linkLists = [ch5seq.linkLists CR_Iseq{n}.linkLists];
+    ch6seq.linkLists = [ch6seq.linkLists CR_Qseq{n}.linkLists];
+end
+ch5seq.waveforms = deviceDrivers.APS.unifySequenceLibraryWaveformsSingle(CR_Iseq);
+ch6seq.waveforms = deviceDrivers.APS.unifySequenceLibraryWaveformsSingle(CR_Qseq);
+
 if makePlot
-    myn = 25;
+    myn = 2;
     figure
     plot(ch1(myn,:))
     hold on
