@@ -133,6 +133,26 @@ classdef PatternGen < handle
             outy = zeros(n, 1);
         end
         
+        function [outx, outy] = derivGaussOnPulse(params)
+           amp = params.amp;
+           n = params.width;
+           sigma = params.sigma;
+
+           t = 1:n;
+           outx = round(amp * (-(t-n)./sigma^2).*exp(-(t-n).^2./(2 * sigma^2))).';
+           outy = zeros(n, 1);
+        end
+
+        function [outx, outy] = derivGaussOffPulse(params)
+           amp = params.amp;
+           n = params.width;
+           sigma = params.sigma;
+
+           t = 1:n;
+           outx = round(amp * (-(t-1)./sigma^2).*exp(-(t-1).^2./(2 * sigma^2))).';
+           outy = zeros(n, 1);
+        end
+        
         function [outx, outy] = dragPulse(params)
             self = PatternGen;
             yparams = params;
@@ -140,6 +160,22 @@ classdef PatternGen < handle
             
             [outx, tmp] = self.gaussianPulse(params);
             [outy, tmp] = self.derivGaussianPulse(yparams);
+        end
+        
+        function [outx, outy] = dragGaussOnPulse(params)
+            self = PatternGen;
+            derivParams = params;
+            derivParams.amp = params.amp*params.delta;
+            [outx, ~] = self.gaussOnPulse(params);
+            [outy, ~] = self.derivGaussOnPulse(derivParams);
+        end
+        
+        function [outx, outy] = dragGaussOffPulse(params)
+            self = PatternGen;
+            derivParams = params;
+            derivParams.amp = params.amp*params.delta;
+            [outx, ~] = self.gaussOffPulse(params);
+            [outy, ~] = self.derivGaussOffPulse(derivParams);
         end
         
         function [outx, outy] = hermitePulse(params)
