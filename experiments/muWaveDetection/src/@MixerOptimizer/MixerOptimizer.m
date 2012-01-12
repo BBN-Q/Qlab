@@ -63,6 +63,8 @@ classdef MixerOptimizer < expManager.expBase
         end
         function Do(obj)
             try
+                %i_offset = -.006;
+                %q_offset = -.076;
                 [i_offset, q_offset] = obj.optimize_mixer_offsets();
                 T = obj.optimize_mixer_ampPhase(i_offset, q_offset);
                 % save transformation and offsets to file

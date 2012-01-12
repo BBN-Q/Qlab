@@ -1,6 +1,6 @@
 function optimize_mixers(channel)
     % channel 0 = all channels
-    cfg_files = {'optimize_mixer.cfg', 'optimize_mixer2.cfg'};
+    cfg_files = {'optimize_mixer.cfg', 'optimize_mixer2.cfg', 'optimize_mixer3.cfg'};
     if ~exist('channel', 'var')
         channel = 1;
     end

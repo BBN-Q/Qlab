@@ -39,8 +39,6 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
         sa = obj.sa;
         awg = obj.awg;
         
-        awg_amp = awg.(['chan_' num2str(awg_I_channel)]).Amplitude;
-
         sa.center_frequency = obj.specgen.frequency * 1e9 - fssb;
         sa.span = spec_analyzer_span;
         sa.sweep_mode = 'single';
@@ -51,11 +49,13 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
         sa.peakAmplitude();
 
         awgfile = ExpParams.SSBAWGFile;
-        awg.openConfig(awgfile);
-        awg.(['chan_' num2str(awg_I_channel)]).offset = i_offset;
-        awg.(['chan_' num2str(awg_Q_channel)]).offset = q_offset;
+
         switch class(awg)
             case 'deviceDrivers.Tek5014'
+                awg_amp = awg.(['chan_' num2str(awg_I_channel)]).Amplitude;
+                awg.openConfig(awgfile);
+                awg.(['chan_' num2str(awg_I_channel)]).offset = i_offset;
+                awg.(['chan_' num2str(awg_Q_channel)]).offset = q_offset;
                 awg.runMode = 'CONT';
                 awg.(['chan_' num2str(awg_I_channel)]).Amplitude = awg_amp;
                 awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = awg_amp;
@@ -64,9 +64,40 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
                 awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
                 awg.(['chan_' num2str(awg_Q_channel)]).Enabled = 1;
             case 'deviceDrivers.APS'
+                awg_amp = awg.(['chan_' num2str(awg_I_channel)]).amplitude;
+
+                samplingRate = 1.2e9;
+                waveform_length = 1200;
+                timeStep = 1/samplingRate;
+                tpts = timeStep*(0:(waveform_length-1));
+                % i waveform
+                iwf = awg.(['chan_' num2str(awg_I_channel)]).waveform;
+                iwf.dataMode = iwf.REAL_DATA;
+                iwf.data = 0.5 * cos(2*pi*fssb.*tpts);
+                iwf.set_offset(i_offset);
+                awg.loadWaveform(awg_I_channel-1, iwf.prep_vector());
+                awg.(['chan_' num2str(awg_I_channel)]).waveform = iwf;
+                % q waveform
+                qwf = awg.(['chan_' num2str(awg_Q_channel)]).waveform;
+                qwf.dataMode = qwf.REAL_DATA;
+                qwf.data = -0.5 * sin(2*pi*fssb.*tpts);
+                qwf.set_offset(q_offset);
+                awg.loadWaveform(awg_Q_channel-1, qwf.prep_vector());
+                awg.(['chan_' num2str(awg_Q_channel)]).waveform = qwf;
+                
+                % copy onto outputs 3 and 4 for testing
+                awg.loadWaveform(2, iwf.prep_vector());
+                awg.loadWaveform(3, qwf.prep_vector());
+                awg.setLinkListMode(2, awg.LL_DISABLE, awg.LL_CONTINUOUS);
+                awg.setLinkListMode(3, awg.LL_DISABLE, awg.LL_CONTINUOUS);
+                awg.chan_3.enabled = 1;
+                awg.chan_4.enabled = 1;
+            
+                awg.triggerSource = 'internal';
+                awg.setLinkListMode(awg_I_channel-1, awg.LL_DISABLE, awg.LL_CONTINUOUS);
+                awg.setLinkListMode(awg_Q_channel-1, awg.LL_DISABLE, awg.LL_CONTINUOUS);
                 awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
                 awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
-                % TODO set channel offsets
         end
         awg.run();
         awg.waitForAWGtoStartRunning();

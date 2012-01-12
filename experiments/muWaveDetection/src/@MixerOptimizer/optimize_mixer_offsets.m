@@ -60,7 +60,6 @@ function [i_offset, q_offset] = optimize_mixer_offsets(obj)
         sa.sweep();
         sa.peakAmplitude();
         
-        awg.operationComplete();
         awg.run();
         awg.waitForAWGtoStartRunning();
     end
@@ -122,7 +121,7 @@ function [i_offset, q_offset] = optimize_mixer_offsets(obj)
         if (ptol < pthreshold && dtol < dthreshold)
           setOffsets(vertices(low));
           fprintf('Nelder-Mead optimum: %.2f\n', values(low));
-          fprintf('Offset: (%.3f, %.3f)\n', [vertices(low).a vertices(low).b]);
+          fprintf('Offset: (%.4f, %.4f)\n', [vertices(low).a vertices(low).b]);
           if verbose, fprintf('Optimization converged in %d steps\n', steps); end
           % turn on video averaging
           sa.number_averages = 10;
@@ -163,7 +162,7 @@ function [i_offset, q_offset] = optimize_mixer_offsets(obj)
       end
 
       setOffsets(vertices(low));
-      fprintf('Offset: (%.3f, %.3f)\n', [vertices(low).a vertices(low).b]);
+      fprintf('Offset: (%.4f, %.4f)\n', [vertices(low).a vertices(low).b]);
       warning('N-M optimization timed out, starting local search.');
       [i_offset, q_offset] = localSearch(vertices(low));     
     end
@@ -203,7 +202,7 @@ function [i_offset, q_offset] = optimize_mixer_offsets(obj)
               setOffsets(v);
               p = readPower();
               if (verbose)
-                  fprintf('Offset: (%.3f, %.3f), Power: %.2f\n', [v.a v.b p]);
+                  fprintf('Offset: (%.4f, %.4f), Power: %.2f\n', [v.a v.b p]);
               end
               if p < p_best
                 v_best = v;
@@ -216,7 +215,7 @@ function [i_offset, q_offset] = optimize_mixer_offsets(obj)
       i = v_best.a;
       q = v_best.b;
       fprintf('Local search finished with power = %.2f dBm\n', p_best);
-      fprintf('Offset: (%.3f, %.3f)\n', [i q]);
+      fprintf('Offset: (%.4f, %.4f)\n', [i q]);
     end
 
     function power = readPower()
