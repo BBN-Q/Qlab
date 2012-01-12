@@ -12,7 +12,7 @@ temppath = [char(script.getParent()) '\'];
 pathAWG = 'U:\AWG\StateTomo\';
 pathAPS = 'U:\APS\StateTomo\';
 
-Q1pulse = 'X90p';
+Q1pulse = 'QId';
 Q2pulse = 'X90p';
 
 basename = [Q1pulse Q2pulse];
@@ -39,7 +39,7 @@ delayQ2 = delays('34');
 offsetQ2 = offsets('34');
 delayCR21 = delays('56');
 offsetCR21 = offsets('56');
-clockCycle = max(pulseLengths('q1'), pulseLengths('q2'));
+clockCycle = max(pulseLengths('q1')+buffers('q1'), pulseLengths('q2')+buffers('q2'));
 bufferPadding = bufferPaddings('12');
 bufferReset = bufferResets('12');
 bufferDelay = bufferDelays('12');
@@ -220,6 +220,7 @@ for nindex = 1:numsteps
         plot(ch4(myn,:), 'r:')
         plot(5000*ch1m2(myn,:), 'g')
         plot(1000*ch3m1(myn,:), 'r')
+        plot(1000*ch4m1(myn,:), 'r:')
         plot(5000*ch1m1(myn,:),'.')
         grid on
         hold off

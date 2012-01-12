@@ -60,6 +60,7 @@ function [i_offset, q_offset] = optimize_mixer_offsets(obj)
         sa.sweep();
         sa.peakAmplitude();
         
+        awg.operationComplete();
         awg.run();
         awg.waitForAWGtoStartRunning();
     end

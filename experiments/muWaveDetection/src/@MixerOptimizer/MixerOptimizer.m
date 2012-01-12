@@ -27,8 +27,8 @@ classdef MixerOptimizer < expManager.expBase
        specgen % the LO source of the mixer to calibrate
        awg % the AWG driving the I/Q ports of the mixer
        cfg_path;
-       costFunctionGoal = -80;
-       testMode
+       costFunctionGoal = -85;
+       testMode = false
    end
    
    methods

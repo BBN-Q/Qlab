@@ -34,7 +34,8 @@ delayQ2 = delays('34');
 offsetQ2 = offsets('34');
 delayCR21 = delays('56');
 offsetCR21 = offsets('56');
-clockCycle = max(pulseLengths('q1'), pulseLengths('q2'));
+sigma3 = sigmas('q1q2');
+clockCycle = max(pulseLengths('q1')+buffers('q1'), pulseLengths('q2')+buffers('q2'));
 bufferPadding = bufferPaddings('12');
 bufferReset = bufferResets('12');
 bufferDelay = bufferDelays('12');
@@ -59,7 +60,7 @@ nbrPosPulses = length(PosPulsesQ1);
 
 numsteps = 1;
 crossresstep = 10;
-crossreswidths = 924+(0:crossresstep:(numsteps-1)*crossresstep);
+crossreswidths = 552+(0:crossresstep:(numsteps-1)*crossresstep);
 
 ampCR = 5800; %8000
 %angle = 102*(pi/180);
@@ -73,16 +74,18 @@ for nindex = 1:numsteps
     %currdeltaCR12 = delta4s(nindex);
     %stringcurrdelta4 = 10*currdeltaCR12;
     currdeltaCR12 = deltas('q1q2');
-    basename = sprintf('CR21_%d',currcrossreswidth);
+    %basename = sprintf('CR21_%d',currcrossreswidth);
+    basename = 'CrossRes';
     
     %basename = sprintf('CR21Dm%d',nindex);
-    prepPulseQ1 = pg1.pulse('X90p', 'duration', clockCycle);
-    prepPulseQ2 = pg2.pulse('QId', 'duration', clockCycle);
+    prepPulseQ1 = pg1.pulse('QId', 'duration', clockCycle);
+    prepPulseQ2 = pg2.pulse('Y90p', 'duration', clockCycle); %X90p
     prepPulseCR21 = pg21.pulse('QId', 'duration', clockCycle);
     
     processPulseQ1 = pg1.pulse('QId', 'width', currcrossreswidth);
     processPulseQ2 = pg2.pulse('QId', 'width', currcrossreswidth);
-    processPulseCR21 = pg21.pulse('Utheta', 'amp', ampCR, 'angle', angle, 'width', currcrossreswidth, 'pType', 'square');
+    %processPulseCR21 = pg21.pulse('Utheta', 'amp', ampCR, 'angle', angle, 'width', currcrossreswidth, 'pType', 'square');
+    processPulsesCR21 = {pg21.pulse('Xp', 'pType', 'gaussOn', 'width', 6*sigma3, 'duration', 6*sigma3), pg21.pulse('Xp', 'width', currcrossreswidth-12*sigma3, 'pType', 'square'), pg21.pulse('Xp', 'pType', 'gaussOff', 'width', 6*sigma3, 'duration', 6*sigma3)};
     % jerry had the CR21 pulse type as 'dragSq'
     
     %ADD IN CALIBRATIONS
@@ -131,7 +134,7 @@ for nindex = 1:numsteps
             for kindex=1:nbrRepeats
                 patseqQ1{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ1,processPulseQ1,PosPulsesQ1{iindex}};
                 patseqQ2{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseQ2,processPulseQ2,PosPulsesQ2{jindex}};
-                patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}={prepPulseCR21,processPulseCR21,pg21.pulse('QId', 'duration', clockCycle)};
+                patseqCR21{16+(iindex-1)*nbrPosPulses*nbrRepeats+(jindex-1)*nbrRepeats+kindex}=[{prepPulseCR21},processPulsesCR21,{pg21.pulse('QId', 'duration', clockCycle)}];
             end
         end
     end
@@ -162,25 +165,24 @@ for nindex = 1:numsteps
     PulseCollectionCR = [];
     
     for n = 1:nbrPulses
+        % CR21, build for APS
+        numsteps = 1;
+        [CR21_I_seq{n}, CR21_Q_seq{n}, ~, PulseCollectionCR] = pg21.build(patseqCR21{n}, numsteps, delayCR21, fixedPt, PulseCollectionCR);
+        patxCR = pg21.linkListToPattern(CR21_I_seq{n}, 1)';
+        patyCR = pg21.linkListToPattern(CR21_Q_seq{n}, 1)';
+        %CR21buffer(n, :) = pg21.bufferPulse(patxCR, patyCR, 0, bufferPadding3, bufferReset3, bufferDelay3);
+        
         % Q1
         [patx paty] = pg1.getPatternSeq(patseqQ1{n}, n, delayQ1, fixedPt);
         Q1_I(n, :) = patx + offsetQ1;
         Q1_Q(n, :) = paty + offsetQ1;
-        Q1buffer(n, :) = pg1.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
+        Q1buffer(n, :) = pg1.bufferPulse(patx+patxCR, paty+patyCR, 0, bufferPadding, bufferReset, bufferDelay);
         
         % Q2
         [patx paty] = pg2.getPatternSeq(patseqQ2{n}, n, delayQ2, fixedPt);
         Q2_I(n, :) = patx + offsetQ2;
         Q2_Q(n, :) = paty + offsetQ2;
         Q2buffer(n, :) = pg1.bufferPulse(patx, paty, 0, bufferPadding2, bufferReset2, bufferDelay2);
-        
-        % CR21, build for APS
-        numsteps = 1;
-        [CR21_I_seq{n}, CR21_Q_seq{n}, ~, PulseCollectionCR] = pg21.build(patseqCR21{n}, numsteps, delayCR21, fixedPt, PulseCollectionCR);
-    
-        patx = pg21.linkListToPattern(CR21_I_seq{n}, 1)';
-        paty = pg21.linkListToPattern(CR21_Q_seq{n}, 1)';
-        CR21buffer(n, :) = pg21.bufferPulse(patx, paty, 0, bufferPadding3, bufferReset3, bufferDelay3);
     end
     
     % trigger slave AWG (the APS) at beginning

@@ -5,7 +5,7 @@ function setInstrument(obj, amp, phase)
     channel = ExpParams.Mixer.Q_channel;
     % convert phase to radians and restrict to range [-pi, pi]
     phase = mod(phase*pi/180, 2*pi);
-    if phase > pi, phase = phase - pi; end
+    if phase > pi, phase = phase - 2*pi; end
     
     switch class(obj.awg)
         case 'deviceDrivers.Tek5014'
@@ -13,6 +13,9 @@ function setInstrument(obj, amp, phase)
             % on the Tek5014 we just update the channel skew to change the
             % phase
             skew = phase/fssb;
+            if obj.inputStructure.verbose
+                fprintf('Skew: %.3f ns\n', skew*1e9);
+            end
             obj.awg.(['chan_' num2str(channel)]).Skew = skew;
         case 'deviceDrivers.APS'
             % on the APS we generate a new waveform and upload it

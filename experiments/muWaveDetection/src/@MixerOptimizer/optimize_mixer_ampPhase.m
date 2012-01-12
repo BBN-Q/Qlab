@@ -52,17 +52,21 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
 
         awgfile = ExpParams.SSBAWGFile;
         awg.openConfig(awgfile);
-        awg.runMode = 'CONT';
         awg.(['chan_' num2str(awg_I_channel)]).offset = i_offset;
         awg.(['chan_' num2str(awg_Q_channel)]).offset = q_offset;
-        obj.setInstrument(awg_amp, 0);
         switch class(awg)
             case 'deviceDrivers.Tek5014'
+                awg.runMode = 'CONT';
+                awg.(['chan_' num2str(awg_I_channel)]).Amplitude = awg_amp;
+                awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = awg_amp;
+                awg.(['chan_' num2str(awg_I_channel)]).Skew = 0;
+                awg.(['chan_' num2str(awg_Q_channel)]).Skew = 0;
                 awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
                 awg.(['chan_' num2str(awg_Q_channel)]).Enabled = 1;
             case 'deviceDrivers.APS'
                 awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
                 awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
+                % TODO set channel offsets
         end
         awg.run();
         awg.waitForAWGtoStartRunning();
@@ -70,7 +74,7 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
         awg_amp = 1.0;
     end
     
-    phaseScale = 10.0;
+    phaseScale = 20.0;
     % initial guess has no amplitude or phase correction
     x0 = [awg_amp, 0];
     % options for Levenberg-Marquardt
@@ -88,7 +92,7 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
         'TolFun', 1e-4, ...
         'MaxFunEvals', 100, ...
         'OutputFcn', @obj.LMStoppingCondition, ...
-        'DiffMinChange', 1e-3, ... %1e-4 worked well in simulation
+        'DiffMinChange', 5e-3, ... %1e-4 worked well in simulation
         'Jacobian', 'off', ... % use finite-differences to compute Jacobian
         'Algorithm', {'levenberg-marquardt',1e-1}, ... % starting value for lambda = 1e-1
         'ScaleProblem', 'Jacobian', ... % 'Jacobian' or 'none'
@@ -100,7 +104,7 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
 %         'TolX', 1e-3, ... %2e-3
 %         'TolFun', 1e-4, ...
 %         'MaxFunEvals', 100, ...
-%         'DiffMinChange', 5e-4, ... %1e-4 worked well in simulation
+%         'DiffMinChange', 5e-3, ... %1e-4 worked well in simulation
 %         'LargeScale', 'off',...
 %         'Display', displayMode);
 %     [x0, optPower] = fminunc(@SSBObjectiveFcn,x0,options);
@@ -118,7 +122,7 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
     ampFactor = x0(1)/awg_amp;
     skew = x0(2)*phaseScale;
     fprintf('Optimal amp/phase parameters:\n');
-    fprintf('a: %.3g, skew: %.3g degrees\n', [ampFactor, skew]);
+    fprintf('a: %.3g, skew: %.3f degrees\n', [ampFactor, skew]);
     fprintf('SSB power: %.2f\n', 10*log10(optPower));
     
     % correction transformation
@@ -135,18 +139,18 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
         sa.sweep();
         sa.peakAmplitude();
         
-        awg.(['chan_' num2str(awg_I_channel)]).offset = i_offset;
-        awg.(['chan_' num2str(awg_Q_channel)]).offset = q_offset;
-        %obj.setInstrument(awg_amp, 0);
+        obj.setInstrument(x0(1), skew);
+        %awg.(['chan_' num2str(awg_I_channel)]).offset = i_offset;
+        %awg.(['chan_' num2str(awg_Q_channel)]).offset = q_offset;
     end
     
     % local functions
     function cost = SSBObjectiveFcn(x)
         phase = x(2)*phaseScale;
-        if verbose, fprintf('amp: %.3f, x(2): %.3f, phase: %.3g\n', x(1), x(2), phase); end
+        if verbose, fprintf('amp: %.3f, x(2): %.3f, phase: %.3f\n', x(1), x(2), phase); end
         if ~simulate
             obj.setInstrument(x(1), phase);
-            pause(0.01);
+            pause(0.02);
         else
             simul_amp = x(1);
             simul_phase = phase;
