@@ -41,6 +41,8 @@ function [i_offset, q_offset] = optimize_mixer_offsets(obj)
     simul_vertex.b = 0;
     fevals = 0;
     fevals2 = 0;
+    zeroWaveform = APSWaveform();
+    zeroWaveform.data = int16(zeros(1,1000));
     
     % initialize instruments
     if ~simulate
@@ -230,8 +232,26 @@ function [i_offset, q_offset] = optimize_mixer_offsets(obj)
 
     function setOffsets(vertex)
         if ~simulate
-            awg.(['chan_' num2str(awg_I_channel)]).offset = vertex.a;
-            awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
+            switch class(awg)
+                case 'deviceDrivers.Tek5014'
+                    awg.(['chan_' num2str(awg_I_channel)]).offset = vertex.a;
+                    awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
+                case 'deviceDrivers.APS'
+                    awg.stop();
+                    % update I waveform
+                    zeroWaveform.set_offset(vertex.a);
+                    awg.loadWaveform(awg_I_channel-1, zeroWaveform.prep_vector());
+                    % update I zero register
+                    offset = vertex.a * 8191;
+                    awg.setOffset(awg_I_channel-1, offset);
+                    % update Q waveform
+                    zeroWaveform.set_offset(vertex.b);
+                    awg.loadWaveform(awg_Q_channel-1, zeroWaveform.prep_vector());
+                    % update Q zero register
+                    offset = vertex.b * 8191;
+                    awg.setOffset(awg_Q_channel-1, offset);
+                    awg.run();
+            end
             pause(0.02);
             sa.sweep();
         else

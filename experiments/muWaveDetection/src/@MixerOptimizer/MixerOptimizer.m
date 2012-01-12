@@ -27,6 +27,8 @@ classdef MixerOptimizer < expManager.expBase
        specgen % the LO source of the mixer to calibrate
        awg % the AWG driving the I/Q ports of the mixer
        cfg_path;
+       costFunctionGoal = -80;
+       testMode
    end
    
    methods
@@ -45,12 +47,19 @@ classdef MixerOptimizer < expManager.expBase
        
        %% class methods
        function Init(obj)
+            obj.errorCheckExpParams();
             obj.openInstruments();
             obj.initializeInstruments();
             
-            obj.sa = obj.Instr.spectrum_analyzer;
-            obj.specgen = obj.Instr.Specgen;
-            obj.awg = obj.Instr.AWG;
+            if isfield(obj.inputStructure, 'SoftwareDevelopmentMode') && obj.inputStructure.SoftwareDevelopmentMode
+                obj.testMode = true;
+            end
+            
+            if ~obj.testMode
+                obj.sa = obj.Instr.spectrum_analyzer;
+                obj.specgen = obj.Instr.Specgen;
+                obj.awg = obj.Instr.AWG;
+            end
         end
         function Do(obj)
             try
@@ -59,18 +68,39 @@ classdef MixerOptimizer < expManager.expBase
                 % save transformation and offsets to file
                 save([obj.cfg_path '/mixercal.mat'], 'i_offset', 'q_offset', 'T', '-v7.3');
             catch exception
-                warning(exception.identifier);
+                warning(exception.identifier, 'Error in MixerOptimizer.Do()\n%s', exception.message);
             end
         end
         function CleanUp(obj)
             %Close all instruments
             obj.closeInstruments();
         end
+        
+        function errorCheckExpParams(obj)
+            ExpParams = obj.inputStructure.ExpParams;
+            if ~isfield(ExpParams, 'SpecAnalyzer')
+                error('Must provide ExpParams.SpecAnalyzer struct');
+            end
+            if ~isfield(ExpParams, 'Mixer')
+                error('Must provide ExpParams.Mixer struct');
+            end
+            if ~isfield(ExpParams, 'SSBFreq')
+                error('Must specify ExpParams.SSBFreq');
+            end
+        end
+        
         function Run(obj)
             obj.Init();
             obj.Do();
             obj.CleanUp();
         end
 
+        function stop = LMStoppingCondition(obj, x, optimValues, state)
+            if 10*log10(optimValues.resnorm) < obj.costFunctionGoal
+                stop = true;
+            else
+                stop = false;
+            end
+        end
    end
 end

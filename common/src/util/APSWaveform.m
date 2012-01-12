@@ -205,8 +205,8 @@ classdef APSWaveform < handle
             data = fix(data);
             
             % clip data
-            data(find(data > wf.max_wf_amp_value)) = wf.max_wf_amp_value;
-            data(find(data < -wf.max_wf_amp_value)) = -wf.max_wf_amp_value;
+            data(data > wf.max_wf_amp_value) = wf.max_wf_amp_value;
+            data(data < -wf.max_wf_amp_value) = -wf.max_wf_amp_value;
             
             % ensure int16 data storage
             data = int16(data);

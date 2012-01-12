@@ -25,14 +25,13 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
     spec_sweep_points = ExpParams.SpecAnalyzer.sweep_points;
     awg_I_channel = ExpParams.Mixer.I_channel;
     awg_Q_channel = ExpParams.Mixer.Q_channel;
-    search_iterations = 2;
-    fssb = 10e6; % SSB modulation frequency
+    fssb = ExpParams.SSBFreq; % SSB modulation frequency (usually 10 MHz)
 
     simul_amp = 1.0;
     simul_phase = 0.0;
 
     verbose = obj.inputStructure.verbose;
-    simulate = obj.inputStructure.SoftwareDevelopmentMode;
+    simulate = obj.testMode;
     
     % initialize instruments
     if ~simulate
@@ -54,31 +53,76 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
         awgfile = ExpParams.SSBAWGFile;
         awg.openConfig(awgfile);
         awg.runMode = 'CONT';
-        awg.(['chan_' num2str(awg_I_channel)]).Amplitude = awg_amp;
         awg.(['chan_' num2str(awg_I_channel)]).offset = i_offset;
-        awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = awg_amp;
         awg.(['chan_' num2str(awg_Q_channel)]).offset = q_offset;
-        awg.(['chan_' num2str(awg_I_channel)]).Skew = 0.0;
-        awg.(['chan_' num2str(awg_Q_channel)]).Skew = 0.0;
-        awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
-        awg.(['chan_' num2str(awg_Q_channel)]).Enabled = 1;
+        obj.setInstrument(awg_amp, 0);
+        switch class(awg)
+            case 'deviceDrivers.Tek5014'
+                awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
+                awg.(['chan_' num2str(awg_Q_channel)]).Enabled = 1;
+            case 'deviceDrivers.APS'
+                awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
+                awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
+        end
         awg.run();
         awg.waitForAWGtoStartRunning();
+    else
+        awg_amp = 1.0;
     end
     
-    % search for best I and Q values to minimize the peak amplitude
-    for i = 1:search_iterations
-        fprintf('Iteration %d\n', i);
-        ampFactor = optimizeAmp()/awg_amp;
-        skew = optimizePhase(); % in ns
+    phaseScale = 10.0;
+    % initial guess has no amplitude or phase correction
+    x0 = [awg_amp, 0];
+    % options for Levenberg-Marquardt
+    if verbose
+        displayMode = 'iter';
+    else
+        displayMode = 'none';
     end
     
-    % convert skew to radians
-    skew = 2*pi*fssb * skew/1e9;
-    fprintf('a: %.3g, skew: %.3g degrees\n', [ampFactor, skew*180/pi]);
+    fprintf('\nStarting search for optimal amp/phase\n');
+
+    % Leven-Marquardt search
+    options = optimset(...
+        'TolX', 1e-3, ... %2e-3
+        'TolFun', 1e-4, ...
+        'MaxFunEvals', 100, ...
+        'OutputFcn', @obj.LMStoppingCondition, ...
+        'DiffMinChange', 1e-3, ... %1e-4 worked well in simulation
+        'Jacobian', 'off', ... % use finite-differences to compute Jacobian
+        'Algorithm', {'levenberg-marquardt',1e-1}, ... % starting value for lambda = 1e-1
+        'ScaleProblem', 'Jacobian', ... % 'Jacobian' or 'none'
+        'Display', displayMode);
+    [x0, optPower] = lsqnonlin(@SSBObjectiveFcn,x0,[],[],options);
+
+    % commented out section for fminunc search
+%     options = optimset(...
+%         'TolX', 1e-3, ... %2e-3
+%         'TolFun', 1e-4, ...
+%         'MaxFunEvals', 100, ...
+%         'DiffMinChange', 5e-4, ... %1e-4 worked well in simulation
+%         'LargeScale', 'off',...
+%         'Display', displayMode);
+%     [x0, optPower] = fminunc(@SSBObjectiveFcn,x0,options);
+%     optPower = optPower^2;
+
+    % Nelder-Meade Simplex search
+%     options = optimset(...
+%         'TolX', 1e-3, ... %2e-3
+%         'TolFun', 1e-4, ...
+%         'MaxFunEvals', 100, ...
+%         'Display', displayMode);
+%     [x0, optPower] = fminsearch(@SSBObjectiveFcn,x0,options);
+%     optPower = optPower^2;
+    
+    ampFactor = x0(1)/awg_amp;
+    skew = x0(2)*phaseScale;
+    fprintf('Optimal amp/phase parameters:\n');
+    fprintf('a: %.3g, skew: %.3g degrees\n', [ampFactor, skew]);
+    fprintf('SSB power: %.2f\n', 10*log10(optPower));
     
     % correction transformation
-    T = [ampFactor ampFactor*tan(skew); 0 sec(skew)];
+    T = [ampFactor ampFactor*tand(skew); 0 secd(skew)];
     
     % restore instruments to a normal state
     if ~simulate
@@ -91,50 +135,25 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
         sa.sweep();
         sa.peakAmplitude();
         
-        %awg.openConfig(awgfile);
-        %awg.runMode = 'CONT';
-        awg.(['chan_' num2str(awg_I_channel)]).Amplitude = awg_amp;
         awg.(['chan_' num2str(awg_I_channel)]).offset = i_offset;
-        awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = awg_amp;
         awg.(['chan_' num2str(awg_Q_channel)]).offset = q_offset;
-        awg.(['chan_' num2str(awg_I_channel)]).Skew = 0.0;
-        awg.(['chan_' num2str(awg_Q_channel)]).Skew = 0.0;
-        %awg.run();
+        %obj.setInstrument(awg_amp, 0);
     end
     
     % local functions
-    
-    %% Modify amplitude imbalance factor in transformation matrix to minimize
-     % amplitude in the undesired sideband.
-    %%
-    function a = optimizeAmp()
-        [a, minPower, success] = fminbnd(@amplitude_objective_fcn, 0.8*awg_amp, 1.2*awg_amp,...
-            optimset('TolX', 0.001));
-        if ~success
-            error('optimizeAmp() did not converge.');
+    function cost = SSBObjectiveFcn(x)
+        phase = x(2)*phaseScale;
+        if verbose, fprintf('amp: %.3f, x(2): %.3f, phase: %.3g\n', x(1), x(2), phase); end
+        if ~simulate
+            obj.setInstrument(x(1), phase);
+            pause(0.01);
+        else
+            simul_amp = x(1);
+            simul_phase = phase;
         end
-        fprintf('Amplitude scale: %.3f, Power: %.1f dBm\n', [a, minPower]);
-    end
-
-    function out = amplitude_objective_fcn(amp)
-        awg.(['chan_' num2str(awg_I_channel)]).Amplitude = amp;
-        pause(0.01);
-        out = readPower();
-    end
-
-    function skew = optimizePhase()
-        [skew, minPower, success] = fminbnd(@phase_objective_fcn, -5, 5,...
-            optimset('TolX', 0.005));
-        if ~success
-            error('optimizePhase() did not converge.');
-        end
-        fprintf('Phase skew: %.3f, Power: %.1f dBm\n', [skew, minPower]);
-    end
-
-    function out = phase_objective_fcn(skew)
-        awg.(['chan_' num2str(awg_Q_channel)]).Skew = skew * 1e-9;
-        pause(0.01);
-        out = readPower();
+        power = readPower();
+        cost = 10^(power/20);
+        if verbose, fprintf('Power: %.3f, Cost: %.3f \n', power, cost); end
     end
 
     function power = readPower()
@@ -143,9 +162,12 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
             power = sa.peakAmplitude();
         else
             best_amp = 1.05;
-            best_phase = 11.0;
-            distance = sqrt((simul_amp - best_amp)^2 + (simul_phase - best_phase)^2);
-            power = 20*log10(distance);
+            ampError = simul_amp/best_amp;
+            best_phase = 7.1;
+            phaseError = simul_phase - best_phase;
+            errorVec = [ampError - cosd(phaseError); sind(phaseError)];
+
+            power = 20*log10(norm(errorVec));
         end
     end
 end
