@@ -37,6 +37,7 @@ function [i_offset, q_offset] = optimize_mixer_offsets(obj)
     dthreshold = ExpParams.Search.distance_threshold;
     verbose = obj.inputStructure.verbose;
     simulate = obj.inputStructure.SoftwareDevelopmentMode;
+    doLocalSearch = ExpParams.Search.local_search;
     simul_vertex.a = 0;
     simul_vertex.b = 0;
     fevals = 0;
@@ -127,7 +128,12 @@ function [i_offset, q_offset] = optimize_mixer_offsets(obj)
           sa.number_averages = 10;
           sa.video_averaging = 1;
           % start local search around minimum
-          [i_offset, q_offset] = localSearch(vertices(low));
+          if doLocalSearch
+              [i_offset, q_offset] = localSearch(vertices(low));
+          else
+              i_offset = vertices(low).a;
+              q_offset = vertices(low).b;
+          end
           if (verbose)
               fprintf('Total calls to readPower: %d\n', fevals);
               fprintf('Total calls to setOffsets: %d\n', fevals2);
@@ -162,9 +168,15 @@ function [i_offset, q_offset] = optimize_mixer_offsets(obj)
       end
 
       setOffsets(vertices(low));
+      warning('Nelder-Meade optimization timed out\n');
       fprintf('Offset: (%.4f, %.4f)\n', [vertices(low).a vertices(low).b]);
-      warning('N-M optimization timed out, starting local search.');
-      [i_offset, q_offset] = localSearch(vertices(low));     
+      if doLocalSearch
+          fprintf('Starting local search\n');
+          [i_offset, q_offset] = localSearch(vertices(low));
+      else
+          i_offset = vertices(low).a;
+          q_offset = vertices(low).b;
+      end
     end
 
     function trial = extrapolate(factor)
@@ -242,14 +254,12 @@ function [i_offset, q_offset] = optimize_mixer_offsets(obj)
                     zeroWaveform.set_offset(vertex.a);
                     awg.loadWaveform(awg_I_channel-1, zeroWaveform.prep_vector());
                     % update I zero register
-                    offset = vertex.a * 8191;
-                    awg.setOffset(awg_I_channel-1, offset);
+                    awg.setOffset(awg_I_channel, vertex.a);
                     % update Q waveform
                     zeroWaveform.set_offset(vertex.b);
                     awg.loadWaveform(awg_Q_channel-1, zeroWaveform.prep_vector());
                     % update Q zero register
-                    offset = vertex.b * 8191;
-                    awg.setOffset(awg_Q_channel-1, offset);
+                    awg.setOffset(awg_Q_channel, vertex.b);
                     awg.run();
             end
             pause(0.02);

@@ -82,6 +82,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         ADDRESS_UNIT = 4;
         MIN_PAD_SIZE = 4;
         MIN_LL_ENTRY_COUNT = 3;
+        MAX_WAVEFORM_VALUE = 8191;
         
         ELL_MAX_WAVFORM = 8192;
         ELL_MAX_LL = 512;
@@ -134,11 +135,15 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             d.bit_file_path = script_path(1:baseIdx);
             
-            % init channel structs
+            % init channel structs and waveform objects
             d.chan_1 = d.channelStruct;
+            d.chan_1.waveform = APSWaveform();
             d.chan_2 = d.channelStruct;
+            d.chan_2.waveform = APSWaveform();
             d.chan_3 = d.channelStruct;
+            d.chan_3.waveform = APSWaveform();
             d.chan_4 = d.channelStruct;
+            d.chan_4.waveform = APSWaveform();
         end
         
         %Destructor
@@ -354,7 +359,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 end
                 
                 % set all channel offsets to zero
-                for ch=1:4, obj.setOffset(ch-1, 0); end
+                for ch=1:4, obj.setOffset(ch, 0); end
             end
             
             obj.bit_file_programmed = 1;
@@ -581,8 +586,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     aps.(['chan_' num2str(ch)]).waveform = wf;
                     
                     % set zero register value
-                    offset = aps.(['chan_' num2str(ch)]).offset * 8191;
-                    aps.setOffset(ch-1, offset);
+                    offset = aps.(['chan_' num2str(ch)]).offset;
+                    aps.setOffset(ch, offset);
                 end
             end
             
@@ -790,8 +795,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
         end
         
-        function val = setOffset(aps, id, offset)
-            val = aps.librarycall('Set channel offset','APS_SetChannelOffset', id, offset);
+        function val = setOffset(aps, ch, offset)
+            val = aps.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*aps.MAX_WAVEFORM_VALUE);
+            aps.(['chan_' num2str(ch)]).offset = offset;
         end
         
         function setupPLL(aps)

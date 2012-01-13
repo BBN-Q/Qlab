@@ -76,6 +76,7 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
                 iwf.data = 0.5 * cos(2*pi*fssb.*tpts);
                 iwf.set_offset(i_offset);
                 awg.loadWaveform(awg_I_channel-1, iwf.prep_vector());
+                awg.setOffset(awg_I_channel, i_offset);
                 awg.(['chan_' num2str(awg_I_channel)]).waveform = iwf;
                 % q waveform
                 qwf = awg.(['chan_' num2str(awg_Q_channel)]).waveform;
@@ -83,6 +84,7 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
                 qwf.data = -0.5 * sin(2*pi*fssb.*tpts);
                 qwf.set_offset(q_offset);
                 awg.loadWaveform(awg_Q_channel-1, qwf.prep_vector());
+                awg.setOffset(awg_Q_channel, q_offset);
                 awg.(['chan_' num2str(awg_Q_channel)]).waveform = qwf;
                 
                 % copy onto outputs 3 and 4 for testing
@@ -125,7 +127,7 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
         'OutputFcn', @obj.LMStoppingCondition, ...
         'DiffMinChange', 5e-3, ... %1e-4 worked well in simulation
         'Jacobian', 'off', ... % use finite-differences to compute Jacobian
-        'Algorithm', {'levenberg-marquardt',1e-1}, ... % starting value for lambda = 1e-1
+        'Algorithm', {'levenberg-marquardt',1.0}, ... % starting value for lambda = 1e-1
         'ScaleProblem', 'Jacobian', ... % 'Jacobian' or 'none'
         'Display', displayMode);
     [x0, optPower] = lsqnonlin(@SSBObjectiveFcn,x0,[],[],options);

@@ -105,12 +105,12 @@ classdef APSWaveform < handle
        end
        
        function set_scale_factor(wf,sf)
-           if (sf < -1)
-               sf = -1;
-               fprintf('Warning: Scale factor out of range. Setting to -1\n')
-           elseif(sf > 1.0)
-               sf = 1;
-               fprintf('Warning: Scale factor out of range. Setting to 1\n')
+           if (sf < -2)
+               sf = -2;
+               fprintf('Warning: Scale factor out of range. Setting to -2\n')
+           elseif(sf > 2.0)
+               sf = 2;
+               fprintf('Warning: Scale factor out of range. Setting to 2\n')
            end
            
            wf.scale_factor = sf;

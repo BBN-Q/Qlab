@@ -197,9 +197,9 @@ classdef guifunctions < handle
             
             wf = gui.waveforms(id+1);
             wf.set_offset(val);
-            % set zero register value for the channel to match the waveform
+            % set zero register value for the channel(=id+1) to match the waveform
             % offset
-            gui.dac.setOffset(id, wf.offset*wf.max_wf_amp_value);
+            gui.dac.setOffset(id+1, wf.offset);
             if (wf.offset ~= val)
                 beep;
                 gui.message_manager.disp('Offset was out of range and has been put into range.');
