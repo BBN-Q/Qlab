@@ -137,8 +137,21 @@ class APScontrol(QDialog, Ui_Dialog):
                         
                 # load file
                 fileData = APSMatlabFile()
-                cmd = 'filename = self.ch%ifile.text()' % chan
-                exec(cmd)
+                
+                # prefer to use following two lines but this is not
+                # working in python 3
+                #cmd = 'filename = self.ch%ifile.text()' % chan
+                #exec(cmd)
+                
+                if chan == 1:
+                    filename = self.ch1file.text()
+                elif chan == 2:
+                    filename = self.ch2file.text()
+                elif chan == 3:
+                    filename = self.ch3file.text()
+                elif chan == 4:
+                    filename = self.ch4file.text()
+                
                 self.printMessage('Loading file %s' % filename)
                 fileData.readFile(filename)
                 data = fileData.get_vector()
@@ -189,7 +202,7 @@ class APScontrol(QDialog, Ui_Dialog):
             self.aps.triggerFpga(self.aps.FPGA1,trigger_type)
     
         for chan in range(0,4):
-            if not triggeredFPGA[chan / 2] and trigger[chan]:
+            if not triggeredFPGA[chan // 2] and trigger[chan]:
                 self.printMessage('Trigger Channel %i' % (chan + 1))
                 self.aps.triggerWaveform(chan,trigger_type)
                     
