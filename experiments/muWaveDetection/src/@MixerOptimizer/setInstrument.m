@@ -4,8 +4,8 @@ function setInstrument(obj, amp, phase)
     samplingRate = obj.awg.samplingRate;
     I_channel = ExpParams.Mixer.I_channel;
     Q_channel = ExpParams.Mixer.Q_channel;
-    % convert phase to radians and restrict to range [-pi, pi]
-    phase = mod(phase*pi/180, 2*pi);
+    % restrict phase to range [-pi, pi]
+    phase = mod(phase, 2*pi);
     if phase > pi, phase = phase - 2*pi; end
     
     switch class(obj.awg)

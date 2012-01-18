@@ -107,7 +107,6 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
         awg_amp = 1.0;
     end
     
-    phaseScale = 20.0;
     % initial guess has no amplitude or phase correction
     x0 = [awg_amp, 0];
     % options for Levenberg-Marquardt
@@ -121,14 +120,14 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
 
     % Leven-Marquardt search
     options = optimset(...
-        'TolX', 1e-3, ... %2e-3
-        'TolFun', 1e-4, ...
-        'MaxFunEvals', 100, ...
+        'TolX', 2e-3, ... %2e-3
+        'TolFun', 2e-4, ...
+        'MaxFunEvals', 1000, ...
         'OutputFcn', @obj.LMStoppingCondition, ...
-        'DiffMinChange', 5e-3, ... %1e-4 worked well in simulation
+        'DiffMinChange', 1e-3, ... %1e-4 worked well in simulation
         'Jacobian', 'off', ... % use finite-differences to compute Jacobian
-        'Algorithm', {'levenberg-marquardt',1.0}, ... % starting value for lambda = 1e-1
-        'ScaleProblem', 'Jacobian', ... % 'Jacobian' or 'none'
+        'Algorithm', {'levenberg-marquardt',1e-2}, ... % starting value for lambda = 1e-1
+        'ScaleProblem', 'none', ... % 'Jacobian' or 'none'
         'Display', displayMode);
     [x0, optPower] = lsqnonlin(@SSBObjectiveFcn,x0,[],[],options);
 
@@ -153,13 +152,13 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
 %     optPower = optPower^2;
     
     ampFactor = x0(1)/awg_amp;
-    skew = x0(2)*phaseScale;
+    skew = x0(2);
     fprintf('Optimal amp/phase parameters:\n');
-    fprintf('a: %.3g, skew: %.3f degrees\n', [ampFactor, skew]);
+    fprintf('a: %.3g, skew: %.3f (%.3f degrees)\n', [ampFactor, skew, skew*180/pi]);
     fprintf('SSB power: %.2f\n', 10*log10(optPower));
     
     % correction transformation
-    T = [ampFactor ampFactor*tand(skew); 0 secd(skew)];
+    T = [ampFactor ampFactor*tan(skew); 0 sec(skew)];
     
     % restore instruments to a normal state
     if ~simulate
@@ -179,18 +178,17 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
     
     % local functions
     function cost = SSBObjectiveFcn(x)
-        phase = x(2)*phaseScale;
-        if verbose, fprintf('amp: %.3f, x(2): %.3f, phase: %.3f\n', x(1), x(2), phase); end
+        if verbose, fprintf('amp: %.3f, phase: %.3f\n', x(1), x(2)); end
         if ~simulate
-            obj.setInstrument(x(1), phase);
+            obj.setInstrument(x(1), x(2));
             pause(0.02);
         else
             simul_amp = x(1);
-            simul_phase = phase;
+            simul_phase = x(2);
         end
         power = readPower();
         cost = 10^(power/20);
-        if verbose, fprintf('Power: %.3f, Cost: %.3f \n', power, cost); end
+        if verbose, fprintf('Power: %.3f, Cost: %.3f\n', power, cost); end
     end
 
     function power = readPower()
@@ -199,11 +197,10 @@ function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
             power = sa.peakAmplitude();
         else
             best_amp = 1.05;
-            ampError = simul_amp/best_amp;
-            best_phase = 7.1;
-            phaseError = simul_phase - best_phase;
-            errorVec = [ampError - cosd(phaseError); sind(phaseError)];
-
+            best_phase = 0.1;
+            a = simul_amp/best_amp;
+            phi = simul_phase - best_phase;
+            errorVec = [a - cos(phi); sin(phi)];
             power = 20*log10(norm(errorVec));
         end
     end
