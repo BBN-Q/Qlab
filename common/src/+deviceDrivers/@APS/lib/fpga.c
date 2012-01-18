@@ -1654,7 +1654,7 @@ EXPORT int APS_ReadBitFileVersion(int device) {
 
 		version = APS_ReadFPGA(device, FPGA_ADDR_ELL_REGREAD | FPGA_OFF_VERSION, fpga);
 
-		version = version & 0x7FF; // First 11 bits hold version
+		version = version & 0x1FF; // First 9 bits hold version
 	}
   dlog(DEBUG_INFO,"Found BitFile Version 0x%x\n", version);
 
