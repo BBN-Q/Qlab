@@ -1,3 +1,12 @@
+P176
+- Corrected dac_if_sm, for initial load (added state 0x0040)
+  Holds one state to insure initial LL values are out and loaded.
+P174
+- Added SW Sync, Latches for PLL_INT, PLL02, PLL13 Lock bits.(top)
+P173
+- Added B->A LL mod for Continuous mode (dac_sm)
+P168_draft
+- Added raw phase/lock data to register (top, reg)
 P167
 - Corrected reset state of Zero Output registers
 P166

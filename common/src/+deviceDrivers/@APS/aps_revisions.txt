@@ -1,0 +1,12 @@
+aps_dac2_r10_p01.bit - Original Version (from MQCO 170)
+aps_dac2_r10_p04.bit - Version w/SW Sync, B-A Fix, Latched PLL_INT lock
+aps_dac2_r10_p05.bit - Version w/SW Sync, B-A Fix, Latched PLL_INT, PLL02, PLL13 locks
+aps_dac2_r10_p06.bit - Corrected dac_if_sm, for initial load (added state 0x0040)
+                       Holds one state to insure initial LL values are out and loaded.
+
+aps_fab1_p07.bit - repetative half height positive square pulse
+                   12 samples high, 12 samples low
+                   trigger out same duration as pulse
+aps_fab1_p08.bit - repetative half height positive square pulse
+                   12 samples high, 12 samples low
+                   trigger out 1/300 MHz width
