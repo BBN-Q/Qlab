@@ -1,5 +1,16 @@
 function analyzeRB(ypts)
     %[xpts ypts] = calScale;
+    % if no input arguments, try to get the data from the current figure
+    if nargin < 2
+        h = gcf;
+        line = findall(h, 'Type', 'Line');
+        ypts = get(line(1), 'ydata');
+        % save figure title
+        plotTitle = get(get(gca, 'Title'), 'String');
+    else
+        h = figure;
+    end
+
     seqlengths = [2, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96];
     xpts2 = seqlengths(1 + floor((0:length(ypts)-1)./32));
     
@@ -15,12 +26,13 @@ function analyzeRB(ypts)
     fidelity = .5 * (1 - ypts2);
     avgFidelity = .5 * (1 - avgpts);
     
-    figure
+    figure(h)
     plot(xpts2, fidelity, '.', 'Color', [.5 .5 .5])
     hold on
     errorbar(seqlengths, avgFidelity, errors/sqrt(32), '.')
     xlabel('Number of Clifford gates')
     ylabel('Fidelity')
+    title(plotTitle)
     
     % fit to exponential
     fitf = inline('p(1) * exp(-p(2)*n) + p(3)','p','n');

@@ -66,11 +66,9 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
         function obj = Labbrick()
             % load DLL
             % build library path
-            script = java.io.File(mfilename('fullpath'));
-            path = [char(script.getParent()) '\'];
+            path = [fileparts(mfilename('fullpath')) filesep];
             if ~libisloaded('vnx_fmsynth')
-                [notfound warnings] = loadlibrary([path 'vnx_fmsynth.dll'], ...
-                    [path 'vnx_fmsynth.h']);
+                loadlibrary([path 'vnx_fmsynth.dll'], [path 'vnx_fmsynth.h']);
                 calllib('vnx_fmsynth', 'fnLMS_SetTestMode', false);
             end
         end

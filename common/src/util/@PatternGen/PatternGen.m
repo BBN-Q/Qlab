@@ -84,7 +84,8 @@ classdef PatternGen < handle
             
             midpoint = (n+1)/2;
             t = 1:n;
-            outx = round(amp * exp(-(t - midpoint).^2./(2 * sigma^2))).';
+            baseLine = round(amp*exp(-midpoint^2/(2*sigma^2)));
+            outx = round(amp * exp(-(t - midpoint).^2./(2 * sigma^2))).'- baseLine;
             outy = zeros(n, 1);
         end
         
@@ -94,7 +95,8 @@ classdef PatternGen < handle
             sigma = params.sigma;
             
             t = 1:n;
-            outx = round(amp * exp(-(t - n).^2./(2 * sigma^2))).';
+            baseLine = round(amp*exp(-n^2/(2*sigma^2)));
+            outx = round(amp * exp(-(t - n).^2./(2 * sigma^2))).'- baseLine;
             outy = zeros(n, 1);
         end
         
@@ -104,7 +106,8 @@ classdef PatternGen < handle
             sigma = params.sigma;
             
             t = 1:n;
-            outx = round(amp * exp(-(t-1).^2./(2 * sigma^2))).';
+            baseLine = round(amp*exp(-n^2/(2*sigma^2)));
+            outx = round(amp * exp(-(t-1).^2./(2 * sigma^2))).'- baseLine;
             outy = zeros(n, 1);
         end
         
@@ -494,7 +497,7 @@ classdef PatternGen < handle
                 
                 entry.key = key;
                 % mark square pulses as time/amplitude
-                if strcmp(key, padWaveformKey) || (strcmp(pulseType, 'square') && length(pulse) > 100)
+                if strcmp(key, padWaveformKey) || strcmp(pulseType, 'square') 
                     % repeat = width for time/amplitude pulses
                     entry.length = 1;
                     entry.repeat = length(pulse);

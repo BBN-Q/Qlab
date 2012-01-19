@@ -11,6 +11,7 @@ addpath([path '/common/src/util/'],'-END');
 temppath = [char(script.getParent()) '\'];
 pathAWG = 'U:\AWG\CrossRes\';
 pathAPS = 'U:\APS\CrossRes\';
+basename = 'CrossRes';
 
 fixedPt = 13000;
 cycleLength = 16000;
@@ -46,6 +47,8 @@ bufferPadding3 = bufferPaddings('56');
 bufferReset3 = bufferResets('56');
 bufferDelay3 = bufferDelays('56');
 
+delayDiff = delays('34') - delays('56');
+
 PosPulsesQ1{1} = pg1.pulse('QId', 'duration', clockCycle);
 PosPulsesQ1{2} = pg1.pulse('Xp', 'duration', clockCycle);
 PosPulsesQ1{3} = pg1.pulse('X90p', 'duration', clockCycle);
@@ -60,9 +63,9 @@ nbrPosPulses = length(PosPulsesQ1);
 
 numsteps = 1;
 crossresstep = 10;
-crossreswidths = 552+(0:crossresstep:(numsteps-1)*crossresstep);
+crossreswidths = 876+(0:crossresstep:(numsteps-1)*crossresstep);
 
-ampCR = 5800; %8000
+ampCR = 8000;
 %angle = 102*(pi/180);
 angle = 0;
 %deltastep=0.1;
@@ -70,23 +73,17 @@ angle = 0;
 
 for nindex = 1:numsteps
     currcrossreswidth = crossreswidths(nindex);  
-    %currcrossreswidth = 236;
-    %currdeltaCR12 = delta4s(nindex);
-    %stringcurrdelta4 = 10*currdeltaCR12;
     currdeltaCR12 = deltas('q1q2');
     %basename = sprintf('CR21_%d',currcrossreswidth);
-    basename = 'CrossRes';
     
-    %basename = sprintf('CR21Dm%d',nindex);
     prepPulseQ1 = pg1.pulse('QId', 'duration', clockCycle);
-    prepPulseQ2 = pg2.pulse('Y90p', 'duration', clockCycle); %X90p
+    prepPulseQ2 = pg2.pulse('X90p', 'duration', clockCycle); %X90p
     prepPulseCR21 = pg21.pulse('QId', 'duration', clockCycle);
     
     processPulseQ1 = pg1.pulse('QId', 'width', currcrossreswidth);
     processPulseQ2 = pg2.pulse('QId', 'width', currcrossreswidth);
     %processPulseCR21 = pg21.pulse('Utheta', 'amp', ampCR, 'angle', angle, 'width', currcrossreswidth, 'pType', 'square');
-    processPulsesCR21 = {pg21.pulse('Xp', 'pType', 'gaussOn', 'width', 6*sigma3, 'duration', 6*sigma3), pg21.pulse('Xp', 'width', currcrossreswidth-12*sigma3, 'pType', 'square'), pg21.pulse('Xp', 'pType', 'gaussOff', 'width', 6*sigma3, 'duration', 6*sigma3)};
-    % jerry had the CR21 pulse type as 'dragSq'
+    processPulsesCR21 = {pg21.pulse('Xp', 'pType', 'dragGaussOn', 'width', 3*sigma3, 'duration', 3*sigma3), pg21.pulse('Xp', 'width', currcrossreswidth-6*sigma3, 'pType', 'square'), pg21.pulse('Xp', 'pType', 'dragGaussOff', 'width', 3*sigma3, 'duration', 3*sigma3)};
     
     %ADD IN CALIBRATIONS
 
@@ -171,7 +168,9 @@ for nindex = 1:numsteps
         patxCR = pg21.linkListToPattern(CR21_I_seq{n}, 1)';
         patyCR = pg21.linkListToPattern(CR21_Q_seq{n}, 1)';
         %CR21buffer(n, :) = pg21.bufferPulse(patxCR, patyCR, 0, bufferPadding3, bufferReset3, bufferDelay3);
-        
+         % remove difference of delays
+        patxCR = circshift(patxCR, delayDiff);
+        patyCR = circshift(patyCR, delayDiff);
         % Q1
         [patx paty] = pg1.getPatternSeq(patseqQ1{n}, n, delayQ1, fixedPt);
         Q1_I(n, :) = patx + offsetQ1;
