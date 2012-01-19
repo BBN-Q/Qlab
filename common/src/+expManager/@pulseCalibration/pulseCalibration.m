@@ -42,6 +42,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         channelMap
         ExpParams
         awgParams
+        targetAWGIdx = 1
         scope
         scopeParams
         testMode = false;
@@ -68,9 +69,9 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             
             % to do: load channel mapping from file
             obj.channelMap = containers.Map();
-            obj.channelMap('q1') = {1,2,'3m1'};
-            obj.channelMap('q2') = {3,4,'4m1'};
-            obj.channelMap('q1q2') = {5,6,'2m1'};
+            obj.channelMap('q1') = struct('instr', 'BBNAPS', 'i', 1, 'q', 2, 'marker', '3m1');
+            obj.channelMap('q2') = struct('instr', 'BBNAPS', 'i', 3, 'q', 4, 'marker', '4m1');
+            obj.channelMap('q1q2') = struct('instr', 'TekAWG', 'i', 1, 'q', 2, 'marker', '2m1');
         end
         
         % externally defined static methods
@@ -101,11 +102,11 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             
             %pulseCal.pulseParams = struct('piAmp', 6000, 'pi2Amp', 2800, 'delta', -0.5, 'T', eye(2,2), 'pulseType', 'drag',...
             %                         'i_offset', 0.110, 'q_offset', 0.138);
-            %pulseCal.rabiAmpChannelSequence('q1', false);
+            %pulseCal.rabiAmpChannelSequence('q1q2', true);
             %pulseCal.rabiAmpChannelSequence('q2', false);
-            %pulseCal.Pi2CalChannelSequence('q1', 'X', false);
+            %pulseCal.Pi2CalChannelSequence('q1q2', 'X', true);
             %pulseCal.Pi2CalChannelSequence('q2', 'Y', false);
-            %pulseCal.PiCalChannelSequence('q1', 'Y', false);
+            %pulseCal.PiCalChannelSequence('q1q2', 'Y', true);
             %pulseCal.PiCalChannelSequence('q2', 'X', false);
             
             % rabi Amp data
@@ -131,8 +132,8 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             %fprintf('PiCost for more realistic data: %f\n', cost);
             
             pulseCal.Init();
-            pulseCal.Do();
-            pulseCal.CleanUp();
+            %pulseCal.Do();
+            %pulseCal.CleanUp();
         end
     end
     methods
@@ -203,6 +204,9 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             end
             Init@expManager.homodyneDetection2D(obj);
             
+            IQchannels = obj.channelMap(obj.ExpParams.Qubit);
+            IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
+            
             % find AWG instrument parameters(s) - traverse in the same way
             % used to find the awg objects, to try to preserve the ordering
             % at the same time, grab the digitizer object and parameters
@@ -215,6 +219,9 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                     case {'deviceDrivers.Tek5014', 'deviceDrivers.APS'}
                         numAWGs = numAWGs + 1;
                         obj.awgParams{numAWGs} = obj.inputStructure.InstrParams.(InstrName);
+                        if strcmp(InstrName, IQchannels.instr)
+                            obj.targetAWGIdx = numAWGs;
+                        end
                     case 'deviceDrivers.AgilentAP120'
                         obj.scope = obj.Instr.(InstrName);
                         obj.scopeParams = obj.inputStructure.InstrParams.(InstrName);
@@ -227,14 +234,12 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             pi2Amp = pi2Amps(obj.ExpParams.Qubit);
             delta  = deltas(obj.ExpParams.Qubit);
             
-            IQchannels = obj.channelMap(obj.ExpParams.Qubit);
-            IQkey = [num2str(IQchannels{1}) num2str(IQchannels{2})];
-            T      = Ts(IQkey);
+            T = Ts(IQkey);
 
             if ~obj.testMode
-                channelParams = obj.awgParams{1};
-                i_offset = channelParams.(['chan_' num2str(IQchannels{1})]).offset;
-                q_offset = channelParams.(['chan_' num2str(IQchannels{2})]).offset;
+                channelParams = obj.inputStructure.InstrParams.(IQchannels.instr);
+                i_offset = channelParams.(['chan_' num2str(IQchannels.i)]).offset;
+                q_offset = channelParams.(['chan_' num2str(IQchannels.q)]).offset;
                 obj.pulseParams = struct('piAmp', piAmp, 'pi2Amp', pi2Amp, 'delta', delta, 'T', T,...
                     'pulseType', 'drag', 'i_offset', i_offset, 'q_offset', q_offset);
             else

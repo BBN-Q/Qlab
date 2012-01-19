@@ -2,26 +2,23 @@ function [cost, J] = pi2ObjectiveFunction(obj, x, qubit, direction)
     pi2Amp = x(1);
     offset = x(2);
     fprintf('pi2Amp: %.1f, offset: %.4f\n', pi2Amp, offset);
-    % create and load sequence
+    % create sequence
     obj.pulseParams.pi2Amp = pi2Amp;
     [filenames nbrPatterns] = obj.Pi2CalChannelSequence(obj.ExpParams.Qubit, direction);
-    if ~obj.testMode
-        obj.loadSequence(filenames);
-    end
     
     % set channel offset
-    IQchannels = obj.channelMap(qubit);
     switch direction
         case 'X'
-            chan = num2str(IQchannels{1});
+            chan = 'i_offset';
         case 'Y'
-            chan = num2str(IQchannels{2});
+            chan = 'q_offset';
         otherwise
             error('Unknown direction %s', direction);
     end
     if ~obj.testMode
-        awg = obj.awg{1};
-        awg.(['chan_' chan]).offset = offset;
+        obj.pulseParams.(chan) = offset;
+        % load sequence
+        obj.loadSequence(filenames, qubit);
     end
     
     % measure

@@ -1,4 +1,4 @@
-function loadSequence(obj, paths)
+function loadSequence(obj, paths, qubit)
     % loadSequence(paths)
     % Load a set of pattern files onto one or more AWGs
     
@@ -8,14 +8,16 @@ function loadSequence(obj, paths)
     
     IQchannels = obj.channelMap(obj.ExpParams.Qubit);
     
+    % update offsets on target AWG
+    obj.awgParams{obj.targetAWGIdx}.(['chan_' num2str(IQchannels.i)]).offset = obj.pulseParams.i_offset;
+    obj.awgParams{obj.targetAWGIdx}.(['chan_' num2str(IQchannels.q)]).offset = obj.pulseParams.q_offset;
+    
     for i = 1:length(paths)
         % load sequence
         params = obj.awgParams{i};
         awg = obj.awg{i};
         params.seqfile = paths{i};
         params.seqforce = 1;
-        params.(['chan_' num2str(IQchannels{1})]).offset = obj.pulseParams.i_offset;
-        params.(['chan_' num2str(IQchannels{2})]).offset = obj.pulseParams.q_offset;
         awg.setAll(params);
         obj.awgParams{i} = params;
     end

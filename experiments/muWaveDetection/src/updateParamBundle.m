@@ -1,0 +1,2 @@
+params = {'Ts', 'delays', 'measDelay', 'bufferDelays', 'bufferResets', 'bufferPaddings', 'offsets', 'piAmps', 'pi2Amps', 'sigmas', 'pulseTypes', 'deltas', 'buffers', 'pulseLengths', 'passThrus'};
+save(getpref('qlab','pulseParamsBundleFile'), params{:}, '-v7.3');

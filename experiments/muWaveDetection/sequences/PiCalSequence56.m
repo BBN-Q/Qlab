@@ -3,37 +3,22 @@ function PiCalSequence56(makePlot)
 if ~exist('makePlot', 'var')
     makePlot = true;
 end
-script = java.io.File(mfilename('fullpath'));
-path = char(script.getParentFile().getParentFile().getParentFile().getParent());
-addpath([path '/common/src'],'-END');
-addpath([path '/common/src/util/'],'-END');
 
-temppath = [char(script.getParent()) '\'];
 pathAWG = 'U:\AWG\PiCal\';
 pathAPS = 'U:\APS\PiCal\';
 basename = 'PiCal56';
 
 fixedPt = 6000;
 cycleLength = 10000;
-numsteps = 42;
 
 % load config parameters from file
-parent_path = char(script.getParentFile.getParent());
-cfg_path = [parent_path '/cfg/'];
-load([cfg_path 'pulseParams.mat'], 'T', 'delay', 'measDelay', 'bufferDelay', 'bufferReset', 'bufferPadding', 'offset', 'piAmp', 'pi2Amp', 'sigma', 'pulseType', 'delta', 'buffer', 'pulseLength');
-load([cfg_path 'pulseParams.mat'], 'T2', 'delay2', 'bufferDelay2', 'bufferReset2', 'bufferPadding2', 'offset2', 'piAmp2', 'pi2Amp2', 'sigma2', 'pulseType2', 'delta2', 'buffer2', 'pulseLength2');
-load([cfg_path 'pulseParams.mat'], 'T3', 'delay3', 'bufferDelay3', 'bufferReset3', 'bufferPadding3', 'offset3', 'piAmp3', 'pi2Amp3', 'sigma3', 'pulseType3', 'delta3', 'buffer3', 'pulseLength3');
+load(getpref('qlab','pulseParamsBundleFile'), 'Ts', 'delays', 'measDelay', 'bufferDelays', 'bufferResets', 'bufferPaddings', 'offsets', 'piAmps', 'pi2Amps', 'sigmas', 'pulseTypes', 'deltas', 'buffers', 'pulseLengths');
 
-pg21 = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', pulseType, 'dDelta', delta, 'correctionT', T, 'dBuffer', buffer, 'dPulseLength', pulseLength, 'cycleLength', cycleLength);
-pg1 = PatternGen('dPiAmp', piAmp2, 'dPiOn2Amp', pi2Amp2, 'dSigma', sigma2, 'dPulseType', pulseType2, 'dDelta', delta2, 'correctionT', T2, 'dBuffer', buffer2, 'dPulseLength', pulseLength2, 'cycleLength', cycleLength);
-pg2 = PatternGen('dPiAmp', piAmp3, 'dPiOn2Amp', pi2Amp3, 'dSigma', sigma3, 'dPulseType', pulseType3, 'dDelta', delta3, 'correctionT', T3, 'dBuffer', buffer3, 'dPulseLength', pulseLength3, 'cycleLength', cycleLength);
-delayQ1 = delay2;
-offsetQ1 = offset2;
-delayQ2 = delay3;
-offsetQ2 = offset3;
-delayCR21 = delay;
-offsetCR21 = offset;
-pg = pg1;
+pg21 = PatternGen('dPiAmp', piAmps('q1q2'), 'dPiOn2Amp', pi2Amps('q1q2'), 'dSigma', sigmas('q1q2'), 'dPulseType', pulseTypes('q1q2'), 'dDelta', deltas('q1q2'), 'correctionT', Ts('56'), 'dBuffer', buffers('q1q2'), 'dPulseLength', pulseLengths('q1q2'), 'cycleLength', cycleLength, 'passThru', true);
+pg1 = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength);
+pg2 = PatternGen('dPiAmp', piAmps('q2'), 'dPiOn2Amp', pi2Amps('q2'), 'dSigma', sigmas('q2'), 'dPulseType', pulseTypes('q2'), 'dDelta', deltas('q2'), 'correctionT', Ts('34'), 'dBuffer', buffers('q2'), 'dPulseLength', pulseLengths('q2'), 'cycleLength', cycleLength);
+
+pg = pg21;
 
 % +X rotations
 % QId
@@ -99,30 +84,28 @@ ch1 = zeros(nbrPatterns, cycleLength);
 ch2 = ch1; ch3 = ch1; ch4 = ch1;
 ch1m1 = ch1; ch1m2 = ch1; ch2m1 = ch1; ch2m2 = ch1;
 ch3m1 = ch1; ch3m2 = ch1; ch4m1 = ch1; ch4m2 = ch1;
+delayDiff = delays('34') - delays('56');
 PulseCollectionQ2 = [];
 
 for kindex = 1:nbrPatterns;
-% 	[patx paty] = pg.getPatternSeq(patseq{floor((kindex-1)/2)+1}, 1, delayQ1, fixedPt);
-% 	ch3(kindex, :) = patx + offsetQ1;
-% 	ch4(kindex, :) = paty + offsetQ1;
-%     ch4m1(kindex, :) = pg.bufferPulse(patx, paty, 0, bufferPadding2, bufferReset2, bufferDelay2);
-
-    [Q2_I_seq{kindex}, Q2_Q_seq{kindex}, ~, PulseCollectionQ2] = pg2.build(patseq{floor((kindex-1)/2)+1}, 1, delayQ2, fixedPt, PulseCollectionQ2);
-    patx = pg2.linkListToPattern(Q2_I_seq{kindex}, 1)';
-    paty = pg2.linkListToPattern(Q2_Q_seq{kindex}, 1)';
-    ch2m1(kindex, :) = pg2.bufferPulse(patx, paty, 0, bufferPadding3, bufferReset3, bufferDelay3);
+    [Q2_I_seq{kindex}, Q2_Q_seq{kindex}, ~, PulseCollectionQ2] = pg21.build(patseq{floor((kindex-1)/2)+1}, 1, delays('56'), fixedPt, PulseCollectionQ2);
+    patx = pg21.linkListToPattern(Q2_I_seq{kindex}, 1)';
+    paty = pg21.linkListToPattern(Q2_Q_seq{kindex}, 1)';
+    % remove difference of delays
+    patx = circshift(patx, delayDiff);
+    paty = circshift(paty, delayDiff);
+    ch2m1(kindex, :) = pg2.bufferPulse(patx, paty, 0, bufferPaddings('34'), bufferResets('34'), bufferDelays('34'));
 end
 
 % trigger at beginning of measurement pulse
 % measure from (6000:9500)
 measLength = 3500;
-measSeq = {pg.pulse('M', 'width', measLength)};
-ch1m1 = zeros(nbrPatterns, cycleLength);
-ch1m2 = zeros(nbrPatterns, cycleLength);
+measSeq = {pg2.pulse('M', 'width', measLength)};
+
 for n = 1:nbrPatterns;
-	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
-	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
-    ch4m2(n,:) = pg.makePattern([], 5, ones(100,1), cycleLength);
+	ch1m1(n,:) = pg2.makePattern([], fixedPt-500, ones(100,1), cycleLength);
+	ch1m2(n,:) = int32(pg2.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
+    ch4m2(n,:) = pg2.makePattern([], 5, ones(100,1), cycleLength);
 end
 
 % unify LLs and waveform libs
@@ -152,20 +135,20 @@ if makePlot
 end
 
 % add offsets to unused channels
-ch1 = ch1 + offsetCR21;
-ch2 = ch2 + offsetCR21;
-ch3 = ch3 + offsetQ1;
-ch4 = ch4 + offsetQ1;
+ch1 = ch1 + offsets('12');
+ch2 = ch2 + offsets('12');
+ch3 = ch3 + offsets('34');
+ch4 = ch4 + offsets('34');
 ch2m2 = ch4m2;
 
 % make APS file
-exportAPSConfig(temppath, basename, ch5seq, ch6seq);
-%exportAPSConfig(temppath, basename, ch5seq, ch6seq, ch5seq, ch6seq);
+%exportAPSConfig(tempdir, basename, ch5seq, ch6seq);
+exportAPSConfig(tempdir, basename, ch5seq, ch6seq, ch5seq, ch6seq);
 disp('Moving APS file to destination');
-movefile([temppath basename '.mat'], [pathAPS basename '.mat']);
+movefile([tempdir basename '.mat'], [pathAPS basename '.mat']);
 % make TekAWG file
 options = struct('m21_high', 2.0, 'm41_high', 2.0);
-TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
+TekPattern.exportTekSequence(tempdir, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
 disp('Moving AWG file to destination');
-movefile([temppath basename '.awg'], [pathAWG basename '.awg']);
+movefile([tempdir basename '.awg'], [pathAWG basename '.awg']);
 end

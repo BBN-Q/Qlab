@@ -153,7 +153,7 @@ pi2Amps(obj.ExpParams.Qubit) = obj.pulseParams.pi2Amp;
 deltas(obj.ExpParams.Qubit)  = obj.pulseParams.delta;
 
 IQchannels = obj.channelMap(obj.ExpParams.Qubit);
-IQkey = [num2str(IQchannels{1}) num2str(IQchannels{2})];
+IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
 Ts(IQkey) = obj.pulseParams.T;
 
 save(obj.pulseParamPath, 'piAmps', 'pi2Amps', 'deltas', 'Ts', '-append', '-v7.3');
