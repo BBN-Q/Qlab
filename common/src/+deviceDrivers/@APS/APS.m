@@ -1145,6 +1145,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 bank.trigger = bank.trigger(1:len);
                 bank.repeat = bank.repeat(1:len);
                 bank.length = len;
+                
+                % fix the last mini-LL entry of the current bank
+                bank.offset(end) = uint16(bitand(bank.offset(end), ~aps.ELL_FIRST_ENTRY));
             end
             
             curBank = 1;
@@ -1248,25 +1251,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     idx = idx + 1;
                 end
             end
-            
-            %{
-            for qq = 1:10
-            offsetVal = 0;
-            offsetVal = bitor(offsetVal, aps.ELL_ZERO);
-            offsetVal = bitor(offsetVal, aps.ELL_TIME_AMPLITUDE);
-            
-            triggerVal = 0;
-            countVal = 0;
-            repeatVal = 0;
-            
-            bank.offset(idx) = uint16(offsetVal);
-            bank.count(idx) = uint16(countVal);
-            bank.trigger(idx) = uint16(triggerVal);
-            bank.repeat(idx) = uint16(repeatVal);
-            
-            idx = idx + 1;
-            end
-            %}
             
             % trim last bank
             banks{curBank} = trimBank(banks{curBank},idx-1);
