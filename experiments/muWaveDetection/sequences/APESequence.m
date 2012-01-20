@@ -10,14 +10,15 @@ cycleLength = 10000;
 nbrRepeats = 2;
 
 % load config parameters from file
-load(getpref('qlab','pulseParamsBundleFile'), 'Ts', 'delays', 'measDelay', 'bufferDelays', 'bufferResets', 'bufferPaddings', 'offsets', 'piAmps', 'pi2Amps', 'sigmas', 'pulseTypes', 'deltas', 'buffers', 'pulseLengths');
+load(getpref('qlab','pulseParamsBundleFile'));
 % if using SSB, uncomment the following line
 % Ts('12') = eye(2);
-pg = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength);
+IQkey = 'BBNAPS12';
+pg = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength, 'passThru', passThrus(IQkey));
 
 angle = pi/2;
 numPsQId = 5; % number pseudoidentities
-numsteps = 11; %number of drag parameters
+numsteps = 9; %number of drag parameters (11)
 deltamax=2.0;
 deltamin=-2.0;
 delta=linspace(deltamin,deltamax,numsteps);
@@ -48,5 +49,5 @@ end
 % just a pi pulse for scaling
 calseq={{pg.pulse('Xp')}};
 
-compileSequence12(basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot);
+compileSequenceBBNAPS12(basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot);
 end
