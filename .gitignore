@@ -4,6 +4,7 @@
 *.o
 *.a
 *.log
+*.pyc
 .DS_Store*
 Thumbs.db
 data/

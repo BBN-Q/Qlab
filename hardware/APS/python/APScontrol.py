@@ -61,26 +61,25 @@ class APScontrol(QDialog, Ui_Dialog):
         self.bitFileName.setText(fileName)
 
     def waveformDialog1(self):
-        self.waveformDialog(1)
+        self.waveformDialog(1, self.ch1file)
         
     def waveformDialog2(self):
-        self.waveformDialog(2)
+        self.waveformDialog(2, self.ch2file)
         
     def waveformDialog3(self):
-        self.waveformDialog(3)
+        self.waveformDialog(3, self.ch3file)
         
     def waveformDialog4(self):
-        self.waveformDialog(4)
+        self.waveformDialog(4, self.ch4file)
 
-    def waveformDialog(self,channel):
+    def waveformDialog(self, channel, textBox):
         # todo: error file channel number
         if (channel < 1) or (channel > 4):
             print "Error ==> unknown channel", channel
             return
 
         fileName, fileFilter = QFileDialog.getOpenFileName(self, 'Open File', '', 'Matlab Files (*.mat);;Waveform files (*.m);;Sequence files (*.seq)')
-        cmd = 'self.ch%ifile.setText(fileName)' % channel
-        exec(cmd)
+        textBox.setText(fileName)
         
     def programFPGA(self):
         # check that file exists
@@ -131,26 +130,15 @@ class APScontrol(QDialog, Ui_Dialog):
         triggeredFPGA = [False,False]
                 
         for chan in range(1,5):
-            cmd = 'trigger[chan-1] = self.ch%ienable.isChecked()' % chan
-            exec(cmd)
+            checkBox = getattr(self, 'ch%ienable' % chan)
+            trigger[chan-1] = checkBox.isChecked()
             if trigger[chan - 1]:
                         
                 # load file
                 fileData = APSMatlabFile()
                 
-                # prefer to use following two lines but this is not
-                # working in python 3
-                #cmd = 'filename = self.ch%ifile.text()' % chan
-                #exec(cmd)
-                
-                if chan == 1:
-                    filename = self.ch1file.text()
-                elif chan == 2:
-                    filename = self.ch2file.text()
-                elif chan == 3:
-                    filename = self.ch3file.text()
-                elif chan == 4:
-                    filename = self.ch4file.text()
+                fileTextBox = getattr(self, 'ch%ifile' % chan)
+                filename = fileTextBox.text()
                 
                 self.printMessage('Loading file %s' % filename)
                 fileData.readFile(filename)
@@ -220,16 +208,16 @@ class APScontrol(QDialog, Ui_Dialog):
     def setScaleFactor(self,channel,value):
         value = '%.2f' % value
         if channel in range(1,5):
-            cmd = 'self.ch%iscale.setText(value)' % channel
-            exec(cmd)
+            textBox = getattr(self, 'ch%iscale' % channel)
+            textBox.setText(value)
         else:
             print 'Unknown channel', channel
             
     def setOffset(self,channel,value):
         value = '%.2f' % value
         if channel in range(1,5):
-            cmd = 'self.ch%ioffset.setText(value)'% channel
-            exec(cmd)
+            textBox = getattr(self, 'ch%ioffset' % channel)
+            textBox.setText(value)
         else:
             print 'Unknown channel', channel
         
