@@ -91,10 +91,15 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         ELL_ADDRESS            = hex2dec('07FF');
         ELL_TIME_AMPLITUDE     = hex2dec('8000');
         ELL_LL_TRIGGER         = hex2dec('8000');
+        ELL_LL_TRIGGER_BIT     = 16;
         ELL_ZERO               = hex2dec('4000');
+        ELL_ZERO_BIT           = 15;
         ELL_VALID_TRIGGER      = hex2dec('2000');
+        ELL_VALID_TRIGGER_BIT  = 14;
         ELL_FIRST_ENTRY        = hex2dec('1000');
+        ELL_FIRST_ENTRY_BIT    = 13;
         ELL_LAST_ENTRY         = hex2dec('800');
+        ELL_LAST_ENTRY_BIT     = 12;
         ELL_TA_MAX             = hex2dec('FFFF');
         ELL_TRIGGER_DELAY      = hex2dec('3FFF');
         ELL_TRIGGER_MODE_SHIFT = 14;
@@ -617,7 +622,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         end
 
                         %aps.setLinkListRepeat(ch-1,ell.repeatCount);
-                        aps.setLinkListRepeat(ch-1,10000);
+                        %aps.setLinkListRepeat(ch-1,10000);
+                        aps.setLinkListRepeat(ch-1,0);
                     end
                     aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                 end
@@ -1146,8 +1152,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 bank.repeat = bank.repeat(1:len);
                 bank.length = len;
                 
-                % fix the last mini-LL entry of the current bank
-                bank.offset(end) = uint16(bitand(bank.offset(end), ~aps.ELL_FIRST_ENTRY));
+                % fix the last mini-LL entry of the current bank by
+                % clearing the LL_FIRST_ENTRY bit
+                bank.offset(end) = bitset(bank.offset(end), aps.ELL_FIRST_ENTRY_BIT, 0);
             end
             
             curBank = 1;
