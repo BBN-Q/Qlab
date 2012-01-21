@@ -36,11 +36,11 @@ function LinkListUnitTest2
     
     useVarients = 1;
     validate = 0;
-    miniLinkRepeat = 2;
+    miniLinkRepeat = 1;
     
     %% Get Link List Sequence and Convert To APS Format
     sequence = aps.LinkListSequences(1);
-    wfLib = aps.buildWaveformLibrary(sequence{1}.llpatx.waveforms, useVarients);
+    wfLib = aps.buildWaveformLibrary(sequence{1}.llpatx, useVarients);
     [wf1, banks1] = aps.convertLinkListFormat(sequence{1}.llpatx,useVarients,wfLib,miniLinkRepeat);
     %[wf2, banks2] = aps.convertLinkListFormat(sequence.llpaty,useVarients);
     
@@ -70,14 +70,14 @@ function LinkListUnitTest2
         aps.loadLinkListELL(0,cb.offset,cb.count, cb.trigger, cb.repeat, cb.length, 0, validate)
         % fill bank B
         aps.loadLinkListELL(0,cb.offset,cb.count, cb.trigger, cb.repeat, cb.length, 1, validate)
-        aps.setLinkListRepeat(0,100);
+        aps.setLinkListRepeat(0,0);
         aps.setLinkListMode(0,aps.LL_ENABLE,aps.LL_CONTINUOUS);
         % same for channel 1 for test
         % fill bank A
         aps.loadLinkListELL(1,cb.offset,cb.count, cb.trigger, cb.repeat, cb.length, 0, validate)
         % fill bank B
         aps.loadLinkListELL(1,cb.offset,cb.count, cb.trigger, cb.repeat, cb.length, 1, validate)
-        aps.setLinkListRepeat(1,100);
+        aps.setLinkListRepeat(1,0);
         aps.setLinkListMode(1,aps.LL_ENABLE,aps.LL_CONTINUOUS);
     end
     

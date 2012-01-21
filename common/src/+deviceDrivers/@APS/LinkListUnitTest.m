@@ -134,7 +134,7 @@ for seq = 1:length(sequences1)
         %sequence2 = sequences2{seq};
         %[wf, banks1] = aps.convertLinkListFormat(sequence1.llpatx,useVarients,unifiedX,miniLinkRepeat);
         %[wf2, banks2] = aps.convertLinkListFormat(sequence2.llpatx,useVarients,unifiedX,miniLinkRepeat);
-        wfLib = aps.buildWaveformLibrary(sequence1.llpatx.waveforms, useVarients); % added by BRJ
+        wfLib = aps.buildWaveformLibrary(sequence1.llpatx, useVarients);
         [wf, banks1] = aps.convertLinkListFormat(sequence1.llpatx,useVarients,wfLib,miniLinkRepeat);
         wf2 = wf;
         banks2 = banks1;
@@ -150,9 +150,7 @@ for seq = 1:length(sequences1)
     
     %aps.setFrequency(1,wf2.sample_rate, 0);
     aps.loadWaveform(1, wf2.data, wf2.offset);
-    
-    %aps.testPllSync();
-    
+        
     if singleBankTest
         
         for i = 1:length(banks1)

@@ -86,6 +86,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         ELL_MAX_WAVFORM = 8192;
         ELL_MAX_LL = 512;
+        ELL_MIN_COUNT = 3;
         
         %% ELL Linklist Masks and Contants
         ELL_ADDRESS            = hex2dec('07FF');
@@ -867,13 +868,26 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         %% TODO: Clean up verbose messages
         
-        function library = buildWaveformLibrary(aps, waveforms, useVarients, useEndPadding)
+        function library = buildWaveformLibrary(aps, pattern, useVarients)
             % convert baseWaveforms to waveform array suitable for the APS
-            
-            % Todo: Square pulses as time amplitude pair
+            waveforms = pattern.waveforms;
+            linkLists = pattern.linkLists;
             
             if ~exist('useVarients','var')
                 useVarients = 1;
+            end
+            
+            if useVarients
+                % preprocess waveforms
+                for ii = 1:length(linkLists)
+                    % clear padding adjust variables
+                    aps.pendingLength = 0;
+                    aps.expectedLength = 0;
+                    aps.currentLength = 0;
+                    for jj = 1:length(linkLists{ii})
+                        library = preprocessEntry(linkLists{ii}{jj}, library);
+                    end
+                end
             end
             
             if ~exist('useEndPadding','var')
@@ -889,51 +903,37 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             idx = 1;
             
-            if useEndPadding
-                endPadding = 3;
-            else
-                endPadding = 0;
-            end
-            
             % loop through waveform library
             keys = waveforms.keys();
             while keys.hasMoreElements()
                 key = keys.nextElement();
                 orgWF = waveforms.get(key);
                 
-                varientWFs = {};
+                maxPadding = aps.ADDRESS_UNIT*(aps.ELL_MIN_COUNT+1)-1;
+                varientWFs = cell(maxPadding+1,1);
                 if useVarients
-                    endPad = 15;
-                    % TODO add check for lenght(orgWF) < 16
-                else
-                    endPad = 0;
-                end
-                if length(orgWF) == 1
-                    endPad = 0;
+                    
                 end
                 
-                for leadPad = 0:endPad
+                paddings = library(key);
+                for padIdx = 1:length(paddings)
+                    leadPad = paddings(padIdx);
+                    assert(leadPad <= maxPadding, 'WF padding is too large')
                     wf = [];  % clear waveform
                     if leadPad
                         wf = zeros([1,leadPad]);
                     end
                     wf(end+1:end+length(orgWF)) = orgWF;
-                    % add 12 extra zero points to handle
-                    % TAZ entries with count < 3
-                    %if useEndPadding
-                    %    wf(end+1:end+endPadding - leadPad) = zeros([1, endPadding-leadPad]);
-                    %end
 
-                    % test for padding to mod 4
+                    % pad total length to a multiple of 4
                     if length(wf) == 1
                         % time amplitude pair
-                        % example to save value repeated four times
+                        % pad out to 4 samples
                         wf = ones([1,aps.ADDRESS_UNIT]) * wf;
                     end
-                    pad = mod(-length(wf),aps.ADDRESS_UNIT);
-                    if pad ~= 0 && pad < aps.MIN_PAD_SIZE
-                        % pad to length 4
-                        wf(end+1:end+pad) = zeros([1,pad],'int16');
+                    residual = mod(-length(wf),aps.ADDRESS_UNIT);
+                    if residual ~= 0 && residual < aps.MIN_PAD_SIZE
+                        wf(end+1:end+residual) = zeros([1,residual],'int16');
                     end
                     
                     assert(mod(length(wf),aps.ADDRESS_UNIT) == 0, 'WF Padding Failed')
@@ -951,7 +951,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         % are used to handle 0 and 1 count TA
                         varient.length = length(wf);
                         varient.pad = leadPad;
-                        varientWFs{end+1} = varient; % store the varient at position varientWFs{leadPad+1}
+                        varientWFs{leadPad+1} = varient; % store the varient at position varientWFs{leadPad+1}
                     end
                     idx = idx + length(wf);
                 end
@@ -978,7 +978,53 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function [offsetVal countVal ] = entryToOffsetCount(aps,entry,library, firstEntry, lastEntry)
+        function library = preprocessEntry(aps, entry, library)
+            % preprocessEntry marks used waveforms in the library and
+            % indicates which padding varients need to be generated
+            entryData.length = library.lengths(entry.key);
+            entryData.paddings = library.paddings(entry.key);
+            
+            aps.expectedLength = aps.expectedLength + entry.length * entry.repeat;
+            
+            % if we have a zero that is less than count 3, we skip it and
+            % pad the following entry
+            if entry.isZero && (aps.pendingLength + entry.repeat < (aps.MIN_LL_ENTRY_COUNT+1) * aps.ADDRESS_UNIT)
+                aps.pendingLength = aps.expectedLength - aps.currentLength;
+                return;
+            end
+            
+            % pad non-TAZ waveforms if the pendingLength is positive
+            if aps.pendingLength > 0 && ~entry.isZero
+                entryData.length = entryData.length + aps.pendingLength;
+                % add the padding length to the library
+                if ~ismember(aps.pendingLength, entryData.paddings)
+                    entryData.paddings(end+1) = aps.pendingLength;
+                end
+            % pad TAZ regardless of the sign of pendingLength
+            elseif entry.isZero
+                entry.repeat = entry.repeat + aps.pendingLength;
+            end
+            
+            if ~entry.isTimeAmplitude
+                % count val is (length in 4 sample units) - 1
+                countVal = fix(entryData.length/aps.ADDRESS_UNIT) - 1;
+                % padding = 0
+                if ~ismember(0, entryData.paddings)
+                    entryData.paddings(end+1) = 0;
+            else
+                countVal = fix(entry.repeat / aps.ADDRESS_UNIT) - 1;
+            end
+            
+            aps.currentLength = aps.currentLength + (countVal+1) * aps.ADDRESS_UNIT;
+            
+            % if the pattern is running long, trim pendingLength
+            aps.pendingLength = aps.expectedLength - aps.currentLength;
+            
+            % update library entry
+            library.paddings(entry.key) = entryData.paddings;
+        end
+        
+        function [offsetVal countVal ] = entryToOffsetCount(aps, entry, library, firstEntry, lastEntry)
             
             entryData.offset = library.offsets(entry.key);
             entryData.length = library.lengths(entry.key);
@@ -1061,13 +1107,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % use entryData to get length as it includes the padded
             % length
             if ~entry.isTimeAmplitude
-                % waveforms might have extra end padding; take min length
-                %entrylen = min(entry.length, entryData.length);
-                entrylen = entryData.length;
                 % count val is (length in 4 sample units) - 1
-                countVal = fix(entrylen/aps.ADDRESS_UNIT) - 1;
+                countVal = fix(entryData.length / aps.ADDRESS_UNIT) - 1;
             else
-                countVal = fix(floor(entry.repeat / aps.ADDRESS_UNIT)) - 1;
+                countVal = fix(entry.repeat / aps.ADDRESS_UNIT) - 1;
             end
             if (~entry.isTimeAmplitude && countVal > aps.ELL_ADDRESS) || ...
                     (entry.isTimeAmplitude && countVal > aps.ELL_TA_MAX)
@@ -1109,7 +1152,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function [wf, banks] = convertLinkListFormat(aps, pattern, useVarients, waveformLibrary, miniLinkRepeat, useEndPadding)
+        function [wf, banks] = convertLinkListFormat(aps, pattern, useVarients, waveformLibrary, miniLinkRepeat)
             if aps.verbose
                fprintf('APS::convertLinkListFormat useVarients = %i\n', useVarients) 
             end
@@ -1118,17 +1161,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 useVarients = 1;
             end
             
-            if ~exist('useEndPadding','var') || isempty(useVarients)
-                useEndPadding = 1;
-            end
-            
-            
             if ~exist('waveformLibrary','var') || isempty(waveformLibrary)
-                waveformLibrary = aps.buildWaveformLibrary(pattern.waveforms, useVarients);
+                waveformLibrary = aps.buildWaveformLibrary(pattern, useVarients);
             end
             
             if ~exist('miniLinkRepeat', 'var') || isempty(miniLinkRepeat)
-                miniLinkRepeat = 1;
+                miniLinkRepeat = 0;
             end
             
 
