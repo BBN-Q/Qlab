@@ -148,10 +148,10 @@ useVarients = 1;
 numSequences = length(sequences);
 
 % unify sequce waveform libraries
-[unifiedX unifiedY] = d.unifySequenceLibraryWaveforms(sequences);
+%[unifiedX unifiedY] = APSPattern.unifySequenceLibraryWaveforms(sequences);
 
-unifiedX = d.buildWaveformLibrary(unifiedX, useVarients, useEndPadding);
-unifiedY = d.buildWaveformLibrary(unifiedY, useVarients, useEndPadding);
+%unifiedX = APSPattern.buildWaveformLibrary(unifiedX, useVarients);
+%unifiedY = APSPattern.buildWaveformLibrary(unifiedY, useVarients);
 
 %{
 figure(2);
@@ -175,11 +175,11 @@ for seq = 1:numSequences
     
     
     d.verbose = 0;
-    [wf, banks] = d.convertLinkListFormat(sequence.llpatx,useVarients,unifiedX,1,useEndPadding);
-    patternX = d.linkListToPattern(wf, banks);
+    [wf, banks] = APSPattern.convertLinkListFormat(sequence.llpatx,useVarients);
+    patternX = APSPattern.linkListToPattern(wf, banks);
     
-    [wf, banks] = d.convertLinkListFormat(sequence.llpaty,useVarients,unifiedY,1,useEndPadding);
-    patternY = d.linkListToPattern(wf, banks);
+    [wf, banks] = APSPattern.convertLinkListFormat(sequence.llpaty,useVarients);
+    patternY = APSPattern.linkListToPattern(wf, banks);
     
     for n = 1:sequence.numsteps;
         

@@ -15,6 +15,7 @@ classdef APSPattern < handle
         %% ELL Linklist Masks and Contants
         ELL_ADDRESS            = hex2dec('07FF');
         ELL_TIME_AMPLITUDE     = hex2dec('8000');
+        ELL_TIME_AMPLITUDE_BIT = 16;
         ELL_LL_TRIGGER         = hex2dec('8000');
         ELL_LL_TRIGGER_BIT     = 16;
         ELL_ZERO               = hex2dec('4000');
@@ -52,20 +53,17 @@ classdef APSPattern < handle
             if ~exist('useVarients','var')
                 useVarients = 1;
             end
-
+            
+            paddingLib = containers.Map('KeyType','char','ValueType','any');
             if useVarients
                 % preprocess waveforms
                 for ii = 1:length(linkLists)
                     for jj = 1:length(linkLists{ii})
-                        library = preprocessEntry(linkLists{ii}{jj}, library, jj == 1);
+                        paddingLib = aps.preprocessEntry(linkLists{ii}{jj}, paddingLib, jj == 1);
                     end
                 end
             end
-
-            if ~exist('useEndPadding','var')
-                useEndPadding = 1;
-            end
-
+            
             offsets = containers.Map('KeyType','char','ValueType','any');
             lengths = containers.Map('KeyType','char','ValueType','any');
             varients = containers.Map('KeyType','char','ValueType','any');
@@ -87,15 +85,12 @@ classdef APSPattern < handle
 
                 end
 
-                paddings = library(key);
+                paddings = paddingLib(key);
+                if isempty(paddings), paddings = [0]; end
                 for padIdx = 1:length(paddings)
                     leadPad = paddings(padIdx);
                     assert(leadPad <= maxPadding, 'WF padding is too large')
-                    wf = [];  % clear waveform
-                    if leadPad
-                        wf = zeros([1,leadPad]);
-                    end
-                    wf(end+1:end+length(orgWF)) = orgWF;
+                    wf = [zeros([1,leadPad]) orgWF'];
 
                     % pad total length to a multiple of 4
                     if length(wf) == 1
@@ -150,20 +145,24 @@ classdef APSPattern < handle
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function library = preprocessEntry(entry, library, resetCounts)
+        function paddingLib = preprocessEntry(entry, paddingLib, resetCounts)
             % preprocessEntry marks used waveforms in the library and
             % indicates which padding varients need to be generated
             % borrows most of its code from entryToOffsetCount
             aps = APSPattern;
             % state variables
-            persistent expectedLength, pendingLength, currentLength
+            persistent expectedLength pendingLength currentLength
             if resetCounts
                 expectedLength = 0;
                 pendingLength = 0;
                 currentLength = 0;
             end
-            entryData.length = library.lengths(entry.key);
-            entryData.paddings = library.paddings(entry.key);
+            
+            if ismember(entry.key, keys(paddingLib))
+                paddings = paddingLib(entry.key);
+            else
+                paddings = [];
+            end
 
             expectedLength = expectedLength + entry.length * entry.repeat;
 
@@ -175,26 +174,28 @@ classdef APSPattern < handle
             end
 
             % pad non-TAZ waveforms if the pendingLength is positive
-            if pendingLength > 0 && ~entry.isZero
+            if pendingLength > 0 && ~entry.isZero && ~entry.isTimeAmplitude
                 % add the padding length to the library
-                if ~ismember(pendingLength, entryData.paddings)
-                    entryData.paddings(end+1) = pendingLength;
+                if ~ismember(pendingLength, paddings)
+                    paddings(end+1) = pendingLength;
                 end
                 % the entry itself can potentially have additional padding to
                 % make the length an integer multiple of the ADDRESS_UNIT
-                residual = mod(-entryData.length, aps.ADDRESS_UNIT);
-                entryData.length = entryData.length + residual + pendingLength;
+                residual = mod(-(entry.length + pendingLength), aps.ADDRESS_UNIT);
+                entry.length = entry.length + pendingLength + residual;
             % pad TAZ regardless of the sign of pendingLength
             elseif entry.isZero
                 entry.repeat = entry.repeat + pendingLength;
+            elseif ~entry.isZero && ~entry.isTimeAmplitude
+                % mark this entry with padding = 0
+                if ~ismember(0, paddings)
+                    paddings(end+1) = 0;
+                end
             end
 
             if ~entry.isTimeAmplitude
                 % count val is (length in 4 sample units) - 1
-                countVal = fix(entryData.length/aps.ADDRESS_UNIT) - 1;
-                % mark this entry with padding = 0
-                if ~ismember(0, entryData.paddings)
-                    entryData.paddings(end+1) = 0;
+                countVal = fix(entry.length / aps.ADDRESS_UNIT) - 1;
             else
                 countVal = fix(entry.repeat / aps.ADDRESS_UNIT) - 1;
             end
@@ -205,13 +206,13 @@ classdef APSPattern < handle
             pendingLength = expectedLength - currentLength;
 
             % update library entry
-            library.paddings(entry.key) = entryData.paddings;
+            paddingLib(entry.key) = paddings;
         end
 
         function [offsetVal countVal ] = entryToOffsetCount(entry, library, firstEntry, lastEntry)
             aps = APSPattern;
             % state variables
-            persistent expectedLength, pendingLength, currentLength
+            persistent expectedLength pendingLength currentLength
             if firstEntry
                 expectedLength = 0;
                 pendingLength = 0;
@@ -239,7 +240,7 @@ classdef APSPattern < handle
             end
 
             % pad non-TAZ waveforms if the pendingLength is positive, provided we have an appropriate varient
-            if pendingLength > 0 && ~entry.isZero && ~isempty(entryData.varientWFs)
+            if pendingLength > 0 && ~entry.isZero && ~entry.isTimeAmplitude && ~isempty(entryData.varientWFs)
                 % attempt to use a varient
                 padIdx = pendingLength + 1;
                 assert(padIdx > 0 && padIdx <= (aps.MIN_LL_ENTRY_COUNT+1) * aps.ADDRESS_UNIT,sprintf('Padding Index %i Out of Range', padIdx));
@@ -367,7 +368,7 @@ classdef APSPattern < handle
             wf.data = waveformLibrary.waveforms;
 
             curBank = 1;
-            [banks{curBank} idx] = allocateBank();
+            [banks{curBank} idx] = aps.allocateBank();
 
             for i = 1:length(pattern.linkLists)
                 linkList = pattern.linkLists{i};
@@ -381,9 +382,9 @@ classdef APSPattern < handle
                 % if we are going to fall off the end of the current LL
                 % bank, allocate a new one
                 if (idx + lenLL) > aps.max_ll_length
-                    banks{curBank} = trimBank(banks{curBank},idx-1);
+                    banks{curBank} = aps.trimBank(banks{curBank},idx-1);
                     curBank = curBank + 1;
-                    [banks{curBank} idx] = allocateBank();
+                    [banks{curBank} idx] = aps.allocateBank();
                 end
 
                 for j = 1:lenLL
@@ -399,7 +400,7 @@ classdef APSPattern < handle
                         entry.hasTrigger = 1;
                     end
 
-                    [offsetVal countVal] = entryToOffsetCount(aps,entry,waveformLibrary, j == 1, j == lenLL - 1);
+                    [offsetVal countVal] = aps.entryToOffsetCount(entry, waveformLibrary, j == 1, j == lenLL - 1);
 
                     if isempty(offsetVal) % TAZ of count < 3, skip it
                         continue
@@ -449,7 +450,7 @@ classdef APSPattern < handle
             end
 
             % trim last bank
-            banks{curBank} = trimBank(banks{curBank},idx-1);
+            banks{curBank} = aps.trimBank(banks{curBank},idx-1);
         end
         
         % helper methods used by convertLinkListFormat
