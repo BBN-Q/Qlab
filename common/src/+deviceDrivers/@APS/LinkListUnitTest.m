@@ -125,17 +125,17 @@ for seq = 1:length(sequences1)
     
     if ~hardCodeSeq
         sequence = sequences1{seq};
-        [wf, banks] = aps.convertLinkListFormat(sequence.llpatx,useVarients,miniLinkRepeat);
+        [wf, banks] = APSPattern.convertLinkListFormat(sequence.llpatx,useVarients,miniLinkRepeat);
         banks1 = banks;
         banks2 = banks;
         wf2 = wf;
     else
         sequence1 = sequences1{seq};
         %sequence2 = sequences2{seq};
-        %[wf, banks1] = aps.convertLinkListFormat(sequence1.llpatx,useVarients,unifiedX,miniLinkRepeat);
-        %[wf2, banks2] = aps.convertLinkListFormat(sequence2.llpatx,useVarients,unifiedX,miniLinkRepeat);
-        wfLib = aps.buildWaveformLibrary(sequence1.llpatx, useVarients);
-        [wf, banks1] = aps.convertLinkListFormat(sequence1.llpatx,useVarients,wfLib,miniLinkRepeat);
+        %[wf, banks1] = APSPattern.convertLinkListFormat(sequence1.llpatx,useVarients,unifiedX,miniLinkRepeat);
+        %[wf2, banks2] = APSPattern.convertLinkListFormat(sequence2.llpatx,useVarients,unifiedX,miniLinkRepeat);
+        wfLib = APSPattern.buildWaveformLibrary(sequence1.llpatx, useVarients);
+        [wf, banks1] = APSPattern.convertLinkListFormat(sequence1.llpatx,useVarients,wfLib,miniLinkRepeat);
         wf2 = wf;
         banks2 = banks1;
     end

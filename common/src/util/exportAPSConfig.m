@@ -1,7 +1,6 @@
 function exportAPSConfig(path, basename, ch1seq, ch2seq, ch3seq, ch4seq)
     Version = 1.0;
-    useVarients = 0; %1
-    aps = deviceDrivers.APS();
+    useVarients = 1;
     
     % construct filename
     disp('Writing APS file');
@@ -21,8 +20,8 @@ function exportAPSConfig(path, basename, ch1seq, ch2seq, ch3seq, ch4seq)
             % set up struct
             LinkLists{i} = struct('bankA', [], 'repeatCount', 1);
             seq = eval(varname);
-            wfLib = aps.buildWaveformLibrary(seq, useVarients);
-            [WaveformLibs{i}, banks] = aps.convertLinkListFormat(seq, useVarients, wfLib, miniLinkRepeat);
+            wfLib = APSPattern.buildWaveformLibrary(seq, useVarients);
+            [WaveformLibs{i}, banks] = APSPattern.convertLinkListFormat(seq, useVarients, wfLib, miniLinkRepeat);
             LinkLists{i}.bankA = banks{1};
             if length(banks) > 1
                 LinkLists{i}.bankB = banks{2};          

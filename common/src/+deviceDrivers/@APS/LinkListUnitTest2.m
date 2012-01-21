@@ -40,9 +40,9 @@ function LinkListUnitTest2
     
     %% Get Link List Sequence and Convert To APS Format
     sequence = aps.LinkListSequences(1);
-    wfLib = aps.buildWaveformLibrary(sequence{1}.llpatx, useVarients);
-    [wf1, banks1] = aps.convertLinkListFormat(sequence{1}.llpatx,useVarients,wfLib,miniLinkRepeat);
-    %[wf2, banks2] = aps.convertLinkListFormat(sequence.llpaty,useVarients);
+    wfLib = APSPattern.buildWaveformLibrary(sequence{1}.llpatx, useVarients);
+    [wf1, banks1] = APSPattern.convertLinkListFormat(sequence{1}.llpatx,useVarients,wfLib,miniLinkRepeat);
+    %[wf2, banks2] = APSPattern.convertLinkListFormat(sequence.llpaty,useVarients);
     
     % erase any existing link list memory
     aps.clearLinkListELL(0);
