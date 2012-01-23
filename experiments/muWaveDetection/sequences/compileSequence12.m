@@ -14,9 +14,6 @@ ch2 = ch1; ch3 = ch1; ch4 = ch1;
 ch1m1 = ch1; ch1m2 = ch1; ch2m1 = ch1; ch2m2 = ch1;
 ch3m1 = ch1; ch3m2 = ch1; ch4m1 = ch1; ch4m2 = ch1;
 
-timeStep = 1/1.2e9;
-SSBFreq = 150e6;
-
 for n = 1:nbrPatterns;
     for stepct = 1:numsteps
         [patx paty] = pg.getPatternSeq(patseq{floor((n-1)/nbrRepeats)+1}, stepct, delays('12'), fixedPt);

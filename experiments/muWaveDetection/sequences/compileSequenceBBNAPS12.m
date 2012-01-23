@@ -1,5 +1,8 @@
-function compileSequenceBBNAPS12(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot)
+function compileSequenceBBNAPS12(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot, plotIdx)
 
+if ~exist('plotIdx', 'var')
+    plotIdx = 20;
+end
 % load config parameters from file
 load(getpref('qlab','pulseParamsBundleFile'), 'Ts', 'delays', 'measDelay', 'bufferDelays', 'bufferResets', 'bufferPaddings', 'offsets');
 
@@ -60,21 +63,19 @@ for n = 2:(nbrPatterns+calPatterns)
         ch6seq.linkLists{end+1} = Q_seq{n}.linkLists{m};
     end
 end
-ch5seq.waveforms = deviceDrivers.APS.unifySequenceLibraryWaveformsSingle(I_seq);
-ch6seq.waveforms = deviceDrivers.APS.unifySequenceLibraryWaveformsSingle(Q_seq);
-
+ch5seq.waveforms = APSPattern.unifySequenceLibraryWaveformsSingle(I_seq);
+ch6seq.waveforms = APSPattern.unifySequenceLibraryWaveformsSingle(Q_seq);
 
 if makePlot
-    myn = 10;
     figure
-    ch5 = pg.linkListToPattern(ch5seq, myn);
-    ch6 = pg.linkListToPattern(ch6seq, myn);
+    ch5 = pg.linkListToPattern(ch5seq, plotIdx);
+    ch6 = pg.linkListToPattern(ch6seq, plotIdx);
     plot(ch5)
     hold on
     plot(ch6, 'r')
-    plot(5000*ch3m1(myn,:), 'k')
-    plot(5000*ch1m1(myn,:),'.')
-    plot(5000*ch1m2(myn,:), 'g')
+    plot(5000*ch3m1(plotIdx,:), 'k')
+    plot(5000*ch1m1(plotIdx,:),'.')
+    plot(5000*ch1m2(plotIdx,:), 'g')
     grid on
     hold off
 end

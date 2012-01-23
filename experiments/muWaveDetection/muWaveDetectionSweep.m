@@ -78,7 +78,7 @@ mainWindow = figure( ...
 	'Visible', 'off');
 
 % list of instruments expected in the settings structs
-instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'TekAWG', 'BBNdc'};
+instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'TekAWG', 'BBNAPS', 'BBNdc'};
 % load previous settings structs
 [commonSettings, prevSettings] = get_previous_settings('muWaveDetectionSweep', cfg_path, instrumentNames);
 
@@ -102,7 +102,15 @@ get_spec_settings = deviceGUIs.uW_source_settings_GUI(Spectab, 10, 10, 'Spec', p
 get_spec2_settings = deviceGUIs.uW_source_settings_GUI(Spec2tab, 10, 10, 'Spec2', prevSettings.InstrParams.Spec2gen);
 
 % add AWGs
-get_tekAWG_settings = deviceGUIs.AWG5014_settings_GUI(mainWindow, 240, 350, 'TekAWG', prevSettings.InstrParams.TekAWG);
+AWGPanel = uipanel('parent', mainWindow, ...
+	'units', 'pixels', 'position', [350, 235, 405, 260]);
+AWGTabGroup = uitabgroup('parent', AWGPanel, ...
+	'units', 'pixels', 'position', [2, 2, 400, 255]);
+TekTab = uitab('parent', AWGTabGroup, 'title', 'Tek');
+APSTab = uitab('parent', AWGTabGroup, 'title', 'APS');
+
+get_tekAWG_settings = deviceGUIs.AWG5014_settings_GUI(TekTab, 5, 5, 'TekAWG', prevSettings.InstrParams.TekAWG);
+get_APS_settings = deviceGUIs.APS_settings_GUI(APSTab, 5, 5, 'BBN APS', prevSettings.InstrParams.BBNAPS);
 
 % add DC sources
 get_DCsource_settings = deviceGUIs.DCBias_settings_GUI(mainWindow, 240, 775, prevSettings.InstrParams.BBNdc);
@@ -182,6 +190,7 @@ set(mainWindow, 'Visible', 'on');
 		settings.InstrParams.Specgen = get_spec_settings();
         settings.InstrParams.Spec2gen = get_spec2_settings();
 		settings.InstrParams.TekAWG = get_tekAWG_settings();
+        settings.InstrParams.BBNAPS = get_APS_settings();
 		settings.InstrParams.BBNdc = get_DCsource_settings();
 		
 		% get sweep settings

@@ -73,6 +73,8 @@ if ~SD_mode
 				Instr.(tekInstrName).run();
                 [success_flag_AWG] = Instr.(tekInstrName).waitForAWGtoStartRunning();
                 if success_flag_AWG ~= 1, error('AWG timed out'), end
+            case 'deviceDrivers.APS'
+                Instr.(InstrName).run();
             case 'deviceDrivers.AgilentAP120'
                 scope = Instr.(InstrName); % we're going to need this later
             otherwise
