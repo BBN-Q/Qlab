@@ -23,23 +23,27 @@ class PulseParamGUI(QDialog, Ui_Dialog):
 
         # connect UI element to signals
         self.updateButton.clicked.connect(self.writeParameters)
+        self.refreshButton.clicked.connect(self.refreshParameters)
         self.qubitComboBox.activated.connect(self.updateQubitParameters)
         self.channelComboBox.activated.connect(self.updateChannelParameters)
         
         self.loadParameters()
-        self.updateQubitParameters()
-        self.updateChannelParameters()
-        # testing
-        #print self._params
+        self.updateQubitParameters(0, False)
+        self.updateChannelParameters(0, False)
     
     def loadParameters(self):
         f = open(self._paramPath, 'r')
         self._params = json.loads(f.read())
         f.close()
     
-    def updateQubitParameters(self):
+    def refreshParameters(self):
+        self.loadParameters()
+        self.updateQubitParameters(saveBeforeSwitch=False)
+        self.updateChannelParameters(saveBeforeSwitch=False)
+    
+    def updateQubitParameters(self, index=0, saveBeforeSwitch=True):
         # save parameters
-        if self._currentQubit != '':
+        if saveBeforeSwitch:
             self.saveQubitParameters()
         
         # update GUI with parameters for newly selected channel
@@ -54,9 +58,9 @@ class PulseParamGUI(QDialog, Ui_Dialog):
         self.pulseType.setText(self._params[qubit]['pulseType'])
         self._currentQubit = qubit
     
-    def updateChannelParameters(self):
+    def updateChannelParameters(self, index=0, saveBeforeSwitch=True):
         # save parameters
-        if self._currentChannel != '':
+        if saveBeforeSwitch:
             self.saveChannelParameters()
         
         # update GUI with parameters for newly selected channel
