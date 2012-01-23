@@ -23,8 +23,10 @@ function exportAPSConfig(path, basename, ch1seq, ch2seq, ch3seq, ch4seq)
             wfLib = APSPattern.buildWaveformLibrary(seq, useVarients);
             [WaveformLibs{i}, banks] = APSPattern.convertLinkListFormat(seq, useVarients, wfLib, miniLinkRepeat);
             LinkLists{i}.bankA = banks{1};
+            fprintf('Length of Bank A: %d\n',LinkLists{i}.bankA.length)
             if length(banks) > 1
                 LinkLists{i}.bankB = banks{2};          
+                fprintf('Length of Bank B: %d\n',LinkLists{i}.bankB.length)
             end
         else
             WaveformLibs{i} = [];

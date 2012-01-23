@@ -4,15 +4,16 @@ if ~exist('makePlot', 'var')
     makePlot = true;
 end
 
-basename = 'Pi2Cal';
+basename = 'Ramsey';
 fixedPt = 16000;
 cycleLength = 20000;
 
 % load config parameters from file
-load(getpref('qlab','pulseParamsBundleFile'), 'Ts', 'delays', 'measDelay', 'bufferDelays', 'bufferResets', 'bufferPaddings', 'offsets', 'piAmps', 'pi2Amps', 'sigmas', 'pulseTypes', 'deltas', 'buffers', 'pulseLengths');
+load(getpref('qlab','pulseParamsBundleFile'));
 % if using SSB, uncomment the following line
 % Ts('12') = eye(2);
-pg = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength);
+IQkey = 'BBNAPS12';
+pg = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength, 'passThru', passThrus(IQkey));
 
 numsteps = 150;
 stepsize = 48; %24 (300)
@@ -24,5 +25,5 @@ patseq = {{...
     }};
 calseq = {{pg.pulse('QId')}, {pg.pulse('QId')}, {pg.pulse('Xp')}, {pg.pulse('Xp')}};
 
-compileSequence12(basename, pg, patseq, calseq, numsteps, 1, fixedPt, cycleLength, makePlot);
+compileSequenceBBNAPS12(basename, pg, patseq, calseq, numsteps, 1, fixedPt, cycleLength, makePlot);
 end

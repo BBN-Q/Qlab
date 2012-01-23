@@ -91,6 +91,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         %% ELL Linklist Masks and Contants
         ELL_ADDRESS            = hex2dec('07FF');
         ELL_TIME_AMPLITUDE     = hex2dec('8000');
+        ELL_TIME_AMPLITUDE_BIT = 16;
         ELL_LL_TRIGGER         = hex2dec('8000');
         ELL_LL_TRIGGER_BIT     = 16;
         ELL_ZERO               = hex2dec('4000');
@@ -105,6 +106,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         ELL_TRIGGER_DELAY      = hex2dec('3FFF');
         ELL_TRIGGER_MODE_SHIFT = 14;
         ELL_TRIGGER_DELAY_UNIT = 3.333e-9;
+        ELL_NO_TRIGGER_BIT     = 16;
         
         LL_ENABLE = 1;
         LL_DISABLE = 0;
@@ -623,8 +625,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         end
 
                         %aps.setLinkListRepeat(ch-1,ell.repeatCount);
-                        %aps.setLinkListRepeat(ch-1,10000);
-                        aps.setLinkListRepeat(ch-1,0);
+                        aps.setLinkListRepeat(ch-1,10000);
+                        %aps.setLinkListRepeat(ch-1,0);
                     end
                     aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                 end

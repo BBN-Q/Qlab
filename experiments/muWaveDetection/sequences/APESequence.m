@@ -17,10 +17,10 @@ IQkey = 'BBNAPS12';
 pg = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength, 'passThru', passThrus(IQkey));
 
 angle = pi/2;
-numPsQId = 5; % number pseudoidentities
-numsteps = 9; %number of drag parameters (11)
-deltamax=2.0;
-deltamin=-2.0;
+numPsQId = 4; % number pseudoidentities
+numsteps = 5; %number of drag parameters (11)
+deltamax=-0.5;
+deltamin=-1.5;
 delta=linspace(deltamin,deltamax,numsteps);
 
 sindex = 0;

@@ -65,7 +65,7 @@ ch6seq.waveforms = deviceDrivers.APS.unifySequenceLibraryWaveformsSingle(Q_seq);
 
 
 if makePlot
-    myn = 20;
+    myn = 10;
     figure
     ch5 = pg.linkListToPattern(ch5seq, myn);
     ch6 = pg.linkListToPattern(ch6seq, myn);
