@@ -1,0 +1,27 @@
+{
+ "q1": {
+  "pulseType": "drag", 
+  "piAmp": 6000, 
+  "pi2Amp": 3000, 
+  "delta": -0.5, 
+  "pulseLength": 48, 
+  "sigma": 12
+ }, 
+ "Tek12": {
+  "delay": 12, 
+  "bufferReset": 120, 
+  "T": [
+   [
+    1, 
+    2
+   ], 
+   [
+    3, 
+    4
+   ]
+  ], 
+  "offset": 8192, 
+  "bufferDelay": 44, 
+  "bufferPadding": 24
+ }
+}
