@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'pulseParamGUI.ui'
 #
-# Created: Sun Jan 22 20:29:07 2012
+# Created: Mon Jan 23 10:53:21 2012
 #      by: pyside-uic 0.2.13 running on PySide 1.1.0
 #
 # WARNING! All changes made in this file will be lost!
@@ -12,7 +12,7 @@ from PySide import QtCore, QtGui
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
-        Dialog.resize(510, 371)
+        Dialog.resize(510, 346)
         self.verticalLayout_3 = QtGui.QVBoxLayout(Dialog)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.label_14 = QtGui.QLabel(Dialog)
@@ -142,10 +142,12 @@ class Ui_Dialog(object):
         self.verticalLayout_2.addLayout(self.formLayout_2)
         self.horizontalLayout_5.addWidget(self.groupBox_2)
         self.verticalLayout_3.addLayout(self.horizontalLayout_5)
+        spacerItem = QtGui.QSpacerItem(20, 12, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.verticalLayout_3.addItem(spacerItem)
         self.horizontalLayout_4 = QtGui.QHBoxLayout()
         self.horizontalLayout_4.setObjectName("horizontalLayout_4")
-        spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
-        self.horizontalLayout_4.addItem(spacerItem)
+        spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.horizontalLayout_4.addItem(spacerItem1)
         self.refreshButton = QtGui.QPushButton(Dialog)
         self.refreshButton.setObjectName("refreshButton")
         self.horizontalLayout_4.addWidget(self.refreshButton)
@@ -153,8 +155,6 @@ class Ui_Dialog(object):
         self.updateButton.setObjectName("updateButton")
         self.horizontalLayout_4.addWidget(self.updateButton)
         self.verticalLayout_3.addLayout(self.horizontalLayout_4)
-        spacerItem1 = QtGui.QSpacerItem(20, 12, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.verticalLayout_3.addItem(spacerItem1)
         self.label.setBuddy(self.qubitComboBox)
         self.label_2.setBuddy(self.piAmp)
         self.label_3.setBuddy(self.pi2Amp)
@@ -189,7 +189,7 @@ class Ui_Dialog(object):
         Dialog.setTabOrder(self.qubitComboBox, self.channelComboBox)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Dialog", None, QtGui.QApplication.UnicodeUTF8))
+        Dialog.setWindowTitle(QtGui.QApplication.translate("Dialog", "Pulse Parameters", None, QtGui.QApplication.UnicodeUTF8))
         self.label_14.setText(QtGui.QApplication.translate("Dialog", "Pulse Parameters", None, QtGui.QApplication.UnicodeUTF8))
         self.label.setText(QtGui.QApplication.translate("Dialog", "Qubit", None, QtGui.QApplication.UnicodeUTF8))
         self.qubitComboBox.setItemText(0, QtGui.QApplication.translate("Dialog", "q1", None, QtGui.QApplication.UnicodeUTF8))
