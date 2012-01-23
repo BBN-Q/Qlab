@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>510</width>
-    <height>346</height>
+    <width>458</width>
+    <height>378</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -150,6 +150,16 @@
           <item row="6" column="1">
            <widget class="QLineEdit" name="pulseType"/>
           </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_16">
+            <property name="text">
+             <string>buffer</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QLineEdit" name="buffer"/>
+          </item>
          </layout>
         </item>
        </layout>
@@ -163,6 +173,46 @@
           <property name="fieldGrowthPolicy">
            <enum>QFormLayout::FieldsStayAtSizeHint</enum>
           </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_8">
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Channel</string>
+            </property>
+            <property name="buddy">
+             <cstring>channelComboBox</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="channelComboBox">
+            <item>
+             <property name="text">
+              <string>Tek12</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Tek34</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>BBN12</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>BBN34</string>
+             </property>
+            </item>
+           </widget>
+          </item>
           <item row="1" column="0">
            <widget class="QLabel" name="label_9">
             <property name="text">
@@ -241,44 +291,18 @@
           <item row="6" column="1">
            <widget class="QLineEdit" name="T"/>
           </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_8">
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
+          <item row="7" column="1">
+           <widget class="QCheckBox" name="passThru">
             <property name="text">
-             <string>Channel</string>
-            </property>
-            <property name="buddy">
-             <cstring>channelComboBox</cstring>
+             <string/>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="channelComboBox">
-            <item>
-             <property name="text">
-              <string>Tek12</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Tek34</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>BBN12</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>BBN34</string>
-             </property>
-            </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_17">
+            <property name="text">
+             <string>passThru</string>
+            </property>
            </widget>
           </item>
          </layout>

@@ -12,8 +12,8 @@ from PulseParam_ui import Ui_Dialog
 class PulseParamGUI(QDialog, Ui_Dialog):
     _paramPath = '../cfg/example-json.txt'
     _params = {}
-    _emptyQubitParams = {'piAmp': 0, 'pi2Amp': 0, 'sigma': 0, 'delta': 0, 'pulseLength': 0, 'pulseType': 'drag'}
-    _emptyChannelParams = {'bufferPadding': 0, 'bufferReset': 0, 'bufferDelay': 0, 'offset': 0, 'delay': 0, 'T': [[1,0],[0,1]]}
+    _emptyQubitParams = {'piAmp': 0, 'pi2Amp': 0, 'sigma': 0, 'delta': 0, 'pulseLength': 0, 'pulseType': 'drag', 'buffer': 4}
+    _emptyChannelParams = {'bufferPadding': 0, 'bufferReset': 0, 'bufferDelay': 0, 'offset': 0, 'delay': 0, 'T': [[1,0],[0,1]], 'passThru': 1}
     _currentQubit = ''
     _currentChannel = ''
     
@@ -56,6 +56,7 @@ class PulseParamGUI(QDialog, Ui_Dialog):
         self.delta.setText(str(self._params[qubit]['delta']))
         self.pulseLength.setText(str(self._params[qubit]['pulseLength']))
         self.pulseType.setText(self._params[qubit]['pulseType'])
+        self.buffer.setText(str(self._params[qubit]['buffer']))
         self._currentQubit = qubit
     
     def updateChannelParameters(self, index=0, saveBeforeSwitch=True):
@@ -73,6 +74,10 @@ class PulseParamGUI(QDialog, Ui_Dialog):
         self.offset.setText(str(self._params[channel]['offset']))
         self.delay.setText(str(self._params[channel]['delay']))
         self.T.setText(str(self._params[channel]['T']))
+        if self._params[channel]['passThru']:
+            self.passThru.setChecked(Qt.Checked)
+        else:
+            self.passThru.setChecked(Qt.Unchecked)
         self._currentChannel = channel
 
     def saveQubitParameters(self):
@@ -92,6 +97,7 @@ class PulseParamGUI(QDialog, Ui_Dialog):
         self._params[channel]['offset'] = int(self.offset.text())
         self._params[channel]['delay'] = int(self.delay.text())
         self._params[channel]['T'] = eval(self.T.text())
+        self._params[channel]['passThru'] = int(self.passThru.isChecked())
         
     def writeParameters(self):
         self.saveQubitParameters()
