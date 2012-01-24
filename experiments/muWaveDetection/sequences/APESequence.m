@@ -10,11 +10,12 @@ cycleLength = 10000;
 nbrRepeats = 2;
 
 % load config parameters from file
-load(getpref('qlab','pulseParamsBundleFile'));
+params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+qParams = params.q1; % choose target qubit here
+IQkey = 'BBN12';
 % if using SSB, uncomment the following line
-% Ts('12') = eye(2);
-IQkey = 'BBNAPS12';
-pg = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength, 'passThru', passThrus(IQkey));
+% params.(IQkey).T = eye(2);
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'passThru', params.(IQkey).passThru);
 
 angle = pi/2;
 numPsQId = 4; % number pseudoidentities
@@ -31,17 +32,12 @@ sindex = 0;
 for i=1:numsteps
     sindex=sindex+1;
     patseq{sindex} = {pg.pulse('QId')};
-    %patnames{sindex} = {{'QId'}};
     for j = 1:numPsQId
         patseq{sindex + j} = {pg.pulse('X90p', 'delta', delta(i))};
-        %patnames{sindex + j} = {{'X90p'}};
         for k = 1:j
             patseq{sindex + j}(2*k:2*k+1) = {pg.pulse('X90p','delta',delta(i)),pg.pulse('X90m','delta',delta(i))};
-            %patseq{sindex + j}(2*k:2*k+1) = {pg.pulse('Xp','delta',delta(i)),pg.pulse('Xm','delta',delta(i))};
-            %patnames{sindex + j}(2*k:2*k+1) = {{'X90p'},{'X90m'}};
         end
         patseq{sindex+j}{2*(j+1)} = pg.pulse('U90p', 'angle', angle, 'delta', delta(i));
-        %patnames{sindex+j}{2*(j+1)} = {'U90p'};
     end
     sindex = sindex + numPsQId;
 end

@@ -4,7 +4,9 @@ if ~exist('plotIdx', 'var')
     plotIdx = 20;
 end
 % load config parameters from file
-load(getpref('qlab','pulseParamsBundleFile'), 'Ts', 'delays', 'measDelay', 'bufferDelays', 'bufferResets', 'bufferPaddings', 'offsets');
+params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+params.measDelay = -64;
+ChParams = params.BBN12;
 
 nbrPatterns = length(patseq)*nbrRepeats;
 calPatterns = length(calseq)*nbrRepeats;
@@ -16,11 +18,11 @@ ch1 = zeros(segments, cycleLength);
 ch2 = ch1; ch3 = ch1; ch4 = ch1;
 ch1m1 = ch1; ch1m2 = ch1; ch2m1 = ch1; ch2m2 = ch1;
 ch3m1 = ch1; ch3m2 = ch1; ch4m1 = ch1; ch4m2 = ch1;
-delayDiff = delays('TekAWG12') - delays('BBNAPS12');
+delayDiff = params.Tek34.delay - ChParams.delay;
 PulseCollection = [];
 
 for n = 1:nbrPatterns;
-    [I_seq{n}, Q_seq{n}, ~, PulseCollection] = pg.build(patseq{floor((n-1)/nbrRepeats)+1}, numsteps, delays('BBNAPS12'), fixedPt, PulseCollection);
+    [I_seq{n}, Q_seq{n}, ~, PulseCollection] = pg.build(patseq{floor((n-1)/nbrRepeats)+1}, numsteps, ChParams.delay, fixedPt, PulseCollection);
 
     for stepct = 1:numsteps
         patx = pg.linkListToPattern(I_seq{n}, stepct)';
@@ -29,19 +31,19 @@ for n = 1:nbrPatterns;
         % remove difference of delays
         patx = circshift(patx, delayDiff);
         paty = circshift(paty, delayDiff);
-        ch3m1((n-1)*stepct + stepct, :) = pg.bufferPulse(patx, paty, 0, bufferPaddings('BBNAPS12'), bufferResets('BBNAPS12'), bufferDelays('BBNAPS12'));
+        ch3m1((n-1)*stepct + stepct, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
     end
 end
 
 for n = 1:calPatterns;
-    [I_seq{nbrPatterns + n}, Q_seq{nbrPatterns + n}, ~, PulseCollection] = pg.build(calseq{floor((n-1)/nbrRepeats)+1}, 1, delays('BBNAPS12'), fixedPt, PulseCollection);
+    [I_seq{nbrPatterns + n}, Q_seq{nbrPatterns + n}, ~, PulseCollection] = pg.build(calseq{floor((n-1)/nbrRepeats)+1}, 1, ChParams.delay, fixedPt, PulseCollection);
     patx = pg.linkListToPattern(I_seq{nbrPatterns + n}, 1)';
     paty = pg.linkListToPattern(Q_seq{nbrPatterns + n}, 1)';
 
     % remove difference of delays
     patx = circshift(patx, delayDiff);
     paty = circshift(paty, delayDiff);
-    ch3m1(nbrPatterns*numsteps + n, :) = pg.bufferPulse(patx, paty, 0, bufferPaddings('BBNAPS12'), bufferResets('BBNAPS12'), bufferDelays('BBNAPS12'));
+    ch3m1(nbrPatterns*numsteps + n, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
 end
 
 % trigger at beginning of measurement pulse
@@ -51,7 +53,7 @@ pg.passThru = 0;
 measLength = 3000;
 measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = repmat(pg.makePattern([], fixedPt-500, ones(100,1), cycleLength), 1, segments)';
-ch1m2 = repmat(int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength)), 1, segments)';
+ch1m2 = repmat(int32(pg.getPatternSeq(measSeq, n, params.measDelay, fixedPt+measLength)), 1, segments)';
 ch4m2 = repmat(pg.makePattern([], 5, ones(100,1), cycleLength), 1, segments)';
 ch2m2 = ch4m2;
 
@@ -81,10 +83,10 @@ if makePlot
 end
 
 % add offsets to unused channels
-ch1 = ch1 + offsets('TekAWG12');
-ch2 = ch2 + offsets('TekAWG12');
-ch3 = ch3 + offsets('TekAWG34');
-ch4 = ch4 + offsets('TekAWG34');
+ch1 = ch1 + params.Tek12.offset;
+ch2 = ch2 + params.Tek12.offset;
+ch3 = ch3 + params.Tek34.offset;
+ch4 = ch4 + params.Tek34.offset;
 
 strippedBasename = basename;
 basename = [basename 'BBNAPS12'];
