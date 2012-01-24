@@ -5,6 +5,7 @@
 rngstate = rand ('state');
 randseed=hex2dec('623F9A9E');
 clear data2json json2data
+import jsonlab.*
 
 fprintf(1,'\n%%=================================================\n')
 fprintf(1,'%%  a simple scalar value \n')

@@ -35,6 +35,7 @@ function data = loadjson(fname,varargin)
 % -- this function is part of jsonlab toolbox (http://iso2mesh.sf.net/cgi-bin/index.cgi?jsonlab)
 %
 
+import jsonlab.*
 global pos inStr len  esc index_esc len_esc isoct arraytoken
 
 if(regexp(fname,'[\{\}\]\[]','once'))

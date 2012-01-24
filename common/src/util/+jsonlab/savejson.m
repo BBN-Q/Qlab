@@ -55,6 +55,7 @@ function json=savejson(rootname,obj,varargin)
 % -- this function is part of jsonlab toolbox (http://iso2mesh.sf.net/cgi-bin/index.cgi?jsonlab)
 %
 
+import jsonlab.*
 varname=inputname(2);
 if(~isempty(rootname))
    varname=rootname;
