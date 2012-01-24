@@ -1,13 +1,16 @@
 {
  "q1": {
+  "channelType": "logical",
   "pulseType": "drag", 
   "piAmp": 6000, 
   "pi2Amp": 3000, 
   "delta": -0.5, 
   "pulseLength": 48, 
-  "sigma": 12
+  "sigma": 12,
+  "buffer": 4
  }, 
  "Tek12": {
+  "channelType": "physical",
   "delay": 12, 
   "bufferReset": 120, 
   "T": [
@@ -22,6 +25,7 @@
   ], 
   "offset": 8192, 
   "bufferDelay": 44, 
-  "bufferPadding": 24
+  "bufferPadding": 24, 
+  "passThru": 1
  }
 }
