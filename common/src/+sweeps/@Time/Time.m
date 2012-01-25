@@ -40,7 +40,9 @@ classdef Time < sweeps.Sweep
 			step = SweepParams.step;
             stop = start + (obj.numSegments - 1) * step;
 
-			obj.points = start:step:stop;
+            %obj.numSegments is an integer so we have to cast to double or
+            %else linspace fails 
+			obj.points = linspace(start,double(stop),obj.numSegments);
 			
 			obj.plotRange.start = start;
 			obj.plotRange.end = stop;
