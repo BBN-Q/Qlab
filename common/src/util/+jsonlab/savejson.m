@@ -57,18 +57,17 @@ function json=savejson(rootname,obj,varargin)
 
 import jsonlab.*
 varname=inputname(2);
-if(~isempty(rootname))
-   varname=rootname;
-end
 rootisarray=0;
 rootlevel=1;
-if((isnumeric(obj) || islogical(obj) || ischar(obj)) && isempty(rootname))
+if((isnumeric(obj) || islogical(obj) || ischar(obj) || isstruct(obj)) && isempty(rootname))
     rootisarray=1;
     rootlevel=0;
-    varname='';
+    rootname='';
+elseif isempty(rootname)
+    rootname = varname;
 end
 opt=varargin2struct(varargin{:});
-json=obj2json(varname,obj,rootlevel,opt);
+json=obj2json(rootname,obj,rootlevel,opt);
 if(rootisarray)
     json=sprintf('%s\n',json);
 else
@@ -77,8 +76,6 @@ end
 
 %%-------------------------------------------------------------------------
 function txt=obj2json(name,item,level,varargin)
-
-cname=class(item);
 
 if(iscell(item))
     txt=cell2json(name,item,level,varargin{:});
