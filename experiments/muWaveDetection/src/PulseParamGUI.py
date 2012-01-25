@@ -72,8 +72,8 @@ class PulseParamGUI(object):
         file.close()
         
         #Set some validators to help ensure we don't get bogus input
-        self.ui.piAmp.setValidator(QtGui.QIntValidator())
-        self.ui.pi2Amp.setValidator(QtGui.QIntValidator())
+        self.ui.piAmp.setValidator(QtGui.QDoubleValidator())
+        self.ui.pi2Amp.setValidator(QtGui.QDoubleValidator())
         self.ui.pulseLength.setValidator(QtGui.QIntValidator())
         self.ui.sigma.setValidator(QtGui.QIntValidator())
         self.ui.delta.setValidator(QtGui.QDoubleValidator())
@@ -171,26 +171,19 @@ class PulseParamGUI(object):
         fileName = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open Configuration File')[0]
         if fileName != '':
             self._paramPath = fileName
-        
-            self.loadParameters()
-     
-            #Update the combo boxes from the file parameters
-            self.update_combo_boxes()
-            
-            self.updateQubitParameters(saveBeforeSwitch=False)
-            self.updateChannelParameters(saveBeforeSwitch=False)
-        
-            self.ui.statusbar.showMessage('Loaded Cfg. File {0}'.format(os.path.basename(fileName)), 5000 )        
-            
+            self.refreshParameters(fileName)
     
     def loadParameters(self):
         with open(self._paramPath, 'r') as FID:
             self._params = json.load(FID)
 
-    def refreshParameters(self):
+    def refreshParameters(self, fileName=''):
         self.loadParameters()
+        #Update the combo boxes from the file parameters
+        self.update_combo_boxes()
         self.updateQubitParameters(saveBeforeSwitch=False)
         self.updateChannelParameters(saveBeforeSwitch=False)
+        self.ui.statusbar.showMessage('Loaded Cfg. File {0}'.format(os.path.basename(fileName)), 5000 )        
     
     def updateQubitParameters(self, saveBeforeSwitch=True):
         # save parameters
@@ -234,12 +227,13 @@ class PulseParamGUI(object):
 
     def saveQubitParameters(self):
         if self._currentQubit is not None:
-            self._params[self._currentQubit]['piAmp'] = int(self.ui.piAmp.text())
-            self._params[self._currentQubit]['pi2Amp'] = int(self.ui.pi2Amp.text())
+            self._params[self._currentQubit]['piAmp'] = float(self.ui.piAmp.text())
+            self._params[self._currentQubit]['pi2Amp'] = float(self.ui.pi2Amp.text())
             self._params[self._currentQubit]['delta'] = float(self.ui.delta.text())
             self._params[self._currentQubit]['sigma'] = int(self.ui.sigma.text())
             self._params[self._currentQubit]['pulseLength'] = int(self.ui.pulseLength.text())
             self._params[self._currentQubit]['pulseType'] = self.ui.pulseType.text()
+            self._params[self._currentQubit]['buffer'] = int(self.ui.buffer.text())
         
     def saveChannelParameters(self):
         if self._currentChannel is not None:
