@@ -146,17 +146,25 @@ if ExpParams.DoDRAGCal
     obj.pulseParams.delta = obj.analyzeDRAG(data);
 end
 
-% save updated parameters to file
-load(obj.pulseParamPath, 'piAmps', 'pi2Amps', 'deltas', 'Ts');
-piAmps(obj.ExpParams.Qubit)  = obj.pulseParams.piAmp;
-pi2Amps(obj.ExpParams.Qubit) = obj.pulseParams.pi2Amp;
-deltas(obj.ExpParams.Qubit)  = obj.pulseParams.delta;
+%% Save updated parameters to file
+
+% Load the previous parameters from file
+params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+
+% Update the relevant variables
+params.(ExpParams.Qubit).piAmp = obj.pulseParams.piAmp;
+params.(ExpParams.Qubit).pi2Amp = obj.pulseParams.pi2Amp;
+params.(ExpParams.Qubit).delta = obj.pulseParams.delta;
 
 IQchannels = obj.channelMap(obj.ExpParams.Qubit);
 IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
-Ts(IQkey) = obj.pulseParams.T;
 
-save(obj.pulseParamPath, 'piAmps', 'pi2Amps', 'deltas', 'Ts', '-append', '-v7.3');
+params.(IQkey).T = obj.pulseParams.T;
+
+FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'wt'); %open in text mode
+fprintf(FID, jsonlab.savejson('',params));
+fclose(FID);
+
 % TODO: save I/Q offsets
 
 % for now, just display the results

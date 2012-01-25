@@ -65,7 +65,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             script = [script(1:sindex-1) 'experiments/muWaveDetection/'];
             
             obj.mixerCalPath = [script 'cfg/mixercal.mat'];
-            obj.pulseParamPath = [script 'cfg/pulseParamBundles.mat'];
+            obj.pulseParamPath = getpref('qlab', 'pulseParamsBundleFile');
             
             % to do: load channel mapping from file
             obj.channelMap = containers.Map();
@@ -227,21 +227,15 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                         obj.scopeParams = obj.inputStructure.InstrParams.(InstrName);
                 end
             end
-            
-            % load pulse parameters for the relevant qubit
-            load(obj.pulseParamPath, 'piAmps', 'pi2Amps', 'deltas', 'Ts');
-            piAmp  = piAmps(obj.ExpParams.Qubit);
-            pi2Amp = pi2Amps(obj.ExpParams.Qubit);
-            delta  = deltas(obj.ExpParams.Qubit);
-            
-            T = Ts(IQkey);
 
             if ~obj.testMode
+                % load pulse parameters for the relevant qubit
+                params = jsonlab.loadjson(obj.pulseParamPath);
+                obj.pulseParams = params.(obj.ExpParams.Qubit);
+                obj.pulseParams.T = params.(IQkey).T;
                 channelParams = obj.inputStructure.InstrParams.(IQchannels.instr);
-                i_offset = channelParams.(['chan_' num2str(IQchannels.i)]).offset;
-                q_offset = channelParams.(['chan_' num2str(IQchannels.q)]).offset;
-                obj.pulseParams = struct('piAmp', piAmp, 'pi2Amp', pi2Amp, 'delta', delta, 'T', T,...
-                    'pulseType', 'drag', 'i_offset', i_offset, 'q_offset', q_offset);
+                obj.pulseParams.i_offset = channelParams.(['chan_' num2str(IQchannels.i)]).offset;
+                obj.pulseParams.q_offset = channelParams.(['chan_' num2str(IQchannels.q)]).offset;
             else
                 obj.pulseParams = struct('piAmp', 6560, 'pi2Amp', 3280, 'delta', -0.5, 'T', eye(2,2),...
                     'pulseType', 'drag', 'i_offset', 0.119, 'q_offset', 0.130);
