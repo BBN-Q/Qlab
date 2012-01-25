@@ -19,7 +19,7 @@ end
 ExpParams = struct();
 ExpParams.Qubit = qubit;
 ExpParams.DoMixerCal = 0;
-ExpParams.DoRabiAmp = 0;
+ExpParams.DoRabiAmp = 1;
 ExpParams.DoRamsey = 0;
 ExpParams.DoPi2Cal = 1;
 ExpParams.DoPiCal = 1;

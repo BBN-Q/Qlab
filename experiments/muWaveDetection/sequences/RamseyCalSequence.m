@@ -9,14 +9,15 @@ fixedPt = 16000;
 cycleLength = 20000;
 
 % load config parameters from file
-load(getpref('qlab','pulseParamsBundleFile'));
+params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+qParams = params.q1; % choose target qubit here
+IQkey = 'BBN12';
 % if using SSB, uncomment the following line
-% Ts('12') = eye(2);
-IQkey = 'BBNAPS12';
-pg = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength, 'passThru', passThrus(IQkey));
+% params.(IQkey).T = eye(2);
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'passThru', params.(IQkey).passThru);
 
-numsteps = 150;
-stepsize = 48; %24 (300)
+numsteps = 100; %150
+stepsize = 120; %24 (300)
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {{...
     pg.pulse('X90p'), ...

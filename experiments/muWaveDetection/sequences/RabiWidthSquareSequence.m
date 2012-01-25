@@ -10,10 +10,12 @@ cycleLength = 10000;
 nbrRepeats = 1;
 
 % load config parameters from file
-load(getpref('qlab','pulseParamsBundleFile'), 'Ts', 'delays', 'measDelay', 'bufferDelays', 'bufferResets', 'bufferPaddings', 'offsets', 'piAmps', 'pi2Amps', 'sigmas', 'pulseTypes', 'deltas', 'buffers', 'pulseLengths');
+params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+qParams = params.q1; % choose target qubit here
+IQkey = 'BBN12';
 % if using SSB, uncomment the following line
-Ts('12') = eye(2);
-pg = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength);
+% params.(IQkey).T = eye(2);
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'passThru', params.(IQkey).passThru);
 
 numsteps = 100;
 minWidth = 12;
@@ -24,6 +26,6 @@ patseq = {{pg.pulse('Xtheta', 'amp', 6000, 'width', pulseLength, 'pType', 'squar
 
 calseq = {};
 
-compileSequenceSSB12(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot);
+compileSequenceBBNAPS12(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot);
 
 end
