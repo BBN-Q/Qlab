@@ -6,7 +6,7 @@ end
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
 params.measDelay = -64;
-ChParams = params.BBN12;
+ChParams = params.BBNAPS12;
 
 nbrPatterns = length(patseq)*nbrRepeats;
 calPatterns = length(calseq)*nbrRepeats;
@@ -18,7 +18,7 @@ ch1 = zeros(segments, cycleLength);
 ch2 = ch1; ch3 = ch1; ch4 = ch1;
 ch1m1 = ch1; ch1m2 = ch1; ch2m1 = ch1; ch2m2 = ch1;
 ch3m1 = ch1; ch3m2 = ch1; ch4m1 = ch1; ch4m2 = ch1;
-delayDiff = params.Tek34.delay - ChParams.delay;
+delayDiff = params.TekAWG34.delay - ChParams.delay;
 PulseCollection = [];
 
 for n = 1:nbrPatterns;
@@ -83,10 +83,10 @@ if makePlot
 end
 
 % add offsets to unused channels
-ch1 = ch1 + params.Tek12.offset;
-ch2 = ch2 + params.Tek12.offset;
-ch3 = ch3 + params.Tek34.offset;
-ch4 = ch4 + params.Tek34.offset;
+ch1 = ch1 + params.TekAWG12.offset;
+ch2 = ch2 + params.TekAWG12.offset;
+ch3 = ch3 + params.TekAWG34.offset;
+ch4 = ch4 + params.TekAWG34.offset;
 
 strippedBasename = basename;
 basename = [basename 'BBNAPS12'];
