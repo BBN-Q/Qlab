@@ -123,17 +123,17 @@ class APS:
         print 'APS.setALL is not yet implemented in Python'
         
         
-    def open(self,id,force = 0):
-        self.deviceId = id
+    def open(self,ID,force = 0):
+        self.deviceId = ID
         val = self.lib.APS_Open(self.deviceId,force)
         if val == 0:
             self.is_open = 1
-            print 'Openned device:', id
+            print 'Openned device:', ID
         elif val == -1 or val == 1:
-            print 'Could not open device:', id
+            print 'Could not open device:', ID
             print 'Device may be open in a different process'
         elif val == 2:
-            print 'APS Device: ', id, 'not found'
+            print 'APS Device: ', ID, 'not found'
         else:
             print 'Unknown return value', val
             
@@ -203,36 +203,36 @@ class APS:
         print 'Read', len(data), 'bytes'
         self.programFPGA(data,len(data),Sel)
         
-    def loadWaveform(self, id, waveform, offset = 0, validate = 0, useSlowWrite = 0):
+    def loadWaveform(self, ID, waveform, offset = 0, validate = 0, useSlowWrite = 0):
         if not self.is_open and not self.mock_aps:
             print 'APS unit is not open'
             return -1
             
-        print 'Loading waveform length: %i into DAC%i' % ( len(waveform), id)
+        print 'Loading waveform length: %i into DAC%i' % ( len(waveform), ID)
         
         waveform = waveform.astype(numpy.int16)
         c_int_p = ctypes.POINTER(ctypes.c_int16)
         waveform_p = waveform.ctypes.data_as(c_int_p) 
         
         val = self.lib.APS_LoadWaveform(self.device_id, waveform_p, len(waveform), 
-                                        offset, id, validate, useSlowWrite)
+                                        offset, ID, validate, useSlowWrite)
         print 'Done'
         if val < 0:
             print 'APS_LoadWaveform returned an error code of:', val
         return val
         
-    def loadLinkList(self, id, offsets, counts, ll_len):
+    def loadLinkList(self, ID, offsets, counts, ll_len):
         repeat = trigger = None
         bank = 0
         self.loadLinkListELL(self.device_id, offsets,counts, trigger, repeat, ll_len, bank)
         
-    def loadLinkListELL(self, id, offsets, counts, trigger, repeat, ll_len, bank, validate = 0):
+    def loadLinkListELL(self, ID, offsets, counts, trigger, repeat, ll_len, bank, validate = 0):
         print 'loadLinkListELL'
         if not self.is_open and not self.mock_aps:
             print 'APS unit is not open'
             return -1
             
-        print 'Loading Link List length %i into DAC%i bank %i' % (ll_len,id,bank)
+        print 'Loading Link List length %i into DAC%i bank %i' % (ll_len,ID,bank)
         
         # convert each array to int16 pointer
         c_int_p = ctypes.POINTER(ctypes.c_int16)
@@ -250,7 +250,7 @@ class APS:
         repeat_p = repeat.ctypes.data_as(c_int_p)
         
         val = self.lib.APS_LoadLinkList(self.device_id, offsets_p, counts_p, trigger_p,
-                                        repeat_p, ll_len, id, bank, validate)
+                                        repeat_p, ll_len, ID, bank, validate)
         
         if val < 0:
             print 'APS_LoadLinkList returned an error code of:', val
@@ -277,43 +277,43 @@ class APS:
         else:
             print 'Error: library call does not support more that 3 arguments'
         
-    def clearLinkListELL(self,id):
-        self.librarycall(None,'APS_ClearLinkListELL',id,0);  # bank 0 
-        self.librarycall(None,'APS_ClearLinkListELL',id,1);  # bank 1
+    def clearLinkListELL(self,ID):
+        self.librarycall(None,'APS_ClearLinkListELL',ID,0);  # bank 0 
+        self.librarycall(None,'APS_ClearLinkListELL',ID,1);  # bank 1
         
         
-    def triggerWaveform(self,id,trigger_type):
-        val = self.librarycall('Trigger Waveform %i Type %i' % (id, trigger_type), 
-                         'APS_TriggerDac',id,trigger_type)
+    def triggerWaveform(self,ID,trigger_type):
+        val = self.librarycall('Trigger Waveform %i Type %i' % (ID, trigger_type), 
+                         'APS_TriggerDac',ID,trigger_type)
         
-    def pauseWaveform(self,id):
-        val = self.librarycall('Pause Waveform %i' % (id), 'APS_PauseDac',id)
+    def pauseWaveform(self,ID):
+        val = self.librarycall('Pause Waveform %i' % (ID), 'APS_PauseDac',ID)
         
-    def disableWaveform(self,id):
-        val = self.librarycall('Disable Waveform %i' % (id), 'APS_DisableDac',id)
+    def disableWaveform(self,ID):
+        val = self.librarycall('Disable Waveform %i' % (ID), 'APS_DisableDac',ID)
         
-    def triggerFpga(self,id,trigger_type):
-        val = self.librarycall('Trigger Waveform %i Type: %i' %(id, trigger_type), 
-                               'APS_TriggerFpga',id,trigger_type)
+    def triggerFpga(self,ID,trigger_type):
+        val = self.librarycall('Trigger Waveform %i Type: %i' %(ID, trigger_type), 
+                               'APS_TriggerFpga',ID,trigger_type)
                                
-    def pauseFpga(self,id):                           
-        val = self.librarycall('Pause FPGA %i' % (id), 'APS_PauseFpga',id)
+    def pauseFpga(self,ID):                           
+        val = self.librarycall('Pause FPGA %i' % (ID), 'APS_PauseFpga',ID)
         
-    def disableFpga(self,id):                           
-        val = self.librarycall('Disable FPGA %i' % (id), 'APS_DisableFpga',id)
+    def disableFpga(self,ID):                           
+        val = self.librarycall('Disable FPGA %i' % (ID), 'APS_DisableFpga',ID)
 
-    def setLinkListMode(self,id, enable,dc):
-        val = self.librarycall('Dac: %i Link List Enable: %i Mode: %i' % (id, enable,dc), 
-                               'APS_SetLinkListMode',enable,dc,id);
+    def setLinkListMode(self,ID, enable,dc):
+        val = self.librarycall('Dac: %i Link List Enable: %i Mode: %i' % (ID, enable,dc), 
+                               'APS_SetLinkListMode',enable,dc,ID);
         
         
-    def setLinkListRepeat(self,id, repeat):
-        val = self.librarycall('Dac: %i Link List Repeat: %i' % (id, repeat),
-                               'APS_SetLinkListRepeat',repeat,id)
+    def setLinkListRepeat(self,ID, repeat):
+        val = self.librarycall('Dac: %i Link List Repeat: %i' % (ID, repeat),
+                               'APS_SetLinkListRepeat',repeat,ID)
         
-    def setFrequency(self,id, freq):
+    def setFrequency(self,ID, freq):
         testLock = 1;
-        val = self.librarycall('Dac: %i Freq : %i' % (id, freq), 'APS_SetPllFreq',id,freq,testLock);
+        val = self.librarycall('Dac: %i Freq : %i' % (ID, freq), 'APS_SetPllFreq',ID,freq,testLock);
         if val: 
             print 'Warning: APS::setFrequency returned', val
 
@@ -327,11 +327,11 @@ class APS:
     def readAllRegisters(self):
         val = self.librarycall('Read Registers', 'APS_ReadAllRegisters');
         
-    def testWaveformMemory(self, id, numBytes):
-            val = self.librarycall('Test WaveformMemory','APS_TestWaveformMemory',id,numBytes);
+    def testWaveformMemory(self, ID, numBytes):
+            val = self.librarycall('Test WaveformMemory','APS_TestWaveformMemory',ID,numBytes);
         
-    def readLinkListStatus(self,id):
-        return self.librarycall('Read Link List Status', 'APS_ReadLinkListStatus',id);
+    def readLinkListStatus(self,ID):
+        return self.librarycall('Read Link List Status', 'APS_ReadLinkListStatus',ID);
         
     def buildWaveformLibrary(self,waveforms,useVarients = True):
         print 'buildWaveformLibrary not yet implemented in Python'
