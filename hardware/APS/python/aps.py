@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import ctypes
+import platform
 import sys
 import os
 
@@ -69,14 +70,13 @@ class APS:
     VALID_FREQUENCIES = [1200,600,300,100,40];
 
     def __init__(self,libPath= libPathDebug, bitFilePath = ''):
-        # load library
-        platform = sys.platform
-        if platform == 'win32' or platform == 'cygwin':
-            libName = 'libaps.dll'
-        elif platform == 'darwin':
-            libName = 'libaps.dylib'
-        else:
-            libName = 'libaps.so'
+        #Load the approriate library with some platform/architecture checks
+        #Check for 32bit 64bit python from sys.maxsize
+        #We do this because we can run 32bit programs on 64bit architectures so
+        #platform.achitecture() might give misleading results
+        str64bit = '64' if sys.maxsize > 2147483647 else ''
+        extDict = {'Windows':'.dll', 'Linux':'.so', 'Darwin':'.dylib'}        
+        libName = 'libaps' + str64bit + extDict[platform.system()]
         
         if len(libPath) == 0:
             # build path for library
