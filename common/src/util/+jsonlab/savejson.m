@@ -62,7 +62,6 @@ rootlevel=1;
 if((isnumeric(obj) || islogical(obj) || ischar(obj) || isstruct(obj)) && isempty(rootname))
     rootisarray=1;
     rootlevel=0;
-    rootname='';
 elseif isempty(rootname)
     rootname = varname;
 end
