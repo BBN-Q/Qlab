@@ -11,7 +11,7 @@ nbrRepeats = 1;
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.q3; % choose target qubit here
+qParams = params.q2; % choose target qubit here
 IQkey = 'TekAWG34';
 % if using SSB, uncomment the following line
 % params.(IQkey).T = eye(2);

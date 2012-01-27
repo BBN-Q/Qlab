@@ -1,0 +1,91 @@
+{
+	"q1": {
+		"buffer": 4,
+		"pulseType": "drag",
+		"piAmp": 5018.298164,
+		"pi2Amp": 2467.583678,
+		"delta": -0.5,
+		"pulseLength": 64,
+		"channelType": "logical",
+		"sigma": 16
+	},
+	"q3": {
+		"buffer": 4,
+		"pulseType": "drag",
+		"piAmp": 7466.90922,
+		"pi2Amp": 3586.905937,
+		"delta": -0.5,
+		"pulseLength": 48,
+		"channelType": "logical",
+		"sigma": 12
+	},
+	"q2": {
+		"buffer": 4,
+		"pulseType": "drag",
+		"piAmp": 7094.680692,
+		"pi2Amp": 3496.109066,
+		"delta": -0.5,
+		"pulseLength": 16,
+		"channelType": "logical",
+		"sigma": 4
+	},
+	"CR32": {
+		"buffer": 0,
+		"pulseType": "drag",
+		"piAmp": 8000,
+		"pi2Amp": 0,
+		"delta": 0,
+		"pulseLength": 0,
+		"channelType": "logical",
+		"sigma": 16
+	},
+	"BBNAPS12": {
+		"passThru": 1,
+		"delay": -96,
+		"bufferDelay": 48,
+		"T": [
+			[0.9916044658,0],
+			[0,1]
+		],
+		"offset": 0,
+		"bufferReset": 120,
+		"channelType": "physical",
+		"bufferPadding": 24
+	},
+	"TekAWG12": {
+		"passThru": 0,
+		"delay": -12,
+		"bufferDelay": 70,
+		"T": [
+			[1,0],
+			[0,1]
+		],
+		"offset": 8192,
+		"bufferReset": 120,
+		"channelType": "physical",
+		"bufferPadding": 24
+	},
+	"TekAWG34": {
+		"passThru": 0,
+		"delay": -12,
+		"bufferDelay": 44,
+		"T": [
+			[0.9735581476,0.04080417598],
+			[0,1.00087794]
+		],
+		"offset": 8192,
+		"bufferReset": 120,
+		"channelType": "physical",
+		"bufferPadding": 24
+	},
+	"CR23": {
+		"buffer": 4,
+		"pulseType": "drag",
+		"piAmp": 6000,
+		"pi2Amp": 0,
+		"delta": 0,
+		"pulseLength": 0,
+		"channelType": "logical",
+		"sigma": 16
+	}
+}
