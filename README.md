@@ -17,5 +17,5 @@ Before running any of the scripts, add `basedir/common/src` and `basedir/common/
 
 See the [wiki][] for further help.
 
-[wiki]: github.com/BBN-Q/Qlab/wiki
-[PatternGen]: github.com/BBN-Q/Qlab/wiki/PatternGen
+[wiki]: http://github.com/BBN-Q/Qlab/wiki
+[PatternGen]: http://github.com/BBN-Q/Qlab/wiki/PatternGen
