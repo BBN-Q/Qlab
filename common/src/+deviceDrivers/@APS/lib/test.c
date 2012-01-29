@@ -52,49 +52,24 @@
 	#define GetFunction dlsym
 #endif
 
-#define is64Bit (sizeof(size_t)== 8)
+#define is64Bit (sizeof(size_t) == 8)
 
 typedef int (*pfunc)();
 
-void doToggleTest(HANDLE hdll, char * bitFile) {
-	pfunc load;
-	pfunc trigger;
-	pfunc disable;
-	pfunc open;
-	pfunc close;
+void programFPGA(HANDLE hdll, int dac, char * bitFile) {
 	pfunc prog;
 	pfunc setup_vco;
 	pfunc setup_pll;
 	pfunc read_version;
 
-	int waveformLen = 1000;
-	int pulseLen = 500;
-	int cnt;
-	int ask;
-	int ret;
-	char cmd;
+	prog         = (pfunc) GetFunction(hdll,"APS_ProgramFpga");
+	setup_vco    = (pfunc) GetFunction(hdll,"APS_SetupVCXO");
+	setup_pll    = (pfunc) GetFunction(hdll,"APS_SetupPLL");
+	read_version = (pfunc) GetFunction(hdll,"APS_ReadBitFileVersion");
+
 	FILE * fp;
 	int bitFileSize,numRead;
 	unsigned char * bitFileData;
-
-	unsigned short * pulseMem;
-
-	open = (pfunc)GetFunction(hdll,"APS_Open");
-	trigger = (pfunc) GetFunction(hdll,"APS_TriggerFpga");
-	disable = (pfunc) GetFunction(hdll,"APS_DisableFpga");
-	load    = (pfunc) GetFunction(hdll,"APS_LoadWaveform");
-	close = (pfunc)GetFunction(hdll,"APS_Close");
-	prog =  (pfunc)GetFunction(hdll,"APS_ProgramFpga");
-	setup_vco = (pfunc)GetFunction(hdll,"APS_SetupVCXO");
-	setup_pll = (pfunc)GetFunction(hdll,"APS_SetupPLL");
-	read_version = (pfunc)GetFunction(hdll,"APS_ReadBitFileVersion");
-
-
-	pulseMem = malloc(waveformLen * sizeof(unsigned short));
-	if (!pulseMem) {
-		printf("Error Allocating Memory\n");
-		return;
-	}
 
 	printf("Reading bitfile from %s.\n", bitFile);
 
@@ -111,30 +86,20 @@ void doToggleTest(HANDLE hdll, char * bitFile) {
 	bitFileData = malloc(bitFileSize * sizeof(unsigned char));
 	if (!bitFileData) {
 		printf("Error allocating memory\n");
-		goto dealloc;
 	}
 
 	numRead = fread(bitFileData,sizeof(unsigned char),bitFileSize,fp);
 	if (numRead != bitFileSize) {
 		printf("Error loading bit file data: Expected %i Got %i\n", bitFileSize, numRead);
 		free(bitFileData);
-		goto dealloc;
 	}
 
 	fclose(fp);
 
 	printf("Read %i bytes\n", numRead);
 
-	printf("Opening Dac 0: ");
-	fflush(stdout);
-	if (open(0) < 0)  {
-		printf("Error\n");
-		return;
-	}
-	printf("Done\n");
-
-	setup_vco(0);
-	setup_pll(0);
+	setup_vco(dac);
+	setup_pll(dac);
 
 	printf("Programming FPGAS: ");
 	fflush(stdout);
@@ -156,8 +121,100 @@ void doToggleTest(HANDLE hdll, char * bitFile) {
 		exit(-1);
 	}
 
+	return;
+
+}
+
+int openDac(HANDLE hdll, int dac) {
+	pfunc open;
+	open = (pfunc) GetFunction(hdll, "APS_Open");
+	printf("Opening Dac 0: ");
+	fflush(stdout);
+	if (open(dac) < 0)  {
+		printf("Error\n");
+		return -1;
+	}
+	printf("Done\n");
+	return 0;
+}
+
+int buildPulseMemory(int waveformLen , int pulseLen, unsigned short * pulseMem) {
+	int cnt;
+	pulseMem = malloc(waveformLen * sizeof(unsigned short));
+	if (!pulseMem) {
+		printf("Error Allocating Memory\n");
+		return -1;
+	}
+
 	for(cnt = 0; cnt < waveformLen; cnt++)
 		pulseMem[cnt] = (cnt < pulseLen) ? (int) floor(0.8*8192) : 0;
+	return 0;
+}
+
+void doStoreLoadTest(HANDLE hdll, char * bitFile) {
+	pfunc close;
+	pfunc setWaveform, setLinkList;
+	pfunc setWaveformOffset, getWaveformOffset;
+	pfunc setWaveformScale,  getWaveformScale;
+	pfunc loadStored;
+
+	int waveformLen = 1000;
+	int pulseLen = 500;
+
+	unsigned short * pulseMem;
+
+	int cnt;
+
+	close             = (pfunc) GetFunction(hdll, "APS_Close");
+	setWaveform       = (pfunc) GetFunction(hdll, "APS_SetWaveform");
+	setLinkList       = (pfunc) GetFunction(hdll, "APS_SetLinkList");
+	setWaveformOffset = (pfunc) GetFunction(hdll, "APS_GetWaveformOffset");
+	getWaveformOffset = (pfunc) GetFunction(hdll, "APS_GetWaveformOffset");
+	setWaveformScale  = (pfunc) GetFunction(hdll, "APS_SetWaveformScale");
+	getWaveformScale  = (pfunc) GetFunction(hdll, "APS_GetWaveformScale");
+	loadStored        = (pfunc) GetFunction(hdll, "APS_LoadStoredWaveform");
+
+	if (buildPulseMemory(waveformLen , pulseLen, pulseMem) < 0) return;
+
+	if (openDac(hdll,0) < 0) return;
+
+	programFPGA(hdll,0, bitFile);
+
+	for( cnt = 0; cnt < 4; cnt++)
+		setWaveform(0, cnt, pulseMem, waveformLen);
+
+	for( cnt = 0; cnt < 4; cnt++)
+		loadStored(0, cnt);
+
+	close(0);
+}
+
+void doToggleTest(HANDLE hdll, char * bitFile) {
+	pfunc load;
+	pfunc trigger;
+	pfunc disable;
+	pfunc close;
+
+	int waveformLen = 1000;
+	int pulseLen = 500;
+	int cnt;
+	int ask;
+	int ret;
+	char cmd;
+
+	unsigned short * pulseMem;
+
+	trigger      = (pfunc) GetFunction(hdll,"APS_TriggerFpga");
+	disable      = (pfunc) GetFunction(hdll,"APS_DisableFpga");
+	load         = (pfunc) GetFunction(hdll,"APS_LoadWaveform");
+	close        = (pfunc) GetFunction(hdll,"APS_Close");
+
+
+	if (buildPulseMemory(waveformLen , pulseLen, pulseMem) < 0) return;
+
+	if (openDac(hdll,0) < 0) return;
+
+	programFPGA(hdll,0, bitFile);
 
 	// load memory
 	for (cnt = 0 ; cnt < 4; cnt++ ) {
@@ -234,10 +291,6 @@ int main (int argc, char** argv) {
 
 	HANDLE hdll;
 
-	pfunc open;
-	pfunc close;
-	pfunc setup_vco;
-	pfunc setup_pll;
 	pfunc serials;
 	pfunc listserials;
 	pfunc openbyserial;
@@ -273,13 +326,9 @@ int main (int argc, char** argv) {
 
 #endif
 
-	open = (pfunc)GetFunction(hdll,"APS_Open");
-	close = (pfunc)GetFunction(hdll,"APS_Close");
-	setup_vco = (pfunc)GetFunction(hdll,"APS_SetupVCXO");
-	setup_pll = (pfunc)GetFunction(hdll,"APS_SetupPLL");
-	serials = (pfunc)GetFunction(hdll,"APS_GetSerialNumbers");
-	listserials = (pfunc)GetFunction(hdll,"APS_ListSerials");
-	getserial = (pfunc)GetFunction(hdll,"APS_GetSerial");
+	serials      = (pfunc)GetFunction(hdll,"APS_GetSerialNumbers");
+	listserials  = (pfunc)GetFunction(hdll,"APS_ListSerials");
+	getserial    = (pfunc)GetFunction(hdll,"APS_GetSerial");
 	openbyserial = (pfunc)GetFunction(hdll,"APS_OpenByID");
 
 	if (argc == 1) printHelp();
@@ -295,6 +344,8 @@ int main (int argc, char** argv) {
 		}
 		if (strcmp(argv[cnt],"-h") == 0)
 			printHelp();
+		if (strcmp(argv[cnt],"-w") == 0)
+			doStoreLoadTest(hdll,argv[cnt+1]);
 	}
 
 

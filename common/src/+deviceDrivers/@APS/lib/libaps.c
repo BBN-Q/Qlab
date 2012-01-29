@@ -108,6 +108,7 @@ FT_HANDLE device2handle(int device) {
 EXPORT int APS_SetDebugLevel(int level) {
 	if (level < 0) level = 0;
 	setDebugLevel(level);
+	return 0;
 }
 
 int APS_Init()
@@ -239,8 +240,7 @@ EXPORT int APS_Open(int device, int force)
 			WF_Destroy(waveforms[device]);
 		}
 		// allocate new memory
-
-		//waveforms[device] = WF_Init();
+		waveforms[device] = WF_Init();
 
 	} else {
 #ifdef DEBUG
@@ -490,7 +490,7 @@ EXPORT int APS_Close(int device)
 	DLL_FT_Close(usb_handles[device]);
 	usb_handles[device] = 0;
 
-	//WF_Destroy(waveforms[device]);
+	WF_Destroy(waveforms[device]);
 
 	return 0;
 }
@@ -1640,6 +1640,27 @@ EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 		APS_LoadWaveform(device, dataPtr, length, 0 ,channel - 1, 0, 0);
 		WF_SetIsLoaded(wfArray,  channel,1);
 	}
+	return 0;
+}
+
+EXPORT int APS_LoadStoredLinkLists(int device, int channel) {
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	bank_t * bankPtr;
+	const int validate = 0;
+	int bank;
+
+	for (bank = 0; bank < 2; bank++) {
+		bankPtr = WF_GetLinkListBank(device,channel,bank);
+		if (!bankPtr->isLoaded) {
+			LoadLinkList_ELL(device, bankPtr->offset, bankPtr->count, bankPtr->trigger,
+				bankPtr->repeat, bankPtr->length, channel,bank,validate);
+			bankPtr->isLoaded = 1;
+		}
+	}
+
+	return 0;
 }
 
 EXPORT int APS_SetLinkList(int device, int channel,

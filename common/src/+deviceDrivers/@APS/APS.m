@@ -504,20 +504,38 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 
             % store waveform data
             
-            val = calllib(aps.library_name,'APS_SetWaveform', aps.device_id, dac, ...
-                waveform.data, length(waveform));
+            val = aps.librarycall('Storing waveform','APS_SetWaveform', dac, waveform.data, length(waveform));
             if (val < 0), error('APS:storeAPSWaveform:set', 'error in set waveform'),end;
            
             % set offset
             
-            val = calllib(aps.library_name,'APS_SetWaveformOffset', aps.device_id, dac, ...
-                waveform.offset);
+            val = aps.librarycall('Setting waveform offet','APS_SetWaveformOffset', dac, waveform.offset);
             
             % set scale
             
-            val = calllib(aps.library_name,'APS_SetWaveformOffset', aps.device_id, dac, ...
-                waveform.scale_factor);
+            val = aps.librarycall('Setting wavform scale','APS_SetWaveformScale', dac, waveform.scale_factor);
             
+            % check for link list data
+            if wf.have_link_list
+               ell = wf.get_ell_link_list();
+               if isfield(ell,'bankA') && ell.bankA.length > 0
+                            
+                   bankA = ell.bankA;
+                   
+                   % store link list
+                   val = aps.librarycall('Storing LL BankA','APS_SetLinkList',dac,bankA.offset,bankA.count, ...
+                       bankA.trigger, bankA.repeat, bankA.length, 0);
+               end
+               
+               if isfield(ell,'bankB')
+                   bankB = ell.bankB;
+                   val = aps.librarycall('Storing LL BankB','APS_SetLinkList',dac,bankB.offset,bankB.count, ...
+                       bankB.trigger, bankB.repeat, bankB.length, 1);
+               end
+               
+               %aps.setLinkListRepeat(ch-1,ell.repeatCount);
+               aps.setLinkListRepeat(ch-1,10000);
+            end
         end
         
         

@@ -12,3 +12,4 @@ data/*
 cfg/
 cfg/*
 *.cfg
+*.bak

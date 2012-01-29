@@ -27,6 +27,7 @@ typedef struct {
   uint16_t *trigger;
   uint16_t *repeat;
   unsigned int length;
+  int isLoaded;
 } bank_t;
 
 typedef struct {
@@ -57,5 +58,6 @@ int WF_SetLinkList(waveform_t * wfArray, int channel,
     uint16_t *TriggerData, uint16_t *RepeatData,
     int length, int bank);
 void WF_FreeBank(bank_t * bank);
+bank_t * WF_GetLinkListBank(waveform_t * wfArray, int channel, unsigned int bank);
 
 #endif /* WAVEFORM_H_ */

@@ -21,25 +21,8 @@ waveform_t * WF_Init() {
     dlog(DEBUG_INFO,"Failed to allocate memory for waveform array\n");
   }
 
-  int cnt, bank;
-
-  for (cnt = 0; cnt < MAX_APS_CHANNELS; cnt++) {
-    wfArray[cnt].pData = 0;
-    wfArray[cnt].pFormatedData = 0;
-    wfArray[cnt].offset = 0.0;
-    wfArray[cnt].scale = 1.0;
-    wfArray[cnt].allocatedLength = 0;
-    wfArray[cnt].isLoaded = 0;
-
-    for (bank = 0; bank < 2; bank++) {
-      wfArray[cnt].linkListBanks[bank].count = 0;
-      wfArray[cnt].linkListBanks[bank].offset = 0;
-      wfArray[cnt].linkListBanks[bank].trigger = 0;
-      wfArray[cnt].linkListBanks[bank].repeat = 0;
-      wfArray[cnt].linkListBanks[bank].length = 0;
-    }
-
-  }
+  // zero contents on memory
+  memset(wfArray,0, MAX_APS_CHANNELS * sizeof(waveform_t));
 
   return wfArray;
 }
@@ -131,6 +114,15 @@ void WF_FreeBank(bank_t * bank) {
   bank->trigger = 0;
   bank->repeat = 0;
   bank->length = 0;
+}
+
+bank_t * WF_GetLinkListBank(waveform_t * wfArray, int channel, unsigned int bank) {
+	bank_t * ret;
+	if (!wfArray) return 0;
+	if (bank > 1) return 0;
+
+	ret = &(wfArray[channel].linkListBanks[bank]);
+	return ret;
 }
 
 void  WF_SetOffset(waveform_t * wfArray,int channel, float offset) {
@@ -254,5 +246,6 @@ int WF_SetLinkList(waveform_t * wfArray, int channel,
   memcpy(bank->repeat,  RepeatData,  length * sizeof(uint16_t));
 
   bank->length = length;
+  bank->isLoaded = 0;
   return 0;
 }

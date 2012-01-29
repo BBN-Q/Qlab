@@ -127,7 +127,7 @@ EXPORT int APS_WriteFPGA(int device, ULONG addr, ULONG data, UCHAR fpga)
 
 	dlog(DEBUG_VERBOSE2,"Writting Addr 0x%x Data 0x%x\n", addr, data);
 
-	APS_WriteReg(device, APS_FPGA_IO, 2, fpga, outdata);
+	return APS_WriteReg(device, APS_FPGA_IO, 2, fpga, outdata);
 }
 
 EXPORT int APS_CompareCheckSum(int device, int dac) {
@@ -143,6 +143,7 @@ EXPORT int APS_CompareCheckSum(int device, int dac) {
 
 EXPORT UINT APS_ResetCheckSum(int device, int dac) {
   gCheckSum[device][dac2fpga(dac) - 1] = 0;
+  return 0;
 }
 
 EXPORT UINT APS_ResetAllCheckSum() {
@@ -151,6 +152,7 @@ EXPORT UINT APS_ResetAllCheckSum() {
     gCheckSum[i][0] = 0;
     gCheckSum[i][1] = 0;
   }
+  return 0;
 }
 
 
@@ -479,7 +481,7 @@ int APS_SetBit(int device, int fpga, int addr, int mask)
   dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Mask: 0x%x Writing 0x%x\n",
 	      addr, current_state, mask, current_state | mask);
 
-	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state | mask, fpga);
+	return APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state | mask, fpga);
 }
 
 int APS_ClearBit(int device, int fpga, int addr, int mask)
@@ -508,7 +510,7 @@ int APS_ClearBit(int device, int fpga, int addr, int mask)
 
 	dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Writing 0x%x\n", addr, current_state, current_state & ~mask);
 
-	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state & ~mask, fpga);
+	return APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state & ~mask, fpga);
 }
 
 
