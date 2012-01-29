@@ -13,3 +13,6 @@ cfg/
 cfg/*
 *.cfg
 *.bak
+*.exe
+.cproject
+.project
