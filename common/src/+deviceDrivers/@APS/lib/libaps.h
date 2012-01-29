@@ -93,20 +93,20 @@ EXPORT int APS_SetDebugLevel(int level);
 EXPORT int APS_ReadLinkListStatus(int device, int dac);
 
 EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int maxlen );
-EXPORT int APS_ClearLinkListELL(int device,int dac, int bank);
+EXPORT int  APS_ClearLinkListELL(int device,int dac, int bank);
 
-EXPORT int APS_SetChannelOffset(int device, int dac, short offset);
+EXPORT int   APS_SetChannelOffset(int device, int dac, short offset);
 EXPORT short APS_ReadChannelOffset(int device, int dac);
 
 // Waveform related functions
 
-EXPORT int APS_SetWaveform(int device, int channel, float * data, int length);
-EXPORT int APS_SetWaveformOffset(int device, int channel, float offset);
+EXPORT int   APS_SetWaveform(int device, int channel, float * data, int length);
+EXPORT int   APS_SetWaveformOffset(int device, int channel, float offset);
 EXPORT float APS_GetWaveformOffset(int device, int channel);
-EXPORT int APS_SetWaveformScale(int device, int channel, float scale);
+EXPORT int   APS_SetWaveformScale(int device, int channel, float scale);
 EXPORT float APS_GetWaveformScale(int device, int channel);
-EXPORT int APS_LoadStoredWaveform(int device, int channel);
-EXPORT int APS_SetLinkList(int device, int channel,
+EXPORT int   APS_LoadStoredWaveform(int device, int channel);
+EXPORT int   APS_SetLinkList(int device, int channel,
                            unsigned short *OffsetData, unsigned short *CountData,
                            unsigned short *TriggerData, unsigned short *RepeatData,
                            int length, int bank);

@@ -34,6 +34,11 @@
 #include <stdint.h>
 #include <limits.h>
 
+// BUILD_DLL define
+// Use to switch between a statically linked test and a dynamically linked test
+// Static link test is useful for printing debug output to console during debug
+// Set define using Makefile
+
 #ifdef __CYGWIN__
 	#include "windows.h"
 #elif __APPLE__
@@ -44,7 +49,11 @@
 	#include <dlfcn.h>
 #endif
 
+#ifdef BUILD_DLL
 #include "aps.h"
+#else
+#include "libaps.h"
+#endif
 
 #ifdef __CYGWIN__
 	#define GetFunction GetProcAddress
@@ -54,9 +63,39 @@
 
 #define is64Bit (sizeof(size_t) == 8)
 
+static const int false = 0;
+static const int true = 1;
+
 typedef int (*pfunc)();
 
+// redefine names for APS library calls
+// this is done to support both static and dynamic linking
+#ifndef BUILD_DLL
+#define prog              APS_ProgramFpga
+#define setup_vco         APS_SetupVCXO
+#define setup_pll         APS_SetupPLL
+#define read_version      APS_ReadBitFileVersion
+#define open              APS_Open
+#define close             APS_Close
+#define setWaveform       APS_SetWaveform
+#define setLinkList       APS_SetLinkList
+#define setWaveformOffset APS_GetWaveformOffset
+#define getWaveformOffset APS_GetWaveformOffset
+#define setWaveformScale  APS_SetWaveformScale
+#define getWaveformScale  APS_GetWaveformScale
+#define loadStored        APS_LoadStoredWaveform
+#define trigger           APS_TriggerFpga
+#define disable           APS_DisableFpga
+#define load              APS_LoadWaveform
+#define serials           APS_GetSerialNumbers
+#define listserials       APS_ListSerials
+#define getserial         APS_GetSerial
+#define openbyserial      APS_OpenByID
+#endif
+
 void programFPGA(HANDLE hdll, int dac, char * bitFile) {
+
+#ifdef BUILD_DLL
 	pfunc prog;
 	pfunc setup_vco;
 	pfunc setup_pll;
@@ -66,6 +105,7 @@ void programFPGA(HANDLE hdll, int dac, char * bitFile) {
 	setup_vco    = (pfunc) GetFunction(hdll,"APS_SetupVCXO");
 	setup_pll    = (pfunc) GetFunction(hdll,"APS_SetupPLL");
 	read_version = (pfunc) GetFunction(hdll,"APS_ReadBitFileVersion");
+#endif
 
 	FILE * fp;
 	int bitFileSize,numRead;
@@ -126,44 +166,73 @@ void programFPGA(HANDLE hdll, int dac, char * bitFile) {
 }
 
 int openDac(HANDLE hdll, int dac) {
+
+#ifdef BUILD_DLL
 	pfunc open;
 	open = (pfunc) GetFunction(hdll, "APS_Open");
-	printf("Opening Dac 0: ");
+#endif
+
+	int err;
+
+	printf("Opening Dac %i: ", dac);
 	fflush(stdout);
-	if (open(dac) < 0)  {
-		printf("Error\n");
+	err = open(dac,true);
+	if (err < 0)  {
+		printf("Error Opened Return %i\n", err);
 		return -1;
 	}
 	printf("Done\n");
 	return 0;
 }
 
-int buildPulseMemory(int waveformLen , int pulseLen, unsigned short * pulseMem) {
+enum PULSE_TYPE {FLOAT_TYPE, INT_TYPE};
+
+
+
+// integerVersion
+
+void * buildPulseMemory(int waveformLen , int pulseLen, int pulseType) {
 	int cnt;
-	pulseMem = malloc(waveformLen * sizeof(unsigned short));
-	if (!pulseMem) {
-		printf("Error Allocating Memory\n");
-		return -1;
+	void * pulseMem;
+	float * pulseMemFloat;
+	unsigned short * pulseMemInt;
+	if (pulseType == INT_TYPE) {
+		pulseMemInt = malloc(waveformLen * sizeof(unsigned short));
+		pulseMem = pulseMemInt;
+	} else {
+		pulseMemFloat = malloc(waveformLen * sizeof(float));
+		pulseMem = pulseMemFloat;
 	}
 
-	for(cnt = 0; cnt < waveformLen; cnt++)
-		pulseMem[cnt] = (cnt < pulseLen) ? (int) floor(0.8*8192) : 0;
-	return 0;
+	if (!pulseMem) {
+		printf("Error Allocating Memory\n");
+		return 0;
+	}
+
+	for(cnt = 0; cnt < waveformLen; cnt++) {
+		if (pulseType == INT_TYPE) {
+			pulseMemInt[cnt] = (cnt < pulseLen) ? (int) floor(0.8*8192) : 0;
+		} else {
+			pulseMemFloat[cnt] = (cnt < pulseLen) ? 0.8*8192 : 0;
+		}
+	}
+	return pulseMem;
 }
 
 void doStoreLoadTest(HANDLE hdll, char * bitFile) {
+	int waveformLen = 1000;
+	int pulseLen = 500;
+
+	float * pulseMem;
+
+	int cnt;
+
+#ifdef BUILD_DLL
 	pfunc close;
 	pfunc setWaveform, setLinkList;
 	pfunc setWaveformOffset, getWaveformOffset;
 	pfunc setWaveformScale,  getWaveformScale;
 	pfunc loadStored;
-
-	int waveformLen = 1000;
-	int pulseLen = 500;
-
-	unsigned short * pulseMem;
-
-	int cnt;
 
 	close             = (pfunc) GetFunction(hdll, "APS_Close");
 	setWaveform       = (pfunc) GetFunction(hdll, "APS_SetWaveform");
@@ -173,8 +242,10 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile) {
 	setWaveformScale  = (pfunc) GetFunction(hdll, "APS_SetWaveformScale");
 	getWaveformScale  = (pfunc) GetFunction(hdll, "APS_GetWaveformScale");
 	loadStored        = (pfunc) GetFunction(hdll, "APS_LoadStoredWaveform");
+#endif
 
-	if (buildPulseMemory(waveformLen , pulseLen, pulseMem) < 0) return;
+	pulseMem = (float *) buildPulseMemory(waveformLen , pulseLen, FLOAT_TYPE);
+	if (pulseMem == 0) return;
 
 	if (openDac(hdll,0) < 0) return;
 
@@ -190,10 +261,6 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile) {
 }
 
 void doToggleTest(HANDLE hdll, char * bitFile) {
-	pfunc load;
-	pfunc trigger;
-	pfunc disable;
-	pfunc close;
 
 	int waveformLen = 1000;
 	int pulseLen = 500;
@@ -202,15 +269,22 @@ void doToggleTest(HANDLE hdll, char * bitFile) {
 	int ret;
 	char cmd;
 
-	unsigned short * pulseMem;
+	unsigned short * pulseMem = 0;
+
+#ifdef BUILD_DLL
+	pfunc load;
+	pfunc trigger;
+	pfunc disable;
+	pfunc close;
 
 	trigger      = (pfunc) GetFunction(hdll,"APS_TriggerFpga");
 	disable      = (pfunc) GetFunction(hdll,"APS_DisableFpga");
 	load         = (pfunc) GetFunction(hdll,"APS_LoadWaveform");
 	close        = (pfunc) GetFunction(hdll,"APS_Close");
+#endif
 
-
-	if (buildPulseMemory(waveformLen , pulseLen, pulseMem) < 0) return;
+	pulseMem = (unsigned short *) buildPulseMemory(waveformLen , pulseLen,INT_TYPE);
+	if (pulseMem == 0) return;
 
 	if (openDac(hdll,0) < 0) return;
 
@@ -220,7 +294,8 @@ void doToggleTest(HANDLE hdll, char * bitFile) {
 	for (cnt = 0 ; cnt < 4; cnt++ ) {
 		printf("Loading Waveform: %i ", cnt);
 		fflush(stdout);
-		ret = load(0, pulseMem, waveformLen,0, cnt, 0);
+		ret = load(0, pulseMem, waveformLen,0, cnt, false, false);
+
 		if (ret < 0)
 			printf("Error: %i\n",ret);
 		else
@@ -281,25 +356,33 @@ dealloc:
 void printHelp(){
 	int bitdepth = sizeof(size_t) == 8 ? 64 : 32;
 	printf("BBN APS C Test Bench $Rev$ %i-Bit\n", bitdepth);
-	printf("   -t <bitfile> Trigger Loop Test\n");
-	printf("   -s List Available APS Serial Numbers\n");
+	printf("   -t  <bitfile> Trigger Loop Test\n");
+	printf("   -s  List Available APS Serial Numbers\n");
 	printf("   -ks List Known APS Serial Numbers\n");
-	printf("   -h Print This Help Message\n");
+	printf("   -w  Run Waveform StoreLoad Tests\n");
+	printf("   -h  Print This Help Message\n");
 }
 
 int main (int argc, char** argv) {
 
-	HANDLE hdll;
+	// require that the handle to the dll is declared
+	// even if it is not being used
+	HANDLE hdll = 0;
 
+#ifdef BUILD_DLL
 	pfunc serials;
 	pfunc listserials;
 	pfunc openbyserial;
 	pfunc getserial;
+	char *libName;
+#endif
 
 	int cnt;
 
-	char *libName;
+	char *defaultBitFile = "../mqco_dac2_latest.bit";
+	char *bitFile = defaultBitFile;
 
+#ifdef BUILD_DLL
 #ifdef __CYGWIN__
 	if (!is64Bit) {
 		libName = "libaps.dll";
@@ -312,6 +395,7 @@ int main (int argc, char** argv) {
 #else
 	hdll = dlopen("./libaps.so",RTLD_LAZY);
 #endif
+
 
 #ifdef __CYGWIN__
 	if ((uintptr_t)hdll <= HINSTANCE_ERROR) {
@@ -330,12 +414,17 @@ int main (int argc, char** argv) {
 	listserials  = (pfunc)GetFunction(hdll,"APS_ListSerials");
 	getserial    = (pfunc)GetFunction(hdll,"APS_GetSerial");
 	openbyserial = (pfunc)GetFunction(hdll,"APS_OpenByID");
+#endif
 
 	if (argc == 1) printHelp();
 
 	for(cnt = 0; cnt < argc; cnt++) {
-		if (strcmp(argv[cnt],"-t") == 0)
-			doToggleTest(hdll,argv[cnt+1]);
+		if (strcmp(argv[cnt],"-t") == 0) {
+			// allow bit file to be passed in otherwise use default
+			if (argc > (cnt+1)) bitFile = argv[cnt+1];
+			doToggleTest(hdll,bitFile);
+		}
+
 		if (strcmp(argv[cnt],"-ks") == 0) {
 			listserials();
 		}
@@ -344,8 +433,11 @@ int main (int argc, char** argv) {
 		}
 		if (strcmp(argv[cnt],"-h") == 0)
 			printHelp();
-		if (strcmp(argv[cnt],"-w") == 0)
-			doStoreLoadTest(hdll,argv[cnt+1]);
+		if (strcmp(argv[cnt],"-w") == 0) {
+			// allow bit file to be passed in otherwise use default
+			if (argc > (cnt+1)) bitFile = argv[cnt+1];
+			doStoreLoadTest(hdll,bitFile);
+		}
 	}
 
 

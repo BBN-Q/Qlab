@@ -153,8 +153,11 @@ int APS_Init()
 	}
 #endif
 
-	dlog(DEBUG_INFO,"Library Loaded\n");
-
+#ifdef BUILD_DLL
+	dlog(DEBUG_INFO,"Library Dynamically Loaded\n");
+#else
+	dlog(DEBUG_INFO,"Library Statically loaded\n");
+#endif
 
 	DLL_FT_Open  = (pFT_Open) GetFunction(hdll,"FT_Open");
 	DLL_FT_Close = (pFT_Close) GetFunction(hdll,"FT_Close");
@@ -203,15 +206,16 @@ EXPORT int APS_Open(int device, int force)
 	// Global FTDI Device usb_handle, must be set by call to FT_Open()
 	FT_STATUS status;
 
-	if (device > MAX_APS_DEVICES) {
-		return -1;
-	}
-
 	// If the ftd2xx dll has not been loaded, loadit.
 	if (!hdll) {
 		if (APS_Init() != 0) {
-			return -2;
+			return -1;
 		};
+	}
+
+	if (device > MAX_APS_DEVICES) {
+		dlog(DEBUG_INFO,"Device %i exceeds max of %i\n", device, MAX_APS_DEVICES);
+		return -2;
 	}
 
 	// allow a forced reopen of the device
@@ -1652,7 +1656,7 @@ EXPORT int APS_LoadStoredLinkLists(int device, int channel) {
 	int bank;
 
 	for (bank = 0; bank < 2; bank++) {
-		bankPtr = WF_GetLinkListBank(device,channel,bank);
+		bankPtr = WF_GetLinkListBank(wfArray,channel,bank);
 		if (!bankPtr->isLoaded) {
 			LoadLinkList_ELL(device, bankPtr->offset, bankPtr->count, bankPtr->trigger,
 				bankPtr->repeat, bankPtr->length, channel,bank,validate);

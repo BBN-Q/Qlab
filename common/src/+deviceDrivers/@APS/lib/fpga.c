@@ -1,35 +1,35 @@
 /**********************************************
-* Module Name : fpga.c
-*
-* Author/Date : B.C. Donovan / 21-Oct-08
-*
-* Description : Private fpga functions for libaps.dll
-*
-* Restrictions/Limitations :
-*
-*
-* Change Descriptions :
-*
-* Classification : Unclassified
-*
-* References :
-*
-*
-*    Modified    By    Reason
-*    --------    --    ------
-*                BCD
-*
-* $Author: bdonovan $
-* $Date$
-* $Locker:  $
-* $Name:  $
-* $Revision$
-*
-* Copyright (C) BBN Technologies Corp. 2008- 2011
-**********************************************/
+ * Module Name : fpga.c
+ *
+ * Author/Date : B.C. Donovan / 21-Oct-08
+ *
+ * Description : Private fpga functions for libaps.dll
+ *
+ * Restrictions/Limitations :
+ *
+ *
+ * Change Descriptions :
+ *
+ * Classification : Unclassified
+ *
+ * References :
+ *
+ *
+ *    Modified    By    Reason
+ *    --------    --    ------
+ *                BCD
+ *
+ * $Author: bdonovan $
+ * $Date$
+ * $Locker:  $
+ * $Name:  $
+ * $Revision$
+ *
+ * Copyright (C) BBN Technologies Corp. 2008- 2011
+ **********************************************/
 
 #ifdef WIN32
-  #include <windows.h>
+#include <windows.h>
 #endif
 
 #include <stdio.h>
@@ -61,8 +61,8 @@ int APS_FormatForFPGA(BYTE * buffer, ULONG addr, ULONG data, UCHAR fpga)
 }
 
 int APS_FormatForFPGA_ELL(BYTE * buffer, ULONG addr,
-		                    ULONG offset, ULONG count,
-		                    ULONG trigger, ULONG repeat, UCHAR fpga)
+		ULONG offset, ULONG count,
+		ULONG trigger, ULONG repeat, UCHAR fpga)
 {
 	BYTE cmd;
 
@@ -116,13 +116,13 @@ EXPORT int APS_WriteFPGA(int device, ULONG addr, ULONG data, UCHAR fpga)
 	outdata[3] = data & LSB_MASK;
 
 	if (fpga == 3) {
-	  gCheckSum[device][0] += addr;
-	  gCheckSum[device][0] += data;
-	  gCheckSum[device][1] += addr;
-	  gCheckSum[device][1] += data;
+		gCheckSum[device][0] += addr;
+		gCheckSum[device][0] += data;
+		gCheckSum[device][1] += addr;
+		gCheckSum[device][1] += data;
 	} else {
-    gCheckSum[device][fpga - 1] += addr;
-    gCheckSum[device][fpga - 1] += data;
+		gCheckSum[device][fpga - 1] += addr;
+		gCheckSum[device][fpga - 1] += data;
 	}
 
 	dlog(DEBUG_VERBOSE2,"Writting Addr 0x%x Data 0x%x\n", addr, data);
@@ -131,28 +131,28 @@ EXPORT int APS_WriteFPGA(int device, ULONG addr, ULONG data, UCHAR fpga)
 }
 
 EXPORT int APS_CompareCheckSum(int device, int dac) {
-  unsigned int checksum;
-  int fpga;
-  fpga = dac2fpga(dac);
-  if (fpga < 0 || fpga == 3) {
-    return -1;
-  }
-  checksum = APS_ReadFPGA(device, gRegRead | FPGA_OFF_DATA_CHECKSUM, fpga);
-  return (checksum == gCheckSum[device][fpga - 1]);
+	unsigned int checksum;
+	int fpga;
+	fpga = dac2fpga(dac);
+	if (fpga < 0 || fpga == 3) {
+		return -1;
+	}
+	checksum = APS_ReadFPGA(device, gRegRead | FPGA_OFF_DATA_CHECKSUM, fpga);
+	return (checksum == gCheckSum[device][fpga - 1]);
 }
 
 EXPORT UINT APS_ResetCheckSum(int device, int dac) {
-  gCheckSum[device][dac2fpga(dac) - 1] = 0;
-  return 0;
+	gCheckSum[device][dac2fpga(dac) - 1] = 0;
+	return 0;
 }
 
 EXPORT UINT APS_ResetAllCheckSum() {
-  int i;
-  for (i = 0; i < MAX_APS_DEVICES; i++) {
-    gCheckSum[i][0] = 0;
-    gCheckSum[i][1] = 0;
-  }
-  return 0;
+	int i;
+	for (i = 0; i < MAX_APS_DEVICES; i++) {
+		gCheckSum[i][0] = 0;
+		gCheckSum[i][1] = 0;
+	}
+	return 0;
 }
 
 
@@ -223,24 +223,24 @@ int dac2fpga(int dac)
 	    at the same time.
 	 */
 	switch(dac) {
-		case -1:
-			return 3;
-		case 0:
-			// fall through
-		case 1:
-			return 1;
-		case 2:
-			// fall through
-		case 3:
-			return 2;
-		default:
-			return -1;
+	case -1:
+		return 3;
+	case 0:
+		// fall through
+	case 1:
+		return 1;
+	case 2:
+		// fall through
+	case 3:
+		return 2;
+	default:
+		return -1;
 	}
 }
 
 EXPORT int APS_LoadWaveform(int device, short *Data,
-		                      int ByteCount, int offset,int dac,
-		                      int validate, int useSlowWrite)
+		int ByteCount, int offset,int dac,
+		int validate, int useSlowWrite)
 /********************************************************************
  *
  * Function Name : APS_LoadWaveform()
@@ -266,22 +266,22 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	int cnt;
 	char * dac_type;
 
-	#ifdef LOG_WAVEFORM
+#ifdef LOG_WAVEFORM
 	FILE * logwaveform;
-	#endif
+#endif
 
 	ULONG data;
 	ULONG wf_length;
 	ULONG max_wf_length;
 	ULONG formated_length;
-	
+
 	BYTE * formatedData;
 	BYTE * formatedDataIdx;
 
 	if(gBitFileVersion < VERSION_ELL) {
-	  max_wf_length = K4;
+		max_wf_length = K4;
 	} else {
-	  max_wf_length = K8;
+		max_wf_length = K8;
 	}
 
 	if(ByteCount > max_wf_length ) {
@@ -306,38 +306,38 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 
 	// setup register addressing based on DAC
 	switch(dac) {
-		case 0:
-			// fall through
-		case 2:
-			dac_type   = ENVELOPE;
-			dac_offset = FPGA_OFF_ENVOFF;
-			dac_size   = FPGA_OFF_ENVSIZE;
-			if (gBitFileVersion < VERSION_ELL) {
-				dac_mem_lock = CSRMSK_ENVMEMLCK;
-				dac_write = FPGA_ADDR_ENVWRITE;
-			} else {
-				dac_mem_lock = CSRMSK_ENVMEMLCK_ELL;
-				dac_write =  FPGA_ADDR_ELL_ENVWRITE;
-			}
+	case 0:
+		// fall through
+	case 2:
+		dac_type   = ENVELOPE;
+		dac_offset = FPGA_OFF_ENVOFF;
+		dac_size   = FPGA_OFF_ENVSIZE;
+		if (gBitFileVersion < VERSION_ELL) {
+			dac_mem_lock = CSRMSK_ENVMEMLCK;
+			dac_write = FPGA_ADDR_ENVWRITE;
+		} else {
+			dac_mem_lock = CSRMSK_ENVMEMLCK_ELL;
+			dac_write =  FPGA_ADDR_ELL_ENVWRITE;
+		}
 
-			break;
-		case 1:
-			// fall through
-		case 3:
-			dac_type   = PHASE;
-			dac_offset = FPGA_OFF_PHSOFF;
-			dac_size   = FPGA_OFF_PHSSIZE;
+		break;
+	case 1:
+		// fall through
+	case 3:
+		dac_type   = PHASE;
+		dac_offset = FPGA_OFF_PHSOFF;
+		dac_size   = FPGA_OFF_PHSSIZE;
 
-			if (gBitFileVersion < VERSION_ELL) {
-				dac_mem_lock = CSRMSK_PHSMEMLCK;
-				dac_write = FPGA_ADDR_PHSWRITE;
-			} else {
-				dac_mem_lock = CSRMSK_PHSMEMLCK_ELL ;
-				dac_write =  FPGA_ADDR_ELL_PHSWRITE;
-			}
-			break;
-		default:
-			return -2;
+		if (gBitFileVersion < VERSION_ELL) {
+			dac_mem_lock = CSRMSK_PHSMEMLCK;
+			dac_write = FPGA_ADDR_PHSWRITE;
+		} else {
+			dac_mem_lock = CSRMSK_PHSMEMLCK_ELL ;
+			dac_write =  FPGA_ADDR_ELL_PHSWRITE;
+		}
+		break;
+	default:
+		return -2;
 	}
 
 	dac_read = gRegRead | dac_write;
@@ -351,100 +351,100 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 		return -4;
 	}
 
-  dlog(DEBUG_VERBOSE,"Initialize Control and Status Register to initial state\n");
-  // State machines should be reset and DDRs enabled
-  int csr_init = CSRMSK_ENVSMRST_ELL | CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMRST_ELL | CSRMSK_PHSSMEN_ELL;
+	dlog(DEBUG_VERBOSE,"Initialize Control and Status Register to initial state\n");
+	// State machines should be reset and DDRs enabled
+	int csr_init = CSRMSK_ENVSMRST_ELL | CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMRST_ELL | CSRMSK_PHSSMEN_ELL;
 
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_CSR, csr_init, fpga);
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
-	  data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
-	  dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
-	  dlog(DEBUG_VERBOSE,"Initializing %s (%i) Offset and Size\n", dac_type, dac);
+		data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
+		dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
+		dlog(DEBUG_VERBOSE,"Initializing %s (%i) Offset and Size\n", dac_type, dac);
 	}
 
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_offset, offset, fpga);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_size,   wf_length, fpga);
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
-	  data = APS_ReadFPGA(device, gRegRead | dac_offset, fpga);
-	  dlog(DEBUG_VERBOSE,"Offset set to: %i\n", data);
+		data = APS_ReadFPGA(device, gRegRead | dac_offset, fpga);
+		dlog(DEBUG_VERBOSE,"Offset set to: %i\n", data);
 
-	  data = APS_ReadFPGA(device, gRegRead | dac_size, fpga);
-	  dlog(DEBUG_VERBOSE,"Size set to: %i\n", data);
-	  dlog(DEBUG_VERBOSE,"Loading %s (%i) Waveform at 0x%x ...\n", dac_type, dac, dac_write);
+		data = APS_ReadFPGA(device, gRegRead | dac_size, fpga);
+		dlog(DEBUG_VERBOSE,"Size set to: %i\n", data);
+		dlog(DEBUG_VERBOSE,"Loading %s (%i) Waveform at 0x%x ...\n", dac_type, dac, dac_write);
 	}
 
 	int error = 0;
 
-	#ifdef LOG_WAVEFORM
+#ifdef LOG_WAVEFORM
 	logwaveform = fopen("waveform.out", "w");
-	#endif
+#endif
 
 	// Adjust start of writing by offset
 	dac_write += offset;
 
-	#define ADDRDATASIZE 5
+#define ADDRDATASIZE 5
 
 	// slow write of data one sample at a time
 	UCHAR dummyRead[2];
 	if (useSlowWrite != 0) {
-	  dlog(DEBUG_INFO,"Using slow write\n");
+		dlog(DEBUG_INFO,"Using slow write\n");
 
-	  for(cnt = 0; cnt < ByteCount; cnt++) {
-	    APS_WriteFPGA(device, dac_write + cnt, Data[cnt], fpga);
-	    if (cnt % 4 == 0 && cnt != 0) {
-	      // dummy read to slow down the cpld
-	      APS_ReadReg(device, APS_FPGA_IO, 1, fpga, dummyRead);
-	    }
-	  }
+		for(cnt = 0; cnt < ByteCount; cnt++) {
+			APS_WriteFPGA(device, dac_write + cnt, Data[cnt], fpga);
+			if (cnt % 4 == 0 && cnt != 0) {
+				// dummy read to slow down the cpld
+				APS_ReadReg(device, APS_FPGA_IO, 1, fpga, dummyRead);
+			}
+		}
 	} else {
+		// faster buffered write
 
-	  // faster buffered write
+		formated_length  = ADDRDATASIZE * ByteCount;  // Expanded length 1 byte command 2 bytes addr 2 bytes data per data sample
+		formatedData = (BYTE *) malloc(formated_length);
+		if (!formatedData)
+			return -5;
+		formatedDataIdx = formatedData;
 
-    formated_length  = ADDRDATASIZE * ByteCount;  // Expanded length 1 byte command 2 bytes addr 2 bytes data per data sample
-    formatedData = (BYTE *) malloc(formated_length);
-    if (!formatedData)
-      return -5;
-    formatedDataIdx = formatedData;
+		// Format data as would be expected for FPGA
+		// This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
 
-    // Format data as would be expected for FPGA
-    // This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
-
-    for(cnt = 0; cnt < ByteCount; cnt++) {
-      APS_FormatForFPGA(formatedDataIdx, dac_write + cnt, Data[cnt], fpga);
-      formatedDataIdx += ADDRDATASIZE;
-    }
-    APS_WriteBlock(device,formated_length, formatedData);
-    free(formatedData);
+		for(cnt = 0; cnt < ByteCount; cnt++) {
+			APS_FormatForFPGA(formatedDataIdx, dac_write + cnt, Data[cnt], fpga);
+			formatedDataIdx += ADDRDATASIZE;
+		}
+		dlog(DEBUG_VERBOSE,"Writing Block\n");
+		APS_WriteBlock(device,formated_length, formatedData);
+		free(formatedData);
 	}
-  
-  if (validate != 0) {
-	  dlog(DEBUG_INFO,"Validating Waveform\n");
 
-	  for(cnt = 0; cnt < ByteCount; cnt++) {
-      data = APS_ReadFPGA(device, dac_read + cnt, fpga);
-      if (data != Data[cnt]) {
-        dlog(DEBUG_INFO,"Error reading back memory: cnt = %i expected 0x%x read 0x%x\n", cnt,Data[cnt], data);
-        error = 1;
-      }
-	  }
+	if (validate != 0) {
+		dlog(DEBUG_INFO,"Validating Waveform\n");
 
-	  if (!error) {
-		  dlog(DEBUG_INFO,"Read back complete: no errors found\n");
-	  }
-  }
-  
+		for(cnt = 0; cnt < ByteCount; cnt++) {
+			data = APS_ReadFPGA(device, dac_read + cnt, fpga);
+			if (data != Data[cnt]) {
+				dlog(DEBUG_INFO,"Error reading back memory: cnt = %i expected 0x%x read 0x%x\n", cnt,Data[cnt], data);
+				error = 1;
+			}
+		}
+
+		if (!error) {
+			dlog(DEBUG_INFO,"Read back complete: no errors found\n");
+		}
+	}
+
 	dlog(DEBUG_VERBOSE,"LoadWaveform Done\n");
 
-	#ifdef LOG_WAVEFORM
+#ifdef LOG_WAVEFORM
 	fclose(logwaveform);
-	#endif
+#endif
 
-  if (getDebugLevel() >= DEBUG_VERBOSE) {
-	  data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
-	  dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
-  }
+	if (getDebugLevel() >= DEBUG_VERBOSE) {
+		data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
+		dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
+	}
 
 	// make sure that link list mode is disabled by default
 	APS_SetLinkListMode(device, 0, 0, dac);
@@ -478,8 +478,8 @@ int APS_SetBit(int device, int fpga, int addr, int mask)
 {
 	int current_state;
 	current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
-  dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Mask: 0x%x Writing 0x%x\n",
-	      addr, current_state, mask, current_state | mask);
+	dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Mask: 0x%x Writing 0x%x\n",
+			addr, current_state, mask, current_state | mask);
 
 	return APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state | mask, fpga);
 }
@@ -548,54 +548,54 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 
 	// setup register addressing based on DAC
 	switch(dac) {
-		case 0:
-			// fall through
-		case 2:
-			dac_type      = ENVELOPE;
-			dac_sw_led    = TRIGLEDMSK_SWLED0;
-			dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG;
-			if (gBitFileVersion < VERSION_ELL) {
-				dac_sm_enable = CSRMSK_ENVSMEN;
-				dac_trig_src  = CSRMSK_ENVTRIGSRC ;
-				dac_sm_reset  = CSRMSK_ENVSMRST;
-			} else {
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL;
-				dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL;
-				dac_sm_reset  = CSRMSK_ENVSMRST_ELL;
-			}
+	case 0:
+		// fall through
+	case 2:
+		dac_type      = ENVELOPE;
+		dac_sw_led    = TRIGLEDMSK_SWLED0;
+		dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG;
+		if (gBitFileVersion < VERSION_ELL) {
+			dac_sm_enable = CSRMSK_ENVSMEN;
+			dac_trig_src  = CSRMSK_ENVTRIGSRC ;
+			dac_sm_reset  = CSRMSK_ENVSMRST;
+		} else {
+			dac_sm_enable = CSRMSK_ENVSMEN_ELL;
+			dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL;
+			dac_sm_reset  = CSRMSK_ENVSMRST_ELL;
+		}
 
 
-			break;
-		case 1:
-			// fall through
-		case 3:
-			dac_type      = PHASE;
-			dac_sw_led    = TRIGLEDMSK_SWLED1;
-			dac_sw_trig   = TRIGLEDMSK_PHSSWTRIG;
-			if (gBitFileVersion < VERSION_ELL) {
-				dac_sm_enable = CSRMSK_PHSSMEN;
-				dac_trig_src  = CSRMSK_PHSTRIGSRC ;
-				dac_sm_reset  = CSRMSK_PHSSMRST;
-			} else {
-				dac_sm_enable = CSRMSK_PHSSMEN_ELL;
-				dac_trig_src  = CSRMSK_PHSTRIGSRC_ELL;
-				dac_sm_reset  = CSRMSK_PHSSMRST_ELL;
-			}
-			break;
-		default:
-			return -2;
+		break;
+	case 1:
+		// fall through
+	case 3:
+		dac_type      = PHASE;
+		dac_sw_led    = TRIGLEDMSK_SWLED1;
+		dac_sw_trig   = TRIGLEDMSK_PHSSWTRIG;
+		if (gBitFileVersion < VERSION_ELL) {
+			dac_sm_enable = CSRMSK_PHSSMEN;
+			dac_trig_src  = CSRMSK_PHSTRIGSRC ;
+			dac_sm_reset  = CSRMSK_PHSSMRST;
+		} else {
+			dac_sm_enable = CSRMSK_PHSSMEN_ELL;
+			dac_trig_src  = CSRMSK_PHSTRIGSRC_ELL;
+			dac_sm_reset  = CSRMSK_PHSSMRST_ELL;
+		}
+		break;
+	default:
+		return -2;
 	}
 
 	dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
-		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
-		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
-		);
+			APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
+			APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
+	);
 
 	if (trigger_type == SOFTWARE_TRIGGER) {
 		dlog(DEBUG_VERBOSE, "Trigger %s State Machine ... \n", dac_type);
 
 		APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
-	  APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
+		APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
 
 	} else if (trigger_type == HARDWARE_TRIGGER) {
 
@@ -606,13 +606,13 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 		APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
 
 	} else {
-	  dlog(DEBUG_VERBOSE, "Invalid Trigger Type\n");
+		dlog(DEBUG_VERBOSE, "Invalid Trigger Type\n");
 		return -1;
 	}
 
-  dlog(DEBUG_VERBOSE,"Enable %s State Machine ... \n", dac_type);
-  
-  APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
+	dlog(DEBUG_VERBOSE,"Enable %s State Machine ... \n", dac_type);
+
+	APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
 	//APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
 
 	return 0;
@@ -649,40 +649,40 @@ EXPORT int APS_PauseDac(int device, int dac)
 	dlog(DEBUG_VERBOSE,"Pause FPGA%i DAC%i\n", fpga, dac);
 
 	switch(dac) {
-		case 0:
-			// fall through
-		case 2:
-			dac_type      = ENVELOPE;
-			dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG;
-			if (gBitFileVersion < VERSION_ELL) {
-				dac_trig_src  = CSRMSK_ENVTRIGSRC ;
-				dac_sm_reset  = CSRMSK_ENVSMRST;
-				dac_sm_enable = CSRMSK_ENVSMEN;
-			} else {
-				dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL;
-				dac_sm_reset  = CSRMSK_ENVSMRST_ELL;
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL;
-			}
+	case 0:
+		// fall through
+	case 2:
+		dac_type      = ENVELOPE;
+		dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG;
+		if (gBitFileVersion < VERSION_ELL) {
+			dac_trig_src  = CSRMSK_ENVTRIGSRC ;
+			dac_sm_reset  = CSRMSK_ENVSMRST;
+			dac_sm_enable = CSRMSK_ENVSMEN;
+		} else {
+			dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL;
+			dac_sm_reset  = CSRMSK_ENVSMRST_ELL;
+			dac_sm_enable = CSRMSK_ENVSMEN_ELL;
+		}
 
 
-			break;
-		case 1:
-			// fall through
-		case 3:
-			dac_type      = PHASE;
-			dac_sw_trig   = TRIGLEDMSK_PHSSWTRIG;
-			if (gBitFileVersion < VERSION_ELL) {
-						dac_trig_src  = CSRMSK_PHSTRIGSRC ;
-						dac_sm_reset  = CSRMSK_PHSSMRST;
-						dac_sm_enable = CSRMSK_PHSSMEN;
-			} else {
-				dac_trig_src  = CSRMSK_PHSTRIGSRC_ELL;
-				dac_sm_reset  = CSRMSK_PHSSMRST_ELL;
-				dac_sm_enable = CSRMSK_PHSSMEN_ELL;
-			}
-			break;
-		default:
-			return -2;
+		break;
+	case 1:
+		// fall through
+	case 3:
+		dac_type      = PHASE;
+		dac_sw_trig   = TRIGLEDMSK_PHSSWTRIG;
+		if (gBitFileVersion < VERSION_ELL) {
+			dac_trig_src  = CSRMSK_PHSTRIGSRC ;
+			dac_sm_reset  = CSRMSK_PHSSMRST;
+			dac_sm_enable = CSRMSK_PHSSMEN;
+		} else {
+			dac_trig_src  = CSRMSK_PHSTRIGSRC_ELL;
+			dac_sm_reset  = CSRMSK_PHSSMRST_ELL;
+			dac_sm_enable = CSRMSK_PHSSMEN_ELL;
+		}
+		break;
+	default:
+		return -2;
 	}
 
 	APS_ClearBit(device, fpga,FPGA_OFF_TRIGLED, dac_sw_trig);
@@ -719,41 +719,41 @@ EXPORT int APS_DisableDac(int device, int dac)
 		return -1;
 	}
 
-  dlog(DEBUG_VERBOSE,"Disable FPGA%i DAC%i\n", fpga, dac);
+	dlog(DEBUG_VERBOSE,"Disable FPGA%i DAC%i\n", fpga, dac);
 
 	switch(dac) {
-		case 0:
-			// fall through
-		case 2:
-			dac_type      = ENVELOPE;
-			dac_offset    = FPGA_OFF_ENVOFF;
-			dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG;
-			if (gBitFileVersion < VERSION_ELL) {
-				dac_sm_reset  = CSRMSK_ENVSMRST;
-				dac_sm_enable = CSRMSK_ENVSMEN ;
-			} else {
-				dac_sm_reset  = CSRMSK_ENVSMRST_ELL;
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL;
-			}
+	case 0:
+		// fall through
+	case 2:
+		dac_type      = ENVELOPE;
+		dac_offset    = FPGA_OFF_ENVOFF;
+		dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG;
+		if (gBitFileVersion < VERSION_ELL) {
+			dac_sm_reset  = CSRMSK_ENVSMRST;
+			dac_sm_enable = CSRMSK_ENVSMEN ;
+		} else {
+			dac_sm_reset  = CSRMSK_ENVSMRST_ELL;
+			dac_sm_enable = CSRMSK_ENVSMEN_ELL;
+		}
 
-			break;
-		case 1:
-			// fall through
-		case 3:
-			dac_type      = PHASE;
-			dac_offset    = FPGA_OFF_PHSOFF;
-			dac_sw_trig   = TRIGLEDMSK_PHSSWTRIG;
-			if (gBitFileVersion < VERSION_ELL) {
-				dac_sm_reset  = CSRMSK_PHSSMRST;
-				dac_sm_enable = CSRMSK_PHSSMEN ;
-			} else {
-				dac_sm_reset  = CSRMSK_PHSSMRST_ELL;
-				dac_sm_enable = CSRMSK_PHSSMEN_ELL;
-			}
+		break;
+	case 1:
+		// fall through
+	case 3:
+		dac_type      = PHASE;
+		dac_offset    = FPGA_OFF_PHSOFF;
+		dac_sw_trig   = TRIGLEDMSK_PHSSWTRIG;
+		if (gBitFileVersion < VERSION_ELL) {
+			dac_sm_reset  = CSRMSK_PHSSMRST;
+			dac_sm_enable = CSRMSK_PHSSMEN ;
+		} else {
+			dac_sm_reset  = CSRMSK_PHSSMRST_ELL;
+			dac_sm_enable = CSRMSK_PHSSMEN_ELL;
+		}
 
-			break;
-		default:
-			return -2;
+		break;
+	default:
+		return -2;
 	}
 
 
@@ -770,7 +770,7 @@ EXPORT int APS_DisableDac(int device, int dac)
 
 
 int LoadLinkList_V5(int device, unsigned short *OffsetData, unsigned short *CountData,
-		            int length, int dac)
+		int length, int dac)
 /********************************************************************
  *
  * Function Name : APS_LoadLinkList()
@@ -778,20 +778,20 @@ int LoadLinkList_V5(int device, unsigned short *OffsetData, unsigned short *Coun
  * Description : Loads LinkList to FPGA
  *
  * Inputs :
-*              OffsetData - pointer to link list offsets
-*              CountData - pointer to link list counts
-*              length - length of link list
-*              Dac - dac ID
-*
-* Returns : 0 on success < 0 on failure
-*
-* Error Conditions :
-*
-* Unit Tested on:
-*
-* Unit Tested by:
-*
-********************************************************************/
+ *              OffsetData - pointer to link list offsets
+ *              CountData - pointer to link list counts
+ *              length - length of link list
+ *              Dac - dac ID
+ *
+ * Returns : 0 on success < 0 on failure
+ *
+ * Error Conditions :
+ *
+ * Unit Tested on:
+ *
+ * Unit Tested by:
+ *
+ ********************************************************************/
 {
 	int dac_shift, dac_write_offset, dac_write_cnt;
 	int fpga;
@@ -812,24 +812,24 @@ int LoadLinkList_V5(int device, unsigned short *OffsetData, unsigned short *Coun
 
 	// setup register addressing based on DAC
 	switch(dac) {
-		case 0:
-			// fall through
-		case 2:
-			dac_type   			= ENVELOPE;
-			dac_shift 			= LL_SIZE_ENVSHIFT;
-			dac_write_offset 	= FPGA_ADDR_ENVLLOFF_WRITE;
-			dac_write_cnt 		= FPGA_ADDR_ENVLLCNT_WRITE;
-			break;
-		case 1:
-			// fall through
-		case 3:
-			dac_type   			= PHASE;
-			dac_shift 			= LL_SIZE_PHSSHIFT;
-			dac_write_offset 	= FPGA_ADDR_PHSLLOFF_WRITE;
-			dac_write_cnt 		= FPGA_ADDR_PHSLLCNT_WRITE;
-			break;
-		default:
-			return -2;
+	case 0:
+		// fall through
+	case 2:
+		dac_type   			= ENVELOPE;
+		dac_shift 			= LL_SIZE_ENVSHIFT;
+		dac_write_offset 	= FPGA_ADDR_ENVLLOFF_WRITE;
+		dac_write_cnt 		= FPGA_ADDR_ENVLLCNT_WRITE;
+		break;
+	case 1:
+		// fall through
+	case 3:
+		dac_type   			= PHASE;
+		dac_shift 			= LL_SIZE_PHSSHIFT;
+		dac_write_offset 	= FPGA_ADDR_PHSLLOFF_WRITE;
+		dac_write_cnt 		= FPGA_ADDR_PHSLLCNT_WRITE;
+		break;
+	default:
+		return -2;
 	}
 
 	if ( length > MAX_LL_LENGTH)  {
@@ -839,12 +839,12 @@ int LoadLinkList_V5(int device, unsigned short *OffsetData, unsigned short *Coun
 	// load current cntrl reg
 	ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_LLCTRL, fpga);
 
-  dlog(DEBUG_VERBOSE,"Current Link List Control Reg: 0x%x\n", ctrl_reg);
+	dlog(DEBUG_VERBOSE,"Current Link List Control Reg: 0x%x\n", ctrl_reg);
 
 	// zero current dac settings
 	ctrl_reg &= ~(0xFF << dac_shift);
 
-  dlog(DEBUG_VERBOSE,"Zeroed Link List Control Reg: 0x%x\n", ctrl_reg);
+	dlog(DEBUG_VERBOSE,"Zeroed Link List Control Reg: 0x%x\n", ctrl_reg);
 
 	//set link list size
 	ctrl_reg |= (length << dac_shift);
@@ -860,7 +860,7 @@ int LoadLinkList_V5(int device, unsigned short *OffsetData, unsigned short *Coun
 	ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_LLCTRL, fpga);
 
 	dlog(DEBUG_VERBOSE,"Written Link List Control Reg: 0x%x\n", ctrl_reg);
-  dlog(DEBUG_VERBOSE,"Loading Link List %s DAC%i...\n", dac_type, dac);
+	dlog(DEBUG_VERBOSE,"Loading Link List %s DAC%i...\n", dac_type, dac);
 
 	// Expanded length 1 byte command 2 bytes addr 2 bytes data per data sample
 	// * 2 from two entries offset and count
@@ -888,8 +888,8 @@ int LoadLinkList_V5(int device, unsigned short *OffsetData, unsigned short *Coun
 }
 
 int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *CountData,
-		             unsigned short *TriggerData, unsigned short *RepeatData,
-		             int length, int dac, int bank, int validate)
+		unsigned short *TriggerData, unsigned short *RepeatData,
+		int length, int dac, int bank, int validate)
 /********************************************************************
  *
  * Function Name : LoadLinkList()
@@ -897,20 +897,20 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
  * Description : Loads LinkList to FPGA Enhanced Link List Mode
  *
  * Inputs :
-*              OffsetData - pointer to link list offsets
-*              CountData - pointer to link list counts
-*              length - length of link list
-*              Dac - dac ID
-*
-* Returns : 0 on success < 0 on failure
-*
-* Error Conditions :
-*
-* Unit Tested on:
-*
-* Unit Tested by:
-*
-********************************************************************/
+ *              OffsetData - pointer to link list offsets
+ *              CountData - pointer to link list counts
+ *              length - length of link list
+ *              Dac - dac ID
+ *
+ * Returns : 0 on success < 0 on failure
+ *
+ * Error Conditions :
+ *
+ * Unit Tested on:
+ *
+ * Unit Tested by:
+ *
+ ********************************************************************/
 {
 	int dac_write;
 	int dac_ctrl_reg, dac_rpt_reg;
@@ -944,38 +944,38 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 
 	const char * banks[] = {"A","B"};
 	dlog(DEBUG_VERBOSE,"Loading LinkList length %i into FPGA%i DAC%i Bank %s\n",
-	    length, fpga, dac, banks[bank]);
+			length, fpga, dac, banks[bank]);
 
 	// setup register addressing based on DAC
 	switch(dac) {
-		case 0:
-			// fall through
-		case 2:
-			dac_type = ENVELOPE;
-			if (bank == 0) {
-				dac_write = FPGA_ADDR_ELL_ENVLL_A_WRITE;
-				dac_ctrl_reg = FPGA_OFF_ELL_ENVLL_A_CTRL;
-			} else {
-				dac_write = FPGA_ADDR_ELL_ENVLL_B_WRITE;
-				dac_ctrl_reg = FPGA_OFF_ELL_ENVLL_B_CTRL;
-			}
-			dac_rpt_reg  = FPGA_OFF_ELL_ENVLL_REPEAT;
-			break;
-		case 1:
-			// fall through
-		case 3:
-			dac_type = PHASE;
-			if (bank == 0) {
-				dac_write    = FPGA_ADDR_ELL_PHSLL_A_WRITE;
-				dac_ctrl_reg = FPGA_OFF_ELL_PHSLL_A_CTRL;
-			} else {
-				dac_write = FPGA_ADDR_ELL_PHSLL_B_WRITE;
-				dac_ctrl_reg = FPGA_OFF_ELL_PHSLL_B_CTRL;
-			}
-			dac_rpt_reg  = FPGA_OFF_ELL_PHSLL_REPEAT;
-			break;
-		default:
-			return -2;
+	case 0:
+		// fall through
+	case 2:
+		dac_type = ENVELOPE;
+		if (bank == 0) {
+			dac_write = FPGA_ADDR_ELL_ENVLL_A_WRITE;
+			dac_ctrl_reg = FPGA_OFF_ELL_ENVLL_A_CTRL;
+		} else {
+			dac_write = FPGA_ADDR_ELL_ENVLL_B_WRITE;
+			dac_ctrl_reg = FPGA_OFF_ELL_ENVLL_B_CTRL;
+		}
+		dac_rpt_reg  = FPGA_OFF_ELL_ENVLL_REPEAT;
+		break;
+	case 1:
+		// fall through
+	case 3:
+		dac_type = PHASE;
+		if (bank == 0) {
+			dac_write    = FPGA_ADDR_ELL_PHSLL_A_WRITE;
+			dac_ctrl_reg = FPGA_OFF_ELL_PHSLL_A_CTRL;
+		} else {
+			dac_write = FPGA_ADDR_ELL_PHSLL_B_WRITE;
+			dac_ctrl_reg = FPGA_OFF_ELL_PHSLL_B_CTRL;
+		}
+		dac_rpt_reg  = FPGA_OFF_ELL_PHSLL_REPEAT;
+		break;
+	default:
+		return -2;
 	}
 
 	if ( length > MAX_LL_LENGTH_ELL)  {
@@ -985,7 +985,7 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	// load current cntrl reg
 	ctrl_reg = APS_ReadFPGA(device, gRegRead | dac_ctrl_reg, fpga);
 
-  dlog(DEBUG_VERBOSE,"ELL: Current Link List Control Reg: 0x%x\n", ctrl_reg);
+	dlog(DEBUG_VERBOSE,"ELL: Current Link List Control Reg: 0x%x\n", ctrl_reg);
 
 	//set link list size
 	// ELL Mode does not require shift due to different control registers
@@ -1004,60 +1004,60 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	// load current ctrl reg
 	ctrl_reg_read = APS_ReadFPGA(device, gRegRead | dac_ctrl_reg, fpga);
 
-  dlog(DEBUG_VERBOSE,"Loaded Link List %s DAC%i... Ctrl Reg = 0x%x\n", dac_type, dac, ctrl_reg_read);
+	dlog(DEBUG_VERBOSE,"Loaded Link List %s DAC%i... Ctrl Reg = 0x%x\n", dac_type, dac, ctrl_reg_read);
 
-  if (ctrl_reg_read != ctrl_reg) {
-    dlog(DEBUG_VERBOSE, "WARNING: LinkList Control Reg Did Not Write Correctly\n");
-  }
+	if (ctrl_reg_read != ctrl_reg) {
+		dlog(DEBUG_VERBOSE, "WARNING: LinkList Control Reg Did Not Write Correctly\n");
+	}
 
 #if 1
-  for(cnt = 0; cnt < length; cnt++) {
-    dlog(DEBUG_VERBOSE,"Writting LL Entry: %3i => Addr: 0x%X Count: %i: Repeat %i\n",
-        cnt,dac_write + 4*cnt,  CountData[cnt], RepeatData[cnt]);
-    dlog(DEBUG_VERBOSE,"                          TriggerMode: %i TriggerCount %i\n",
-        TriggerData[cnt] >> 14,
-        TriggerData[cnt] & 0x3FFF);
+	for(cnt = 0; cnt < length; cnt++) {
+		dlog(DEBUG_VERBOSE,"Writting LL Entry: %3i => Addr: 0x%X Count: %i: Repeat %i\n",
+				cnt,dac_write + 4*cnt,  CountData[cnt], RepeatData[cnt]);
+		dlog(DEBUG_VERBOSE,"                          TriggerMode: %i TriggerCount %i\n",
+				TriggerData[cnt] >> 14,
+				TriggerData[cnt] & 0x3FFF);
 
-    dlog(DEBUG_VERBOSE,"                          Offset: 0x%x Address: 0x%x TA: %i Z: %i T:% i LS: %i LE: %i\n",
-        OffsetData[cnt],
-        OffsetData[cnt] & 0x7FF,
-        (OffsetData[cnt] & 0x8000) == 0x8000,
-        (OffsetData[cnt] & 0x4000) == 0x4000,
-        (OffsetData[cnt] & 0x2000) == 0x2000,
-        (OffsetData[cnt] & 0x1000) == 0x1000,
-        (OffsetData[cnt] & 0x800) == 0x800);
+		dlog(DEBUG_VERBOSE,"                          Offset: 0x%x Address: 0x%x TA: %i Z: %i T:% i LS: %i LE: %i\n",
+				OffsetData[cnt],
+				OffsetData[cnt] & 0x7FF,
+				(OffsetData[cnt] & 0x8000) == 0x8000,
+				(OffsetData[cnt] & 0x4000) == 0x4000,
+				(OffsetData[cnt] & 0x2000) == 0x2000,
+				(OffsetData[cnt] & 0x1000) == 0x1000,
+				(OffsetData[cnt] & 0x800) == 0x800);
 
-    APS_WriteFPGA(device, dac_write + 4*cnt  , OffsetData[cnt], fpga);
-    dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Offset  Value 0x%X\n",dac_write + 4*cnt, OffsetData[cnt]);
+		APS_WriteFPGA(device, dac_write + 4*cnt  , OffsetData[cnt], fpga);
+		dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Offset  Value 0x%X\n",dac_write + 4*cnt, OffsetData[cnt]);
 
-    APS_WriteFPGA(device, dac_write + 4*cnt+1, CountData[cnt], fpga);
-    dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Count   Value 0x%X\n",dac_write + 4*cnt+1, CountData[cnt]);
+		APS_WriteFPGA(device, dac_write + 4*cnt+1, CountData[cnt], fpga);
+		dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Count   Value 0x%X\n",dac_write + 4*cnt+1, CountData[cnt]);
 
-    APS_WriteFPGA(device, dac_write + 4*cnt+2, TriggerData[cnt], fpga);
-    dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Trigger Value 0x%X\n",dac_write + 4*cnt+2, TriggerData[cnt]);
+		APS_WriteFPGA(device, dac_write + 4*cnt+2, TriggerData[cnt], fpga);
+		dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Trigger Value 0x%X\n",dac_write + 4*cnt+2, TriggerData[cnt]);
 
-    APS_WriteFPGA(device, dac_write + 4*cnt+3, RepeatData[cnt], fpga);
-    dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Repeat  Value 0x%X\n",dac_write + 4*cnt+3, RepeatData[cnt]);
+		APS_WriteFPGA(device, dac_write + 4*cnt+3, RepeatData[cnt], fpga);
+		dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Repeat  Value 0x%X\n",dac_write + 4*cnt+3, RepeatData[cnt]);
 
-    if (validate) {
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt  ,  fpga) ;
-      if (readVal != OffsetData[cnt])
-         dlog(DEBUG_INFO,"Error writing offset 0x%X != 0x%X \n", readVal, OffsetData[cnt]);
+		if (validate) {
+			readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt  ,  fpga) ;
+			if (readVal != OffsetData[cnt])
+				dlog(DEBUG_INFO,"Error writing offset 0x%X != 0x%X \n", readVal, OffsetData[cnt]);
 
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+1  ,  fpga) ;
-      if (readVal != CountData[cnt])
-        dlog(DEBUG_INFO,"Error writing count 0x%X != 0x%X \n", readVal, CountData[cnt]);
+			readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+1  ,  fpga) ;
+			if (readVal != CountData[cnt])
+				dlog(DEBUG_INFO,"Error writing count 0x%X != 0x%X \n", readVal, CountData[cnt]);
 
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+2  ,  fpga) ;
-      if (readVal != TriggerData[cnt])
-        dlog(DEBUG_INFO,"Error writing trigger 0x%X != 0x%X \n", readVal, TriggerData[cnt]);
+			readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+2  ,  fpga) ;
+			if (readVal != TriggerData[cnt])
+				dlog(DEBUG_INFO,"Error writing trigger 0x%X != 0x%X \n", readVal, TriggerData[cnt]);
 
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+3  ,  fpga) ;
-      if (readVal != RepeatData[cnt])
-        dlog(DEBUG_INFO,"Error writing repeat 0x%X != 0x%X \n", readVal, RepeatData[cnt]);
-    }
+			readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+3  ,  fpga) ;
+			if (readVal != RepeatData[cnt])
+				dlog(DEBUG_INFO,"Error writing repeat 0x%X != 0x%X \n", readVal, RepeatData[cnt]);
+		}
 
-  }
+	}
 
 #else
 	// ADDRDATASIZE_ELL 1 cmd 2 addr 2 offset 2 count 2 trigger 2 repeat
@@ -1073,9 +1073,9 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 
 	for(cnt = 0; cnt < length; cnt++) {
 		APS_FormatForFPGA_ELL(formatedDataIdx, dac_write + cnt,
-								OffsetData[cnt], CountData[cnt],
-								TriggerData[cnt], RepeatData[cnt],
-								fpga );
+				OffsetData[cnt], CountData[cnt],
+				TriggerData[cnt], RepeatData[cnt],
+				fpga );
 		formatedDataIdx += ADDRDATASIZE_ELL;
 	}
 	APS_WriteBlock(device,formated_length, formatedData);
@@ -1090,95 +1090,95 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 }
 
 EXPORT int APS_LoadLinkList(int device,
-		                          unsigned short *OffsetData, unsigned short *CountData,
-		                          unsigned short *TriggerData, unsigned short *RepeatData,
-		                          int length, int dac, int bank, int validate)
+		unsigned short *OffsetData, unsigned short *CountData,
+		unsigned short *TriggerData, unsigned short *RepeatData,
+		int length, int dac, int bank, int validate)
 {
-  dlog(DEBUG_INFO,"APS_LoadLinkList\n");
+	dlog(DEBUG_INFO,"APS_LoadLinkList\n");
 	if (gBitFileVersion < VERSION_ELL) {
 		return LoadLinkList_V5(device, OffsetData, CountData, length, dac);
 	} else {
 		return LoadLinkList_ELL(device, OffsetData, CountData, TriggerData, RepeatData,
-				         length, dac, bank, validate);
+				length, dac, bank, validate);
 	}
 }
 
 EXPORT int APS_ClearLinkListELL(int device,int dac, int bank)
 {
-  dlog(DEBUG_INFO,"APS_ClearLinkList\n");
-  int dac_write;
-    int dac_ctrl_reg, dac_rpt_reg;
-    int fpga;
-    int ctrl_reg;
-    char * dac_type;
+	dlog(DEBUG_INFO,"APS_ClearLinkList\n");
+	int dac_write;
+	int dac_ctrl_reg, dac_rpt_reg;
+	int fpga;
+	int ctrl_reg;
+	char * dac_type;
 
-    fpga = dac2fpga(dac);
-    if (fpga < 0) {
-      return -1;
-    }
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
 
-    dlog(DEBUG_INFO,"Load Link List ELL\n");
+	dlog(DEBUG_INFO,"Load Link List ELL\n");
 
-    if (gBitFileVersion < VERSION_ELL) {
-      dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
-      return -1;
-    }
+	if (gBitFileVersion < VERSION_ELL) {
+		dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
+		return -1;
+	}
 
-    const char * banks[] = {"A","B"};
-    dlog(DEBUG_VERBOSE,"Clearign LinkList FPGA%i DAC%i Bank %s\n", fpga, dac, banks[bank]);
+	const char * banks[] = {"A","B"};
+	dlog(DEBUG_VERBOSE,"Clearign LinkList FPGA%i DAC%i Bank %s\n", fpga, dac, banks[bank]);
 
-    // setup register addressing based on DAC
-    switch(dac) {
-      case 0:
-        // fall through
-      case 2:
-        dac_type = ENVELOPE;
-        if (bank == 0) {
-          dac_write = FPGA_ADDR_ELL_ENVLL_A_WRITE;
-          dac_ctrl_reg = FPGA_OFF_ELL_ENVLL_A_CTRL;
-        } else {
-          dac_write = FPGA_ADDR_ELL_ENVLL_B_WRITE;
-          dac_ctrl_reg = FPGA_OFF_ELL_ENVLL_B_CTRL;
-        }
-        dac_rpt_reg  = FPGA_OFF_ELL_ENVLL_REPEAT;
-        break;
-      case 1:
-        // fall through
-      case 3:
-        dac_type = PHASE;
-        if (bank == 0) {
-          dac_write    = FPGA_ADDR_ELL_PHSLL_A_WRITE;
-          dac_ctrl_reg = FPGA_OFF_ELL_PHSLL_A_CTRL;
-        } else {
-          dac_write = FPGA_ADDR_ELL_PHSLL_B_WRITE;
-          dac_ctrl_reg = FPGA_OFF_ELL_PHSLL_B_CTRL;
-        }
-        dac_rpt_reg  = FPGA_OFF_ELL_PHSLL_REPEAT;
-        break;
-      default:
-        return -2;
-    }
+	// setup register addressing based on DAC
+	switch(dac) {
+	case 0:
+		// fall through
+	case 2:
+		dac_type = ENVELOPE;
+		if (bank == 0) {
+			dac_write = FPGA_ADDR_ELL_ENVLL_A_WRITE;
+			dac_ctrl_reg = FPGA_OFF_ELL_ENVLL_A_CTRL;
+		} else {
+			dac_write = FPGA_ADDR_ELL_ENVLL_B_WRITE;
+			dac_ctrl_reg = FPGA_OFF_ELL_ENVLL_B_CTRL;
+		}
+		dac_rpt_reg  = FPGA_OFF_ELL_ENVLL_REPEAT;
+		break;
+	case 1:
+		// fall through
+	case 3:
+		dac_type = PHASE;
+		if (bank == 0) {
+			dac_write    = FPGA_ADDR_ELL_PHSLL_A_WRITE;
+			dac_ctrl_reg = FPGA_OFF_ELL_PHSLL_A_CTRL;
+		} else {
+			dac_write = FPGA_ADDR_ELL_PHSLL_B_WRITE;
+			dac_ctrl_reg = FPGA_OFF_ELL_PHSLL_B_CTRL;
+		}
+		dac_rpt_reg  = FPGA_OFF_ELL_PHSLL_REPEAT;
+		break;
+	default:
+		return -2;
+	}
 
-    //set link list size
-    // for zero length to clear Link List
-    ctrl_reg = 0;
+	//set link list size
+	// for zero length to clear Link List
+	ctrl_reg = 0;
 
-    // if bank is Bank B need to add based 0x200 to length
-    // for the mgth
-    //if (bank == 1) {
-    // ctrl_reg = ctrl_reg + 0x200;  // Link List B offset is 0x200 (on DAC side)
-    //}
+	// if bank is Bank B need to add based 0x200 to length
+	// for the mgth
+	//if (bank == 1) {
+	// ctrl_reg = ctrl_reg + 0x200;  // Link List B offset is 0x200 (on DAC side)
+	//}
 
-    dlog(DEBUG_VERBOSE,"Writing Link List Control Reg: 0x%x = 0x%x\n", dac_ctrl_reg,ctrl_reg);
+	dlog(DEBUG_VERBOSE,"Writing Link List Control Reg: 0x%x = 0x%x\n", dac_ctrl_reg,ctrl_reg);
 
-    // write control reg
-    APS_WriteFPGA(device, dac_ctrl_reg, ctrl_reg, fpga);
+	// write control reg
+	APS_WriteFPGA(device, dac_ctrl_reg, ctrl_reg, fpga);
 
-    // zero repeat register
-    APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_rpt_reg, 0, fpga);
+	// zero repeat register
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_rpt_reg, 0, fpga);
 
-    dlog(DEBUG_VERBOSE,"Done\n");
-    return 0;
+	dlog(DEBUG_VERBOSE,"Done\n");
+	return 0;
 
 }
 
@@ -1200,20 +1200,20 @@ EXPORT int APS_SetLinkListRepeat(int device, unsigned short repeat, int dac) {
 
 	// setup register addressing based on DAC
 	switch(dac) {
-		case 0:
-			// fall through
-		case 2:
-			dac_type = ENVELOPE;
-			dac_rpt_reg  = FPGA_OFF_ELL_ENVLL_REPEAT;
-			break;
-		case 1:
-			// fall through
-		case 3:
-			dac_type = PHASE;
-			dac_rpt_reg  = FPGA_OFF_ELL_PHSLL_REPEAT;
-			break;
-		default:
-			return -2;
+	case 0:
+		// fall through
+	case 2:
+		dac_type = ENVELOPE;
+		dac_rpt_reg  = FPGA_OFF_ELL_ENVLL_REPEAT;
+		break;
+	case 1:
+		// fall through
+	case 3:
+		dac_type = PHASE;
+		dac_rpt_reg  = FPGA_OFF_ELL_PHSLL_REPEAT;
+		break;
+	default:
+		return -2;
 	}
 	// zero repeat register
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_rpt_reg, repeat, fpga);
@@ -1231,19 +1231,19 @@ int SetLinkListMode_V5(int device, int enable, int mode, int dac)
  * Description : Loads LinkList to FPGA
  *
  * Inputs :
-*              enable -  enable link list 1 = enabled 0 = disabled
-*              mode - 1 = DC mode 0 = waveform mode
-*              dac - dac ID
-*
-* Returns : 0 on success < 0 on failure
-*
-* Error Conditions :
-*
-* Unit Tested on:
-*
-* Unit Tested by:
-*
-********************************************************************/
+ *              enable -  enable link list 1 = enabled 0 = disabled
+ *              mode - 1 = DC mode 0 = waveform mode
+ *              dac - dac ID
+ *
+ * Returns : 0 on success < 0 on failure
+ *
+ * Error Conditions :
+ *
+ * Unit Tested on:
+ *
+ * Unit Tested by:
+ *
+ ********************************************************************/
 {
 	int fpga;
 	int dac_enable_mask, dac_mode_mask, ctrl_reg;
@@ -1256,23 +1256,23 @@ int SetLinkListMode_V5(int device, int enable, int mode, int dac)
 
 	// setup register addressing based on DAC
 	switch(dac) {
-		case 0:
-			// fall through
-		case 2:
-			dac_type   		= ENVELOPE;
-			dac_enable_mask = LLMSK_ENVENABLE;
-			dac_mode_mask 	= LLMSK_ENVMODE;
+	case 0:
+		// fall through
+	case 2:
+		dac_type   		= ENVELOPE;
+		dac_enable_mask = LLMSK_ENVENABLE;
+		dac_mode_mask 	= LLMSK_ENVMODE;
 
-			break;
-		case 1:
-			// fall through
-		case 3:
-			dac_type   		= PHASE;
-			dac_enable_mask = LLMSK_PHSENABLE;
-			dac_mode_mask 	= LLMSK_PHSMODE;
-			break;
-		default:
-			return -2;
+		break;
+	case 1:
+		// fall through
+	case 3:
+		dac_type   		= PHASE;
+		dac_enable_mask = LLMSK_PHSENABLE;
+		dac_mode_mask 	= LLMSK_PHSMODE;
+		break;
+	default:
+		return -2;
 	}
 
 	if (enable < 0 && enable > 1) {
@@ -1288,7 +1288,7 @@ int SetLinkListMode_V5(int device, int enable, int mode, int dac)
 	// load current cntrl reg
 	ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_LLCTRL, fpga);
 
-  dlog(DEBUG_INFO,"Current Link List Control Reg: 0x%x\n", ctrl_reg);
+	dlog(DEBUG_INFO,"Current Link List Control Reg: 0x%x\n", ctrl_reg);
 
 
 	if (enable) {
@@ -1316,93 +1316,93 @@ int SetLinkListMode_ELL(int device, int enable, int mode, int dac)
  * Description : Loads LinkList to FPGA
  *
  * Inputs :
-*              enable -  enable link list 1 = enabled 0 = disabled
-*              mode - 1 = DC mode 0 = waveform mode
-*              dac - dac ID
-*
-* Returns : 0 on success < 0 on failure
-*
-* Error Conditions :
-*
-* Unit Tested on:
-*
-* Unit Tested by:
-*
-********************************************************************/
+ *              enable -  enable link list 1 = enabled 0 = disabled
+ *              mode - 1 = DC mode 0 = waveform mode
+ *              dac - dac ID
+ *
+ * Returns : 0 on success < 0 on failure
+ *
+ * Error Conditions :
+ *
+ * Unit Tested on:
+ *
+ * Unit Tested by:
+ *
+ ********************************************************************/
 {
-  int fpga;
-  int dac_enable_mask, dac_mode_mask, ctrl_reg;
+	int fpga;
+	int dac_enable_mask, dac_mode_mask, ctrl_reg;
 
-  char *dac_type;
+	char *dac_type;
 
-  fpga = dac2fpga(dac);
-  if (fpga < 0) {
-    return -1;
-  }
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
 
-  // setup register addressing based on DAC
-  switch(dac) {
-    case 0:
-      // fall through
-    case 2:
-      dac_type      = ENVELOPE;
-      dac_enable_mask = CSRMSK_ENVOUTMODE_ELL;
-      dac_mode_mask   = CSRMSK_ENVLLMODE_ELL;
+	// setup register addressing based on DAC
+	switch(dac) {
+	case 0:
+		// fall through
+	case 2:
+		dac_type      = ENVELOPE;
+		dac_enable_mask = CSRMSK_ENVOUTMODE_ELL;
+		dac_mode_mask   = CSRMSK_ENVLLMODE_ELL;
 
-      break;
-    case 1:
-      // fall through
-    case 3:
-      dac_type      = PHASE;
-      dac_enable_mask = CSRMSK_PHSOUTMODE_ELL;
-      dac_mode_mask   = CSRMSK_PHSLLMODE_ELL;
-      break;
-    default:
-      return -2;
-  }
+		break;
+	case 1:
+		// fall through
+	case 3:
+		dac_type      = PHASE;
+		dac_enable_mask = CSRMSK_PHSOUTMODE_ELL;
+		dac_mode_mask   = CSRMSK_PHSLLMODE_ELL;
+		break;
+	default:
+		return -2;
+	}
 
-  if (enable < 0 && enable > 1) {
-    return -3;
-  }
+	if (enable < 0 && enable > 1) {
+		return -3;
+	}
 
-  if (mode < 0 && mode > 1) {
-    return -4;
-  }
+	if (mode < 0 && mode > 1) {
+		return -4;
+	}
 
-  dlog(DEBUG_VERBOSE, "Setting Link List Enable ==> FPGA: %i DAC: %i Enable: %i\n", fpga, dac, enable);
+	dlog(DEBUG_VERBOSE, "Setting Link List Enable ==> FPGA: %i DAC: %i Enable: %i\n", fpga, dac, enable);
 
-  // load current cntrl reg
-  ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
+	// load current cntrl reg
+	ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
 
-  dlog(DEBUG_INFO,"Current CSR: 0x%x\n", ctrl_reg);
+	dlog(DEBUG_INFO,"Current CSR: 0x%x\n", ctrl_reg);
 
 
-  if (enable) {
-    // set bit to turn on link list mode
-    APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_enable_mask);
-  } else {
-    APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_enable_mask);
-  }
+	if (enable) {
+		// set bit to turn on link list mode
+		APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_enable_mask);
+	} else {
+		APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_enable_mask);
+	}
 
-  dlog(DEBUG_VERBOSE, "Setting Link List Mode ==> FPGA: %i DAC: %i Mode: %i\n", fpga, dac, mode);
+	dlog(DEBUG_VERBOSE, "Setting Link List Mode ==> FPGA: %i DAC: %i Mode: %i\n", fpga, dac, mode);
 
-  if (mode) {
-    APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_mode_mask);
-  } else {
-    APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_mode_mask);
-  }
+	if (mode) {
+		APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_mode_mask);
+	} else {
+		APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_mode_mask);
+	}
 
-  return 0;
+	return 0;
 }
 
 EXPORT int APS_SetLinkListMode(int device, int enable, int mode, int dac) {
-    // may be able to merge functions back together
-    dlog(DEBUG_INFO,"APS_SetLinkListMode\n");
-    if (gBitFileVersion < VERSION_ELL) {
-      return SetLinkListMode_V5( device, enable, mode, dac);
-    } else {
-      return SetLinkListMode_ELL(device, enable, mode, dac);
-    }
+	// may be able to merge functions back together
+	dlog(DEBUG_INFO,"APS_SetLinkListMode\n");
+	if (gBitFileVersion < VERSION_ELL) {
+		return SetLinkListMode_V5( device, enable, mode, dac);
+	} else {
+		return SetLinkListMode_ELL(device, enable, mode, dac);
+	}
 }
 
 EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
@@ -1429,7 +1429,7 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 	char * dac_type;
 	int dac_sm_enable, dac_sw_led, dac_trig_src, dac_sw_trig, dac_sm_reset;
 
-  dlog(DEBUG_VERBOSE,"Trigger FPGA DAC%i type %i \n", dac, trigger_type);
+	dlog(DEBUG_VERBOSE,"Trigger FPGA DAC%i type %i \n", dac, trigger_type);
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -1442,37 +1442,37 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 	// to TriggerDAC and validate the input value of
 	// the variable dac
 	switch(dac) {
-	  case -1:
-	    // fall through
-		case 0:
-			// fall through
-		case 1:
-			// fall through
-		case 2:
-			// fall through
-		case 3:
-			dac_type      = BOTH_DACS;
-			dac_sw_led    = TRIGLEDMSK_SWLED0 | TRIGLEDMSK_SWLED1;
-			dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG | TRIGLEDMSK_PHSSWTRIG;
-			if (gBitFileVersion < VERSION_ELL) {
-				dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
-				dac_trig_src  = CSRMSK_ENVTRIGSRC | CSRMSK_PHSTRIGSRC;
-				dac_sm_reset  = CSRMSK_ENVSMRST | CSRMSK_PHSSMRST;
-			} else {
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL ;
-				dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL | CSRMSK_PHSTRIGSRC_ELL;
-				dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL ;
-			}
+	case -1:
+		// fall through
+	case 0:
+		// fall through
+	case 1:
+		// fall through
+	case 2:
+		// fall through
+	case 3:
+		dac_type      = BOTH_DACS;
+		dac_sw_led    = TRIGLEDMSK_SWLED0 | TRIGLEDMSK_SWLED1;
+		dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG | TRIGLEDMSK_PHSSWTRIG;
+		if (gBitFileVersion < VERSION_ELL) {
+			dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
+			dac_trig_src  = CSRMSK_ENVTRIGSRC | CSRMSK_PHSTRIGSRC;
+			dac_sm_reset  = CSRMSK_ENVSMRST | CSRMSK_PHSSMRST;
+		} else {
+			dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL ;
+			dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL | CSRMSK_PHSTRIGSRC_ELL;
+			dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL ;
+		}
 
-			break;
-		default:
-			return -2;
+		break;
+	default:
+		return -2;
 	}
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
-	  dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
-		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
-		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
+		dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
+				APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
+				APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
 		);
 	}
 
@@ -1480,7 +1480,7 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 		dlog(DEBUG_VERBOSE, "Trigger %s State Machine ... \n", dac_type);
 
 		APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
-	  APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
+		APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
 
 	} else if (trigger_type == HARDWARE_TRIGGER) {
 
@@ -1496,15 +1496,15 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 	}
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
-	    dlog(DEBUG_VERBOSE,"New CSR: %x TRIGLED %i\n",
-	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
-	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
-	    );
-	  }
+		dlog(DEBUG_VERBOSE,"New CSR: %x TRIGLED %i\n",
+				APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
+				APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
+		);
+	}
 
 	dlog(DEBUG_VERBOSE,"Enable %s State Machine ... \n", dac_type);
 
-  APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
+	APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
 	//APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
 
 
@@ -1542,31 +1542,31 @@ EXPORT int APS_PauseFpga(int device, int dac)
 	dlog(DEBUG_VERBOSE,"Pause FPGA%i DAC%i\n", fpga, dac);
 
 	switch(dac) {
-	  case -1:
-	    // fall through
-		case 0:
-			// fall through
-		case 1:
-			// fall through
-		case 2:
-			// fall through
-		case 3:
-			dac_type      = BOTH_DACS;
-			dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG | TRIGLEDMSK_PHSSWTRIG;
+	case -1:
+		// fall through
+	case 0:
+		// fall through
+	case 1:
+		// fall through
+	case 2:
+		// fall through
+	case 3:
+		dac_type      = BOTH_DACS;
+		dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG | TRIGLEDMSK_PHSSWTRIG;
 
-			if (gBitFileVersion < VERSION_ELL) {
-				dac_trig_src  = CSRMSK_ENVTRIGSRC | CSRMSK_PHSTRIGSRC;
-				dac_sm_reset  = CSRMSK_ENVSMRST | CSRMSK_PHSSMRST;
-				dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
-			} else {
-				dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL | CSRMSK_PHSTRIGSRC_ELL ;
-				dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
-			}
+		if (gBitFileVersion < VERSION_ELL) {
+			dac_trig_src  = CSRMSK_ENVTRIGSRC | CSRMSK_PHSTRIGSRC;
+			dac_sm_reset  = CSRMSK_ENVSMRST | CSRMSK_PHSSMRST;
+			dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
+		} else {
+			dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL | CSRMSK_PHSTRIGSRC_ELL ;
+			dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
+			dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
+		}
 
-			break;
-		default:
-			return -2;
+		break;
+	default:
+		return -2;
 	}
 
 	APS_ClearBit(device, fpga,FPGA_OFF_TRIGLED, dac_sw_trig);
@@ -1606,29 +1606,29 @@ EXPORT int APS_DisableFpga(int device, int dac)
 	dlog(DEBUG_VERBOSE,"Disable FPGA%i DAC%i\n", fpga, dac);
 
 	switch(dac) {
-	  case -1 :
-	    // fall through
-		case 0:
-			// fall through
-		case 1:
-			// fall through
-		case 2:
-			// fall through
-		case 3:
-			dac_type      = BOTH_DACS;
-			dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG | TRIGLEDMSK_PHSSWTRIG;
+	case -1 :
+		// fall through
+	case 0:
+		// fall through
+	case 1:
+		// fall through
+	case 2:
+		// fall through
+	case 3:
+		dac_type      = BOTH_DACS;
+		dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG | TRIGLEDMSK_PHSSWTRIG;
 
-			if ( gBitFileVersion < VERSION_ELL) {
-				dac_sm_reset  = CSRMSK_ENVSMRST | CSRMSK_PHSSMRST;
-				dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
-			} else {
-				dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
-			}
+		if ( gBitFileVersion < VERSION_ELL) {
+			dac_sm_reset  = CSRMSK_ENVSMRST | CSRMSK_PHSSMRST;
+			dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
+		} else {
+			dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
+			dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
+		}
 
-			break;
-		default:
-			return -2;
+		break;
+	default:
+		return -2;
 	}
 
 	//dlog(DEBUG_VERBOSE, "Disable %s State Machine ... \n", dac_type);
@@ -1658,7 +1658,7 @@ EXPORT int APS_ReadBitFileVersion(int device) {
 
 		version = version & 0x1FF; // First 9 bits hold version
 	}
-  dlog(DEBUG_INFO,"Found BitFile Version 0x%x\n", version);
+	dlog(DEBUG_INFO,"Found BitFile Version 0x%x\n", version);
 
 	gBitFileVersion = version;
 	gRegRead = (version >= VERSION_ELL) ? FPGA_ADDR_ELL_REGREAD : FPGA_ADDR_REGREAD;
@@ -1704,9 +1704,9 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 	int cnt;
 	char * dac_type;
 
-	#ifdef LOG_WAVEFORM
+#ifdef LOG_WAVEFORM
 	FILE * logwaveform;
-	#endif
+#endif
 
 	ULONG data;
 	ULONG wf_length;
@@ -1740,44 +1740,44 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 
 	// setup register addressing based on DAC
 	switch(dac) {
-		case 0:
-			// fall through
-		case 2:
-			dac_type   = ENVELOPE;
-			dac_offset = FPGA_OFF_ENVOFF;
-			dac_size   = FPGA_OFF_ENVSIZE;
-			if (gBitFileVersion < VERSION_ELL) {
-				dac_mem_lock = CSRMSK_ENVMEMLCK;
-				dac_write = FPGA_ADDR_ENVWRITE;
+	case 0:
+		// fall through
+	case 2:
+		dac_type   = ENVELOPE;
+		dac_offset = FPGA_OFF_ENVOFF;
+		dac_size   = FPGA_OFF_ENVSIZE;
+		if (gBitFileVersion < VERSION_ELL) {
+			dac_mem_lock = CSRMSK_ENVMEMLCK;
+			dac_write = FPGA_ADDR_ENVWRITE;
 
-			} else {
-				dac_mem_lock = CSRMSK_ENVMEMLCK_ELL;
-				dac_write =  FPGA_ADDR_ELL_ENVWRITE;
-			}
+		} else {
+			dac_mem_lock = CSRMSK_ENVMEMLCK_ELL;
+			dac_write =  FPGA_ADDR_ELL_ENVWRITE;
+		}
 
-			break;
-		case 1:
-			// fall through
-		case 3:
-			dac_type   = PHASE;
-			dac_offset = FPGA_OFF_PHSOFF;
-			dac_size   = FPGA_OFF_PHSSIZE;
+		break;
+	case 1:
+		// fall through
+	case 3:
+		dac_type   = PHASE;
+		dac_offset = FPGA_OFF_PHSOFF;
+		dac_size   = FPGA_OFF_PHSSIZE;
 
-			if (gBitFileVersion < VERSION_ELL) {
-				dac_mem_lock = CSRMSK_PHSMEMLCK;
-				dac_write = FPGA_ADDR_PHSWRITE;
-			} else {
-				dac_mem_lock = CSRMSK_PHSMEMLCK_ELL ;
-				dac_write =  FPGA_ADDR_ELL_PHSWRITE;
-			}
-			break;
-		default:
-			return -2;
+		if (gBitFileVersion < VERSION_ELL) {
+			dac_mem_lock = CSRMSK_PHSMEMLCK;
+			dac_write = FPGA_ADDR_PHSWRITE;
+		} else {
+			dac_mem_lock = CSRMSK_PHSMEMLCK_ELL ;
+			dac_write =  FPGA_ADDR_ELL_PHSWRITE;
+		}
+		break;
+	default:
+		return -2;
 	}
 
 	dac_read = gRegRead | dac_write;
 
-  dlog(DEBUG_VERBOSE,"Clearing Control and Status Register ...\n");
+	dlog(DEBUG_VERBOSE,"Clearing Control and Status Register ...\n");
 
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_CSR, 0x0, fpga);
 
@@ -1846,49 +1846,49 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 }
 
 EXPORT int APS_ReadLinkListStatus(int device, int dac) {
-  int csr, link_list_status;
-  int fpga;
+	int csr, link_list_status;
+	int fpga;
 
-  int val;
-  int status;
-  char * dac_type;
+	int val;
+	int status;
+	char * dac_type;
 
-  fpga = dac2fpga(dac);
-  if (fpga < 0) {
-    return -1;
-  }
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
 
-  if (gBitFileVersion < VERSION_ELL) {
-    dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
-    return -1;
-  }
+	if (gBitFileVersion < VERSION_ELL) {
+		dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
+		return -1;
+	}
 
-  csr = FPGA_OFF_CSR;
+	csr = FPGA_OFF_CSR;
 
-  // setup register addressing based on DAC
-  switch(dac) {
-    case 0:
-      // fall through
-    case 2:
-      dac_type = ENVELOPE;
-      link_list_status  = CSRMSK_ENVLLSTATUS_ELL;
-      break;
-    case 1:
-      // fall through
-    case 3:
-      dac_type = PHASE;
-      link_list_status  = CSRMSK_PHSLLSTATUS_ELL;
-      break;
-    default:
-      return -2;
-  }
-  // read CSR
-  val = APS_ReadFPGA(device, gRegRead | csr, fpga);
-  status = (val & link_list_status) == link_list_status;
+	// setup register addressing based on DAC
+	switch(dac) {
+	case 0:
+		// fall through
+	case 2:
+		dac_type = ENVELOPE;
+		link_list_status  = CSRMSK_ENVLLSTATUS_ELL;
+		break;
+	case 1:
+		// fall through
+	case 3:
+		dac_type = PHASE;
+		link_list_status  = CSRMSK_PHSLLSTATUS_ELL;
+		break;
+	default:
+		return -2;
+	}
+	// read CSR
+	val = APS_ReadFPGA(device, gRegRead | csr, fpga);
+	status = (val & link_list_status) == link_list_status;
 
-  dlog(DEBUG_INFO,"CSR = 0x%x LL Status = %i\n", val,status);
+	dlog(DEBUG_INFO,"CSR = 0x%x LL Status = %i\n", val,status);
 
-  return status;
+	return status;
 }
 
 EXPORT int APS_IsRunning(int device)
@@ -1904,31 +1904,31 @@ EXPORT int APS_IsRunning(int device)
  *
  ********************************************************************/
 {
-  int csrReg1, csrReg2;
-  int dac_sm_enable;
-  int running;
-  // load current cntrl reg
-  csrReg1 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 1);
-  csrReg2 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 2);
+	int csrReg1, csrReg2;
+	int dac_sm_enable;
+	int running;
+	// load current cntrl reg
+	csrReg1 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 1);
+	csrReg2 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 2);
 
-  if (gBitFileVersion < VERSION_ELL) {
-      dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
+	if (gBitFileVersion < VERSION_ELL) {
+		dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
 
-    } else {
-      dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL ;
+	} else {
+		dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL ;
 
-    }
+	}
 
-  // test for output enable on each channel
-  csrReg1 &= dac_sm_enable;
-  csrReg2 &= dac_sm_enable;
+	// test for output enable on each channel
+	csrReg1 &= dac_sm_enable;
+	csrReg2 &= dac_sm_enable;
 
-  // or each channel together to determine if the aps is running
-  running = csrReg1 | csrReg2;
-  if (running)
-    running = 1;  // return 1 if running otherwise return 0;
+	// or each channel together to determine if the aps is running
+	running = csrReg1 | csrReg2;
+	if (running)
+		running = 1;  // return 1 if running otherwise return 0;
 
-  return running;
+	return running;
 }
 
 EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
@@ -1937,37 +1937,37 @@ EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
  * offset - signed 14-bit value (-8192, 8192) representing the channel offset
  */
 {
-  int fpga, zero_register_addr;
-  
-  fpga = dac2fpga(dac);
-  if (fpga < 0) {
-    return -1;
-  }
-  
-  switch (dac) {
-    case 0:
-      // fall through
-    case 2:
-      zero_register_addr = FPGA_OFF_DAC02_ZERO;
-      break;
-    case 1:
-      // fall through
-    case 3:
-      zero_register_addr = FPGA_OFF_DAC13_ZERO;
-      break;
-    default:
-      return -2;
-  }
-  
-  // clip the offset value to the allowed range
-  if (offset > 8191)
-    offset = 8191;
-  if (offset < -8191)
-    offset = -8191;
-  dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, offset);
-  
-  APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset, fpga);
-  return 0;
+	int fpga, zero_register_addr;
+
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+
+	switch (dac) {
+	case 0:
+		// fall through
+	case 2:
+		zero_register_addr = FPGA_OFF_DAC02_ZERO;
+		break;
+	case 1:
+		// fall through
+	case 3:
+		zero_register_addr = FPGA_OFF_DAC13_ZERO;
+		break;
+	default:
+		return -2;
+	}
+
+	// clip the offset value to the allowed range
+	if (offset > 8191)
+		offset = 8191;
+	if (offset < -8191)
+		offset = -8191;
+	dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, offset);
+
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset, fpga);
+	return 0;
 }
 
 EXPORT short APS_ReadChannelOffset(int device, int dac)
@@ -1975,27 +1975,27 @@ EXPORT short APS_ReadChannelOffset(int device, int dac)
  * Read the zero register for the associated channel
  */
 {
-  int fpga, zero_register_addr;
-  
-  fpga = dac2fpga(dac);
-  if (fpga < 0) {
-    return -1;
-  }
-  
-  switch (dac) {
-    case 0:
-      // fall through
-    case 2:
-      zero_register_addr = FPGA_OFF_DAC02_ZERO;
-      break;
-    case 1:
-      // fall through
-    case 3:
-      zero_register_addr = FPGA_OFF_DAC13_ZERO;
-      break;
-    default:
-      return -2;
-  }
-  
-  return APS_ReadFPGA(device, gRegRead | zero_register_addr, fpga);
+	int fpga, zero_register_addr;
+
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+
+	switch (dac) {
+	case 0:
+		// fall through
+	case 2:
+		zero_register_addr = FPGA_OFF_DAC02_ZERO;
+		break;
+	case 1:
+		// fall through
+	case 3:
+		zero_register_addr = FPGA_OFF_DAC13_ZERO;
+		break;
+	default:
+		return -2;
+	}
+
+	return APS_ReadFPGA(device, gRegRead | zero_register_addr, fpga);
 }
