@@ -8,6 +8,8 @@ import os
 import math
 from copy import deepcopy
 
+from optparse import OptionParser
+
 from PySide import QtGui, QtUiTools, QtCore
 
 
@@ -62,7 +64,7 @@ class PulseParamGUI(object):
     _currentQubit = None
     _currentChannel = None
     
-    def __init__(self):
+    def __init__(self, fileName=None):
 
         #It seems there should be some nicer way to do this so that we could still subclass QMainWindow
         loader = QtUiTools.QUiLoader()
@@ -100,6 +102,10 @@ class PulseParamGUI(object):
         self.ui.actionAdd_Channel.triggered.connect(self.add_channel)
         self.ui.actionDelete_Channel.triggered.connect(self.delete_channel)
         
+        if fileName is not None:
+            self._paramPath = fileName
+            self.refreshParameters(fileName)
+   
         self.ui.show()
 
     
@@ -259,7 +265,12 @@ class PulseParamGUI(object):
             self.ui.statusbar.showMessage('Unable to save file.',5000)
 
 if __name__ == '__main__':
+    #See if we have been passed a cfg file
+    parser = OptionParser()
+    parser.add_option('-f', action='store', type='string', dest='fileName', default=None)    
+    (options, args) =  parser.parse_args(sys.argv[1:])
+
     # create the Qt application
     app = QtGui.QApplication(sys.argv)
-    frame = PulseParamGUI()
+    frame = PulseParamGUI(options.fileName)
     sys.exit(app.exec_())

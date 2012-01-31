@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>538</width>
-    <height>351</height>
+    <height>354</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -142,8 +142,14 @@
       </item>
       <item>
        <widget class="Line" name="line">
+        <property name="minimumSize">
+         <size>
+          <width>3</width>
+          <height>0</height>
+         </size>
+        </property>
         <property name="lineWidth">
-         <number>10</number>
+         <number>2</number>
         </property>
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -341,7 +347,7 @@
      <x>0</x>
      <y>0</y>
      <width>538</width>
-     <height>20</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
