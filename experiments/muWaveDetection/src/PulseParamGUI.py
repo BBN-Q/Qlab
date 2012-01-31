@@ -68,7 +68,7 @@ class PulseParamGUI(object):
 
         #It seems there should be some nicer way to do this so that we could still subclass QMainWindow
         loader = QtUiTools.QUiLoader()
-        file = QtCore.QFile('pulseParamGUI.ui')
+        file = QtCore.QFile(os.path.join(os.path.dirname(sys.argv[0]), 'pulseParamGUI.ui'))
         file.open(QtCore.QFile.ReadOnly)
         self.ui = loader.load(file)
         file.close()
