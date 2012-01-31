@@ -69,7 +69,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             
             % to do: load channel mapping from file
             obj.channelMap = containers.Map();
-            obj.channelMap('q1') = struct('instr', 'BBNAPS', 'i', 1, 'q', 2, 'marker', '3m1');
+            obj.channelMap('q1') = struct('instr', 'TekAWG', 'i', 1, 'q', 2, 'marker', '3m1');
             obj.channelMap('q2') = struct('instr', 'TekAWG', 'i', 3, 'q', 4, 'marker', '4m1');
             obj.channelMap('q3') = struct('instr', 'BBNAPS', 'i', 1, 'q', 2, 'marker', '3m1');
             obj.channelMap('q1q2') = struct('instr', 'TekAWG', 'i', 1, 'q', 2, 'marker', '2m1');

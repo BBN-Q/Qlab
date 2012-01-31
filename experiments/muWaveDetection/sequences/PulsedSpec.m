@@ -13,17 +13,23 @@ nbrRepeats = 1;
 specLength = 9600;
 specAmp = 4000;
 
-% load config parameters from file
-load(getpref('qlab','pulseParamsBundleFile'));
+params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+qParams = params.q2; % choose target qubit here
+IQkey = 'TekAWG34';
 % if using SSB, uncomment the following line
-% Ts('12') = eye(2);
-IQkey = 'BBNAPS12';
-pg = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts(IQkey), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength, 'passThru', passThrus(IQkey));
+% params.(IQkey).T = eye(2);
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'passThru', params.(IQkey).passThru);
 
 patseq = {{pg.pulse('Xtheta', 'amp', specAmp, 'width', specLength, 'pType', 'square')}};
 
 calseq = {};
 
-compileSequenceBBNAPS12(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot, 1);
+compiler = ['compileSequence' IQkey];
+compileArgs = {basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot};
+if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
+    feval(compiler, compileArgs{:});
+else
+    error('Unable to find compiler for IQkey: %s',IQkey) 
+end
 
 end

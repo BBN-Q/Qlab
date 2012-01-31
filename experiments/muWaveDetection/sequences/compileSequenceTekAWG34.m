@@ -1,4 +1,8 @@
-function compileSequenceTekAWG34(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot)
+function compileSequenceTekAWG34(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot, plotIdx)
+
+if ~exist('plotIdx', 'var')
+    plotIdx = 20;
+end
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
@@ -43,7 +47,7 @@ ch1m2 = repmat(int32(pg.getPatternSeq(measSeq, n, params.measDelay, fixedPt+meas
 
 
 if makePlot
-    myn = 10;
+    myn = plotIdx;
     figure
     plot(ch3(myn,:))
     hold on
