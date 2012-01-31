@@ -206,7 +206,7 @@ classdef PatternGen < handle
             fname = params.arbfname;
             delta = params.delta;
             
-            if ~ismember(fname, keys(arbPulses))
+            if ~arbPulse.isKey(fname)
                 % need to load the pulse from file
                 % TODO check for existence of file before loading it
                 arbPulses(fname) = load(fname);
@@ -222,6 +222,10 @@ classdef PatternGen < handle
         % buffer pulse generator
 		function out = bufferPulse(patx, paty, zeroLevel, padding, reset, delay)
 			self = PatternGen;
+            % min reset = 1
+            if reset < 1
+				reset = 1;
+			end
 
             % subtract offsets
 			patx = patx(:) - zeroLevel;
@@ -240,22 +244,18 @@ classdef PatternGen < handle
 			pat = uint8(logical(pat));
 			
 			% keep the pulse high if the delay is less than the reset time
-			% min reset = 1
-			if reset < 1
-				reset = 1;
-			end
-			i = 1;
-			while i < (length(pat)-reset-1)
-				if (pat(i) && pat(i+reset+1))
-					pat = [pat(1:i); ones(reset,1); pat(i+reset+1:end)];
-					i = i + reset + 1;
-				else
-					i = i + 1;
-				end
-			end
+            onOffPts = find(diff(pat));
+            bufferSpacings = diff(onOffPts);
+            if length(onOffPts) > 2
+                for ii = 1:(length(bufferSpacings)/2-1)
+                    if bufferSpacings(2*ii) < reset
+                        pat(onOffPts(2*ii):onOffPts(2*ii+1)+1) = 1;
+                    end
+                end
+            end
 			
-			% shift to the left by the delay amount
-			out = [pat(delay+1:end); zeros(delay,1)];
+			% shift by delay # of points
+            out = circshift(pat, delay);
         end
     end
     
@@ -379,46 +379,65 @@ classdef PatternGen < handle
                 params.amp = 1;
             end
             
-            % create closure with the parameters defined above
-            function [xpulse, ypulse] = pulseFunction(n)
-                % if amp, width, sigma, or angle is a vector, get the nth entry
-                function out = getelement(x)
-                    if isscalar(x) || ischar(x)
-                        out = x;
-                    else
-                        out = x(n);
-                    end
+            % if amp, width, sigma, or angle is a vector, get the nth entry
+            function out = getelement(x, n)
+                if isscalar(x) || ischar(x)
+                    out = x;
+                else
+                    out = x(n);
                 end
-                
+            end
+            
+            function out = getlength(x)
+                if isscalar(x) || ischar(x)
+                    out = 1;
+                else
+                    out = length(x);
+                end
+            end
+            
+            % find longest parameter vector
+            nbrPulses = max(structfun(@getlength, params));
+            pulses = cell(nbrPulses,1);
+            modAngles = cell(nbrPulses,1);
+            % construct cell array of pulses for all parameter vectors
+            for n = 1:nbrPulses
                 % pick out the nth element of parameters provided as
                 % vectors
-                elementParams = params;
-                fields = fieldnames(params);
-                for ii = 1:length(fields)
-                    field = fields{ii};
-                    elementParams.(field) = getelement(params.(field));
-                end
-                angle = elementParams.angle;
+                elementParams = structfun(@(x) getelement(x, n), params, 'UniformOutput', 0);
                 duration = elementParams.duration;
                 width = elementParams.width;
                 
                 [xpulse, ypulse] = pf(elementParams);
                 
-                % rotate and correct the pulse
-                complexPulse = xpulse +1j*ypulse;
-                timeStep = 1/self.samplingRate;
-                tmpAngles = angle - 2*pi*params.modFrequency*timeStep*(0:(width-1))';
-                complexPulse = complexPulse.*exp(1j*tmpAngles);
-                xypairs = self.correctionT*[real(complexPulse) imag(complexPulse)].';
-                xpulse = xypairs(1,:).';
-                ypulse = xypairs(2,:).';
-                
+                % add buffer padding
                 if (duration > width)
                     padleft = floor((duration - width)/2);
                     padright = ceil((duration - width)/2);
                     xpulse = [zeros(padleft,1); xpulse; zeros(padright,1)];
                     ypulse = [zeros(padleft,1); ypulse; zeros(padright,1)];
                 end
+                
+                % store the pulse
+                pulses{n} = xpulse +1j*ypulse;
+                
+                % precompute SSB modulation angles
+                timeStep = 1/self.samplingRate;
+                modAngles{n} = - 2*pi*params.modFrequency*timeStep*(0:(length(pulses{n})-1))';
+            end
+            
+            
+            % create closure with the parameters defined above
+            function [xpulse, ypulse] = pulseFunction(n)
+                angle = params.angle(1+mod(n-1, length(params.angle)));
+                complexPulse = pulses{1+mod(n-1, length(pulses))};
+                
+                % rotate and correct the pulse
+                tmpAngles = angle + modAngles{n};
+                complexPulse = complexPulse.*exp(1j*tmpAngles);
+                xypairs = self.correctionT*[real(complexPulse) imag(complexPulse)].';
+                xpulse = xypairs(1,:).';
+                ypulse = xypairs(2,:).';
             end
         end
         
