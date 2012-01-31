@@ -298,7 +298,13 @@ set(mainWindow, 'Visible', 'on');
 		Exp.finalizeData;
 
 		status = 0;
-	end
+    end
+
+    function keyPress(src, event)
+        if strcmp(event.Modifier{1},'control') && strcmp(event.Key,'r')
+            run_callback()
+        end
+    end
 
 end
 
