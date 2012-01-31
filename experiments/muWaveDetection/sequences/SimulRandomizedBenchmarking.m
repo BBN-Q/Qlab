@@ -107,9 +107,9 @@ calseqQ1 = {{pgQ1.pulse('QId')},{pgQ1.pulse('Xp')},{pgQ1.pulse('QId')},{pgQ1.pul
 calseqQ2 = {{pgQ2.pulse('QId')},{pgQ2.pulse('QId')},{pgQ2.pulse('Xp')},{pgQ2.pulse('Xp')}};
 
 % allocate space for a quarter of the sequences
-nbrSets = 4;
-segments = nbrPatterns/nbrSets + nbrRepeats*length(calseqQ1);
-fprintf('Number of segments in each set: %d\n', segments);
+nbrSets = 2;
+segments = nbrPatterns/nbrSets;
+fprintf('Number of segments in each set: %d\n', segments + nbrRepeats*length(calseqQ1));
 ch1 = zeros(segments, cycleLength);
 ch2 = ch1;
 ch3 = ch1;
@@ -135,23 +135,23 @@ end
 % add calibration experiments
 for n = 1:nbrRepeats*length(calseqQ1);
     [patx paty] = pgQ1.getPatternSeq(calseqQ1{floor((n-1)/nbrRepeats)+1}, 1, params.(IQkeyQ1).delay, fixedPt);
-	ch1(nbrPatterns/nbrSets + n, :) = patx + params.(IQkeyQ1).offset;
-	ch2(nbrPatterns/nbrSets + n, :) = paty + params.(IQkeyQ1).offset;
-    ch3m1(nbrPatterns/nbrSets + n, :) = pgQ1.bufferPulse(patx, paty, 0, params.(IQkeyQ1).bufferPadding, params.(IQkeyQ1).bufferReset, params.(IQkeyQ1).bufferDelay);
+	ch1(segments + n, :) = patx + params.(IQkeyQ1).offset;
+	ch2(segments + n, :) = paty + params.(IQkeyQ1).offset;
+    ch3m1(segments + n, :) = pgQ1.bufferPulse(patx, paty, 0, params.(IQkeyQ1).bufferPadding, params.(IQkeyQ1).bufferReset, params.(IQkeyQ1).bufferDelay);
     
     [patx paty] = pgQ2.getPatternSeq(calseqQ2{floor((n-1)/nbrRepeats)+1}, 1, params.(IQkeyQ2).delay, fixedPt);
-	ch3(nbrPatterns/nbrSets + n, :) = patx + params.(IQkeyQ2).offset;
-	ch4(nbrPatterns/nbrSets + n, :) = paty + params.(IQkeyQ2).offset;
-    ch4m1(nbrPatterns/nbrSets + n, :) = pgQ2.bufferPulse(patx, paty, 0, params.(IQkeyQ2).bufferPadding, params.(IQkeyQ2).bufferReset, params.(IQkeyQ2).bufferDelay);
+	ch3(segments + n, :) = patx + params.(IQkeyQ2).offset;
+	ch4(segments + n, :) = paty + params.(IQkeyQ2).offset;
+    ch4m1(segments + n, :) = pgQ2.bufferPulse(patx, paty, 0, params.(IQkeyQ2).bufferPadding, params.(IQkeyQ2).bufferReset, params.(IQkeyQ2).bufferDelay);
 end
 
 % trigger at fixedPt-500
 % measure from (fixedPt:fixedPt+measLength)
 measLength = 3000;
 measSeq = {pgQ1.pulse('M', 'width', measLength)};
-ch1m1 = repmat(pgQ1.makePattern([], fixedPt-500, ones(100,1), cycleLength), 1, segments)';
-ch1m2 = repmat(int32(pgQ1.getPatternSeq(measSeq, 1, measDelay, fixedPt+measLength)), 1, segments)';
-%ch4m2 = repmat(pgQ1.makePattern([], 5, ones(100,1), cycleLength), 1, segments)';
+ch1m1 = repmat(pgQ1.makePattern([], fixedPt-500, ones(100,1), cycleLength), 1, segments + nbrRepeats*length(calseqQ1))';
+ch1m2 = repmat(int32(pgQ1.getPatternSeq(measSeq, 1, measDelay, fixedPt+measLength)), 1, segments + nbrRepeats*length(calseqQ1))';
+%ch4m2 = repmat(pgQ1.makePattern([], 5, ones(100,1), cycleLength), 1, segments + nbrRepeats*length(calseqQ1))';
 %ch2m2 = ch4m2;
 
 if makePlot
@@ -167,13 +167,18 @@ if makePlot
     plot(3000*ch4m1(myn,:), 'b:')
     grid on
     hold off
+    
+    figure; subplot(2,2,1); imagesc(ch1);
+    subplot(2,2,2); imagesc(ch2);
+    subplot(2,2,3); imagesc(ch3);
+    subplot(2,2,4); imagesc(ch4);
 end
 
 % make first TekAWG file
 options = struct('m21_high', 2.0, 'm41_high', 2.0);
-%TekPattern.exportTekSequence(tempdir, [basename '_1'], ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
+TekPattern.exportTekSequence(tempdir, [basename '_1'], ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
 disp('Moving AWG file to destination');
-%movefile([tempdir basename '_1.awg'], [pathAWG basename '_1.awg']);
+movefile([tempdir basename '_1.awg'], [pathAWG basename '_1.awg']);
 
 disp ('Constructing second set');
 
@@ -189,10 +194,17 @@ for n = 1:segments;
     ch4m1(n, :) = pgQ2.bufferPulse(patx, paty, 0, params.(IQkeyQ2).bufferPadding, params.(IQkeyQ2).bufferReset, params.(IQkeyQ2).bufferDelay);
 end
 
+if makePlot
+    figure; subplot(2,2,1); imagesc(ch1);
+    subplot(2,2,2); imagesc(ch2);
+    subplot(2,2,3); imagesc(ch3);
+    subplot(2,2,4); imagesc(ch4);
+end
+
 % make second TekAWG file
 options = struct('m21_high', 2.0, 'm41_high', 2.0);
-%TekPattern.exportTekSequence(tempdir, [basename '_2'], ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
+TekPattern.exportTekSequence(tempdir, [basename '_2'], ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
 disp('Moving AWG file to destination');
-%movefile([tempdir basename '_2.awg'], [pathAWG basename '_2.awg']);
+movefile([tempdir basename '_2.awg'], [pathAWG basename '_2.awg']);
 
 end
