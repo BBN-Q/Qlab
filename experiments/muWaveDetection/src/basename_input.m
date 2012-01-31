@@ -16,7 +16,7 @@
 %
 % Description: Creates a GUI input for the device and experiment names
 
-function value_fcn = basename_input(parent, position, deviceName, exptName)
+function [value_fcn, exptBox] = basename_input(parent, position, deviceName, exptName)
     % FUNCTION file_counter
     % INPUTS:
     % parent - handle of parent window/figure

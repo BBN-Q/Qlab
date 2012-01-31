@@ -17,7 +17,7 @@
 % Description: Creates the GUI inputs for data path, counter and basename
 % inputs
 
-function value_fcn = path_and_file_controls(parent, position, commonSettings, prevSettings)
+function [value_fcn, exptBox] = path_and_file_controls(parent, position, commonSettings, prevSettings)
     % FUNCTION path_and_file_controls
     % inputs:
     % parent - handle of parent window/figure
@@ -60,7 +60,7 @@ function value_fcn = path_and_file_controls(parent, position, commonSettings, pr
         exptName = prevSettings.exptName;
     end
     position = position + [120 0]; % basename fields over by counter width (110) + gutter
-    get_basename = basename_input(parent, position, deviceName, exptName);
+    [get_basename, exptBox] = basename_input(parent, position, deviceName, exptName);
     
     value_fcn = @get_inputs;
     

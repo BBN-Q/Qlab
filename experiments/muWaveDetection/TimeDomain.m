@@ -145,14 +145,15 @@ get_power_settings = sweepGUIs.PowerSweepGUI(Powertab, 5, 2, '');
 get_phase_settings = sweepGUIs.PhaseSweepGUI(Phasetab, 5, 2, '');
 get_dc_settings = sweepGUIs.DCSweepGUI(DCtab, 5, 2, '');
 get_tekChannel_settings = sweepGUIs.TekChannelSweepGUI(TekChtab, 5, 2, '');
-get_time_settings = sweepGUIs.TimeSweepGUI(Timetab, 5, 2, '');
+[get_time_settings, set_time_settings] = sweepGUIs.TimeSweepGUI(Timetab, 5, 2, '');
 
 % add sweep/loop selector
 fastLoop = labeledDropDown(mainWindow, [775 550 120 25], 'Fast Loop', ...
 	{'frequencyA', 'power', 'phase', 'dc', 'TekCh', 'CrossDriveTuneUp', 'Repeat', 'nothing'});
 
-% add path and file controls
-get_path_and_file = path_and_file_controls(mainWindow, [910 525], commonSettings, prevSettings);
+% add path and file controls\
+%Crude hack to pull out a handle to the experiment editbox.
+[get_path_and_file, exptBox] = path_and_file_controls(mainWindow, [910 525], commonSettings, prevSettings);
 
 % add soft averages control
 softAvgs = uicontrol(mainWindow, ...
@@ -189,10 +190,13 @@ GUIgetters = containers.Map();
 GUIgetters('TekAWG') = get_tekAWG_settings;
 GUIgetters('BBNAPS') = get_APS_settings;
 GUIgetters('digitizer') = get_acqiris_settings;
+GUIgetters('xaxis') = get_time_settings;
 GUIsetters = containers.Map();
 GUIsetters('TekAWG') = set_tekAWG_GUI;
 GUIsetters('BBNAPS') = set_APS_settings;
 GUIsetters('digitizer') = set_acqiris_settings;
+GUIsetters('xaxis') = set_time_settings;
+GUIsetters('exptBox') = exptBox;
 
 
 ExperimentQuickPicker_GUI(mainWindow, 50, 700, GUIgetters, GUIsetters);
