@@ -150,7 +150,7 @@ end
 measLength = 3000;
 measSeq = {pgQ1.pulse('M', 'width', measLength)};
 ch1m1 = repmat(pgQ1.makePattern([], fixedPt-500, ones(100,1), cycleLength), 1, segments)';
-ch1m2 = repmat(int32(pgQ1.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength)), 1, segments)';
+ch1m2 = repmat(int32(pgQ1.getPatternSeq(measSeq, 1, measDelay, fixedPt+measLength)), 1, segments)';
 %ch4m2 = repmat(pgQ1.makePattern([], 5, ones(100,1), cycleLength), 1, segments)';
 %ch2m2 = ch4m2;
 

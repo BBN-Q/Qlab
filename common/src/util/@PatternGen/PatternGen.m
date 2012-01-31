@@ -379,58 +379,65 @@ classdef PatternGen < handle
                 params.amp = 1;
             end
             
-            % create closure with the parameters defined above
-            function [xpulse, ypulse] = pulseFunction(n)
-                % if amp, width, sigma, or angle is a vector, get the nth entry
-                function out = getelement(x)
-                    if isscalar(x) || ischar(x)
-                        out = x;
-                    else
-                        out = x(n);
-                    end
+            % if amp, width, sigma, or angle is a vector, get the nth entry
+            function out = getelement(x, n)
+                if isscalar(x) || ischar(x)
+                    out = x;
+                else
+                    out = x(n);
                 end
-                persistent pulseCache
-                if isempty(pulseCache)
-                    pulseCache = containers.Map();
+            end
+            
+            function out = getlength(x)
+                if isscalar(x) || ischar(x)
+                    out = 1;
+                else
+                    out = length(x);
                 end
-                
+            end
+            
+            % find longest parameter vector
+            nbrPulses = max(structfun(@getlength, params));
+            pulses = cell(nbrPulses,1);
+            modAngles = cell(nbrPulses,1);
+            % construct cell array of pulses for all parameter vectors
+            for n = 1:nbrPulses
                 % pick out the nth element of parameters provided as
                 % vectors
-                elementParams = structfun(@getelement, params, 'UniformOutput', 0);
-                sha = java.security.MessageDigest.getInstance('SHA-1');
-                paramSig = cellfun(@int32, struct2cell(elementParams), 'UniformOutput', 0);
-                % calculate SHA hash of parameters
-                sha.reset();
-                sha.update(uint8([paramSig{:}]));
-                paramHash = char(sha.digest());
-                if pulseCache.isKey(paramHash)
-                    cachedVal = pulseCache(paramHash);
-                    xpulse = real(cachedVal);
-                    ypulse = imag(cachedVal);
-                else
-                    [xpulse, ypulse] = pf(elementParams);
-                    pulseCache(paramHash) = xpulse +1j*ypulse;
-                end
-                
-                angle = elementParams.angle;
+                elementParams = structfun(@(x) getelement(x, n), params, 'UniformOutput', 0);
                 duration = elementParams.duration;
                 width = elementParams.width;
                 
-                % rotate and correct the pulse
-                complexPulse = xpulse +1j*ypulse;
-                timeStep = 1/self.samplingRate;
-                tmpAngles = angle - 2*pi*params.modFrequency*timeStep*(0:(width-1))';
-                complexPulse = complexPulse.*exp(1j*tmpAngles);
-                xypairs = self.correctionT*[real(complexPulse) imag(complexPulse)].';
-                xpulse = xypairs(1,:).';
-                ypulse = xypairs(2,:).';
+                [xpulse, ypulse] = pf(elementParams);
                 
+                % add buffer padding
                 if (duration > width)
                     padleft = floor((duration - width)/2);
                     padright = ceil((duration - width)/2);
                     xpulse = [zeros(padleft,1); xpulse; zeros(padright,1)];
                     ypulse = [zeros(padleft,1); ypulse; zeros(padright,1)];
                 end
+                
+                % store the pulse
+                pulses{n} = xpulse +1j*ypulse;
+                
+                % precompute SSB modulation angles
+                timeStep = 1/self.samplingRate;
+                modAngles{n} = - 2*pi*params.modFrequency*timeStep*(0:(length(pulses{n})-1))';
+            end
+            
+            
+            % create closure with the parameters defined above
+            function [xpulse, ypulse] = pulseFunction(n)
+                angle = params.angle(1+mod(n-1, length(params.angle)));
+                complexPulse = pulses{1+mod(n-1, length(pulses))};
+                
+                % rotate and correct the pulse
+                tmpAngles = angle + modAngles{n};
+                complexPulse = complexPulse.*exp(1j*tmpAngles);
+                xypairs = self.correctionT*[real(complexPulse) imag(complexPulse)].';
+                xpulse = xypairs(1,:).';
+                ypulse = xypairs(2,:).';
             end
         end
         
