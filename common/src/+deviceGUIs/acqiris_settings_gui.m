@@ -1,4 +1,4 @@
-function settings_fcn = acqiris_settings_gui(parent, left, bottom, settings)
+function [get_settings_fcn, set_settings_fcn] = acqiris_settings_gui(parent, left, bottom, settings)
 % ACQIRIS_SETTINGS_GUID
 %-------------------------------------------------------------------------------
 % File name   : acqiris_settings_guid.m       
@@ -61,10 +61,11 @@ build_gui();
 if nargin < 4
 	settings = struct();
 end
-set_defaults(settings);
+set_GUI_fields(settings);
 
-settings_fcn = @get_settings;
-
+% Assign function handles output
+get_settings_fcn = @get_settings;
+set_settings_fcn = @set_GUI_fields;
 %% ---------------------------------------------------------------------------
 	function build_gui()
 % Creation of all uicontrols
@@ -595,7 +596,7 @@ settings_fcn = @get_settings;
 		scope_settings.averager = avgSettings;
 	end
 
-	function set_defaults(settings)
+	function set_GUI_fields(settings)
 		% define default values for fields. If given a settings structure, grab
 		% defaults from it
 		defaults = struct();

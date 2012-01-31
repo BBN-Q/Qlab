@@ -79,7 +79,8 @@ mainWindow = figure( ...
 	'MenuBar', 'none', ...
 	'NumberTitle', 'off', ...
 	'Color', get(0,'DefaultUicontrolBackgroundColor'), ...
-	'Visible', 'off');
+	'Visible', 'off',...
+    'KeyPressFcn', @keyPress);
 
 % list of instruments expected in the settings structs
 instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'Spec3gen', 'TekAWG', 'BBNAPS', 'BBNdc'};
@@ -87,7 +88,7 @@ instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'Spec3gen',
 [commonSettings, prevSettings] = get_previous_settings('TimeDomain', cfg_path, instrumentNames);
 
 % add instrument panels
-get_acqiris_settings = deviceGUIs.acqiris_settings_gui(mainWindow, 10, 155, prevSettings.InstrParams.scope);
+[get_acqiris_settings, set_acqiris_settings] = deviceGUIs.acqiris_settings_gui(mainWindow, 10, 155, prevSettings.InstrParams.scope);
 
 % create tab group for microwave sources
 warning('off','MATLAB:uitabgroup:OldVersion');
@@ -115,8 +116,8 @@ AWGTabGroup = uitabgroup('parent', AWGPanel, ...
 TekTab = uitab('parent', AWGTabGroup, 'title', 'Tek');
 APSTab = uitab('parent', AWGTabGroup, 'title', 'APS');
 
-get_tekAWG_settings = deviceGUIs.AWG5014_settings_GUI(TekTab, 5, 5, 'TekAWG', prevSettings.InstrParams.TekAWG);
-get_APS_settings = deviceGUIs.APS_settings_GUI(APSTab, 5, 5, 'BBN APS', prevSettings.InstrParams.BBNAPS);
+[get_tekAWG_settings, set_tekAWG_GUI] = deviceGUIs.AWG5014_settings_GUI(TekTab, 5, 5, 'TekAWG', prevSettings.InstrParams.TekAWG);
+[get_APS_settings, set_APS_settings] = deviceGUIs.APS_settings_GUI(APSTab, 5, 5, 'BBN APS', prevSettings.InstrParams.BBNAPS);
 
 % add DC sources
 get_DCsource_settings = deviceGUIs.DCBias_settings_GUI(mainWindow, 240, 775, prevSettings.InstrParams.BBNdc);
@@ -182,6 +183,21 @@ runHandle = uicontrol(mainWindow, ...
 	'String', 'Run', ...
 	'Position', [50 50, 75, 30], ...
 	'Callback', {@run_callback});
+
+%Add the experiment quick picker
+GUIgetters = containers.Map();
+GUIgetters('TekAWG') = get_tekAWG_settings;
+GUIgetters('BBNAPS') = get_APS_settings;
+GUIgetters('digitizer') = get_acqiris_settings;
+GUIsetters = containers.Map();
+GUIsetters('TekAWG') = set_tekAWG_GUI;
+GUIsetters('BBNAPS') = set_APS_settings;
+GUIsetters('digitizer') = set_acqiris_settings;
+
+
+ExperimentQuickPicker_GUI(mainWindow, 50, 700, GUIgetters, GUIsetters);
+
+
 
 % show mainWindow
 drawnow;
