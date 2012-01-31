@@ -206,7 +206,7 @@ classdef PatternGen < handle
             fname = params.arbfname;
             delta = params.delta;
             
-            if ~ismember(fname, keys(arbPulses))
+            if ~arbPulse.isKey(fname)
                 % need to load the pulse from file
                 % TODO check for existence of file before loading it
                 arbPulses(fname) = load(fname);
@@ -222,6 +222,10 @@ classdef PatternGen < handle
         % buffer pulse generator
 		function out = bufferPulse(patx, paty, zeroLevel, padding, reset, delay)
 			self = PatternGen;
+            % min reset = 1
+            if reset < 1
+				reset = 1;
+			end
 
             % subtract offsets
 			patx = patx(:) - zeroLevel;
@@ -240,22 +244,18 @@ classdef PatternGen < handle
 			pat = uint8(logical(pat));
 			
 			% keep the pulse high if the delay is less than the reset time
-			% min reset = 1
-			if reset < 1
-				reset = 1;
-			end
-			i = 1;
-			while i < (length(pat)-reset-1)
-				if (pat(i) && pat(i+reset+1))
-					pat = [pat(1:i); ones(reset,1); pat(i+reset+1:end)];
-					i = i + reset + 1;
-				else
-					i = i + 1;
-				end
-			end
+            onOffPts = find(diff(pat));
+            bufferSpacings = diff(onOffPts);
+            if length(onOffPts) > 2
+                for ii = 1:(length(bufferSpacings)/2-1)
+                    if bufferSpacings(2*ii) < reset
+                        pat(onOffPts(2*ii):onOffPts(2*ii+1)+1) = 1;
+                    end
+                end
+            end
 			
-			% shift to the left by the delay amount
-			out = [pat(delay+1:end); zeros(delay,1)];
+			% shift by delay # of points
+            out = circshift(pat, delay);
         end
     end
     
@@ -389,20 +389,32 @@ classdef PatternGen < handle
                         out = x(n);
                     end
                 end
+                persistent pulseCache
+                if isempty(pulseCache)
+                    pulseCache = containers.Map();
+                end
                 
                 % pick out the nth element of parameters provided as
                 % vectors
-                elementParams = params;
-                fields = fieldnames(params);
-                for ii = 1:length(fields)
-                    field = fields{ii};
-                    elementParams.(field) = getelement(params.(field));
+                elementParams = structfun(@getelement, params, 'UniformOutput', 0);
+                sha = java.security.MessageDigest.getInstance('SHA-1');
+                paramSig = cellfun(@int32, struct2cell(elementParams), 'UniformOutput', 0);
+                % calculate SHA hash of parameters
+                sha.reset();
+                sha.update(uint8([paramSig{:}]));
+                paramHash = char(sha.digest());
+                if pulseCache.isKey(paramHash)
+                    cachedVal = pulseCache(paramHash);
+                    xpulse = real(cachedVal);
+                    ypulse = imag(cachedVal);
+                else
+                    [xpulse, ypulse] = pf(elementParams);
+                    pulseCache(paramHash) = xpulse +1j*ypulse;
                 end
+                
                 angle = elementParams.angle;
                 duration = elementParams.duration;
                 width = elementParams.width;
-                
-                [xpulse, ypulse] = pf(elementParams);
                 
                 % rotate and correct the pulse
                 complexPulse = xpulse +1j*ypulse;
