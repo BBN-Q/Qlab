@@ -433,7 +433,7 @@ classdef PatternGen < handle
                 complexPulse = pulses{1+mod(n-1, length(pulses))};
                 
                 % rotate and correct the pulse
-                tmpAngles = angle + modAngles{n};
+                tmpAngles = angle + modAngles{1+mod(n-1, length(modAngles))};
                 complexPulse = complexPulse.*exp(1j*tmpAngles);
                 xypairs = self.correctionT*[real(complexPulse) imag(complexPulse)].';
                 xpulse = xypairs(1,:).';
@@ -455,7 +455,7 @@ classdef PatternGen < handle
             end
             
             if ~libisloaded('libaps')
-                md5 = java.security.MessageDigest.getInstance('MD5');
+                sha = java.security.MessageDigest.getInstance('SHA-1');
             else
                 sha1key = libpointer('stringPtr','                                        ');
             end
@@ -494,10 +494,13 @@ classdef PatternGen < handle
                 % and uses java to build hash string. Still need to check
                 % performance
                 if ~libisloaded('libaps')
-                    md5.reset();
-                    md5.update(array);
-                    h=typecast(md5.digest,'uint8');
-                    h = mat2str(h);
+                    sha.reset();
+                    sha.update(array);
+                    h = sha.digest();
+                    % The Java hashtable won't accept a plain char array,
+                    % so we need to convert the hash to another format.
+                    % Use log sum of first 10 values as key
+                    h = sum(int32(logspace(0,9,10)).*int32(h(1:10)'));
                 else
                     sha1key.Value = '                                        ';
                     calllib('libaps','APS_HashPulse', array,length(array),sha1key,length(sha1key.Value));
