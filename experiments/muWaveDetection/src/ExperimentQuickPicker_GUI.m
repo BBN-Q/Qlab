@@ -28,12 +28,11 @@ end
 
 %Load the experiments from the json cfg file
 expParams = struct();
-loadJSON()
 
 % Create all UI controls
 build_gui();
 
-
+loadJSON();
 
 
 %% ---------------------------------------------------------------------------
@@ -110,6 +109,7 @@ build_gui();
 
     function loadJSON(~,~)
         expParams = jsonlab.loadjson(getpref('qlab', 'ExpQuickPickFile'));
+        set(handles.expDropDown, 'String', fieldnames(expParams));
     end
     
     function updateFields(~,~)

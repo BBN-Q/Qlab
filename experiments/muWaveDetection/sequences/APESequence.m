@@ -12,16 +12,16 @@ nbrRepeats = 2;
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
 qParams = params.q1; % choose target qubit here
-IQkey = 'BBN12';
+IQkey = 'TekAWG12';
 % if using SSB, uncomment the following line
 % params.(IQkey).T = eye(2);
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'passThru', params.(IQkey).passThru);
 
 angle = pi/2;
 numPsQId = 4; % number pseudoidentities
-numsteps = 5; %number of drag parameters (11)
-deltamax=-0.5;
-deltamin=-1.5;
+numsteps = 11; %number of drag parameters (11)
+deltamax=-0.0;
+deltamin=-1.0;
 delta=linspace(deltamin,deltamax,numsteps);
 
 sindex = 0;
@@ -45,5 +45,10 @@ end
 % just a pi pulse for scaling
 calseq={{pg.pulse('Xp')}};
 
-compileSequenceBBNAPS12(basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot);
+compiler = ['compileSequence' IQkey];
+compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 10};
+if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
+    feval(compiler, compileArgs{:});
+end
+
 end
