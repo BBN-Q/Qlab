@@ -1,0 +1,13 @@
+import os 
+
+env = Environment(ENV=os.environ, tools=['mingw'])
+
+#Get the 32/64 architecture we want to build and default to 32
+archType = ARGUMENTS.get('arch', '32')
+env.Append(CCFLAGS='-m{0}'.format(archType))
+
+#Build the dll
+finalLib = env.SharedLibrary(target='libaps', source=['libaps.c','common.c','fpga.c','sha1.c','waveform.c'], CPPPATH=['.','./include'])
+
+#Set the final library as protected so we don't clean it by accident
+env.NoClean(finalLib)
