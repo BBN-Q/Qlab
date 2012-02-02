@@ -64,10 +64,10 @@ classdef TekPattern < handle
 			for i = 1:numsteps
                 % by some weird Tektronix convention, waveform numbering
                 % starts at 21
-				self.writeTekPattern(fid, strcat(basename, 'Ch1', sprintf('%03d', i)), 20 + 4*(i - 1) + 1, packedCh1(i,:));
-				self.writeTekPattern(fid, strcat(basename, 'Ch2', sprintf('%03d', i)), 20 + 4*(i - 1) + 2, packedCh2(i,:));
-				self.writeTekPattern(fid, strcat(basename, 'Ch3', sprintf('%03d', i)), 20 + 4*(i - 1) + 3, packedCh3(i,:));
-				self.writeTekPattern(fid, strcat(basename, 'Ch4', sprintf('%03d', i)), 20 + 4*(i - 1) + 4, packedCh4(i,:));
+				self.writeTekPattern(fid, sprintf('%sCh1%03d', basename, i), 20 + 4*(i - 1) + 1, packedCh1(i,:));
+				self.writeTekPattern(fid, sprintf('%sCh2%03d', basename, i), 20 + 4*(i - 1) + 2, packedCh2(i,:));
+				self.writeTekPattern(fid, sprintf('%sCh3%03d', basename, i), 20 + 4*(i - 1) + 3, packedCh3(i,:));
+				self.writeTekPattern(fid, sprintf('%sCh4%03d', basename, i), 20 + 4*(i - 1) + 4, packedCh4(i,:));
 			end
 
 			% write sequence table
@@ -177,16 +177,16 @@ classdef TekPattern < handle
 			self = TekPattern;
 			numstring = num2str(number);
 			
-			self.writeField(fid, strcat('WAVEFORM_NAME_', numstring), filename, 'char');
+            self.writeField(fid, ['WAVEFORM_NAME_', numstring], filename, 'char');
 			
 			% waveform type = 1 for integer format data
-			self.writeField(fid, strcat('WAVEFORM_TYPE_', numstring), 1, 'int16');
+            self.writeField(fid, ['WAVEFORM_TYPE_', numstring], 1, 'int16');
 			
-			self.writeField(fid, strcat('WAVEFORM_LENGTH_', numstring), length(packedPattern), 'int32');
+			self.writeField(fid, ['WAVEFORM_LENGTH_', numstring], length(packedPattern), 'int32');
 			
-			self.writeField(fid, strcat('WAVEFORM_TIMESTAMP_', numstring), 0, 'uint128');
+			self.writeField(fid, ['WAVEFORM_TIMESTAMP_', numstring], 0, 'uint128');
 			
-			fieldName = [strcat('WAVEFORM_DATA_', numstring) 0];
+			fieldName = ['WAVEFORM_DATA_', numstring, 0];
 			dataSize = 2*length(packedPattern);
 			fwrite(fid, length(fieldName), 'uint32');
 			fwrite(fid, dataSize, 'uint32');
@@ -197,18 +197,19 @@ classdef TekPattern < handle
 		function writeTekSeqTable(fid, basename, numsteps, options)
 			self = TekPattern;
 			for i = 1:numsteps
+                i_str = num2str(i);
 				% sequence wait: 1 = on, 0 = off
-				self.writeField(fid, strcat('SEQUENCE_WAIT_', num2str(i)), 1, 'int16');
+				self.writeField(fid, ['SEQUENCE_WAIT_', i_str], 1, 'int16');
 				
 				% sequence loop: 0 = infinite (default = 1)
                 num_repeats = 1;
                 if ismember('num_repeats', fieldnames(options)) && isnumeric(options.num_repeats) && options.num_repeats >= 0
                     num_repeats = options.num_repeats;
                 end
-				self.writeField(fid, strcat('SEQUENCE_LOOP_', num2str(i)), num_repeats, 'int32');
+				self.writeField(fid, ['SEQUENCE_LOOP_', i_str], num_repeats, 'int32');
 				
 				% sequence jump: 0 = off, -1 = next, n = element #
-				self.writeField(fid, strcat('SEQUENCE_JUMP_', num2str(i)), 0, 'int16');
+				self.writeField(fid, ['SEQUENCE_JUMP_', i_str], 0, 'int16');
 				
 				% sequence goto: 0 = off, n = element #
 				if i == numsteps
@@ -216,27 +217,41 @@ classdef TekPattern < handle
 				else
 					goto = 0;
 				end
-				self.writeField(fid, strcat('SEQUENCE_GOTO_', num2str(i)), goto, 'int16');
+				self.writeField(fid, ['SEQUENCE_GOTO_', i_str], goto, 'int16');
 				
-				for j = 1:4
-					namestring = strcat(basename, 'Ch', num2str(j), sprintf('%03d', i));
-					self.writeField(fid, strcat('SEQUENCE_WAVEFORM_NAME_CH_', num2str(j), '_', num2str(i)), namestring, 'char');
-				end
+                namestring = sprintf('%sCh1%03d', basename, i);
+                self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_1_', i_str], namestring, 'char');
+                
+                namestring = sprintf('%sCh2%03d', basename, i);
+                self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_2_', i_str], namestring, 'char');
+                
+                namestring = sprintf('%sCh3%03d', basename, i);
+                self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_3_', i_str], namestring, 'char');
+                
+                namestring = sprintf('%sCh4%03d', basename, i);
+                self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_4_', i_str], namestring, 'char');
 			end
 		end
 
 		function writeField(fid, name, data, type)
 			nameSize = length(name) + 1;
-			typeSizes = containers.Map({'int16', 'int32', 'uint128', 'double'}, {2, 4, 16, 8});
+            typeSizes = struct(...
+                'int16', 2, ...
+                'int32', 4, ...
+                'uint128', 16, ...
+                'double', 8 ...
+            );
 
 			if strcmp(type,'char')
 				dataSize = length(data) + 1;
 				% add null termination to string
 				data = [data 0];
-			elseif isKey(typeSizes, type)
-				dataSize = typeSizes(type);
-			else
-				error('Unknown data type');
+            else
+                try
+                    dataSize = typeSizes.(type);
+                catch
+                    error('Unknown data type');
+                end
 			end
 
 			fwrite(fid, nameSize, 'uint32');
@@ -249,11 +264,7 @@ classdef TekPattern < handle
 			else
 				fwrite(fid, data, type);
 			end
-			
-% 			fprintf(fid, '%d', nameSize);
-% 			fprintf(fid, '%d', dataSize);
-% 			fprintf(fid, '%s', [name 0]);
-% 			fprintf(fid, '%s', num2str(data));
+
 		end
 		
 	end

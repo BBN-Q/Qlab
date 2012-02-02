@@ -7,6 +7,7 @@ end
 basename = 'SimulRB';
 fixedPt = 11000;
 cycleLength = 14000;
+pathAWG = '/Volumes/mqco/AWG/SimulRB/';
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
@@ -14,15 +15,15 @@ measDelay = -64;
 
 q1Params = params.q1;
 IQkeyQ1 = 'TekAWG12';
-pgQ1 = PatternGen('dPiAmp', q1Params.piAmp, 'dPiOn2Amp', q1Params.pi2Amp, 'dSigma', q1Params.sigma, 'dPulseType', q1Params.pulseType, 'dDelta', q1Params.delta, 'correctionT', params.(IQkeyQ1).T, 'dBuffer', q1Params.buffer, 'dPulseLength', q1Params.pulseLength, 'cycleLength', cycleLength, 'passThru', params.(IQkeyQ1).passThru);
+pgQ1 = PatternGen('dPiAmp', q1Params.piAmp, 'dPiOn2Amp', q1Params.pi2Amp, 'dSigma', q1Params.sigma, 'dPulseType', q1Params.pulseType, 'dDelta', q1Params.delta, 'correctionT', params.(IQkeyQ1).T, 'dBuffer', q1Params.buffer, 'dPulseLength', q1Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyQ1).passThru);
 
 q2Params = params.q2;
 IQkeyQ2 = 'TekAWG34';
-pgQ2 = PatternGen('dPiAmp', q2Params.piAmp, 'dPiOn2Amp', q2Params.pi2Amp, 'dSigma', q2Params.sigma, 'dPulseType', q2Params.pulseType, 'dDelta', q2Params.delta, 'correctionT', params.(IQkeyQ2).T, 'dBuffer', q2Params.buffer, 'dPulseLength', q2Params.pulseLength, 'cycleLength', cycleLength, 'passThru', params.(IQkeyQ2).passThru);
+pgQ2 = PatternGen('dPiAmp', q2Params.piAmp, 'dPiOn2Amp', q2Params.pi2Amp, 'dSigma', q2Params.sigma, 'dPulseType', q2Params.pulseType, 'dDelta', q2Params.delta, 'correctionT', params.(IQkeyQ2).T, 'dBuffer', q2Params.buffer, 'dPulseLength', q2Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyQ2).passThru);
 
 q3Params = params.q3; 
 IQkeyQ3 = 'BBNAPS12';
-pgQ3 = PatternGen('dPiAmp', q3Params.piAmp, 'dPiOn2Amp', q3Params.pi2Amp, 'dSigma', q3Params.sigma, 'dPulseType', q3Params.pulseType, 'dDelta', q3Params.delta, 'correctionT', params.(IQkeyQ3).T, 'dBuffer', q3Params.buffer, 'dPulseLength', q3Params.pulseLength, 'cycleLength', cycleLength, 'passThru', params.(IQkeyQ3).passThru);
+pgQ3 = PatternGen('dPiAmp', q3Params.piAmp, 'dPiOn2Amp', q3Params.pi2Amp, 'dSigma', q3Params.sigma, 'dPulseType', q3Params.pulseType, 'dDelta', q3Params.delta, 'correctionT', params.(IQkeyQ3).T, 'dBuffer', q3Params.buffer, 'dPulseLength', q3Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyQ3).passThru);
 
 % load in random Clifford sequences from text file
 fid = fopen('RBsequences.txt');
@@ -110,7 +111,7 @@ calseqQ2 = {{pgQ2.pulse('QId')},{pgQ2.pulse('QId')},{pgQ2.pulse('Xp')},{pgQ2.pul
 nbrSets = 2;
 segments = nbrPatterns/nbrSets;
 fprintf('Number of segments in each set: %d\n', segments + nbrRepeats*length(calseqQ1));
-ch1 = zeros(segments, cycleLength);
+ch1 = zeros(segments + nbrRepeats*length(calseqQ1), cycleLength);
 ch2 = ch1;
 ch3 = ch1;
 ch4 = ch1;
