@@ -43,7 +43,7 @@ classdef PatternGen < handle
         correctionT = eye(2,2);
         arbPulses = containers.Map();
         dArbfname = '';
-        passThru = false; % pg.pulse(...) returns its input when this is enabled
+        linkList = false; % enable to construct link lists
         sha = java.security.MessageDigest.getInstance('SHA-1');
         pulseCollection = containers.Map();
     end
@@ -432,20 +432,6 @@ classdef PatternGen < handle
                 modAngles{n} = - 2*pi*params.modFrequency*timeStep*(0:(length(pulses{n})-1))';
             end
             
-            if obj.linkList
-                retVal.pulseArray = arrayfun(@(x) pulseFunction(x), 1:nbrPulses, 'UniformOutput', 0);
-                retVal.hashKeys = cellfun(@hashArray, retVal.pulseArray);
-                if strcmp(params.pType, 'square')
-                    retVal.isTimeAmplitude = 1;
-                end
-                if ismember(p, identityPulses)
-                    retVal.isZero = 1;
-                end
-                for ii = 1:length(retVal.hashKeys)
-                    self.pulseCollection(retVal.hashKeys(ii)) = retVal.pulseArray{ii};
-                end
-            end
-            
             % create closure with the parameters defined above
             function [xpulse, ypulse] = pulseFunction(n)
                 angle = params.angle(1+mod(n-1, length(params.angle)));
@@ -458,22 +444,46 @@ classdef PatternGen < handle
                 xpulse = xypairs(1,:).';
                 ypulse = xypairs(2,:).';
             end
+            
+            if obj.linkList
+                % how this should look
+                %retVal.pulseArray = arrayfun(@pulseFunction, 1:nbrPulses, 'UniformOutput', 0);
+                %retVal.hashKeys = cellfun(@obj.hashArray, retVal.pulseArray, 'UniformOutput', 0);
+                % some weird MATLAB bug causes this not to work, hence the
+                % following for loop
+                retVal.pulseArray = cell(nbrPulses,1);
+                retVal.hashKeys = cell(nbrPulses,1);
+                for ii = 1:nbrPulses
+                    [xpulse, ypulse] = pulseFunction(ii);
+                    retVal.pulseArray{ii} = [xpulse, ypulse];
+                    retVal.hashKeys{ii} = obj.hashArray(retVal.pulseArray{ii});
+                end
+                if strcmp(params.pType, 'square')
+                    retVal.isTimeAmplitude = 1;
+                end
+                if ismember(p, identityPulses)
+                    retVal.isZero = 1;
+                end
+                for ii = 1:length(retVal.hashKeys)
+                    self.pulseCollection(retVal.hashKeys{ii}) = retVal.pulseArray{ii};
+                end
+            end
+            
         end
         
-        function h = hashArray(array)
-            % new version keeps one message digest per call to build
-            % and uses java to build hash string. Still need to check
-            % performance
-            sha.reset();
-            sha.update(array);
-            h = sha.digest();
-            % The Java hashtable won't accept a plain char array,
-            % so we need to convert the hash to another format.
-            % Use log sum of first 10 values as key
-            h = sum(hashScaler.*int32(h(1:10)'));
+        function h = hashArray(obj, array)
+            % uses java object to build hash string.
+            if isempty(array)
+                array = 0;
+            end
+            obj.sha.reset();
+            obj.sha.update(array(:));
+            h = obj.sha.digest();
+            % concert to ASCII char array A-z
+            h = char(65 + mod(h', 57));
         end
         
-        function [xpat, ypat, patList] = build(obj,patListParams,numsteps, delay, fixedPoint)
+        function xpat = build(obj, patListParams, numsteps, delay, fixedPoint)
             % xpat - struct(waveforms, linkLists) with hashtable of
             %   x waveforms and the link list that references the hashtable
             % ypat - same for y waveforms
@@ -481,28 +491,37 @@ classdef PatternGen < handle
 
             numPatterns = length(patListParams); % check this
             
-            padWaveform = [0];
-            padWaveformKey = hashArray(padWaveform);
+            padWaveform = [0,0];
+            padWaveformKey = obj.hashArray(padWaveform);
             padPulse = struct();
             padPulse.pulseArray = {padWaveform};
-            padPulse.hashKeys = [padWaveformKey];
+            padPulse.hashKeys = {padWaveformKey};
             padPulse.isTimeAmplitude = 1;
             padPulse.isZero = 1;
+            obj.pulseCollection(padWaveformKey) = padWaveform;
             
             function entry = buildEntry(pulse, n)
                 
-                entry.key = pulse.hashKeys(n);
+                reducedIndex = 1 + mod(n-1, length(pulse.hashKeys));
+                entry.key = pulse.hashKeys{reducedIndex};
                 if pulse.isTimeAmplitude
                     % repeat = width for time/amplitude pulses
                     entry.length = 1;
-                    entry.repeat = length(pulse.pulseArray{n});
+                    entry.repeat = length(pulse.pulseArray{reducedIndex});
                     entry.isTimeAmplitude = 1;
                 else
-                    entry.length = length(pulse.pulseArray{n});
+                    entry.length = length(pulse.pulseArray{reducedIndex});
                     entry.repeat = 1;
                     entry.isTimeAmplitude = 0;
                 end
                 entry.isZero = pulse.isZero || strcmp(entry.key,padWaveformKey);
+                if entry.isZero
+                    % remove zero pulses from pulse collection
+                    if ~all(entry.key == padWaveformKey) && obj.pulseCollection.isKey(entry.key)
+                        obj.pulseCollection.remove(entry.key);
+                    end
+                    entry.key = padWaveformKey;
+                end
                 entry.hasTrigger = 0;
                 entry.linkListRepeat = 0;
             end
@@ -510,26 +529,28 @@ classdef PatternGen < handle
             LinkLists = {};
             
             for n = 1:numsteps
+                % start with a padding pulse which we later expand to the
+                % correct length
+                LinkList = cell(numPatterns+2,1);
+                LinkList{1} = buildEntry(padPulse, 1);
                 
-                LinkList = {buildEntry(padPulse, 1)};
-                
-                for i = 1:numPatterns
-                    LinkList = [LinkList {buildEntry(patListParams{i}, n)}];
+                for ii = 1:numPatterns
+                    LinkList{1+ii} = buildEntry(patListParams{ii}, n);
                 end
 
                 % sum lengths
                 xsum = 0;
-                for i = 2:length(xLinkList)
-                    xsum = xsum + LinkList{i}.repeat * LinkList{i}.length;
+                for ii = 1:numPatterns
+                    xsum = xsum + LinkList{1+ii}.repeat * LinkList{1+ii}.length;
                 end
                 
                 % pad left but setting repeat count
                 LinkList{1}.repeat = fixedPoint + delay - xsum;
                 
-                xsum = xsum + xLinkList{1}.repeat;
+                xsum = xsum + LinkList{1}.repeat;
                 
                 % pad right by adding pad waveform with appropriate repeat
-                LinkList{end+1} = {buildEntry(padPulse, 1)};
+                LinkList{end} = buildEntry(padPulse, 1);
                 
                 LinkList{end}.repeat = obj.cycleLength - xsum;
                 
@@ -550,24 +571,26 @@ classdef PatternGen < handle
             plot(wavefrms)
         end
         
-        function [pattern] = linkListToPattern(obj, linkListPattern, n)
+        function [xpattern, ypattern] = linkListToPattern(obj, linkListPattern, n)
             linkList = linkListPattern.linkLists{n};
-            wf = linkListPattern.waveforms;
+            wfLib = linkListPattern.waveforms;
             
-            nEntries = length(linkList);
-            pattern = zeros(1,obj.cycleLength);
+            xpattern = zeros(1,obj.cycleLength);
+            ypattern = xpattern;
             idx = 1;
-            for i = 1:nEntries
+            for i = 1:length(linkList)
                 if linkList{i}.isTimeAmplitude
-                    amplitude = wf.get(linkList{i}.key)';
-                    amplitude = amplitude(1);
-                    newPat = amplitude * ones(1,linkList{i}.repeat);
-                    pattern(idx:idx+length(newPat)-1) = newPat;
-                    idx = idx + length(newPat);
+                    amplitude = wfLib(linkList{i}.key);
+                    xamp = amplitude(1,1);
+                    yamp = amplitude(1,2);
+                    xpattern(idx:idx+linkList{i}.repeat-1) = xamp * ones(1,linkList{i}.repeat);
+                    ypattern(idx:idx+linkList{i}.repeat-1) = yamp * ones(1,linkList{i}.repeat);
+                    idx = idx + linkList{i}.repeat;
                 else
-                    currWf = wf.get(linkList{i}.key)';
-                    pattern(idx:idx+linkList{i}.repeat*length(currWf)-1) = repmat(currWf, 1, linkList{i}.repeat);
-                    idx = idx + linkList{i}.repeat*length(currWf);
+                    currWf = wfLib(linkList{i}.key);
+                    xpattern(idx:idx+linkList{i}.repeat*length(currWf)-1) = repmat(currWf(:,1)', 1, linkList{i}.repeat);
+                    ypattern(idx:idx+linkList{i}.repeat*length(currWf)-1) = repmat(currWf(:,2)', 1, linkList{i}.repeat);
+                    idx = idx + linkList{i}.repeat*size(currWf,1);
                 end
             end
         end

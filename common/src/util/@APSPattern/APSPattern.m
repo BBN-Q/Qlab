@@ -44,11 +44,27 @@ classdef APSPattern < handle
         %%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        function library = buildWaveformLibrary(pattern, useVarients)
-            % convert baseWaveforms to waveform array suitable for the APS
-            aps = APSPattern;
+        function [xlib, ylib] = buildWaveformLibrary(pattern, useVarients)
+            self = APSPattern;
             waveforms = pattern.waveforms;
             linkLists = pattern.linkLists;
+
+            keys = waveforms.keys();
+            xWFs = containers.Map();
+            yWFs = containers.Map();
+            for ii = 1:length(keys)
+                tempWf = waveforms(keys{ii});
+                xWFs(keys{ii}) = tempWf(:,1);
+                yWFs(keys{ii}) = tempWf(:,2);
+            end
+            
+            xlib = self.buildWaveformLibraryQuad(linkLists, xWFs, useVarients);
+            ylib = self.buildWaveformLibraryQuad(linkLists, yWFs, useVarients);
+        end
+        
+        function library = buildWaveformLibraryQuad(linkLists, waveforms, useVarients)
+            % convert baseWaveforms to waveform array suitable for the APS
+            aps = APSPattern;
 
             if ~exist('useVarients','var')
                 useVarients = 1;
@@ -75,9 +91,9 @@ classdef APSPattern < handle
 
             % loop through waveform library
             keys = waveforms.keys();
-            while keys.hasMoreElements()
-                key = keys.nextElement();
-                orgWF = waveforms.get(key);
+            for ii = 1:length(keys)
+                key = keys{ii};
+                orgWF = waveforms(key);
 
                 maxPadding = aps.ADDRESS_UNIT*(aps.ELL_MIN_COUNT+1)-1;
                 varientWFs = cell(maxPadding+1,1);
@@ -85,8 +101,12 @@ classdef APSPattern < handle
 
                 end
 
-                paddings = paddingLib(key);
-                if isempty(paddings), paddings = [0]; end
+                if paddingLib.isKey(key)
+                    paddings = sort(paddingLib(key));
+                else
+                    paddings = 0;
+                end
+
                 for padIdx = 1:length(paddings)
                     leadPad = paddings(padIdx);
                     assert(leadPad <= maxPadding, 'WF padding is too large')
@@ -108,7 +128,9 @@ classdef APSPattern < handle
                     %insert into global waveform array
                     data(idx:idx+length(wf)-1) = wf;
 
-                    if leadPad == 0
+                    % insert the first instance of the waveform into the
+                    % offset and length maps
+                    if ~offsets.isKey(key)
                         offsets(key) = idx;
                         lengths(key) = length(wf);
                     end
@@ -158,7 +180,7 @@ classdef APSPattern < handle
                 currentLength = 0;
             end
             
-            if ismember(entry.key, keys(paddingLib))
+            if paddingLib.isKey(entry.key)
                 paddings = paddingLib(entry.key);
             else
                 paddings = [];
@@ -206,7 +228,9 @@ classdef APSPattern < handle
             pendingLength = expectedLength - currentLength;
 
             % update library entry
-            paddingLib(entry.key) = paddings;
+            if ~isempty(paddings)
+                paddingLib(entry.key) = paddings;
+            end
         end
 
         function [offsetVal countVal ] = entryToOffsetCount(entry, library, firstEntry, lastEntry)
