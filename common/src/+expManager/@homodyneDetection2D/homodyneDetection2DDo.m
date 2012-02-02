@@ -64,16 +64,9 @@ if ~SD_mode
     end
 end
 
-% start and stop every AWG to make sure the sequence files are loaded
-for i = 1:length(obj.awg)
-    awg = obj.awg{i};
-    awg.run();
-    [success_flag_AWG] = awg.waitForAWGtoStartRunning();
-    if success_flag_AWG ~= 1, error('AWG %d timed out', i), end
-    awg.stop(); % to sync AWGs with experiment start
-end
+% stop the master and make sure it stopped
 masterAWG = obj.awg{1};
-% make sure master has actually stopped
+masterAWG.stop();
 masterAWG.operationComplete();
 % start all the slave AWGs
 for i = 2:length(obj.awg)
