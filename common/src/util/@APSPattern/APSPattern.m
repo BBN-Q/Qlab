@@ -14,17 +14,17 @@ classdef APSPattern < handle
         
         %% ELL Linklist Masks and Contants
         ELL_ADDRESS            = hex2dec('07FF');
-        ELL_TIME_AMPLITUDE     = hex2dec('8000');
+        %ELL_TIME_AMPLITUDE     = hex2dec('8000');
         ELL_TIME_AMPLITUDE_BIT = 16;
-        ELL_LL_TRIGGER         = hex2dec('8000');
+        %ELL_LL_TRIGGER         = hex2dec('8000');
         ELL_LL_TRIGGER_BIT     = 16;
-        ELL_ZERO               = hex2dec('4000');
+        %ELL_ZERO               = hex2dec('4000');
         ELL_ZERO_BIT           = 15;
-        ELL_VALID_TRIGGER      = hex2dec('2000');
+        %ELL_VALID_TRIGGER      = hex2dec('2000');
         ELL_VALID_TRIGGER_BIT  = 14;
-        ELL_FIRST_ENTRY        = hex2dec('1000');
+        %ELL_FIRST_ENTRY        = hex2dec('1000');
         ELL_FIRST_ENTRY_BIT    = 13;
-        ELL_LAST_ENTRY         = hex2dec('800');
+        %ELL_LAST_ENTRY         = hex2dec('800');
         ELL_LAST_ENTRY_BIT     = 12;
         ELL_TA_MAX             = hex2dec('FFFF');
         ELL_TRIGGER_DELAY      = hex2dec('3FFF');
@@ -171,7 +171,7 @@ classdef APSPattern < handle
             % preprocessEntry marks used waveforms in the library and
             % indicates which padding varients need to be generated
             % borrows most of its code from entryToOffsetCount
-            aps = APSPattern;
+            
             % state variables
             persistent expectedLength pendingLength currentLength
             if resetCounts
@@ -179,6 +179,10 @@ classdef APSPattern < handle
                 pendingLength = 0;
                 currentLength = 0;
             end
+            
+            % lookup of class properites is expensive, create locals
+            ADDRESS_UNIT = 4;
+            MIN_LL_ENTRY_COUNT = 3;
             
             if paddingLib.isKey(entry.key)
                 paddings = paddingLib(entry.key);
@@ -190,7 +194,7 @@ classdef APSPattern < handle
 
             % if we have a zero that is less than count 3, we skip it and
             % pad the following entry
-            if entry.isZero && (pendingLength + entry.repeat < (aps.MIN_LL_ENTRY_COUNT+1) * aps.ADDRESS_UNIT)
+            if entry.isZero && (pendingLength + entry.repeat < (MIN_LL_ENTRY_COUNT+1) * ADDRESS_UNIT)
                 pendingLength = expectedLength - currentLength;
                 return;
             end
@@ -203,26 +207,26 @@ classdef APSPattern < handle
                 end
                 % the entry itself can potentially have additional padding to
                 % make the length an integer multiple of the ADDRESS_UNIT
-                residual = mod(-(entry.length + pendingLength), aps.ADDRESS_UNIT);
+                residual = mod(-(entry.length + pendingLength), ADDRESS_UNIT);
                 entry.length = entry.length + pendingLength + residual;
             % pad TAZ regardless of the sign of pendingLength
             elseif entry.isZero
                 entry.repeat = entry.repeat + pendingLength;
             elseif ~entry.isZero && ~entry.isTimeAmplitude
                 % mark this entry with padding = 0
-                if ~ismember(0, paddings)
+                if ~any(paddings == 0) % same as ~ismember(0, paddings)
                     paddings(end+1) = 0;
                 end
             end
 
             if ~entry.isTimeAmplitude
                 % count val is (length in 4 sample units) - 1
-                countVal = fix(entry.length / aps.ADDRESS_UNIT) - 1;
+                countVal = fix(entry.length / ADDRESS_UNIT) - 1;
             else
-                countVal = fix(entry.repeat / aps.ADDRESS_UNIT) - 1;
+                countVal = fix(entry.repeat / ADDRESS_UNIT) - 1;
             end
 
-            currentLength = currentLength + (countVal+1) * aps.ADDRESS_UNIT;
+            currentLength = currentLength + (countVal+1) * ADDRESS_UNIT;
 
             % if the pattern is running long, trim pendingLength
             pendingLength = expectedLength - currentLength;
@@ -234,7 +238,6 @@ classdef APSPattern < handle
         end
 
         function [offsetVal countVal ] = entryToOffsetCount(entry, library, firstEntry, lastEntry)
-            aps = APSPattern;
             % state variables
             persistent expectedLength pendingLength currentLength
             if firstEntry
@@ -242,6 +245,18 @@ classdef APSPattern < handle
                 pendingLength = 0;
                 currentLength = 0;
             end
+            
+            % lookup of class properites is expensive, create locals
+            ADDRESS_UNIT = 4;
+            MIN_LL_ENTRY_COUNT = 3;
+            ELL_ADDRESS            = 2047; % 0x07FF
+            ELL_TIME_AMPLITUDE_BIT = 16;
+            ELL_LL_TRIGGER_BIT     = 16;
+            ELL_ZERO_BIT           = 15;
+            ELL_VALID_TRIGGER_BIT  = 14;
+            ELL_FIRST_ENTRY_BIT    = 13;
+            ELL_LAST_ENTRY_BIT     = 12;
+            ELL_TA_MAX             = 65535; % 0xFFFF
 
             entryData.offset = library.offsets(entry.key);
             entryData.length = library.lengths(entry.key);
@@ -256,7 +271,7 @@ classdef APSPattern < handle
 
             % if we have a zero that is less than count 3, we skip it and
             % pad the following entry
-            if entry.isZero && (pendingLength + entry.repeat < (aps.MIN_LL_ENTRY_COUNT+1) * aps.ADDRESS_UNIT)
+            if entry.isZero && (pendingLength + entry.repeat < (MIN_LL_ENTRY_COUNT+1) * ADDRESS_UNIT)
                 pendingLength = expectedLength - currentLength;
                 countVal = [];
                 offsetVal = [];
@@ -267,14 +282,14 @@ classdef APSPattern < handle
             if pendingLength > 0 && ~entry.isZero && ~entry.isTimeAmplitude && ~isempty(entryData.varientWFs)
                 % attempt to use a varient
                 padIdx = pendingLength + 1;
-                assert(padIdx > 0 && padIdx <= (aps.MIN_LL_ENTRY_COUNT+1) * aps.ADDRESS_UNIT,sprintf('Padding Index %i Out of Range', padIdx));
+                assert(padIdx > 0 && padIdx <= (MIN_LL_ENTRY_COUNT+1) * ADDRESS_UNIT,sprintf('Padding Index %i Out of Range', padIdx));
                 if length(entryData.varientWFs) >= padIdx   % matlab index offset
                     varient = entryData.varientWFs(padIdx);
                     if iscell(varient), varient = varient{1}; end; % remove cell wrapper
                     entryData.offset = varient.offset;
                     entryData.length = varient.length;
                     assert(varient.pad == pendingLength,'Pending length pad does not match');
-                    if aps.verbose
+                    if APSPattern.verbose
                         fprintf('\tUsing WF varient with pad: %i\n', padIdx - 1);
                     end
                 end
@@ -285,7 +300,7 @@ classdef APSPattern < handle
 
             %% convert from 1 based count to 0 based count
             %% div by 4 required for APS addresses
-            address = (entryData.offset - 1) / aps.ADDRESS_UNIT;
+            address = (entryData.offset - 1) / ADDRESS_UNIT;
 
             % offset register format
             %  15  14  13   12   11  10 9 8 7 6 5 4 3 2 1 0
@@ -298,17 +313,17 @@ classdef APSPattern < handle
             %  LS      - Start of Mini Link List
             %  LE      - End of Mini Link List
 
-            offsetVal = bitand(address, aps.ELL_ADDRESS);  % trim address to 11-bits
+            offsetVal = bitand(address, ELL_ADDRESS);  % trim address to 11-bits
             if entry.isTimeAmplitude
-                offsetVal = bitset(offsetVal, aps.ELL_TIME_AMPLITUDE_BIT);
+                offsetVal = bitset(offsetVal, ELL_TIME_AMPLITUDE_BIT);
             end
 
             if entry.isZero
-                offsetVal = bitset(offsetVal, aps.ELL_ZERO_BIT);
+                offsetVal = bitset(offsetVal, ELL_ZERO_BIT);
             end
 
             if entry.hasTrigger
-                offsetVal = bitset(offsetVal, aps.ELL_VALID_TRIGGER_BIT);
+                offsetVal = bitset(offsetVal, ELL_VALID_TRIGGER_BIT);
             end
 
             if firstEntry  % start of link list
@@ -316,33 +331,29 @@ classdef APSPattern < handle
             end
 
             if lastEntry % mark end of link list
-                offsetVal = bitset(offsetVal, aps.ELL_LAST_ENTRY_BIT);
+                offsetVal = bitset(offsetVal, ELL_LAST_ENTRY_BIT);
             end
 
             % use entryData to get length as it includes the padded
             % length
             if ~entry.isTimeAmplitude
                 % count val is (length in 4 sample units) - 1
-                countVal = fix(entryData.length / aps.ADDRESS_UNIT) - 1;
+                countVal = fix(entryData.length / ADDRESS_UNIT) - 1;
             else
-                countVal = fix(entry.repeat / aps.ADDRESS_UNIT) - 1;
+                countVal = fix(entry.repeat / ADDRESS_UNIT) - 1;
             end
-            if (~entry.isTimeAmplitude && countVal > aps.ELL_ADDRESS) || ...
-                    (entry.isTimeAmplitude && countVal > aps.ELL_TA_MAX)
+            if (~entry.isTimeAmplitude && countVal > ELL_ADDRESS) || ...
+                    (entry.isTimeAmplitude && countVal > ELL_TA_MAX)
                 error('Link List countVal %i is too large', countVal);
             end
 
-            currentLength = currentLength + (countVal+1) * aps.ADDRESS_UNIT;
+            currentLength = currentLength + (countVal+1) * ADDRESS_UNIT;
 
             % test to see if the pattern is running long and we need to trim
             % pendingLength
 
             pendingLength = expectedLength - currentLength;
 
-            if aps.verbose
-                fprintf('\tExpected Length: %i Actual Length: %i Pending: %i \n',  ...
-                    expectedLength, currentLength, pendingLength);
-            end
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

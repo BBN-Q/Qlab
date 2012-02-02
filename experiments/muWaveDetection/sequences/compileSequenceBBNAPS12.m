@@ -24,7 +24,7 @@ for n = 1:nbrPatterns;
     IQ_seq{n} = pg.build(patseq{floor((n-1)/nbrRepeats)+1}, numsteps, ChParams.delay, fixedPt);
 
     for stepct = 1:numsteps
-        [patx, paty] = pg.linkListToPattern(I_seq{n}, stepct);
+        [patx, paty] = pg.linkListToPattern(IQ_seq{n}, stepct);
         
         % remove difference of delays
         patx = circshift(patx, delayDiff);
@@ -35,7 +35,7 @@ end
 
 for n = 1:calPatterns;
     IQ_seq{nbrPatterns + n} = pg.build(calseq{floor((n-1)/nbrRepeats)+1}, 1, ChParams.delay, fixedPt);
-    [patx, paty] = pg.linkListToPattern(I_seq{nbrPatterns + n}, 1);
+    [patx, paty] = pg.linkListToPattern(IQ_seq{nbrPatterns + n}, 1);
 
     % remove difference of delays
     patx = circshift(patx, delayDiff);
