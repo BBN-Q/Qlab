@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>538</width>
-    <height>354</height>
+    <width>473</width>
+    <height>351</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -265,7 +265,7 @@
             <widget class="QLineEdit" name="ampFactor"/>
            </item>
            <item row="8" column="1">
-            <widget class="QCheckBox" name="passThru">
+            <widget class="QCheckBox" name="linkListModeCB">
              <property name="text">
               <string/>
              </property>
@@ -274,7 +274,7 @@
            <item row="8" column="0">
             <widget class="QLabel" name="label_17">
              <property name="text">
-              <string>passThru</string>
+              <string>LinkList Mode</string>
              </property>
             </widget>
            </item>
@@ -346,8 +346,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>538</width>
-     <height>21</height>
+     <width>473</width>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

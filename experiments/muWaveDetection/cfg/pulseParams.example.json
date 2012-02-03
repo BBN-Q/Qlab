@@ -40,7 +40,7 @@
 		"sigma": 16
 	},
 	"BBNAPS12": {
-		"passThru": 1,
+		"linkListMode": 1,
 		"delay": -96,
 		"bufferDelay": 48,
 		"T": [
@@ -53,7 +53,7 @@
 		"bufferPadding": 24
 	},
 	"TekAWG12": {
-		"passThru": 0,
+		"linkListMode": 0,
 		"delay": -12,
 		"bufferDelay": 70,
 		"T": [
@@ -66,7 +66,7 @@
 		"bufferPadding": 24
 	},
 	"TekAWG34": {
-		"passThru": 0,
+		"linkListMode": 0,
 		"delay": -12,
 		"bufferDelay": 44,
 		"T": [
