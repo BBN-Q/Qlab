@@ -479,8 +479,8 @@ classdef PatternGen < handle
             obj.sha.reset();
             obj.sha.update(array(:));
             h = obj.sha.digest();
-            % concert to ASCII char array A-z
-            h = char(65 + mod(h', 57));
+            % concert to ASCII char array a-z
+            h = char(97 + mod(h', 26));
         end
         
         function xpat = build(obj, patListParams, numsteps, delay, fixedPoint)

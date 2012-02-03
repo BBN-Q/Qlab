@@ -70,7 +70,12 @@ classdef APSPattern < handle
                 useVarients = 1;
             end
             
-            paddingLib = containers.Map('KeyType','char','ValueType','any');
+            % populate paddingLib with empty arrays for every hash
+            paddingLib = struct();
+            keys = waveforms.keys();
+            for ii = 1:length(keys)
+                paddingLib.(keys{ii}) = [];
+            end
             if useVarients
                 % preprocess waveforms
                 for ii = 1:length(linkLists)
@@ -80,9 +85,9 @@ classdef APSPattern < handle
                 end
             end
             
-            offsets = containers.Map('KeyType','char','ValueType','any');
-            lengths = containers.Map('KeyType','char','ValueType','any');
-            varients = containers.Map('KeyType','char','ValueType','any');
+            offsets = struct();
+            lengths = struct();
+            varients = struct();
 
             % allocate space for data;
             data = zeros([1, aps.max_waveform_points],'int16');
@@ -97,13 +102,9 @@ classdef APSPattern < handle
 
                 maxPadding = aps.ADDRESS_UNIT*(aps.ELL_MIN_COUNT+1)-1;
                 varientWFs = cell(maxPadding+1,1);
-                if useVarients
 
-                end
-
-                if paddingLib.isKey(key)
-                    paddings = sort(paddingLib(key));
-                else
+                paddings = sort(paddingLib.(key));
+                if isempty(paddings)
                     paddings = 0;
                 end
 
@@ -129,10 +130,11 @@ classdef APSPattern < handle
                     data(idx:idx+length(wf)-1) = wf;
 
                     % insert the first instance of the waveform into the
-                    % offset and length maps
-                    if ~offsets.isKey(key)
-                        offsets(key) = idx;
-                        lengths(key) = length(wf);
+                    % offset, length, and varient maps
+                    if ~isfield(offsets, key)
+                        offsets.(key) = idx;
+                        lengths.(key) = length(wf);
+                        varients.(key) = {};
                     end
                     if useVarients
                         varient.offset = idx;
@@ -145,7 +147,7 @@ classdef APSPattern < handle
                     idx = idx + length(wf);
                 end
                 if useVarients && length(orgWF) > 1
-                    varients(key) = varientWFs;
+                    varients.(key) = varientWFs;
                 end
             end
 
@@ -183,12 +185,6 @@ classdef APSPattern < handle
             % lookup of class properites is expensive, create locals
             ADDRESS_UNIT = 4;
             MIN_LL_ENTRY_COUNT = 3;
-            
-            if paddingLib.isKey(entry.key)
-                paddings = paddingLib(entry.key);
-            else
-                paddings = [];
-            end
 
             expectedLength = expectedLength + entry.length * entry.repeat;
 
@@ -200,10 +196,13 @@ classdef APSPattern < handle
             end
 
             % pad non-TAZ waveforms if the pendingLength is positive
+            paddings = paddingLib.(entry.key);
+            updateKey = 0;
             if pendingLength > 0 && ~entry.isZero && ~entry.isTimeAmplitude
                 % add the padding length to the library
-                if ~ismember(pendingLength, paddings)
+                if ~any(paddings == pendingLength) % same as ~ismember(pendingLength, paddings), but faster
                     paddings(end+1) = pendingLength;
+                    updateKey = 1;
                 end
                 % the entry itself can potentially have additional padding to
                 % make the length an integer multiple of the ADDRESS_UNIT
@@ -216,6 +215,7 @@ classdef APSPattern < handle
                 % mark this entry with padding = 0
                 if ~any(paddings == 0) % same as ~ismember(0, paddings)
                     paddings(end+1) = 0;
+                    updateKey = 1;
                 end
             end
 
@@ -232,8 +232,8 @@ classdef APSPattern < handle
             pendingLength = expectedLength - currentLength;
 
             % update library entry
-            if ~isempty(paddings)
-                paddingLib(entry.key) = paddings;
+            if updateKey
+                paddingLib.(entry.key) = paddings;
             end
         end
 
@@ -258,15 +258,6 @@ classdef APSPattern < handle
             ELL_LAST_ENTRY_BIT     = 12;
             ELL_TA_MAX             = 65535; % 0xFFFF
 
-            entryData.offset = library.offsets(entry.key);
-            entryData.length = library.lengths(entry.key);
-
-            if library.varients.isKey(entry.key)
-                entryData.varientWFs = library.varients(entry.key);
-            else
-                entryData.varientWFs = [];
-            end
-
             expectedLength = expectedLength + entry.length * entry.repeat;
 
             % if we have a zero that is less than count 3, we skip it and
@@ -278,6 +269,9 @@ classdef APSPattern < handle
                 return;
             end
 
+            entryData.offset = library.offsets.(entry.key);
+            entryData.length = library.lengths.(entry.key);
+            entryData.varientWFs = library.varients.(entry.key);
             % pad non-TAZ waveforms if the pendingLength is positive, provided we have an appropriate varient
             if pendingLength > 0 && ~entry.isZero && ~entry.isTimeAmplitude && ~isempty(entryData.varientWFs)
                 % attempt to use a varient
@@ -365,17 +359,18 @@ classdef APSPattern < handle
             % | Mode |                Delay                |
             % Delay = time in 3.333 ns increments ( 0 - 54.5 usec )
             
-            aps = APSPattern;
+            ELL_TRIGGER_DELAY      = 16383; %hex2dec('3FFF')
+            ELL_TRIGGER_MODE_SHIFT = 14;
 
             % TODO:  hard code trigger for now, need to think about how to
             % describe
             triggerMode = 3; % do nothing
             triggerDelay = 0;
 
-            triggerMode = bitshift(triggerMode,aps.ELL_TRIGGER_MODE_SHIFT);
-            triggerDelay = fix(round(triggerDelay / aps.ELL_TRIGGER_DELAY_UNIT));
+            triggerMode = bitshift(triggerMode, ELL_TRIGGER_MODE_SHIFT);
+            triggerDelay = fix(triggerDelay);
 
-            triggerVal = bitand(triggerDelay, aps.ELL_TRIGGER_DELAY);
+            triggerVal = bitand(triggerDelay, ELL_TRIGGER_DELAY);
             triggerVal = bitor(triggerVal, triggerMode);
         end
 
