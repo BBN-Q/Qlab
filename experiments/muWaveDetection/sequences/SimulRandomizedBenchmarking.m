@@ -5,8 +5,8 @@ if ~exist('makePlot', 'var')
 end
 
 basename = 'SimulRB';
-fixedPt = 11000;
-cycleLength = 14000;
+fixedPt = 4000;
+cycleLength = 8000;
 pathAWG = '/Volumes/mqco/AWG/SimulRB/';
 
 % load config parameters from file
@@ -15,15 +15,15 @@ measDelay = -64;
 
 q1Params = params.q1;
 IQkeyQ1 = 'TekAWG12';
-pgQ1 = PatternGen('dPiAmp', q1Params.piAmp, 'dPiOn2Amp', q1Params.pi2Amp, 'dSigma', q1Params.sigma, 'dPulseType', q1Params.pulseType, 'dDelta', q1Params.delta, 'correctionT', params.(IQkeyQ1).T, 'dBuffer', q1Params.buffer, 'dPulseLength', q1Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyQ1).passThru);
+pgQ1 = PatternGen('dPiAmp', q1Params.piAmp, 'dPiOn2Amp', q1Params.pi2Amp, 'dSigma', q1Params.sigma, 'dPulseType', q1Params.pulseType, 'dDelta', q1Params.delta, 'correctionT', params.(IQkeyQ1).T, 'dBuffer', q1Params.buffer, 'dPulseLength', q1Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyQ1).linkListMode);
 
 q2Params = params.q2;
 IQkeyQ2 = 'TekAWG34';
-pgQ2 = PatternGen('dPiAmp', q2Params.piAmp, 'dPiOn2Amp', q2Params.pi2Amp, 'dSigma', q2Params.sigma, 'dPulseType', q2Params.pulseType, 'dDelta', q2Params.delta, 'correctionT', params.(IQkeyQ2).T, 'dBuffer', q2Params.buffer, 'dPulseLength', q2Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyQ2).passThru);
+pgQ2 = PatternGen('dPiAmp', q2Params.piAmp, 'dPiOn2Amp', q2Params.pi2Amp, 'dSigma', q2Params.sigma, 'dPulseType', q2Params.pulseType, 'dDelta', q2Params.delta, 'correctionT', params.(IQkeyQ2).T, 'dBuffer', q2Params.buffer, 'dPulseLength', q2Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyQ2).linkListMode);
 
 q3Params = params.q3; 
 IQkeyQ3 = 'BBNAPS12';
-pgQ3 = PatternGen('dPiAmp', q3Params.piAmp, 'dPiOn2Amp', q3Params.pi2Amp, 'dSigma', q3Params.sigma, 'dPulseType', q3Params.pulseType, 'dDelta', q3Params.delta, 'correctionT', params.(IQkeyQ3).T, 'dBuffer', q3Params.buffer, 'dPulseLength', q3Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyQ3).passThru);
+pgQ3 = PatternGen('dPiAmp', q3Params.piAmp, 'dPiOn2Amp', q3Params.pi2Amp, 'dSigma', q3Params.sigma, 'dPulseType', q3Params.pulseType, 'dDelta', q3Params.delta, 'correctionT', params.(IQkeyQ3).T, 'dBuffer', q3Params.buffer, 'dPulseLength', q3Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyQ3).linkListMode);
 
 % load in random Clifford sequences from text file
 fid = fopen('RBsequences.txt');
@@ -87,18 +87,33 @@ if length(patseqQ1) ~= length(patseqQ2)
     error('Number of random sequences does not match')
 end
 
-% insert basic tomography into each random pair
-%TomoPulsesQ1 = {{pulseLibrary('QId')},{pulseLibrary('Xp')},{pulseLibrary('QId')},{pulseLibrary('Xp')}};
-%TomoPulsesQ2 = {{pulseLibrary2('QId')},{pulseLibrary2('QId')},{pulseLibrary2('Xp')},{pulseLibrary2('Xp')}};
+% Break randomizations into sets to fit in Acqiris card segment limit
+% Insert basic tomography into each random pair and
+% order things such that the loop structure looks like:
+% Set
+%   Msmt basis
+%     gate length
+%        randomization
 TomoPulsesQ1 = { {}, {pulseLibrary('Xp')},  {pulseLibrary('QId')},  {pulseLibrary('Xp')}};
 TomoPulsesQ2 = { {}, {pulseLibrary2('QId')}, {pulseLibrary2('Xp')}, {pulseLibrary2('Xp')}};
 
 origPatseqQ1 = patseqQ1;
 origPatseqQ2 = patseqQ2;
-for ii = 1:length(origPatseqQ1)
+nbrRandomizations = 32;
+nbrGateLengths = 11;
+nbrSets = 2;
+cnt = 1;
+
+for ii = 1:nbrSets
+    shift = (ii-1)*nbrRandomizations/nbrSets;
     for jj = 1:length(TomoPulsesQ1)
-        patseqQ1{ii+(jj-1)*length(origPatseqQ1)} = [origPatseqQ1{ii}, TomoPulsesQ1{jj}];
-        patseqQ2{ii+(jj-1)*length(origPatseqQ2)} = [origPatseqQ2{ii}, TomoPulsesQ2{jj}];
+        for kk = 1:nbrGateLengths
+            for ll = 1:nbrRandomizations/nbrSets
+                patseqQ1{cnt} = [origPatseqQ1{ll+shift+nbrRandomizations*(kk-1)}, TomoPulsesQ1{jj}];
+                patseqQ2{cnt} = [origPatseqQ2{ll+shift+nbrRandomizations*(kk-1)}, TomoPulsesQ2{jj}];
+                cnt = cnt+1;
+            end
+        end
     end
 end
 
@@ -107,8 +122,7 @@ nbrRepeats = 2; % only used for cal sequences
 calseqQ1 = {{pgQ1.pulse('QId')},{pgQ1.pulse('Xp')},{pgQ1.pulse('QId')},{pgQ1.pulse('Xp')}};
 calseqQ2 = {{pgQ2.pulse('QId')},{pgQ2.pulse('QId')},{pgQ2.pulse('Xp')},{pgQ2.pulse('Xp')}};
 
-% allocate space for a quarter of the sequences
-nbrSets = 2;
+% allocate space for # sequences/nbrSets
 segments = nbrPatterns/nbrSets;
 fprintf('Number of segments in each set: %d\n', segments + nbrRepeats*length(calseqQ1));
 ch1 = zeros(segments + nbrRepeats*length(calseqQ1), cycleLength);
