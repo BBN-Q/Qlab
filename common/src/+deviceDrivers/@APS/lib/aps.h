@@ -31,8 +31,6 @@
 #ifndef APS_H
 #define APS_H
 
-#define APS_SERIAL_NUMS {"A6001ixW","A6001ixX"}
-
 // Command byte CMD field values
 
 #define APS_READTIMEOUT 1000

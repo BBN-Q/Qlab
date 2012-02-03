@@ -50,10 +50,9 @@
 
 
 EXPORT int APS_NumDevices();
-EXPORT int APS_GetSerialNumbers();
+EXPORT int APS_GetSerialNum(int device, char * buffer, int bufLen);
 EXPORT int APS_Open(int device, int force);
 EXPORT int APS_OpenByID(int device);
-EXPORT int APS_ListSerials();
 EXPORT int APS_Close(int device);
 EXPORT int APS_OpenBySerialNum(char * serialNum);
 

@@ -84,9 +84,6 @@ FT_HANDLE usb_handles[MAX_APS_DEVICES];
 
 waveform_t * waveforms[MAX_APS_DEVICES];
 
-char *dac_devices[] = APS_SERIAL_NUMS;
-#define MAX_DEVICES sizeof(dac_devices) / sizeof(char *)
-
 // global variables for function pointers
 pFT_Open DLL_FT_Open;
 pFT_Close DLL_FT_Close;
@@ -95,6 +92,8 @@ pFT_Read DLL_FT_Read;
 pFT_ListDevices DLL_FT_ListDevices;
 pFT_SetBaudRate DLL_FT_SetBaudRate;
 pFT_SetTimeouts DLL_FT_SetTimeouts;
+
+char deviceSerials[64][MAX_APS_DEVICES];
 
 #define DEBUG
 
@@ -252,29 +251,6 @@ EXPORT int APS_Open(int device, int force)
 	return 0;
 }
 
-EXPORT int APS_ListSerials()
-{
-	int max_serials;
-	int cnt;
-
-	max_serials = MAX_DEVICES;
-
-	printf("This Library knows the following serial numbers\n");
-	for (cnt = 0; cnt < max_serials; cnt++) {
-		printf("ID: %i Serial: %s\n", cnt, dac_devices[cnt]);
-	}
-	return 0;
-}
-
-EXPORT int APS_GetSerials(char * buf, int maxlen, int device)
-{
-	if (device > MAX_DEVICES) {
-		return -1;
-	}
-	snprintf(buf,maxlen,"%s",dac_devices[device] );
-	return 0;
-}
-
 EXPORT int APS_OpenByID(int device)
 /******************************************************************
  *
@@ -307,10 +283,6 @@ EXPORT int APS_OpenByID(int device)
 	char * serial;
 	char testSerial[64];
 
-	if (device > MAX_DEVICES) {
-		return -1;
-	}
-
 	// If the ftd2xx dll has not been loaded, loadit.
 	if (!hdll) {
 		if (APS_Init() != 0) {
@@ -318,8 +290,12 @@ EXPORT int APS_OpenByID(int device)
 		};
 	}
 
-	serial = dac_devices[device];
+	serial = deviceSerials[device];
 	numdevices = APS_NumDevices();
+
+	if (device > numdevices) {
+		return -1;
+	}
 
 	found = 0;
 	for (cnt = 0; cnt < numdevices; cnt++) {
@@ -438,7 +414,7 @@ EXPORT int APS_NumDevices()
 	return numdevices;
 }
 
-EXPORT int APS_GetSerialNumbers()
+EXPORT int APS_PrintSerialNumbers()
 {
 	if (!hdll) {
 		if (APS_Init() != 0) {
@@ -458,6 +434,31 @@ EXPORT int APS_GetSerialNumbers()
 	//
 	return 0;
 }
+
+EXPORT int APS_GetSerialNum(int device, char * buffer, int bufLen)
+/*
+* Return the serial number associated with a particular deviceID num
+*/
+{
+	
+	//Check we aren't asking for something beyond the number of devices
+	if (device > APS_NumDevices()) {
+		printf("Got here!\n");
+		return -1;
+	}
+	
+	//Initialize a temporary buffer of the right length and zero it out
+	char tmpSerial[64];
+	memset(tmpSerial, 0, 64 * sizeof(char));
+	//Use the FTDI driver to get the serial number into the temporary buffer
+	DLL_FT_ListDevices(device, tmpSerial, FT_LIST_BY_INDEX|FT_OPEN_BY_SERIAL_NUMBER);
+	//Copy over the memory given of 64 bytes worth
+	int copyBytes;
+	copyBytes = (bufLen > 64) ? 64 : bufLen; 
+	memcpy(buffer, tmpSerial, copyBytes);
+	return 0;
+}
+
 
 EXPORT int APS_Close(int device)
 /********************************************************************
