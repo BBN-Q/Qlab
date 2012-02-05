@@ -501,7 +501,7 @@ classdef APSPattern < handle
             bank.count = bank.count(1:len);
             bank.trigger = bank.trigger(1:len);
             bank.repeat = bank.repeat(1:len);
-            bank.length = len;
+            bank.length = uint16(len);
 
             % fix the last mini-LL entry of the current bank by
             % clearing the LL_FIRST_ENTRY bit

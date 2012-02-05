@@ -599,10 +599,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.clearLinkListELL(3);
             
             % load waveform data
+            wf = APSWaveform();
             for ch = 1:aps.num_channels
                 if ch <= length(WaveformLibs) && ~isempty(WaveformLibs{ch})
                     % load and scale/shift waveform data
-                    wf = WaveformLibs{ch};
+                    wf.set_vector(WaveformLibs{ch});
                     wf.set_offset(aps.(['chan_' num2str(ch)]).offset);
                     wf.set_scale_factor(aps.(['chan_' num2str(ch)]).amplitude);
                     aps.loadWaveform(ch-1, wf.prep_vector());
@@ -633,7 +634,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                                 bankA.trigger, bankA.repeat, bankA.length, 0);
                         end
 
-                        if isfield(ell,'bankB')
+                        if isfield(ell,'bankB') && ~isempty(ell.bankB) && ell.bankB.length > 0
                             bankB = ell.bankB;
                             aps.loadLinkListELL(ch-1,bankB.offset,bankB.count, ...
                                 bankB.trigger, bankB.repeat, bankB.length, 1);

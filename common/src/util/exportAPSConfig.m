@@ -1,5 +1,5 @@
 function exportAPSConfig(path, basename, ch12seq, ch34seq)
-    Version = 1.0;
+    Version = 1.5;
     useVarients = 1;
     
     % construct filename
@@ -12,18 +12,21 @@ function exportAPSConfig(path, basename, ch12seq, ch34seq)
     miniLinkRepeat = 0;
     WaveformLibs = {};
     LinkLists = {};
+    bankStruct = struct('offset', [], 'count', [], 'trigger', [], 'repeat', [], 'length', 0);
     
     for ii = [1,3]
         % convert link lists to APS format
         varname = ['ch' num2str(ii) num2str(ii+1) 'seq'];
         if exist(varname, 'var')
             % set up structs
-            LinkLists{ii} = struct('bankA', [], 'repeatCount', 1);
-            LinkLists{ii+1} = struct('bankA', [], 'repeatCount', 1);
+            LinkLists{ii} = struct('bankA', bankStruct, 'bankB', bankStruct, 'repeatCount', 0);
+            LinkLists{ii+1} = struct('bankA', bankStruct, 'bankB', bankStruct, 'repeatCount', 0);
             seq = eval(varname);
             [xWfLib, yWfLib] = APSPattern.buildWaveformLibrary(seq, useVarients);
-            [WaveformLibs{ii}, xbanks] = APSPattern.convertLinkListFormat(seq, useVarients, xWfLib, miniLinkRepeat);
-            [WaveformLibs{ii+1}, ybanks] = APSPattern.convertLinkListFormat(seq, useVarients, yWfLib, miniLinkRepeat);
+            [wf, xbanks] = APSPattern.convertLinkListFormat(seq, useVarients, xWfLib, miniLinkRepeat);
+            WaveformLibs{ii} = wf.prep_vector();
+            [wf, ybanks] = APSPattern.convertLinkListFormat(seq, useVarients, yWfLib, miniLinkRepeat);
+            WaveformLibs{ii+1} = wf.prep_vector();
             LinkLists{ii}.bankA = xbanks{1};
             LinkLists{ii+1}.bankA = ybanks{1};
             fprintf('Length of Bank A: %d\n',LinkLists{ii}.bankA.length)

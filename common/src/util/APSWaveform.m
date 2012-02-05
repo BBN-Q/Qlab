@@ -393,7 +393,7 @@ classdef APSWaveform < handle
            end
            
            ell =  wf.ellData;
-            ell.len = length(wf.ellData.bankA.offset);
+           ell.len = length(wf.ellData.bankA.offset);
        end
        
        function [offsets, counts, link_list_length] = get_link_list(wf)
