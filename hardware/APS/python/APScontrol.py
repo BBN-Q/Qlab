@@ -93,12 +93,12 @@ class APScontrol(object):
         self.printMessage("Loaded firmware version %i" % self.aps.readBitFileVersion())
 
     def run(self):
-        self.runButton.setEnabled(0)
-        self.stopButton.setEnabled(1)
+        self.ui.runButton.setEnabled(0)
+        self.ui.stopButton.setEnabled(1)
 
         # check frequencies
         validFreqs = self.aps.VALID_FREQUENCIES;
-        frequency = validFreqs[self.sampleRate.currentIndex()];
+        frequency = validFreqs[self.ui.sampleRate.currentIndex()];
         
         # set frequency
         self.aps.setFrequency(self.aps.FPGA0, frequency)
@@ -106,7 +106,7 @@ class APScontrol(object):
         self.printMessage('Set frequency to %i' % frequency)
         
         # get mode
-        if self.sequencerMode.currentIndex() == 0:
+        if self.ui.sequencerMode.currentIndex() == 0:
             self.printMessage('Continous Mode')
             mode = self.aps.LL_CONTINUOUS
         else:
@@ -115,10 +115,12 @@ class APScontrol(object):
         
         # check to see how to trigger
         
-        trigger_type = self.triggerType.currentIndex();
+        trigger_type = self.ui.triggerType.currentIndex();
         if trigger_type == 0:  # Internal (aka Software Trigger)
             trigger_type = self.aps.TRIGGER_SOFTWARE
-        else: # External (aka Software Trigger)
+            self.printMessage('Sofware trigger.')
+        else: # External (aka Software Trigger):
+            self.printMessage('Hardware trigger.')
             trigger_type = self.aps.TRIGGER_HARDWARE
         
         trigger = [0,0,0,0];
@@ -126,15 +128,13 @@ class APScontrol(object):
         triggeredFPGA = [False,False]
                 
         for chan in range(1,5):
-            checkBox = getattr(self, 'ch%ienable' % chan)
-            trigger[chan-1] = checkBox.isChecked()
+            trigger[chan-1] = getattr(self.ui, 'ch%ienable' % chan).isChecked()
             if trigger[chan - 1]:
                         
                 # load file
                 fileData = APSMatlabFile()
                 
-                fileTextBox = getattr(self, 'ch%ifile' % chan)
-                filename = fileTextBox.text()
+                filename = getattr(self.ui, 'ch%ifile' % chan).text()
                 
                 self.printMessage('Loading file %s' % filename)
                 fileData.readFile(filename)
@@ -193,8 +193,8 @@ class APScontrol(object):
         self.printMessage('Running')
 
     def stop(self):
-        self.stopButton.setEnabled(0)
-        self.runButton.setEnabled(1)
+        self.ui.stopButton.setEnabled(0)
+        self.ui.runButton.setEnabled(1)
         
         self.aps.disableFpga(0)
         self.aps.disableFpga(2)

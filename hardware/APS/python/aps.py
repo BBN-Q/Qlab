@@ -177,7 +177,7 @@ class APS:
         self.max_waveform_points = self.ELL_MAX_WAVFORM
         self.max_ll_points = self.ELL_MAX_LL
         
-    def programFPGA(self,data,bytecount, sel):
+    def programFPGA(self, data, bytecount, sel):
         if not self.is_open and not self.mock_aps:
             print 'APS unit is not open'
             return -1
