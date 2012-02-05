@@ -16,7 +16,7 @@ class APS:
     device_id = 0
     num_devices = 0
     bit_file_path = ''
-    bit_file = 'mqco_dac2_latest.bit'
+    bit_file = 'mqco_aps_latest.bit'
     expected_bit_file_ver = 0x10
     Address = 0
     verbose = False
@@ -105,8 +105,19 @@ class APS:
         return charBuffer.value
         
     def enumerate(self):
+        #List the number of devices attached and their serial numbers
+        
+        #First get the number of devices        
         numDevices = self.lib.APS_NumDevices()
-        return numDevices
+
+        deviceSerials = []
+        #Now, for each device, get the associated serial number
+        charBuffer = ctypes.create_string_buffer(64)
+        for ct in range(numDevices):
+            self.lib.APS_GetSerialNum(ct,charBuffer, 64)
+            deviceSerials.append(charBuffer.value)
+
+        return numDevices, deviceSerials
         
     def connect(self, address):
         # Experiment framework function for connecting to an APS
@@ -151,7 +162,7 @@ class APS:
             print 'Unknown return: ', val
             
     def close(self):
-        self.lib.APS_close(self.device_id)
+        self.lib.APS_Close(self.device_id)
         self.is_open = 0
         
     def readBitFileVersion(self):
@@ -181,8 +192,8 @@ class APS:
     def getDefaultBitFileName(self):
         return os.path.abspath(self.bit_file_path + self.bit_file)
         
-    def loadBitFile(self,filename = ''):
-        if len(filename) == 0:
+    def loadBitFile(self,filename = None):
+        if filename is None:
             filename = self.getDefaultBitFileName()
             
         if not self.is_open and not self.mock_aps:

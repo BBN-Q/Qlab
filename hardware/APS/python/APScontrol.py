@@ -2,12 +2,8 @@
 
 import sys
 import os.path
-import pdb
 
-from PySide.QtCore import *
-from PySide.QtGui import *
-
-from APS_ui import Ui_Dialog
+from PySide import QtGui, QtCore, QtUiTools
 
 from APSMatlabFile import APSMatlabFile
 
@@ -15,86 +11,86 @@ import aps
 
 libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
 
-class APScontrol(QDialog, Ui_Dialog):
+class APScontrol(object):
+    _bitFileName = ''
     def __init__(self, parent=None):
-        super(APScontrol, self).__init__(parent)
-        self.setupUi(self)
 
-        # connect UI element to signals
-        self.bitFileOpen.clicked.connect(self.bitFileDialog)
-        self.programButton.clicked.connect(self.programFPGA)
-        self.runButton.clicked.connect(self.run)
-        self.stopButton.clicked.connect(self.stop)
+        #Dynamically load the ui file
+        loader = QtUiTools.QUiLoader()
+        file = QtCore.QFile(os.path.join(os.path.dirname(sys.argv[0]), 'APS.ui'))
+        file.open(QtCore.QFile.ReadOnly)
+        self.ui = loader.load(file)
+        file.close()
 
-        self.ch1fileOpen.clicked.connect(self.waveformDialog1)
-        self.ch2fileOpen.clicked.connect(self.waveformDialog2)
-        self.ch3fileOpen.clicked.connect(self.waveformDialog3)
-        self.ch4fileOpen.clicked.connect(self.waveformDialog4)
+        #Connect UI element to signals
+        self.ui.runButton.clicked.connect(self.run)
+        self.ui.stopButton.clicked.connect(self.stop)
 
-        # set default scale factor / offset values
-        for i in range(1,5):
-            self.setScaleFactor(i,1.0)
-            self.setOffset(i,0)
+        self.ui.ch1fileOpen.clicked.connect(lambda : self.waveformDialog(self.ui.ch1file))
+        self.ui.ch2fileOpen.clicked.connect(lambda : self.waveformDialog(self.ui.ch2file))
+        self.ui.ch3fileOpen.clicked.connect(lambda : self.waveformDialog(self.ui.ch3file))
+        self.ui.ch4fileOpen.clicked.connect(lambda : self.waveformDialog(self.ui.ch4file))
+        
+        self.ui.actionLoad_Bit_File.triggered.connect(self.bitFileDialog)
 
+        #Set some validators for the scale factor / offset values so we don't have to error check later
+        for channelct in range(1,5):
+            #First the scale to anything
+            tmpLineEdit = getattr(self.ui, 'ch{0}scale'.format(channelct))
+            tmpLineEdit.setValidator(QtGui.QDoubleValidator())
+            
+            #Then the offset to +/-1 because it is of the full scale
+            tmpLineEdit = getattr(self.ui, 'ch{0}offset'.format(channelct))
+            tmpLineEdit.setValidator(QtGui.QDoubleValidator())
+            tmpLineEdit.validator().setRange(-1,1)
+            
+        #Create an APS class instance for interacting with the instrument
         self.aps = aps.APS(libPath)
-
-        self.bitFileName.setText(self.aps.getDefaultBitFileName())
+        
+        #Enumerate the number of connected APS devices and fill out the combo box
+        (numAPS, deviceSerials) = self.aps.enumerate()
+        self.printMessage('Found {0} APS units'.format(numAPS))
+        
+        #Fill out the device ID combo box
+        self.ui.deviceIDComboBox.clear()
+        self.ui.deviceIDComboBox.insertItems(0,['{0} ({1})'.format(num, deviceSerials[num]) for num in range(numAPS)])
+        
+        #Try to connect to the device
         self.connect()
         
-    def connect(self):
-        # connect to APS
-        numAPS = self.aps.enumerate()
-        self.printMessage('Found %i APS units' % numAPS)
-        
-        # todo edit drop unit drop down to increase number of available units
-        
-        self.printMessage('Opening connection to APS 0')
-        self.aps.connect(0)
-        self.updateFirmwareVersion(self.aps.readBitFileVersion())
-        
+        self._bitfilename = self.aps.getDefaultBitFileName()
 
+        self.ui.show()
+
+        
+    def connect(self):
+        #Connect to the specified APS
+        apsNum = self.ui.deviceIDComboBox.currentIndex()
+        self.printMessage('Opening connection to APS {0}'.format(apsNum))
+        self.aps.connect(apsNum)
+        self.printMessage("Firmware version: {0}".format(self.aps.readBitFileVersion()))
+        
     def printMessage(self, message):
-        self.messageLog.append(message)
+        self.ui.messageLog.append(message)
 
     def bitFileDialog(self):
-        fileName, fileFilter = QFileDialog.getOpenFileName(self, 'Open File', '', 'Bit files (*.bit)')
-        self.bitFileName.setText(fileName)
-
-    def waveformDialog1(self):
-        self.waveformDialog(1, self.ch1file)
+        self._bitFileName = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Bit files (*.bit)')[0]
+        self.programFPGA()
         
-    def waveformDialog2(self):
-        self.waveformDialog(2, self.ch2file)
-        
-    def waveformDialog3(self):
-        self.waveformDialog(3, self.ch3file)
-        
-    def waveformDialog4(self):
-        self.waveformDialog(4, self.ch4file)
-
-    def waveformDialog(self, channel, textBox):
-        # todo: error file channel number
-        if (channel < 1) or (channel > 4):
-            print "Error ==> unknown channel", channel
-            return
-
-        fileName, fileFilter = QFileDialog.getOpenFileName(self, 'Open File', '', 'Matlab Files (*.mat);;Waveform files (*.m);;Sequence files (*.seq)')
+    def waveformDialog(self, textBox):
+        fileName, fileFilter = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Matlab Files (*.mat);;Waveform files (*.m);;Sequence files (*.seq)')
         textBox.setText(fileName)
         
     def programFPGA(self):
-        # check that file exists
-        if not os.path.isfile(self.bitFileName.text()):
-            self.printMessage("Error file not found: %s" % self.bitFileName.text() )
+        #Check that file exists
+        if not os.path.isfile(self._bitFileName):
+            self.printMessage("Error bitfile not found: %s" % self.bitFileName.text() )
             return
         
-        # load the file
+        #Load the file
         self.printMessage('Programming FPGA bitfile.')
-        self.aps.loadBitFile(self.bitFileName.text())
+        self.aps.loadBitFile(self._bitFileName)
         self.printMessage("Loaded firmware version %i" % self.aps.readBitFileVersion())
-        self.updateFirmwareVersion(self.aps.readBitFileVersion())
-
-    def updateFirmwareVersion(self, version):
-        self.bitFileVersion.setText("Firmware version: %i" % version)
 
     def run(self):
         self.runButton.setEnabled(0)
@@ -223,7 +219,6 @@ class APScontrol(QDialog, Ui_Dialog):
         
 if __name__ == '__main__':
     # create the Qt application
-    app = QApplication(sys.argv)
+    app =QtGui.QApplication(sys.argv)
     frame = APScontrol()
-    frame.show()
     sys.exit(app.exec_())
