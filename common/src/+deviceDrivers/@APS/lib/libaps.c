@@ -1009,7 +1009,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 		// Read the Status to get state of RESETN for unused channel
 		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1)
 			return(-1);
-
+		dlog(DEBUG_VERBOSE, "ReadByte after first ReadReg: %i ... \n", ReadByte);
 		// Create active high mask bits for RESETN field
 		// Force state of programmed chip reset to 1, leave the other alone
 		RstMask = APS_FRST_BITS & ReadByte;
@@ -1028,6 +1028,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 		// Read the Status to see that INITN is asserted in response to PROGRAMN
 		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1)
 			return(-3);
+		dlog(DEBUG_VERBOSE, "ReadByte after second ReadReg: %i ... \n", ReadByte);
 
 		if((ReadByte & InitMask) != 0)
 			return(-4);
@@ -1040,6 +1041,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 		// Read the Status to see that INITN is deasserted in response to PROGRAMN deassertion
 		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1)
 			return(-6);
+		dlog(DEBUG_VERBOSE, "ReadByte after third ReadReg: %i ... \n", ReadByte);
 
 		if((ReadByte & InitMask) == 0) {
 			attemptCnt++;
