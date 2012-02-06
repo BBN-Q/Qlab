@@ -426,6 +426,9 @@
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
         <widget class="QTabWidget" name="tabWidget">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -441,6 +444,74 @@
          <property name="currentIndex">
           <number>0</number>
          </property>
+         <widget class="QWidget" name="ChannelTabAll">
+          <attribute name="title">
+           <string>4 Channel Mode</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_9">
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <item>
+              <widget class="QLabel" name="label_20">
+               <property name="text">
+                <string>Waveform/Sequence file:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="chAllfile">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>22</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="chAllfileOpen">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>32</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Choose</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_6">
+             <item>
+              <spacer name="horizontalSpacer_2">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="chAllOnOff">
+               <property name="text">
+                <string>On/Off</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
          <widget class="QWidget" name="ChannelTab1">
           <attribute name="title">
            <string>Channel 1</string>
@@ -457,6 +528,9 @@
              </item>
              <item>
               <widget class="QLineEdit" name="ch1file">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="minimumSize">
                 <size>
                  <width>0</width>
@@ -537,8 +611,14 @@
              </item>
              <item>
               <widget class="QRadioButton" name="ch1enable">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
                <property name="text">
                 <string>On/Off</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -562,6 +642,9 @@
              </item>
              <item>
               <widget class="QLineEdit" name="ch2file">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="minimumSize">
                 <size>
                  <width>0</width>
@@ -642,8 +725,14 @@
              </item>
              <item>
               <widget class="QRadioButton" name="ch2enable">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
                <property name="text">
                 <string>On/Off</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -667,6 +756,9 @@
              </item>
              <item>
               <widget class="QLineEdit" name="ch3file">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="minimumSize">
                 <size>
                  <width>0</width>
@@ -747,8 +839,14 @@
              </item>
              <item>
               <widget class="QRadioButton" name="ch3enable">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
                <property name="text">
                 <string>On/Off</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -772,6 +870,9 @@
              </item>
              <item>
               <widget class="QLineEdit" name="ch4file">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="minimumSize">
                 <size>
                  <width>0</width>
@@ -852,8 +953,14 @@
              </item>
              <item>
               <widget class="QRadioButton" name="ch4enable">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
                <property name="text">
                 <string>On/Off</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -932,7 +1039,7 @@
      <x>0</x>
      <y>0</y>
      <width>696</width>
-     <height>21</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuTools">
@@ -940,6 +1047,7 @@
      <string>Tools</string>
     </property>
     <addaction name="actionLoad_Bit_File"/>
+    <addaction name="actionTest_PLL_Sync"/>
    </widget>
    <addaction name="menuTools"/>
   </widget>
@@ -950,6 +1058,11 @@
    </property>
    <property name="toolTip">
     <string>Load Non-Default Bit File</string>
+   </property>
+  </action>
+  <action name="actionTest_PLL_Sync">
+   <property name="text">
+    <string>Test PLL Sync</string>
    </property>
   </action>
  </widget>

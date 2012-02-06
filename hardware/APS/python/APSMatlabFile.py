@@ -2,7 +2,7 @@
 
 # script to load APS GUI linklist files
 
-import numpy
+import numpy as np
 import h5py
 try:
     import matplotlib.pyplot as plt
@@ -12,107 +12,83 @@ except:
     
     
 
-class APSMatlabFile:
+class APSMatlabFile(object):
     APS_UNITSIZE = 4
     TYPE_LINKLIST = 0
     TYPE_WAVEFORM = 1
     
     MAX_AMP_VALUE = 8191
     
-    def readFile(self,fileName):
-        print 'Loading File', fileName
+    FOURCHANNELMODE = 0;
+    SINGLECHANNELMODE = 1;
+    
+    CHANNELNAMES = ('ch1','ch2','ch3','ch4')
+    
+    def __init__(self, mode=0, fileName=None, channel=None):
+        self.mode = mode
+        self.channel=channel
+        if fileName is not None:
+            self.readFile(fileName)
+            
+    def readFile(self, fileName):
+        print('Loading File {0}'.format(fileName))
         try:
-            f = h5py.File(fileName,'r')
+            FID = h5py.File(fileName,'r')
         except:
-            print 'Error could not open file.'
-            print '\tThe matlab file may need to be saved using a recent'
-            print '\tversion of matlab to be a HDF5 file.'
+            print('Error could not open file.')
+            print('\tThe matlab file may need to be saved using a recent')
+            print('\tversion of matlab to be a HDF5 file.')
         
-        self.file_type = None
+        self.WFData = {}
+        self.LLData = {}
         
-        # wave
-        self.waveform = None
-        
-        # link list variables
-        self.linkList16 = None
-        self.bankA = None
-        self.repeatCount = None
-        
-        if 'linkList16' in f:
-            self.file_type = self.TYPE_LINKLIST
-            self.linkList16 = f['linkList16']
-            
-            required = ['bankA','waveformLibrary','repeatCount']
-            valid = True
-            for el in required:
-                if el not in self.linkList16:
-                    valid = False
-            
-            if valid:                
-                self.bankA = self.linkList16['bankA']
-                self.bankA = self.unpackLinkListBank(self.bankA)
-                self.waveform = self.linkList16['waveformLibrary']
-                self.repeatCount = (self.linkList16['repeatCount'][:]).astype(numpy.int)
-                # strange work around to get single integer from dataset
-                # there is hopefully a better way to do this
-        
-                self.repeatCount = int(self.repeatCount[0][0])
-                if 'bankB' in self.linkList16:
-                    self.bankB = numpy.array(self.linkList16['bankB'])
-                    self.bankB = self.unpackLinkListBank(self.bankB)
-                else:
-                    self.bankB = None
-            else:
-                print "Error loading link list file: Invalid format"
+        #First look for all four channel data
+        if self.mode == self.FOURCHANNELMODE:
+            #Look for the Matlab a,b,c,d,e,f stuff
+            refs = FID['#refs#']
+            WFletters = 'bcde'
+            LLletters = 'fghi'
+            for ct,channel in enumerate(self.CHANNELNAMES):
+                self.WFData[channel] = refs[WFletters[ct]].value
+                self.LLData[channel] = {}
+                self.LLData[channel]['repeatCount'] = int(refs[LLletters[ct]]['repeatCount'].value[0][0])
+                self.LLData[channel]['bankA'] = {}
+                for key,value in refs[LLletters[ct]]['bankA'].items():
+                    self.LLData[channel]['bankA'][key] = value.value
+                self.LLData[channel]['bankA']['length'] = int(self.LLData[channel]['bankA']['length'][0][0])
                 
-            self.isLinkList = True
-        
-        if 'WFVec' in f:
-            self.waveform = f['WFVec']
-            self.isLinkList = False
+                self.LLData[channel]['bankB'] = {}
+                for key,value in refs[LLletters[ct]]['bankB'].items():
+                    self.LLData[channel]['bankB'][key] = value.value
+                self.LLData[channel]['bankB']['length'] = int(self.LLData[channel]['bankB']['length'][0][0])
+            
+        else:
+            if 'WFVec' in FID:
+                self.waveform = FID['WFVec'].value
+                self.isLinkList = False
 
-    def unpackLinkListBank(self,bank):
-        required = ['offset', 'count','trigger','repeat','length']
-        for r in required:
-            if r not in bank:
-                print 'Error bank is invalid %s not found' % (r)
-                return None
-            
-        unPackedBank = {}        
-        for r in required[0:-1]:
-            cmd = "unPackedBank['%s'] = numpy.array(bank['%s'])" % (r,r)
-            exec(cmd)
-            
-        # strange work around to get single integer from dataset
-        # there is hopefully a better way to do this
-        tmp =(bank['length'][:]).astype(numpy.int)
-        unPackedBank['length'] = int(tmp[0][0])
-        return unPackedBank
+    def get_vector(self, scale_factor=1, offset=0.0, channelName=None):
         
-            
-    def get_vector(self,scale_factor = 1.0, offset = 0.0):
+        #If channel is None then assume single channel data in self.waveform
+        if channelName is None:
+            WF = self.waveform
+        else:
+            WF = self.WFData[channelName]
         
-        data = numpy.array(self.waveform)
+        #Make sure the waveform is a multiple of 4
+        if WF.size % self.APS_UNITSIZE != 0:
+            NSamples = self.APS_UNITSIZE - (WF.size % self.APS_UNITSIZE)
+            WF = np.append(WF,np.zeros(NSamples))
+
+        WF = WF*scale_factor + offset*self.MAX_AMP_VALUE
         
-        if self.isLinkList:
-            return data
+        WF = WF.astype('int16')
         
-        if data.size % self.APS_UNITSIZE != 0:
-            NSamples = self.APS_UNITSIZE - (data.size % self.APS_UNITSIZE)
-            numpy.append(data,numpy.zeros(NSamples))
-            
-        scale = scale_factor * 1.0 /  numpy.abs(data).max()
-        scale = scale * self.MAX_AMP_VALUE
+        #Clip
+        WF[WF > self.MAX_AMP_VALUE] = self.MAX_AMP_VALUE
+        WF[WF < -self.MAX_AMP_VALUE] = -self.MAX_AMP_VALUE
         
-        offset = offset * self.MAX_AMP_VALUE
-        
-        data = data * scale + offset
-        
-        data = data.astype('int16')
-        
-        data[data > self.MAX_AMP_VALUE] = self.MAX_AMP_VALUE
-        
-        return data
+        return WF
             
     def plotWaveformLibrary(self):
         if haveMatplotlib:
