@@ -257,22 +257,24 @@ class APS:
             print 'APS unit is not open'
             return -1
             
-        print 'Loading Link List length %i into DAC%i bank %i' % (ll_len,ID,bank)
+        print('Loading Link List length {0} into DAC{1} bank {2}'.format(ll_len,ID,bank))
         
-        # convert each array to int16 pointer
-        c_int_p = ctypes.POINTER(ctypes.c_int16)
+        #TODO: we are assuming the arrays are contiguous should we check this?
         
-        offsets = offsets.astype(np.int16)
-        offsets_p = offsets.ctypes.data_as(c_int_p)
+        # convert each array to uint16 pointer
+        c_uint16_p = ctypes.POINTER(ctypes.c_uint16)
         
-        counts = counts.astype(np.int16)
-        counts_p = counts.ctypes.data_as(c_int_p)
+        offsets = offsets.astype(np.uint16)
+        offsets_p = offsets.ctypes.data_as(c_uint16_p)
         
-        trigger = trigger.astype(np.int16)
-        trigger_p = trigger.ctypes.data_as(c_int_p)
+        counts = counts.astype(np.uint16)
+        counts_p = counts.ctypes.data_as(c_uint16_p)
         
-        repeat = repeat.astype(np.int16)
-        repeat_p = repeat.ctypes.data_as(c_int_p)
+        trigger = trigger.astype(np.uint16)
+        trigger_p = trigger.ctypes.data_as(c_uint16_p)
+        
+        repeat = repeat.astype(np.uint16)
+        repeat_p = repeat.ctypes.data_as(c_uint16_p)
         val = self.lib.APS_LoadLinkList(self.device_id, offsets_p, counts_p, trigger_p,
                                         repeat_p, ll_len, ID, bank, validate)
         
@@ -402,7 +404,7 @@ class APS:
             
             #Load the WF vectors and LLs into memory
             for ct,channelName in enumerate(self.CHANNELNAMES):
-                tmpWF = fileData.get_vector(scale_factor=self.channelSettings[channelName]['amplitude'], offset=self.channelSettings[channelName]['amplitude'], channelName=channelName)
+                tmpWF = fileData.get_vector(scale_factor=self.channelSettings[channelName]['amplitude'], offset=self.channelSettings[channelName]['offset'], channelName=channelName)
                 self.loadWaveform(ct, tmpWF)
 
                 bankA = fileData.LLData[channelName]['bankA']

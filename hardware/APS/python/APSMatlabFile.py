@@ -66,6 +66,9 @@ class APSMatlabFile(object):
             if 'WFVec' in FID:
                 self.waveform = FID['WFVec'].value
                 self.isLinkList = False
+                
+        #Close the file
+        FID.close()
 
     def get_vector(self, scale_factor=1, offset=0.0, channelName=None):
         

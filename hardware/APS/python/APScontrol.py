@@ -5,15 +5,13 @@ import os.path
 
 from PySide import QtGui, QtCore, QtUiTools
 
-from APSMatlabFile import APSMatlabFile
-
 import aps
 
 libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
 
 class APScontrol(object):
     _bitFileName = ''
-    def __init__(self, parent=None):
+    def __init__(self):
 
         #Dynamically load the ui file
         loader = QtUiTools.QUiLoader()
@@ -189,6 +187,6 @@ class APScontrol(object):
         
 if __name__ == '__main__':
     # create the Qt application
-    app =QtGui.QApplication(sys.argv)
+    app = QtGui.QApplication(sys.argv)
     frame = APScontrol()
     sys.exit(app.exec_())
