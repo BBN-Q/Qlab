@@ -18,25 +18,22 @@ IQkey = 'TekAWG12';
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
 
 % load in random Clifford sequences from text file
-fid = fopen('RBsequences.txt');
-if ~fid
+FID = fopen('RBsequences.txt');
+if ~FID
     error('Could not open Clifford sequence list')
 end
 
-tline = fgetl(fid);
-lnum = 1;
-while ischar(tline)
-    seqStrings{lnum} = textscan(tline, '%s');
-    lnum = lnum + 1;
-    tline = fgetl(fid);
-end
-fclose(fid);
+%Read in each line
+tmpArray = textscan(FID, '%s','delimiter','\n');
+fclose(FID);
+%Split each line
+seqStrings = cellfun(@(x) textscan(x,'%s'), tmpArray{1});
 
 % convert sequence strings into pulses
 pulseLibrary = containers.Map();
 for ii = 1:length(seqStrings)
-    for jj = 1:length(seqStrings{ii}{1})
-        pulseName = seqStrings{ii}{1}{jj};
+    for jj = 1:length(seqStrings{ii})
+        pulseName = seqStrings{ii}{jj};
         if ~isKey(pulseLibrary, pulseName)
             pulseLibrary(pulseName) = pg.pulse(pulseName);
         end

@@ -26,40 +26,32 @@ IQkeyQ3 = 'BBNAPS12';
 pgQ3 = PatternGen('dPiAmp', q3Params.piAmp, 'dPiOn2Amp', q3Params.pi2Amp, 'dSigma', q3Params.sigma, 'dPulseType', q3Params.pulseType, 'dDelta', q3Params.delta, 'correctionT', params.(IQkeyQ3).T, 'dBuffer', q3Params.buffer, 'dPulseLength', q3Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyQ3).linkListMode);
 
 % load in random Clifford sequences from text file
-fid = fopen('RBsequences.txt');
-if ~fid
+FID = fopen('RBsequences.txt');
+if ~FID
     error('Could not open Clifford sequence list')
 end
 
-tline = fgetl(fid);
-lnum = 1;
-while ischar(tline)
-    seqStrings{lnum} = textscan(tline, '%s');
-    lnum = lnum + 1;
-    tline = fgetl(fid);
-end
-fclose(fid);
+%Read in each line
+tmpArray = textscan(FID, '%s','delimiter','\n');
+fclose(FID);
+%Split each line
+seqStrings = cellfun(@(x) textscan(x,'%s'), tmpArray{1});
 
 % load second sequence
-fid = fopen('RBsequences2.txt');
-if ~fid
+FID = fopen('RBsequences2.txt');
+if ~FID
     error('Could not open Clifford sequence list')
 end
 
-tline = fgetl(fid);
-lnum = 1;
-while ischar(tline)
-    seqStrings2{lnum} = textscan(tline, '%s');
-    lnum = lnum + 1;
-    tline = fgetl(fid);
-end
-fclose(fid);
+tmpArray = textscan(FID, '%s','delimiter','\n');
+fclose(FID);
+seqStrings2 = cellfun(@(x) textscan(x,'%s'), tmpArray{1});
 
 % convert sequence strings into pulses
 pulseLibrary = containers.Map();
 for ii = 1:length(seqStrings)
-    for jj = 1:length(seqStrings{ii}{1})
-        pulseName = seqStrings{ii}{1}{jj};
+    for jj = 1:length(seqStrings{ii})
+        pulseName = seqStrings{ii}{jj};
         if ~isKey(pulseLibrary, pulseName)
             pulseLibrary(pulseName) = pgQ1.pulse(pulseName);
         end
@@ -72,8 +64,8 @@ clear seqStrings
 % convert sequence strings into pulses
 pulseLibrary2 = containers.Map();
 for ii = 1:length(seqStrings2)
-    for jj = 1:length(seqStrings2{ii}{1})
-        pulseName = seqStrings2{ii}{1}{jj};
+    for jj = 1:length(seqStrings2{ii})
+        pulseName = seqStrings2{ii}{jj};
         if ~isKey(pulseLibrary2, pulseName)
             pulseLibrary2(pulseName) = pgQ2.pulse(pulseName);
         end
