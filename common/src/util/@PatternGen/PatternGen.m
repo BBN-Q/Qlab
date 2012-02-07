@@ -546,7 +546,11 @@ classdef PatternGen < handle
                 
                 % pad left but setting repeat count
                 LinkList{1}.repeat = fixedPoint + delay - xsum;
-                
+                %Catch a pulse sequence is too long when the initial padding is less than zero
+                if(LinkList{1}.repeat < 0)
+                    error('Pulse sequence step %i is too long.  Try increasing the fixedpoint.',n);
+                end
+
                 xsum = xsum + LinkList{1}.repeat;
                 
                 % pad right by adding pad waveform with appropriate repeat
@@ -578,19 +582,19 @@ classdef PatternGen < handle
             xpattern = zeros(1,obj.cycleLength);
             ypattern = xpattern;
             idx = 1;
-            for i = 1:length(linkList)
-                if linkList{i}.isTimeAmplitude
-                    amplitude = wfLib(linkList{i}.key);
+            for ct = 1:length(linkList)
+                if linkList{ct}.isTimeAmplitude
+                    amplitude = wfLib(linkList{ct}.key);
                     xamp = amplitude(1,1);
                     yamp = amplitude(1,2);
-                    xpattern(idx:idx+linkList{i}.repeat-1) = xamp * ones(1,linkList{i}.repeat);
-                    ypattern(idx:idx+linkList{i}.repeat-1) = yamp * ones(1,linkList{i}.repeat);
-                    idx = idx + linkList{i}.repeat;
+                    xpattern(idx:idx+linkList{ct}.repeat-1) = xamp * ones(1,linkList{ct}.repeat);
+                    ypattern(idx:idx+linkList{ct}.repeat-1) = yamp * ones(1,linkList{ct}.repeat);
+                    idx = idx + linkList{ct}.repeat;
                 else
-                    currWf = wfLib(linkList{i}.key);
-                    xpattern(idx:idx+linkList{i}.repeat*length(currWf)-1) = repmat(currWf(:,1)', 1, linkList{i}.repeat);
-                    ypattern(idx:idx+linkList{i}.repeat*length(currWf)-1) = repmat(currWf(:,2)', 1, linkList{i}.repeat);
-                    idx = idx + linkList{i}.repeat*size(currWf,1);
+                    currWf = wfLib(linkList{ct}.key);
+                    xpattern(idx:idx+linkList{ct}.repeat*length(currWf)-1) = repmat(currWf(:,1)', 1, linkList{ct}.repeat);
+                    ypattern(idx:idx+linkList{ct}.repeat*length(currWf)-1) = repmat(currWf(:,2)', 1, linkList{ct}.repeat);
+                    idx = idx + linkList{ct}.repeat*size(currWf,1);
                 end
             end
         end
