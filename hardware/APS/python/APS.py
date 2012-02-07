@@ -17,8 +17,8 @@ class APS:
     # class properties
     device_id = 0
     num_devices = 0
+    deviceSerials = []
     bit_file_path = ''
-    bit_file = 'mqco_dac2_latest.bit'
     expected_bit_file_ver = 0x10
     Address = 0
     verbose = False
@@ -78,6 +78,9 @@ class APS:
     CHANNELNAMES = ('ch1','ch2','ch3','ch4')
     
     lastSeqFile = ''
+    
+    #DAC2 devices use a different bit file
+    DAC2Serials = ('A6UQZB7Z')
 
     def __init__(self,libPath= libPathDebug, bitFilePath = ''):
         #Load the approriate library with some platform/architecture checks
@@ -111,7 +114,7 @@ class APS:
         #Initialize the channel settings
         self.channelSettings = {}
         for chanName in self.CHANNELNAMES:
-            self.channelSettings[chanName] = {'amplitude':1, 'offset':0, 'enabled':False}
+            self.channelSettings[chanName] = {'amplitude':1, 'offset':0, 'enabled':False, 'seqfile':None}
         
         #Initialize trigger settings
         self.triggerSource = self.TRIGGER_SOFTWARE        
@@ -128,14 +131,14 @@ class APS:
         #First get the number of devices        
         numDevices = self.lib.APS_NumDevices()
 
-        deviceSerials = []
+        self.deviceSerials = []
         #Now, for each device, get the associated serial number
         charBuffer = ctypes.create_string_buffer(64)
         for ct in range(numDevices):
             self.lib.APS_GetSerialNum(ct,charBuffer, 64)
-            deviceSerials.append(charBuffer.value)
+            self.deviceSerials.append(charBuffer.value)
 
-        return numDevices, deviceSerials
+        return numDevices, self.deviceSerials
         
     def connect(self, address):
         # Experiment framework function for connecting to an APS
@@ -149,8 +152,8 @@ class APS:
         self.close()
         
     def open(self,ID,force = 0):
-        self.deviceId = ID
-        val = self.lib.APS_Open(self.deviceId,force)
+        self.device_id = ID
+        val = self.lib.APS_Open(self.device_id,force)
         if val == 0:
             self.is_open = 1
             print 'Openned device:', ID
@@ -204,7 +207,11 @@ class APS:
         return val
 
     def getDefaultBitFileName(self):
-        return os.path.abspath(self.bit_file_path + self.bit_file)
+        #Check whether we have a DACII or APS device
+        if self.deviceSerials[self.device_id] in self.DAC2Serials:
+            return os.path.abspath(self.bit_file_path + 'mqco_dac2_latest.bit')
+        else:
+            return os.path.abspath(self.bit_file_path + 'mqco_aps_latest.bit')
         
     def loadBitFile(self,filename = None):
         if filename is None:
@@ -324,7 +331,7 @@ class APS:
         self.librarycall('Dac: %i Link List Repeat: %i' % (ID, repeat),
                                'APS_SetLinkListRepeat',repeat,ID)
         
-    def setFrequency(self,ID, freq, testLock=1):
+    def setFrequency(self, ID, freq, testLock=1):
         if self.samplingRate[ID] != freq:
             val = self.librarycall('Dac: %i Freq : %i' % (ID, freq), 'APS_SetPllFreq',ID,freq,testLock);
             if val: 
@@ -389,7 +396,7 @@ class APS:
     def set_offset(self, ch, offset):
         return self.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*self.MAX_WAVEFORM_VALUE)
         
-    def load_sequence_file(self, filename, mode):
+    def load_sequence_file(self, filename, mode, channelNum=None):
         '''
         Load a complete 4 channel linklist file.close
         '''
@@ -398,7 +405,7 @@ class APS:
         for ct in range(4):
             self.clearLinkListELL(ct)
             
-        #If we are in 4 channel mode then try and load the file
+        #If we are in 4 channel mode then try and load the file for all four channels
         if mode == 0:        
             fileData = APSMatlabFile.APSMatlabFile(mode, filename)
             
@@ -416,7 +423,13 @@ class APS:
                     
                 self.setLinkListRepeat(ct, fileData.LLData[channelName]['repeatCount'])
                             
-        #TODO: single channel stuff
+        #Otherwise load the single channel file if it is specified
+        else:
+            if filename != '':
+                fileData = APSMatlabFile.APSMatlabFile(mode, filename)
+                channelName = self.CHANNELNAMES[channelNum]
+                tmpWF = fileData.get_vector(scale_factor=self.channelSettings[channelName]['amplitude'], offset=self.channelSettings[channelName]['offset'])
+                self.loadWaveform(channelNum, tmpWF)
         
 
     def init(self, force=False):
@@ -458,7 +471,11 @@ class APS:
             self.load_sequence_file(settings['chAll']['seqfile'], 0)
             for ct in range(4):
                 self.setLinkListMode(ct, self.LL_ENABLE, settings['runMode']);
-            
+        else:
+            for channelct, channelName in enumerate(self.CHANNELNAMES):
+                if self.channelSettings[channelName]['enabled']:
+                    self.load_sequence_file(self.channelSettings[channelName]['seqfile'], 1, channelct)
+                
          # set frequency
         self.setFrequency(self.FPGA0, settings['frequency'])
         self.setFrequency(self.FPGA1, settings['frequency'])
@@ -471,8 +488,7 @@ class APS:
         Set the trigger and start things going.
         '''
 
-        #Sort out what we need to trigger and how trigger 
-            
+        #Sort out what we need to trigger
         triggerArray = np.zeros(4, dtype=np.bool)
         for ct, channelName in enumerate(self.CHANNELNAMES):
             triggerArray[ct] = self.channelSettings[channelName]['enabled']

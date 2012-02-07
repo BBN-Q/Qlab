@@ -24,9 +24,8 @@ class APSMatlabFile(object):
     
     CHANNELNAMES = ('ch1','ch2','ch3','ch4')
     
-    def __init__(self, mode=0, fileName=None, channel=None):
+    def __init__(self, mode=0, fileName=None):
         self.mode = mode
-        self.channel=channel
         if fileName is not None:
             self.readFile(fileName)
             

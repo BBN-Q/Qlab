@@ -44,7 +44,7 @@ CC64=x86_64-w64-mingw32-gcc
 GLOBAL_ALL=all64
 else
 ####### 32-bit #######
-CC=gcc-3
+CC=gcc
 endif
 endif
 endif

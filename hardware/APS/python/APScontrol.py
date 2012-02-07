@@ -5,7 +5,7 @@ import os.path
 
 from PySide import QtGui, QtCore, QtUiTools
 
-import aps
+import APS
 
 libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
 
@@ -47,7 +47,7 @@ class APScontrol(object):
             tmpLineEdit.validator().setRange(-1,1)
             
         #Create an APS class instance for interacting with the instrument
-        self.aps = aps.APS(libPath)
+        self.aps = APS.APS(libPath)
         
         #Enumerate the number of connected APS devices and fill out the combo box
         (numAPS, deviceSerials) = self.aps.enumerate()
