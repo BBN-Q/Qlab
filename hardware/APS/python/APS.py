@@ -492,7 +492,6 @@ class APS:
         triggerArray = np.zeros(4, dtype=np.bool)
         for ct, channelName in enumerate(self.CHANNELNAMES):
             triggerArray[ct] = self.channelSettings[channelName]['enabled']
-        
         triggeredFPGA = [False,False]
                 
         if np.all(triggerArray):
@@ -504,13 +503,11 @@ class APS:
             self.triggerFpga(self.FPGA0,self.triggerSource)
         elif triggerArray[2] and triggerArray[3]:
             triggeredFPGA[1] = True
-            self.printMessage('Trigger FPGA 1')
             self.triggerFpga(self.FPGA1,self.triggerSource)
     
         #Look at individual channels.  Matlab file claims: % NOTE: Poorly defined syncronization between channels in this case
         for chan in range(0,4):
             if not triggeredFPGA[chan // 2] and triggerArray[chan]:
-                self.printMessage('Trigger Channel %i' % (chan + 1))
                 self.triggerWaveform(chan,self.triggerSource)
 
     def stop(self):

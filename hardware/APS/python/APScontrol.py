@@ -60,7 +60,6 @@ class APScontrol(object):
         self._bitfilename = self.aps.getDefaultBitFileName()
 
         self.ui.show()
-
         
     def connect(self):
         #Connect to the specified APS
