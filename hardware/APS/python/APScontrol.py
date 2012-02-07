@@ -44,7 +44,7 @@ class APScontrol(object):
             #Then the offset to +/-1 because it is of the full scale
             tmpLineEdit = getattr(self.ui, 'ch{0}offset'.format(channelct))
             tmpLineEdit.setValidator(QtGui.QDoubleValidator())
-            tmpLineEdit.validator().setRange(-1,1)
+            tmpLineEdit.validator().setRange(-1,1,4)
             
         #Create an APS class instance for interacting with the instrument
         self.aps = APS.APS(libPath)
