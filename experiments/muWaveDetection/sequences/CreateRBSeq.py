@@ -3,7 +3,7 @@
 
 Created on Tue Feb 07 15:01:37 2012
 
-@author: Colm Ryan and Marcus Silva
+@authors: Colm Ryan and Marcus Silva
 """
 import numpy as np
 from scipy.linalg import expm
@@ -11,6 +11,8 @@ from scipy.constants import pi
 
 from functools import reduce
 from itertools import permutations
+
+import csv
 
 def memoize(function):
 	cache = {}
@@ -69,11 +71,16 @@ Cliff[21] = expm(-2j*(pi/3)*(1/np.sqrt(3))*(X+Y-Z))
 Cliff[22] = expm(-1j*(pi/3)*(1/np.sqrt(3))*(-X+Y+Z))
 Cliff[23] = expm(-2j*(pi/3)*(1/np.sqrt(3))*(-X+Y+Z))
 
+#Map each of the Cliffords to its inverse
 inverseMap = [0, 3, 2, 1, 6, 5, 4, 9, 8, 7, 10, 11, 12, 13, 14, 15, 17, 16, 19, 18, 21, 20, 23, 22]
 
 #Pulses that we can apply
-generatorStrings = ['QId', 'X90p', 'X90m', 'Y90p', 'Y90m', 'Xp', 'Xm', 'Yp', 'Ym']
 generatorPulses = [0, 1, 3, 4, 6, 2, 2, 5, 5]
+#A function that returns the string corresponding to a generator (randomly chooses between Xp and Xm for X)
+def generatorString(G):
+    generatorStrings = {0:('QId',), 1:('X90p',), 3:('X90m',), 4:('Y90p',), 6:('Y90m',), 2:('Xp','Xm'), 5:('Yp','Ym')}
+    tmpString = generatorStrings[G]
+    return tmpString[np.random.randint(0, len(tmpString))]
 
 #Get all generator sequences up to length four TODO: why do we need 4?
 generatorSeqs = [x for x in permutations(generatorPulses,1)] + \
@@ -87,28 +94,36 @@ reducedSeqs = np.array([ reduce(clifford_multiply,x) for x in generatorSeqs ])
 #Pick first generator sequence (and thus shortest) that gives each Clifford
 shortestSeqs = [np.nonzero(reducedSeqs==x)[0][0] for x in range(24)]
 
-#Generate random sequences
-randomSeqs = [np.random.randint(0,24, (numRandomizations, gateLength)).tolist() for gateLength in gateLengths]
+#Mean number of generators
+meanNumGens = np.mean([len(generatorSeqs[shortestSeqs[ct]]) for ct in range(24)])
+print('Mean number of generators per Clifford is {0}'.format(meanNumGens))
 
-#For each sequence calculate inverse
+#Generate random sequences
+randomSeqs = [np.random.randint(0,24, (gateLength-1)).tolist() for gateLength in gateLengths for ct in range(numRandomizations) ] 
+
+#For each sequence calculate inverse and the X sequence and append the final Clifford
 randomISeqs = []
 randomXSeqs = []
-for tmpSeqs in randomSequences:
-    tmpISeq = []    
-    tmpXSeq = []    
-    for tmpSeq in tmpSeqs:
-        totalCliff = reduce(clifford_multiply, tmpSeq)
-        inverseCliff = inverseMap[totalCliff]
-        tmpISeq.append(tmpSeq + [inverseCliff])
-        inverseCliffX = clifford_multiply(inverseCliff, 2)
-        tmpXSeq.append(tmpSeq + [inverseCliffX])        
-    randomISeqs.append(tmpISeq)
-    randomXSeqs.append(tmpXSeq)
+for tmpSeq in randomSeqs:
+    totalCliff = reduce(clifford_multiply, tmpSeq)
+    inverseCliff = inverseMap[totalCliff]
+    inverseCliffX = clifford_multiply(inverseCliff, 2)
+    randomISeqs.append(tmpSeq + [inverseCliff])
+    randomXSeqs.append(tmpSeq + [inverseCliffX])    
     
-#Each Clifford corresponds to one or many sequences of pulses we can apply    
+#Each Clifford corresponds to a sequence of generators pulses we can apply so convert from sequences of Clifford numbers to generator strings
+#For each sequences of numbers create a list of strings: for each Clifford gate convert each generator in the generator sequence to a string
+IpulseSeqs = [[generatorString(tmpGenCliff) for tmpCliff in tmpSeq for tmpGenCliff in generatorSeqs[shortestSeqs[tmpCliff]] ] for tmpSeq in randomISeqs]
+XpulseSeqs = [[generatorString(tmpGenCliff) for tmpCliff in tmpSeq for tmpGenCliff in generatorSeqs[shortestSeqs[tmpCliff]] ] for tmpSeq in randomXSeqs]
 
+#Write out the files now
+with open('RB_ISeqs.txt','wt') as ISeqFID:
+    writer = csv.writer(ISeqFID)
+    writer.writerows(IpulseSeqs)
 
-#Replace each Clifford in the sequences with a sequence of pulses we can apply
+with open('RB_XSeqs.txt','wt') as XSeqFID:
+    writer = csv.writer(XSeqFID)
+    writer.writerows(XpulseSeqs)
 
 
 
