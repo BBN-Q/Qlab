@@ -12,6 +12,23 @@ from scipy.constants import pi
 from functools import reduce
 from itertools import permutations
 
+def memoize(function):
+	cache = {}
+	def decorated(*args):
+		if args not in cache:
+			cache[args] = function(*args)
+		return cache[args]
+	return decorated
+
+@memoize
+def clifford_multiply(C1, C2):
+    '''
+    Multiplication table for single qubit cliffords.  Note this assumes C1 is applied first. 
+    '''
+    tmpMult = np.dot(Cliff[C2],Cliff[C1])
+    checkArray = np.array([np.abs(np.trace(np.dot(tmpMult.transpose().conj(),Cliff[x]))) for x in range(24)])
+    return checkArray.argmax()
+
 
 #Number of gates that we want
 gateLengths = 2**np.arange(2,7)
@@ -55,32 +72,23 @@ Cliff[23] = expm(-2j*(pi/3)*(1/np.sqrt(3))*(-X+Y+Z))
 inverseMap = [0, 3, 2, 1, 6, 5, 4, 9, 8, 7, 10, 11, 12, 13, 14, 15, 17, 16, 19, 18, 21, 20, 23, 22]
 
 #Pulses that we can apply
-#[QId X90p, X90m, Y90p, Y90m, Xp, Xm, Yp, Ym]
+generatorStrings = ['QId', 'X90p', 'X90m', 'Y90p', 'Y90m', 'Xp', 'Xm', 'Yp', 'Ym']
 generatorPulses = [0, 1, 3, 4, 6, 2, 2, 5, 5]
 
-#Generate all sequences up to length three
-generatorSeqs = [x for x in permutations(generatorPulses,1)] + [x for x in permutations(generatorPulses,2)] + [x for x in permutations(generatorPulses,3)]
+#Get all generator sequences up to length four TODO: why do we need 4?
+generatorSeqs = [x for x in permutations(generatorPulses,1)] + \
+                [x for x in permutations(generatorPulses,2)] + \
+		[x for x in permutations(generatorPulses,3)] + \
+		[x for x in permutations(generatorPulses,4)] 
 
-def memoize(function):
-	cache = {}
-	def decorated(*args):
-		if args not in cache:
-			cache[args] = function(*args)
-		return cache[args]
-	return decorated
+#Find the effective unitary for each generator sequence
+reducedSeqs = np.array([ reduce(clifford_multiply,x) for x in generatorSeqs ])
 
-#@memoize
-def clifford_multiply(C1, C2):
-    '''
-    Multiplication table for single qubit cliffords.  Note this assumes C1 is applied first. 
-    '''
-    tmpMult = np.dot(Cliff[C2],Cliff[C1])
-    checkArray = np.array([np.abs(np.trace(np.dot(tmpMult.transpose().conj(),Cliff[x]))) for x in range(24)])
-    return checkArray.argmax()
-    
+#Pick first generator sequence (and thus shortest) that gives each Clifford
+shortestSeqs = [np.nonzero(reducedSeqs==x)[0][0] for x in range(24)]
 
 #Generate random sequences
-randomSequences = [np.random.randint(0,24, (numRandomizations, gateLength)).tolist() for gateLength in gateLengths]
+randomSeqs = [np.random.randint(0,24, (numRandomizations, gateLength)).tolist() for gateLength in gateLengths]
 
 #For each sequence calculate inverse
 randomISeqs = []
