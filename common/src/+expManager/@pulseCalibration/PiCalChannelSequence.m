@@ -14,7 +14,7 @@ pathAWG = 'U:\AWG\PiCal\';
 pathAPS = 'U:\APS\PiCal\';
 basename = 'PiCal';
 
-IQchannels = obj.channelMap(qubit);
+IQchannels = obj.channelMap.(qubit);
 IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
 
 fixedPt = 6000;

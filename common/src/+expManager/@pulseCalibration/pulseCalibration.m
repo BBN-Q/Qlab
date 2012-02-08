@@ -68,11 +68,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             obj.pulseParamPath = getpref('qlab', 'pulseParamsBundleFile');
             
             % to do: load channel mapping from file
-            obj.channelMap = containers.Map();
-            obj.channelMap('q1') = struct('instr', 'TekAWG', 'i', 1, 'q', 2, 'marker', '3m1');
-            obj.channelMap('q2') = struct('instr', 'TekAWG', 'i', 3, 'q', 4, 'marker', '4m1');
-            obj.channelMap('q3') = struct('instr', 'BBNAPS', 'i', 1, 'q', 2, 'marker', '3m1');
-            obj.channelMap('q1q2') = struct('instr', 'TekAWG', 'i', 1, 'q', 2, 'marker', '2m1');
+            obj.channelMap = jsonlab.loadjson(getpref('qlab','PulseCalibrationMap'));
         end
         
         % externally defined static methods
@@ -205,7 +201,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             end
             Init@expManager.homodyneDetection2D(obj);
             
-            IQchannels = obj.channelMap(obj.ExpParams.Qubit);
+            IQchannels = obj.channelMap.(obj.ExpParams.Qubit);
             IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
             
             % find AWG instrument parameters(s) - traverse in the same way

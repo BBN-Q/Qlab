@@ -14,7 +14,7 @@ pathAWG = 'U:\AWG\Pi2Cal\';
 pathAPS = 'U:\APS\Pi2Cal\';
 basename = 'Pi2Cal';
 
-IQchannels = obj.channelMap(qubit);
+IQchannels = obj.channelMap.(qubit);
 IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
 
 fixedPt = 6000;

@@ -8,7 +8,7 @@ pathAWG = 'U:\AWG\Rabi\';
 pathAPS = 'U:\APS\Rabi\';
 basename = 'Rabi';
 
-IQchannels = obj.channelMap(qubit);
+IQchannels = obj.channelMap.(qubit);
 IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
 
 fixedPt = 6000;

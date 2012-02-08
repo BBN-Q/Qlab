@@ -6,7 +6,7 @@ function loadSequence(obj, paths, qubit)
         error('Must provide a sequence path for each AWG');
     end
     
-    IQchannels = obj.channelMap(obj.ExpParams.Qubit);
+    IQchannels = obj.channelMap.(obj.ExpParams.Qubit);
     
     % update offsets on target AWG
     obj.awgParams{obj.targetAWGIdx}.(['chan_' num2str(IQchannels.i)]).offset = obj.pulseParams.i_offset;
