@@ -39,7 +39,7 @@ function analyzeRB(ypts)
     fitf = inline('p(1) * exp(-p(2)*n) + p(3)','p','n');
     [beta, r, j] = nlinfit(seqlengths, avgFidelity, fitf, [1.0 .05 0.5]);
 
-    yfit = beta(1)*exp(-beta(2) * (1:96)) + beta(3);
+    yfit = beta(1)*exp(-beta(2) * (1:seqlengths(end))) + beta(3);
     
     % get confidence intervals
     ci = nlparci(beta,r,j);
