@@ -56,7 +56,7 @@
 
 typedef int (*pfunc)();
 
-void doToggleTest(HANDLE hdll, char * bitFile) {
+void doToggleTest(HANDLE hdll, char * bitFile, int progTest) {
 	pfunc load;
 	pfunc trigger;
 	pfunc disable;
@@ -136,15 +136,30 @@ void doToggleTest(HANDLE hdll, char * bitFile) {
 	setup_vco(0);
 	setup_pll(0);
 
-	printf("Programming FPGAS: ");
-	fflush(stdout);
-	int numBytesProg;
-	numBytesProg = prog(0, bitFileData, bitFileSize, 3);
-	printf("Done \n");
 
-	printf("Programmed: %i bytes\n", numBytesProg);
+	int progCnt = 0;
+	int maxProg;
+
+	maxProg = progTest ? 100: 1;
+
+	for (progCnt = 0; progCnt < maxProg; progCnt++) {
+		printf("Programming FPGAS %i: ", progCnt);
+		fflush(stdout);
+		int numBytesProg;
+		numBytesProg = prog(0, bitFileData, bitFileSize, 3);
+		printf("Done \n");
+
+		printf("Programmed: %i bytes\n", numBytesProg);
+		if (numBytesProg < 0) {
+			printf("Failed at: %i\n", progCnt);
+			break;
+		}
+	}
 
 	free(bitFileData);
+
+	if (progTest)
+		exit(0);
 
 	// test bit file version
 	int version;
@@ -225,6 +240,7 @@ void printHelp(){
 	int bitdepth = sizeof(size_t) == 8 ? 64 : 32;
 	printf("BBN APS C Test Bench $Rev$ %i-Bit\n", bitdepth);
 	printf("   -t <bitfile> Trigger Loop Test\n");
+	printf("   -p <bitfile> Program Loop Test\n");
 	printf("   -s List Available APS Serial Numbers\n");
 	printf("   -ks List Known APS Serial Numbers\n");
 	printf("   -h Print This Help Message\n");
@@ -286,7 +302,9 @@ int main (int argc, char** argv) {
 
 	for(cnt = 0; cnt < argc; cnt++) {
 		if (strcmp(argv[cnt],"-t") == 0)
-			doToggleTest(hdll,argv[cnt+1]);
+			doToggleTest(hdll,argv[cnt+1],0);
+		if (strcmp(argv[cnt],"-p") == 0)
+					doToggleTest(hdll,argv[cnt+1],1);
 		if (strcmp(argv[cnt],"-ks") == 0) {
 			listserials();
 		}
