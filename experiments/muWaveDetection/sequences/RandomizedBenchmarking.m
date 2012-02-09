@@ -14,8 +14,8 @@ elseif length(varargin) > 2
 end
 
 basename = 'RB';
-fixedPt = 11000;
-cycleLength = 15000;
+fixedPt = 13000;
+cycleLength = 17000;
 nbrRepeats = 1;
 
 % load config parameters from file
@@ -29,7 +29,7 @@ IQkey = qubitMap.(qubit).IQkey;
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
 
 % load in random Clifford sequences from text file
-FID = fopen('RBsequences.txt');
+FID = fopen('RBsequences-long.txt');
 if ~FID
     error('Could not open Clifford sequence list')
 end

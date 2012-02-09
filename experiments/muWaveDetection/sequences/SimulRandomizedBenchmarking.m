@@ -5,28 +5,29 @@ if ~exist('makePlot', 'var')
 end
 
 basename = 'SimulRB';
-fixedPt = 4000;
-cycleLength = 8000;
+fixedPt = 13000; %4000
+cycleLength = 16000; %8000
 pathAWG = '/Volumes/mqco/AWG/SimulRB/';
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 measDelay = -64;
 
 q1Params = params.q1;
-IQkeyQ1 = 'TekAWG12';
+IQkeyQ1 = qubitMap.q1.IQkey;
 pgQ1 = PatternGen('dPiAmp', q1Params.piAmp, 'dPiOn2Amp', q1Params.pi2Amp, 'dSigma', q1Params.sigma, 'dPulseType', q1Params.pulseType, 'dDelta', q1Params.delta, 'correctionT', params.(IQkeyQ1).T, 'dBuffer', q1Params.buffer, 'dPulseLength', q1Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyQ1).linkListMode);
 
 q2Params = params.q2;
-IQkeyQ2 = 'TekAWG34';
+IQkeyQ2 = qubitMap.q2.IQkey;
 pgQ2 = PatternGen('dPiAmp', q2Params.piAmp, 'dPiOn2Amp', q2Params.pi2Amp, 'dSigma', q2Params.sigma, 'dPulseType', q2Params.pulseType, 'dDelta', q2Params.delta, 'correctionT', params.(IQkeyQ2).T, 'dBuffer', q2Params.buffer, 'dPulseLength', q2Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyQ2).linkListMode);
 
 q3Params = params.q3; 
-IQkeyQ3 = 'BBNAPS12';
+IQkeyQ3 = qubitMap.q3.IQkey;
 pgQ3 = PatternGen('dPiAmp', q3Params.piAmp, 'dPiOn2Amp', q3Params.pi2Amp, 'dSigma', q3Params.sigma, 'dPulseType', q3Params.pulseType, 'dDelta', q3Params.delta, 'correctionT', params.(IQkeyQ3).T, 'dBuffer', q3Params.buffer, 'dPulseLength', q3Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyQ3).linkListMode);
 
 % load in random Clifford sequences from text file
-FID = fopen('RBsequences.txt');
+FID = fopen('RBsequences-long.txt');
 if ~FID
     error('Could not open Clifford sequence list')
 end
@@ -38,7 +39,7 @@ fclose(FID);
 seqStrings = cellfun(@(x) textscan(x,'%s'), tmpArray{1});
 
 % load second sequence
-FID = fopen('RBsequences2.txt');
+FID = fopen('RBsequences2-long.txt');
 if ~FID
     error('Could not open Clifford sequence list')
 end
