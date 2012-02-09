@@ -1,10 +1,20 @@
-function SPAMSequence(makePlot)
+function SPAMSequence(varargin)
 
 %Y90-(X180-Y180-X180-Y180)^n to determine phase difference between quadrature channels
 
-if ~exist('makePlot', 'var')
-    makePlot = true;
+%varargin assumes qubit and then makePlot
+qubit = 'q1';
+makePlot = true;
+
+if length(varargin) == 1
+    qubit = varargin{1};
+elseif length(varargin) == 2
+    qubit = varargin{1};
+    makePlot = varargin{2};
+elseif length(varargin) > 2
+    error('Too many input arguments.')
 end
+
 basename = 'SPAM';
 fixedPt = 6000;
 cycleLength = 10000;
@@ -12,8 +22,10 @@ nbrRepeats = 1;
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.q2; % choose target qubit here
-IQkey = 'TekAWG34';
+qParams = params.(qubit);
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
+
 % if using SSB, uncomment the following line
 % params.(IQkey).T = eye(2);
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
@@ -38,7 +50,7 @@ calseq{end+1} = {pg.pulse('Xp')};
 calseq{end+1} = {pg.pulse('Xp')};
 
 compiler = ['compileSequence' IQkey];
-compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 15};
+compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 10};
 if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
     feval(compiler, compileArgs{:});
 end

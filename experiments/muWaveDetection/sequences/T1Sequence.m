@@ -1,26 +1,35 @@
-function T1Sequence(makePlot)
+function T1Sequence(varargin)
 
-if ~exist('makePlot', 'var')
-    makePlot = true;
+%varargin assumes qubit and then makePlot
+qubit = 'q1';
+makePlot = true;
+
+if length(varargin) == 1
+    qubit = varargin{1};
+elseif length(varargin) == 2
+    qubit = varargin{1};
+    makePlot = varargin{2};
+elseif length(varargin) > 2
+    error('Too many input arguments.')
 end
 
 basename = 'T1';
-
-fixedPt = 20000; %40000
-cycleLength = 24000; %44000
+fixedPt = 30000; %40000
+cycleLength = 34000; %44000
 nbrRepeats = 1;
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.q1; % choose target qubit here
-IQkey = 'TekAWG12';
+qParams = params.(qubit);
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
+
 % if using SSB, uncomment the following line
 % params.(IQkey).T = eye(2);
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
 
 numsteps = 160 ; %250
-nbrRepeats = 1;
-stepsize = 120; %24
+stepsize = 180; %24
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {{...
     pg.pulse('Xp'), ...

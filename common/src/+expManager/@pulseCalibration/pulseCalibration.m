@@ -68,7 +68,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             obj.pulseParamPath = getpref('qlab', 'pulseParamsBundleFile');
             
             % to do: load channel mapping from file
-            obj.channelMap = jsonlab.loadjson(getpref('qlab','PulseCalibrationMap'));
+            obj.channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
         end
         
         % externally defined static methods
