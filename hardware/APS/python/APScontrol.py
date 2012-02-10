@@ -2,206 +2,161 @@
 
 import sys
 import os.path
-import pdb
 
-from PySide.QtCore import *
-from PySide.QtGui import *
+from PySide import QtGui, QtCore, QtUiTools
 
-from APS_ui import Ui_Dialog
-
-from APSMatlabFile import APSMatlabFile
-
-import aps
+import APS
 
 libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
 
-class APScontrol(QDialog, Ui_Dialog):
-    def __init__(self, parent=None):
-        super(APScontrol, self).__init__(parent)
-        self.setupUi(self)
+class APScontrol(object):
+    _bitFileName = ''
+    def __init__(self):
 
-        # connect UI element to signals
-        self.bitFileOpen.clicked.connect(self.bitFileDialog)
-        self.programButton.clicked.connect(self.programFPGA)
-        self.runButton.clicked.connect(self.run)
-        self.stopButton.clicked.connect(self.stop)
+        #Dynamically load the ui file
+        loader = QtUiTools.QUiLoader()
+        file = QtCore.QFile(os.path.join(os.path.dirname(sys.argv[0]), 'APS.ui'))
+        file.open(QtCore.QFile.ReadOnly)
+        self.ui = loader.load(file)
+        file.close()
 
-        self.ch1fileOpen.clicked.connect(self.waveformDialog1)
-        self.ch2fileOpen.clicked.connect(self.waveformDialog2)
-        self.ch3fileOpen.clicked.connect(self.waveformDialog3)
-        self.ch4fileOpen.clicked.connect(self.waveformDialog4)
+        #Connect UI element to signals
+        self.ui.runButton.clicked.connect(self.run)
+        self.ui.stopButton.clicked.connect(self.stop)
 
-        # set default scale factor / offset values
-        for i in range(1,5):
-            self.setScaleFactor(i,1.0)
-            self.setOffset(i,0)
+        self.ui.ch1fileOpen.clicked.connect(lambda : self.waveformDialog(self.ui.ch1file))
+        self.ui.ch2fileOpen.clicked.connect(lambda : self.waveformDialog(self.ui.ch2file))
+        self.ui.ch3fileOpen.clicked.connect(lambda : self.waveformDialog(self.ui.ch3file))
+        self.ui.ch4fileOpen.clicked.connect(lambda : self.waveformDialog(self.ui.ch4file))
+        self.ui.chAllfileOpen.clicked.connect(lambda : self.waveformDialog(self.ui.chAllfile))
+        
+        self.ui.chAllOnOff.toggled.connect(self.update_channel_enablers)
+        
+        self.ui.actionLoad_Bit_File.triggered.connect(self.bitFileDialog)
+        self.ui.actionTest_PLL_Sync.triggered.connect(self.test_PLL_sync)
+        
+        #Set some validators for the scale factor / offset values so we don't have to error check later
+        for channelct in range(1,5):
+            #First the scale to anything
+            tmpLineEdit = getattr(self.ui, 'ch{0}scale'.format(channelct))
+            tmpLineEdit.setValidator(QtGui.QDoubleValidator())
+            
+            #Then the offset to +/-1 because it is of the full scale
+            tmpLineEdit = getattr(self.ui, 'ch{0}offset'.format(channelct))
+            tmpLineEdit.setValidator(QtGui.QDoubleValidator())
+            tmpLineEdit.validator().setRange(-1,1,4)
+            
+        #Create an APS class instance for interacting with the instrument
+        self.aps = APS.APS(libPath)
+        
+        #Enumerate the number of connected APS devices and fill out the combo box
+        (numAPS, deviceSerials) = self.aps.enumerate()
+        self.printMessage('Found {0} APS units'.format(numAPS))
+        
+        #Fill out the device ID combo box
+        self.ui.deviceIDComboBox.clear()
+        self.ui.deviceIDComboBox.insertItems(0,['{0} ({1})'.format(num, deviceSerials[num]) for num in range(numAPS)])
+        
+        self._bitfilename = self.aps.getDefaultBitFileName()
 
-        self.aps = aps.APS(libPath)
-
-        self.bitFileName.setText(self.aps.getDefaultBitFileName())
-        self.connect()
+        self.ui.show()
         
     def connect(self):
-        # connect to APS
-        numAPS = self.aps.enumerate()
-        self.printMessage('Found %i APS units' % numAPS)
+        #Connect to the specified APS
+        apsNum = self.ui.deviceIDComboBox.currentIndex()
+        self.printMessage('Opening connection to APS {0}'.format(apsNum))
+        self.aps.connect(apsNum)
+        self.printMessage("Firmware version: {0}".format(self.aps.readBitFileVersion()))
         
-        # todo edit drop unit drop down to increase number of available units
-        
-        self.printMessage('Opening connection to APS 0')
-        self.aps.connect(0)
-        self.updateFirmwareVersion(self.aps.readBitFileVersion())
-        
-
     def printMessage(self, message):
-        self.messageLog.append(message)
+        self.ui.messageLog.append(message)
 
     def bitFileDialog(self):
-        fileName, fileFilter = QFileDialog.getOpenFileName(self, 'Open File', '', 'Bit files (*.bit)')
-        self.bitFileName.setText(fileName)
-
-    def waveformDialog1(self):
-        self.waveformDialog(1, self.ch1file)
+        self._bitFileName = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Bit files (*.bit)')[0]
+        self.programFPGA()
         
-    def waveformDialog2(self):
-        self.waveformDialog(2, self.ch2file)
-        
-    def waveformDialog3(self):
-        self.waveformDialog(3, self.ch3file)
-        
-    def waveformDialog4(self):
-        self.waveformDialog(4, self.ch4file)
-
-    def waveformDialog(self, channel, textBox):
-        # todo: error file channel number
-        if (channel < 1) or (channel > 4):
-            print "Error ==> unknown channel", channel
-            return
-
-        fileName, fileFilter = QFileDialog.getOpenFileName(self, 'Open File', '', 'Matlab Files (*.mat);;Waveform files (*.m);;Sequence files (*.seq)')
+    def waveformDialog(self, textBox):
+        fileName, fileFilter = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Matlab Files (*.mat);;Waveform files (*.m);;Sequence files (*.seq)')
         textBox.setText(fileName)
         
     def programFPGA(self):
-        # check that file exists
-        if not os.path.isfile(self.bitFileName.text()):
-            self.printMessage("Error file not found: %s" % self.bitFileName.text() )
+        #Check that file exists
+        if not os.path.isfile(self._bitFileName):
+            self.printMessage("Error bitfile not found: %s" % self.bitFileName.text() )
             return
         
-        # load the file
+        #Load the file
         self.printMessage('Programming FPGA bitfile.')
-        self.aps.loadBitFile(self.bitFileName.text())
+        self.connect()
+        self.aps.loadBitFile(self._bitFileName)
         self.printMessage("Loaded firmware version %i" % self.aps.readBitFileVersion())
-        self.updateFirmwareVersion(self.aps.readBitFileVersion())
-
-    def updateFirmwareVersion(self, version):
-        self.bitFileVersion.setText("Firmware version: %i" % version)
-
+        self.aps.disconnect()
+        
+    def update_channel_enablers(self):
+        '''
+        Update the single channel entries based on whether 4-channel mode is activiated.
+        '''
+        fourChanMode = self.ui.chAllOnOff.isChecked()
+        for ct in range(1,5):
+            getattr(self.ui,'ch{0}file'.format(ct)).setEnabled(not fourChanMode)
+        self.ui.chAllfile.setEnabled(fourChanMode)
+            
+        
     def run(self):
-        self.runButton.setEnabled(0)
-        self.stopButton.setEnabled(1)
+        self.ui.runButton.setEnabled(0)
+        self.ui.stopButton.setEnabled(1)
 
-        # check frequencies
-        validFreqs = self.aps.VALID_FREQUENCIES;
-        frequency = validFreqs[self.sampleRate.currentIndex()];
+        #Pull the settings from the gui
+        settings = {}
         
-        # set frequency
-        self.aps.setFrequency(self.aps.FPGA0, frequency)
-        self.aps.setFrequency(self.aps.FPGA1, frequency)
-        self.printMessage('Set frequency to %i' % frequency)
-        
-        # get mode
-        if self.sequencerMode.currentIndex() == 0:
+        #Sampling frequency frequencies
+        settings['frequency'] = self.aps.VALID_FREQUENCIES[self.ui.sampleRate.currentIndex()];
+        self.printMessage('Set frequency to {0}'.format(settings['frequency']))
+
+        #Get the run mode
+        if self.ui.sequencerMode.currentIndex() == 0:
             self.printMessage('Continous Mode')
-            mode = self.aps.LL_CONTINUOUS
+            settings['runMode'] = self.aps.LL_CONTINUOUS
         else:
             self.printMessage('One Shot Mode')
-            mode = self.aps.LL_ONESHOT
+            settings['runMode'] = self.aps.LL_ONESHOT
         
-        # check to see how to trigger
-        
-        trigger_type = self.triggerType.currentIndex();
-        if trigger_type == 0:  # Internal (aka Software Trigger)
-            trigger_type = self.aps.TRIGGER_SOFTWARE
-        else: # External (aka Software Trigger)
-            trigger_type = self.aps.TRIGGER_HARDWARE
-        
-        trigger = [0,0,0,0];
-        allTrigger = True
-        triggeredFPGA = [False,False]
-                
-        for chan in range(1,5):
-            checkBox = getattr(self, 'ch%ienable' % chan)
-            trigger[chan-1] = checkBox.isChecked()
-            if trigger[chan - 1]:
-                        
-                # load file
-                fileData = APSMatlabFile()
-                
-                fileTextBox = getattr(self, 'ch%ifile' % chan)
-                filename = fileTextBox.text()
-                
-                self.printMessage('Loading file %s' % filename)
-                fileData.readFile(filename)
-                data = fileData.get_vector()
-                
-                # clear existing APS LL data
-                self.aps.clearLinkListELL(chan - 1)
-                
-                self.printMessage('Sending waveform to APS')
-                self.aps.loadWaveform(chan - 1, data)
-                
-                if fileData.isLinkList:
-                    # need to load link list data
-                    if fileData.bankA:
-                        bA = fileData.bankA
-                        self.printMessage('Loading Bank A')
-                        self.aps.loadLinkListELL(chan - 1, bA['offset'], bA['count'],
-                                                 bA['trigger'], bA['repeat'], bA['length'],
-                                                 self.aps.BANKA)
-                    
-                    if fileData.bankB:
-                        bB = fileData.bankB
-                        self.printMessage('Loading Bank B')
-                        self.aps.loadLinkListELL(chan - 1, bA['offset'], bA['count'],
-                                                 bA['trigger'], bA['repeat'], bA['length'],
-                                                 self.aps.BANKB)
-                        
-                    self.printMessage('Set link list repeat and mode')
-                    self.aps.setLinkListRepeat(chan - 1, fileData.repeatCount)
-                    self.aps.setLinkListMode(chan - 1, self.aps.LL_ENABLE,mode)
-                    
-                
-            allTrigger = allTrigger and trigger[chan - 1]
 
-        if allTrigger:
-            self.printMessage('Trigger All FPGAs')
-            triggeredFPGA[0] = True
-            triggeredFPGA[1] = True
-            #self.aps.triggerFpga(self.aps.BOTH_FPGAS,trigger_type)
-            self.aps.triggerFpga(self.aps.FPGA0,trigger_type)
-            self.aps.triggerFpga(self.aps.FPGA1,trigger_type)
-        elif trigger[0] and trigger[1]:
-            triggeredFPGA[0] = True
-            self.printMessage('Trigger FPGA 0')
-            self.aps.triggerFpga(self.aps.FPGA0,trigger_type)
-        elif trigger[2] and trigger[3]:
-            triggeredFPGA[1] = True
-            self.printMessage('Trigger FPGA 1')
-            self.aps.triggerFpga(self.aps.FPGA1,trigger_type)
-    
-        for chan in range(0,4):
-            if not triggeredFPGA[chan // 2] and trigger[chan]:
-                self.printMessage('Trigger Channel %i' % (chan + 1))
-                self.aps.triggerWaveform(chan,trigger_type)
-                    
+        #Check to see how to trigger
+        if self.ui.triggerType.currentIndex() == 0:  # Internal (aka Software Trigger)
+            settings['triggerSource'] = self.aps.TRIGGER_SOFTWARE
+            self.printMessage('Sofware trigger.')
+        else: # External (aka Software Trigger):
+            self.printMessage('Hardware trigger.')
+            settings['triggerSource'] = self.aps.TRIGGER_HARDWARE
+        
+        #Pull out specific channel properties
+        for ct,channelName in enumerate(self.aps.CHANNELNAMES):
+            settings[channelName] = {}
+            settings[channelName]['amplitude'] = float(getattr(self.ui,'ch{0}scale'.format(ct+1)).text())
+            settings[channelName]['offset'] = float(getattr(self.ui,'ch{0}offset'.format(ct+1)).text())
+            settings[channelName]['enabled'] = bool(getattr(self.ui,'ch{0}enable'.format(ct+1)).isChecked())
+            settings[channelName]['seqfile'] = getattr(self.ui,'ch{0}file'.format(ct+1)).text()
+            
+        #Get the four channel mode stuff
+        settings['fourChannelMode'] = bool(self.ui.chAllOnOff.isChecked())
+        if settings['fourChannelMode']:
+            settings['chAll'] = {}
+            settings['chAll']['seqfile'] = self.ui.chAllfile.text()
+
+        self.connect()
+        self.aps.init()
+        self.aps.setAll(settings)
+        self.aps.run()
+        
         self.printMessage('Running')
 
     def stop(self):
-        self.stopButton.setEnabled(0)
-        self.runButton.setEnabled(1)
+        self.ui.stopButton.setEnabled(0)
+        self.ui.runButton.setEnabled(1)
         
-        self.aps.disableFpga(0)
-        self.aps.disableFpga(2)
+        self.aps.stop()
+        self.aps.disconnect()
         self.printMessage('Stopped')
     
             
@@ -220,10 +175,17 @@ class APScontrol(QDialog, Ui_Dialog):
             textBox.setText(value)
         else:
             print 'Unknown channel', channel
+            
+    def test_PLL_sync(self):
+        self.connect()
+        status = self.aps.test_PLL_sync(0)
+        self.printMessage('PLL Sync Test for DAC {0} returned {1}'.format(0, status))
+        status = self.aps.test_PLL_sync(2)
+        self.printMessage('PLL Sync Test for DAC {0} returned {1}'.format(2, status))
+        self.aps.disconnect()
         
 if __name__ == '__main__':
     # create the Qt application
-    app = QApplication(sys.argv)
+    app = QtGui.QApplication(sys.argv)
     frame = APScontrol()
-    frame.show()
     sys.exit(app.exec_())

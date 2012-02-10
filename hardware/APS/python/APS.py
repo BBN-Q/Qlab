@@ -5,7 +5,9 @@ import platform
 import sys
 import os
 
-import numpy
+import numpy as np
+
+import APSMatlabFile
 
 libPathDebug = '../libaps/'
 
@@ -15,11 +17,13 @@ class APS:
     # class properties
     device_id = 0
     num_devices = 0
+    deviceSerials = []
     bit_file_path = ''
-    bit_file = 'mqco_dac2_latest.bit'
     expected_bit_file_ver = 0x10
     Address = 0
     verbose = False
+    
+    samplingRate = {0:0,2:0}
     
     mock_aps = False
 
@@ -33,6 +37,8 @@ class APS:
     ELL_VERSION = 0x10
     
     ADDRESS_UNIT = 4
+    
+    MAX_WAVEFORM_VALUE = 8191
     
     ELL_MAX_WAVEFORM = 8192
     ELL_MAX_LL = 512
@@ -69,6 +75,13 @@ class APS:
     
     VALID_FREQUENCIES = [1200,600,300,100,40];
 
+    CHANNELNAMES = ('ch1','ch2','ch3','ch4')
+    
+    lastSeqFile = ''
+    
+    #DAC2 devices use a different bit file
+    DAC2Serials = ('A6UQZB7Z')
+
     def __init__(self,libPath= libPathDebug, bitFilePath = ''):
         #Load the approriate library with some platform/architecture checks
         #Check for 32bit 64bit python from sys.maxsize
@@ -97,6 +110,14 @@ class APS:
                 self.bit_file_path = scriptPath[0:baseIdx+len(extendedPath)] + '/'
             except ValueError:
                 print 'Error finding bit file path in: ', scriptPath
+                
+        #Initialize the channel settings
+        self.channelSettings = {}
+        for chanName in self.CHANNELNAMES:
+            self.channelSettings[chanName] = {'amplitude':1, 'offset':0, 'enabled':False, 'seqfile':None}
+        
+        #Initialize trigger settings
+        self.triggerSource = self.TRIGGER_SOFTWARE        
         
     def readLibraryVersion(self):
         strLen = 30
@@ -105,8 +126,19 @@ class APS:
         return charBuffer.value
         
     def enumerate(self):
+        #List the number of devices attached and their serial numbers
+        
+        #First get the number of devices        
         numDevices = self.lib.APS_NumDevices()
-        return numDevices
+
+        self.deviceSerials = []
+        #Now, for each device, get the associated serial number
+        charBuffer = ctypes.create_string_buffer(64)
+        for ct in range(numDevices):
+            self.lib.APS_GetSerialNum(ct,charBuffer, 64)
+            self.deviceSerials.append(charBuffer.value)
+
+        return numDevices, self.deviceSerials
         
     def connect(self, address):
         # Experiment framework function for connecting to an APS
@@ -119,13 +151,9 @@ class APS:
     def disconnect(self):
         self.close()
         
-    def setAll(self, init_params):
-        print 'APS.setALL is not yet implemented in Python'
-        
-        
     def open(self,ID,force = 0):
-        self.deviceId = ID
-        val = self.lib.APS_Open(self.deviceId,force)
+        self.device_id = ID
+        val = self.lib.APS_Open(self.device_id,force)
         if val == 0:
             self.is_open = 1
             print 'Openned device:', ID
@@ -151,7 +179,7 @@ class APS:
             print 'Unknown return: ', val
             
     def close(self):
-        self.lib.APS_close(self.device_id)
+        self.lib.APS_Close(self.device_id)
         self.is_open = 0
         
     def readBitFileVersion(self):
@@ -166,7 +194,7 @@ class APS:
         self.max_waveform_points = self.ELL_MAX_WAVFORM
         self.max_ll_points = self.ELL_MAX_LL
         
-    def programFPGA(self,data,bytecount, sel):
+    def programFPGA(self, data, bytecount, sel):
         if not self.is_open and not self.mock_aps:
             print 'APS unit is not open'
             return -1
@@ -179,10 +207,14 @@ class APS:
         return val
 
     def getDefaultBitFileName(self):
-        return os.path.abspath(self.bit_file_path + self.bit_file)
+        #Check whether we have a DACII or APS device
+        if self.deviceSerials[self.device_id] in self.DAC2Serials:
+            return os.path.abspath(self.bit_file_path + 'mqco_dac2_latest.bit')
+        else:
+            return os.path.abspath(self.bit_file_path + 'mqco_aps_latest.bit')
         
-    def loadBitFile(self,filename = ''):
-        if len(filename) == 0:
+    def loadBitFile(self,filename = None):
+        if filename is None:
             filename = self.getDefaultBitFileName()
             
         if not self.is_open and not self.mock_aps:
@@ -210,7 +242,7 @@ class APS:
             
         print 'Loading waveform length: %i into DAC%i' % ( len(waveform), ID)
         
-        waveform = waveform.astype(numpy.int16)
+        waveform = waveform.astype(np.int16)
         c_int_p = ctypes.POINTER(ctypes.c_int16)
         waveform_p = waveform.ctypes.data_as(c_int_p) 
         
@@ -232,23 +264,24 @@ class APS:
             print 'APS unit is not open'
             return -1
             
-        print 'Loading Link List length %i into DAC%i bank %i' % (ll_len,ID,bank)
+        print('Loading Link List length {0} into DAC{1} bank {2}'.format(ll_len,ID,bank))
         
-        # convert each array to int16 pointer
-        c_int_p = ctypes.POINTER(ctypes.c_int16)
+        #TODO: we are assuming the arrays are contiguous should we check this?
         
-        offsets = offsets.astype(numpy.int16)
-        offsets_p = offsets.ctypes.data_as(c_int_p)
+        # convert each array to uint16 pointer
+        c_uint16_p = ctypes.POINTER(ctypes.c_uint16)
         
-        counts = counts.astype(numpy.int16)
-        counts_p = counts.ctypes.data_as(c_int_p)
+        offsets = offsets.astype(np.uint16)
+        offsets_p = offsets.ctypes.data_as(c_uint16_p)
         
-        trigger = trigger.astype(numpy.int16)
-        trigger_p = trigger.ctypes.data_as(c_int_p)
+        counts = counts.astype(np.uint16)
+        counts_p = counts.ctypes.data_as(c_uint16_p)
         
-        repeat = repeat.astype(numpy.int16)
-        repeat_p = repeat.ctypes.data_as(c_int_p)
+        trigger = trigger.astype(np.uint16)
+        trigger_p = trigger.ctypes.data_as(c_uint16_p)
         
+        repeat = repeat.astype(np.uint16)
+        repeat_p = repeat.ctypes.data_as(c_uint16_p)
         val = self.lib.APS_LoadLinkList(self.device_id, offsets_p, counts_p, trigger_p,
                                         repeat_p, ll_len, ID, bank, validate)
         
@@ -263,19 +296,7 @@ class APS:
         methodCall = getattr(self.lib,functionName)
         if logStr:
             print logStr
-        if len(args) == 0:
-            methodCall(self.device_id)
-        elif len(args) == 1:
-            a1 = args[0]
-            methodCall(self.device_id,a1)
-        elif len(args) == 2:
-            a1, a2 = args
-            methodCall(self.device_id,a1, a2)
-        elif len(args) == 3:
-            a1, a2, a3 = args
-            methodCall(self.device_id,a1, a2, a3)
-        else:
-            print 'Error: library call does not support more that 3 arguments'
+        return methodCall(self.device_id, *args)
         
     def clearLinkListELL(self,ID):
         self.librarycall(None,'APS_ClearLinkListELL',ID,0);  # bank 0 
@@ -283,52 +304,52 @@ class APS:
         
         
     def triggerWaveform(self,ID,trigger_type):
-        val = self.librarycall('Trigger Waveform %i Type %i' % (ID, trigger_type), 
+        return self.librarycall('Trigger Waveform %i Type %i' % (ID, trigger_type), 
                          'APS_TriggerDac',ID,trigger_type)
         
     def pauseWaveform(self,ID):
-        val = self.librarycall('Pause Waveform %i' % (ID), 'APS_PauseDac',ID)
+        return self.librarycall('Pause Waveform %i' % (ID), 'APS_PauseDac',ID)
         
-    def disableWaveform(self,ID):
-        val = self.librarycall('Disable Waveform %i' % (ID), 'APS_DisableDac',ID)
+    def disableWaveform(self, ID):
+        return self.librarycall('Disable Waveform %i' % (ID), 'APS_DisableDac',ID)
         
-    def triggerFpga(self,ID,trigger_type):
-        val = self.librarycall('Trigger Waveform %i Type: %i' %(ID, trigger_type), 
+    def triggerFpga(self, ID, trigger_type):
+        return self.librarycall('Trigger Waveform %i Type: %i' %(ID, trigger_type), 
                                'APS_TriggerFpga',ID,trigger_type)
                                
-    def pauseFpga(self,ID):                           
-        val = self.librarycall('Pause FPGA %i' % (ID), 'APS_PauseFpga',ID)
+    def pauseFpga(self, ID):                           
+        return self.librarycall('Pause FPGA %i' % (ID), 'APS_PauseFpga',ID)
         
-    def disableFpga(self,ID):                           
-        val = self.librarycall('Disable FPGA %i' % (ID), 'APS_DisableFpga',ID)
+    def disableFpga(self, ID):                           
+        return self.librarycall('Disable FPGA %i' % (ID), 'APS_DisableFpga',ID)
 
-    def setLinkListMode(self,ID, enable,dc):
-        val = self.librarycall('Dac: %i Link List Enable: %i Mode: %i' % (ID, enable,dc), 
+    def setLinkListMode(self, ID, enable,dc):
+        self.librarycall('Dac: %i Link List Enable: %i Mode: %i' % (ID, enable,dc), 
                                'APS_SetLinkListMode',enable,dc,ID);
         
-        
-    def setLinkListRepeat(self,ID, repeat):
-        val = self.librarycall('Dac: %i Link List Repeat: %i' % (ID, repeat),
+    def setLinkListRepeat(self, ID, repeat):
+        self.librarycall('Dac: %i Link List Repeat: %i' % (ID, repeat),
                                'APS_SetLinkListRepeat',repeat,ID)
         
-    def setFrequency(self,ID, freq):
-        testLock = 1;
-        val = self.librarycall('Dac: %i Freq : %i' % (ID, freq), 'APS_SetPllFreq',ID,freq,testLock);
-        if val: 
-            print 'Warning: APS::setFrequency returned', val
+    def setFrequency(self, ID, freq, testLock=1):
+        if self.samplingRate[ID] != freq:
+            val = self.librarycall('Dac: %i Freq : %i' % (ID, freq), 'APS_SetPllFreq',ID,freq,testLock);
+            if val: 
+                print('Warning: APS::setFrequency returned: {0}'.format(val))
+            else:
+                self.samplingRate[ID] = freq
 
     def setupPLL(self):
-        val = self.librarycall('Setup PLL', 'APS_SetupPLL');
+        self.librarycall('Setup PLL', 'APS_SetupPLL');
         
     def setupVCX0(self):
-        val = self.librarycall('Setup VCX0', 'APS_SetupVCXO');
+        self.librarycall('Setup VCX0', 'APS_SetupVCXO');
     
-        
     def readAllRegisters(self):
-        val = self.librarycall('Read Registers', 'APS_ReadAllRegisters');
+        self.librarycall('Read Registers', 'APS_ReadAllRegisters');
         
     def testWaveformMemory(self, ID, numBytes):
-            val = self.librarycall('Test WaveformMemory','APS_TestWaveformMemory',ID,numBytes);
+        self.librarycall('Test WaveformMemory','APS_TestWaveformMemory',ID,numBytes);
         
     def readLinkListStatus(self,ID):
         return self.librarycall('Read Link List Status', 'APS_ReadLinkListStatus',ID);
@@ -361,6 +382,138 @@ class APS:
         print 'getNewWaveform not yet implemented in Python'
         return None
         
+    def test_PLL_sync(self, DACNum=0, numSyncChannels=4):
+        return self.librarycall('Test Pll Sync: DAC: {0}'.format(DACNum),'APS_TestPllSync', DACNum, numSyncChannels)
+
+    def read_PLL_status(self):
+        #Read FPGA1
+        val1 = self.librarycall('Read PLL Sync FPGA1','APS_ReadPllStatus', 1)
+        #Read FPGA2
+        val2 = self.librarycall('Read PLL Sync FPGA2','APS_ReadPllStatus', 2)
+        # functions return 0 on success;
+        return val1 and val2
+        
+    def set_offset(self, ch, offset):
+        return self.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*self.MAX_WAVEFORM_VALUE)
+        
+    def load_sequence_file(self, filename, mode, channelNum=None):
+        '''
+        Load a complete 4 channel linklist file.close
+        '''
+
+        #Clear the old LinkList data
+        for ct in range(4):
+            self.clearLinkListELL(ct)
+            
+        #If we are in 4 channel mode then try and load the file for all four channels
+        if mode == 0:        
+            fileData = APSMatlabFile.APSMatlabFile(mode, filename)
+            
+            #Load the WF vectors and LLs into memory
+            for ct,channelName in enumerate(self.CHANNELNAMES):
+                tmpWF = fileData.get_vector(scale_factor=self.channelSettings[channelName]['amplitude'], offset=self.channelSettings[channelName]['offset'], channelName=channelName)
+                self.loadWaveform(ct, tmpWF)
+
+                bankA = fileData.LLData[channelName]['bankA']
+                self.loadLinkListELL(ct, bankA['offset'], bankA['count'], bankA['trigger'], bankA['repeat'], bankA['length'], self.BANKA)  
+                
+                bankB = fileData.LLData[channelName]['bankB']
+                if bankB['length'] > 0:
+                    self.loadLinkListELL(ct, bankA['offset'], bankA['count'], bankA['trigger'], bankA['repeat'], bankA['length'], self.BANKB)  
+                    
+                self.setLinkListRepeat(ct, fileData.LLData[channelName]['repeatCount'])
+                            
+        #Otherwise load the single channel file if it is specified
+        else:
+            if filename != '':
+                fileData = APSMatlabFile.APSMatlabFile(mode, filename)
+                channelName = self.CHANNELNAMES[channelNum]
+                tmpWF = fileData.get_vector(scale_factor=self.channelSettings[channelName]['amplitude'], offset=self.channelSettings[channelName]['offset'])
+                self.loadWaveform(channelNum, tmpWF)
+        
+
+    def init(self, force=False):
+        '''
+        A basic intialization of the APS unit following the Matlab driver.
+        force determines whether to force a reload of the bitfile
+        '''
+        #Try to determine whether we need to program the bitfile
+        curBitFileVer = self.readBitFileVersion();
+        if (curBitFileVer != self.expected_bit_file_ver ) or (self.read_PLL_status()) or force:
+            self.loadBitFile()
+            
+            # Default all channels to 1.2 GS/s
+            self.setFrequency(0, 1200, testLock=0)
+            self.setFrequency(2, 1200, testLock=0)
+            
+            # Test PLL sync on each FPGA
+            status = self.test_PLL_sync(0) or self.test_PLL_sync(2)
+            if status:
+                raise RuntimeError('APS failed to initialize')
+        
+            #Set all channel offsets to zero
+            for ch in range(1,5):
+                self.set_offset(ch, 0)
+                
+    def setAll(self, settings):
+        '''
+        Again mimicing the Matlab driver to load all the setttings from a dictionary.
+        '''
+        #First load all the channel offsets, scalings, enabled
+        for channelName, tmpChan in self.channelSettings.items():
+            for channelSetting in tmpChan.keys():
+                self.channelSettings[channelName][channelSetting] = settings[channelName][channelSetting]
+            
+        
+        #Now load the pulse sequence or waveform files
+        if settings['fourChannelMode']:
+            #Load the sequence file information
+            self.load_sequence_file(settings['chAll']['seqfile'], 0)
+            for ct in range(4):
+                self.setLinkListMode(ct, self.LL_ENABLE, settings['runMode']);
+        else:
+            for channelct, channelName in enumerate(self.CHANNELNAMES):
+                if self.channelSettings[channelName]['enabled']:
+                    self.load_sequence_file(self.channelSettings[channelName]['seqfile'], 1, channelct)
+                
+         # set frequency
+        self.setFrequency(self.FPGA0, settings['frequency'])
+        self.setFrequency(self.FPGA1, settings['frequency'])
+        
+        self.triggerSource = settings['triggerSource']
+
+
+    def run(self):
+        '''
+        Set the trigger and start things going.
+        '''
+
+        #Sort out what we need to trigger
+        triggerArray = np.zeros(4, dtype=np.bool)
+        for ct, channelName in enumerate(self.CHANNELNAMES):
+            triggerArray[ct] = self.channelSettings[channelName]['enabled']
+        triggeredFPGA = [False,False]
+                
+        if np.all(triggerArray):
+            triggeredFPGA[0] = True
+            triggeredFPGA[1] = True
+            self.triggerFpga(self.ALL_DACS,self.triggerSource)
+        elif triggerArray[0] and triggerArray[1]:
+            triggeredFPGA[0] = True
+            self.triggerFpga(self.FPGA0,self.triggerSource)
+        elif triggerArray[2] and triggerArray[3]:
+            triggeredFPGA[1] = True
+            self.triggerFpga(self.FPGA1,self.triggerSource)
+    
+        #Look at individual channels.  Matlab file claims: % NOTE: Poorly defined syncronization between channels in this case
+        for chan in range(0,4):
+            if not triggeredFPGA[chan // 2] and triggerArray[chan]:
+                self.triggerWaveform(chan,self.triggerSource)
+
+    def stop(self):
+        ''' Stop everything '''
+        self.disableFpga(self.ALL_DACS)
+        
     def unitTestBasic(self):
         self.open(0)
         self.mock_aps = True
@@ -381,6 +534,9 @@ class APS:
         print 'Done with load Waveform'
         self.triggerWaveform(0,1)
         print 'Done with Trigger'
+        
+        
+        
         
 if __name__ == '__main__':
     aps = APS(libPathDebug)

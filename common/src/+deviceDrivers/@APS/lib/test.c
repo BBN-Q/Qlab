@@ -93,7 +93,7 @@ typedef int (*pfunc)();
 #define openbyserial      APS_OpenByID
 #endif
 
-void programFPGA(HANDLE hdll, int dac, char * bitFile) {
+void programFPGA(HANDLE hdll, int dac, char * bitFile, int progamTest) {
 
 #ifdef BUILD_DLL
 	pfunc prog;
@@ -141,15 +141,30 @@ void programFPGA(HANDLE hdll, int dac, char * bitFile) {
 	setup_vco(dac);
 	setup_pll(dac);
 
-	printf("Programming FPGAS: ");
-	fflush(stdout);
-	int numBytesProg;
-	numBytesProg = prog(0, bitFileData, bitFileSize, 3);
-	printf("Done \n");
 
-	printf("Programmed: %i bytes\n", numBytesProg);
+	int progCnt = 0;
+	int maxProg;
+
+	maxProg = progamTest ? 100: 1;
+	maxProg = 1;
+	for (progCnt = 0; progCnt < maxProg; progCnt++) {
+		printf("Programming FPGAS %i: ", progCnt);
+		fflush(stdout);
+		int numBytesProg;
+		numBytesProg = prog(0, bitFileData, bitFileSize, 3);
+		printf("Done \n");
+
+		printf("Programmed: %i bytes\n", numBytesProg);
+		if (numBytesProg < 0) {
+			printf("Failed at: %i\n", progCnt);
+			break;
+		}
+	}
 
 	free(bitFileData);
+
+	if (progamTest)
+		exit(0);
 
 	// test bit file version
 	int version;
@@ -249,7 +264,7 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile) {
 
 	if (openDac(hdll,0) < 0) return;
 
-	programFPGA(hdll,0, bitFile);
+	programFPGA(hdll,0, bitFile,0);
 
 	for( cnt = 0; cnt < 4; cnt++)
 		setWaveform(0, cnt, pulseMem, waveformLen);
@@ -260,7 +275,7 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile) {
 	close(0);
 }
 
-void doToggleTest(HANDLE hdll, char * bitFile) {
+void doToggleTest(HANDLE hdll, char * bitFile, int programTest) {
 
 	int waveformLen = 1000;
 	int pulseLen = 500;
@@ -288,7 +303,7 @@ void doToggleTest(HANDLE hdll, char * bitFile) {
 
 	if (openDac(hdll,0) < 0) return;
 
-	programFPGA(hdll,0, bitFile);
+	programFPGA(hdll,0, bitFile, 0);
 
 	// load memory
 	for (cnt = 0 ; cnt < 4; cnt++ ) {
@@ -356,8 +371,9 @@ dealloc:
 void printHelp(){
 	int bitdepth = sizeof(size_t) == 8 ? 64 : 32;
 	printf("BBN APS C Test Bench $Rev$ %i-Bit\n", bitdepth);
-	printf("   -t  <bitfile> Trigger Loop Test\n");
-	printf("   -s  List Available APS Serial Numbers\n");
+	printf("   -t <bitfile> Trigger Loop Test\n");
+	printf("   -p <bitfile> Program Loop Test\n");
+	printf("   -s List Available APS Serial Numbers\n");
 	printf("   -ks List Known APS Serial Numbers\n");
 	printf("   -w  Run Waveform StoreLoad Tests\n");
 	printf("   -h  Print This Help Message\n");
@@ -379,7 +395,7 @@ int main (int argc, char** argv) {
 
 	int cnt;
 
-	char *defaultBitFile = "../mqco_dac2_latest.bit";
+	char *defaultBitFile = "../mqco_aps_latest.bit";
 	char *bitFile = defaultBitFile;
 
 #ifdef BUILD_DLL
@@ -422,14 +438,16 @@ int main (int argc, char** argv) {
 		if (strcmp(argv[cnt],"-t") == 0) {
 			// allow bit file to be passed in otherwise use default
 			if (argc > (cnt+1)) bitFile = argv[cnt+1];
-			doToggleTest(hdll,bitFile);
+				doToggleTest(hdll,bitFile,0);
 		}
-
+		if (strcmp(argv[cnt],"-p") == 0)
+			if (argc > (cnt+1)) bitFile = argv[cnt+1];
+				doToggleTest(hdll,bitFile,1);
 		if (strcmp(argv[cnt],"-ks") == 0) {
-			listserials();
+			//listserials();
 		}
 		if (strcmp(argv[cnt],"-s") == 0) {
-			serials();
+			//serials();
 		}
 		if (strcmp(argv[cnt],"-h") == 0)
 			printHelp();

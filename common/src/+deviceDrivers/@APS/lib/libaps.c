@@ -84,9 +84,6 @@ FT_HANDLE usb_handles[MAX_APS_DEVICES];
 
 waveform_t * waveforms[MAX_APS_DEVICES];
 
-char *dac_devices[] = APS_SERIAL_NUMS;
-#define MAX_DEVICES sizeof(dac_devices) / sizeof(char *)
-
 // global variables for function pointers
 pFT_Open DLL_FT_Open;
 pFT_Close DLL_FT_Close;
@@ -95,6 +92,8 @@ pFT_Read DLL_FT_Read;
 pFT_ListDevices DLL_FT_ListDevices;
 pFT_SetBaudRate DLL_FT_SetBaudRate;
 pFT_SetTimeouts DLL_FT_SetTimeouts;
+
+char deviceSerials[64][MAX_APS_DEVICES];
 
 #define DEBUG
 
@@ -256,29 +255,6 @@ EXPORT int APS_Open(int device, int force)
 	return 0;
 }
 
-EXPORT int APS_ListSerials()
-{
-	int max_serials;
-	int cnt;
-
-	max_serials = MAX_DEVICES;
-
-	printf("This Library knows the following serial numbers\n");
-	for (cnt = 0; cnt < max_serials; cnt++) {
-		printf("ID: %i Serial: %s\n", cnt, dac_devices[cnt]);
-	}
-	return 0;
-}
-
-EXPORT int APS_GetSerials(char * buf, int maxlen, int device)
-{
-	if (device > MAX_DEVICES) {
-		return -1;
-	}
-	snprintf(buf,maxlen,"%s",dac_devices[device] );
-	return 0;
-}
-
 EXPORT int APS_OpenByID(int device)
 /******************************************************************
  *
@@ -311,10 +287,6 @@ EXPORT int APS_OpenByID(int device)
 	char * serial;
 	char testSerial[64];
 
-	if (device > MAX_DEVICES) {
-		return -1;
-	}
-
 	// If the ftd2xx dll has not been loaded, loadit.
 	if (!hdll) {
 		if (APS_Init() != 0) {
@@ -322,8 +294,12 @@ EXPORT int APS_OpenByID(int device)
 		};
 	}
 
-	serial = dac_devices[device];
+	serial = deviceSerials[device];
 	numdevices = APS_NumDevices();
+
+	if (device > numdevices) {
+		return -1;
+	}
 
 	found = 0;
 	for (cnt = 0; cnt < numdevices; cnt++) {
@@ -442,7 +418,7 @@ EXPORT int APS_NumDevices()
 	return numdevices;
 }
 
-EXPORT int APS_GetSerialNumbers()
+EXPORT int APS_PrintSerialNumbers()
 {
 	if (!hdll) {
 		if (APS_Init() != 0) {
@@ -462,6 +438,31 @@ EXPORT int APS_GetSerialNumbers()
 	//
 	return 0;
 }
+
+EXPORT int APS_GetSerialNum(int device, char * buffer, int bufLen)
+/*
+* Return the serial number associated with a particular deviceID num
+*/
+{
+	
+	//Check we aren't asking for something beyond the number of devices
+	if (device > APS_NumDevices()) {
+		printf("Got here!\n");
+		return -1;
+	}
+	
+	//Initialize a temporary buffer of the right length and zero it out
+	char tmpSerial[64];
+	memset(tmpSerial, 0, 64 * sizeof(char));
+	//Use the FTDI driver to get the serial number into the temporary buffer
+	DLL_FT_ListDevices(device, tmpSerial, FT_LIST_BY_INDEX|FT_OPEN_BY_SERIAL_NUMBER);
+	//Copy over the memory given of 64 bytes worth
+	int copyBytes;
+	copyBytes = (bufLen > 64) ? 64 : bufLen; 
+	memcpy(buffer, tmpSerial, copyBytes);
+	return 0;
+}
+
 
 EXPORT int APS_Close(int device)
 /********************************************************************
@@ -984,75 +985,80 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 
 	dlog(DEBUG_VERBOSE, "Starting ProgramFPGA Device: %i Sel: %i ... \n", device, Sel);
 
-	// Create active low mask bits for PROGRAMN field
-	PgmMask = APS_PGM_BITS;
-	if(Sel & 1) PgmMask &= ~APS_PGM01_BIT;
-	if(Sel & 2) PgmMask &= ~APS_PGM23_BIT;
+	// Create masks
+	PgmMask = 0;
+	if(Sel & 1) PgmMask |= APS_PGM01_BIT;
+	if(Sel & 2) PgmMask |= APS_PGM23_BIT;
 
-	// Create mask bits for valid INITN readback bits
 	InitMask = 0;
 	if(Sel & 1) InitMask |= APS_INIT01_BIT;
 	if(Sel & 2) InitMask |= APS_INIT23_BIT;
 
-	// Create active high mask bits for DONE field
 	DoneMask = 0;
 	if(Sel & 1) DoneMask |= APS_DONE01_BIT;
 	if(Sel & 2) DoneMask |= APS_DONE23_BIT;
 
-	// BCD: 12/22/11
-	// Added multiple attempts to start of program
-	// 64-bit windows often failed at (return -7)
-	// Need to check why this is and if it goes away in future
-	// FTDI versions
+	RstMask = 0;
+	if(Sel & 1) RstMask |= APS_FRST01_BIT;
+	if(Sel & 2) RstMask |= APS_FRST23_BIT;
 
-	int startProgram = 0;
-	int attemptCnt = 0;
+	const int maxAttemptCnt = 3; // max retries is something faails along the way
+	int numBytesProgrammed;
 
-	while (!startProgram) {
+	int ok = 0; // flag to indicate test worked
+
+	/*
+	 * Programming order:
+	 *
+	 * 1) clear PGM and RESET
+	 * 2) issue status READ and verify init bits are low
+	 * 3) set PGM and RESET high
+	 * 4) verify bits are HIGH
+	 * 5) write program
+	 * 6) test done bits
+	 */
+
+	for(i = 0, ok = 0; i < maxAttemptCnt && ok == 0; i++) {
+		dlog(DEBUG_VERBOSE, "Attempt: %i \n", i);
 		// Read the Status to get state of RESETN for unused channel
-		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1)
-			return(-1);
+		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1) return(-1);
+		dlog(DEBUG_VERBOSE, "Read 1: %02X \n", ReadByte);
 
-		// Create active high mask bits for RESETN field
-		// Force state of programmed chip reset to 1, leave the other alone
-		RstMask = APS_FRST_BITS & ReadByte;
-		if(Sel & 1) RstMask |= APS_FRST01_BIT;
-		if(Sel & 2) RstMask |= APS_FRST23_BIT;
-
-		//WriteByte = APS_OSCEN_BIT;
-		//if(APS_WriteReg(device, APS_STATUS_CTRL, 1, 0, &WriteByte) != 1)
-		// return(-5);
-
-		// Assert PROGRAMN and deassert RESETN for the selected FPGA(s).  Leave all other bits low.
-		WriteByte = PgmMask | RstMask;
-		if(APS_WriteReg(device,  APS_CONF_STAT, 1, 0, &WriteByte) != 1)
-			return(-2);
+		// Clear Program and Reset Masks
+		WriteByte = ~PgmMask & ~RstMask & 0xF;
+		dlog(DEBUG_VERBOSE, "Write 1: %02X \n", WriteByte);
+		if(APS_WriteReg(device,  APS_CONF_STAT, 1, 0, &WriteByte) != 1)	return(-2);
 
 		// Read the Status to see that INITN is asserted in response to PROGRAMN
-		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1)
-			return(-3);
+		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1) return(-3);
+		dlog(DEBUG_VERBOSE, "Read 2: %02X \n", ReadByte);
 
-		if((ReadByte & InitMask) != 0)
-			return(-4);
+		// verify Init bits are cleared
+		if((ReadByte & InitMask) == 0) ok = 1;
+	}
 
-		// Deassert PROGRAMN for all FPGA(s).
-		WriteByte |= APS_PGM_BITS;
-		if(APS_WriteReg(device, APS_CONF_STAT, 1, 0, &WriteByte) != 1)
-			return(-5);
+	if (!ok) return -4;
+
+	for(i = 0, ok = 0; i < maxAttemptCnt && ok == 0; i++) {
+		dlog(DEBUG_VERBOSE, "Attempt: %i \n", i);
+		// Set Program and Reset Bits
+		WriteByte = (PgmMask | RstMask) & 0xF;
+		dlog(DEBUG_VERBOSE, "Write 2: %02X \n", WriteByte);
+		if(APS_WriteReg(device, APS_CONF_STAT, 1, 0, &WriteByte) != 1)	return(-5);
+
+		// sleep to allow init to take place
+		// if the sleep is left out the next test might fail
+		sleep(1);
 
 		// Read the Status to see that INITN is deasserted in response to PROGRAMN deassertion
-		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1)
-			return(-6);
+		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1) return(-6);
+		dlog(DEBUG_VERBOSE, "Read 3: %02X \n", ReadByte);
 
-		if((ReadByte & InitMask) == 0) {
-			attemptCnt++;
-			dlog(DEBUG_VERBOSE, "retrying program\n");
-			if (attemptCnt > 5)
-				return(-7);
-		} else {
-			startProgram = 1;
-		}
+		// verify Init Mask is high
+		if((ReadByte & InitMask) == InitMask) ok = 1;
 	}
+
+	if (!ok) return -7;
 
 	// Bit reverse the data
 	for(i = 0; i < ByteCount; i++)
@@ -1103,14 +1109,25 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 	fclose(test);
 #endif
 
-	dlog(DEBUG_VERBOSE, "Done\n");
+	numBytesProgrammed = i + j;
 
+	// check done bits
+	for(i = 0, ok = 0; i < maxAttemptCnt && !ok; i++) {
+		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1) return(-3);
+		dlog(DEBUG_VERBOSE, "%02X %02X\n", ReadByte, DoneMask);
+		if (ReadByte & DoneMask == DoneMask) ok = 1;
+		sleep(1); // if done has not set wait a bit
+	}
+
+	if (!ok) return -8;
+
+	dlog(DEBUG_VERBOSE, "Done\n");
 
 	// Read Bit File Version
 	APS_ReadBitFileVersion(device);
 
 	// Return the number of data bytes written
-	return(i+j);
+	return numBytesProgrammed;
 }
 
 

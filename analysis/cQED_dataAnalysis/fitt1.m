@@ -59,7 +59,7 @@ disp(cov)
 
 % annotate the graph with T_1 result
 subplot(3,1,2:3)
-text(xdata(end-1)/1e3, 0.9*max(y), sprintf('T_1 = %.1f +/- %.1f ns', t1/1e3, t1error/1e3), ...
+text(xdata(end-1)/1e3, 0.9*max(y), sprintf('T_1 = %.1f +/- %.1f us', t1/1e3, t1error/1e3), ...
     'HorizontalAlignment', 'right', 'FontSize',12);
 
 % if you want confidence bands, use something like:

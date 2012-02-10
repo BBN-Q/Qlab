@@ -1,4 +1,4 @@
-function settings_fcn = AWG5014_settings_GUI(parent, bottom, left, name, settings)
+function [get_settings_fcn, set_settings_fcn] = AWG5014_settings_GUI(parent, bottom, left, name, settings)
 % AWG5014_BUILD
 %-------------------------------------------------------------------------------
 % File name   : AWG5014_build.m               
@@ -35,10 +35,11 @@ build_gui();
 if nargin < 5
 	settings = struct();
 end
-set_defaults(settings);
+set_GUI_fields(settings);
 
-% Assign function output
-settings_fcn = @get_settings;
+% Assign function handles output
+get_settings_fcn = @get_settings;
+set_settings_fcn = @set_GUI_fields;
 
 %% ---------------------------------------------------------------------------
 	function build_gui()
@@ -407,7 +408,7 @@ settings_fcn = @get_settings;
 		
     end
 
-	function set_defaults(settings)
+	function set_GUI_fields(settings)
 		% define default values for fields. If given a settings structure, grab
 		% defaults from it
 		defaults = struct();

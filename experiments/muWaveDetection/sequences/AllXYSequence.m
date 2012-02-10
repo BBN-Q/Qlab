@@ -1,7 +1,16 @@
-function AllXYSequence(makePlot)
+function AllXYSequence(varargin)
 
-if ~exist('makePlot', 'var')
-    makePlot = true;
+%varargin assumes qubit and then makePlot
+qubit = 'q1';
+makePlot = true;
+
+if length(varargin) == 1
+    qubit = varargin{1};
+elseif length(varargin) == 2
+    qubit = varargin{1};
+    makePlot = varargin{2};
+elseif length(varargin) > 2
+    error('Too many input arguments.')
 end
 
 basename = 'AllXY';
@@ -11,11 +20,13 @@ nbrRepeats = 2;
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.q1; % choose target qubit here
-IQkey = 'BBN12';
+qParams = params.(qubit);
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
+
 % if using SSB, uncomment the following line
 % params.(IQkey).T = eye(2);
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'passThru', params.(IQkey).passThru);
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
 
 % ground state:
 % QId
@@ -121,6 +132,10 @@ patseq{35} = {pg.pulse('Y90m'),pg.pulse('Y90m')};
 % just a pi pulse for scaling
 calseq={};
 
-compileSequenceBBNAPS12(basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot);
+compiler = ['compileSequence' IQkey];
+compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 15};
+if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
+    feval(compiler, compileArgs{:});
+end
 
 end

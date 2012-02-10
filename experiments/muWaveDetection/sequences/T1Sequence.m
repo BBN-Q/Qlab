@@ -1,24 +1,35 @@
-function T1Sequence(makePlot)
+function T1Sequence(varargin)
 
-if ~exist('makePlot', 'var')
-    makePlot = true;
+%varargin assumes qubit and then makePlot
+qubit = 'q1';
+makePlot = true;
+
+if length(varargin) == 1
+    qubit = varargin{1};
+elseif length(varargin) == 2
+    qubit = varargin{1};
+    makePlot = varargin{2};
+elseif length(varargin) > 2
+    error('Too many input arguments.')
 end
 
 basename = 'T1';
-
-fixedPt = 40000;
-cycleLength = 44000;
+fixedPt = 30000; %40000
+cycleLength = 34000; %44000
+nbrRepeats = 1;
 
 % load config parameters from file
-load(getpref('qlab','pulseParamsBundleFile'));
-% if using SSB, uncomment the following line
-% Ts('12') = eye(2);
-IQkey = 'BBNAPS12';
-pg = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts(IQkey), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength, 'passThru', passThrus(IQkey));
+params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+qParams = params.(qubit);
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
 
-numsteps = 120 ; %250
-nbrRepeats = 1;
-stepsize = 240; %24
+% if using SSB, uncomment the following line
+% params.(IQkey).T = eye(2);
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
+
+numsteps = 160 ; %250
+stepsize = 180; %24
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {{...
     pg.pulse('Xp'), ...
@@ -27,6 +38,12 @@ patseq = {{...
 
 calseq = {{pg.pulse('QId')}, {pg.pulse('QId')}, {pg.pulse('Xp')}, {pg.pulse('Xp')}};
 
-compileSequenceBBNAPS12(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot, 1);
+compiler = ['compileSequence' IQkey];
+compileArgs = {basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot};
+if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
+    feval(compiler, compileArgs{:});
+else
+    error('Unable to find compiler for IQkey: %s',IQkey) 
+end
 
 end

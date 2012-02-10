@@ -40,6 +40,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         library_name = 'libaps';
         device_id = 0;
         num_devices;
+        deviceSerials = {}
         message_manager =[];
         bit_file_path = '';
         bit_file = 'mqco_dac2_latest.bit';
@@ -220,17 +221,31 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %Return the number of devices and their serial numbers
         function num_devices = enumerate(aps)
             % Library may not be opened if a stale object is left in
             % memory by matlab. So we reopen on if need be.
             aps.load_library()
-            aps.num_devices = calllib(aps.library_name,'APS_NumDevices');
-            
+
             if aps.mock_aps && aps.num_devices == 0
                 aps.num_devices = 1;
+            else
+
+                aps.num_devices = calllib(aps.library_name,'APS_NumDevices');
+                num_devices = aps.num_devices;
+
+                %Reset cell array
+                aps.deviceSerials = cell(num_devices,1);
+                %For each device load the serial number
+                for ct = 1:num_devices
+                    [success, deviceSerial] = calllib(aps.library_name, 'APS_GetSerialNum',ct-1, blanks(64), 64);
+                    if success == 0
+                        aps.deviceSerials{ct} = deviceSerial;
+                    else
+                        error('Unable to get serial number');
+                    end
+                end
             end
-            
-            num_devices = aps.num_devices;
         end
         
         
@@ -602,10 +617,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.clearLinkListELL(3);
             
             % load waveform data
+            wf = APSWaveform();
             for ch = 1:aps.num_channels
                 if ch <= length(WaveformLibs) && ~isempty(WaveformLibs{ch})
                     % load and scale/shift waveform data
-                    wf = WaveformLibs{ch};
+                    wf.set_vector(WaveformLibs{ch});
                     wf.set_offset(aps.(['chan_' num2str(ch)]).offset);
                     wf.set_scale_factor(aps.(['chan_' num2str(ch)]).amplitude);
                     aps.loadWaveform(ch-1, wf.prep_vector());
@@ -636,7 +652,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                                 bankA.trigger, bankA.repeat, bankA.length, 0);
                         end
 
-                        if isfield(ell,'bankB')
+                        if isfield(ell,'bankB') && ~isempty(ell.bankB) && ell.bankB.length > 0
                             bankB = ell.bankB;
                             aps.loadLinkListELL(ch-1,bankB.offset,bankB.count, ...
                                 bankB.trigger, bankB.repeat, bankB.length, 1);

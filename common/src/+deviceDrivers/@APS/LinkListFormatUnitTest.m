@@ -1,24 +1,23 @@
 function LinkListFormatUnitTest(sequence, useEndPadding)
 
-%% APS Enhanced Link List Unit Test
-%%
-%% Gets Pattern Generator and produces link lists from pattern generator
-%% And ELL link lists and plots for comparision
-%% May be Called Using Some Varient of deviceDrivers.APS.LinkListFormatUnitTest
+% APS Enhanced Link List Unit Test
+%
+% Gets Pattern Generator and produces link lists from pattern generator
+% And ELL link lists and plots for comparision
+% May be Called Using Some Varient of deviceDrivers.APS.LinkListFormatUnitTest
 
-%% Test Status
-%% Last Tested: 4/19/2011
-%% $Rev$
-%%
-%% Sequence 1: Echo: Passed 5/4/11
-%% Sequence 2: Rabi Amp: Passed 5/4/11
-%% Sequence 3: Ramsey: Passed 5/4/11
-%% Sequency 4: URamseySequence Failed: Passed 5/4/11
+% Test Status
+% Last Tested: 4/19/2011
+%
+% Sequence 1: Echo: Passed 5/4/11
+% Sequence 2: Rabi Amp: Passed 5/4/11
+% Sequence 3: Ramsey: Passed 5/4/11
+% Sequency 4: URamseySequence Failed: Passed 5/4/11
 
 % Uses PatternGen Link List Generator to develop link lists
 
-addpath('../../common/src/','-END');
-addpath('../../common/src/util/','-END');
+%addpath('../../common/src/','-END');
+%addpath('../../common/src/util/','-END');
 
 d = deviceDrivers.APS();
 d.dbgForceELLMode();
@@ -175,11 +174,13 @@ for seq = 1:numSequences
     
     
     d.verbose = 0;
-    [wf, banks] = APSPattern.convertLinkListFormat(sequence.llpatx,useVarients);
-    patternX = APSPattern.linkListToPattern(wf, banks);
+    miniLinkRepeat = 0;
+    [xWfLib, yWfLib] = APSPattern.buildWaveformLibrary(sequence.llpatxy, useVarients);
+    [wf, xbanks] = APSPattern.convertLinkListFormat(sequence.llpatxy, useVarients, xWfLib, miniLinkRepeat);
+    patternX = APSPattern.linkListToPattern(wf, xbanks);
     
-    [wf, banks] = APSPattern.convertLinkListFormat(sequence.llpaty,useVarients);
-    patternY = APSPattern.linkListToPattern(wf, banks);
+    [wf, ybanks] = APSPattern.convertLinkListFormat(sequence.llpatxy, useVarients, yWfLib, miniLinkRepeat);
+    patternY = APSPattern.linkListToPattern(wf, ybanks);
     
     for n = 1:sequence.numsteps;
         
@@ -187,9 +188,9 @@ for seq = 1:numSequences
         patternGenX(n, :) = patx + sequence.offset;
         patternGenY(n, :) = paty + sequence.offset;
         
-        patLinkListX(n, :) = sequence.pg.linkListToPattern(sequence.llpatx,n)+sequence.offset;
-        patLinkListY(n, :) = sequence.pg.linkListToPattern(sequence.llpaty,n)+sequence.offset;
-        
+        [patx paty] = sequence.pg.linkListToPattern(sequence.llpatxy,n);
+        patLinkListX(n, :) = patx + sequence.offset;
+        patLinkListY(n, :) = paty + sequence.offset;
         
         st = fix((n-1)*sequence.cycleLength+1);
         en = fix(n*sequence.cycleLength);

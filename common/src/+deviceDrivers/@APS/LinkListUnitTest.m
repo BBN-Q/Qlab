@@ -123,22 +123,13 @@ miniLinkRepeat = 1000; %10
 
 for seq = 1:length(sequences1)
     
-    if ~hardCodeSeq
-        sequence = sequences1{seq};
-        [wf, banks] = APSPattern.convertLinkListFormat(sequence.llpatx,useVarients,miniLinkRepeat);
-        banks1 = banks;
-        banks2 = banks;
-        wf2 = wf;
-    else
-        sequence1 = sequences1{seq};
-        %sequence2 = sequences2{seq};
-        %[wf, banks1] = APSPattern.convertLinkListFormat(sequence1.llpatx,useVarients,unifiedX,miniLinkRepeat);
-        %[wf2, banks2] = APSPattern.convertLinkListFormat(sequence2.llpatx,useVarients,unifiedX,miniLinkRepeat);
-        wfLib = APSPattern.buildWaveformLibrary(sequence1.llpatx, useVarients);
-        [wf, banks1] = APSPattern.convertLinkListFormat(sequence1.llpatx,useVarients,wfLib,miniLinkRepeat);
-        wf2 = wf;
-        banks2 = banks1;
-    end
+    sequence = sequences1{seq};
+    [xWfLib, yWfLib] = APSPattern.buildWaveformLibrary(sequence, useVarients);
+    [wf, xbanks] = APSPattern.convertLinkListFormat(sequence, useVarients, xWfLib, miniLinkRepeat);
+    [wf2, ybanks] = APSPattern.convertLinkListFormat(sequence, useVarients, yWfLib, miniLinkRepeat);
+    banks1 = xbanks;
+    banks2 = ybanks;
+
     drawnow
     
     % erase any existing link list memory
@@ -170,7 +161,6 @@ for seq = 1:length(sequences1)
     else
         setTrigger = 0;
         for repeatTest = 1:1
-            curBank = 0;
             altBank = [1 0];
             cb1 = banks1{1};
             cb2 = banks2{1};
@@ -200,6 +190,7 @@ for seq = 1:length(sequences1)
                 %aps.triggerFpga(0,aps.TRIGGER_HARDWARE);
                 
                 aps.triggerWaveform(3,aps.TRIGGER_SOFTWARE);
+
                 setTrigger = 1;
             end
             

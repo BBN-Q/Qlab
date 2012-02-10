@@ -11,7 +11,8 @@ function analyzeRB(ypts)
         h = figure;
     end
 
-    seqlengths = [2, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96];
+    %seqlengths = [2, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96];
+    seqlengths = [2, 4, 8, 16, 32, 64, 96, 128, 192, 256, 320];
     xpts2 = seqlengths(1 + floor((0:length(ypts)-1)./32));
     
     % force long times to <sigma_z> = 0 by rescaling

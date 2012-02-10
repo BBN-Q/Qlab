@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>538</width>
+    <width>473</width>
     <height>351</height>
    </rect>
   </property>
@@ -142,8 +142,14 @@
       </item>
       <item>
        <widget class="Line" name="line">
+        <property name="minimumSize">
+         <size>
+          <width>3</width>
+          <height>0</height>
+         </size>
+        </property>
         <property name="lineWidth">
-         <number>10</number>
+         <number>2</number>
         </property>
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -259,7 +265,7 @@
             <widget class="QLineEdit" name="ampFactor"/>
            </item>
            <item row="8" column="1">
-            <widget class="QCheckBox" name="passThru">
+            <widget class="QCheckBox" name="linkListModeCB">
              <property name="text">
               <string/>
              </property>
@@ -268,7 +274,7 @@
            <item row="8" column="0">
             <widget class="QLabel" name="label_17">
              <property name="text">
-              <string>passThru</string>
+              <string>LinkList Mode</string>
              </property>
             </widget>
            </item>
@@ -340,7 +346,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>538</width>
+     <width>473</width>
      <height>20</height>
     </rect>
    </property>

@@ -7,6 +7,9 @@ import json
 import os
 import math
 from copy import deepcopy
+import hashlib
+
+from optparse import OptionParser
 
 from PySide import QtGui, QtUiTools, QtCore
 
@@ -58,15 +61,16 @@ class PulseParamGUI(object):
     _paramPath = ''
     _params = {}
     _emptyQubitParams = {'channelType':'logical', 'piAmp': 0, 'pi2Amp': 0, 'sigma': 0, 'delta': 0, 'pulseLength': 0, 'pulseType': 'drag', 'buffer': 4}
-    _emptyChannelParams = {'channelType':'physical', 'bufferPadding': 0, 'bufferReset': 0, 'bufferDelay': 0, 'offset': 0, 'delay': 0, 'T': [[1,0],[0,1]], 'passThru': 1}
+    _emptyChannelParams = {'channelType':'physical', 'bufferPadding': 0, 'bufferReset': 0, 'bufferDelay': 0, 'offset': 0, 'delay': 0, 'T': [[1,0],[0,1]], 'linkListMode': 1}
     _currentQubit = None
     _currentChannel = None
+    _paramsMD5 = None
     
-    def __init__(self):
+    def __init__(self, fileName=None):
 
         #It seems there should be some nicer way to do this so that we could still subclass QMainWindow
         loader = QtUiTools.QUiLoader()
-        file = QtCore.QFile('pulseParamGUI.ui')
+        file = QtCore.QFile(os.path.join(os.path.dirname(sys.argv[0]), 'pulseParamGUI.ui'))
         file.open(QtCore.QFile.ReadOnly)
         self.ui = loader.load(file)
         file.close()
@@ -100,6 +104,10 @@ class PulseParamGUI(object):
         self.ui.actionAdd_Channel.triggered.connect(self.add_channel)
         self.ui.actionDelete_Channel.triggered.connect(self.delete_channel)
         
+        if fileName is not None:
+            self._paramPath = fileName
+            self.refreshParameters(fileName)
+   
         self.ui.show()
 
     
@@ -175,7 +183,12 @@ class PulseParamGUI(object):
     
     def loadParameters(self):
         with open(self._paramPath, 'r') as FID:
+            #Load in the params dictionary            
             self._params = json.load(FID)
+        with open(self._paramPath, 'rb') as FID:
+            #Also calculate a hash of the file so we can check if it has been changed by an outside later
+            self._paramsMD5 = hashlib.md5(FID.read()).hexdigest()
+            
 
     def refreshParameters(self, fileName=''):
         self.loadParameters()
@@ -219,10 +232,10 @@ class PulseParamGUI(object):
             tmpT = self._params[channel]['T']
             self.ui.ampFactor.setText(str(tmpT[0][0]))
             self.ui.phaseSkew.setText(str((180/math.pi)*math.atan(tmpT[0][1]/tmpT[0][0])))
-            if self._params[channel]['passThru']:
-                self.ui.passThru.setChecked(QtCore.Qt.Checked)
+            if self._params[channel]['linkListMode']:
+                self.ui.linkListModeCB.setChecked(QtCore.Qt.Checked)
             else:
-                self.ui.passThru.setChecked(QtCore.Qt.Unchecked)
+                self.ui.linkListModeCB.setChecked(QtCore.Qt.Unchecked)
             self._currentChannel = channel
 
     def saveQubitParameters(self):
@@ -246,20 +259,36 @@ class PulseParamGUI(object):
             ampFactor = float(self.ui.ampFactor.text())
             phaseSkew = (math.pi/180)*float(self.ui.phaseSkew.text())
             self._params[self._currentChannel]['T'] = [[ampFactor, ampFactor*math.tan(phaseSkew)], [0, 1/math.cos(phaseSkew)]]
-            self._params[self._currentChannel]['passThru'] = int(self.ui.passThru.isChecked())
+            self._params[self._currentChannel]['linkListMode'] = int(self.ui.linkListModeCB.isChecked())
         
     def writeParameters(self):
         self.saveQubitParameters()
         self.saveChannelParameters()
         try:
+            with open(self._paramPath, 'rb') as FID:
+                #Double check the file hasn't changed
+                if self._paramsMD5 != hashlib.md5(FID.read()).hexdigest():
+                    reply = QtGui.QMessageBox.warning(self.ui, 'Message',
+                           "The file has been changed since it was loaded, are you sure you want to overwrite it?", QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, QtGui.QMessageBox.No)
+                    if reply == QtGui.QMessageBox.No:
+                        raise
             with open(self._paramPath, 'w') as FID:
                 json.dump(self._params, FID, indent=1)
                 self.ui.statusbar.showMessage('Wrote configuration to {0}'.format(os.path.basename(self._paramPath)),5000)
+            #Update the hash
+            with open(self._paramPath, 'rb') as FID:
+                self._paramsMD5 = hashlib.md5(FID.read()).hexdigest()
+
         except:
             self.ui.statusbar.showMessage('Unable to save file.',5000)
 
 if __name__ == '__main__':
+    #See if we have been passed a cfg file
+    parser = OptionParser()
+    parser.add_option('-f', action='store', type='string', dest='fileName', default=None)    
+    (options, args) =  parser.parse_args(sys.argv[1:])
+
     # create the Qt application
     app = QtGui.QApplication(sys.argv)
-    frame = PulseParamGUI()
+    frame = PulseParamGUI(options.fileName)
     sys.exit(app.exec_())

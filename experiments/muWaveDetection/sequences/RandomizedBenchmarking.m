@@ -1,42 +1,50 @@
-function RandomizedBenchmarking(makePlot)
+function RandomizedBenchmarking(varargin)
 
-if ~exist('makePlot', 'var')
-    makePlot = true;
+%varargin assumes qubit and then makePlot
+qubit = 'q1';
+makePlot = true;
+
+if length(varargin) == 1
+    qubit = varargin{1};
+elseif length(varargin) == 2
+    qubit = varargin{1};
+    makePlot = varargin{2};
+elseif length(varargin) > 2
+    error('Too many input arguments.')
 end
 
 basename = 'RB';
-fixedPt = 11000;
-cycleLength = 15000;
+fixedPt = 13000;
+cycleLength = 17000;
 nbrRepeats = 1;
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.q2; % choose target qubit here
-IQkey = 'TekAWG34';
+qParams = params.(qubit);
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
+
 % if using SSB, uncomment the following line
 % params.(IQkey).T = eye(2);
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'passThru', params.(IQkey).passThru);
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
 
 % load in random Clifford sequences from text file
-fid = fopen('RBsequences.txt');
-if ~fid
+FID = fopen('RBsequences-long.txt');
+if ~FID
     error('Could not open Clifford sequence list')
 end
 
-tline = fgetl(fid);
-lnum = 1;
-while ischar(tline)
-    seqStrings{lnum} = textscan(tline, '%s');
-    lnum = lnum + 1;
-    tline = fgetl(fid);
-end
-fclose(fid);
+%Read in each line
+tmpArray = textscan(FID, '%s','delimiter','\n');
+fclose(FID);
+%Split each line
+seqStrings = cellfun(@(x) textscan(x,'%s'), tmpArray{1});
 
 % convert sequence strings into pulses
 pulseLibrary = containers.Map();
 for ii = 1:length(seqStrings)
-    for jj = 1:length(seqStrings{ii}{1})
-        pulseName = seqStrings{ii}{1}{jj};
+    for jj = 1:length(seqStrings{ii})
+        pulseName = seqStrings{ii}{jj};
         if ~isKey(pulseLibrary, pulseName)
             pulseLibrary(pulseName) = pg.pulse(pulseName);
         end

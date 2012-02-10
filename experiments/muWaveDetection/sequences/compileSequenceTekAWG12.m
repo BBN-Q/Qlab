@@ -1,13 +1,12 @@
-function compileSequenceTekAWG34(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot, plotIdx)
+function compileSequenceTekAWG12(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot, plotIdx)
 
 if ~exist('plotIdx', 'var')
     plotIdx = 20;
 end
-
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
 params.measDelay = -64;
-ChParams = params.TekAWG34;
+ChParams = params.TekAWG12;
 
 nbrPatterns = length(patseq)*nbrRepeats;
 calPatterns = length(calseq)*nbrRepeats;
@@ -24,18 +23,18 @@ for n = 1:nbrPatterns;
     for stepct = 1:numsteps
         [patx paty] = pg.getPatternSeq(patseq{floor((n-1)/nbrRepeats)+1}, stepct, ChParams.delay, fixedPt);
 
-        ch3((n-1)*stepct + stepct, :) = patx + ChParams.offset;
-        ch4((n-1)*stepct + stepct, :) = paty + ChParams.offset;
-        ch4m1((n-1)*stepct + stepct, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
+        ch1((n-1)*stepct + stepct, :) = patx + ChParams.offset;
+        ch2((n-1)*stepct + stepct, :) = paty + ChParams.offset;
+        ch3m1((n-1)*stepct + stepct, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
     end
 end
 
 for n = 1:calPatterns;
     [patx paty] = pg.getPatternSeq(calseq{floor((n-1)/nbrRepeats)+1}, 1, ChParams.delay, fixedPt);
 
-    ch3(nbrPatterns*numsteps + n, :) = patx + ChParams.offset;
-    ch4(nbrPatterns*numsteps + n, :) = paty + ChParams.offset;
-    ch4m1(nbrPatterns*numsteps + n, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
+    ch1(nbrPatterns*numsteps + n, :) = patx + ChParams.offset;
+    ch2(nbrPatterns*numsteps + n, :) = paty + ChParams.offset;
+    ch3m1(nbrPatterns*numsteps + n, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
 end
 
 % trigger at beginning of measurement pulse
@@ -49,10 +48,10 @@ ch1m2 = repmat(int32(pg.getPatternSeq(measSeq, 1, params.measDelay, fixedPt+meas
 if makePlot
     myn = plotIdx;
     figure
-    plot(ch3(myn,:))
+    plot(ch1(myn,:))
     hold on
-    plot(ch4(myn,:), 'r')
-    plot(5000*ch4m1(myn,:), 'k')
+    plot(ch2(myn,:), 'r')
+    plot(5000*ch3m1(myn,:), 'k')
     plot(5000*ch1m1(myn,:),'.')
     plot(5000*ch1m2(myn,:), 'g')
     grid on
@@ -60,12 +59,12 @@ if makePlot
 end
 
 % add offsets to unused channels
-ch1 = ch1 + params.TekAWG12.offset;
-ch2 = ch2 + params.TekAWG12.offset;
+ch3 = ch3 + params.TekAWG34.offset;
+ch4 = ch4 + params.TekAWG34.offset;
 
 % make TekAWG file
 strippedBasename = basename;
-basename = [basename 'TekAWG34'];
+basename = [basename 'TekAWG12'];
 options = struct('m21_high', 2.0, 'm41_high', 2.0);
 TekPattern.exportTekSequence(tempdir, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
 disp('Moving AWG file to destination');

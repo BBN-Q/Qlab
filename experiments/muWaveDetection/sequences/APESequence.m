@@ -1,7 +1,16 @@
-function APESequence(makePlot)
+function APESequence(varargin)
 
-if ~exist('makePlot', 'var')
-    makePlot = true;
+%varargin assumes qubit and then makePlot
+qubit = 'q1';
+makePlot = true;
+
+if length(varargin) == 1
+    qubit = varargin{1};
+elseif length(varargin) == 2
+    qubit = varargin{1};
+    makePlot = varargin{2};
+elseif length(varargin) > 2
+    error('Too many input arguments.')
 end
 
 basename = 'APE';
@@ -9,19 +18,21 @@ fixedPt = 6000;
 cycleLength = 10000;
 nbrRepeats = 2;
 
-% load config parameters from file
+% load config parameters from files
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.q1; % choose target qubit here
-IQkey = 'BBN12';
+qParams = params.(qubit);
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
+
 % if using SSB, uncomment the following line
 % params.(IQkey).T = eye(2);
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'passThru', params.(IQkey).passThru);
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
 
 angle = pi/2;
 numPsQId = 4; % number pseudoidentities
-numsteps = 5; %number of drag parameters (11)
-deltamax=-0.5;
-deltamin=-1.5;
+numsteps = 11; %number of drag parameters (11)
+deltamax=0;
+deltamin=-1.0;
 delta=linspace(deltamin,deltamax,numsteps);
 
 sindex = 0;
@@ -45,5 +56,10 @@ end
 % just a pi pulse for scaling
 calseq={{pg.pulse('Xp')}};
 
-compileSequenceBBNAPS12(basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot);
+compiler = ['compileSequence' IQkey];
+compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 10};
+if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
+    feval(compiler, compileArgs{:});
+end
+
 end

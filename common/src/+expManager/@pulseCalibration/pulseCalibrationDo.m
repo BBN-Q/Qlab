@@ -156,7 +156,7 @@ params.(ExpParams.Qubit).piAmp = obj.pulseParams.piAmp;
 params.(ExpParams.Qubit).pi2Amp = obj.pulseParams.pi2Amp;
 params.(ExpParams.Qubit).delta = obj.pulseParams.delta;
 
-IQchannels = obj.channelMap(obj.ExpParams.Qubit);
+IQchannels = obj.channelMap.(obj.ExpParams.Qubit);
 IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
 
 params.(IQkey).T = obj.pulseParams.T;

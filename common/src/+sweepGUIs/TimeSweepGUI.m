@@ -1,4 +1,4 @@
-function settings_fcn = TimeSweepGUI(parent, bottom, left, name)
+function [get_settings_fcn, set_settings_fcn] = TimeSweepGUI(parent, bottom, left, name)
 % TIMESWEEP
 %-------------------------------------------------------------------------------
 % File name   : TimeSweep.m
@@ -32,8 +32,12 @@ end
 % Create all UI controls
 build_gui();
 
-% Assign function output
-settings_fcn = @get_settings;
+settings = struct();
+set_GUI_fields(settings);
+
+% Assign function handles output
+get_settings_fcn = @get_settings;
+set_settings_fcn = @set_GUI_fields;
 
 %% ---------------------------------------------------------------------------
 	function build_gui()
@@ -105,6 +109,25 @@ settings_fcn = @get_settings;
 		settings.type = 'sweeps.Time';
 		settings.start = get_numeric(handles.start);
 		settings.step = get_numeric(handles.step);
-	end
+    end
+
+    function set_GUI_fields(settings)
+        
+        defaults.type = 'sweeps.Time';
+        defaults.start = 0;
+        defaults.step = 1;
+        
+        if ~isempty(fieldnames(settings))
+			fields = fieldnames(settings);
+			for i = 1:length(fields)
+				name = fields{i};
+				defaults.(name) = settings.(name);
+			end
+        end
+        
+        set(handles.start,'String',num2str(defaults.start));
+        set(handles.step,'String',num2str(defaults.step));
+        
+    end
 
 end
