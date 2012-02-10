@@ -67,6 +67,9 @@ classdef PatternGen < handle
         
         function out = makePattern(leftPat, fixedPt, rightPat, totalLength)
             self = PatternGen;
+            if(length(leftPat) > fixedPt)
+                error('Your sequence is %d too long.  Try moving the fixedPt out.', (length(leftPat)-fixedPt))
+            end
             out = self.padRight([self.padLeft(leftPat, fixedPt); rightPat], totalLength);
         end
         

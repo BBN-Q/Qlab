@@ -14,8 +14,8 @@ elseif length(varargin) > 2
 end
 
 basename = 'RB';
-fixedPt = 13000;
-cycleLength = 17000;
+fixedPt = 15000;
+cycleLength = 19000;
 nbrRepeats = 1;
 
 % load config parameters from file
