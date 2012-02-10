@@ -1709,4 +1709,32 @@ EXPORT int APS_SetLinkList(int device, int channel,
 
 }
 
+EXPORT int APS_SaveWaveformCache(int device, char * filename) {
 
+	char altFilename[100];
+
+	if (filename == NULL) {
+		sprintf(altFilename,"aps_%i_cache.dat", device);
+		filename = altFilename;
+	}
+
+
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	return WF_SaveCache(wfArray,filename);
+}
+
+EXPORT int APS_LoadWaveformCache(int device, char * filename) {
+	char altFilename[100];
+
+	if (filename == NULL) {
+		sprintf(altFilename,"aps_%i_cache.dat", device);
+		filename = altFilename;
+	}
+
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	return WF_LoadCache(wfArray,filename);
+}

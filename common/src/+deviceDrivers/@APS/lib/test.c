@@ -91,6 +91,8 @@ typedef int (*pfunc)();
 #define listserials       APS_PrintSerialNumbers
 #define getserial         APS_GetSerial
 #define openbyserial      APS_OpenByID
+#define saveCache         APS_SaveWaveformCache
+#define loadCache         APS_LoadWaveformCache
 #endif
 
 void programFPGA(HANDLE hdll, int dac, char * bitFile, int progamTest) {
@@ -248,6 +250,7 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 	pfunc setWaveformOffset, getWaveformOffset;
 	pfunc setWaveformScale,  getWaveformScale;
 	pfunc loadStored;
+	pfunc saveCache, loadCache;
 
 	pfunc trigger;
 	pfunc disable;
@@ -260,6 +263,8 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 	setWaveformScale  = (pfunc) GetFunction(hdll, "APS_SetWaveformScale");
 	getWaveformScale  = (pfunc) GetFunction(hdll, "APS_GetWaveformScale");
 	loadStored        = (pfunc) GetFunction(hdll, "APS_LoadStoredWaveform");
+	saveCache         = (pfunc) GetFunction(hdll, "APS_SaveWaveformCache");
+	loadCache         = (pfunc) GetFunction(hdll, "APS_LoadWaveformCache");
 
 	trigger      = (pfunc) GetFunction(hdll,"APS_TriggerFpga");
 	disable      = (pfunc) GetFunction(hdll,"APS_DisableFpga");
@@ -282,7 +287,13 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 		printf("Loading Waveform\n");
 		for( cnt = 0; cnt < 4; cnt++)
 			loadStored(0, cnt);
+
+		printf("Saving Cache\n");
+		saveCache(0,0);
 	}
+
+	printf("Loading Cache\n");
+	loadCache(0,0);
 
 	printf("Triggering:\n");
 

@@ -110,5 +110,6 @@ EXPORT int   APS_SetLinkList(int device, int channel,
                            unsigned short *OffsetData, unsigned short *CountData,
                            unsigned short *TriggerData, unsigned short *RepeatData,
                            int length, int bank);
-
+EXPORT int APS_SaveWaveformCache(int device, char * filename);
+EXPORT int APS_LoadWaveformCache(int device, char * filename);
 #endif
