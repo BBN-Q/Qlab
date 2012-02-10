@@ -7,6 +7,9 @@ initialGuess=[0.99 0.99, 0.0, 0.0, 0.0, 0.0];
 
 [beta, r, j] = nlinfit(seqlengths, ydat(:), @(p, seqlengths) model(seqlengths,p), initialGuess);
 
+% get confidence intervals
+ci = nlparci(beta,r,j);
+cis = (ci(:,2)-ci(:,1))./2;
 
 if plotflag
     %figure
@@ -27,8 +30,10 @@ end
 
 p1=beta(1);
 p2=beta(2);
-r1=1/2-p1/2
-r2=1/2-p2/2
+r1=1/2-p1/2;
+r2=1/2-p2/2;
+
+fprintf('r1 = %.04f +/- %.04f, r2 = %.04f +/- %.04f\n', [r1 cis(1) r2 cis(2)]);
 
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
