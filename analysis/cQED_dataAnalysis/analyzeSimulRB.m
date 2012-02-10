@@ -2,7 +2,8 @@ function analyzeSimulRB(data1, data2)
 
     nbrRandomizations = 32;
     nbrSets = 2;
-    seqlengths = [2, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96];
+%     seqlengths = [2, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96];
+    seqlengths = [2, 4, 8, 16, 32, 64, 96, 128, 192, 256, 320];
     nbrExps = length(seqlengths)*nbrRandomizations/nbrSets;
     xpts = seqlengths(1 + floor((0:nbrExps-1).*nbrSets./nbrRandomizations));
     
@@ -49,5 +50,10 @@ function analyzeSimulRB(data1, data2)
     ylabel('Population')
     legend(h, {'00', '01', '10', '11'})
     
-    fitSeqFidCross(seqlengths, meanPops(1,:), true)
+    fitSeqFidCross(seqlengths, meanPops', true)
+    
+    % save data to file
+    [~, filename, ~] = fileparts(data1.filename);
+    filename = [filename '_populations.mat'];
+    save(filename, 'seqlengths', 'meanPops', 'meanStdErrors', 'xpts', 'populations');
 end
