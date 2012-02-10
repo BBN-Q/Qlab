@@ -252,6 +252,9 @@ EXPORT int APS_Open(int device, int force)
 		return -status;
 	}
 
+	// assume the device is running and attempt to read version
+	APS_ReadBitFileVersion(device);
+
 	return 0;
 }
 

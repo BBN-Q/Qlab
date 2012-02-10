@@ -87,8 +87,8 @@ typedef int (*pfunc)();
 #define trigger           APS_TriggerFpga
 #define disable           APS_DisableFpga
 #define load              APS_LoadWaveform
-#define serials           APS_GetSerialNumbers
-#define listserials       APS_ListSerials
+#define serials           APS_GetSerialNum
+#define listserials       APS_PrintSerialNumbers
 #define getserial         APS_GetSerial
 #define openbyserial      APS_OpenByID
 #endif
@@ -234,7 +234,7 @@ void * buildPulseMemory(int waveformLen , int pulseLen, int pulseType) {
 	return pulseMem;
 }
 
-void doStoreLoadTest(HANDLE hdll, char * bitFile) {
+void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 	int waveformLen = 1000;
 	int pulseLen = 500;
 
@@ -249,6 +249,9 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile) {
 	pfunc setWaveformScale,  getWaveformScale;
 	pfunc loadStored;
 
+	pfunc trigger;
+	pfunc disable;
+
 	close             = (pfunc) GetFunction(hdll, "APS_Close");
 	setWaveform       = (pfunc) GetFunction(hdll, "APS_SetWaveform");
 	setLinkList       = (pfunc) GetFunction(hdll, "APS_SetLinkList");
@@ -257,6 +260,10 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile) {
 	setWaveformScale  = (pfunc) GetFunction(hdll, "APS_SetWaveformScale");
 	getWaveformScale  = (pfunc) GetFunction(hdll, "APS_GetWaveformScale");
 	loadStored        = (pfunc) GetFunction(hdll, "APS_LoadStoredWaveform");
+
+	trigger      = (pfunc) GetFunction(hdll,"APS_TriggerFpga");
+	disable      = (pfunc) GetFunction(hdll,"APS_DisableFpga");
+
 #endif
 
 	pulseMem = (float *) buildPulseMemory(waveformLen , pulseLen, FLOAT_TYPE);
@@ -264,13 +271,29 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile) {
 
 	if (openDac(hdll,0) < 0) return;
 
-	programFPGA(hdll,0, bitFile,0);
+	if (doSetup) {
+		programFPGA(hdll,0, bitFile,0);
 
-	for( cnt = 0; cnt < 4; cnt++)
-		setWaveform(0, cnt, pulseMem, waveformLen);
+		printf("Storing Waveform\n");
 
-	for( cnt = 0; cnt < 4; cnt++)
-		loadStored(0, cnt);
+		for( cnt = 0; cnt < 4; cnt++)
+			setWaveform(0, cnt, pulseMem, waveformLen);
+
+		printf("Loading Waveform\n");
+		for( cnt = 0; cnt < 4; cnt++)
+			loadStored(0, cnt);
+	}
+
+	printf("Triggering:\n");
+
+	trigger(0, 0, 1);
+	trigger(0, 2, 1);
+
+	printf("Press key:\n");
+	getchar();
+
+	disable(0,0);
+	disable(0,2);
 
 	close(0);
 }
@@ -426,35 +449,42 @@ int main (int argc, char** argv) {
 
 #endif
 
-	serials      = (pfunc)GetFunction(hdll,"APS_GetSerialNumbers");
-	listserials  = (pfunc)GetFunction(hdll,"APS_ListSerials");
+	serials      = (pfunc)GetFunction(hdll,"APS_GetSerialNum");
+	listserials  = (pfunc)GetFunction(hdll,"APS_PrintSerialNumbers");
 	getserial    = (pfunc)GetFunction(hdll,"APS_GetSerial");
 	openbyserial = (pfunc)GetFunction(hdll,"APS_OpenByID");
 #endif
 
+	char serialBuffer[100];
+
 	if (argc == 1) printHelp();
 
 	for(cnt = 0; cnt < argc; cnt++) {
+
 		if (strcmp(argv[cnt],"-t") == 0) {
 			// allow bit file to be passed in otherwise use default
 			if (argc > (cnt+1)) bitFile = argv[cnt+1];
 				doToggleTest(hdll,bitFile,0);
 		}
-		if (strcmp(argv[cnt],"-p") == 0)
+		if (strcmp(argv[cnt],"-p") == 0) {
 			if (argc > (cnt+1)) bitFile = argv[cnt+1];
 				doToggleTest(hdll,bitFile,1);
+		}
 		if (strcmp(argv[cnt],"-ks") == 0) {
-			//listserials();
+			listserials();
 		}
 		if (strcmp(argv[cnt],"-s") == 0) {
-			//serials();
+			serials(0,serialBuffer,100);
+			printf("Serial #: %s\n", serialBuffer);
 		}
 		if (strcmp(argv[cnt],"-h") == 0)
 			printHelp();
 		if (strcmp(argv[cnt],"-w") == 0) {
 			// allow bit file to be passed in otherwise use default
 			if (argc > (cnt+1)) bitFile = argv[cnt+1];
-			doStoreLoadTest(hdll,bitFile);
+			int doSetup;
+			doSetup = (argc > (cnt+2)) ? atoi(argv[cnt+2]) : 1;
+			doStoreLoadTest(hdll,bitFile,doSetup);
 		}
 	}
 

@@ -51,6 +51,7 @@
 
 EXPORT int APS_NumDevices();
 EXPORT int APS_GetSerialNum(int device, char * buffer, int bufLen);
+EXPORT int APS_PrintSerialNumbers();
 EXPORT int APS_Open(int device, int force);
 EXPORT int APS_OpenByID(int device);
 EXPORT int APS_Close(int device);
@@ -84,12 +85,12 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock);
 EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels);
 EXPORT int APS_ReadPllStatus(int device, int fpga);
 
-EXPORT int APS_ReadBitFileVersion(int device);
+EXPORT int  APS_ReadBitFileVersion(int device);
 EXPORT void APS_ReadLibraryVersion(void * buffer, int maxlen);
-EXPORT int APS_ReadAllRegisters(int device);
-EXPORT int APS_TestWaveformMemory(int device, int dac, int byteCount);
-EXPORT int APS_SetDebugLevel(int level);
-EXPORT int APS_ReadLinkListStatus(int device, int dac);
+EXPORT int  APS_ReadAllRegisters(int device);
+EXPORT int  APS_TestWaveformMemory(int device, int dac, int byteCount);
+EXPORT int  APS_SetDebugLevel(int level);
+EXPORT int  APS_ReadLinkListStatus(int device, int dac);
 
 EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int maxlen );
 EXPORT int  APS_ClearLinkListELL(int device,int dac, int bank);
