@@ -8,7 +8,7 @@ function AllXYlabel(h)
     end
     
     a = get(gcf,'CurrentAxes');
-    xlabel(a, 'Pulse sequence')
+    ylabel(a, 'Pulse sequence')
     
     labels = {...
         'Id', ...
@@ -50,19 +50,6 @@ function AllXYlabel(h)
         'Y90mY90m', ...
         };
     
-    % grab the line handle
-    lineHandle = findobj(h, 'Type', 'Line');
-    
-    if isempty(lineHandle)
-        error('NO DATA: Could not find an line object in the figure.')
-    end
-    
-    xpts = get(lineHandle(1), 'XData');
-    % if there are 35 points, label every one, otherwise label every other
-    if length(xpts) == 35
-        set(a, 'XTick', [1:35])
-    else
-        set(a, 'XTick', [1:2:70])
-    end
-    xticklabel_rotate([], 45, labels)
+    set(gca, 'YTick', 1:35);
+    set(gca, 'YTickLabel', fliplr(labels));
 end
