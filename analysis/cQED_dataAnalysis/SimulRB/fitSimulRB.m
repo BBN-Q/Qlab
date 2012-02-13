@@ -1,6 +1,6 @@
 % FILE: fitSeqFid0.m
 
-function [beta,r1,r2] = fitSimulRB(seqlengths,ydat,plotflag)
+function [beta,r1,r2,yfit] = fitSimulRB(seqlengths,ydat,plotflag)
 %this function fits the zeroth order benchmarking formula
 
 initialGuess=[0.01 0.01, 0.0, 0.0, 0.0, 0.0, 0.0];
