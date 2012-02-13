@@ -1,4 +1,4 @@
-function data = loadData(makePlot)
+function data = loadData(makePlot, fullpath)
     if ~exist('makePlot', 'var')
         makePlot = true;
     end
@@ -7,14 +7,14 @@ function data = loadData(makePlot)
     [base_path] = fileparts(mfilename('fullpath'));
     base_path = parent_dir(base_path, 3);
 
-    addpath([ base_path '/experiments/muWaveDetection/'],'-END');
-    addpath([ base_path '/common/src'],'-END');
-    addpath([ base_path '/experiments/muWaveDetection/src'],'-END');
-    addpath([ base_path '/common/src/util/'],'-END');    
-
     % get path of file to load
-    [filename, pathname] = uigetfile('*.out');
-    fullpath = [pathname '/' filename];
+    if ~exist('fullpath', 'var')
+        [filename, pathname] = uigetfile('*.out');
+        fullpath = [pathname '/' filename];
+    else
+        [pathname, filename, ext] = fileparts(fullpath);
+        filename = [filename ext];
+    end
 
     % create the exp object (use the data file itself as the cfg file)
     Exp = expManager.homodyneDetection(base_path, fullpath, 'homodyneDetection', 1);
