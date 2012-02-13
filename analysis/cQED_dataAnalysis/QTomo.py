@@ -7,13 +7,14 @@ Written by Colm Ryan 22 Sept 2010
 
 import numpy as np
 
-import copy
-
 from itertools import product
 from functools import reduce
 from collections import OrderedDict
 
 from scipy.linalg import sqrtm
+
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 def qst_iter(measurements, expresults, n, maxiter = 1000):
     '''
@@ -140,7 +141,7 @@ def qpt_iter(inputStates,measurements,expResults,n):
     '''
     
     #Precalculate the partial trace indices for speed
-    indices = partrace_indices(n,np.arange(n+1,2*n+1))
+    indices = partrace_indices(2*n,np.arange(n+1,2*n+1))
     
     numinputs = len(inputStates)
     nummeas = len(measurements)
@@ -173,12 +174,8 @@ def qpt_iter(inputStates,measurements,expResults,n):
         tmpmat = np.dot(K, np.dot(curS,K))
  
         #Now take the partial trace
-#        tmpmatbis = np.zeros((dim,dim))
-#        for ct1 in range(dim):
-#            for ct2 in range(dim):
-#                tmpmatbis[ct1,ct2] = np.sum(tmpmat[indices[ct1],indices[ct2]])
-        
         tmpmatbis = np.array([[np.sum(tmpmat[indices[ct1],indices[ct2]]) for ct2 in range(dim)] for ct1 in range(dim)])
+
         tmplambda = sqrtm(tmpmatbis)
     
         #Now  calculate the new S
@@ -300,29 +297,17 @@ def createCartPOVM(n):
 
 
 
-def Liouville2Pauli(map,n):
+def Liouville2Pauli(mapIn,n):
     '''
     Function to transform between column stacked Liouville representation a Pauli process map representation
     '''
     #First create the Pauli operators
     singlePaulis = [np.eye(2), np.array([[0, 1],[1, 0]]), np.array([[0, -1j],[1j, 0]]), np.array([[1, 0],[0, -1]]) ]
-    multiPaulis = copy.deepcopy(singlePaulis)
+    multiPaulis = [reduce(np.kron, tmpPauliList) for tmpPauliList in [x for x in product(singlePaulis,repeat=n)]]
+
     #Setup the strings for the Paulis
     singlePauliStr = ['I','X','Y','Z']
-    multiPauliStr = copy.deepcopy(singlePauliStr)
-    
-    ct = 1
-    while ct < n:
-        ct += 1
-        oldPaulis = copy.deepcopy(multiPaulis)
-        oldPaulisStr = copy.deepcopy(multiPauliStr)
-        multiPaulis = []
-        multiPauliStr = []
-        for tmpPauli, tmpPauliStr in zip(oldPaulis,oldPaulisStr):
-            for tmpsinglePauli, tmpSinglePauliStr in zip(singlePaulis, singlePauliStr):
-                multiPaulis.append(np.kron(tmpPauli,tmpsinglePauli))
-                multiPauliStr.append(tmpPauliStr + tmpSinglePauliStr)
-                
+    multiPauliStr = [reduce(lambda x,y:x+y, x) for x in product(singlePauliStr, repeat=n)]
     
                 
     pauliMap = np.zeros((4**n,4**n))            
@@ -330,7 +315,7 @@ def Liouville2Pauli(map,n):
     for ct1,pauliIn in enumerate(multiPaulis):
         for ct2,pauliOut in enumerate(multiPaulis):
             
-            tmpOut = np.transpose(np.resize(np.dot(map,np.reshape(np.transpose(pauliIn),(4**n,1))),(2**n,2**n)))
+            tmpOut = np.transpose(np.resize(np.dot(mapIn,np.reshape(np.transpose(pauliIn),(4**n,1))),(2**n,2**n)))
             
             pauliMap[ct1,ct2] = np.trace(np.dot(tmpOut,pauliOut))/2**n
             
@@ -351,13 +336,13 @@ if __name__ == "__main__":
     singleQubitPrepPulses = OrderedDict([('QId',I), ('Xp',expm(-2j*(pi/4)*X)), ('X90p',expm(-1j*(pi/4)*X)), ('X90m',expm(1j*(pi/4)*X)), ('Y90p',expm(-1j*(pi/4)*Y)), ('Y90m',expm(1j*(pi/4)*Y))])
     singleQubitReadoutPulses = singleQubitPrepPulses    
 
-    measOp = np.kron(Z,I) + np.kron(I,Z)
-    measOp = np.array([[1,0],[0,0]])
-    numQubits = 1
+    numQubits = 2
+    measOp = np.zeros((2**numQubits, 2**numQubits))
+    measOp.flat[0] = 1
 
     CNOT = np.array([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]])    
     testMap = CNOT 
-    testMap = I
+#    testMap = singleQubitPrepPulses['X90p']
     
     #Create all possibilities of state prep and readout pulses
     prepPulses = [reduce(np.kron, tmpPulseList) for tmpPulseList in [x for x in product(singleQubitPrepPulses.values(),repeat=numQubits)]]
@@ -390,16 +375,15 @@ if __name__ == "__main__":
                     
     #Call the optimization
     fitMap = qpt_iter(inputStates, cartPOVMs, POVMexpResults, numQubits )    
-#    
-#    qpt_iter(inputStates,measurements,expResults,n):
-    '''
-    Function to perform iterative maximum liklihood CP map estimation. From Jezek
-    et al. Quantum inference of states and processes. Physical Review A (2003) vol. 68 (1) pp. 1-7
     
-    qpt_iter(inputStates,measurements,expResults,numQubits):
-        inputState - list or array of input density matrices
-        measurements - list of array of POVM operators
-        expResults - matrix (numinputs, nummeasurements) of experimental results
-        n - numQubits
-    '''
+    #Convert to the Pauli map representation
+    pauliMap =  Liouville2Pauli(fitMap,numQubits)
+    plt.figure()
+    plt.imshow(pauliMap[0], cmap = cm.RdBu, interpolation='none')
+    plt.xticks(np.arange(4**numQubits), pauliMap[1])
+    plt.yticks(np.arange(4**numQubits), pauliMap[1])
+    plt.ylabel('Input State')
+    plt.xlabel('Output State')
+    plt.colorbar()
+    plt.show()
     
