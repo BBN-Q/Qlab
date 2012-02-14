@@ -48,28 +48,32 @@ for cnt=1:size(ydata,2)
     if cnt == 1
         p = [mean(y) amp trabi frabi 0];
     else
+        % take the previous fit results as the initial guess, but update
+        % the offset
         p = beta;
+        p(1) = mean(y);
     end
 
-    [beta,r,j] = nlinfit(xdata, y, rabif, p);
+    [beta,r,j] = nlinfit(xdata(1:end-4), y(1:end-4), rabif, p);
 
-    % figure(h)
-    % subplot(3,1,2:3)
-    % plot(xdata,y,'o')
-    % hold on
-    % plot(xdata_finer,rabif(beta,xdata_finer),'-r')
-    % xlabel('Time [ns]')
-    % ylabel('<\sigma_z>')
-    % hold off
-    % subplot(3,1,1)
-    % bar(xdata,r)
-    % axis tight
-    % xlabel('Time [ns]')
-    % ylabel('Residuals [V]')
-    % title(plotTitle)
-    % 
-    % subplot(3,1,2:3)
-    % ylim([-1.05 1.05])
+    figure(100)
+    subplot(3,1,2:3)
+    plot(xdata(1:end-4),y(1:end-4),'o')
+    hold on
+    plot(xdata_finer,rabif(beta,xdata_finer),'-r')
+    xlabel('Time [ns]')
+    ylabel('<\sigma_z>')
+    hold off
+    subplot(3,1,1)
+    bar(xdata(1:end-4),r)
+    axis tight
+    xlabel('Time [ns]')
+    ylabel('Residuals [V]')
+    
+    subplot(3,1,2:3)
+    %ylim([-1.05 1.05])
+    
+    pause(.1)
 
     t2 = beta(3);
     ci = nlparci(beta,r,j);

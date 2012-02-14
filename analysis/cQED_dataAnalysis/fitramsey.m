@@ -68,11 +68,12 @@ t2 = beta(3);
 ci = nlparci(beta,r,j);
 t2error = (ci(3,2)-ci(3,1))/2;
 detuning = abs(beta(4))/2/pi; % in GHz, assuming time is in ns
+detuningError = (ci(4,2)-ci(4,1))/2;
 
 % annotate the graph with T_Rabi result
 text(xdata(end-1)/1e3, max(y), ...
     sprintf(['T_{2}^{*} = %.1f +/- %.1f us \n' ...
-        '\\delta/2\\pi = %.2f MHz'], t2/1e3, t2error/1e3, detuning*1e3), ...
+        '\\delta/2\\pi = %.3f +/- %.3f MHz'], t2/1e3, t2error/1e3, detuning*1e3, detuningError*1e3), ...
     'HorizontalAlignment', 'right', 'VerticalAlignment', 'top');
 axis tight
 % if you want confidence bands, use something like:
