@@ -20,7 +20,7 @@ numberofpreps = length(U_preps);
 % different prepartions
 psiin = zeros(d,1);
 psiin(1,1)=1;
-rhoin=Psi2Rho_(psiin);
+rhoin=psiin*psiin';
 
 for jj=1:length(U_preps)
     rho_preps{jj}=U_preps{jj}*rhoin*U_preps{jj}';

@@ -70,4 +70,5 @@ chitheory = Choi2Chi_(choi_th, pauliopts, nbrQubits);
 
 pauliMapMLE = Choi2PauliMap_(choi_correct, pauliopts, nbrQubits);
 pauliMapTheory = Choi2PauliMap_(choi_th, pauliopts, nbrQubits);
+
 end

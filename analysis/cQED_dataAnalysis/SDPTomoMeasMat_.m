@@ -15,91 +15,86 @@ if nargin < 7
     verbose =0;
 end
 
-
-
 yalmip('clear')
 d = 2^numberofqubits;
 d2 = 4^numberofqubits;
 d4 = 16^numberofqubits;
-%xvec = sdpvar(d4-d2,1,'full','real');
-xvec = sdpvar(d4,1,'full','real');
-t=sdpvar(1,1,'full','real');
 
-% the pauli decomposition of the state (not the confusing ordering as the
-% identity is last)
-choi_SDP=zeros(d2);
-
-for ii =1:d2
-    for jj=1:d2
-        choi_SDP=choi_SDP+xvec((jj-1)*(d2)+ii)*kron(pauliopts{ii},pauliopts{jj})/d2;
-    end
-end
 numberofmeasurements = size(measmat,1);
 numberofpreps = size(measmat,2);
 
 % different prepartions
 psiin = zeros(d,1);
-psiin(1,1)=1;
-rhoin=Psi2Rho_(psiin);
+psiin(1,1) = 1; % assume perfect preparation in the ground state
+rhoin = psiin * psiin'; % convert to density matrix
 
-for jj=1:length(U_preps)
-    rho_preps{jj}=U_preps{jj}*rhoin*U_preps{jj}';
+% transform the measurement operator by the measurement pulse
+for jj=1:length(U_preps) 
     for kk = 1:length(U_meas)
         measurementoptsset{jj}{kk}= U_meas{kk}'*measurementoperators{jj}*U_meas{kk};
     end
 end
 
-Matrix = zeros(numberofmeasurements*numberofpreps,d2*d2);
+% transform the initial state by the preparation pulse
+for jj = 1:length(U_preps)
+    rho_preps{jj} = U_preps{jj}*rhoin*U_preps{jj}';
+end
+
+ExpDecomposition = zeros(numberofmeasurements*numberofpreps,d2*d2);
 
 for ii =1:d2
-   
-    for jj=1:d2
-        for ll=1:numberofpreps
-            shittemp = trace(rho_preps{ll}.'*pauliopts{ii});
+    for ll=1:numberofpreps
+        pauliExpectationOfRhoIn = trace(rho_preps{ll}.'*pauliopts{ii});
+        for jj=1:d2
             for mm=1:numberofmeasurements
-                shittemp2 =trace(pauliopts{jj}*measurementoptsset{ll}{mm});
-                shittemp3 =shittemp*shittemp2/d;
-                Matrix((mm-1)*numberofpreps+ll,(jj-1)*(d2)+ii)=-real(shittemp3);
+                pauliDecompOfMeasOp = trace(pauliopts{jj}*measurementoptsset{ll}{mm});
+                ExpDecomposition((mm-1)*numberofpreps+ll,(jj-1)*(d2)+ii) = -real(pauliExpectationOfRhoIn*pauliDecompOfMeasOp/d);
             end
         end
     end
 end
 
+measvec = measmat(:); % get a vector of the measurement results
+meas_trace = measvec.'*measvec;
 
+choivec = sdpvar(d4,1,'full','real'); % a vectorized Pauli decomposition of the Choi matrix
+t = sdpvar(1,1,'full','real'); % slack variable
 
-mtilde= reshape(measmat, numberofmeasurements*numberofpreps,1);
-meas_trace = mtilde.'*mtilde;
+% the pauli decomposition of the state (not the confusing ordering as the
+% identity is last)
+choi_SDP = zeros(d2);
 
-newvariable = sqrtm(Matrix.'*Matrix);
+for ii =1:d2
+    for jj=1:d2
+        choi_SDP = choi_SDP + choivec((jj-1)*(d2)+ii)*kron(pauliopts{ii},pauliopts{jj})/d2;
+    end
+end
 
+% The Z Matrix
 Z = zeros(d2*d2+1,d2*d2+1);
 temp = zeros(d2*d2+1,d2*d2+1);
 temp(1,1) = 1;
-%The Z Matrix
-%slack variable
-Z =Z + t*temp;
+Z = Z + t*temp;
 
+newvariable = sqrtm(ExpDecomposition.'*ExpDecomposition);
 
-Z(2:end,1) = newvariable*xvec;
-Z(1,2:end) = xvec.'*newvariable.';
+Z(2:end,1) = newvariable*choivec;
+Z(1,2:end) = choivec.'*newvariable.';
 Z(2:end,2:end) = eye(d2*d2);
-
-%Z(2:end,2:end) = inv(Matrix'*Matrix);
 
 constraints = [Z>0, choi_SDP>0];
 
-
-obj =  meas_trace + mtilde.'*Matrix*xvec + xvec.'*Matrix.'*mtilde + t;
-
+obj =  meas_trace + measvec.'*ExpDecomposition*choivec + choivec.'*ExpDecomposition.'*measvec + t;
 
 solvesdp(set(constraints),obj,sdpsettings('verbose',verbose));
 
-xvecd = double(xvec);
+xvecd = double(choivec);
 
-choi_SDP2=zeros(d2);
+% unpack result into a choi matrix
+choi_SDP2 = zeros(d2);
 for ii =1:d2
     for jj=1:d2
-        choi_SDP2=choi_SDP2+xvecd((jj-1)*(d2)+ii)*kron(pauliopts{ii},pauliopts{jj})/d2;
+        choi_SDP2 = choi_SDP2 + xvecd((jj-1)*(d2)+ii)*kron(pauliopts{ii},pauliopts{jj})/d2;
     end
 end
 
