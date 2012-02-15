@@ -80,7 +80,7 @@ newvariable = sqrtm(ExpDecomposition.'*ExpDecomposition);
 
 Z(2:end,1) = newvariable*choivec;
 Z(1,2:end) = choivec.'*newvariable.';
-Z(2:end,2:end) = eye(d2*d2);
+Z(2:end,2:end) = eye(d2*d2); % assume no correlated errors and uniform variances
 
 constraints = [Z>0, choi_SDP>0];
 

@@ -60,7 +60,8 @@ switch Gate
         error('Unrecognized gate');
 end
 
-choi_SDP = SDPTomoMeasMat_(measmat, measurementoperators, U_preps, U_meas, pauliopts, nbrQubits);
+%choi_SDP = SDPTomoMeasMat_(measmat, measurementoperators, U_preps, U_meas, pauliopts, nbrQubits);
+choi_SDP = SimpleSDPTomoMeasMat_(measmat, measurementoperators, U_preps, U_meas, pauliopts, nbrQubits);
 choi_th  = Unitary2Choi_(Uideal, nbrQubits);
 
 % Without ML
