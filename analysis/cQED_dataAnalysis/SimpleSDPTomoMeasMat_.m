@@ -1,5 +1,6 @@
 function choi_SDP2 = SimpleSDPTomoMeasMat_(measmat,measurementoperators,U_preps,U_meas, pauliopts, numberofqubits,verbose)
 % Jay Gambetta and Seth Merkel, Jan 20th 2012
+% Simplified by Colm Ryan and Blake Johnson, Feb 15th, 2012
 % 
 % this function perfomrs semi definte programing to find the closes physical map in the choi represenation to the data. It uses yalmip and sudumi
 % Input
@@ -18,7 +19,6 @@ end
 yalmip('clear')
 d = 2^numberofqubits;
 d2 = 4^numberofqubits;
-d4 = 16^numberofqubits;
 
 numberofmeasurements = size(measmat,1);
 numberofpreps = size(measmat,2);
@@ -43,7 +43,6 @@ end
 choiSDP = sdpvar(d2,d2,'full','complex');
 predMat = sdpvar(d2,d2,'full','real');
 
-%predMat  = zeros(numberofpreps, numberofmeasurements);
 for prepct = 1:numberofpreps
     for measct = 1:numberofmeasurements
         predMat(prepct, measct) = trace(choiSDP*kron(rho_preps{prepct}.', measurementoptsset{prepct}{measct}))*d;
