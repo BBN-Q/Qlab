@@ -10,7 +10,7 @@
 #include <stdarg.h>
 
 
-int gDebugLevel = DEBUG_VERBOSE; // access global debug level
+int gDebugLevel = DEBUG_INFO; // access global debug level
 
 void dlog(int level, char * fmt, ...) {
   // wrap fprintf to force a flush after every write
