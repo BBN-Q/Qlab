@@ -32,7 +32,7 @@ waveform_t * WF_Init() {
 void WF_Destroy(waveform_t * wfArray) {
   int cnt;
 
-  dlog(DEBUG_INFO,"WF_Destroy\n");
+  dlog(DEBUG_VERBOSE2,"WF_Destroy: 0x%x\n", wfArray);
 
   if (!wfArray) return; // waveform array does not exist
 
@@ -87,23 +87,17 @@ int    WF_SetWaveform(waveform_t * wfArray, int channel, float * data, int lengt
   return 0;
 }
 
-int    WF_Free(waveform_t * wfArray, int channel) {
+int WF_Free(waveform_t * wfArray, int channel) {
   if (!wfArray) return 0;
 
-  dlog(DEBUG_INFO,"WF_Free Channel: %i\n", channel);
+  dlog(DEBUG_VERBOSE2,"WF_Free Channel: %i\n", channel);
 
-  dlog(DEBUG_INFO,"wfArray[channel] = 0x%x\n", &(wfArray[channel]));
-  dlog(DEBUG_INFO,"wfArray[channel].pData = 0x%x\n", wfArray[channel].pData);
-  dlog(DEBUG_INFO,"wfArray[channel].pFormatedData = 0x%x\n", wfArray[channel].pFormatedData);
+  dlog(DEBUG_VERBOSE2,"wfArray[channel] = 0x%x\n", &(wfArray[channel]));
+  dlog(DEBUG_VERBOSE2,"wfArray[channel].pData = 0x%x\n", wfArray[channel].pData);
+  dlog(DEBUG_VERBOSE2,"wfArray[channel].pFormatedData = 0x%x\n", wfArray[channel].pFormatedData);
 
   if (wfArray[channel].pData) free(wfArray[channel].pData);
   if (wfArray[channel].pFormatedData) free(wfArray[channel].pFormatedData);
-
-  dlog(DEBUG_INFO,"WF_Free Channel: Post Free\n");
-
-  // reset pointers to null
-  wfArray[channel].pData = 0;
-  wfArray[channel].pFormatedData = 0;
 
   int bank;
 
@@ -111,12 +105,17 @@ int    WF_Free(waveform_t * wfArray, int channel) {
     WF_FreeBank(&(wfArray[channel].linkListBanks[bank]));
   }
 
+
+  // reset pointers to null
+  wfArray[channel].pData = 0;
+  wfArray[channel].pFormatedData = 0;
+
   return 0;
 }
 
 void WF_FreeBank(bank_t * bank) {
 
-  dlog(DEBUG_INFO,"WF_FreeBank\n");
+  dlog(DEBUG_VERBOSE2,"WF_FreeBank\n");
 
   if (bank->count)   free(bank->count);
   if (bank->offset)  free(bank->offset);

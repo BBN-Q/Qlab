@@ -497,6 +497,7 @@ EXPORT int APS_Close(int device)
 	usb_handles[device] = 0;
 
 	WF_Destroy(waveforms[device]);
+	waveforms[device] = 0;  // clear pointer to waveform library for device
 
 	return 0;
 }

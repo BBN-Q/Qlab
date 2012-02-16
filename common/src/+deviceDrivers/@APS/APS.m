@@ -206,6 +206,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 libfname = 'libaps.so';
             end
             
+            if libisloaded(d.library_name)
+                unloadlibrary(d.library_name)
+            end
+            
             % build library path
             script = mfilename('fullpath');
             script = java.io.File(script);
