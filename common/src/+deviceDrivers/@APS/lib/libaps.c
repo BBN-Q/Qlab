@@ -1302,6 +1302,66 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 	return sync_status;
 }
 
+EXPORT int APS_GetPllFreq(int device, int dac) {
+	// Poll APS PLL chip to determine current frequency
+
+	ULONG pll_cycles_addr, pll_bypass_addr;
+	UCHAR pll_cycles_val, pll_bypass_val;
+
+	UCHAR WriteByte;
+	int fpga;
+	int sync_status;
+	int numSyncChannels;
+	int freq;
+
+	dlog(DEBUG_VERBOSE, "Getting PLL DAC: %i\n", dac);
+
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+
+	switch(dac) {
+	case 0:
+		// fall through
+	case 1:
+		pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
+		pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
+		break;
+	case 2:
+		// fall through
+	case 3:
+		pll_cycles_addr = FPGA2_PLL_CYCLES_ADDR;
+		pll_bypass_addr = FPGA2_PLL_BYPASS_ADDR;
+		break;
+	default:
+		return -1;
+	}
+
+	APS_ReadSPI(device, APS_PLL_SPI, pll_cycles_addr, &pll_cycles_val);
+	APS_ReadSPI(device, APS_PLL_SPI, pll_bypass_addr, &pll_bypass_val);
+
+	if (pll_bypass_val == 0x80 && pll_cycles_val == 0x00)
+		return 1200;
+	// select frequency based on pll cycles setting
+	// the values here should match the reverse lookup in APS_SetPllFreq
+
+	switch(pll_cycles_val) {
+		case 0xEE: freq = 40;  break;
+		case 0xBB: freq = 50;  break;
+		case 0x55: freq = 100; break;
+		case 0x22: freq = 200; break;
+		case 0x11: freq = 300; break;
+		case 0x00: freq = 600; break;
+		default:
+			return -2;
+	}
+
+	dlog(DEBUG_VERBOSE, "PLL DAC: %i Freq: %i\n", dac, freq);
+
+	return freq;
+}
+
 /*
 	APS_TestPllSync synchronized the phases of the DAC clocks with the following procedure:
 	1) Make sure all PLLs have locked.

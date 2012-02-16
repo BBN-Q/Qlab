@@ -817,7 +817,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if val ~= 0
                 fprintf('Warning: APS::setFrequency returned %i\n', val);
             end
-            
+        end
+        
+        function [freq] = getFrequency(aps,dac)
+            % poll hardware for DAC PLL frequency
+            freq = aps.librarycall('Get SampleRate', 'APS_GetPllFreq', dac);
+            if freq < 0
+                fprintf('Warning: APS::getFrequency returned error %i\n', freq);
+            end
         end
         
         function val = setOffset(aps, ch, offset)
@@ -843,6 +850,16 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 aps.testPllSync(2);
             end
             aps.samplingRate = rate;
+        end
+        
+        function [rate1] = get.samplingRate(aps)
+            % polls APS hardware to get current PLL Sample Rate
+            % valid rates in MHz (1200, 600, 300, 100, 40)
+            rate1 = aps.getFrequency(0);
+            rate2 = aps.getFrequency(2);
+            if rate1 ~= rate2
+                fprintf('Expected sampling rate to be the same for each DAC read [%i %i]\n', rate1, rate2)
+            end
         end
         
         function aps = set.triggerSource(aps, trig)
