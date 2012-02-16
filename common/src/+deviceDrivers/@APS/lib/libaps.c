@@ -1323,10 +1323,7 @@ EXPORT int APS_GetPllFreq(int device, int dac) {
 	ULONG pll_cycles_addr, pll_bypass_addr;
 	UCHAR pll_cycles_val, pll_bypass_val;
 
-	UCHAR WriteByte;
 	int fpga;
-	int sync_status;
-	int numSyncChannels;
 	int freq;
 
 	dlog(DEBUG_VERBOSE, "Getting PLL DAC: %i\n", dac);

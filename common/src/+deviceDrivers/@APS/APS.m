@@ -43,7 +43,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         deviceSerials = {}
         message_manager =[];
         bit_file_path = '';
-        bit_file = 'mqco_dac2_latest.bit';
+        bit_file = 'mqco_aps_latest.bit';
         expected_bit_file_ver = hex2dec('10');
         Address = 0;
         verbose = 0;
@@ -997,7 +997,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             wf.set_scale_factor(0.8);
             
             for ch = 0:3
-                aps.setFrequency(ch, 1200)
+                aps.setFrequency(ch, 1200);
                 aps.loadWaveform(ch, wf.get_vector(), 0, validate,useSlowWrite);
                 
             end
