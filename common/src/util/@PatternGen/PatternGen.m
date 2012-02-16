@@ -39,7 +39,7 @@ classdef PatternGen < handle
         dBuffer = 5;
         dmodFrequency = 0; % SSB modulation frequency (sign matters!!)
         cycleLength = 10000;
-        samplingRate = 1e9; % in samples per second
+        samplingRate = 1.2e9; % in samples per second
         correctionT = eye(2,2);
         arbPulses = containers.Map();
         dArbfname = '';
@@ -386,6 +386,7 @@ classdef PatternGen < handle
             % measurement pulses
             if strcmp(p, 'M')
                 params.amp = 1;
+                params.modFrequency = 0;
             end
             
             % if amp, width, sigma, or angle is a vector, get the nth entry

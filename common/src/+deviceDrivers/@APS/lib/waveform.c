@@ -54,7 +54,7 @@ int    WF_SetWaveform(waveform_t * wfArray, int channel, float * data, int lengt
 
   // trim length to maximum allowed
   if (length > MAX_WAVEFORM_LENGTH) {
-    dlog(DEBUG_INFO,"Warning trimming channel %i length to %i\n", channel, MAX_WAVEFORM_LENGTH);
+    dlog(DEBUG_VERBOSE,"Warning trimming channel %i length to %i\n", channel, MAX_WAVEFORM_LENGTH);
     length =  MAX_WAVEFORM_LENGTH;
   }
 
@@ -62,13 +62,13 @@ int    WF_SetWaveform(waveform_t * wfArray, int channel, float * data, int lengt
 
   wfArray[channel].pData = (float *) malloc(allocatedLength * sizeof(float));
   if (!wfArray[channel].pData) {
-    dlog(DEBUG_INFO,"Error allocating data pointer for channel: %i", channel);
+    dlog(DEBUG_VERBOSE,"Error allocating data pointer for channel: %i", channel);
     return -1;
   }
 
   wfArray[channel].pFormatedData = (int16_t *) malloc(allocatedLength * sizeof(int16_t));
   if (!wfArray[channel].pFormatedData) {
-    dlog(DEBUG_INFO,"Error allocating formated data pointer for channel: %i", channel);
+    dlog(DEBUG_VERBOSE,"Error allocating formated data pointer for channel: %i", channel);
     return -1;
   }
 
@@ -236,7 +236,7 @@ int WF_SetLinkList(waveform_t * wfArray, int channel,
 
   if (!bank->offset || !bank->count || !bank->trigger || !bank->repeat) {
     WF_FreeBank(bank);
-    dlog(DEBUG_INFO,"Error allocating link list bank for channel: %i", channel);
+    dlog(DEBUG_VERBOSE,"Error allocating link list bank for channel: %i", channel);
     return -7;
   }
 

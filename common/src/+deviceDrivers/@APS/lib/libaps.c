@@ -153,9 +153,9 @@ int APS_Init()
 #endif
 
 #ifdef BUILD_DLL
-	dlog(DEBUG_INFO,"Library Dynamically Loaded\n");
+	dlog(DEBUG_VERBOSE,"Library Dynamically Loaded\n");
 #else
-	dlog(DEBUG_INFO,"Library Statically loaded\n");
+	dlog(DEBUG_VERBOSE,"Library Statically loaded\n");
 #endif
 
 	DLL_FT_Open  = (pFT_Open) GetFunction(hdll,"FT_Open");
@@ -227,16 +227,14 @@ EXPORT int APS_Open(int device, int force)
 
 	if (status == FT_OK) {
 #ifdef DEBUG
-		dlog(DEBUG_INFO,"FTD2 Open\n");
+		dlog(DEBUG_VERBOSE,"FTD2 Open\n");
 #endif
 		status = DLL_FT_SetTimeouts(device2handle(device), APS_READTIMEOUT,APS_WRITETIMEOUT);
 		if (status == FT_OK) {
-			dlog(DEBUG_INFO,"Set Timeouts OK\n");
+			dlog(DEBUG_VERBOSE,"Set Timeouts OK\n");
 		} else {
-			dlog(DEBUG_INFO,"Set Timeouts Failed %i\n", status);
+			dlog(DEBUG_VERBOSE,"Set Timeouts Failed %i\n", status);
 		}
-
-
 
 		// destroy old memory if it exists
 		if (waveforms[device]) {
@@ -247,7 +245,7 @@ EXPORT int APS_Open(int device, int force)
 
 	} else {
 #ifdef DEBUG
-		dlog(DEBUG_INFO,"FTD_Open returned: %i\n", status);
+		dlog(DEBUG_VERBOSE,"FTD_Open returned: %i\n", status);
 #endif
 		return -status;
 	}
@@ -314,12 +312,12 @@ EXPORT int APS_OpenByID(int device)
 	}
 
 	if (!found) {
-		dlog(DEBUG_INFO,"Could not locate device ID: %i Serial %s\n",device, serial );
+		dlog(DEBUG_VERBOSE,"Could not locate device ID: %i Serial %s\n",device, serial );
 		printf("%i\n",status);
 		return -1;
 	}
 
-	dlog(DEBUG_INFO,"Found device ID: %i Serial %s @ Index %i\n",device, serial,cnt );
+	dlog(DEBUG_VERBOSE,"Found device ID: %i Serial %s @ Index %i\n",device, serial,cnt );
 
 	status = APS_Open(cnt, 0);
 	if (status == FT_OK) {
@@ -375,12 +373,12 @@ EXPORT int APS_OpenBySerialNum(char * serialNum)
 	}
 
 	if (!found) {
-		dlog(DEBUG_INFO,"Could not locate device ID: Serial %s\n", serialNum );
+		dlog(DEBUG_VERBOSE,"Could not locate device ID: Serial %s\n", serialNum );
 		printf("%i\n",status);
 		return -1;
 	}
 
-	dlog(DEBUG_INFO,"Found device ID: Serial %s @ Index %i\n", serialNum,cnt );
+	dlog(DEBUG_VERBOSE,"Found device ID: Serial %s @ Index %i\n", serialNum,cnt );
 
 	status = APS_Open(cnt, 0);
 	if (status == FT_OK) {
@@ -493,7 +491,7 @@ EXPORT int APS_Close(int device)
 	}
 	// Closes handle to FTD2 device
 
-	dlog(DEBUG_INFO,"Closing: %i Handle %x\n", device, usb_handles[device]);
+	dlog(DEBUG_VERBOSE,"Closing: %i Handle %x\n", device, usb_handles[device]);
 
 	DLL_FT_Close(usb_handles[device]);
 	usb_handles[device] = 0;
@@ -571,21 +569,21 @@ int APS_ReadReg
 
 	// Send the read command with the number of bytes specified in the Command Byte
 	for (repeats = 0; repeats < max_repeats; repeats++) {
-		if (repeats > 0) dlog(DEBUG_INFO,"Retry USB Write %i\n", repeats);
+		if (repeats > 0) dlog(DEBUG_VERBOSE2,"Retry USB Write %i\n", repeats);
 		status = DLL_FT_Write(usb_handle, Packet, 1, &BytesWritten);
 
 		if (status != FT_OK || BytesWritten != 1) {
-			dlog(DEBUG_INFO,"APS_ReadReg: Error writing to USB status %i bytes written %i / 1 repeats %i\n",
+			dlog(DEBUG_VERBOSE2,"APS_ReadReg: Error writing to USB status %i bytes written %i / 1 repeats %i\n",
 					status,BytesWritten, repeats);
 			continue;
 		}
 		usleep(10);
 		status = DLL_FT_Read(usb_handle, Data, Length, &BytesRead);
-		if (repeats > 0) dlog(DEBUG_INFO,"Retry USB Read %i\n", repeats);
+		if (repeats > 0) dlog(DEBUG_VERBOSE2,"Retry USB Read %i\n", repeats);
 		if (status == FT_OK && BytesRead == Length) break;
 	}
 	if (status != FT_OK || BytesRead != Length) {
-		dlog(DEBUG_INFO,"APS_ReadReg: Error reading from USB! status %i bytes read %i / %i repeats = %i\n", status,BytesRead,Length,repeats);
+		dlog(DEBUG_VERBOSE,"APS_ReadReg: Error reading from USB! status %i bytes read %i / %i repeats = %i\n", status,BytesRead,Length,repeats);
 	}
 
 
@@ -666,14 +664,14 @@ int APS_WriteReg
 		Packet[i+1] = Data[i];
 
 	for (repeats = 0; repeats < max_repeats; repeats++) {
-		if (repeats > 0) dlog(DEBUG_INFO,"Repeat Write %i\n", repeats);
+		if (repeats > 0) dlog(DEBUG_VERBOSE2,"Repeat Write %i\n", repeats);
 		status = DLL_FT_Write(usb_handle, Packet, Length+1, &BytesWritten);
 		if (status == FT_OK) break;
 
 	}
 
 	if (status != FT_OK || BytesWritten != Length+1) {
-		dlog(DEBUG_INFO,"APS_WriteReg: Error writing to USB status %i bytes written %i / %i repeats %i\n",
+		dlog(DEBUG_VERBOSE,"APS_WriteReg: Error writing to USB status %i bytes written %i / %i repeats %i\n",
 				status,BytesWritten, Length+1, repeats);
 	}
 
@@ -1172,7 +1170,7 @@ EXPORT int APS_SetupPLL(int device)
 {
 
 	int i;
-	dlog(DEBUG_INFO,"Setting PLL\n");
+	dlog(DEBUG_VERBOSE,"Setting PLL\n");
 
 	// Disable DDRs
 	int ddr_mask = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
@@ -1213,7 +1211,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 	int sync_status;
 	int numSyncChannels;
 
-	dlog(DEBUG_INFO, "Setting PLL DAC: %i Freq: %i\n", dac, freq);
+	dlog(DEBUG_VERBOSE, "Setting PLL DAC: %i Freq: %i\n", dac, freq);
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -1270,8 +1268,8 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 		pll_bypass_val = 0x00;
 	}
 
-	dlog(DEBUG_INFO, "Setting PLL cycles addr: 0x%x val: 0x%x\n", pll_cycles_addr, pll_cycles_val);
-	dlog(DEBUG_INFO, "Setting PLL bypass addr: 0x%x val: 0x%x\n", pll_bypass_addr, pll_bypass_val);
+	dlog(DEBUG_VERBOSE, "Setting PLL cycles addr: 0x%x val: 0x%x\n", pll_cycles_addr, pll_cycles_val);
+	dlog(DEBUG_VERBOSE, "Setting PLL bypass addr: 0x%x val: 0x%x\n", pll_bypass_addr, pll_bypass_val);
 
 	// fpga = 1 or 2 save frequency for later comparison to decide to use
 	// 4 channel sync or 2 channel sync
@@ -1319,6 +1317,66 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 	return sync_status;
 }
 
+EXPORT int APS_GetPllFreq(int device, int dac) {
+	// Poll APS PLL chip to determine current frequency
+
+	ULONG pll_cycles_addr, pll_bypass_addr;
+	UCHAR pll_cycles_val, pll_bypass_val;
+
+	UCHAR WriteByte;
+	int fpga;
+	int sync_status;
+	int numSyncChannels;
+	int freq;
+
+	dlog(DEBUG_VERBOSE, "Getting PLL DAC: %i\n", dac);
+
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+
+	switch(dac) {
+	case 0:
+		// fall through
+	case 1:
+		pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
+		pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
+		break;
+	case 2:
+		// fall through
+	case 3:
+		pll_cycles_addr = FPGA2_PLL_CYCLES_ADDR;
+		pll_bypass_addr = FPGA2_PLL_BYPASS_ADDR;
+		break;
+	default:
+		return -1;
+	}
+
+	APS_ReadSPI(device, APS_PLL_SPI, pll_cycles_addr, &pll_cycles_val);
+	APS_ReadSPI(device, APS_PLL_SPI, pll_bypass_addr, &pll_bypass_val);
+
+	if (pll_bypass_val == 0x80 && pll_cycles_val == 0x00)
+		return 1200;
+	// select frequency based on pll cycles setting
+	// the values here should match the reverse lookup in APS_SetPllFreq
+
+	switch(pll_cycles_val) {
+		case 0xEE: freq = 40;  break;
+		case 0xBB: freq = 50;  break;
+		case 0x55: freq = 100; break;
+		case 0x22: freq = 200; break;
+		case 0x11: freq = 300; break;
+		case 0x00: freq = 600; break;
+		default:
+			return -2;
+	}
+
+	dlog(DEBUG_VERBOSE, "PLL DAC: %i Freq: %i\n", dac, freq);
+
+	return freq;
+}
+
 /*
 	APS_TestPllSync synchronized the phases of the DAC clocks with the following procedure:
 	1) Make sure all PLLs have locked.
@@ -1355,7 +1413,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 		return -1;
 	}
 
-	dlog(DEBUG_INFO,"Running channel sync test on FPGA%i\n", fpga);
+	dlog(DEBUG_VERBOSE,"Running channel sync test on FPGA%i\n", fpga);
 
 	switch(dac) {
 	case 0:
@@ -1404,7 +1462,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
 	// start by testing for a global or channel XOR count near 50%, which indicates
 	// that DAC 600 MHz clocks have come up out of phase.
-	dlog(DEBUG_INFO,"Testing for DAC clock phase sync\n");
+	dlog(DEBUG_VERBOSE,"Testing for DAC clock phase sync\n");
 	for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
 		xor_flag_cnt = 0;
 		xor_flag_cnt2 = 0;
@@ -1425,12 +1483,12 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 				(xor_flag_cnt3 < 5 || xor_flag_cnt3 > 15) ) {
 			// 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase, so 600 MHz clocks
 			// from DAC must be in phase. Move on.
-			dlog(DEBUG_INFO,"DAC clocks in phase with reference (XOR counts %i and %i and %i)\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
+			dlog(DEBUG_VERBOSE,"DAC clocks in phase with reference (XOR counts %i and %i and %i)\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
 			break;
 		}
 		else {
 			// 600 MHz clocks out of phase, reset DAC clocks that are 90/270 degrees out of phase with reference
-			dlog(DEBUG_INFO,"DAC clocks out of phase; resetting (XOR counts %i and %i and %i)\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
+			dlog(DEBUG_VERBOSE,"DAC clocks out of phase; resetting (XOR counts %i and %i and %i)\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
 			UCHAR WriteByte = 0x2; //disable clock outputs
 			if (xor_flag_cnt2 >= 5 || xor_flag_cnt2 <= 15) {
 				dac02_reset = 1;
@@ -1478,7 +1536,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 		case 2: pllStr = "Global"; break;
 		}
 
-		dlog(DEBUG_INFO,"Testing channel %s\n", pllStr);
+		dlog(DEBUG_VERBOSE,"Testing channel %s\n", pllStr);
 		for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
 			xor_flag_cnt = 0;
 
@@ -1535,7 +1593,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 		dlog(DEBUG_INFO,"Warning: PLLs are not in sync\n");
 		return -8;
 	}
-	dlog(DEBUG_INFO,"Sync test complete\n");
+	dlog(DEBUG_VERBOSE,"Sync test complete\n");
 	return 0;
 }
 
@@ -1583,7 +1641,7 @@ UCHAR Reg01Bytes[4] =
 EXPORT int APS_SetupVCXO(int device)
 {
 
-	dlog(DEBUG_INFO, "Setting up VCX0\n");
+	dlog(DEBUG_VERBOSE, "Setting up VCX0\n");
 
 	APS_WriteSPI(device, APS_VCXO_SPI, 0, Reg00Bytes);
 	APS_WriteSPI(device, APS_VCXO_SPI, 0, Reg01Bytes);
@@ -1598,14 +1656,14 @@ EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int ma
 	SHA1Context_t sha;
 	uint8_t HASH[20];
 	//freopen("libaps.log","w+", stderr);
-	//dlog(DEBUG_INFO,"Start sha %i len pulse str len %i\n", len, maxlen);
+	//dlog(DEBUG_VERBOSE,"Start sha %i len pulse str len %i\n", len, maxlen);
 	sha1_init(&sha);
 	sha1_update(&sha,(uint8_t*)pulse,len);
 	sha1_finish(&sha,HASH);
 	snprintf(hashStr,maxlen, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
 			HASH[0],HASH[1],HASH[2],HASH[3],HASH[4],HASH[5],HASH[6],HASH[7],HASH[8],HASH[9],HASH[10],
 			HASH[11],HASH[12],HASH[13],HASH[14],HASH[15],HASH[16],HASH[17],HASH[18],HASH[19]);
-	//dlog(DEBUG_INFO,"HASH %s\n",(char*) hashStr);
+	//dlog(DEBUG_VERBOSE,"HASH %s\n",(char*) hashStr);
 }
 
 

@@ -389,7 +389,8 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	// slow write of data one sample at a time
 	UCHAR dummyRead[2];
 	if (useSlowWrite != 0) {
-		dlog(DEBUG_INFO,"Using slow write\n");
+
+		dlog(DEBUG_VERBOSE,"Using slow write\n");
 
 		for(cnt = 0; cnt < ByteCount; cnt++) {
 			APS_WriteFPGA(device, dac_write + cnt, Data[cnt], fpga);
@@ -425,15 +426,16 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 		for(cnt = 0; cnt < ByteCount; cnt++) {
 			data = APS_ReadFPGA(device, dac_read + cnt, fpga);
 			if (data != Data[cnt]) {
-				dlog(DEBUG_INFO,"Error reading back memory: cnt = %i expected 0x%x read 0x%x\n", cnt,Data[cnt], data);
+				dlog(DEBUG_VERBOSE,"Error reading back memory: cnt = %i expected 0x%x read 0x%x\n", cnt,Data[cnt], data);
 				error = 1;
 			}
 		}
 
 		if (!error) {
-			dlog(DEBUG_INFO,"Read back complete: no errors found\n");
+			dlog(DEBUG_VERBOSE,"Read back complete: no errors found\n");
 		}
 	}
+
 
 	dlog(DEBUG_VERBOSE,"LoadWaveform Done\n");
 
@@ -935,7 +937,7 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 		return -1;
 	}
 
-	dlog(DEBUG_INFO,"Load Link List ELL\n");
+	dlog(DEBUG_VERBOSE,"Load Link List ELL\n");
 
 	if (gBitFileVersion < VERSION_ELL) {
 		dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
@@ -1094,7 +1096,9 @@ EXPORT int APS_LoadLinkList(int device,
 		unsigned short *TriggerData, unsigned short *RepeatData,
 		int length, int dac, int bank, int validate)
 {
-	dlog(DEBUG_INFO,"APS_LoadLinkList\n");
+
+	dlog(DEBUG_VERBOSE,"APS_LoadLinkList\n");
+
 	if (gBitFileVersion < VERSION_ELL) {
 		return LoadLinkList_V5(device, OffsetData, CountData, length, dac);
 	} else {
@@ -1105,7 +1109,7 @@ EXPORT int APS_LoadLinkList(int device,
 
 EXPORT int APS_ClearLinkListELL(int device,int dac, int bank)
 {
-	dlog(DEBUG_INFO,"APS_ClearLinkList\n");
+	dlog(DEBUG_VERBOSE,"APS_ClearLinkList\n");
 	int dac_write;
 	int dac_ctrl_reg, dac_rpt_reg;
 	int fpga;
@@ -1117,7 +1121,7 @@ EXPORT int APS_ClearLinkListELL(int device,int dac, int bank)
 		return -1;
 	}
 
-	dlog(DEBUG_INFO,"Load Link List ELL\n");
+	dlog(DEBUG_VERBOSE,"Load Link List ELL\n");
 
 	if (gBitFileVersion < VERSION_ELL) {
 		dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
@@ -1125,7 +1129,7 @@ EXPORT int APS_ClearLinkListELL(int device,int dac, int bank)
 	}
 
 	const char * banks[] = {"A","B"};
-	dlog(DEBUG_VERBOSE,"Clearign LinkList FPGA%i DAC%i Bank %s\n", fpga, dac, banks[bank]);
+	dlog(DEBUG_VERBOSE,"Clearing LinkList FPGA%i DAC%i Bank %s\n", fpga, dac, banks[bank]);
 
 	// setup register addressing based on DAC
 	switch(dac) {
@@ -1218,7 +1222,7 @@ EXPORT int APS_SetLinkListRepeat(int device, unsigned short repeat, int dac) {
 	// zero repeat register
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_rpt_reg, repeat, fpga);
 
-	dlog(DEBUG_INFO,"SET: FPGA: %i Dac: %s Repeat Count: %i Addr: 0x%X\n", fpga, dac_type, repeat, FPGA_ADDR_REGWRITE | dac_rpt_reg);
+	dlog(DEBUG_VERBOSE,"SET: FPGA: %i Dac: %s Repeat Count: %i Addr: 0x%X\n", fpga, dac_type, repeat, FPGA_ADDR_REGWRITE | dac_rpt_reg);
 
 	return 0;
 }
@@ -1288,8 +1292,7 @@ int SetLinkListMode_V5(int device, int enable, int mode, int dac)
 	// load current cntrl reg
 	ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_LLCTRL, fpga);
 
-	dlog(DEBUG_INFO,"Current Link List Control Reg: 0x%x\n", ctrl_reg);
-
+	dlog(DEBUG_VERBOSE,"Current Link List Control Reg: 0x%x\n", ctrl_reg);
 
 	if (enable) {
 		APS_SetBit(device, fpga, FPGA_OFF_LLCTRL, dac_enable_mask);
@@ -1658,11 +1661,12 @@ EXPORT int APS_ReadBitFileVersion(int device) {
 
 		version = version & 0x1FF; // First 9 bits hold version
 	}
-	dlog(DEBUG_INFO,"Found BitFile Version 0x%x\n", version);
+
+	dlog(DEBUG_VERBOSE,"Found BitFile Version 0x%x\n", version);
 
 	gBitFileVersion = version;
 	gRegRead = (version >= VERSION_ELL) ? FPGA_ADDR_ELL_REGREAD : FPGA_ADDR_REGREAD;
-	dlog(DEBUG_INFO,"gRegRead set to: 0x%x\n", gRegRead );
+	dlog(DEBUG_VERBOSE,"gRegRead set to: 0x%x\n", gRegRead );
 	return version;
 }
 
@@ -1674,7 +1678,7 @@ EXPORT int APS_ReadAllRegisters(int device) {
 	int ok, attempt;
 	int expected_values[] = {-1, 0,0,-1, 0,0,-1,0,0,0,0,0,0,0xdead,0xdead,0xdead};
 
-	dlog(DEBUG_INFO,"====== Regiser Read %3i ======\n", readCnt++);
+	dlog(DEBUG_VERBOSE,"====== Register Read %3i ======\n", readCnt++);
 
 	for(cnt = 0; cnt < 16; cnt++) {
 		ok = 0;
@@ -1685,13 +1689,13 @@ EXPORT int APS_ReadAllRegisters(int device) {
 			if ((expected_values[cnt] != -1) && (expected_values[cnt] != val)) {
 				attempt++;
 				if (attempt == 1)
-					dlog(DEBUG_INFO,"Error reading 0x%x: expected 0x%x read ",  gRegRead | cnt,expected_values[cnt]);
-				dlog(DEBUG_INFO,"0x%x ", val);
+					dlog(DEBUG_VERBOSE,"Error reading 0x%x: expected 0x%x read ",  gRegRead | cnt,expected_values[cnt]);
+				dlog(DEBUG_VERBOSE,"0x%x ", val);
 			} else {
 				ok = 1;
 			}
 			if (attempt)
-				dlog(DEBUG_INFO, "attempts %i\n", attempt);
+				dlog(DEBUG_VERBOSE, "attempts %i\n", attempt);
 		}
 		// register values will be dumped to lob by APS_ReadFPGA
 	}
@@ -1734,7 +1738,7 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 		return -1;
 	}
 
-	dlog(DEBUG_INFO,"Testing device %i dac %i fpga %i\n",device,dac, fpga);
+	dlog(DEBUG_VERBOSE,"Testing device %i dac %i fpga %i\n",device,dac, fpga);
 
 	dlog(DEBUG_VERBOSE,"Loading Waveform length %i into FPGA%i DAC%i \n", ByteCount, fpga, dac);
 
@@ -1791,7 +1795,7 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 	for(cnt = 0; cnt < ByteCount; cnt++) {
 
 		if (cnt % 100 == 0) {
-			dlog(DEBUG_INFO,"Writing to addr: 0x%x\n", dac_write+cnt);
+			dlog(DEBUG_VERBOSE,"Writing to addr: 0x%x\n", dac_write+cnt);
 		}
 		ok = 0;
 		attempt = 0;
@@ -1802,23 +1806,23 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 			if (data != out) {
 				attempt++;
 				if (attempt == 1)
-					dlog(DEBUG_INFO,"Error reading 0x%x (0x%x): expected 0x%x read ", dac_read + cnt,  dac_write + cnt,out);
-				dlog(DEBUG_INFO,"0x%x ", data);
+					dlog(DEBUG_VERBOSE,"Error reading 0x%x (0x%x): expected 0x%x read ", dac_read + cnt,  dac_write + cnt,out);
+				dlog(DEBUG_VERBOSE,"0x%x ", data);
 				num_errors = num_errors + 1;
 			} else {
 				ok = 1;
 			}
 		}
 		if (attempt)
-			dlog(DEBUG_INFO, "bad attempts %i\n", attempt);
+			dlog(DEBUG_VERBOSE, "bad attempts %i\n", attempt);
 	}
 
 	int round;
 	for(round = 0; round < 1; round++) {
-		//dlog(DEBUG_INFO,"======== %i =========\n", round);
+		//dlog(DEBUG_VERBOSE,"======== %i =========\n", round);
 		for(cnt = 0; cnt < ByteCount; cnt++) {
 			if (cnt % 100 == 0) {
-				dlog(DEBUG_INFO,"Reading from addr: 0x%x\n", dac_read+cnt);
+				dlog(DEBUG_VERBOSE,"Reading from addr: 0x%x\n", dac_read+cnt);
 			}
 
 			ok = 0;
@@ -1829,18 +1833,18 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 				if (data != out) {
 					attempt++;
 					if (attempt == 1)
-						dlog(DEBUG_INFO,"Error reading 0x%x: expected 0x%x read ", dac_read + cnt,out);
-					dlog(DEBUG_INFO,"0x%x ", data);
+						dlog(DEBUG_VERBOSE,"Error reading 0x%x: expected 0x%x read ", dac_read + cnt,out);
+					dlog(DEBUG_VERBOSE,"0x%x ", data);
 					num_errors = num_errors + 1;
 				} else {
 					ok = 1;
 				}
 			}
 			if (attempt)
-				dlog(DEBUG_INFO,"bad attempts %i\n", attempt);
+				dlog(DEBUG_VERBOSE,"bad attempts %i\n", attempt);
 		}
 	}
-	dlog(DEBUG_INFO,"Total Number of Errors: %i\n",num_errors);
+	dlog(DEBUG_VERBOSE,"Total Number of Errors: %i\n",num_errors);
 
 	return 0;
 }
@@ -1886,7 +1890,7 @@ EXPORT int APS_ReadLinkListStatus(int device, int dac) {
 	val = APS_ReadFPGA(device, gRegRead | csr, fpga);
 	status = (val & link_list_status) == link_list_status;
 
-	dlog(DEBUG_INFO,"CSR = 0x%x LL Status = %i\n", val,status);
+	dlog(DEBUG_VERBOSE,"CSR = 0x%x LL Status = %i\n", val,status);
 
 	return status;
 }
@@ -1937,6 +1941,7 @@ EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
  * offset - signed 14-bit value (-8192, 8192) representing the channel offset
  */
 {
+
 	int fpga, zero_register_addr;
 
 	fpga = dac2fpga(dac);
