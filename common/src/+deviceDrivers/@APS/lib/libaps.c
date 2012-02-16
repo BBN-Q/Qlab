@@ -107,6 +107,7 @@ FT_HANDLE device2handle(int device) {
 EXPORT int APS_SetDebugLevel(int level) {
 	if (level < 0) level = 0;
 	setDebugLevel(level);
+	return 0;
 }
 
 int APS_Init()
@@ -1308,10 +1309,7 @@ EXPORT int APS_GetPllFreq(int device, int dac) {
 	ULONG pll_cycles_addr, pll_bypass_addr;
 	UCHAR pll_cycles_val, pll_bypass_val;
 
-	UCHAR WriteByte;
 	int fpga;
-	int sync_status;
-	int numSyncChannels;
 	int freq;
 
 	dlog(DEBUG_VERBOSE, "Getting PLL DAC: %i\n", dac);
@@ -1707,6 +1705,7 @@ EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 		APS_LoadWaveform(device, dataPtr, length, 0 ,channel - 1, 0, 0);
 		WF_SetIsLoaded(wfArray,  channel,1);
 	}
+	return 0;
 }
 
 EXPORT int APS_SetLinkList(int device, int channel,
