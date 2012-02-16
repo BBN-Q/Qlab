@@ -284,36 +284,39 @@ classdef PatternGen < handle
         
         % pattern generator
         function [xpat ypat] = getPatternSeq(obj, patList, n, delay, fixedPoint)
-            self = PatternGen;
             numPatterns = size(patList,2);
             xpat = zeros(fixedPoint,1);
             ypat = zeros(fixedPoint,1);
-            len = 0;
+            accumulatedPhase = 0;
+            timeStep = 1/obj.samplingRate;
             
+            len = 0;
+
             for i = 1:numPatterns
-                [xpulse ypulse] = patList{i}(n); % call the current pulse function
+                [xpulse ypulse] = patList{i}(n, accumulatedPhase); % call the current pulse function
                 increment = length(xpulse);
                 xpat(len+1:len+increment) = xpulse;
                 ypat(len+1:len+increment) = ypulse;
                 len = len + increment;
+                accumulatedPhase = accumulatedPhase - 2*pi*obj.dmodFrequency*timeStep*increment;
             end
             
             xpat = xpat(1:len);
             ypat = ypat(1:len);
             
-            xpat = self.makePattern(xpat, fixedPoint + delay, [], obj.cycleLength);
-            ypat = self.makePattern(ypat, fixedPoint + delay, [], obj.cycleLength);
+            xpat = obj.makePattern(xpat, fixedPoint + delay, [], obj.cycleLength);
+            ypat = obj.makePattern(ypat, fixedPoint + delay, [], obj.cycleLength);
         end
         
         function retVal = pulse(obj, p, varargin)
             self = obj;
-            if obj.linkList % if passthru is enabled, just return the inputs
+            if obj.linkList % if linkList mode is enabled, return a struct
                 retVal = struct();
                 retVal.pulseArray = {};
                 retVal.hashKeys = [];
                 retVal.isTimeAmplitude = 0;
                 retVal.isZero = 0;
-            else
+            else % otherwise return the pulseFunction closure
                 retVal = @pulseFunction;
             end
             
@@ -355,7 +358,7 @@ classdef PatternGen < handle
                 params.angle = pi/2;
             end
             
-            % pi pulses
+            % set amplitude/rotation angle defaults
             switch p
                 case {'Xp','Yp','Up','Zp'}
                     params.amp = self.dPiAmp;
@@ -437,12 +440,15 @@ classdef PatternGen < handle
             end
             
             % create closure with the parameters defined above
-            function [xpulse, ypulse] = pulseFunction(n)
+            function [xpulse, ypulse] = pulseFunction(n, accumulatedPhase)
+                % n - index into parameter arrays
+                % accumulatedPhase - allows dynamic updating of the basis
+                %   based upon the position in time of the pulse
                 angle = params.angle(1+mod(n-1, length(params.angle)));
                 complexPulse = pulses{1+mod(n-1, length(pulses))};
                 
                 % rotate and correct the pulse
-                tmpAngles = angle + modAngles{1+mod(n-1, length(modAngles))};
+                tmpAngles = angle + accumulatedPhase + modAngles{1+mod(n-1, length(modAngles))};
                 complexPulse = complexPulse.*exp(1j*tmpAngles);
                 xypairs = self.correctionT*[real(complexPulse) imag(complexPulse)].';
                 xpulse = xypairs(1,:).';
@@ -458,7 +464,7 @@ classdef PatternGen < handle
                 retVal.pulseArray = cell(nbrPulses,1);
                 retVal.hashKeys = cell(nbrPulses,1);
                 for ii = 1:nbrPulses
-                    [xpulse, ypulse] = pulseFunction(ii);
+                    [xpulse, ypulse] = pulseFunction(ii, 0);
                     retVal.pulseArray{ii} = [xpulse, ypulse];
                     retVal.hashKeys{ii} = obj.hashArray(retVal.pulseArray{ii});
                 end
