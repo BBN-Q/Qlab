@@ -32,7 +32,7 @@ pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', 
 
 amps = -((numsteps-1)/2)*stepsize:stepsize:((numsteps-1)/2)*stepsize;
 %amps = 0:stepsize:(numsteps-1)*stepsize;
-patseq = {{pg.pulse('Xtheta', 'amp', amps)}};
+patseq = {{pg.pulse('Ytheta', 'amp', amps)}};
 calseq = {};
 
 compiler = ['compileSequence' IQkey];

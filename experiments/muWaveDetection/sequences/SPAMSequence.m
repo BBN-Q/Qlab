@@ -30,22 +30,22 @@ IQkey = qubitMap.(qubit).IQkey;
 % params.(IQkey).T = eye(2);
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
 %angleShift = 8.5*pi/180;
-angleShift = 0;
-SPAMBlock = {pg.pulse('Xp'),pg.pulse('Up','angle',pi/2+angleShift),pg.pulse('Xp'),pg.pulse('Up','angle',pi/2+angleShift)};
+angleShifts = (pi/180)*(-2:0.5:2);
 
 patseq = {};
 
-for SPAMct = 0:10
-    patseq{end+1} = {pg.pulse('Y90p')};
-    for ct = 0:SPAMct
-        patseq{end} = [patseq{end}, SPAMBlock];
-    end
-    patseq{end} = [patseq{end}, {pg.pulse('X90m')}];
+for angleShift = angleShifts
+    SPAMBlock = {pg.pulse('Xp'),pg.pulse('Up','angle',pi/2+angleShift),pg.pulse('Xp'),pg.pulse('Up','angle',pi/2+angleShift)};
+     for SPAMct = 0:10
+        patseq{end+1} = {pg.pulse('Y90p')};
+        for ct = 0:SPAMct
+            patseq{end} = [patseq{end}, SPAMBlock];
+        end
+        patseq{end} = [patseq{end}, {pg.pulse('X90m')}];
+     end
+    patseq{end+1} = {pg.pulse('QId')};
 end
-
 calseq = {};
-calseq{end+1} = {pg.pulse('QId')};
-calseq{end+1} = {pg.pulse('QId')};
 calseq{end+1} = {pg.pulse('Xp')};
 calseq{end+1} = {pg.pulse('Xp')};
 
