@@ -14,18 +14,17 @@ function choi_SDP2 = SimpleSDPTomoMeasMat_(measmat, measurementoperators, U_prep
 % Return
 %	choi_SDP2 = the constrained physical process Choi matrix
 
-%Default to quiet
-if nargin < 7
-    verbose =0;
+% Default to quiet
+if ~exist('verbose', 'var')
+    verbose = 0;
 end
 
-%Clear the yalmip (why?)
+% Clear yalmip (why?)
 yalmip('clear')
 
 %Some dimensions
 d = 2^nbrQubits;
 d2 = 4^nbrQubits;
-d4 = 16^nbrQubits;
 
 numMeas = length(U_preps);
 numPrep = length(U_meas);
@@ -48,34 +47,29 @@ for jj=1:length(U_preps)
     end
 end
 
-%Set up the SDP problem with Yalmip
-%First the Choi matrix in square form
+% Set up the SDP problem with Yalmip
+% First the Choi matrix in square form
 choiSDP = sdpvar(d2, d2, 'hermitian', 'complex');
+predictedMeasMat = sdpvar(numPrep, numMeas, 'full', 'real');
 
-%Now each measurement result corresponds to a linear combination of Choi
-%matrix (S) elements: for a given rhoin and measOp then measResult = Tr(S*kron(rhoin.', measOp))
-%Thus we can write down the result from the tomography experiment with all combintations of inputs
-%and measurements as d4xd4 matrix A: A*vec(choiSDP) = fitResults
-%Using the trick that trace(C*D) = sum(C.'.*D) = sum(D.' * C)
-%Then each row of A is the row-stacked version of kron(rhoin.' , measOp) 
-%Or the col-stacked version of kron(rhoin, measOp.')
-A = zeros(numPrep*numMeas,d4);
+% Now each measurement result corresponds to a linear combination of Choi
+% matrix (S) elements: for a given rhoin and measOp then measResult = Tr(S*kron(rhoin.', measOp))
 for prepct = 1:numPrep
     for measct = 1:numMeas
-        %Have to multiply by d to match Jay's convection of dividing the
-        %Choi matrix by d
-        tmpMat = kron(rho_preps{prepct}, measurementoptsset{prepct}{measct}.')*d;
-        A(prepct + (measct-1)*numPrep, :) = tmpMat(:);
+        % Have to multiply by d to match Jay's convection of dividing the
+        % Choi matrix by d
+        predictedMeasMat(prepct, measct) = trace(choiSDP*kron(rho_preps{prepct}.', measurementoptsset{prepct}{measct}))*d;
     end
 end
 
-%Constrain the Choi matrix to be positive semi-definite
-constraint = choiSDP>=0;
+% Constrain the Choi matrix to be positive semi-definite
+constraint = choiSDP >= 0;
 
-%Call the solver
-solvesdp(constraint,norm(A*choiSDP(:) - measmat(:), 2),sdpsettings('verbose',verbose));
+% Call the solver, minimizing the distance between the vectors of predicted and actual
+% measurements
+solvesdp(constraint, norm(predictedMeasMat(:) - measmat(:), 2), sdpsettings('verbose',verbose));
 
-%Extract the matrix values from the result
+% Extract the matrix values from the result
 choi_SDP2 = double(choiSDP);
 
 end
