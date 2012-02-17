@@ -223,13 +223,13 @@ EXPORT int APS_Open(int device, int force)
 
 	if (status == FT_OK) {
 #ifdef DEBUG
-		dlog(DEBUG_VERBOSE,"FTD2 Open\n");
+		dlog(DEBUG_INFO,"FTD2 Open\n");
 #endif
 		status = DLL_FT_SetTimeouts(device2handle(device), APS_READTIMEOUT,APS_WRITETIMEOUT);
 		if (status == FT_OK) {
 			dlog(DEBUG_VERBOSE,"Set Timeouts OK\n");
 		} else {
-			dlog(DEBUG_VERBOSE,"Set Timeouts Failed %i\n", status);
+			dlog(DEBUG_INFO,"Set Timeouts Failed %i\n", status);
 		}
 
 	} else {
@@ -298,12 +298,12 @@ EXPORT int APS_OpenByID(int device)
 	}
 
 	if (!found) {
-		dlog(DEBUG_VERBOSE,"Could not locate device ID: %i Serial %s\n",device, serial );
+		dlog(DEBUG_INFO,"Could not locate device ID: %i Serial %s\n",device, serial );
 		printf("%i\n",status);
 		return -1;
 	}
 
-	dlog(DEBUG_VERBOSE,"Found device ID: %i Serial %s @ Index %i\n",device, serial,cnt );
+	dlog(DEBUG_INFO,"Found device ID: %i Serial %s @ Index %i\n",device, serial,cnt );
 
 	status = APS_Open(cnt, 0);
 	if (status == FT_OK) {
@@ -359,12 +359,12 @@ EXPORT int APS_OpenBySerialNum(char * serialNum)
 	}
 
 	if (!found) {
-		dlog(DEBUG_VERBOSE,"Could not locate device ID: Serial %s\n", serialNum );
+		dlog(DEBUG_INFO,"Could not locate device ID: Serial %s\n", serialNum );
 		printf("%i\n",status);
 		return -1;
 	}
 
-	dlog(DEBUG_VERBOSE,"Found device ID: Serial %s @ Index %i\n", serialNum,cnt );
+	dlog(DEBUG_INFO,"Found device ID: Serial %s @ Index %i\n", serialNum,cnt );
 
 	status = APS_Open(cnt, 0);
 	if (status == FT_OK) {
@@ -477,7 +477,7 @@ EXPORT int APS_Close(int device)
 	}
 	// Closes handle to FTD2 device
 
-	dlog(DEBUG_VERBOSE,"Closing: %i Handle %x\n", device, usb_handles[device]);
+	dlog(DEBUG_INFO,"Closing: %i Handle %x\n", device, usb_handles[device]);
 
 	DLL_FT_Close(usb_handles[device]);
 	usb_handles[device] = 0;
@@ -970,7 +970,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 	test = fopen("data.out","wt");
 #endif
 
-	dlog(DEBUG_VERBOSE, "Starting ProgramFPGA Device: %i Sel: %i ... \n", device, Sel);
+	dlog(DEBUG_INFO, "Starting ProgramFPGA Device: %i Sel: %i ... \n", device, Sel);
 
 	// Create masks
 	PgmMask = 0;
@@ -1156,7 +1156,7 @@ EXPORT int APS_SetupPLL(int device)
 {
 
 	int i;
-	dlog(DEBUG_VERBOSE,"Setting PLL\n");
+	dlog(DEBUG_INFO,"Setting up PLL\n");
 
 	// Disable DDRs
 	int ddr_mask = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
@@ -1197,7 +1197,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 	int sync_status;
 	int numSyncChannels;
 
-	dlog(DEBUG_VERBOSE, "Setting PLL DAC: %i Freq: %i\n", dac, freq);
+	dlog(DEBUG_INFO, "Setting PLL DAC: %i Freq: %i\n", dac, freq);
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -1396,7 +1396,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 		return -1;
 	}
 
-	dlog(DEBUG_VERBOSE,"Running channel sync test on FPGA%i\n", fpga);
+	dlog(DEBUG_INFO,"Running channel sync test on FPGA%i\n", fpga);
 
 	switch(dac) {
 	case 0:
@@ -1445,7 +1445,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
 	// start by testing for a global or channel XOR count near 50%, which indicates
 	// that DAC 600 MHz clocks have come up out of phase.
-	dlog(DEBUG_VERBOSE,"Testing for DAC clock phase sync\n");
+	dlog(DEBUG_INFO,"Testing for DAC clock phase sync\n");
 	for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
 		xor_flag_cnt = 0;
 		xor_flag_cnt2 = 0;
@@ -1519,7 +1519,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 		case 2: pllStr = "Global"; break;
 		}
 
-		dlog(DEBUG_VERBOSE,"Testing channel %s\n", pllStr);
+		dlog(DEBUG_INFO,"Testing channel %s\n", pllStr);
 		for (test_cnt = 0; test_cnt < MAX_PHASE_TEST_CNT; test_cnt++) {
 			xor_flag_cnt = 0;
 
@@ -1576,7 +1576,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 		dlog(DEBUG_INFO,"Warning: PLLs are not in sync\n");
 		return -8;
 	}
-	dlog(DEBUG_VERBOSE,"Sync test complete\n");
+	dlog(DEBUG_INFO,"Sync test complete\n");
 	return 0;
 }
 
@@ -1624,7 +1624,7 @@ UCHAR Reg01Bytes[4] =
 EXPORT int APS_SetupVCXO(int device)
 {
 
-	dlog(DEBUG_VERBOSE, "Setting up VCX0\n");
+	dlog(DEBUG_INFO, "Setting up VCX0\n");
 
 	APS_WriteSPI(device, APS_VCXO_SPI, 0, Reg00Bytes);
 	APS_WriteSPI(device, APS_VCXO_SPI, 0, Reg01Bytes);

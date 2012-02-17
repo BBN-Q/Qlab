@@ -300,7 +300,7 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 		return -1;
 	}
 
-	dlog(DEBUG_VERBOSE,"Loading Waveform length %i into FPGA%i DAC%i \n", ByteCount, fpga, dac);
+	dlog(DEBUG_INFO,"Loading Waveform length %i into FPGA%i DAC%i \n", ByteCount, fpga, dac);
 
 	// setup register addressing based on DAC
 	switch(dac) {
@@ -537,7 +537,7 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 	int dac_sm_enable, dac_sw_led, dac_trig_src, dac_sw_trig, dac_sm_reset;
 
 
-	dlog(DEBUG_VERBOSE,"Trigger DAC%i type %i \n", dac, trigger_type);
+	dlog(DEBUG_INFO,"Trigger DAC%i type %i \n", dac, trigger_type);
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -644,7 +644,7 @@ EXPORT int APS_PauseDac(int device, int dac)
 		return -1;
 	}
 
-	dlog(DEBUG_VERBOSE,"Pause FPGA%i DAC%i\n", fpga, dac);
+	dlog(DEBUG_INFO,"Pause FPGA%i DAC%i\n", fpga, dac);
 
 	switch(dac) {
 		case 0:
@@ -717,7 +717,7 @@ EXPORT int APS_DisableDac(int device, int dac)
 		return -1;
 	}
 
-  dlog(DEBUG_VERBOSE,"Disable FPGA%i DAC%i\n", fpga, dac);
+  dlog(DEBUG_INFO,"Disable FPGA%i DAC%i\n", fpga, dac);
 
 	switch(dac) {
 		case 0:
@@ -806,7 +806,7 @@ int LoadLinkList_V5(int device, unsigned short *OffsetData, unsigned short *Coun
 		return -1;
 	}
 
-	dlog(DEBUG_VERBOSE,"Loading LinkList length %i into FPGA%i DAC%i \n", length, fpga, dac);
+	dlog(DEBUG_INFO,"Loading LinkList length %i into FPGA%i DAC%i \n", length, fpga, dac);
 
 	// setup register addressing based on DAC
 	switch(dac) {
@@ -941,7 +941,7 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	}
 
 	const char * banks[] = {"A","B"};
-	dlog(DEBUG_VERBOSE,"Loading LinkList length %i into FPGA%i DAC%i Bank %s\n",
+	dlog(DEBUG_INFO,"Loading LinkList length %i into FPGA%i DAC%i Bank %s\n",
 	    length, fpga, dac, banks[bank]);
 
 	// setup register addressing based on DAC
@@ -1123,7 +1123,7 @@ EXPORT int APS_ClearLinkListELL(int device,int dac, int bank)
     }
 
     const char * banks[] = {"A","B"};
-    dlog(DEBUG_VERBOSE,"Clearign LinkList FPGA%i DAC%i Bank %s\n", fpga, dac, banks[bank]);
+    dlog(DEBUG_INFO,"Clearing LinkList FPGA%i DAC%i Bank %s\n", fpga, dac, banks[bank]);
 
     // setup register addressing based on DAC
     switch(dac) {
@@ -1216,7 +1216,7 @@ EXPORT int APS_SetLinkListRepeat(int device, unsigned short repeat, int dac) {
 	// zero repeat register
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_rpt_reg, repeat, fpga);
 
-	dlog(DEBUG_VERBOSE,"SET: FPGA: %i Dac: %s Repeat Count: %i Addr: 0x%X\n", fpga, dac_type, repeat, FPGA_ADDR_REGWRITE | dac_rpt_reg);
+	dlog(DEBUG_INFO,"SET LinkList Repeat FPGA: %i Dac: %s Repeat Count: %i Addr: 0x%X\n", fpga, dac_type, repeat, FPGA_ADDR_REGWRITE | dac_rpt_reg);
 
 	return 0;
 }
@@ -1281,7 +1281,7 @@ int SetLinkListMode_V5(int device, int enable, int mode, int dac)
 		return -4;
 	}
 
-	dlog(DEBUG_VERBOSE, "Setting Link List Enable ==> FPGA: %i DAC: %i Enable: %i\n", fpga, dac, enable);
+	dlog(DEBUG_INFO, "Setting Link List Enable ==> FPGA: %i DAC: %i Enable: %i\n", fpga, dac, enable);
 
 	// load current cntrl reg
 	ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_LLCTRL, fpga);
@@ -1295,7 +1295,7 @@ int SetLinkListMode_V5(int device, int enable, int mode, int dac)
 		APS_ClearBit(device, fpga, FPGA_OFF_LLCTRL, dac_enable_mask);
 	}
 
-	dlog(DEBUG_VERBOSE, "Setting Link List Mode ==> FPGA: %i DAC: %i Mode: %i\n", fpga, dac, mode);
+	dlog(DEBUG_INFO, "Setting Link List Mode ==> FPGA: %i DAC: %i Mode: %i\n", fpga, dac, mode);
 
 	if (mode) {
 		APS_SetBit(device, fpga, FPGA_OFF_LLCTRL, dac_mode_mask);
@@ -1367,7 +1367,7 @@ int SetLinkListMode_ELL(int device, int enable, int mode, int dac)
     return -4;
   }
 
-  dlog(DEBUG_VERBOSE, "Setting Link List Enable ==> FPGA: %i DAC: %i Enable: %i\n", fpga, dac, enable);
+  dlog(DEBUG_INFO, "Setting Link List Enable ==> FPGA: %i DAC: %i Enable: %i\n", fpga, dac, enable);
 
   // load current cntrl reg
   ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
@@ -1382,7 +1382,7 @@ int SetLinkListMode_ELL(int device, int enable, int mode, int dac)
     APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_enable_mask);
   }
 
-  dlog(DEBUG_VERBOSE, "Setting Link List Mode ==> FPGA: %i DAC: %i Mode: %i\n", fpga, dac, mode);
+  dlog(DEBUG_INFO, "Setting Link List Mode ==> FPGA: %i DAC: %i Mode: %i\n", fpga, dac, mode);
 
   if (mode) {
     APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_mode_mask);
@@ -1427,7 +1427,7 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 	char * dac_type;
 	int dac_sm_enable, dac_sw_led, dac_trig_src, dac_sw_trig, dac_sm_reset;
 
-  dlog(DEBUG_VERBOSE,"Trigger FPGA DAC%i type %i \n", dac, trigger_type);
+  dlog(DEBUG_INFO,"Trigger FPGA DAC%i type %i \n", dac, trigger_type);
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -1537,7 +1537,7 @@ EXPORT int APS_PauseFpga(int device, int dac)
 		return -1;
 	}
 
-	dlog(DEBUG_VERBOSE,"Pause FPGA%i DAC%i\n", fpga, dac);
+	dlog(DEBUG_INFO,"Pause FPGA%i DAC%i\n", fpga, dac);
 
 	switch(dac) {
 	  case -1:
@@ -1601,7 +1601,7 @@ EXPORT int APS_DisableFpga(int device, int dac)
 		return -1;
 	}
 
-	dlog(DEBUG_VERBOSE,"Disable FPGA%i DAC%i\n", fpga, dac);
+	dlog(DEBUG_INFO,"Disable FPGA%i DAC%i\n", fpga, dac);
 
 	switch(dac) {
 	  case -1 :
@@ -1656,7 +1656,7 @@ EXPORT int APS_ReadBitFileVersion(int device) {
 
 		version = version & 0x1FF; // First 9 bits hold version
 	}
-    dlog(DEBUG_VERBOSE,"Found BitFile Version 0x%x\n", version);
+    dlog(DEBUG_INFO,"Found BitFile Version 0x%x\n", version);
 
 	gBitFileVersion = version;
 	gRegRead = (version >= VERSION_ELL) ? FPGA_ADDR_ELL_REGREAD : FPGA_ADDR_REGREAD;
@@ -1962,7 +1962,7 @@ EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
     offset = 8191;
   if (offset < -8191)
     offset = -8191;
-  dlog(DEBUG_VERBOSE, "Setting DAC%i zero register to %i\n", dac, offset);
+  dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, offset);
   
   APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset, fpga);
   return 0;
