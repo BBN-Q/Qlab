@@ -26,20 +26,12 @@ M = [b0   0  0   b1  0   0   b2  0   0   0   0   0   0   0   0   b3; %Id Id
      b0  -b1 0   0  -b2  0   0   0   0   0   0   0   0   b3  0   0   %Y90p Y90p
      ];
  
- 
- 
- %IdVal = (stomodat(1)+stomodat(2)+stomodat(3)+stomodat(4)+stomodat(84)+stomodat(84)+stomodat(83)+stomodat(82))/8;
-fullmeas = stomodat(17:80);%-IdVal;
+
+fullmeas = stomodat(17:80);
 
 %Take the mean of every 4 points
 measvec = mean(reshape(fullmeas,4,16));
 
- 
- %measvec(11)=(stomodat(19)+stomodat(25))/2;
- %measvec(12)=(stomodat(20)+stomodat(26))/2;
- %measvec(15)=(stomodat(23)+stomodat(27))/2;
- %measvec(16)=(stomodat(24)+stomodat(28))/2;
-
- Pauli = M\measvec';
+Pauli = M\measvec';
  
       

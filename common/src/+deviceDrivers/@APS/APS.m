@@ -40,8 +40,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         library_name = 'libaps';
         device_id = 0;
         num_devices;
-        deviceSerials = {}
-        message_manager =[];
+        deviceSerials = {}; % cell array of serial numbers indexed by the (device_id+1)'s
+        message_manager = [];
         bit_file_path = '';
         bit_file = 'mqco_aps_latest.bit';
         expected_bit_file_ver = hex2dec('10');
@@ -123,6 +123,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         FPGA0 = 0;
         FPGA1 = 2;
+        
+        DAC2_SERIALS = {'A6UQZB7Z','A6001nBU'};
         
         channelStruct = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
     end
@@ -313,6 +315,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 force = 0;
             end
             
+            % populate list of device id's and serials
+            aps.enumerate();
+            if id + 1 > aps.num_devices
+                error('Device id %i not found.', id);
+            end
+            
             val = calllib(aps.library_name,'APS_Open' ,aps.device_id, force);
             if (val == 0)
                 aps.log(sprintf('APS USB Connection Opened'));
@@ -328,12 +336,18 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function val = openBySerialNum(aps,serialNum)
+        function val = openBySerialNum(aps,serial)
             if (aps.is_open)
                 aps.close()
             end
             
-            val = calllib(aps.library_name,'APS_OpenBySerialNum' ,serialNum);
+            % populate list of device id's and serials
+            aps.enumerate();
+            if ~ismember(serial, aps.deviceSerials)
+                error('Device id %i not found.', id);
+            end
+            
+            val = calllib(aps.library_name,'APS_OpenBySerialNum' ,serial);
             if (val >= 0)
                 aps.log(sprintf('APS USB Connection Opened'));
                 aps.is_open = 1;
@@ -437,11 +451,21 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.log('Done');
         end
         
+        function fname = defaultBitFileName(obj)
+            % current device's serial number is at index device_id + 1 in
+            % deviceSerials cell array
+            if ismember(obj.deviceSerials{obj.device_id+1}, obj.DAC2_SERIALS)
+                fname = 'mqco_dac2_latest.bit';
+            else
+                fname = 'mqco_aps_latest.bit';
+            end
+        end
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function val = loadBitFile(aps,filename)
             
             if ~exist('filename','var')
-                filename = [aps.bit_file_path aps.bit_file];
+                filename = [aps.bit_file_path aps.defaultBitFileName];
             end
             
             if ~(aps.is_open)
