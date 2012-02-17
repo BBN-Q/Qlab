@@ -107,6 +107,7 @@ EXPORT float APS_GetWaveformOffset(int device, int channel);
 EXPORT int   APS_SetWaveformScale(int device, int channel, float scale);
 EXPORT float APS_GetWaveformScale(int device, int channel);
 EXPORT int   APS_LoadStoredWaveform(int device, int channel);
+EXPORT int   APS_LoadAllWaveforms(int device);
 EXPORT int   APS_SetLinkList(int device, int channel,
                            unsigned short *OffsetData, unsigned short *CountData,
                            unsigned short *TriggerData, unsigned short *RepeatData,

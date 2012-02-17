@@ -1717,8 +1717,20 @@ EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 	if (!WF_GetIsLoaded(wfArray,channel)) {
 		dataPtr = WF_GetDataPtr(wfArray, channel);
 		length = WF_GetLength(wfArray, channel);
-		APS_LoadWaveform(device, dataPtr, length, 0 ,channel - 1, 0, 0);
+		APS_LoadWaveform(device, dataPtr, length, 0 ,channel, 0, 0);
 		WF_SetIsLoaded(wfArray,  channel,1);
+	}
+	return 0;
+}
+
+EXPORT int APS_LoadAllWaveforms(int device) {
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+
+	int channel;
+	for(channel = 0; channel < MAX_APS_CHANNELS; channel++) {
+		APS_LoadStoredWaveform(device, channel);
 	}
 	return 0;
 }
@@ -1767,10 +1779,15 @@ EXPORT int APS_SetLinkList(int device, int channel,
 
 EXPORT int APS_SaveWaveformCache(int device, char * filename) {
 
-	char altFilename[100];
+	const int strLen = 100;
+	char altFilename[strLen];
+	char serialNumber[strLen];
+
+	memset(serialNumber, 0, strLen);
 
 	if (filename == NULL) {
-		sprintf(altFilename,"aps_%i_cache.dat", device);
+		APS_GetSerialNum(device, serialNumber, 100);
+		snprintf(altFilename,strLen,"aps_%i_cache.dat", serialNumber);
 		filename = altFilename;
 	}
 

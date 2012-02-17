@@ -26,6 +26,10 @@ waveform_t * WF_Init() {
   // zero contents on memory
   memset(wfArray,0, MAX_APS_CHANNELS * sizeof(waveform_t));
 
+  int channel;
+  for(channel = 0; channel < MAX_APS_CHANNELS; channel++)
+	  wfArray[channel].scale = 1.0;
+
   return wfArray;
 }
 
@@ -48,6 +52,8 @@ void WF_Destroy(waveform_t * wfArray) {
 
 int    WF_SetWaveform(waveform_t * wfArray, int channel, float * data, int length) {
   if (!wfArray) return 0;
+
+  dlog(DEBUG_VERBOSE,"SetWaveform channel %i length %i\n", channel, length);
 
   // free any memory associated with channel if it exists
   WF_Free(wfArray,channel);
@@ -198,10 +204,14 @@ void   WF_Prep(waveform_t * wfArray, int channel) {
         maxAbsValue = abs(wfArray[channel].pData[cnt]);
   }
 
+  printf("Prep maxABS = %f scale = %f offset = %i MAX_WF_VALUE = %f\n", maxAbsValue, scale, offset, MAX_WF_VALUE);
   scale = wfArray[channel].scale * 1.0 / maxAbsValue;
+  printf("Prep maxABS = %f scale = %f offset = %i MAX_WF_VALUE = %f\n", maxAbsValue, scale, offset, MAX_WF_VALUE);
   scale = scale * MAX_WF_VALUE;
 
   offset = wfArray[channel].offset * MAX_WF_VALUE;
+
+  printf("Prep maxABS = %f scale = %f offset = %i MAX_WF_VALUE = %f\n", maxAbsValue, scale, offset, MAX_WF_VALUE);
 
   for (cnt = 0; cnt < wfArray[channel].allocatedLength; cnt++) {
     prepValue = wfArray[channel].pData[cnt];

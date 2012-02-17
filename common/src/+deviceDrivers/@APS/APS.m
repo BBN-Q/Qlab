@@ -196,7 +196,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function load_library(d)
+        function load_library(d, reloadLibrary)
+            
+            if ~exist('reloadLibrary','var')
+                reloadLibrary = 0;
+            end
+            
             if strcmp(computer,'PCWIN64')
                 libfname = 'libaps64.dll';
                 d.library_name = 'libaps64';
@@ -208,7 +213,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 libfname = 'libaps.so';
             end
             
-            if libisloaded(d.library_name)
+            if reloadLibrary && libisloaded(d.library_name)
                 unloadlibrary(d.library_name)
             end
             
@@ -540,23 +545,25 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.log('Done');
         end
         
-        function storeAPSWaveform(aps, waveform, dac)
-            if ~strcmp(class(waveform), 'APSWaveform')
+        function storeAPSWaveform(aps, dac,wf)
+            if ~strcmp(class(wf), 'APSWaveform')
                 error('APS:storeAPSWaveform:params', 'waveform must be of class APSWaveform')
             end
                 
             % store waveform data
             
-            val = aps.librarycall('Storing waveform','APS_SetWaveform', dac, waveform.data, length(waveform));
+            val = aps.librarycall('Storing waveform','APS_SetWaveform', dac, wf.data, length(wf.data));
             if (val < 0), error('APS:storeAPSWaveform:set', 'error in set waveform'),end;
            
+            return
+            
             % set offset
             
-            val = aps.librarycall('Setting waveform offet','APS_SetWaveformOffset', dac, waveform.offset);
+            val = aps.librarycall('Setting waveform offet','APS_SetWaveformOffset', dac, wf.offset);
             
             % set scale
             
-            val = aps.librarycall('Setting wavform scale','APS_SetWaveformScale', dac, waveform.scale_factor);
+            val = aps.librarycall('Setting wavform scale','APS_SetWaveformScale', dac, wf.scale_factor);
             
             % check for link list data
             if wf.have_link_list
@@ -579,6 +586,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                %aps.setLinkListRepeat(ch-1,ell.repeatCount);
                aps.setLinkListRepeat(ch-1,10000);
             end
+        end
+        
+        function loadAPSWaveforms(aps)
+            val = aps.librarycall('Loading waveforms','APS_LoadAllWaveforms');
         end
         
         
@@ -765,6 +776,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function run(aps)
             % global run method
             
+            if aps.use_c_waveforms
+                % tell C layer to load waveforms
+                aps.loadAPSWaveforms();
+            end
+            
             trigger_type = aps.TRIGGER_SOFTWARE;
             if strcmp(aps.triggerSource, 'external')
                 trigger_type = aps.TRIGGER_HARDWARE;
@@ -839,7 +855,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if ~exist('numSyncChannels', 'var')
                 numSyncChannels = 4;
             end
-            val = aps.librarycall('Test Pll Sync: DAC: %i','APS_TestPllSync',id, numSyncChannels);
+            val = aps.librarycall(sprintf('Test Pll Sync: DAC: %i',id),'APS_TestPllSync',id, numSyncChannels);
             if val ~= 0
                 fprintf('Warning: APS::testPllSync returned %i\n', val);
             end
@@ -1039,5 +1055,50 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
       
         end
         
+        function aps = UnitTestCWaveform()
+            % work around for not knowing full name
+            % of class - can not use simply APS when in 
+            % experiment framework
+            classname = mfilename('class');
+            
+            % tests channel 0 & 1 output for basic bit file testing
+            aps = eval(sprintf('%s();', classname));
+            aps.verbose = 1;
+            apsId = 0;
+            
+            fprintf('Openning Device: %i\n', apsId);
+
+            aps.use_c_waveforms = true;
+            
+            aps.open(apsId);
+            aps.loadBitFile();
+
+            wf = aps.getNewWaveform();
+            wf.data = 0:1/1000:1;
+            wf.data = wf.data(1:1000) * 8192.0;
+            wf.set_scale_factor(1.0);
+            
+            fprintf('Setting Sample Rate\n');
+            aps.samplingRate = 1200;
+            
+            fprintf('Storing waveforms\n')
+            for ch = 0:3
+                chS = sprintf('chan_%i',ch+1);
+                aps.(chS).waveform = wf;
+                aps.(chS).enabled = 1;
+                aps.storeAPSWaveform(ch,wf);
+            end
+            
+            running = 1;
+            
+            while running
+                fprintf('APS::Run\n')
+                aps.run()
+                keyboard
+                aps.stop()
+            end
+
+            aps.close();
+        end
     end
 end
