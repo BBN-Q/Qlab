@@ -48,6 +48,7 @@ class APScontrol(object):
             
         #Create an APS class instance for interacting with the instrument
         self.aps = APS.APS(libPath)
+
         
         #Enumerate the number of connected APS devices and fill out the combo box
         (numAPS, deviceSerials) = self.aps.enumerate()
@@ -55,11 +56,11 @@ class APScontrol(object):
         
         #Fill out the device ID combo box
         self.ui.deviceIDComboBox.clear()
-        self.ui.deviceIDComboBox.insertItems(0,['{0} ({1})'.format(num, deviceSerials[num]) for num in range(numAPS)])
-        
-        self._bitfilename = self.aps.getDefaultBitFileName()
-
+        if numAPS > 0:
+            self.ui.deviceIDComboBox.insertItems(0,['{0} ({1})'.format(num, deviceSerials[num]) for num in range(numAPS)])
+            self._bitfilename = self.aps.getDefaultBitFileName()
         self.ui.show()
+
         
     def connect(self):
         #Connect to the specified APS

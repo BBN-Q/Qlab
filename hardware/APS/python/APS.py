@@ -223,7 +223,9 @@ class APS:
 
     def getDefaultBitFileName(self):
         #Check whether we have a DACII or APS device
-        if self.deviceSerials[self.device_id] in self.DAC2Serials:
+        if not self.deviceSerials:
+            return None
+        elif self.deviceSerials[self.device_id] in self.DAC2Serials:
             return os.path.abspath(self.bit_file_path + 'mqco_dac2_latest.bit')
         else:
             return os.path.abspath(self.bit_file_path + 'mqco_aps_latest.bit')
