@@ -1,4 +1,4 @@
-function [rho] = Pauli2Chi_(paulicoef,pauliopts,n)
+function [rho] = Pauli2Rho_(paulicoef,pauliopts,n)
 % Jay Gambetta, March 1st 2011
 % 
 % takes in a vector of coef and the opts and makes the state rho for n

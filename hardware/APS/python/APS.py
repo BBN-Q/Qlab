@@ -153,6 +153,13 @@ class APS:
         
     def open(self,ID,force = 0):
         self.device_id = ID
+        
+        # populate list of device id's and serials
+        num_devices = self.enumerate()
+        if ID + 1 > num_devices:
+            print 'APS Device: ', ID, 'not found'
+            return 2
+
         val = self.lib.APS_Open(self.device_id,force)
         if val == 0:
             self.is_open = 1
@@ -164,8 +171,15 @@ class APS:
             print 'APS Device: ', ID, 'not found'
         else:
             print 'Unknown return value', val
+        return val
             
     def openBySerialNum(self,serialNum):
+        # populate list of device id's and serials
+        self.enumerate()
+        if serialNum not in self.deviceSerials:
+            print 'APS Device: ', serialNum, 'not found.'
+            return 2
+        
         cstr = ctypes.create_string_buffer(serialNum)
         val = self.lib.APS_OpenBySerialNum(cstr)
         if val >= 0:
@@ -177,6 +191,7 @@ class APS:
             print 'APS Device: ', serialNum, 'not found.'
         else:
             print 'Unknown return: ', val
+        return val
             
     def close(self):
         self.lib.APS_Close(self.device_id)
