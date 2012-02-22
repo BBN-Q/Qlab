@@ -59,8 +59,11 @@ class APScontrol(object):
         if numAPS > 0:
             self.ui.deviceIDComboBox.insertItems(0,['{0} ({1})'.format(num, deviceSerials[num]) for num in range(numAPS)])
             self._bitfilename = self.aps.getDefaultBitFileName()
-        self.ui.show()
 
+        #Catch any python execptions
+        sys.excepthook = self.exception_printer
+        
+        self.ui.show()
         
     def connect(self):
         #Connect to the specified APS
@@ -71,6 +74,10 @@ class APScontrol(object):
         
     def printMessage(self, message):
         self.ui.messageLog.append(message)
+        
+    def exception_printer(type, value, tback):
+        self.printMessage(tback)
+        sys.__excepthook__(type, value, tback)
 
     def bitFileDialog(self):
         self._bitFileName = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Bit files (*.bit)')[0]
@@ -131,6 +138,13 @@ class APScontrol(object):
             self.printMessage('Hardware trigger.')
             settings['triggerSource'] = self.aps.TRIGGER_HARDWARE
         
+        
+        #Get the four channel mode stuff
+        settings['fourChannelMode'] = bool(self.ui.chAllOnOff.isChecked())
+        if settings['fourChannelMode']:
+            settings['chAll'] = {}
+            settings['chAll']['seqfile'] = self.ui.chAllfile.text()
+
         #Pull out specific channel properties
         for ct,channelName in enumerate(self.aps.CHANNELNAMES):
             settings[channelName] = {}
@@ -138,20 +152,25 @@ class APScontrol(object):
             settings[channelName]['offset'] = float(getattr(self.ui,'ch{0}offset'.format(ct+1)).text())
             settings[channelName]['enabled'] = bool(getattr(self.ui,'ch{0}enable'.format(ct+1)).isChecked())
             settings[channelName]['seqfile'] = getattr(self.ui,'ch{0}file'.format(ct+1)).text()
+            #Do a check whether the file exists
+            if (not settings['fourChannelMode']) and settings[channelName]['enabled'] and (not os.path.isfile(settings[channelName]['seqfile'])):
+                QtGui.QMessageBox.warning(self.ui, 'Oops!', 'Channel {0} is enabled with a non-existent file.'.format(ct+1))
+                self.stop()
+                raise
             
-        #Get the four channel mode stuff
-        settings['fourChannelMode'] = bool(self.ui.chAllOnOff.isChecked())
-        if settings['fourChannelMode']:
-            settings['chAll'] = {}
-            settings['chAll']['seqfile'] = self.ui.chAllfile.text()
 
-        self.connect()
-        self.aps.init()
-        self.aps.setAll(settings)
-        self.aps.run()
+        try:
+            self.connect()
+            self.aps.init()
+            self.aps.setAll(settings)
+            self.aps.run()
+            self.printMessage('Running')
+        except:
+            self.printMessage('WARNING: Could not get APS running!')
+            self.stop()
+            raise
         
-        self.printMessage('Running')
-
+   
     def stop(self):
         self.ui.stopButton.setEnabled(0)
         self.ui.runButton.setEnabled(1)
