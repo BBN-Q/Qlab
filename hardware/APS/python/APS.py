@@ -421,10 +421,8 @@ class APS:
     def read_PLL_status(self):
         #Read FPGA1
         val1 = self.librarycall('Read PLL Sync FPGA1','APS_ReadPllStatus', 1)
-        print(val1)
         #Read FPGA2
         val2 = self.librarycall('Read PLL Sync FPGA2','APS_ReadPllStatus', 2)
-        print(val2)
         # functions return 0 on success;
         return val1 and val2
         

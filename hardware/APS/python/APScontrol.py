@@ -9,6 +9,27 @@ import APS
 
 libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
 
+class LoadBitFileRunner(QtCore.QThread):
+
+    printMessage = QtCore.Signal(str)
+    
+    def __init__(self, bitFileName, aps, apsNum):
+        super(LoadBitFileRunner, self).__init__()
+        self.bitFileName = bitFileName
+        self.aps = aps
+        self.apsNum = apsNum
+
+    #Overwrite the destructor to make sure it doesn't get GC'd before it is finished
+    def __del__(self):
+        self.wait()
+        
+    def run(self):
+        self.printMessage.emit('Programming FPGA bitfile.')
+        self.aps.connect(self.apsNum)
+        self.aps.loadBitFile(self.bitFileName)
+        self.printMessage.emit('Loaded firmware version {0}'.format(self.aps.readBitFileVersion()))
+        self.aps.disconnect()
+   
 class APScontrol(object):
     _bitFileName = ''
     def __init__(self):
@@ -60,9 +81,6 @@ class APScontrol(object):
             self.ui.deviceIDComboBox.insertItems(0,['{0} ({1})'.format(num, deviceSerials[num]) for num in range(numAPS)])
             self._bitfilename = self.aps.getDefaultBitFileName()
 
-        #Catch any python execptions
-        sys.excepthook = self.exception_printer
-        
         self.ui.show()
         
     def connect(self):
@@ -74,32 +92,30 @@ class APScontrol(object):
         
     def printMessage(self, message):
         self.ui.messageLog.append(message)
-        
-    def exception_printer(type, value, tback):
-        self.printMessage(tback)
-        sys.__excepthook__(type, value, tback)
+    
+    #A slot to recieve log messages from threads.
+    @QtCore.Slot(str)
+    def printFromThread(self, message):
+        self.printMessage(message)
 
     def bitFileDialog(self):
+        #Launch a dialog to poll the user for the file name       
         self._bitFileName = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Bit files (*.bit)')[0]
-        self.programFPGA()
+        #Check that file exists
+        if not os.path.isfile(self._bitFileName):
+            self.printMessage("Error bitfile not found: %s" % self.bitFileName.text() )
+            return
+        #If it does then create a thread (loading the bit file takes a few seconds)
+        self.bitFileLoader = LoadBitFileRunner(self._bitFileName, self.aps, self.ui.deviceIDComboBox.currentIndex())
+        self.bitFileLoader.printMessage.connect(self.printFromThread)
+        self.bitFileLoader.start()  
+        print('Started thread...')
         
     def waveformDialog(self, textBox):
         fileName, fileFilter = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Matlab Files (*.mat);;Waveform files (*.m);;Sequence files (*.seq)')
         textBox.setText(fileName)
         
-    def programFPGA(self):
-        #Check that file exists
-        if not os.path.isfile(self._bitFileName):
-            self.printMessage("Error bitfile not found: %s" % self.bitFileName.text() )
-            return
-        
-        #Load the file
-        self.printMessage('Programming FPGA bitfile.')
-        self.connect()
-        self.aps.loadBitFile(self._bitFileName)
-        self.printMessage("Loaded firmware version %i" % self.aps.readBitFileVersion())
-        self.aps.disconnect()
-        
+      
     def update_channel_enablers(self):
         '''
         Update the single channel entries based on whether 4-channel mode is activiated.
@@ -158,7 +174,6 @@ class APScontrol(object):
                 self.stop()
                 raise
             
-
         try:
             self.connect()
             self.aps.init()
