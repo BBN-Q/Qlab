@@ -9,25 +9,26 @@ import APS
 
 libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
 
-class LoadBitFileRunner(QtCore.QThread):
+#A signal for printing log messages from treads
+class MessageFromThread(QtCore.QObject):
+    messageSignal = QtCore.Signal(str)
 
-    printMessage = QtCore.Signal(str)
-    
+tmpVar = MessageFromThread()
+messageSignal = tmpVar.messageSignal
+
+class LoadBitFileRunner(QtCore.QRunnable):
+
     def __init__(self, bitFileName, aps, apsNum):
         super(LoadBitFileRunner, self).__init__()
         self.bitFileName = bitFileName
         self.aps = aps
         self.apsNum = apsNum
 
-    #Overwrite the destructor to make sure it doesn't get GC'd before it is finished
-    def __del__(self):
-        self.wait()
-        
     def run(self):
-        self.printMessage.emit('Programming FPGA bitfile.')
+        messageSignal.emit('Programming FPGA bitfile....')
         self.aps.connect(self.apsNum)
         self.aps.loadBitFile(self.bitFileName)
-        self.printMessage.emit('Loaded firmware version {0}'.format(self.aps.readBitFileVersion()))
+        messageSignal.emit('Loaded firmware version {0}'.format(self.aps.readBitFileVersion()))
         self.aps.disconnect()
    
 class APScontrol(object):
@@ -81,6 +82,10 @@ class APScontrol(object):
             self.ui.deviceIDComboBox.insertItems(0,['{0} ({1})'.format(num, deviceSerials[num]) for num in range(numAPS)])
             self._bitfilename = self.aps.getDefaultBitFileName()
 
+        #Give ourselves some threads for background processes
+        self.threadPool = QtCore.QThreadPool.globalInstance()
+        messageSignal.connect(self.printFromThread)
+ 
         self.ui.show()
         
     def connect(self):
@@ -106,9 +111,8 @@ class APScontrol(object):
             self.printMessage("Error bitfile not found: %s" % self.bitFileName.text() )
             return
         #If it does then create a thread (loading the bit file takes a few seconds)
-        self.bitFileLoader = LoadBitFileRunner(self._bitFileName, self.aps, self.ui.deviceIDComboBox.currentIndex())
-        self.bitFileLoader.printMessage.connect(self.printFromThread)
-        self.bitFileLoader.start()  
+        bitFileLoader = LoadBitFileRunner(self._bitFileName, self.aps, self.ui.deviceIDComboBox.currentIndex())
+        self.threadPool.start(bitFileLoader)        
         print('Started thread...')
         
     def waveformDialog(self, textBox):
