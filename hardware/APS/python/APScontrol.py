@@ -9,42 +9,61 @@ import APS
 
 libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
 
-class LoadBitFileRunner(QtCore.QThread):
+class ThreadSignals(QtCore.QObject):
+    message = QtCore.Signal(str)
+    finished = QtCore.Signal()
 
-    messageSignal = QtCore.Signal(str)
-    
+class LoadBitFileRunner(QtCore.QRunnable):
+
     def __init__(self, bitFileName, aps, apsNum):
         super(LoadBitFileRunner, self).__init__()
         self.bitFileName = bitFileName
         self.aps = aps
         self.apsNum = apsNum
+        self.signals = ThreadSignals()
 
-    #Overwrite the destructor to make sure it doesn't get GC'd before it is finished
-    def __del__(self):
-        self.wait()
-        
     def run(self):
-        self.messageSignal.emit('Programming FPGA bitfile....')
+        self.signals.message.emit('Programming FPGA bitfile....')
         self.aps.connect(self.apsNum)
         self.aps.loadBitFile(self.bitFileName)
-        self.messageSignal.emit('Loaded firmware version {0}'.format(self.aps.readBitFileVersion()))
+        self.signals.message.emit('Loaded firmware version {0}'.format(self.aps.readBitFileVersion()))
         self.aps.disconnect()
+        self.signals.finished.emit()
         
-class PLLSyncTestRunner(QtCore.QThread):
-    messageSignal = QtCore.Signal(str)
-    
-    def __init__(self, bitFileName, aps, apsNum):
+class PLLSyncTestRunner(QtCore.QRunnable):
+    def __init__(self, aps, apsNum):
         super(PLLSyncTestRunner, self).__init__()
-        self.bitFileName = bitFileName
         self.aps = aps
         self.apsNum = apsNum
+        self.signals = ThreadSignals()
         
     def run(self):
-        self.messageSignal.emit('Testing the PLL sync....')
+        self.signals.message.emit('Testing the PLL sync....')
         self.aps.connect(self.apsNum)
-        self.messageSignal.emit('PLL Sync Test for DAC {0} returned {1}'.format(0, self.aps.test_PLL_sync(0)))
-        self.messageSignal.emit('PLL Sync Test for DAC {0} returned {1}'.format(2, self.aps.test_PLL_sync(2)))
+        self.signals.message.emit('PLL Sync Test for DAC {0} returned {1}'.format(0, self.aps.test_PLL_sync(0)))
+        self.signals.message.emit('PLL Sync Test for DAC {0} returned {1}'.format(2, self.aps.test_PLL_sync(2)))
         self.aps.disconnect()
+        self.signals.finished.emit()
+
+class APSRunner(QtCore.QRunnable):
+    def __init__(self, aps, apsNum, settings):
+        super(APSRunner, self).__init__()
+        self.aps = aps
+        self.apsNum = apsNum
+        self.settings = settings
+        self.signals = ThreadSignals()
+        
+    def run(self):
+        try:
+            self.aps.connect(self.apsNum)
+            self.signals.message.emit('Initializing APS...')            
+            self.aps.init()
+            self.aps.setAll(self.settings)
+            self.aps.run()
+            self.signals.message.emit('Running.')
+
+        except:
+            self.signals.message.emit('WARNING: Could not get APS running!')
 
         
 class APScontrol(object):
@@ -87,7 +106,6 @@ class APScontrol(object):
         #Create an APS class instance for interacting with the instrument
         self.aps = APS.APS(libPath)
 
-        
         #Enumerate the number of connected APS devices and fill out the combo box
         (numAPS, deviceSerials) = self.aps.enumerate()
         self.printMessage('Found {0} APS units'.format(numAPS))
@@ -97,6 +115,9 @@ class APScontrol(object):
         if numAPS > 0:
             self.ui.deviceIDComboBox.insertItems(0,['{0} ({1})'.format(num, deviceSerials[num]) for num in range(numAPS)])
             self._bitfilename = self.aps.getDefaultBitFileName()
+
+        #Create a reference to the global thread pool
+        self.threadPool = QtCore.QThreadPool.globalInstance()
 
         self.ui.show()
         
@@ -124,21 +145,21 @@ class APScontrol(object):
             return
         #If it does then create a thread (loading the bit file takes a few seconds)
         #Have to keep a reference around otherwise it gets deleted to early        
-        self.bitFileLoader = LoadBitFileRunner(self._bitFileName, self.aps, self.ui.deviceIDComboBox.currentIndex())
-        self.bitFileLoader.messageSignal.connect(self.printFromThread)
+        bitFileLoader = LoadBitFileRunner(self._bitFileName, self.aps, self.ui.deviceIDComboBox.currentIndex())
+        bitFileLoader.signals.message.connect(self.printFromThread)
         #Disable the run button while we are programming        
         self.ui.runButton.setEnabled(0)
-        self.bitFileLoader.finished.connect(lambda : self.ui.runButton.setEnabled(1))
-        self.bitFileLoader.start()
+        bitFileLoader.signals.finished.connect(lambda : self.ui.runButton.setEnabled(1))
+        self.threadPool.start(bitFileLoader)
         
     def test_PLL_sync(self):
         #Start a background thread for testing the PLL sync
-        self.PLLTester = PLLSyncTestRunner(self._bitFileName, self.aps, self.ui.deviceIDComboBox.currentIndex())
-        self.PLLTester.messageSignal.connect(self.printFromThread)
+        PLLTester = PLLSyncTestRunner(self.aps, self.ui.deviceIDComboBox.currentIndex())
+        PLLTester.signals.message.connect(self.printFromThread)
         #Disable the run button while we are programming        
         self.ui.runButton.setEnabled(0)
-        self.PLLTester.finished.connect(lambda : self.ui.runButton.setEnabled(1))
-        self.PLLTester.start()
+        PLLTester.signals.finished.connect(lambda : self.ui.runButton.setEnabled(1))
+        self.threadPool.start(PLLTester)
                 
     def waveformDialog(self, textBox):
         fileName, fileFilter = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Matlab Files (*.mat);;Waveform files (*.m);;Sequence files (*.seq)')
@@ -201,23 +222,15 @@ class APScontrol(object):
                 QtGui.QMessageBox.warning(self.ui, 'Oops!', 'Channel {0} is enabled with a non-existent file.'.format(ct+1))
                 self.stop()
                 raise
-            
-        try:
-            self.connect()
-            self.aps.init()
-            self.aps.setAll(settings)
-            self.aps.run()
-            self.printMessage('Running')
-        except:
-            self.printMessage('WARNING: Could not get APS running!')
-            self.stop()
-            raise
         
-   
+        #Do the slow work (loading large sequences) lifting in another thread
+        tmpAPSRunner = APSRunner(self.aps, self.ui.deviceIDComboBox.currentIndex(), settings )        
+        tmpAPSRunner.signals.message.connect(self.printFromThread)        
+        self.threadPool.start(tmpAPSRunner)        
+        
     def stop(self):
         self.ui.stopButton.setEnabled(0)
         self.ui.runButton.setEnabled(1)
-        
         self.aps.stop()
         self.aps.disconnect()
         self.printMessage('Stopped')
