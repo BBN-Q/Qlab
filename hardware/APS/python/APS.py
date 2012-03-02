@@ -23,8 +23,6 @@ class APS:
     Address = 0
     verbose = False
     
-    samplingRate = {0:0,2:0}
-    
     mock_aps = False
 
     is_open = False
@@ -163,7 +161,7 @@ class APS:
         val = self.lib.APS_Open(self.device_id,force)
         if val == 0:
             self.is_open = 1
-            print 'Openned device:', ID
+            print 'Opened device:', ID
         elif val == -1 or val == 1:
             print 'Could not open device:', ID
             print 'Device may be open in a different process'
@@ -223,7 +221,9 @@ class APS:
 
     def getDefaultBitFileName(self):
         #Check whether we have a DACII or APS device
-        if self.deviceSerials[self.device_id] in self.DAC2Serials:
+        if not self.deviceSerials:
+            return None
+        elif self.deviceSerials[self.device_id] in self.DAC2Serials:
             return os.path.abspath(self.bit_file_path + 'mqco_dac2_latest.bit')
         else:
             return os.path.abspath(self.bit_file_path + 'mqco_aps_latest.bit')
@@ -345,14 +345,32 @@ class APS:
     def setLinkListRepeat(self, ID, repeat):
         self.librarycall('Dac: %i Link List Repeat: %i' % (ID, repeat),
                                'APS_SetLinkListRepeat',repeat,ID)
+    
+    @property
+    def samplingRate(self):
+        '''
+        Check for a uniform sampling rate for all DACs and return it if they are the same,
+        otherwise return None
+        '''
+        samplingRates = [self.getFrequency(tmpDAC) for tmpDAC in [0, 2]]
+        
+        if samplingRates[0] == samplingRates[1]:
+            return samplingRate[0]
+        else:
+            return None
+            
+    def getFrequency(self, DAC):
+        '''
+        Helper function to get the current sampling rate for a DAC.
+        '''
+        return self.librarycall('Get SampleRate','APS_GetPllFreq',DAC)
         
     def setFrequency(self, ID, freq, testLock=1):
-        if self.samplingRate[ID] != freq:
+        #Check whether we actually need to change anything
+        if self.getFrequency(ID) != freq:
             val = self.librarycall('Dac: %i Freq : %i' % (ID, freq), 'APS_SetPllFreq',ID,freq,testLock);
             if val: 
                 print('Warning: APS::setFrequency returned: {0}'.format(val))
-            else:
-                self.samplingRate[ID] = freq
 
     def setupPLL(self):
         self.librarycall('Setup PLL', 'APS_SetupPLL');
@@ -454,7 +472,10 @@ class APS:
         '''
         #Try to determine whether we need to program the bitfile
         curBitFileVer = self.readBitFileVersion();
+        print(self.read_PLL_status())
+        
         if (curBitFileVer != self.expected_bit_file_ver ) or (self.read_PLL_status()) or force:
+            print('Got here!')
             self.loadBitFile()
             
             # Default all channels to 1.2 GS/s
