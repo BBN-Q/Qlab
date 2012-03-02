@@ -29,7 +29,24 @@ class LoadBitFileRunner(QtCore.QThread):
         self.aps.loadBitFile(self.bitFileName)
         self.messageSignal.emit('Loaded firmware version {0}'.format(self.aps.readBitFileVersion()))
         self.aps.disconnect()
-   
+        
+class PLLSyncTestRunner(QtCore.QThread):
+    messageSignal = QtCore.Signal(str)
+    
+    def __init__(self, bitFileName, aps, apsNum):
+        super(PLLSyncTestRunner, self).__init__()
+        self.bitFileName = bitFileName
+        self.aps = aps
+        self.apsNum = apsNum
+        
+    def run(self):
+        self.messageSignal.emit('Testing the PLL sync....')
+        self.aps.connect(self.apsNum)
+        self.messageSignal.emit('PLL Sync Test for DAC {0} returned {1}'.format(0, self.aps.test_PLL_sync(0)))
+        self.messageSignal.emit('PLL Sync Test for DAC {0} returned {1}'.format(2, self.aps.test_PLL_sync(2)))
+        self.aps.disconnect()
+
+        
 class APScontrol(object):
     _bitFileName = ''
     def __init__(self):
@@ -113,13 +130,20 @@ class APScontrol(object):
         self.ui.runButton.setEnabled(0)
         self.bitFileLoader.finished.connect(lambda : self.ui.runButton.setEnabled(1))
         self.bitFileLoader.start()
-        print('Started thread...')
         
+    def test_PLL_sync(self):
+        #Start a background thread for testing the PLL sync
+        self.PLLTester = PLLSyncTestRunner(self._bitFileName, self.aps, self.ui.deviceIDComboBox.currentIndex())
+        self.PLLTester.messageSignal.connect(self.printFromThread)
+        #Disable the run button while we are programming        
+        self.ui.runButton.setEnabled(0)
+        self.PLLTester.finished.connect(lambda : self.ui.runButton.setEnabled(1))
+        self.PLLTester.start()
+                
     def waveformDialog(self, textBox):
         fileName, fileFilter = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Matlab Files (*.mat);;Waveform files (*.m);;Sequence files (*.seq)')
         textBox.setText(fileName)
         
-      
     def update_channel_enablers(self):
         '''
         Update the single channel entries based on whether 4-channel mode is activiated.
@@ -198,30 +222,6 @@ class APScontrol(object):
         self.aps.disconnect()
         self.printMessage('Stopped')
     
-            
-    def setScaleFactor(self,channel,value):
-        value = '%.2f' % value
-        if channel in range(1,5):
-            textBox = getattr(self, 'ch%iscale' % channel)
-            textBox.setText(value)
-        else:
-            print 'Unknown channel', channel
-            
-    def setOffset(self,channel,value):
-        value = '%.2f' % value
-        if channel in range(1,5):
-            textBox = getattr(self, 'ch%ioffset' % channel)
-            textBox.setText(value)
-        else:
-            print 'Unknown channel', channel
-            
-    def test_PLL_sync(self):
-        self.connect()
-        status = self.aps.test_PLL_sync(0)
-        self.printMessage('PLL Sync Test for DAC {0} returned {1}'.format(0, status))
-        status = self.aps.test_PLL_sync(2)
-        self.printMessage('PLL Sync Test for DAC {0} returned {1}'.format(2, status))
-        self.aps.disconnect()
         
 if __name__ == '__main__':
     # create the Qt application
