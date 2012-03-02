@@ -148,8 +148,8 @@ class APScontrol(object):
         bitFileLoader = LoadBitFileRunner(self._bitFileName, self.aps, self.ui.deviceIDComboBox.currentIndex())
         bitFileLoader.signals.message.connect(self.printFromThread)
         #Disable the run button while we are programming        
-        self.ui.runButton.setEnabled(0)
-        bitFileLoader.signals.finished.connect(lambda : self.ui.runButton.setEnabled(1))
+        self.ui.runButton.setEnabled(False)
+        bitFileLoader.signals.finished.connect(lambda : self.ui.runButton.setEnabled(True))
         self.threadPool.start(bitFileLoader)
         
     def test_PLL_sync(self):
@@ -157,8 +157,8 @@ class APScontrol(object):
         PLLTester = PLLSyncTestRunner(self.aps, self.ui.deviceIDComboBox.currentIndex())
         PLLTester.signals.message.connect(self.printFromThread)
         #Disable the run button while we are programming        
-        self.ui.runButton.setEnabled(0)
-        PLLTester.signals.finished.connect(lambda : self.ui.runButton.setEnabled(1))
+        self.ui.runButton.setEnabled(False)
+        PLLTester.signals.finished.connect(lambda : self.ui.runButton.setEnabled(True))
         self.threadPool.start(PLLTester)
                 
     def waveformDialog(self, textBox):
@@ -176,9 +176,6 @@ class APScontrol(object):
             
         
     def run(self):
-        self.ui.runButton.setEnabled(0)
-        self.ui.stopButton.setEnabled(1)
-
         #Pull the settings from the gui
         settings = {}
         
@@ -222,15 +219,23 @@ class APScontrol(object):
                 QtGui.QMessageBox.warning(self.ui, 'Oops!', 'Channel {0} is enabled with a non-existent file.'.format(ct+1))
                 self.stop()
                 raise
-        
+
+        #Disable buttons we don't want while running
+        self.ui.runButton.setEnabled(False)
+        self.ui.stopButton.setEnabled(True)
+        self.ui.actionLoad_Bit_File.setEnabled(False)
+        self.ui.actionTest_PLL_Sync.setEnabled(False)        
+
         #Do the slow work (loading large sequences) lifting in another thread
         tmpAPSRunner = APSRunner(self.aps, self.ui.deviceIDComboBox.currentIndex(), settings )        
         tmpAPSRunner.signals.message.connect(self.printFromThread)        
         self.threadPool.start(tmpAPSRunner)        
         
     def stop(self):
-        self.ui.stopButton.setEnabled(0)
-        self.ui.runButton.setEnabled(1)
+        self.ui.stopButton.setEnabled(False)
+        self.ui.runButton.setEnabled(True)
+        self.ui.actionLoad_Bit_File.setEnabled(True)
+        self.ui.actionTest_PLL_Sync.setEnabled(True)        
         self.aps.stop()
         self.aps.disconnect()
         self.printMessage('Stopped')
