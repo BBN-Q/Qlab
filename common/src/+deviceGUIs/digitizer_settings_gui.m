@@ -65,8 +65,10 @@ cardParams.trigChannels = containers.Map();
 cardParams.trigCouplings = containers.Map();
 %The slope of the trigger: rising/falling.
 cardParams.trigSlopes = containers.Map();
-%How the syncs????
+%How the card syncs????
 cardParams.resyncs = containers.Map();
+%The allowable sampling rates
+cardParams.samplingRates = containers.Map();
 
 %Setup a dictionary linking these parameters to UI tags for the pop-up
 %menus
@@ -80,6 +82,7 @@ cardParamsUIDict('trigger_ch') = 'trigChannels';
 cardParamsUIDict('trigger_coupling') = 'trigCouplings';
 cardParamsUIDict('trigger_slope') = 'trigSlopes';
 cardParamsUIDict('trigResync') = 'resyncs';
+cardParamsUIDict('samplingRate') = 'samplingRates';
 
 
 % Call a subfunction to create all UI controls
@@ -121,7 +124,7 @@ settings_fcn = @get_settings;
             %Main panel containing everything
             handles.uipanel0 = uipanel( ...
                 'Parent', handles.figure1, ...
-                'Tag', 'uipanel_acqiris_settings', ...
+                'Tag', 'uipanel_digitizer_settings', ...
                 'Units', 'pixels', ...
                 'Position', [left bottom 315 630], ...
                 'FontSize', 10, ...
@@ -166,10 +169,10 @@ settings_fcn = @get_settings;
                 'Position', [12.3333333333333 14.7857142857143 12 1.14285714285714], ...
                 'String', 'Bandwidth');
             
-            handles.text2 = uicontrol( defaults{:},...
+            handles.statictext_vertScale = uicontrol( defaults{:},...
                 'Parent', handles.uipanel1, ...
-                'Tag', 'text2', ...
-                'Position', [9.49999999999999 23.5714285714286 14.6666666666667 1.14285714285714], ...
+                'Tag', 'statictext_vertScale', ...
+                'Position', [6 23.5 20 1.2], ...
                 'String', 'Full scale (V)');
             
             handles.text3 = uicontrol( defaults{:},...
@@ -310,11 +313,11 @@ settings_fcn = @get_settings;
                 'Position', [30 12.9230769230769 12.8 1.53846153846154], ...
                 'String', '1');
             
-            handles.record_length = uicontrol( defaults{:},...
+            handles.recordLength = uicontrol( defaults{:},...
                 'Parent', handles.uipanel1, ...
-                'Tag', 'record_length', ...
+                'Tag', 'recordLength', ...
                 'Position', [30 21.7692307692308 12.8 1.46153846153846], ...
-                'String', '10000');
+                'String', '1024');
             
             handles.delayTime = uicontrol( defaults{:},...
                 'Parent', handles.uipanel1, ...
@@ -322,12 +325,6 @@ settings_fcn = @get_settings;
                 'UserData', zeros(1,0), ...
                 'Position', [30 18.8461538461538 12.8 1.46153846153846], ...
                 'String', '0.0e-6');
-            
-            handles.sampleInterval = uicontrol( defaults{:},...
-                'Parent', handles.uipanel1, ...
-                'Tag', 'sampleInterval', ...
-                'Position', [30 15.9230769230769 12.8 1.46153846153846], ...
-                'String', '1e-9');
             
             handles.trigger_level = uicontrol( defaults{:},...
                 'Parent', handles.uipanel2, ...
@@ -359,78 +356,71 @@ settings_fcn = @get_settings;
             
             %Create a cell-array of default parameters so that I don't have
             %to keep writing them out
-            defaults = {'Style','popupmenu','Units','characters','FontName','Helvetica','FontSize',10,'BackgroundColor',[1 1 1]};
-            handles.cardType = uicontrol( ...
+            defaults = {'Style','popupmenu','Units','characters','FontName','Helvetica','FontSize',10,'BackgroundColor',[1 1 1], 'String', {''}};
+            handles.cardType = uicontrol( defaults{:}, ...
                 'Parent', handles.uipanel0, ...
                 'Tag', 'cardType', ...
                 'Position', [20 44 25 2], ...
-                'String', {'Acqiris PT240', 'Alazar 9870'},...
-                'Callback', @card_switch,...
-                defaults{:});
+                'String', {'AcqirisPT120', 'AlazarATS9870'},...
+                'Callback', @card_switch);
             
-            handles.acquire_mode = uicontrol( ...
+            handles.acquire_mode = uicontrol( defaults{:},...
                 'Parent', handles.uipanel0, ...
                 'Tag', 'acquire_mode', ...
-                'Position', [20 41 25 2], ...
-                defaults{:});
-                       
-            handles.trigger_ch = uicontrol( ...
+                'Position', [20 41 25 2]);
+            
+            handles.trigger_ch = uicontrol( defaults{:},...
                 'Parent', handles.uipanel2, ...
                 'Tag', 'trigger_ch', ...
-                'Position', [26.2 0.923076923076925 20 1.69230769230769], ...
-                defaults{:});
+                'Position', [26.2 0.923076923076925 20 1.69230769230769]);
             
-            handles.trigger_coupling = uicontrol( ...
+            handles.trigger_coupling = uicontrol( defaults{:},...
                 'Parent', handles.uipanel2, ...
                 'Tag', 'trigger_coupling', ...
-                'Position', [26.2 3.92307692307693 20 1.69230769230769], ...
-                defaults{:});
+                'Position', [26.2 3.92307692307693 20 1.69230769230769]);
             
-            handles.trigger_slope = uicontrol( ...
+            handles.trigger_slope = uicontrol( defaults{:},...
                 'Parent', handles.uipanel2, ...
                 'Tag', 'trigger_slope', ...
-                'Position', [2.4 0.923076923076925 20 1.69230769230769], ...
-                defaults{:});
+                'Position', [2.4 0.923076923076925 20 1.69230769230769]);
             
             % order scale choices by the numerical values
-%             scaleNames = keys(scales);
-%             [junk, scaleOrder] = sort(cell2mat(values(scales)));
-            handles.vert_scale = uicontrol( ...
+            handles.vert_scale = uicontrol( defaults{:},...
                 'Parent', handles.uipanel1, ...
                 'Tag', 'vert_scale', ...
-                'Position', [3.83333333333333 21.7857142857143 20.1666666666667 1.64285714285714], ...
-                defaults{:});
+                'Position', [3.83333333333333 21.7857142857143 20.1666666666667 1.64285714285714]);
             
-            handles.bandwidth = uicontrol( ...
+            handles.bandwidth = uicontrol( defaults{:},...
                 'Parent', handles.uipanel1, ...
                 'Tag', 'bandwidth', ...
-                'Position', [3.8 13.0769230769231 20.4 1.61538461538462], ...
-                defaults{:});
+                'Position', [3.8 13.0769230769231 20.4 1.61538461538462]);
             
-            handles.vert_coupling = uicontrol( ...
+            handles.vert_coupling = uicontrol( defaults{:},...
                 'Parent', handles.uipanel1, ...
                 'Tag', 'vert_coupling', ...
-                'Position', [4 16 20.2 1.61538461538462], ...
-                defaults{:});
+                'Position', [4 16 20.2 1.61538461538462]);
             
-            handles.channel = uicontrol( ...
+            handles.channel = uicontrol( defaults{:},...
                 'Parent', handles.uipanel1, ...
                 'Tag', 'channel', ...
                 'Position', [3.8 10.1538461538462 20.4 1.61538461538462], ...
-                'String', {'Both','1','2'},...
-                defaults{:});
+                'String', {'Both','1','2'});
             
-            handles.clockType = uicontrol( ...
+            handles.clockType = uicontrol( defaults{:},...
                 'Parent', handles.uipanel3, ...
                 'Tag', 'clockType', ...
-                'Position', [2.83333333333333 4.09890109890109 20 1.71428571428571], ...
-                defaults{:});
+                'Position', [2.83333333333333 4.09890109890109 20 1.71428571428571]);
             
-            handles.trigResync = uicontrol( ...
+            handles.trigResync = uicontrol( defaults{:},...
                 'Parent', handles.uipanel3, ...
                 'Tag', 'trigResync', ...
-                'Position', [2.83333333333333 1.09890109890109 20 1.71428571428571], ...
-                defaults{:});
+                'Position', [2.83333333333333 1.09890109890109 20 1.71428571428571]);
+            
+            handles.sampleRate = uicontrol( defaults{:},...
+                'Parent', handles.uipanel1, ...
+                'Tag', 'sampleRate', ...
+                'Position', [30 15.9230769230769 12.8 1.46153846153846]);
+
             
         end
         
@@ -457,120 +447,135 @@ settings_fcn = @get_settings;
         
         scope_settings = struct();
         
-        scope_settings.deviceName = 'AgilentAP120';
+        scope_settings.deviceName = get_selected(handles.cardType);
         scope_settings.Address = 'PCI::INSTR0';
         
         % set card mode
-        scope_settings.acquire_mode = cardModes(get_selected(handles.acquire_mode));
-        scope_settings.clockType = clockTypes(get_selected(handles.clockType));
+        scope_settings.acquire_mode = cardParams.cardModes(get_selected(handles.acquire_mode));
+        scope_settings.clockType = cardParams.clockTypes(get_selected(handles.clockType));
         
         % set horizontal settings
-        horizSettings.delayTime = str2num(get(handles.delayTime, 'String'));
-        horizSettings.sampleInterval = str2num(get(handles.sampleInterval, 'String'));
+        horizSettings.delayTime = str2double(get(handles.delayTime, 'String'));
+        horizSettings.sampleInterval = str2double(get(handles.sampleInterval, 'String'));
         %disp(horizSettings);
         scope_settings.horizontal = horizSettings;
         
         % set vertical settings
-        vertSettings.vert_scale = scales(get_selected(handles.vert_scale));
-        vertSettings.offset = str2num(get(handles.offset,'String'));
-        vertSettings.vert_coupling = vert_couplings(get_selected(handles.vert_coupling));
-        vertSettings.bandwidth = bandwidths(get_selected(handles.bandwidth));
+        vertSettings.vert_scale = cardParams.scales(get_selected(handles.vert_scale));
+        vertSettings.offset = str2double(get(handles.offset,'String'));
+        vertSettings.vert_coupling = cardParams.vert_couplings(get_selected(handles.vert_coupling));
+        vertSettings.bandwidth = cardParams.bandwidths(get_selected(handles.bandwidth));
         %disp(vertSettings);
         scope_settings.vertical = vertSettings;
         
         % set trigger settings
-        trigSettings.trigger_level = str2num(get(handles.trigger_level,'String'));
-        trigSettings.trigger_ch = trigChannels(get_selected(handles.trigger_ch));
-        trigSettings.trigger_coupling = trigCouplings(get_selected(handles.trigger_coupling));
-        trigSettings.trigger_slope = trigSlopes(get_selected(handles.trigger_slope));
+        trigSettings.level = str2double(get(handles.trigger_level,'String'));
+        trigSettings.source = cardParams.trigChannels(get_selected(handles.trigger_ch));
+        trigSettings.coupling = cardParams.trigCouplings(get_selected(handles.trigger_coupling));
+        trigSettings.slope = cardParams.trigSlopes(get_selected(handles.trigger_slope));
         %disp(trigSettings);
         scope_settings.trigger = trigSettings;
         
         % set averager settings
-        avgSettings.record_length = str2num(get(handles.record_length,'String'));
-        avgSettings.nbrSegments = str2num(get(handles.nbrSegments,'String'));
-        avgSettings.nbrWaveforms = str2num(get(handles.nbrWaveforms,'String'));
-        avgSettings.nbrRoundRobins = str2num(get(handles.nbrRoundRobins,'String'));
-        avgSettings.ditherRange = str2num(get(handles.ditherRange,'String'));
-        avgSettings.trigResync = resyncs(get_selected(handles.trigResync));
+        avgSettings.recordLength = str2double(get(handles.recordLength,'String'));
+        avgSettings.nbrSegments = str2double(get(handles.nbrSegments,'String'));
+        avgSettings.nbrWaveforms = str2double(get(handles.nbrWaveforms,'String'));
+        avgSettings.nbrRoundRobins = str2double(get(handles.nbrRoundRobins,'String'));
+        avgSettings.ditherRange = str2double(get(handles.ditherRange,'String'));
+        switch scope_settings.deviceName
+            case 'AlazarATS9870'
+                avgSettings.trigResync = false;
+            case 'AcquirisPT240'
+                avgSettings.trigResync = cardParams.resyncs(get_selected(handles.trigResync));
+        end
         
         %disp(avgSettings);
         %scope_settings.channel_on = 1;
         scope_settings.averager = avgSettings;
     end
 
-    %Function to set and load card specific options
+%Function to set and load card specific options
     function card_switch(varargin)
-        %Load which card we are using 
+        %Load which card we are using
         curCard = get_selected(handles.cardType);
+        %Now set the allowed parameters
         switch curCard
-            case 'Acqiris PT240'
+            case 'AcqirisPT120'
                 cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {0, 2});
                 cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {'int', 'ext', 'ref'});
                 cardParams.scales = containers.Map({'50m','100m', '200m', '500m', '1', '2', '5'}, {.05, .1, .2, .5, 1, 2, 5});
                 cardParams.vert_couplings = containers.Map({'Ground','DC, 1 MOhm','AC, 1 MOhm','DC, 50 Ohm','AC, 50 Ohm'}, ...
-                            {0,1,2,3,4});
+                    {0,1,2,3,4});
                 cardParams.bandwidths = containers.Map({'no limit','700 MHz','200 MHz','35 MHz','25 MHz','20 MHz'}, ...
-                            {0,2,3,5,1,4});
+                    {0,2,3,5,1,4});
                 cardParams.trigChannels = containers.Map({'External','Ch 1', 'Ch 2'}, {-1, 1, 2});
                 cardParams.trigCouplings = containers.Map({'DC','AC','DC, 50 Ohm','AC, 50 Ohm'},{0,1,3,4});
                 cardParams.trigSlopes = containers.Map({'Rising','Falling'},{0,1});
                 cardParams.resyncs = containers.Map({'Resync','No resync'},{1,0});
-            case 'Alazar 9870'
-                %TODO: update with actual Alazar values
+                cardParams.samplingRates = containers.Map({'1M','2M','2.5M','4M','5M','10M','20M','25M','40M','50M','100M','200M','250M','400M','500M','1G','2G'},{1e6, 2e6, 2.5e6, 4e6, 5e6, 10e6, 20e6, 25e6, 40e6, 50e6, 100e6, 200e6, 250e6, 400e6, 500e6, 1e9, 2e9});
+                
+                %Update the range text
+                set(handles.statictext_vertScale,'String','Full Scale (Vpp)');
+            case 'AlazarATS9870'
                 cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {0, 2});
-                cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {'int', 'ext', 'ref'});
-                cardParams.scales = containers.Map({'50m','100m', '200m', '500m', '1', '2', '5'}, {.05, .1, .2, .5, 1, 2, 5});
-                cardParams.vert_couplings = containers.Map({'Ground','DC, 1 MOhm','AC, 1 MOhm','DC, 50 Ohm','AC, 50 Ohm'}, ...
-                            {0,1,2,3,4});
-                cardParams.bandwidths = containers.Map({'no limit','700 MHz','200 MHz','35 MHz','25 MHz','20 MHz'}, ...
-                            {0,2,3,5,1,4});
-                cardParams.trigChannels = containers.Map({'External','Ch 1', 'Ch 2'}, {-1, 1, 2});
-                cardParams.trigCouplings = containers.Map({'DC','AC','DC, 50 Ohm','AC, 50 Ohm'},{0,1,3,4});
+                cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {1, 5, 7});
+                cardParams.scales = containers.Map({'40m','100m', '200m', '400m', '1', '2', '4'}, {2, 5, 6, 7, 10, 11, 12});
+                cardParams.vert_couplings = containers.Map({'AC, 50 Ohm','DC, 50 Ohm'}, {1, 2});
+                cardParams.bandwidths = containers.Map({'no limit','20 MHz'}, {0,1});
+                cardParams.trigChannels = containers.Map({'External','Ch A', 'Ch B'}, {2, 0, 1});
+                cardParams.trigCouplings = containers.Map({'DC','AC'},{2,1});
                 cardParams.trigSlopes = containers.Map({'Rising','Falling'},{0,1});
-                cardParams.resyncs = containers.Map({'Resync','No resync'},{1,0});
+                cardParams.resyncs = containers.Map();
+                cardParams.samplingRates = containers.Map({'1M','10M','100M','250M','500M','1G'},{1e6, 10e6, 100e6, 250e6, 500e6, 1e9});
+                
+                %Update the range text
+                set(handles.statictext_vertScale,'String','Full Scale (Vp)');
+                
         end
         
         set_gui_elements(settings)
         
     end
-        
+
     function set_gui_elements(settings)
-        % define default values for fields. If given a settings structure, grab
-        % defaults from it
+        % Define default values for the fields.
+        % If given a settings structure, grab defaults from it'
         defaults = struct();
-        defaults.acquire_mode = 'Averager';
-        defaults.clockType = 'Ext Ref (10 MHz)';
-        defaults.horizontal.delayTime = 0;
-        defaults.horizontal.sampleInterval = 1e-9;
-        defaults.vertical.vert_scale = '500m';
-        defaults.vertical.offset = 0;
-        defaults.vertical.vert_coupling = 'DC, 50 Ohm';
-        defaults.vertical.bandwidth = 'no limit';
-        defaults.trigger.trigger_level = 500;
-        defaults.trigger.trigger_ch = 'External';
-        defaults.trigger.trigger_coupling = 'DC';
-        defaults.trigger.trigger_slope = 'Rising';
-        defaults.averager.record_length = 10000;
-        defaults.averager.nbrSegments = 1;
-        defaults.averager.nbrWaveforms = 1000;
-        defaults.averager.nbrRoundRobins = 1;
-        defaults.averager.ditherRange = 0;
-        defaults.averager.trigResync = 'Resync';
-        
-        % construct inverse maps
-        cardModesInv = invertMap(cardParams.cardModes);
-        clockTypesInv = invertMap(cardParams.clockTypes);
-        scalesInv = invertMap(cardParams.scales);
-        vert_couplingsInv = invertMap(cardParams.vert_couplings);
-        bandwidthsInv = invertMap(cardParams.bandwidths);
-        trigChannelsInv = invertMap(cardParams.trigChannels);
-        trigCouplingsInv = invertMap(cardParams.trigCouplings);
-        trigSlopesInv = invertMap(cardParams.trigSlopes);
-        resyncsInv = invertMap(cardParams.resyncs);
-        % scope settings are two layers deep, need to go into horizontal,
-        % vertical, trigger, and averager
-        if ~isempty(fieldnames(settings))
+        if isempty(fieldnames(settings))
+            defaults.acquire_mode = 'Averager';
+            defaults.clockType = 'Ext Ref (10 MHz)';
+            defaults.horizontal.delayTime = 0;
+            defaults.horizontal.sampleInterval = 1e-9;
+            defaults.vertical.vert_scale = '500m';
+            defaults.vertical.offset = 0;
+            defaults.vertical.vert_coupling = 'DC, 50 Ohm';
+            defaults.vertical.bandwidth = 'no limit';
+            defaults.trigger.trigger_level = 500;
+            defaults.trigger.trigger_ch = 'External';
+            defaults.trigger.trigger_coupling = 'DC';
+            defaults.trigger.trigger_slope = 'Rising';
+            defaults.averager.recordLength = 10000;
+            defaults.averager.nbrSegments = 1;
+            defaults.averager.nbrWaveforms = 1000;
+            defaults.averager.nbrRoundRobins = 1;
+            defaults.averager.ditherRange = 0;
+            defaults.averager.trigResync = 'Resync';
+            
+        else
+            % construct inverse maps
+            cardModesInv = invertMap(cardParams.cardModes);
+            clockTypesInv = invertMap(cardParams.clockTypes);
+            scalesInv = invertMap(cardParams.scales);
+            vert_couplingsInv = invertMap(cardParams.vert_couplings);
+            bandwidthsInv = invertMap(cardParams.bandwidths);
+            trigChannelsInv = invertMap(cardParams.trigChannels);
+            trigCouplingsInv = invertMap(cardParams.trigCouplings);
+            trigSlopesInv = invertMap(cardParams.trigSlopes);
+            if ~isempty(cardParams.resyncs)
+                resyncsInv = invertMap(cardParams.resyncs);
+            end
+            % scope settings are two layers deep, need to go into horizontal,
+            % vertical, trigger, and averager
             defaults.acquire_mode = cardModesInv(settings.acquire_mode);
             defaults.clockType = clockTypesInv(settings.clockType);
             % horizontal
@@ -587,7 +592,7 @@ settings_fcn = @get_settings;
             defaults.trigger.trigger_coupling = trigCouplingsInv(settings.trigger.trigger_coupling);
             defaults.trigger.trigger_slope = trigSlopesInv(settings.trigger.trigger_slope);
             % averaging
-            defaults.averager.record_length = settings.averager.record_length;
+            defaults.averager.recordLength = settings.averager.recordLength;
             defaults.averager.nbrSegments = settings.averager.nbrSegments;
             defaults.averager.nbrWaveforms = settings.averager.nbrWaveforms;
             defaults.averager.nbrRoundRobins = settings.averager.nbrRoundRobins;
@@ -619,9 +624,24 @@ settings_fcn = @get_settings;
                     case 'edit'
                         set(handles.(name), 'String', num2str(value));
                     case 'popupmenu'
-                        %Set the allowable values
-                        set(handles.(name), 'String', keys(cardParams.(cardParamsUIDict(name))))
-                        set_selected(handles.(name), value);
+                        %Some of the pop-up menus we want to order based on
+                        %their numeric values
+                        tmpKeys = keys(cardParams.(cardParamsUIDict(name)));
+                        if(any(strcmp(name, {'vert_scale', 'bandwidth'})))
+                            tmpValues = keys(cardParams.(cardParamsUIDict(name)));
+                            tmpValues = strrep(tmpValues, 'm','e-3');
+                            tmpValues = strrep(tmpValues, 'MHz','e6');
+                            [~, sortOrder] = sort(str2double(tmpValues));
+                            tmpKeys = tmpKeys(sortOrder);
+                        end
+                        if(isempty(tmpKeys))
+                            set(handles.(name), 'Enable', 'off')
+                        else
+                            set(handles.(name), 'Enable', 'on')
+                            %Set the allowable values
+                            set(handles.(name), 'String', tmpKeys)
+                            set_selected(handles.(name), value);
+                        end
                     case 'checkbox'
                         set(handles.(name), 'Value', value);
                     case 'radiobutton'

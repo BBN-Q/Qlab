@@ -101,7 +101,7 @@ for loop2_index = 1:Loop.two.steps
             fprintf('Soft average %d\n', avg_index);
 
             % set the card to acquire
-            success = scope.acquire();
+            scope.acquire();
 
             % set the Tek to run
             masterAWG.run();
