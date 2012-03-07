@@ -316,7 +316,7 @@ classdef APSPattern < handle
                 offsetVal = bitset(offsetVal, ELL_ZERO_BIT);
             end
 
-            if entry.hasTrigger
+            if entry.hasMarker
                 offsetVal = bitset(offsetVal, ELL_VALID_TRIGGER_BIT);
             end
 
@@ -357,15 +357,18 @@ classdef APSPattern < handle
             %% Trigger Delay
             %  15  14  13   12   11  10 9 8 7 6 5 4 3 2 1 0
             % | Mode |                Delay                |
-            % Delay = time in 3.333 ns increments ( 0 - 54.5 usec )
+            % Delay = time in 4 sample increments ( 0 - 54.5 usec at max rate)
             
             ELL_TRIGGER_DELAY      = 16383; %hex2dec('3FFF')
             ELL_TRIGGER_MODE_SHIFT = 14;
 
-            % TODO:  hard code trigger for now, need to think about how to
-            % describe
-            triggerMode = 3; % do nothing
-            triggerDelay = 0;
+            if entry.hasMarker
+                triggerMode = bitand(entry.markerDirection, 3);
+                triggerDelay = entry.markerDelay;
+            else
+                triggerMode = 3; % do nothing
+                triggerDelay = 0;
+            end
 
             triggerMode = bitshift(triggerMode, ELL_TRIGGER_MODE_SHIFT);
             triggerDelay = fix(triggerDelay);
@@ -427,7 +430,15 @@ classdef APSPattern < handle
 
                     % for test, put trigger on first entry of every mini-LL
                     if j == 1
-                        entry.hasTrigger = 1;
+                        entry.hasMarker = 1;
+                        entry.markerDelay = 0;
+                        entry.markerDirection = 1; % rising
+                    end
+                    
+                    if j == 2
+                        entry.hasMarker = 1;
+                        entry.markerDelay = 0;
+                        entry.markerDirection = 2; % falling
                     end
 
                     [offsetVal countVal] = aps.entryToOffsetCount(entry, waveformLibrary, j == 1, j == lenLL - 1);
@@ -460,7 +471,7 @@ classdef APSPattern < handle
                         offsetVal = bitset(offsetVal, aps.ELL_FIRST_ENTRY_BIT); 
                     end
 
-                    triggerVal = aps.entryToTrigger(j == lenLL);
+                    triggerVal = aps.entryToTrigger(entry);
 
                     banks{curBank}.offset(idx) = uint16(offsetVal);
                     banks{curBank}.count(idx) = uint16(countVal);

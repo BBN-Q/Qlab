@@ -532,7 +532,9 @@ classdef PatternGen < handle
                     end
                     entry.key = padWaveformKey;
                 end
-                entry.hasTrigger = 0;
+                entry.hasMarkerData = 0;
+                entry.markerDelay = 0;
+                entry.markerDirection = 0; % 0 - none, 1 - rising, 2 - falling
                 entry.linkListRepeat = 0;
             end
             
@@ -573,6 +575,41 @@ classdef PatternGen < handle
             
             xpat.waveforms = obj.pulseCollection;
             xpat.linkLists = LinkLists;
+        end
+        
+        function addTrigger(seq, delay, width)
+            time = 0;
+            for ii = 1:length(seq)
+                entry = seq{ii};
+                entryWidth = entry.length * entry.repeat;
+                % check if rising edge falls within the current entry
+                if (time + entryWidth > delay)
+                    entry.hasMarkerData = 1;
+                    entry.markerDelay = delay - time;
+                    entry.markerDirection = 1; % 0 - none, 1 - rising, 2 - falling
+                    % break from the loop, leaving time set to the delay
+                    % from the end of the entry
+                    time = entryWidth - entry.markerDelay;
+                    break
+                end
+                time = time + entryWidth;
+            end
+            
+            for jj = (ii+1):length(seq)
+                entry = seq{jj};
+                entryWidth = entry.length * entry.repeat;
+                % check if falling edge falls within the current entry
+                if time + entryWidth > width
+                    entry.hasMarkerData = 1;
+                    entry.markerDelay = abs(width - time);
+                    entry.markerDirection = 2; % 0 - none, 1 - rising, 2 - falling
+                    if width < time
+                        warning('PatternGen:addTrigger:padding', 'Trigger padded to extend over multiple entries.');
+                    end
+                    break
+                end
+                time = time + entryWidth;
+            end
         end
             
         function plotWaveformTable(obj,table)
