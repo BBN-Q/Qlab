@@ -316,7 +316,7 @@ classdef APSPattern < handle
                 offsetVal = bitset(offsetVal, ELL_ZERO_BIT);
             end
 
-            if entry.hasMarker
+            if entry.hasMarkerData
                 offsetVal = bitset(offsetVal, ELL_VALID_TRIGGER_BIT);
             end
 
@@ -361,8 +361,9 @@ classdef APSPattern < handle
             
             ELL_TRIGGER_DELAY      = 16383; %hex2dec('3FFF')
             ELL_TRIGGER_MODE_SHIFT = 14;
+            TRIGGER_INCREMENT      = 4;
 
-            if entry.hasMarker
+            if entry.hasMarkerData
                 triggerMode = bitand(entry.markerDirection, 3);
                 triggerDelay = entry.markerDelay;
             else
@@ -371,7 +372,7 @@ classdef APSPattern < handle
             end
 
             triggerMode = bitshift(triggerMode, ELL_TRIGGER_MODE_SHIFT);
-            triggerDelay = fix(triggerDelay);
+            triggerDelay = fix(triggerDelay / TRIGGER_INCREMENT);
 
             triggerVal = bitand(triggerDelay, ELL_TRIGGER_DELAY);
             triggerVal = bitor(triggerVal, triggerMode);
@@ -426,19 +427,6 @@ classdef APSPattern < handle
                     if aps.verbose
                         fprintf('Entry %i: key: %s length: %2i repeat: %4i \n', j, entry.key, entry.length, ...
                             entry.repeat);
-                    end
-
-                    % for test, put trigger on first entry of every mini-LL
-                    if j == 1
-                        entry.hasMarker = 1;
-                        entry.markerDelay = 0;
-                        entry.markerDirection = 1; % rising
-                    end
-                    
-                    if j == 2
-                        entry.hasMarker = 1;
-                        entry.markerDelay = 0;
-                        entry.markerDirection = 2; % falling
                     end
 
                     [offsetVal countVal] = aps.entryToOffsetCount(entry, waveformLibrary, j == 1, j == lenLL - 1);
