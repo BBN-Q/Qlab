@@ -30,7 +30,7 @@ if nargin < 1 || ~isnumeric(parent)
     handles.parent = figure( ...
         'Tag', 'figure1', ...
         'Units', 'characters', ...
-        'Position', [103.833333333333 13.8571428571429 55 65], ...
+        'Position', [103.833333333333 13.8571428571429 95 40], ...
         'Name', 'Digitizer Settings', ...
         'MenuBar', 'none', ...
         'NumberTitle', 'off', ...
@@ -105,90 +105,81 @@ settings_fcn = @get_settings;
 %Main function layout all the GUI elements
     function build_gui()
         % Creation of all uicontrols
-
+        
         %Base settings for each type
         baseLabelString = {'Style', 'text',  'HorizontalAlignment', 'right', 'FontSize', 10};
         basePopUpMenu = {'Style','popupmenu', 'FontSize',10, 'BackgroundColor', [1 1 1], 'String', {''}};
-        baseEdit = {'Style','edit','FontSize', 10, 'BackgroundColor', [1 1 1], 'HorizontalAlignment', 'right' };
-
+        baseEdit = {'Style','edit','FontSize', 10, 'BackgroundColor', [1 1 1], 'HorizontalAlignment', 'right'};
+        
+        
+        function [tmpHBox, labelHandle, editBoxHandle] = labeledEditBox(parentIn, labelString, editBoxTag, defaultString)
+            tmpHBox = uiextras.HButtonBox('Parent', parentIn, 'Spacing', 10);
+            labelHandle = uicontrol(baseLabelString{:}, 'Parent', tmpHBox, 'String', labelString);
+            editBoxHandle = uicontrol( baseEdit{:}, 'Parent', tmpHBox, 'Tag', editBoxTag , 'String', defaultString);
+%             set(tmpHBox, 'Sizes', [-1, 90])
+        end
+        
+        function [tmpHBox, labelHandle, popUpMenuHandle] = labeledPopUpMenu(parentIn, labelString, menuTag, strings)
+            tmpHBox = uiextras.HButtonBox('Parent', parentIn, 'Spacing', 10);
+            labelHandle = uicontrol(baseLabelString{:}, 'Parent', tmpHBox, 'String', labelString);
+            popUpMenuHandle = uicontrol( basePopUpMenu{:}, 'Parent', tmpHBox, 'Tag', menuTag , 'String', strings);
+%             set(tmpHBox, 'Sizes', [-1, 100])
+        end
+        
         %Create the main panel containing everything with a VBox layout
         handles.mainPanel = uiextras.Panel('Parent', handles.parent, 'Title', 'Digitizer Settings', 'Padding', 5, 'FontSize', 12 );
         handles.mainVBox = uiextras.VBox('Parent',handles.mainPanel, 'Spacing', 10);
         
         %Add the digitizer card and mode options
         tmpGrid1 = uiextras.Grid('Parent', handles.mainVBox, 'Spacing', 10, 'Padding', 5);
-
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid1, 'String', 'Card Type:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid1, 'String', 'Card Mode:')
-
-        handles.cardType = uicontrol( basePopUpMenu{:}, 'Parent', tmpGrid1, 'Tag', 'cardType', ...
-            'String', {'AcqirisPT120', 'AlazarATS9870'}, 'Callback', @card_switch);
         
-        handles.acquire_mode = uicontrol(basePopUpMenu{:}, 'Parent', tmpGrid1, 'Tag', 'acquire_mode');
-
-        set(tmpGrid1, 'RowSizes', [-1, -1], 'ColumnSizes', [-1, 120]); 
+        [~, ~, handles.cardType] = labeledPopUpMenu(tmpGrid1, 'Card Type:', 'cardType', {'AcqirisPT120', 'AlazarATS9870'});
+        set(handles.cardType, 'Callback', @card_switch);
+        [~, ~, handles.acquire_mode] = labeledPopUpMenu(tmpGrid1, 'Card Mode:', 'acquire_mode', {''});
+        
+        set(tmpGrid1, 'RowSizes', [-1], 'ColumnSizes', [-1, -1]);
         
         %Setup the averager settings
         handles.averagerPanel = uiextras.Panel('Parent', handles.mainVBox, 'Title', 'Averager', 'Padding', 5, 'FontSize', 11);
         tmpGrid2 = uiextras.Grid('Parent', handles.averagerPanel, 'Spacing', 10, 'Padding', 10);
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid2, 'String', 'Waveforms:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid2, 'String', 'Round Robins:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid2, 'String', 'Nbr. Segments:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid2, 'String', 'Dither Range:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid2, 'String', 'Trigger:')
-
-        handles.nbrWaveforms = uicontrol( baseEdit{:}, 'Parent', tmpGrid2, 'Tag', 'nbrWaveforms', 'String', '10000');
-        handles.nbrRoundRobins = uicontrol( baseEdit{:}, 'Parent', tmpGrid2, 'Tag', 'nbrRoundRobins', 'String', '1');
-        handles.nbrSegments = uicontrol( baseEdit{:}, 'Parent', tmpGrid2, 'Tag', 'nbrSegments', 'String', '1');
-        handles.ditherRange = uicontrol( baseEdit{:}, 'Parent', tmpGrid2, 'Tag', 'ditherRange', 'String', '0');
-        handles.trigResync = uicontrol( basePopUpMenu{:}, 'Parent', tmpGrid2, 'Tag', 'trigResync');
-
-        set(tmpGrid2, 'RowSizes', -1*ones([1,5]), 'ColumnSizes', [-1, 110]); 
-           
+        
+        [~, ~, handles.nbrWaveforms] = labeledEditBox(tmpGrid2, 'Waveforms:', 'nbrWaveforms', '10000');
+        [~, ~, handles.nbrRoundRobins] = labeledEditBox(tmpGrid2, 'Round Robins:', 'nbrRoundRobins', '1');
+        [~, ~, handles.nbrSegments] = labeledEditBox(tmpGrid2, 'Nbr. Segments:', 'nbrSegments', '1');
+        [~, ~, handles.ditherRange] = labeledEditBox(tmpGrid2, 'Dither Range:', 'ditherRange', '0');
+        [~, ~, handles.trigResync] = labeledPopUpMenu(tmpGrid2, 'Trigger:', 'trigResync', {''});
+        
+        set(tmpGrid2, 'RowSizes', -1*ones([1,3]), 'ColumnSizes', [-1, -1]);
+        
         %Setup the acquisition settings
         handles.acquirePanel = uiextras.Panel('Parent', handles.mainVBox, 'Title', 'Acquisition', 'FontSize', 11);
         tmpGrid3 = uiextras.Grid('Parent', handles.acquirePanel, 'Spacing', 10, 'Padding', 10);
-
-        handles.statictext_vertScale = uicontrol(baseLabelString{:}, 'Parent', tmpGrid3, 'String', 'Full Scale:');
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid3, 'String', 'Offset:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid3, 'String', 'Delay:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid3, 'String', 'Samples:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid3, 'String', 'Sampling Rate:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid3, 'String', 'Coupling:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid3, 'String', 'Bandwidth:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid3, 'String', 'Channel:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid3, 'String', 'Clock:')
-
-        handles.vert_scale = uicontrol( basePopUpMenu{:}, 'Parent', tmpGrid3, 'Tag', 'vert_scale');
-        handles.offset = uicontrol( baseEdit{:}, 'Parent', tmpGrid3, 'Tag', 'offset', 'String', '0');
-        handles.delayTime = uicontrol( baseEdit{:}, 'Parent', tmpGrid3, 'Tag', 'delayTime', 'String', '0');
-        handles.recordLength = uicontrol( baseEdit{:}, 'Parent', tmpGrid3, 'Tag', 'recordLength', 'String', '1024');
-        handles.sampleRate = uicontrol( basePopUpMenu{:}, 'Parent', tmpGrid3, 'Tag', 'sampleRate');
-        handles.vert_coupling = uicontrol( basePopUpMenu{:}, 'Parent', tmpGrid3, 'Tag', 'vert_coupling');
-        handles.bandwidth = uicontrol( basePopUpMenu{:}, 'Parent', tmpGrid3, 'Tag', 'bandwidth');
-        handles.channel = uicontrol( basePopUpMenu{:}, 'Parent', tmpGrid3, 'Tag', 'channel');
-        handles.clockType = uicontrol( basePopUpMenu{:}, 'Parent', tmpGrid3, 'Tag', 'clockType');
         
-        set(tmpGrid3, 'RowSizes', -1*ones([1,9]), 'ColumnSizes', [-1, 110]); 
-
+        [~, handles.statictext_vertScale, handles.vert_scale] = labeledPopUpMenu(tmpGrid3, 'Full Scale:', 'vert_scale', {''});
+        [~, ~, handles.offset] = labeledEditBox(tmpGrid3, 'Offset:', 'offset', '0');
+        [~, ~, handles.delayTime] = labeledEditBox(tmpGrid3, 'Delay:', 'delayTime', '0');
+        [~, ~, handles.recordLength] = labeledEditBox(tmpGrid3, 'Samples:', 'recordLength', '0');
+        [~, ~, handles.samplingRate] = labeledPopUpMenu(tmpGrid3, 'Sampling Rate:', 'samplingRate', {''});
+        [~, ~, handles.vert_coupling] = labeledPopUpMenu(tmpGrid3, 'Coupling:', 'vert_coupling', {''});
+        [~, ~, handles.bandwidth] = labeledPopUpMenu(tmpGrid3, 'Bandwidth:', 'bandwidth', {''});
+        [~, ~, handles.channel] = labeledPopUpMenu(tmpGrid3, 'Channel:', 'channel', {''});
+        [~, ~, handles.clockType] = labeledPopUpMenu(tmpGrid3, 'Clock:', 'clockType', {''});
+        
+        set(tmpGrid3, 'RowSizes', -1*ones([1,5]), 'ColumnSizes', [-1, -1]);
+        
         %Setup the trigger settings
         handles.triggerPanel = uiextras.Panel('Parent', handles.mainVBox, 'Title', 'Trigger', 'FontSize', 11);
         tmpGrid4 = uiextras.Grid('Parent', handles.triggerPanel, 'Spacing', 10, 'Padding', 10);
         
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid4, 'String', 'Level (mV):')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid4, 'String', 'Slope:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid4, 'String', 'Coupling:')
-        uicontrol(baseLabelString{:}, 'Parent', tmpGrid4, 'String', 'Channel:')
+        [~, ~, handles.trigger_level] = labeledEditBox(tmpGrid4, 'Level(mV):', 'trigger_level', '500');
+        [~, ~, handles.trigger_slope] = labeledPopUpMenu(tmpGrid4, 'Slope:', 'trigger_slope', {''});
+        [~, ~, handles.trigger_coupling] = labeledPopUpMenu(tmpGrid4, 'Coupling:', 'trigger_coupling', {''});
+        [~, ~, handles.trigger_ch] = labeledPopUpMenu(tmpGrid4, 'Channel:', 'trigger_ch', {''});
         
-        handles.trigger_level = uicontrol( baseEdit{:}, 'Parent', tmpGrid4, 'Tag', 'trigger_level', 'String', 500);
-        handles.trigger_slope = uicontrol( basePopUpMenu{:}, 'Parent', tmpGrid4, 'Tag', 'trigger_slope');
-        handles.trigger_coupling = uicontrol( basePopUpMenu{:}, 'Parent', tmpGrid4, 'Tag', 'trigger_coupling');
-        handles.trigger_ch = uicontrol( basePopUpMenu{:}, 'Parent', tmpGrid4, 'Tag', 'trigger_ch');
-
-       set(tmpGrid4, 'RowSizes', -1*ones([1,4]), 'ColumnSizes', [-1, 110]); 
-
+        set(tmpGrid4, 'RowSizes', -1*ones([1,2]), 'ColumnSizes', [-1, -1]);
+        
         %Weight the vbox sizes
-        set(handles.mainVBox, 'Sizes', [-1.5, -5, -9, -4])
+        set(handles.mainVBox, 'Sizes', [-1, -3, -4.5, -2])
         
     end %build_gui function
 
@@ -221,7 +212,7 @@ settings_fcn = @get_settings;
         
         % set horizontal settings
         horizSettings.delayTime = str2double(get(handles.delayTime, 'String'));
-        horizSettings.sampleInterval = str2double(get(handles.sampleInterval, 'String'));
+        horizSettings.samplingRate = str2double(get(handles.samplingRate, 'String'));
         %disp(horizSettings);
         scope_settings.horizontal = horizSettings;
         
@@ -280,7 +271,7 @@ settings_fcn = @get_settings;
                 cardParams.samplingRates = containers.Map({'1M','2M','2.5M','4M','5M','10M','20M','25M','40M','50M','100M','200M','250M','400M','500M','1G','2G'},{1e6, 2e6, 2.5e6, 4e6, 5e6, 10e6, 20e6, 25e6, 40e6, 50e6, 100e6, 200e6, 250e6, 400e6, 500e6, 1e9, 2e9});
                 
                 %Update the range text
-                set(handles.statictext_vertScale,'String','Full Scale (Vpp)');
+                set(handles.statictext_vertScale,'String','Full Scale (Vpp):');
             case 'AlazarATS9870'
                 cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {0, 2});
                 cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {1, 5, 7});
@@ -294,7 +285,7 @@ settings_fcn = @get_settings;
                 cardParams.samplingRates = containers.Map({'1M','10M','100M','250M','500M','1G'},{1e6, 10e6, 100e6, 250e6, 500e6, 1e9});
                 
                 %Update the range text
-                set(handles.statictext_vertScale,'String','Full Scale (Vp)');
+                set(handles.statictext_vertScale,'String','Full Scale (Vp):');
                 
         end
         
@@ -310,7 +301,7 @@ settings_fcn = @get_settings;
             defaults.acquire_mode = 'Averager';
             defaults.clockType = 'Ext Ref (10 MHz)';
             defaults.horizontal.delayTime = 0;
-            defaults.horizontal.sampleInterval = 1e-9;
+            defaults.horizontal.samplingRate = 10e9;
             defaults.vertical.vert_scale = '500m';
             defaults.vertical.offset = 0;
             defaults.vertical.vert_coupling = 'DC, 50 Ohm';
@@ -345,7 +336,7 @@ settings_fcn = @get_settings;
             defaults.clockType = clockTypesInv(settings.clockType);
             % horizontal
             defaults.horizontal.delayTime = settings.horizontal.delayTime;
-            defaults.horizontal.sampleInterval = settings.horizontal.sampleInterval;
+            defaults.horizontal.samplingRate = settings.horizontal.samplingRate;
             % vertical
             defaults.vertical.vert_scale = scalesInv(settings.vertical.vert_scale);
             defaults.vertical.offset = settings.vertical.offset;
