@@ -15,11 +15,11 @@ clear classes;
 disp('Creating experiment');
 
 %addpath('C:\Documents and Settings\Administrator\My Documents\DR_Exp\SVN\qlab\BBN_Experiment')
-%addpath('C:\Documents and Settings\gbrummer\Desktop\Code\BBN_Experiment')
+%addpath('U:\Tom\BBN_Experiment')
 addpath('data');
 addpath('src');
-
-dummyExp = Dummy('dummyv2.cfg');
+import Dummy.*
+dummyExp = Dummy('dummy3.cfg');
 
 disp('Initializing experiment');
 dummyExp.Initialize();
