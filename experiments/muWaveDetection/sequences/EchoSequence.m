@@ -14,8 +14,8 @@ elseif length(varargin) > 2
 end
 
 basename = 'Echo';
-fixedPt = 20000;
-cycleLength = 24000;
+fixedPt = 37000;
+cycleLength = 41000;
 nbrRepeats = 1;
 
 % load config parameters from file
@@ -29,7 +29,7 @@ IQkey = qubitMap.(qubit).IQkey;
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
 
 numsteps = 100; %150
-stepsize = 90;
+stepsize = 180;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 anglepts = 0:pi/8:(numsteps-1)*pi/8;
 %anglepts = 0;
