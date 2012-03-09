@@ -38,6 +38,11 @@ classdef PatternGen < handle
         dPulseType = 'gaussian';
         dBuffer = 5;
         dmodFrequency = 0; % SSB modulation frequency (sign matters!!)
+        % gating pulse parameters
+        bufferDelay = 0;
+        bufferReset = 12;
+        bufferPadding = 12;
+        
         cycleLength = 10000;
         samplingRate = 1.2e9; % in samples per second
         correctionT = eye(2,2);
@@ -493,13 +498,25 @@ classdef PatternGen < handle
             h = char(97 + mod(h', 26));
         end
         
-        function xpat = build(obj, patListParams, numsteps, delay, fixedPoint)
-            % xpat - struct(waveforms, linkLists) with hashtable of
-            %   x waveforms and the link list that references the hashtable
-            % ypat - same for y waveforms
-            % patList - sequential references to pulseCollection entries            
+        function seq = build(obj, pulseList, numsteps, delay, fixedPoint, gated)
+            % function pg.build(pulseList, numsteps, delay, fixedPoint)
+            % inputs:
+            % pulseList - cell array of pulse functions (returned by PatternGen.pulse())
+            % numsteps - number of parameters to iterate over in pulseList
+            % delay - offset from fixedPoint in # of samples
+            % fixedPoint - the delay at which to right align the pulse
+            %     sequence, in # of samples
+            % gated - boolean that determines if gating pulses should be
+            %     calculated for the sequence marker channel
+            % returns:
+            % seq - struct(waveforms, linkLists) with hashtable of
+            %   waveforms and the link list that references the hashtable
 
-            numPatterns = length(patListParams); % check this
+            if ~exist('gated', 'var')
+                gated = 1;
+            end
+
+            numPatterns = length(pulseList);
             
             padWaveform = [0,0];
             padWaveformKey = obj.hashArray(padWaveform);
@@ -532,7 +549,9 @@ classdef PatternGen < handle
                     end
                     entry.key = padWaveformKey;
                 end
-                entry.hasTrigger = 0;
+                entry.hasMarkerData = 0;
+                entry.markerDelay = 0;
+                entry.markerMode = 3; % 0 - pulse, 1 - rising, 2 - falling, 3 - none
                 entry.linkListRepeat = 0;
             end
             
@@ -545,7 +564,7 @@ classdef PatternGen < handle
                 LinkList{1} = buildEntry(padPulse, 1);
                 
                 for ii = 1:numPatterns
-                    LinkList{1+ii} = buildEntry(patListParams{ii}, n);
+                    LinkList{1+ii} = buildEntry(pulseList{ii}, n);
                 end
 
                 % sum lengths
@@ -568,11 +587,116 @@ classdef PatternGen < handle
                 
                 LinkList{end}.repeat = obj.cycleLength - xsum;
                 
+                % add gating markers
+                if gated
+                    LinkList = obj.addGatePulses(LinkList);
+                end
+                
                 LinkLists{n} = LinkList;
             end
             
-            xpat.waveforms = obj.pulseCollection;
-            xpat.linkLists = LinkLists;
+            seq.waveforms = obj.pulseCollection;
+            seq.linkLists = LinkLists;
+        end
+        
+        function seq = addTrigger(obj, seq, delay, width)
+            % adds a trigger pulse to each link list in the sequence
+            % delay - delay (in samples) from the beginning of the link list to the
+            %   trigger rising edge
+            % width - width (in samples) of the trigger pulse
+            for kk = 1:length(seq.linkLists)
+                linkList = seq.linkLists{kk};
+                time = 0;
+                for ii = 1:length(linkList)
+                    entry = linkList{ii};
+                    entryWidth = entry.length * entry.repeat;
+                    % check if rising edge falls within the current entry
+                    if (time + entryWidth > delay)
+                        entry.hasMarkerData = 1;
+                        entry.markerDelay = delay - time;
+                        entry.markerMode = 1; % 0 - pulse, 1 - rising, 2 - falling, 3 - none
+                        % break from the loop, leaving time set to the delay
+                        % from the end of the entry
+                        time = entryWidth - entry.markerDelay;
+                        linkList{ii} = entry;
+                        break
+                    end
+                    time = time + entryWidth;
+                end
+
+                for jj = (ii+1):length(linkList)
+                    entry = linkList{jj};
+                    entryWidth = entry.length * entry.repeat;
+                    % check if falling edge falls within the current entry
+                    if time + entryWidth > width
+                        entry.hasMarkerData = 1;
+                        entry.markerDelay = abs(width - time);
+                        entry.markerMode = 2; % 0 - pulse, 1 - rising, 2 - falling, 3 - none
+                        if width < time
+                            warning('PatternGen:addTrigger:padding', 'Trigger padded to extend over multiple entries.');
+                        end
+                        linkList{jj} = entry;
+                        break
+                    end
+                    time = time + entryWidth;
+                end
+                
+                seq.linkLists{kk} = linkList;
+            end
+        end
+        
+        function linkList = addGatePulses(obj, linkList)
+            % uses the following class buffer parameters to add gating
+            % pulses:
+            %     bufferReset
+            %     bufferPadding
+            %     bufferDelay
+            
+            % we're going to make an assumption to do this:
+            % all pulses have the same buffering, so if a LL entry has
+            % width W, we assume that the pulse width is (W - buffer).
+            %
+            % The strategy is the following: we only add triggers to zero
+            % entries. If the previous entry is a pulse, we need a trigger
+            % to switch low, and if the next entry is a pulse, we need a
+            % trigger to switch high. Depending on the sequence, this may
+            % result in multiple triggers in an entry which may need to be
+            % split when compiled for the particular hardware.
+            
+            state = 0; % 0 = low, 1 = high
+            startDelay = fix(obj.bufferPadding - obj.dBuffer/2 - obj.bufferDelay);
+            endDelay = fix(obj.bufferPadding - obj.dBuffer/2 + obj.bufferDelay);
+            if startDelay < 0 || endDelay < 0
+                error('PatternGen:addGatePulses', 'Negative gate delays');
+            end
+            LLlength = length(linkList);
+            for ii = 1:LLlength
+                entryWidth = linkList{ii}.length * linkList{ii}.repeat;
+                if linkList{ii}.isZero
+                    % check if we need to switch low
+                    if state == 1 && entryWidth > obj.bufferReset
+                        linkList{ii}.hasMarkerData = 1;
+                        linkList{ii}.markerDelay = endDelay;
+                        linkList{ii}.markerMode = 0; % 0 = pulse mode
+                        state = 0;
+                    end
+                    
+                    % check if we need to switch high
+                    if state == 0 && ii + 1 < LLlength && ~linkList{ii+1}.isZero
+                        % add to the markerDelay vector if we already have
+                        % marker data on this entry
+                        if linkList{ii}.hasMarkerData == 1
+                            linkList{ii}.markerDelay(end+1) = entryWidth - startDelay;
+                        else
+                            linkList{ii}.hasMarkerData = 1;
+                            linkList{ii}.markerDelay = entryWidth - startDelay;
+                            linkList{ii}.markerMode = 0;
+                        end
+
+                        state = 1;
+                    end
+                end
+            end % end for
         end
             
         function plotWaveformTable(obj,table)

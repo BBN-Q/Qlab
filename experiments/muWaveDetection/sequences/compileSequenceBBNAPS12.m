@@ -22,6 +22,9 @@ delayDiff = params.TekAWG34.delay - ChParams.delay;
 
 for n = 1:nbrPatterns;
     IQ_seq{n} = pg.build(patseq{floor((n-1)/nbrRepeats)+1}, numsteps, ChParams.delay, fixedPt);
+    
+    % for testing, put a trigger in each sequence
+    %IQ_seq{n} = pg.addTrigger(IQ_seq{n}, fixedPt - 100, 100);
 
     for stepct = 1:numsteps
         [patx, paty] = pg.linkListToPattern(IQ_seq{n}, stepct);
