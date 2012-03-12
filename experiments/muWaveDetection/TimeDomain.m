@@ -5,13 +5,13 @@
  %
  % Description : A GUI sweeper for homodyneDetection2D.
  %
- % Version: 1.0
+ % Version: 2.0
  %
  %    Modified    By    Reason
  %    --------    --    ------
+ %    March 2012  Colm Ryan: Refactored to proper GUI layouts.
  %
- %
- % Copyright 2010 Raytheon BBN Technologies
+ % Copyright 2010,2012 Raytheon BBN Technologies
  %
  % Licensed under the Apache License, Version 2.0 (the "License");
  % you may not use this file except in compliance with the License.
@@ -74,11 +74,10 @@ addpath([ base_path '/common/src/util/'],'-END');
 mainWindow = figure( ...
 	'Tag', 'figure1', ...
 	'Units', 'pixels', ...
-	'Position', [25 25 1250 800], ...
+	'Position', [25 25 1300 700], ...
 	'Name', 'TimeDomain', ...
 	'MenuBar', 'none', ...
 	'NumberTitle', 'off', ...
-	'Color', get(0,'DefaultUicontrolBackgroundColor'), ...
 	'Visible', 'off',...
     'KeyPressFcn', @keyPress);
 
@@ -87,123 +86,136 @@ instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'Spec3gen',
 % load previous settings structs
 [commonSettings, prevSettings] = get_previous_settings('TimeDomain', cfg_path, instrumentNames);
 
-% add instrument panels
-[get_acqiris_settings, set_acqiris_settings] = deviceGUIs.acqiris_settings_gui(mainWindow, 10, 155, prevSettings.InstrParams.scope);
+%Add a grid layout for all the controls
+mainGrid = uiextras.Grid('Parent', mainWindow, 'Spacing', 20, 'Padding', 10);
 
-% create tab group for microwave sources
-warning('off','MATLAB:uitabgroup:OldVersion');
-muWaveTabGroupPanel = uipanel('parent', mainWindow, ...
-	'units', 'pixels', 'position', [350, 490, 405, 290]);
-muWaveTabGroup = uitabgroup('parent', muWaveTabGroupPanel, ...
-	'units', 'pixels', 'position', [2, 2, 400, 285]);
-RFtab = uitab('parent', muWaveTabGroup, 'title', 'RF');
-LOtab = uitab('parent', muWaveTabGroup, 'title', 'LO');
-Spectab = uitab('parent', muWaveTabGroup, 'title', 'Spec');
-Spec2tab = uitab('parent', muWaveTabGroup, 'title', 'Spec 2');
-Spec3tab = uitab('parent', muWaveTabGroup, 'title', 'Spec 3');
+%Add the digitizer panel
+leftVBox = uiextras.VBox('Parent', mainGrid, 'Spacing', 10);
+[get_digitizer_settings, set_digitizer_settings] = deviceGUIs.digitizer_settings_gui(leftVBox, prevSettings.InstrParams.scope);
 
-get_rf_settings = deviceGUIs.uW_source_settings_GUI(RFtab, 10, 10, 'RF', prevSettings.InstrParams.RFgen);
-get_lo_settings = deviceGUIs.uW_source_settings_GUI(LOtab, 10, 10, 'LO', prevSettings.InstrParams.LOgen);
-get_spec_settings = deviceGUIs.uW_source_settings_GUI(Spectab, 10, 10, 'Spec', prevSettings.InstrParams.Specgen);
-get_spec2_settings = deviceGUIs.uW_source_settings_GUI(Spec2tab, 10, 10, 'Spec2', prevSettings.InstrParams.Spec2gen);
-get_spec3_settings = deviceGUIs.uW_source_settings_GUI(Spec3tab, 10, 10, 'Spec3', prevSettings.InstrParams.Spec3gen);
+%Add the Run/Stop buttons and scope checkbox
+tmpHBox = uiextras.HButtonBox('Parent', leftVBox, 'ButtonSize', [120, 40]);
+runButton = uicontrol('Parent', tmpHBox, 'Style', 'pushbutton', 'String', 'Run', 'FontSize', 10, 'Callback', @run_callback);
+stopButton = uicontrol('Parent', tmpHBox, 'Style', 'pushbutton', 'String', 'Stop', 'FontSize', 10, 'Callback', @(~,~)warndlg('Oops, Not implemented yet') );
+scopeButton = uicontrol('Parent', tmpHBox, 'Style', 'checkbox', 'FontSize', 10, 'String', 'Scope:'); 
 
-% add AWGs
-AWGPanel = uipanel('parent', mainWindow, ...
-	'units', 'pixels', 'position', [350, 235, 405, 260]);
-AWGTabGroup = uitabgroup('parent', AWGPanel, ...
-	'units', 'pixels', 'position', [2, 2, 400, 255]);
-TekTab = uitab('parent', AWGTabGroup, 'title', 'Tek');
-APSTab = uitab('parent', AWGTabGroup, 'title', 'APS');
+leftVBox.Sizes = [-4,-1];
 
-[get_tekAWG_settings, set_tekAWG_GUI] = deviceGUIs.AWG5014_settings_GUI(TekTab, 5, 5, 'TekAWG', prevSettings.InstrParams.TekAWG);
-[get_APS_settings, set_APS_settings] = deviceGUIs.APS_settings_GUI(APSTab, 5, 5, 'BBN APS', prevSettings.InstrParams.BBNAPS);
+%Add the microwave sources
+middleVBox = uiextras.VBox('Parent', mainGrid, 'Spacing', 10);
+sourcePanel = uiextras.Panel('Parent', middleVBox, 'Title', 'Microwave Sources','FontSize',12, 'Padding', 5);
+sourceTabPanel = uiextras.TabPanel('Parent', sourcePanel, 'Padding', 5, 'HighlightColor', 'k');
+get_rf_settings = deviceGUIs.uW_source_settings_GUI(sourceTabPanel,'RF', prevSettings.InstrParams.RFgen);
+get_lo_settings = deviceGUIs.uW_source_settings_GUI(sourceTabPanel, 'LO', prevSettings.InstrParams.LOgen);
+get_spec_settings = deviceGUIs.uW_source_settings_GUI(sourceTabPanel, 'Spec', prevSettings.InstrParams.Specgen);
+get_spec2_settings = deviceGUIs.uW_source_settings_GUI(sourceTabPanel, 'Spec2', prevSettings.InstrParams.Spec2gen);
+get_spec3_settings = deviceGUIs.uW_source_settings_GUI(sourceTabPanel, 'Spec3', prevSettings.InstrParams.Spec3gen);
+sourceTabPanel.TabNames = {'RF','LO','Spec','Spec2','Spec3'};
+sourceTabPanel.SelectedChild = 1;
 
-% add DC sources
-get_DCsource_settings = deviceGUIs.DCBias_settings_GUI(mainWindow, 240, 775, prevSettings.InstrParams.BBNdc);
+%Add the AWG's
+AWGPanel = uiextras.Panel('Parent', middleVBox, 'Title', 'AWG''s','FontSize',12, 'Padding', 5);
+AWGTabPanel = uiextras.TabPanel('Parent', AWGPanel, 'Padding', 5, 'HighlightColor', 'k');
+[get_tekAWG_settings, set_tekAWG_GUI] = deviceGUIs.AWG5014_settings_GUI(AWGTabPanel, 'TekAWG', prevSettings.InstrParams.TekAWG);
+[get_APS_settings, set_APS_settings] = deviceGUIs.APS_settings_GUI(AWGTabPanel, 'BBN APS', prevSettings.InstrParams.BBNAPS);
+AWGTabPanel.TabNames = {'Tektronix','APS'};
+AWGTabPanel.SelectedChild = 1;
 
-% add digital Homodyne
-get_digitalHomodyne_settings = digitalHomodyne_GUI(mainWindow, 140, 350, prevSettings.ExpParams.digitalHomodyne);
+%Add the Sweeps's
+rightVBox = uiextras.VBox('Parent', mainGrid, 'Spacing', 10);
+SweepPanel = uiextras.Panel('Parent', rightVBox, 'Title', 'Sweeps','FontSize',12, 'Padding', 5);
+SweepTabPanel = uiextras.TabPanel('Parent', SweepPanel, 'Padding', 5, 'HighlightColor', 'k');
+get_freqA_settings = sweepGUIs.FrequencySweepGUI(SweepTabPanel, 'A');
+get_power_settings = sweepGUIs.PowerSweepGUI(SweepTabPanel, '');
+get_phase_settings = sweepGUIs.PhaseSweepGUI(SweepTabPanel, '');
+[get_time_settings, set_time_settings] = sweepGUIs.TimeSweepGUI(SweepTabPanel, '');
 
-% add filter settings
-get_boxcarFilter_settings = boxcarFilter_GUI(mainWindow, 50, 350, prevSettings.ExpParams.filter);
 
-% add tab group for sweeps
-sweepsTabGroupPanel = uipanel('parent', mainWindow, ...
-	'units', 'pixels', 'position', [775, 620, 440, 160]);
-sweepsTabGroup = uitabgroup('parent', sweepsTabGroupPanel, ...
-	'units', 'pixels', 'position', [2, 2, 430, 160]);
-FreqAtab = uitab('parent', sweepsTabGroup, 'title', 'Freq A');
-Powertab = uitab('parent', sweepsTabGroup, 'title', 'Power');
-Phasetab = uitab('parent', sweepsTabGroup, 'title', 'Phase');
-DCtab = uitab('parent', sweepsTabGroup, 'title', 'DC');
-TekChtab = uitab('parent', sweepsTabGroup, 'title', 'TekCh');
-Timetab = uitab('parent', sweepsTabGroup, 'title', 'Time');
+SweepTabPanel.TabNames = {'Freq. A', 'Power', 'Phase', 'X-Axis'};
+SweepTabPanel.SelectedChild = 1;
 
-get_freqA_settings = sweepGUIs.FrequencySweepGUI(FreqAtab, 5, 2, 'A');
-get_power_settings = sweepGUIs.PowerSweepGUI(Powertab, 5, 2, '');
-get_phase_settings = sweepGUIs.PhaseSweepGUI(Phasetab, 5, 2, '');
-get_dc_settings = sweepGUIs.DCSweepGUI(DCtab, 5, 2, '');
-get_tekChannel_settings = sweepGUIs.TekChannelSweepGUI(TekChtab, 5, 2, '');
-[get_time_settings, set_time_settings] = sweepGUIs.TimeSweepGUI(Timetab, 5, 2, '');
+% Add the measurement settings panels
+MeasurementPanel = uiextras.Panel('Parent', rightVBox, 'Title', 'Measurement Processing','FontSize',12, 'Padding', 5);
+measPanelVBox = uiextras.VBox('Parent', MeasurementPanel, 'Spacing', 5);
+get_digitalHomodyne_settings = digitalHomodyne_GUI(measPanelVBox, prevSettings.ExpParams.digitalHomodyne);
+get_boxcarFilter_settings = boxcarFilter_GUI(measPanelVBox, prevSettings.ExpParams.filter);
 
-% add sweep/loop selector
-fastLoop = labeledDropDown(mainWindow, [775 550 120 25], 'Fast Loop', ...
-	{'frequencyA', 'power', 'phase', 'dc', 'TekCh', 'CrossDriveTuneUp', 'Repeat', 'nothing'});
+%Add some of the experiment setup buttons in a panel
+ExpSetupPanel = uiextras.Panel('Parent', rightVBox, 'Title', 'Experiment Setup','FontSize',12, 'Padding', 5);
+ExpSetupVBox = uiextras.VBox('Parent', ExpSetupPanel, 'Spacing', 5);
 
-% add path and file controls\
-%Crude hack to pull out a handle to the experiment editbox.
-[get_path_and_file, exptBox] = path_and_file_controls(mainWindow, [910 525], commonSettings, prevSettings);
+%Add sweep/loop selector
+tmpGrid = uiextras.Grid('Parent', ExpSetupVBox, 'Spacing', 5);
+[~, ~, fastLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Fast Loop:', 'fastloop',  {'frequencyA', 'power', 'phase', 'dc', 'TekCh', 'CrossDriveTuneUp', 'Repeat', 'nothing'});
+[~, ~, softAvgs] = uiextras.labeledEditBox(tmpGrid, 'Soft Averages:', 'softAvgs', '1');
+[~, ~, deviceNameHandle] = uiextras.labeledEditBox(tmpGrid, 'Device Name:', 'deviceName', '');
+[~, ~, exptBox] = uiextras.labeledEditBox(tmpGrid, 'Experiment:', 'expName', '');
+set(tmpGrid, 'RowSizes', [-1,-1], 'ColumnSizes', [-1, -1]);
 
-% add soft averages control
-softAvgs = uicontrol(mainWindow, ...
-    'Style', 'edit', ...
-    'BackgroundColor', 'white', ...
-    'String', '1', ...
-    'Position', [775 495 100 25]);
+tmpHBox = uiextras.HBox('Parent',ExpSetupVBox);
+[~, ~, fileNum] = uiextras.labeledEditBox(tmpHBox, 'File Number:', 'fileNum', '001');
+tmpButtonBox = uiextras.HButtonBox('Parent', tmpHBox);
+uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Reset', 'Callback', @(~,~)warndlg('Oops, Not implemented yet'));
 
-% soft avgs label
-uicontrol(mainWindow, 'Style' ,'text', 'String', 'Soft Avgs', 'Position', [775 520 100 25]);
-
-% add check box for scope
-scopeButton = uicontrol(mainWindow, ...
-    'Style', 'checkbox', ...
-    'Units', 'pixels', ...
-    'Position', [775 200 25 25]);
-% scope box label
-uicontrol(mainWindow,...
-    'Style', 'text',...
-    'HorizontalAlignment', 'left',...
-    'Units', 'pixels', ...
-    'Position', [800 195 80 25],...
-    'String', 'Scope');
-
-% add run button
-runHandle = uicontrol(mainWindow, ...
-	'Style', 'pushbutton', ...
-	'String', 'Run', ...
-	'Position', [50 50, 75, 30], ...
-	'Callback', {@run_callback});
+tmpHBox = uiextras.HBox('Parent',ExpSetupVBox, 'Spacing', 5);
+uicontrol('Parent', tmpHBox, 'Style', 'text', 'String', 'Data Path:', 'FontSize', 10);
+uicontrol('Parent', tmpHBox, 'Style', 'edit', 'BackgroundColor', [1,1,1]);
+tmpButtonBox = uiextras.HButtonBox('Parent', tmpHBox);
+uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Choose', 'Callback', @(~,~)warndlg('Oops, Not implemented yet'));
+uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Today', 'Callback', @(~,~)warndlg('Oops, Not implemented yet'));
+tmpHBox.Sizes = [-1, -2, -1];
 
 %Add the experiment quick picker
 GUIgetters = containers.Map();
 GUIgetters('TekAWG') = get_tekAWG_settings;
 GUIgetters('BBNAPS') = get_APS_settings;
-GUIgetters('digitizer') = get_acqiris_settings;
+GUIgetters('digitizer') = get_digitizer_settings;
 GUIgetters('xaxis') = get_time_settings;
 GUIsetters = containers.Map();
 GUIsetters('TekAWG') = set_tekAWG_GUI;
 GUIsetters('BBNAPS') = set_APS_settings;
-GUIsetters('digitizer') = set_acqiris_settings;
+GUIsetters('digitizer') = set_digitizer_settings;
 GUIsetters('xaxis') = set_time_settings;
 GUIsetters('exptBox') = exptBox;
 
+ExperimentQuickPicker_GUI(ExpSetupVBox, GUIgetters, GUIsetters);
 
-ExperimentQuickPicker_GUI(mainWindow, 50, 700, GUIgetters, GUIsetters);
+ExpSetupVBox.Sizes = [-2, -1, -1, -3];
 
 
 
-% show mainWindow
+
+%Setup the file counter and initialize the field
+global counter;
+if ~isa(counter, 'Counter')
+    initial_counter_value = 1;
+    if isfield(commonSettings, 'counter')
+        initial_counter_value = commonSettings.counter + 1;
+    end
+    counter = Counter(initial_counter_value);
+end
+
+
+%Try and patch up the sizing
+uiextras.Empty('Parent', rightVBox);
+rightVBox.Sizes = [-1, -1.25, -1.75, -.1];
+set(mainGrid, 'RowSizes', [-1], 'ColumnSizes', [-1.05 -1.2, -1]);
+        
+% 
+% % add DC sources
+% get_DCsource_settings = deviceGUIs.DCBias_settings_GUI(mainWindow, 240, 775, prevSettings.InstrParams.BBNdc);
+% 
+% 
+% get_dc_settings = sweepGUIs.DCSweepGUI(DCtab, 5, 2, '');
+% get_tekChannel_settings = sweepGUIs.TekChannelSweepGUI(TekChtab, 5, 2, '');
+% 
+% 
+% % add path and file controls\
+% %Crude hack to pull out a handle to the experiment editbox.
+% [get_path_and_file, exptBox] = path_and_file_controls(mainWindow, [910 525], commonSettings, prevSettings);
+
+
+%Now that everything is setup draw the window
 drawnow;
 set(mainWindow, 'Visible', 'on');
 

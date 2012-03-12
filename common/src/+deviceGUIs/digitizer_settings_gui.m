@@ -1,4 +1,4 @@
-function settings_fcn = digitizer_settings_gui(parent, left, bottom, settings)
+function [get_settings_fcn, set_settings_fcn] = digitizer_settings_gui(parent, settings)
 % DIGITIZER_SETTINGS_GUID
 %-------------------------------------------------------------------------------
 % File name   : acqiris_settings_guid.m
@@ -26,7 +26,7 @@ function settings_fcn = digitizer_settings_gui(parent, left, bottom, settings)
 handles = struct();
 
 % If there is no parent figure given, generate a new one
-if nargin < 1 || ~isnumeric(parent)
+if nargin < 1 
     handles.parent = figure( ...
         'Tag', 'figure1', ...
         'Units', 'characters', ...
@@ -40,7 +40,7 @@ if nargin < 1 || ~isnumeric(parent)
     bottom = 0.5;
     %Otherwise we are placed into a parent container so grab a handle to that
 else
-    handles.parent = figure(parent);
+    handles.parent = parent;
 end
 
 % Instrument allowable parameters and mapping to API parameters
@@ -97,45 +97,27 @@ end
 %card and the current settings
 card_switch()
 
-%Return a function handle to the subfunction which returns all the current
-%settings
-settings_fcn = @get_settings;
+% Assign function handles output
+get_settings_fcn = @get_settings;
+set_settings_fcn = @set_gui_elements;
+
 
 %% ---------------------------------------------------------------------------
 %Main function layout all the GUI elements
     function build_gui()
         % Creation of all uicontrols
         
-        %Base settings for each type
-        baseLabelString = {'Style', 'text',  'HorizontalAlignment', 'right', 'FontSize', 10};
-        basePopUpMenu = {'Style','popupmenu', 'FontSize',10, 'BackgroundColor', [1 1 1], 'String', {''}};
-        baseEdit = {'Style','edit','FontSize', 10, 'BackgroundColor', [1 1 1], 'HorizontalAlignment', 'right'};
         
-        
-        function [tmpHBox, labelHandle, editBoxHandle] = labeledEditBox(parentIn, labelString, editBoxTag, defaultString)
-            tmpHBox = uiextras.HButtonBox('Parent', parentIn, 'Spacing', 10);
-            labelHandle = uicontrol(baseLabelString{:}, 'Parent', tmpHBox, 'String', labelString);
-            editBoxHandle = uicontrol( baseEdit{:}, 'Parent', tmpHBox, 'Tag', editBoxTag , 'String', defaultString);
-%             set(tmpHBox, 'Sizes', [-1, 90])
-        end
-        
-        function [tmpHBox, labelHandle, popUpMenuHandle] = labeledPopUpMenu(parentIn, labelString, menuTag, strings)
-            tmpHBox = uiextras.HButtonBox('Parent', parentIn, 'Spacing', 10);
-            labelHandle = uicontrol(baseLabelString{:}, 'Parent', tmpHBox, 'String', labelString);
-            popUpMenuHandle = uicontrol( basePopUpMenu{:}, 'Parent', tmpHBox, 'Tag', menuTag , 'String', strings);
-%             set(tmpHBox, 'Sizes', [-1, 100])
-        end
-        
-        %Create the main panel containing everything with a VBox layout
+         %Create the main panel containing everything with a VBox layout
         handles.mainPanel = uiextras.Panel('Parent', handles.parent, 'Title', 'Digitizer Settings', 'Padding', 5, 'FontSize', 12 );
         handles.mainVBox = uiextras.VBox('Parent',handles.mainPanel, 'Spacing', 10);
         
         %Add the digitizer card and mode options
         tmpGrid1 = uiextras.Grid('Parent', handles.mainVBox, 'Spacing', 10, 'Padding', 5);
         
-        [~, ~, handles.cardType] = labeledPopUpMenu(tmpGrid1, 'Card Type:', 'cardType', {'AcqirisPT120', 'AlazarATS9870'});
+        [~, ~, handles.cardType] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Type:', 'cardType', {'AcqirisPT120', 'AlazarATS9870'});
         set(handles.cardType, 'Callback', @card_switch);
-        [~, ~, handles.acquire_mode] = labeledPopUpMenu(tmpGrid1, 'Card Mode:', 'acquire_mode', {''});
+        [~, ~, handles.acquire_mode] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Mode:', 'acquire_mode', {''});
         
         set(tmpGrid1, 'RowSizes', [-1], 'ColumnSizes', [-1, -1]);
         
@@ -143,11 +125,11 @@ settings_fcn = @get_settings;
         handles.averagerPanel = uiextras.Panel('Parent', handles.mainVBox, 'Title', 'Averager', 'Padding', 5, 'FontSize', 11);
         tmpGrid2 = uiextras.Grid('Parent', handles.averagerPanel, 'Spacing', 10, 'Padding', 10);
         
-        [~, ~, handles.nbrWaveforms] = labeledEditBox(tmpGrid2, 'Waveforms:', 'nbrWaveforms', '10000');
-        [~, ~, handles.nbrRoundRobins] = labeledEditBox(tmpGrid2, 'Round Robins:', 'nbrRoundRobins', '1');
-        [~, ~, handles.nbrSegments] = labeledEditBox(tmpGrid2, 'Nbr. Segments:', 'nbrSegments', '1');
-        [~, ~, handles.ditherRange] = labeledEditBox(tmpGrid2, 'Dither Range:', 'ditherRange', '0');
-        [~, ~, handles.trigResync] = labeledPopUpMenu(tmpGrid2, 'Trigger:', 'trigResync', {''});
+        [~, ~, handles.nbrWaveforms] = uiextras.labeledEditBox(tmpGrid2, 'Waveforms:', 'nbrWaveforms', '10000');
+        [~, ~, handles.nbrRoundRobins] = uiextras.labeledEditBox(tmpGrid2, 'Round Robins:', 'nbrRoundRobins', '1');
+        [~, ~, handles.nbrSegments] = uiextras.labeledEditBox(tmpGrid2, 'Segments:', 'nbrSegments', '1');
+        [~, ~, handles.ditherRange] = uiextras.labeledEditBox(tmpGrid2, 'Dither Range:', 'ditherRange', '0');
+        [~, ~, handles.trigResync] = uiextras.labeledPopUpMenu(tmpGrid2, 'Trigger:', 'trigResync', {''});
         
         set(tmpGrid2, 'RowSizes', -1*ones([1,3]), 'ColumnSizes', [-1, -1]);
         
@@ -155,15 +137,15 @@ settings_fcn = @get_settings;
         handles.acquirePanel = uiextras.Panel('Parent', handles.mainVBox, 'Title', 'Acquisition', 'FontSize', 11);
         tmpGrid3 = uiextras.Grid('Parent', handles.acquirePanel, 'Spacing', 10, 'Padding', 10);
         
-        [~, handles.statictext_vertScale, handles.vert_scale] = labeledPopUpMenu(tmpGrid3, 'Full Scale:', 'vert_scale', {''});
-        [~, ~, handles.offset] = labeledEditBox(tmpGrid3, 'Offset:', 'offset', '0');
-        [~, ~, handles.delayTime] = labeledEditBox(tmpGrid3, 'Delay:', 'delayTime', '0');
-        [~, ~, handles.recordLength] = labeledEditBox(tmpGrid3, 'Samples:', 'recordLength', '0');
-        [~, ~, handles.samplingRate] = labeledPopUpMenu(tmpGrid3, 'Sampling Rate:', 'samplingRate', {''});
-        [~, ~, handles.vert_coupling] = labeledPopUpMenu(tmpGrid3, 'Coupling:', 'vert_coupling', {''});
-        [~, ~, handles.bandwidth] = labeledPopUpMenu(tmpGrid3, 'Bandwidth:', 'bandwidth', {''});
-        [~, ~, handles.channel] = labeledPopUpMenu(tmpGrid3, 'Channel:', 'channel', {''});
-        [~, ~, handles.clockType] = labeledPopUpMenu(tmpGrid3, 'Clock:', 'clockType', {''});
+        [~, handles.statictext_vertScale, handles.vert_scale] = uiextras.labeledPopUpMenu(tmpGrid3, 'Scale:', 'vert_scale', {''});
+        [~, ~, handles.offset] = uiextras.labeledEditBox(tmpGrid3, 'Offset:', 'offset', '0');
+        [~, ~, handles.delayTime] = uiextras.labeledEditBox(tmpGrid3, 'Delay:', 'delayTime', '0');
+        [~, ~, handles.recordLength] = uiextras.labeledEditBox(tmpGrid3, 'Samples:', 'recordLength', '0');
+        [~, ~, handles.samplingRate] = uiextras.labeledPopUpMenu(tmpGrid3, 'Samp. Rate:', 'samplingRate', {''});
+        [~, ~, handles.vert_coupling] = uiextras.labeledPopUpMenu(tmpGrid3, 'Coupling:', 'vert_coupling', {''});
+        [~, ~, handles.bandwidth] = uiextras.labeledPopUpMenu(tmpGrid3, 'Bandwidth:', 'bandwidth', {''});
+        [~, ~, handles.channel] = uiextras.labeledPopUpMenu(tmpGrid3, 'Channel:', 'channel', {''});
+        [~, ~, handles.clockType] = uiextras.labeledPopUpMenu(tmpGrid3, 'Clock:', 'clockType', {''});
         
         set(tmpGrid3, 'RowSizes', -1*ones([1,5]), 'ColumnSizes', [-1, -1]);
         
@@ -171,10 +153,10 @@ settings_fcn = @get_settings;
         handles.triggerPanel = uiextras.Panel('Parent', handles.mainVBox, 'Title', 'Trigger', 'FontSize', 11);
         tmpGrid4 = uiextras.Grid('Parent', handles.triggerPanel, 'Spacing', 10, 'Padding', 10);
         
-        [~, ~, handles.trigger_level] = labeledEditBox(tmpGrid4, 'Level(mV):', 'trigger_level', '500');
-        [~, ~, handles.trigger_slope] = labeledPopUpMenu(tmpGrid4, 'Slope:', 'trigger_slope', {''});
-        [~, ~, handles.trigger_coupling] = labeledPopUpMenu(tmpGrid4, 'Coupling:', 'trigger_coupling', {''});
-        [~, ~, handles.trigger_ch] = labeledPopUpMenu(tmpGrid4, 'Channel:', 'trigger_ch', {''});
+        [~, ~, handles.trigger_level] = uiextras.labeledEditBox(tmpGrid4, 'Level(mV):', 'trigger_level', '500');
+        [~, ~, handles.trigger_slope] = uiextras.labeledPopUpMenu(tmpGrid4, 'Slope:', 'trigger_slope', {''});
+        [~, ~, handles.trigger_coupling] = uiextras.labeledPopUpMenu(tmpGrid4, 'Coupling:', 'trigger_coupling', {''});
+        [~, ~, handles.trigger_ch] = uiextras.labeledPopUpMenu(tmpGrid4, 'Channel:', 'trigger_ch', {''});
         
         set(tmpGrid4, 'RowSizes', -1*ones([1,2]), 'ColumnSizes', [-1, -1]);
         
@@ -241,12 +223,9 @@ settings_fcn = @get_settings;
         switch scope_settings.deviceName
             case 'AlazarATS9870'
                 avgSettings.trigResync = false;
-            case 'AcquirisPT240'
+            case {'AcqirisPT120'}
                 avgSettings.trigResync = cardParams.resyncs(get_selected(handles.trigResync));
         end
-        
-        %disp(avgSettings);
-        %scope_settings.channel_on = 1;
         scope_settings.averager = avgSettings;
     end
 
@@ -271,7 +250,7 @@ settings_fcn = @get_settings;
                 cardParams.samplingRates = containers.Map({'1M','2M','2.5M','4M','5M','10M','20M','25M','40M','50M','100M','200M','250M','400M','500M','1G','2G'},{1e6, 2e6, 2.5e6, 4e6, 5e6, 10e6, 20e6, 25e6, 40e6, 50e6, 100e6, 200e6, 250e6, 400e6, 500e6, 1e9, 2e9});
                 
                 %Update the range text
-                set(handles.statictext_vertScale,'String','Full Scale (Vpp):');
+                set(handles.statictext_vertScale,'String','Scale (Vpp):');
             case 'AlazarATS9870'
                 cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {0, 2});
                 cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {1, 5, 7});
@@ -285,7 +264,7 @@ settings_fcn = @get_settings;
                 cardParams.samplingRates = containers.Map({'1M','10M','100M','250M','500M','1G'},{1e6, 10e6, 100e6, 250e6, 500e6, 1e9});
                 
                 %Update the range text
-                set(handles.statictext_vertScale,'String','Full Scale (Vp):');
+                set(handles.statictext_vertScale,'String','Scale (Vp):');
                 
         end
         
@@ -343,10 +322,10 @@ settings_fcn = @get_settings;
             defaults.vertical.vert_coupling = vert_couplingsInv(settings.vertical.vert_coupling);
             defaults.vertical.bandwidth = bandwidthsInv(settings.vertical.bandwidth);
             % trigger
-            defaults.trigger.trigger_level = settings.trigger.trigger_level;
-            defaults.trigger.trigger_ch = trigChannelsInv(settings.trigger.trigger_ch);
-            defaults.trigger.trigger_coupling = trigCouplingsInv(settings.trigger.trigger_coupling);
-            defaults.trigger.trigger_slope = trigSlopesInv(settings.trigger.trigger_slope);
+            defaults.trigger.level = settings.trigger.level;
+            defaults.trigger.source = trigChannelsInv(settings.trigger.source);
+            defaults.trigger.coupling = trigCouplingsInv(settings.trigger.coupling);
+            defaults.trigger.slope = trigSlopesInv(settings.trigger.slope);
             % averaging
             defaults.averager.recordLength = settings.averager.recordLength;
             defaults.averager.nbrSegments = settings.averager.nbrSegments;
