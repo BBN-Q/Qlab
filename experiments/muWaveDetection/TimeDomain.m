@@ -82,7 +82,7 @@ mainWindow = figure( ...
     'KeyPressFcn', @keyPress);
 
 % list of instruments expected in the settings structs
-instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'Spec3gen', 'TekAWG', 'BBNAPS', 'BBNdc'};
+instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'Spec3gen', 'TekAWG', 'BBNAPS'};
 % load previous settings structs
 [commonSettings, prevSettings] = get_previous_settings('TimeDomain', cfg_path, instrumentNames);
 
@@ -159,7 +159,7 @@ uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Reset', 'Cal
 
 tmpHBox = uiextras.HBox('Parent',ExpSetupVBox, 'Spacing', 5);
 uicontrol('Parent', tmpHBox, 'Style', 'text', 'String', 'Data Path:', 'FontSize', 10);
-uicontrol('Parent', tmpHBox, 'Style', 'edit', 'BackgroundColor', [1,1,1]);
+uicontrol('Parent', tmpHBox, 'Style', 'edit', 'BackgroundColor', [1,1,1], 'Max', 2, 'Min', 0);
 tmpButtonBox = uiextras.HButtonBox('Parent', tmpHBox);
 uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Choose', 'Callback', @(~,~)warndlg('Oops, Not implemented yet'));
 uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Today', 'Callback', @(~,~)warndlg('Oops, Not implemented yet'));
@@ -183,8 +183,6 @@ ExperimentQuickPicker_GUI(ExpSetupVBox, GUIgetters, GUIsetters);
 ExpSetupVBox.Sizes = [-2, -1, -1, -3];
 
 
-
-
 %Setup the file counter and initialize the field
 global counter;
 if ~isa(counter, 'Counter')
@@ -199,7 +197,7 @@ end
 %Try and patch up the sizing
 uiextras.Empty('Parent', rightVBox);
 rightVBox.Sizes = [-1, -1.25, -1.75, -.1];
-set(mainGrid, 'RowSizes', [-1], 'ColumnSizes', [-1.05 -1.2, -1]);
+set(mainGrid, 'RowSizes', -1, 'ColumnSizes', [-1.05 -1.2, -1]);
         
 % 
 % % add DC sources
@@ -221,7 +219,7 @@ set(mainWindow, 'Visible', 'on');
 
 % add run callback
 
-	function run_callback(hObject, eventdata)
+	function run_callback(~, ~)
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		%%%%%%%%%%%%%%%%%%%%%%%     WRITE CONFIG     %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -231,7 +229,7 @@ set(mainWindow, 'Visible', 'on');
 		settings = struct();
 		
 		% get instrument settings
-		settings.InstrParams.scope = get_acqiris_settings();
+		settings.InstrParams.scope = get_digitizer_settings();
 		settings.InstrParams.RFgen = get_rf_settings();
 		settings.InstrParams.LOgen = get_lo_settings();
 		settings.InstrParams.Specgen = get_spec_settings();
@@ -239,20 +237,23 @@ set(mainWindow, 'Visible', 'on');
         settings.InstrParams.Spec3gen = get_spec3_settings();
 		settings.InstrParams.TekAWG = get_tekAWG_settings();
         settings.InstrParams.BBNAPS = get_APS_settings();
-		settings.InstrParams.BBNdc = get_DCsource_settings();
 		
 		% get sweep settings
 		settings.SweepParams.frequencyA = get_freqA_settings();
 		settings.SweepParams.power = get_power_settings();
 		settings.SweepParams.phase = get_phase_settings();
-		settings.SweepParams.dc = get_dc_settings();
+% 		settings.SweepParams.dc = get_dc_settings();
         settings.SweepParams.time = get_time_settings();
-        settings.SweepParams.TekCh = get_tekChannel_settings();
+%         settings.SweepParams.TekCh = get_tekChannel_settings();
+  
+        %%%%%%%%%%%%%%%%%%%%%%% Hacked-in sweeps %%%%%%%%%%%%%%%%%%%%%%%%%%
         settings.SweepParams.CrossDriveTuneUp = struct('type', 'sweeps.CrossDriveTuneUp');
         settings.SweepParams.Repeat = struct('type', 'sweeps.Repeat', 'stop', 20);
 		% add 'nothing' sweep
 		settings.SweepParams.nothing = struct('type', 'sweeps.Nothing');
-		
+		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        
         % time is always sweep number 1
         % label fast loop as sweep 2
         settings.SweepParams.time.number = 1;
@@ -316,7 +317,7 @@ set(mainWindow, 'Visible', 'on');
 		status = 0;
     end
 
-    function keyPress(src, event)
+    function keyPress(~, event)
         if strcmp(event.Modifier{1},'control') && strcmp(event.Key,'r')
             run_callback()
         end
@@ -324,14 +325,4 @@ set(mainWindow, 'Visible', 'on');
 
 end
 
-% find the nth parent of directory given in 'path'
-function str = parent_dir(path, n)
-	str = path;
-	if nargin < 2
-		n = 1;
-	end
-	for j = 1:n
-		pos = find(str == filesep, 1, 'last');
-		str = str(1:pos-1);
-	end
-end
+
