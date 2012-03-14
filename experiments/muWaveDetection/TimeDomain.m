@@ -46,45 +46,43 @@ clear temp;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % base_path is up two levels from this file
-[base_path] = fileparts(mfilename('fullpath'));
-base_path = parent_dir(base_path, 2);
+base_path = fileparts(mfilename('fullpath'));
 
-data_path = [base_path '/experiments/muWaveDetection/data/'];
-cfg_path = [base_path '/experiments/muWaveDetection/cfg/'];
+data_path = [base_path, filesep 'data'];
+cfg_path = [base_path, filesep, 'cfg'];
 basename = 'TimeDomain';
 
 if nargin < 1
-	cfg_file_name = [cfg_path 'TimeDomain.cfg'];
+	cfg_file_name = fullfile(cfg_path, 'TimeDomain.cfg');
 end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%     INITIALIZE PATH     %%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%restoredefaultpath
-addpath([ base_path '/experiments/muWaveDetection/'],'-END');
-addpath([ base_path '/common/src'],'-END');
-addpath([ base_path '/experiments/muWaveDetection/src'],'-END');
-addpath([ base_path '/common/src/util/'],'-END');
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%     CREATE GUI     %%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-mainWindow = figure( ...
-	'Tag', 'figure1', ...
-	'Units', 'pixels', ...
-	'Position', [25 25 1300 700], ...
-	'Name', 'TimeDomain', ...
-	'MenuBar', 'none', ...
-	'NumberTitle', 'off', ...
-	'Visible', 'off',...
-    'KeyPressFcn', @keyPress);
 
 % list of instruments expected in the settings structs
 instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'Spec3gen', 'TekAWG', 'BBNAPS'};
 % load previous settings structs
 [commonSettings, prevSettings] = get_previous_settings('TimeDomain', cfg_path, instrumentNames);
+
+%Setup the file counter 
+global counter;
+if ~isa(counter, 'Counter')
+    initial_counter_value = 1;
+    if isfield(commonSettings, 'counter')
+        initial_counter_value = commonSettings.counter + 1;
+    end
+    counter = Counter(initial_counter_value);
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%     CREATE GUI     %%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+mainWindow = figure( ...
+	'Tag', 'figure1', ...
+	'Units', 'pixels', ...
+	'Position', [50 50 1300 700], ...
+	'Name', 'TimeDomain', ...
+	'MenuBar', 'none', ...
+	'NumberTitle', 'off', ...
+	'Visible', 'off',...
+    'KeyPressFcn', @keyPress);
 
 %Add a grid layout for all the controls
 mainGrid = uiextras.Grid('Parent', mainWindow, 'Spacing', 20, 'Padding', 10);
@@ -148,21 +146,27 @@ ExpSetupVBox = uiextras.VBox('Parent', ExpSetupPanel, 'Spacing', 5);
 tmpGrid = uiextras.Grid('Parent', ExpSetupVBox, 'Spacing', 5);
 [~, ~, fastLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Fast Loop:', 'fastloop',  {'frequencyA', 'power', 'phase', 'dc', 'TekCh', 'CrossDriveTuneUp', 'Repeat', 'nothing'});
 [~, ~, softAvgs] = uiextras.labeledEditBox(tmpGrid, 'Soft Averages:', 'softAvgs', '1');
-[~, ~, deviceNameHandle] = uiextras.labeledEditBox(tmpGrid, 'Device Name:', 'deviceName', '');
-[~, ~, exptBox] = uiextras.labeledEditBox(tmpGrid, 'Experiment:', 'expName', '');
+[~, ~, deviceName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Device Name:', 'deviceName', '');
+[~, ~, exptName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Experiment:', 'expName', '');
 set(tmpGrid, 'RowSizes', [-1,-1], 'ColumnSizes', [-1, -1]);
 
 tmpHBox = uiextras.HBox('Parent',ExpSetupVBox);
-[~, ~, fileNum] = uiextras.labeledEditBox(tmpHBox, 'File Number:', 'fileNum', '001');
+[~, ~, fileNum_EditBox] = uiextras.labeledEditBox(tmpHBox, 'File Number:', 'fileNum', '001');
+%Add a listener to the file number edit box to update with the counter value
+fileNumberListener = addlistener(counter, 'valueChanged', @(src,~) set(fileNum_EditBox, 'String', sprintf('%03d',src.value)));
+%Clear the listener when the uicontrol is delete so they don't pile up
+set(fileNum_EditBox, 'DeleteFcn', @(~,~) delete(fileNumberListener));
 tmpButtonBox = uiextras.HButtonBox('Parent', tmpHBox);
-uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Reset', 'Callback', @(~,~)warndlg('Oops, Not implemented yet'));
+%Reset button is added below because we can't forward reference the
+%dataPath_EditBox
 
 tmpHBox = uiextras.HBox('Parent',ExpSetupVBox, 'Spacing', 5);
 uicontrol('Parent', tmpHBox, 'Style', 'text', 'String', 'Data Path:', 'FontSize', 10);
-uicontrol('Parent', tmpHBox, 'Style', 'edit', 'BackgroundColor', [1,1,1], 'Max', 2, 'Min', 0);
+dataPath_EditBox = uicontrol('Parent', tmpHBox, 'Style', 'edit', 'BackgroundColor', [1,1,1], 'Max', 2, 'Min', 0);
+uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Reset', 'Callback', @(~,~) counter.reset(get(dataPath_EditBox, 'String')));
 tmpButtonBox = uiextras.HButtonBox('Parent', tmpHBox);
-uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Choose', 'Callback', @(~,~)warndlg('Oops, Not implemented yet'));
-uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Today', 'Callback', @(~,~)warndlg('Oops, Not implemented yet'));
+uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Choose', 'Callback', @choose_data_path);
+uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Today', 'Callback', @set_dataPath_today);
 tmpHBox.Sizes = [-1, -2, -1];
 
 %Add the experiment quick picker
@@ -176,22 +180,11 @@ GUIsetters('TekAWG') = set_tekAWG_GUI;
 GUIsetters('BBNAPS') = set_APS_settings;
 GUIsetters('digitizer') = set_digitizer_settings;
 GUIsetters('xaxis') = set_time_settings;
-GUIsetters('exptBox') = exptBox;
+GUIsetters('exptBox') = exptName_EditBox;
 
 ExperimentQuickPicker_GUI(ExpSetupVBox, GUIgetters, GUIsetters);
 
 ExpSetupVBox.Sizes = [-2, -1, -1, -3];
-
-
-%Setup the file counter and initialize the field
-global counter;
-if ~isa(counter, 'Counter')
-    initial_counter_value = 1;
-    if isfield(commonSettings, 'counter')
-        initial_counter_value = commonSettings.counter + 1;
-    end
-    counter = Counter(initial_counter_value);
-end
 
 
 %Try and patch up the sizing
@@ -217,8 +210,24 @@ set(mainGrid, 'RowSizes', -1, 'ColumnSizes', [-1.05 -1.2, -1]);
 drawnow;
 set(mainWindow, 'Visible', 'on');
 
-% add run callback
 
+%Add a callback for setting the directory
+    function choose_data_path(~,~)
+       newPath = uigetdir(get(dataPath_EditBox, 'String'));
+       if newPath ~= 0
+            set(dataPath_EditBox, 'String', newPath);
+       end 
+    end
+
+%Add a callback to set the dataPath to today
+    function set_dataPath_today(~,~)
+        newPath = [data_path, filesep, get(deviceName_EditBox,'String'), filesep, datestr(now, 'yymmdd')];
+        if ~exist(newPath, 'dir')
+            mkdir(newPath);
+        end
+        set(dataPath_EditBox, 'String',newPath); 
+    end
+%Add the main run callback
 	function run_callback(~, ~)
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -269,11 +278,13 @@ set(mainWindow, 'Visible', 'on');
 		settings.SoftwareDevelopmentMode = 0;
         
         % get file path, counter, device name, and experiment name
-        [temppath, counter, deviceName, exptName] = get_path_and_file();
-        if ~strcmp(temppath, '')
-            data_path = temppath;
+        tmpDataPath = get(dataPath_EditBox, 'String');
+        deviceName = get(deviceName_EditBox, 'String');
+        exptName = get(exptName_EditBox, 'String');
+        if ~isempty(tmpDataPath)
+            data_path = tmpDataPath;
         end
-        if (~strcmp(exptName, '') && ~strcmp(deviceName, ''))
+        if ~isempty(exptName) && ~isempty(deviceName)
             basename = [deviceName '_' exptName];
         end
         settings.data_path = data_path;
@@ -282,8 +293,7 @@ set(mainWindow, 'Visible', 'on');
         settings.counter = counter.value;
         
         % save settings to specific program cfg file as well as common cfg.
-		cfg_file_name = [cfg_path 'TimeDomain.cfg'];
-        common_cfg_name = [cfg_path 'common.cfg'];
+        common_cfg_name = fullfile(cfg_path, 'common.cfg');
 		writeCfgFromStruct(cfg_file_name, settings);
         writeCfgFromStruct(common_cfg_name, settings);
 
@@ -306,13 +316,13 @@ set(mainWindow, 'Visible', 'on');
         counter.increment();
 
 		% Run the actual experiment
-		Exp.Init;
-		Exp.Do;
-		Exp.CleanUp;
-
-		% Close the data file and end connection to all insturments.  This is 
-		% another method inherited from 'experiment'
-		Exp.finalizeData;
+% 		Exp.Init;
+% 		Exp.Do;
+% 		Exp.CleanUp;
+% 
+% 		% Close the data file and end connection to all insturments.  This is 
+% 		% another method inherited from 'experiment'
+% 		Exp.finalizeData;
 
 		status = 0;
     end
