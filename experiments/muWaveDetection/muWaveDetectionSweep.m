@@ -41,33 +41,56 @@ if ~isempty(temp)
 end
 clear temp;
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%     CREATE GUI     %%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%     BASIC INPUTS      %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-mainWindow = figure( ...
-	'Tag', 'figure1', ...
-	'Units', 'pixels', ...
-	'Position', [25 25 1300 750], ...
-	'Name', 'muWaveSweep', ...
-	'MenuBar', 'none', ...
-	'NumberTitle', 'off', ...
-	'Color', get(0,'DefaultUicontrolBackgroundColor'), ...
-	'Visible', 'off');
+% base_path is up two levels from this file
+base_path = fileparts(mfilename('fullpath'));
+
+data_path = [base_path, filesep 'data'];
+cfg_path = [base_path, filesep, 'cfg'];
+basename = 'muWaveDetection';
+
+if nargin < 1
+	cfg_file_name = fullfile(cfg_path, 'muWaveDetectionSweep.cfg');
+end
 
 % list of instruments expected in the settings structs
 instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'TekAWG', 'BBNAPS'};
 % load previous settings structs
 [commonSettings, prevSettings] = get_previous_settings('muWaveDetectionSweep', cfg_path, instrumentNames);
 
+%Setup the file counter 
+global counter;
+if ~isa(counter, 'Counter')
+    initial_counter_value = 1;
+    if isfield(commonSettings, 'counter')
+        initial_counter_value = commonSettings.counter + 1;
+    end
+    counter = Counter(initial_counter_value);
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%     CREATE GUI     %%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+mainWindow = figure( ...
+	'Tag', 'figure1', ...
+	'Units', 'pixels', ...
+	'Position', [50 50 1300 700], ...
+	'Name', 'muWaveSweep', ...
+	'MenuBar', 'none', ...
+	'NumberTitle', 'off', ...
+	'Color', get(0,'DefaultUicontrolBackgroundColor'), ...
+	'Visible', 'off');
+
+
 %Add a grid layout for all the controls
 mainGrid = uiextras.Grid('Parent', mainWindow, 'Spacing', 20, 'Padding', 10);
 
 %Add the digitizer panel
 leftVBox = uiextras.VBox('Parent', mainGrid, 'Spacing', 10);
-[get_digitizer_settings, set_digitizer_settings] = deviceGUIs.digitizer_settings_gui(leftVBox, prevSettings.InstrParams.scope);
-
+[get_digitizer_settings, ~] = deviceGUIs.digitizer_settings_gui(leftVBox, prevSettings.InstrParams.scope);
 
 %Add the Run/Stop buttons and scope checkbox
 tmpHBox = uiextras.HButtonBox('Parent', leftVBox, 'ButtonSize', [120, 40]);
@@ -91,8 +114,8 @@ sourceTabPanel.SelectedChild = 1;
 %Add the AWG's
 AWGPanel = uiextras.Panel('Parent', middleVBox, 'Title', 'AWG''s','FontSize',12, 'Padding', 5);
 AWGTabPanel = uiextras.TabPanel('Parent', AWGPanel, 'Padding', 5, 'HighlightColor', 'k');
-[get_tekAWG_settings, set_tekAWG_GUI] = deviceGUIs.AWG5014_settings_GUI(AWGTabPanel, 'TekAWG', prevSettings.InstrParams.TekAWG);
-[get_APS_settings, set_APS_settings] = deviceGUIs.APS_settings_GUI(AWGTabPanel, 'BBN APS', prevSettings.InstrParams.BBNAPS);
+[get_tekAWG_settings, ~] = deviceGUIs.AWG5014_settings_GUI(AWGTabPanel, 'TekAWG', prevSettings.InstrParams.TekAWG);
+[get_APS_settings, ~] = deviceGUIs.APS_settings_GUI(AWGTabPanel, 'BBN APS', prevSettings.InstrParams.BBNAPS);
 AWGTabPanel.TabNames = {'Tektronix','APS'};
 AWGTabPanel.SelectedChild = 1;
 
@@ -121,31 +144,36 @@ ExpSetupVBox = uiextras.VBox('Parent', ExpSetupPanel, 'Spacing', 5);
 tmpGrid = uiextras.Grid('Parent', ExpSetupVBox, 'Spacing', 5);
 [~, ~, fastLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Fast Loop:', 'fastloop',  {'frequencyA', 'frequencyB', 'power', 'phase', 'dc', 'TekCh', 'nothing'});
 [~, ~, slowLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Slow Loop:', 'slowloop',  {'frequencyA', 'frequencyB', 'power', 'phase', 'dc', 'TekCh', 'nothing'});
-[~, ~, softAvgs] = uiextras.labeledEditBox(tmpGrid, 'Soft Averages:', 'softAvgs', '1');
-[~, ~, deviceNameHandle] = uiextras.labeledEditBox(tmpGrid, 'Device Name:', 'deviceName', '');
-[~, ~, exptBox] = uiextras.labeledEditBox(tmpGrid, 'Experiment:', 'expName', '');
-set(tmpGrid, 'RowSizes', [-1, -1, -1], 'ColumnSizes', [-1, -1]);
+[~, ~, deviceName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Device Name:', 'deviceName', '');
+[~, ~, exptName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Experiment:', 'expName', '');
+set(tmpGrid, 'RowSizes', [-1, -1], 'ColumnSizes', [-1, -1]);
 
 tmpHBox = uiextras.HBox('Parent',ExpSetupVBox);
-[~, ~, fileNum] = uiextras.labeledEditBox(tmpHBox, 'File Number:', 'fileNum', '001');
+[~, ~, fileNum_EditBox] = uiextras.labeledEditBox(tmpHBox, 'File Number:', 'fileNum', '001');
+%Add a listener to the file number edit box to update with the counter value
+fileNumberListener = addlistener(counter, 'valueChanged', @(src,~) set(fileNum_EditBox, 'String', sprintf('%03d',src.value)));
+%Clear the listener when the uicontrol is delete so they don't pile up
+set(fileNum_EditBox, 'DeleteFcn', @(~,~) delete(fileNumberListener));
+
 tmpButtonBox = uiextras.HButtonBox('Parent', tmpHBox);
-uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Reset', 'Callback', @(~,~)warndlg('Oops, Not implemented yet'));
+%Reset button is added below because we can't forward reference the
+%dataPath_EditBox
 
 tmpHBox = uiextras.HBox('Parent',ExpSetupVBox, 'Spacing', 5);
 uicontrol('Parent', tmpHBox, 'Style', 'text', 'String', 'Data Path:', 'FontSize', 10);
-uicontrol('Parent', tmpHBox, 'Style', 'edit', 'BackgroundColor', [1,1,1], 'Max', 2, 'Min', 0);
+dataPath_EditBox = uicontrol('Parent', tmpHBox, 'Style', 'edit', 'BackgroundColor', [1,1,1], 'Max', 2, 'Min', 0);
+uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Reset', 'Callback', @(~,~) counter.reset(get(dataPath_EditBox, 'String')));
 tmpButtonBox = uiextras.HButtonBox('Parent', tmpHBox);
-uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Choose', 'Callback', @(~,~)warndlg('Oops, Not implemented yet'));
-uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Today', 'Callback', @(~,~)warndlg('Oops, Not implemented yet'));
+uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Choose', 'Callback', @choose_data_path);
+uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Today', 'Callback', @set_dataPath_today);
 tmpHBox.Sizes = [-1, -2, -1];
-
 
 
 %Try and patch up the sizing
 ExpSetupVBox.Sizes = [-2, -1, -1];
 uiextras.Empty('Parent', rightVBox);
-rightVBox.Sizes = [-1, -0.75, -1.75, -1];
-set(mainGrid, 'RowSizes', [-1], 'ColumnSizes', [-1.05 -1.2, -1]);
+rightVBox.Sizes = [-1, -0.75, -1.5, -1];
+set(mainGrid, 'RowSizes', -1, 'ColumnSizes', [-1.05 -1.2, -1]);
 
 % 
 % % add DC sources
@@ -156,9 +184,25 @@ set(mainGrid, 'RowSizes', [-1], 'ColumnSizes', [-1.05 -1.2, -1]);
 drawnow;
 set(mainWindow, 'Visible', 'on');
 
-% add run callback
+%Add a callback for setting the directory
+    function choose_data_path(~,~)
+       newPath = uigetdir(get(dataPath_EditBox, 'String'));
+       if newPath ~= 0
+            set(dataPath_EditBox, 'String', newPath);
+       end 
+    end
 
-	function run_callback(hObject, eventdata)
+%Add a callback to set the dataPath to today
+    function set_dataPath_today(~,~)
+        newPath = [data_path, filesep, get(deviceName_EditBox,'String'), filesep, datestr(now, 'yymmdd')];
+        if ~exist(newPath, 'dir')
+            mkdir(newPath);
+        end
+        set(dataPath_EditBox, 'String',newPath); 
+    end
+
+%Add the main run callback
+	function run_callback(~, ~)
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		%%%%%%%%%%%%%%%%%%%%%%%     WRITE CONFIG     %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -197,11 +241,13 @@ set(mainWindow, 'Visible', 'on');
 		settings.SoftwareDevelopmentMode = 0;
         
         % get file path, counter, device name, and experiment name
-        [temppath, counter, deviceName, exptName] = get_path_and_file();
-        if ~strcmp(temppath, '')
-            data_path = temppath;
+        tmpDataPath = get(dataPath_EditBox, 'String');
+        deviceName = get(deviceName_EditBox, 'String');
+        exptName = get(exptName_EditBox, 'String');
+        if ~isempty(tmpDataPath)
+            data_path = tmpDataPath;
         end
-        if (~strcmp(exptName, '') && ~strcmp(deviceName, ''))
+        if ~isempty(exptName) && ~isempty(deviceName)
             basename = [deviceName '_' exptName];
         end
         settings.data_path = data_path;
@@ -210,8 +256,7 @@ set(mainWindow, 'Visible', 'on');
         settings.counter = counter.value;
         
         % save settings to specific program cfg file as well as common cfg.
-		cfg_file_name = [cfg_path 'muWaveDetectionSweep.cfg'];
-        common_cfg_name = [cfg_path 'common.cfg'];
+        common_cfg_name = fullfile(cfg_path, 'common.cfg');
 		writeCfgFromStruct(cfg_file_name, settings);
         writeCfgFromStruct(common_cfg_name, settings);
 
