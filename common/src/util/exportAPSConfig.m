@@ -61,16 +61,20 @@ function exportAPSConfig(path, basename, varargin)
     h5writeatt(fileName,'/', 'Version Number', VersionNum);
     %Now create each channel group and put the associated data
     for channel = channelDataFor
-        channelStr = sprintf('/channel%d', channel);
+        channelStr = sprintf('/ch%d', channel);
         
         %The waveform library
         h5create(fileName, [channelStr, '/waveformLib'], size(WaveformLibs{channel}), 'Datatype', 'int16');
         h5write(fileName, [channelStr, '/waveformLib'], WaveformLibs{channel});
         
         %The linklist data
-        %First the number of banks
+        h5create(fileName, [channelStr, '/isLinkListData'], [1, 1], 'Datatype', 'uint16');
+        h5write(fileName, [channelStr, '/isLinkListData'], uint16(LinkLists{channel}.numBanks > 0 ));
+        
+        %Then the number of banks
         h5create(fileName, [channelStr, '/linkListData/numBanks'], [1, 1], 'Datatype', 'uint16');
         h5write(fileName, [channelStr, '/linkListData/numBanks'], uint16(LinkLists{channel}.numBanks));
+
         %Now loop over each bank
         for bankct = 1:LinkLists{channel}.numBanks
             bankStr = sprintf('bank%d',bankct);
@@ -88,5 +92,11 @@ function exportAPSConfig(path, basename, varargin)
             h5create(fileName, [groupStr, '/repeat'], [1, bankLength], 'Datatype', 'uint16');
             h5write(fileName, [groupStr, '/repeat'], curBank.repeat);
         end
+        
+        %Finally the repeatCount
+        h5create(fileName, [channelStr, '/linkListData/repeatCount'], [1, 1], 'Datatype', 'uint16');
+        h5write(fileName, [channelStr, '/linkListData/repeatCount'], uint16(LinkLists{channel}.repeatCount));
+        
+        
     end
 end

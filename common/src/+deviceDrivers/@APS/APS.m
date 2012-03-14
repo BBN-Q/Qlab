@@ -48,16 +48,16 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         verbose = 0;
         
         mock_aps = 0;
-
+        
         % temporary boolean to enable use of c waveforms instead of
         % APSWaveform
-        use_c_waveforms = false; 
+        use_c_waveforms = false;
         
         num_channels = 4;
-        chan_1;
-        chan_2;
-        chan_3;
-        chan_4;
+        ch1;
+        ch2;
+        ch3;
+        ch4;
         
         samplingRate = 1200;   % Global sampling rate in units of MHz (1200, 600, 300, 100, 40)
         triggerSource = 'internal';  % Global trigger source ('internal', or 'external')
@@ -75,7 +75,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         pendingLength = 0;
         expectedLength = 0;
         currentLength = 0;
-
+        
     end
     
     properties (Constant)
@@ -146,14 +146,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             d.bit_file_path = script_path(1:baseIdx);
             
             % init channel structs and waveform objects
-            d.chan_1 = d.channelStruct;
-            d.chan_1.waveform = APSWaveform();
-            d.chan_2 = d.channelStruct;
-            d.chan_2.waveform = APSWaveform();
-            d.chan_3 = d.channelStruct;
-            d.chan_3.waveform = APSWaveform();
-            d.chan_4 = d.channelStruct;
-            d.chan_4.waveform = APSWaveform();
+            d.ch1 = d.channelStruct;
+            d.ch1.waveform = APSWaveform();
+            d.ch2 = d.channelStruct;
+            d.ch2.waveform = APSWaveform();
+            d.ch3 = d.channelStruct;
+            d.ch3.waveform = APSWaveform();
+            d.ch4 = d.channelStruct;
+            d.ch4.waveform = APSWaveform();
         end
         
         %Destructor
@@ -227,14 +227,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % Library may not be opened if a stale object is left in
             % memory by matlab. So we reopen on if need be.
             aps.load_library()
-
+            
             if aps.mock_aps && aps.num_devices == 0
                 aps.num_devices = 1;
             else
-
+                
                 aps.num_devices = calllib(aps.library_name,'APS_NumDevices');
                 num_devices = aps.num_devices;
-
+                
                 %Reset cell array
                 aps.deviceSerials = cell(num_devices,1);
                 %For each device load the serial number
@@ -255,10 +255,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         % setAll is called as part of the Experiment initialize instruments
         function setAll(obj,settings)
             obj.init();
-
+            
             % read in channel settings so we know how to scale waveform
             % data
-            ch_fields = {'chan_1', 'chan_2', 'chan_3', 'chan_4'};
+            ch_fields = {'ch1', 'ch2', 'ch3', 'ch4'};
             for i = 1:length(ch_fields)
                 ch = ch_fields{i};
                 obj.(ch).amplitude = settings.(ch).amplitude;
@@ -267,26 +267,26 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             settings = rmfield(settings, ch_fields);
             
-			% load AWG file before doing anything else
-			if isfield(settings, 'seqfile')
-				if ~isfield(settings, 'seqforce')
-					settings.seqforce = false;
+            % load AWG file before doing anything else
+            if isfield(settings, 'seqfile')
+                if ~isfield(settings, 'seqforce')
+                    settings.seqforce = false;
                 end
                 if ~isfield(settings, 'lastseqfile')
                     settings.lastseqfile = '';
                 end
-				
-				% load an AWG file if the settings file is changed or if force == true
-				if (~strcmp(settings.lastseqfile, settings.seqfile) || settings.seqforce)
-					obj.loadConfig(settings.seqfile);
-				end
-			end
-			settings = rmfield(settings, {'lastseqfile', 'seqfile', 'seqforce'});
-			
+                
+                % load an AWG file if the settings file is changed or if force == true
+                if (~strcmp(settings.lastseqfile, settings.seqfile) || settings.seqforce)
+                    obj.loadConfig(settings.seqfile);
+                end
+            end
+            settings = rmfield(settings, {'lastseqfile', 'seqfile', 'seqforce'});
+            
             % parse remaining settings
-			fields = fieldnames(settings);
-			for j = 1:length(fields);
-				name = fields{j};
+            fields = fieldnames(settings);
+            for j = 1:length(fields);
+                name = fields{j};
                 if ismember(name, methods(obj))
                     feval(['obj.' name], settings.(name));
                 elseif ismember(name, properties(obj))
@@ -383,7 +383,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             bitFileVer = obj.readBitFileVersion();
             if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver || obj.readPllStatus() ~= 0 || force
                 obj.loadBitFile();
-
+                
                 % set all channels to 1.2 GS/s
                 obj.setFrequency(0, 1200, 0);
                 obj.setFrequency(2, 1200, 0);
@@ -404,8 +404,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function val = readBitFileVersion(aps)
             if aps.mock_aps
-                 val = aps.ELL_VERSION;
-                 return
+                val = aps.ELL_VERSION;
+                return
             end
             val = calllib(aps.library_name,'APS_ReadBitFileVersion', aps.device_id);
             aps.bit_file_version = val;
@@ -502,7 +502,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % useSlowWrite - bool, when false uses a faster buffered write
             if aps.mock_aps
                 aps.log('Mock load waveform')
-                return 
+                return
             end
             
             if ~(aps.is_open)
@@ -539,13 +539,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if ~strcmp(class(waveform), 'APSWaveform')
                 error('APS:storeAPSWaveform:params', 'waveform must be of class APSWaveform')
             end
-                
+            
             % store waveform data
             
             val = calllib(aps.library_name,'APS_SetWaveform', aps.device_id, dac, ...
                 waveform.data, length(waveform));
             if (val < 0), error('APS:storeAPSWaveform:set', 'error in set waveform'),end;
-           
+            
             % set offset
             
             val = calllib(aps.library_name,'APS_SetWaveformOffset', aps.device_id, dac, ...
@@ -596,24 +596,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % loads a complete, 4 channel configuration file
             
             % pseudocode:
-            % open file
             % foreach channel
-            %   load and scale/shift waveform data
-            %   save channel waveform lib in chan_i struct
-            %   clear old link list data
-            %   load link list data (if any)
-            %   save channel LL data in chan_i struct
-            %   set link list mode
-            
-            % clear existing variable names
-            clear Version WaveformLibs LinkLists
-            load(filename)
-            % if any channel has a link list, all channels must have a link
-            % list
-            % TODO: add more error checking
-            if length(LinkLists) > 1 && (length(WaveformLibs) ~= length(LinkLists))
-                error('Malformed config file')
-            end
+            %  if there is data
+            %  load and scale/shift waveform data
+            %  save channel waveform lib in chan_i struct
+            %  clear old link list data
+            %  load link list data (if any)
+            %  save channel LL data in chan_i struct
+            %  set link list mode
             
             % clear old link list data
             aps.clearLinkListELL(0);
@@ -623,57 +613,73 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             % load waveform data
             wf = APSWaveform();
+            
+            %See which channels are defined in this file
+            channelDataFor = h5read(filename, '/channelDataFor');
             for ch = 1:aps.num_channels
-                if ch <= length(WaveformLibs) && ~isempty(WaveformLibs{ch})
-                    % load and scale/shift waveform data
-                    wf.set_vector(WaveformLibs{ch});
-                    wf.set_offset(aps.(['chan_' num2str(ch)]).offset);
-                    wf.set_scale_factor(aps.(['chan_' num2str(ch)]).amplitude);
+                if any(ch == channelDataFor)
+                    channelStr = sprintf('/ch%d',ch);
+                    
+                    %Load and scale/shift waveform data
+                    wf.set_vector(h5read(filename,[channelStr, '/waveformLib']));
+                    wf.set_offset(aps.(channelStr).offset);
+                    wf.set_scale_factor(aps.(channelStr]).amplitude);
                     aps.loadWaveform(ch-1, wf.prep_vector());
-                    aps.(['chan_' num2str(ch)]).waveform = wf;
+                    aps.(channelStr).waveform = wf;
                     
                     % set zero register value
-                    offset = aps.(['chan_' num2str(ch)]).offset;
+                    offset = aps.(channelStr).offset;
                     aps.setOffset(ch, offset);
-                end
-            end
-            
-            % load LL data (if any)
-            for ch = 1:aps.num_channels
-                wf = aps.(['chan_' num2str(ch)]).waveform;
-                
-                if ch <= length(LinkLists) && ~isempty(LinkLists{ch})
-                    wf.ellData = LinkLists{ch};
-                    wf.ell = true;
-                    if wf.check_ell_format()
-                        
-                        wf.have_link_list = 1;
                     
-                        ell = wf.get_ell_link_list();
-                        if isfield(ell,'bankA') && ell.bankA.length > 0
+                    %Load LL data if it exists
+                    if(h5read(filename, [channelStr, '/isLinkListData']) == 1)
+                        tmpLinkList = struct();
+                        %Create the linkList structure from the hdf5file
+                        for bankct = 1:h5read(filename, [channelStr, '/linklistData/numBanks'])
+                            bankStr = sprintf('bank%d',bankct);
+                            bankGroupStr = [channelStr, '/linklistData/', bankStr];
+                            tmpLinkList.(bankStr) = struct();
+                            tmpLinkList.(bankStr).count = h5read(filename, [bankGroupStr, '/count']);
+                            tmpLinkList.(bankStr).offset = h5read(filename, [bankGroupStr, '/offset']);
+                            tmpLinkList.(bankStr).repeat = h5read(filename, [bankGroupStr, '/repeat']);
+                            tmpLinkList.(bankStr).trigger = h5read(filename, [bankGroupStr, '/trigger']);
+                            tmpLinkList.(bankStr).length = h5read(filename, [bankGroupStr, '/length']);
+                        end
+                        tmpLinkList.repeatCount = h5read(filename, [channelStr, '/linklistData/repeatCount']);
+                        
+                        %Add the LL data to the wf
+                        wf.ellData = tmpLinkList;
+                        wf.ell = true;
+                        %Do some error checking
+                        if wf.check_ell_format()
                             
-                            bankA = ell.bankA;
-                            aps.loadLinkListELL(ch-1,bankA.offset,bankA.count, ...
-                                bankA.trigger, bankA.repeat, bankA.length, 0);
+                            wf.have_link_list = true;
+                            ell = wf.get_ell_link_list();
+                            
+                            %For now we just directly load the first two
+                            %banks into bankA and bankB
+                            if isfield(ell,'bank1') && ell.bank1.length > 0
+                                bankA = ell.bank1;
+                                aps.loadLinkListELL(ch-1,bankA.offset,bankA.count, ...
+                                    bankA.trigger, bankA.repeat, bankA.length, 0);
+                            end
+                            if isfield(ell,'bank2') && ~isempty(ell.bank1) && ell.bank2.length > 0
+                                bankB = ell.bank2;
+                                aps.loadLinkListELL(ch-1,bankB.offset,bankB.count, ...
+                                    bankB.trigger, bankB.repeat, bankB.length, 1);
+                            end
+                            
+                            %aps.setLinkListRepeat(ch-1,ell.repeatCount);
+                            aps.setLinkListRepeat(ch-1,10000);
+                            %aps.setLinkListRepeat(ch-1,0);
+                            aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                         end
-
-                        if isfield(ell,'bankB') && ~isempty(ell.bankB) && ell.bankB.length > 0
-                            bankB = ell.bankB;
-                            aps.loadLinkListELL(ch-1,bankB.offset,bankB.count, ...
-                                bankB.trigger, bankB.repeat, bankB.length, 1);
-                        end
-
-                        %aps.setLinkListRepeat(ch-1,ell.repeatCount);
-                        aps.setLinkListRepeat(ch-1,10000);
-                        %aps.setLinkListRepeat(ch-1,0);
+                        % update channel waveform object
+                        aps.(channelStr).waveform = wf;
+                        
                     end
-                    aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                 end
-                
-                % update channel waveform object
-                aps.(['chan_' num2str(ch)]).waveform = wf;
             end
-            
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -695,7 +701,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if (aps.verbose)
                 aps.log(mesg);
             end
-                        
+            
             switch size(varargin,2)
                 case 0
                     val = calllib(aps.library_name,func,aps.device_id);
@@ -750,7 +756,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % based upon enabled channels, trigger both FPGAs, a single
             % FPGA, or individuals DACs
             trigger = [false false false false];
-            channels = {'chan_1','chan_2','chan_3','chan_4'};
+            channels = {'ch1','ch2','ch3','ch4'};
             for i = 1:4
                 trigger(i) = aps.(channels{i}).enabled;
             end
@@ -787,7 +793,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % for compatibility with Tek driver
             % checks the state of the CSR to verify that a state machine
             % is running
-        
+            
             % TODO!! Needs an appropriate method in C library.
             % Kludgy workaround for now.
             if ~aps.is_running
@@ -823,12 +829,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         function val = readPllStatus(aps)
-           % read FPGA1
-           val1 = aps.librarycall('Read PLL Sync FPGA1','APS_ReadPllStatus', 1);
-           % read FPGA2
-           val2 = aps.librarycall('Read PLL Sync FPGA2','APS_ReadPllStatus', 2);
-           % functions return 0 on success;
-           val = val1 && val2;
+            % read FPGA1
+            val1 = aps.librarycall('Read PLL Sync FPGA1','APS_ReadPllStatus', 1);
+            % read FPGA2
+            val2 = aps.librarycall('Read PLL Sync FPGA2','APS_ReadPllStatus', 2);
+            % functions return 0 on success;
+            val = val1 && val2;
         end
         
         function val = setFrequency(aps,id, freq, testLock)
@@ -852,7 +858,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         function val = setOffset(aps, ch, offset)
             val = aps.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*aps.MAX_WAVEFORM_VALUE);
-            aps.(['chan_' num2str(ch)]).offset = offset;
+            aps.(channelStr).offset = offset;
         end
         
         function setupPLL(aps)
@@ -887,9 +893,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         function aps = set.triggerSource(aps, trig)
             checkMap = containers.Map({...
-	            'internal','external',...
+                'internal','external',...
                 'int', 'ext'
-	            },{'internal','external','internal','external'});
+                },{'internal','external','internal','external'});
             
             trig = lower(trig);
             if not(checkMap.isKey(trig))
@@ -959,12 +965,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         LinkListUnitTest(sequence, dc_offset)
         LinkListUnitTest2
-                
+        
         sequence = LinkListSequences(sequence)
         
         function aps = UnitTest(skipLoad)
             % work around for not knowing full name
-            % of class - can not use simply APS when in 
+            % of class - can not use simply APS when in
             % experiment framework
             classname = mfilename('class');
             
@@ -993,10 +999,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 ver = aps.readBitFileVersion();
                 fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
             end
-
+            
             validate = 0;
             useSlowWrite = 0;
-
+            
             wf = aps.getNewWaveform();
             wf.data = [zeros([1,2000]) ones([1,2000])];
             wf.set_scale_factor(0.8);
@@ -1013,7 +1019,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.pauseFpga(0);
             aps.pauseFpga(2);
             aps.close();
-      
+            
         end
         
     end
