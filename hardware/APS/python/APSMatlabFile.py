@@ -43,24 +43,28 @@ class APSMatlabFile(object):
         
         #First look for all four channel data
         if self.mode == self.FOURCHANNELMODE:
-            #Look for the Matlab a,b,c,d,e,f stuff
-            refs = FID['#refs#']
-            WFletters = 'bcde'
-            LLletters = 'fghi'
+            #Look for the 4 channel data
             for ct,channel in enumerate(self.CHANNELNAMES):
-                self.WFData[channel] = refs[WFletters[ct]].value
-                self.LLData[channel] = {}
-                self.LLData[channel]['repeatCount'] = int(refs[LLletters[ct]]['repeatCount'].value[0][0])
-                self.LLData[channel]['bankA'] = {}
-                for key,value in refs[LLletters[ct]]['bankA'].items():
-                    self.LLData[channel]['bankA'][key] = value.value
-                self.LLData[channel]['bankA']['length'] = int(self.LLData[channel]['bankA']['length'][0][0])
+                if channel in FID.keys():
+                    tmpChan = FID[channel]
+                    self.WFData[channel] = tmpChan['waveformLib'].value
+                    self.LLData[channel] = {}
+                    tmpLLData = tmpChan['linkListData']
+                    self.LLData[channel]['repeatCount'] = int(tmpLLData['repeatCount'].value[0][0])
+
+                    #Here we just directly load bank1 into bankA and bank2 into bankB
+                    self.LLData[channel]['bankA'] = {}
+                    if 'chan1' in tmpLLData.keys(): 
+                        for key,value in tmpLLData['bank1'].items():
+                            self.LLData[channel]['bankA'][key] = value.value
+                        self.LLData[channel]['bankA']['length'] = int(self.LLData[channel]['bankA']['length'][0][0])
+                    
+                    if 'chan2' in tmpLLData.keys(): 
+                        self.LLData[channel]['bankB'] = {}
+                        for key,value in tmpLLData['bank2'].items():
+                            self.LLData[channel]['bankB'][key] = value.value
+                        self.LLData[channel]['bankB']['length'] = int(self.LLData[channel]['bankB']['length'][0][0])
                 
-                self.LLData[channel]['bankB'] = {}
-                for key,value in refs[LLletters[ct]]['bankB'].items():
-                    self.LLData[channel]['bankB'][key] = value.value
-                self.LLData[channel]['bankB']['length'] = int(self.LLData[channel]['bankB']['length'][0][0])
-            
         else:
             if 'WFVec' in FID:
                 self.waveform = FID['WFVec'].value
