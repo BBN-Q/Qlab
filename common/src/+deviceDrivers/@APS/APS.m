@@ -54,10 +54,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         use_c_waveforms = false;
         
         num_channels = 4;
-        ch1;
-        ch2;
-        ch3;
-        ch4;
+        chan_1;
+        chan_2;
+        chan_3;
+        chan_4;
         
         samplingRate = 1200;   % Global sampling rate in units of MHz (1200, 600, 300, 100, 40)
         triggerSource = 'internal';  % Global trigger source ('internal', or 'external')
@@ -171,9 +171,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % addressing
             
             if isnumeric(address)
-                val = obj.open(address);
+                obj.open(address);
             else
-                val = obj.openBySerialNum(address);
+                obj.openBySerialNum(address);
             end
             
         end
@@ -213,8 +213,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             path = char(script.getParent());
             d.library_path = [path filesep 'lib' filesep];
             if ~libisloaded(d.library_name)
-                [notfound warnings] = loadlibrary([d.library_path libfname], ...
-                    [d.library_path 'libaps.h']);
+                %Return [notfound,warnings] because there are warnings
+                [~,~] = loadlibrary([d.library_path libfname],[d.library_path 'libaps.h']);
             end
         end
         
@@ -474,13 +474,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             Sel = 3;
             
             aps.log(sprintf('Loading bit file: %s', filename));
-            eval(['[DataFileID, FOpenMessage] = fopen(''', filename, ''', ''r'');']);
+            [DataFileID, FOpenMessage] = fopen(filename, 'r');
             if ~isempty(FOpenMessage)
                 error('APS:loadBitFile', 'Input DataFile Not Found');
             end
-            
-            [filename, permission, machineformat, encoding] = fopen(DataFileID);
-            %eval(['disp(''Machine Format = ', machineformat, ''');']);
             
             [DataVec, DataCount] = fread(DataFileID, inf, 'uint8=>uint8');
             aps.log(sprintf('Read %i bytes.', DataCount));
@@ -511,7 +508,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             if isempty(waveform)
                 error('APS:loadWaveform','Waveform is required');
-                return
             end
             
             if ~exist('offset','var')
@@ -541,23 +537,18 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             
             % store waveform data
-            
             val = calllib(aps.library_name,'APS_SetWaveform', aps.device_id, dac, ...
                 waveform.data, length(waveform));
             if (val < 0), error('APS:storeAPSWaveform:set', 'error in set waveform'),end;
             
             % set offset
-            
-            val = calllib(aps.library_name,'APS_SetWaveformOffset', aps.device_id, dac, ...
+            calllib(aps.library_name,'APS_SetWaveformOffset', aps.device_id, dac, ...
                 waveform.offset);
             
             % set scale
-            
-            val = calllib(aps.library_name,'APS_SetWaveformOffset', aps.device_id, dac, ...
+            calllib(aps.library_name,'APS_SetWaveformOffset', aps.device_id, dac, ...
                 waveform.scale_factor);
-            
         end
-        
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function loadLinkList(aps,id,offsets,counts, ll_len)
@@ -618,12 +609,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             channelDataFor = h5read(filename, '/channelDataFor');
             for ch = 1:aps.num_channels
                 if any(ch == channelDataFor)
-                    channelStr = sprintf('/ch%d',ch);
+                    channelStr = sprintf('/chan_%d',ch);
                     
                     %Load and scale/shift waveform data
                     wf.set_vector(h5read(filename,[channelStr, '/waveformLib']));
                     wf.set_offset(aps.(channelStr).offset);
-                    wf.set_scale_factor(aps.(channelStr]).amplitude);
+                    wf.set_scale_factor(aps.(channelStr).amplitude);
                     aps.loadWaveform(ch-1, wf.prep_vector());
                     aps.(channelStr).waveform = wf;
                     
@@ -720,29 +711,29 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         function triggerWaveform(aps,id,trigger_type)
-            val = aps.librarycall(sprintf('Trigger Waveform %i Type: %i', id, trigger_type), ...
+            aps.librarycall(sprintf('Trigger Waveform %i Type: %i', id, trigger_type), ...
                 'APS_TriggerDac',id,trigger_type);
         end
         
         function pauseWaveform(aps,id)
-            val = aps.librarycall(sprintf('Pause Waveform %i', id), 'APS_PauseDac',id);
+            aps.librarycall(sprintf('Pause Waveform %i', id), 'APS_PauseDac',id);
         end
         
         function disableWaveform(aps,id)
-            val = aps.librarycall(sprintf('Disable Waveform %i', id), 'APS_DisableDac',id);
+            aps.librarycall(sprintf('Disable Waveform %i', id), 'APS_DisableDac',id);
         end
         
         function triggerFpga(aps,id,trigger_type)
-            val = aps.librarycall(sprintf('Trigger Waveform %i Type: %i', id, trigger_type), ...
+            aps.librarycall(sprintf('Trigger Waveform %i Type: %i', id, trigger_type), ...
                 'APS_TriggerFpga',id,trigger_type);
         end
         
         function pauseFpga(aps,id)
-            val = aps.librarycall(sprintf('Pause Waveform %i', id), 'APS_PauseFpga',id);
+            aps.librarycall(sprintf('Pause Waveform %i', id), 'APS_PauseFpga',id);
         end
         
         function disableFpga(aps,id)
-            val = aps.librarycall(sprintf('Disable Waveform %i', id), 'APS_DisableFpga',id);
+            aps.librarycall(sprintf('Disable Waveform %i', id), 'APS_DisableFpga',id);
         end
         
         function run(aps)
@@ -806,12 +797,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % id : DAC channel (0-3)
             % enable : 1 = on, 0 = off
             % mode : 1 = one shot, 0 = continuous
-            val = aps.librarycall(sprintf('Dac: %i Link List Enable: %i Mode: %i', id, enable, mode), ...
+            aps.librarycall(sprintf('Dac: %i Link List Enable: %i Mode: %i', id, enable, mode), ...
                 'APS_SetLinkListMode',enable,mode,id);
         end
         
         function setLinkListRepeat(aps,id, repeat)
-            val = aps.librarycall(sprintf('Dac: %i Link List Repeat: %i', id, repeat), ...
+            aps.librarycall(sprintf('Dac: %i Link List Repeat: %i', id, repeat), ...
                 'APS_SetLinkListRepeat',repeat,id);
         end
         
@@ -858,15 +849,15 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         function val = setOffset(aps, ch, offset)
             val = aps.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*aps.MAX_WAVEFORM_VALUE);
-            aps.(channelStr).offset = offset;
+            aps.(sprintf('ch_%d',ch)).offset = offset;
         end
         
         function setupPLL(aps)
-            val = aps.librarycall('Setup PLL', 'APS_SetupPLL');
+            aps.librarycall('Setup PLL', 'APS_SetupPLL');
         end
         
         function setupVCX0(aps)
-            val = aps.librarycall('Setup VCX0', 'APS_SetupVCXO');
+            aps.librarycall('Setup VCX0', 'APS_SetupVCXO');
         end
         
         function aps = set.samplingRate(aps, rate)
@@ -906,16 +897,16 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         function readAllRegisters(aps)
-            val = aps.librarycall(sprintf('Read Registers'), ...
+            aps.librarycall(sprintf('Read Registers'), ...
                 'APS_ReadAllRegisters');
         end
         
         function testWaveformMemory(aps, id, numBytes)
-            val = aps.librarycall(sprintf('Test WaveformMemory'), ...
+            aps.librarycall(sprintf('Test WaveformMemory'), ...
                 'APS_TestWaveformMemory',id,numBytes);
         end
         
-        function val =  readLinkListStatus(aps,id)
+        function val = readLinkListStatus(aps,id)
             val = aps.librarycall(sprintf('Read Link List Status'), ...
                 'APS_ReadLinkListStatus',id);
         end
@@ -968,7 +959,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         sequence = LinkListSequences(sequence)
         
-        function aps = UnitTest(skipLoad)
+        function aps = UnitTest()
             % work around for not knowing full name
             % of class - can not use simply APS when in
             % experiment framework
@@ -995,7 +986,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             ver = aps.readBitFileVersion();
             fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
             if ver ~= aps.expected_bit_file_ver
-                val = aps.loadBitFile();
+                aps.loadBitFile();
                 ver = aps.readBitFileVersion();
                 fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
             end
