@@ -36,8 +36,6 @@ if nargin < 1
         'NumberTitle', 'off', ...
         'Color', get(0,'DefaultUicontrolBackgroundColor'));
     
-    left = 1.0;
-    bottom = 0.5;
     %Otherwise we are placed into a parent container so grab a handle to that
 else
     handles.parent = parent;
@@ -56,7 +54,7 @@ cardParams.clockTypes = containers.Map();
 %Vertical scaling
 cardParams.scales = containers.Map();
 %AC/DC coupling and impedence
-cardParams.vert_couplings = containers.Map();
+cardParams.verticalCouplings = containers.Map();
 %The on-board filtering for bandwidth
 cardParams.bandwidths = containers.Map();
 %Which channel is used for triggering
@@ -75,12 +73,12 @@ cardParams.samplingRates = containers.Map();
 cardParamsUIDict = containers.Map();
 cardParamsUIDict('acquire_mode') = 'cardModes';
 cardParamsUIDict('clockType') = 'clockTypes';
-cardParamsUIDict('vert_scale') = 'scales';
-cardParamsUIDict('vert_coupling') = 'vert_couplings';
+cardParamsUIDict('verticalScale') = 'scales';
+cardParamsUIDict('verticalCoupling') = 'verticalCouplings';
 cardParamsUIDict('bandwidth') = 'bandwidths';
-cardParamsUIDict('trigger_ch') = 'trigChannels';
-cardParamsUIDict('trigger_coupling') = 'trigCouplings';
-cardParamsUIDict('trigger_slope') = 'trigSlopes';
+cardParamsUIDict('triggerSource') = 'trigChannels';
+cardParamsUIDict('triggerCoupling') = 'trigCouplings';
+cardParamsUIDict('triggerSlope') = 'trigSlopes';
 cardParamsUIDict('trigResync') = 'resyncs';
 cardParamsUIDict('samplingRate') = 'samplingRates';
 
@@ -89,7 +87,7 @@ cardParamsUIDict('samplingRate') = 'samplingRates';
 build_gui();
 
 %If we are not passed explicit settings then create an emtpy structure
-if nargin < 4
+if nargin < 2
     settings = struct();
 end
 
@@ -115,7 +113,7 @@ set_settings_fcn = @set_gui_elements;
         %Add the digitizer card and mode options
         tmpGrid1 = uiextras.Grid('Parent', handles.mainVBox, 'Spacing', 10, 'Padding', 5);
         
-        [~, ~, handles.cardType] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Type:', 'cardType', {'AcqirisPT120', 'AlazarATS9870'});
+        [~, ~, handles.cardType] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Type:', 'cardType', {'AgilentAP240', 'AlazarATS9870'});
         set(handles.cardType, 'Callback', @card_switch);
         [~, ~, handles.acquire_mode] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Mode:', 'acquire_mode', {''});
         
@@ -137,12 +135,12 @@ set_settings_fcn = @set_gui_elements;
         handles.acquirePanel = uiextras.Panel('Parent', handles.mainVBox, 'Title', 'Acquisition', 'FontSize', 11);
         tmpGrid3 = uiextras.Grid('Parent', handles.acquirePanel, 'Spacing', 10, 'Padding', 10);
         
-        [~, handles.statictext_vertScale, handles.vert_scale] = uiextras.labeledPopUpMenu(tmpGrid3, 'Scale:', 'vert_scale', {''});
-        [~, ~, handles.offset] = uiextras.labeledEditBox(tmpGrid3, 'Offset:', 'offset', '0');
+        [~, handles.statictext_vertScale, handles.verticalScale] = uiextras.labeledPopUpMenu(tmpGrid3, 'Scale:', 'verticalScale', {''});
+        [~, ~, handles.verticalOffset] = uiextras.labeledEditBox(tmpGrid3, 'Offset:', 'verticalOffset', '0');
         [~, ~, handles.delayTime] = uiextras.labeledEditBox(tmpGrid3, 'Delay:', 'delayTime', '0');
         [~, ~, handles.recordLength] = uiextras.labeledEditBox(tmpGrid3, 'Samples:', 'recordLength', '0');
         [~, ~, handles.samplingRate] = uiextras.labeledPopUpMenu(tmpGrid3, 'Samp. Rate:', 'samplingRate', {''});
-        [~, ~, handles.vert_coupling] = uiextras.labeledPopUpMenu(tmpGrid3, 'Coupling:', 'vert_coupling', {''});
+        [~, ~, handles.verticalCoupling] = uiextras.labeledPopUpMenu(tmpGrid3, 'Coupling:', 'verticalCoupling', {''});
         [~, ~, handles.bandwidth] = uiextras.labeledPopUpMenu(tmpGrid3, 'Bandwidth:', 'bandwidth', {''});
         [~, ~, handles.channel] = uiextras.labeledPopUpMenu(tmpGrid3, 'Channel:', 'channel', {''});
         [~, ~, handles.clockType] = uiextras.labeledPopUpMenu(tmpGrid3, 'Clock:', 'clockType', {''});
@@ -153,10 +151,10 @@ set_settings_fcn = @set_gui_elements;
         handles.triggerPanel = uiextras.Panel('Parent', handles.mainVBox, 'Title', 'Trigger', 'FontSize', 11);
         tmpGrid4 = uiextras.Grid('Parent', handles.triggerPanel, 'Spacing', 10, 'Padding', 10);
         
-        [~, ~, handles.trigger_level] = uiextras.labeledEditBox(tmpGrid4, 'Level(mV):', 'trigger_level', '500');
-        [~, ~, handles.trigger_slope] = uiextras.labeledPopUpMenu(tmpGrid4, 'Slope:', 'trigger_slope', {''});
-        [~, ~, handles.trigger_coupling] = uiextras.labeledPopUpMenu(tmpGrid4, 'Coupling:', 'trigger_coupling', {''});
-        [~, ~, handles.trigger_ch] = uiextras.labeledPopUpMenu(tmpGrid4, 'Channel:', 'trigger_ch', {''});
+        [~, ~, handles.triggerLevel] = uiextras.labeledEditBox(tmpGrid4, 'Level(mV):', 'trigger_level', '500');
+        [~, ~, handles.triggerSlope] = uiextras.labeledPopUpMenu(tmpGrid4, 'Slope:', 'trigger_slope', {''});
+        [~, ~, handles.triggerCoupling] = uiextras.labeledPopUpMenu(tmpGrid4, 'Coupling:', 'trigger_coupling', {''});
+        [~, ~, handles.triggerSource] = uiextras.labeledPopUpMenu(tmpGrid4, 'Channel:', 'trigger_ch', {''});
         
         set(tmpGrid4, 'RowSizes', -1*ones([1,2]), 'ColumnSizes', [-1, -1]);
         
@@ -194,23 +192,23 @@ set_settings_fcn = @set_gui_elements;
         
         % set horizontal settings
         horizSettings.delayTime = str2double(get(handles.delayTime, 'String'));
-        horizSettings.samplingRate = str2double(get(handles.samplingRate, 'String'));
+        horizSettings.samplingRate = cardParams.samplingRates(get_selected(handles.samplingRate));
         %disp(horizSettings);
         scope_settings.horizontal = horizSettings;
         
         % set vertical settings
-        vertSettings.vert_scale = cardParams.scales(get_selected(handles.vert_scale));
-        vertSettings.offset = str2double(get(handles.offset,'String'));
-        vertSettings.vert_coupling = cardParams.vert_couplings(get_selected(handles.vert_coupling));
+        vertSettings.verticalScale = cardParams.scales(get_selected(handles.verticalScale));
+        vertSettings.verticalOffset = str2double(get(handles.verticalOffset,'String'));
+        vertSettings.verticalCoupling = cardParams.verticalCouplings(get_selected(handles.verticalCoupling));
         vertSettings.bandwidth = cardParams.bandwidths(get_selected(handles.bandwidth));
         %disp(vertSettings);
         scope_settings.vertical = vertSettings;
         
         % set trigger settings
-        trigSettings.level = str2double(get(handles.trigger_level,'String'));
-        trigSettings.source = cardParams.trigChannels(get_selected(handles.trigger_ch));
-        trigSettings.coupling = cardParams.trigCouplings(get_selected(handles.trigger_coupling));
-        trigSettings.slope = cardParams.trigSlopes(get_selected(handles.trigger_slope));
+        trigSettings.triggerLevel = str2double(get(handles.triggerLevel,'String'));
+        trigSettings.triggerSource = cardParams.trigChannels(get_selected(handles.triggerSource));
+        trigSettings.triggerCoupling = cardParams.trigCouplings(get_selected(handles.triggerCoupling));
+        trigSettings.triggerSlope = cardParams.trigSlopes(get_selected(handles.triggerSlope));
         %disp(trigSettings);
         scope_settings.trigger = trigSettings;
         
@@ -223,7 +221,7 @@ set_settings_fcn = @set_gui_elements;
         switch scope_settings.deviceName
             case 'AlazarATS9870'
                 avgSettings.trigResync = false;
-            case {'AcqirisPT120'}
+            case {'AgilentAP240'}
                 avgSettings.trigResync = cardParams.resyncs(get_selected(handles.trigResync));
         end
         scope_settings.averager = avgSettings;
@@ -235,11 +233,11 @@ set_settings_fcn = @set_gui_elements;
         curCard = get_selected(handles.cardType);
         %Now set the allowed parameters
         switch curCard
-            case 'AcqirisPT120'
+            case 'AgilentAP240'
                 cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {0, 2});
                 cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {'int', 'ext', 'ref'});
                 cardParams.scales = containers.Map({'50m','100m', '200m', '500m', '1', '2', '5'}, {.05, .1, .2, .5, 1, 2, 5});
-                cardParams.vert_couplings = containers.Map({'Ground','DC, 1 MOhm','AC, 1 MOhm','DC, 50 Ohm','AC, 50 Ohm'}, ...
+                cardParams.verticalCouplings = containers.Map({'Ground','DC, 1 MOhm','AC, 1 MOhm','DC, 50 Ohm','AC, 50 Ohm'}, ...
                     {0,1,2,3,4});
                 cardParams.bandwidths = containers.Map({'no limit','700 MHz','200 MHz','35 MHz','25 MHz','20 MHz'}, ...
                     {0,2,3,5,1,4});
@@ -255,7 +253,7 @@ set_settings_fcn = @set_gui_elements;
                 cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {0, 2});
                 cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {1, 5, 7});
                 cardParams.scales = containers.Map({'40m','100m', '200m', '400m', '1', '2', '4'}, {2, 5, 6, 7, 10, 11, 12});
-                cardParams.vert_couplings = containers.Map({'AC, 50 Ohm','DC, 50 Ohm'}, {1, 2});
+                cardParams.verticalCouplings = containers.Map({'AC, 50 Ohm','DC, 50 Ohm'}, {1, 2});
                 cardParams.bandwidths = containers.Map({'no limit','20 MHz'}, {0,1});
                 cardParams.trigChannels = containers.Map({'External','Ch A', 'Ch B'}, {2, 0, 1});
                 cardParams.trigCouplings = containers.Map({'DC','AC'},{2,1});
@@ -281,9 +279,9 @@ set_settings_fcn = @set_gui_elements;
             defaults.clockType = 'Ext Ref (10 MHz)';
             defaults.horizontal.delayTime = 0;
             defaults.horizontal.samplingRate = 10e9;
-            defaults.vertical.vert_scale = '500m';
-            defaults.vertical.offset = 0;
-            defaults.vertical.vert_coupling = 'DC, 50 Ohm';
+            defaults.vertical.verticalScale = '500m';
+            defaults.vertical.verticalOffset = 0;
+            defaults.vertical.verticalCoupling = 'DC, 50 Ohm';
             defaults.vertical.bandwidth = 'no limit';
             defaults.trigger.trigger_level = 500;
             defaults.trigger.trigger_ch = 'External';
@@ -301,7 +299,7 @@ set_settings_fcn = @set_gui_elements;
             cardModesInv = invertMap(cardParams.cardModes);
             clockTypesInv = invertMap(cardParams.clockTypes);
             scalesInv = invertMap(cardParams.scales);
-            vert_couplingsInv = invertMap(cardParams.vert_couplings);
+            verticalCouplingsInv = invertMap(cardParams.verticalCouplings);
             bandwidthsInv = invertMap(cardParams.bandwidths);
             trigChannelsInv = invertMap(cardParams.trigChannels);
             trigCouplingsInv = invertMap(cardParams.trigCouplings);
@@ -317,15 +315,15 @@ set_settings_fcn = @set_gui_elements;
             defaults.horizontal.delayTime = settings.horizontal.delayTime;
             defaults.horizontal.samplingRate = settings.horizontal.samplingRate;
             % vertical
-            defaults.vertical.vert_scale = scalesInv(settings.vertical.vert_scale);
-            defaults.vertical.offset = settings.vertical.offset;
-            defaults.vertical.vert_coupling = vert_couplingsInv(settings.vertical.vert_coupling);
+            defaults.vertical.verticalScale = scalesInv(settings.vertical.verticalScale);
+            defaults.vertical.verticalOffset = settings.vertical.verticalOffset;
+            defaults.vertical.verticalCoupling = verticalCouplingsInv(settings.vertical.verticalCoupling);
             defaults.vertical.bandwidth = bandwidthsInv(settings.vertical.bandwidth);
             % trigger
-            defaults.trigger.level = settings.trigger.level;
-            defaults.trigger.source = trigChannelsInv(settings.trigger.source);
-            defaults.trigger.coupling = trigCouplingsInv(settings.trigger.coupling);
-            defaults.trigger.slope = trigSlopesInv(settings.trigger.slope);
+            defaults.trigger.triggerLevel = settings.trigger.triggerLevel;
+            defaults.trigger.triggerSource = trigChannelsInv(settings.trigger.triggerSource);
+            defaults.trigger.triggerCoupling = trigCouplingsInv(settings.trigger.triggerCoupling);
+            defaults.trigger.triggerSlope = trigSlopesInv(settings.trigger.triggerSlope);
             % averaging
             defaults.averager.recordLength = settings.averager.recordLength;
             defaults.averager.nbrSegments = settings.averager.nbrSegments;
@@ -362,7 +360,7 @@ set_settings_fcn = @set_gui_elements;
                         %Some of the pop-up menus we want to order based on
                         %their numeric values
                         tmpKeys = keys(cardParams.(cardParamsUIDict(name)));
-                        if(any(strcmp(name, {'vert_scale', 'bandwidth'})))
+                        if(any(strcmp(name, {'verticalScale', 'bandwidth'})))
                             tmpValues = keys(cardParams.(cardParamsUIDict(name)));
                             tmpValues = strrep(tmpValues, 'm','e-3');
                             tmpValues = strrep(tmpValues, 'MHz','e6');
