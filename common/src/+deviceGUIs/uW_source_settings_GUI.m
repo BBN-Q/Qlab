@@ -30,7 +30,8 @@ end
 % Create all UI controls
 build_gui();
 
-if nargin < 5
+%If no settings were passed in create an empty structure
+if nargin < 3
 	settings = struct();
 end
 set_defaults(settings);
@@ -93,7 +94,7 @@ setting_fcn = @get_settings;
 	end
 
 	function value = get_numeric(hObject)
-		value = str2num(get(hObject, 'String'));
+		value = str2double(get(hObject, 'String'));
 	end
 
 	function settings = get_settings()

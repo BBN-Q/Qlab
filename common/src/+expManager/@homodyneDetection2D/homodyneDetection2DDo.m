@@ -56,7 +56,7 @@ if ~SD_mode
     for Instr_index = 1:numel(InstrumentNames)
         InstrName = InstrumentNames{Instr_index};
         switch class(Instr.(InstrName))
-            case 'deviceDrivers.AgilentAP120'
+            case 'deviceDrivers.AgilentAP240'
                 scope = Instr.(InstrName); % we're going to need this later
             otherwise
                 % unknown instrument type, for now do nothing

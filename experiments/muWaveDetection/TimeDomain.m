@@ -145,16 +145,17 @@ ExpSetupVBox = uiextras.VBox('Parent', ExpSetupPanel, 'Spacing', 5);
 %Add sweep/loop selector
 tmpGrid = uiextras.Grid('Parent', ExpSetupVBox, 'Spacing', 5);
 [~, ~, fastLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Fast Loop:', 'fastloop',  {'frequencyA', 'power', 'phase', 'dc', 'TekCh', 'CrossDriveTuneUp', 'Repeat', 'nothing'});
-[~, ~, softAvgs] = uiextras.labeledEditBox(tmpGrid, 'Soft Averages:', 'softAvgs', '1');
-[~, ~, deviceName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Device Name:', 'deviceName', '');
-[~, ~, exptName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Experiment:', 'expName', '');
+set(fastLoop, 'Value', 8);
+[~, ~, softAvgs] = uiextras.labeledEditBox(tmpGrid, 'Soft Averages:', 'softAvgs', prevSettings.ExpParams.softAvgs);
+[~, ~, deviceName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Device Name:', 'deviceName', prevSettings.deviceName);
+[~, ~, exptName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Experiment:', 'expName', prevSettings.exptName);
 set(tmpGrid, 'RowSizes', [-1,-1], 'ColumnSizes', [-1, -1]);
 
 tmpHBox = uiextras.HBox('Parent',ExpSetupVBox);
-[~, ~, fileNum_EditBox] = uiextras.labeledEditBox(tmpHBox, 'File Number:', 'fileNum', '001');
+[~, ~, fileNum_EditBox] = uiextras.labeledEditBox(tmpHBox, 'File Number:', 'fileNum', counter.value);
 %Add a listener to the file number edit box to update with the counter value
 fileNumberListener = addlistener(counter, 'valueChanged', @(src,~) set(fileNum_EditBox, 'String', sprintf('%03d',src.value)));
-%Clear the listener when the uicontrol is delete so they don't pile up
+%Clear the listener when the uicontrol is deleted so they don't pile up
 set(fileNum_EditBox, 'DeleteFcn', @(~,~) delete(fileNumberListener));
 tmpButtonBox = uiextras.HButtonBox('Parent', tmpHBox);
 %Reset button is added below because we can't forward reference the
@@ -162,7 +163,7 @@ tmpButtonBox = uiextras.HButtonBox('Parent', tmpHBox);
 
 tmpHBox = uiextras.HBox('Parent',ExpSetupVBox, 'Spacing', 5);
 uicontrol('Parent', tmpHBox, 'Style', 'text', 'String', 'Data Path:', 'FontSize', 10);
-dataPath_EditBox = uicontrol('Parent', tmpHBox, 'Style', 'edit', 'BackgroundColor', [1,1,1], 'Max', 2, 'Min', 0);
+dataPath_EditBox = uicontrol('Parent', tmpHBox, 'Style', 'edit', 'BackgroundColor', [1,1,1], 'Max', 2, 'Min', 0, 'String', prevSettings.data_path);
 uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Reset', 'Callback', @(~,~) counter.reset(get(dataPath_EditBox, 'String')));
 tmpButtonBox = uiextras.HButtonBox('Parent', tmpHBox);
 uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Choose', 'Callback', @choose_data_path);
@@ -316,13 +317,13 @@ set(mainWindow, 'Visible', 'on');
         counter.increment();
 
 		% Run the actual experiment
-% 		Exp.Init;
-% 		Exp.Do;
-% 		Exp.CleanUp;
-% 
-% 		% Close the data file and end connection to all insturments.  This is 
-% 		% another method inherited from 'experiment'
-% 		Exp.finalizeData;
+		Exp.Init;
+		Exp.Do;
+		Exp.CleanUp;
+
+		% Close the data file and end connection to all insturments.  This is 
+		% another method inherited from 'experiment'
+		Exp.finalizeData;
 
 		status = 0;
     end

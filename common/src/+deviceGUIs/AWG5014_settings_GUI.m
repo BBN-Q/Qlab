@@ -29,7 +29,7 @@ end
 % Create all UI controls
 build_gui();
 
-if nargin < 5
+if nargin < 3
 	settings = struct();
 end
 set_GUI_fields(settings);

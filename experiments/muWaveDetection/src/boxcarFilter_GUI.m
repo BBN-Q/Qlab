@@ -27,7 +27,7 @@ end
 % Create all UI controls
 build_gui();
 
-if nargin < 4
+if nargin < 2
 	settings = struct();
 end
 set_defaults(settings);

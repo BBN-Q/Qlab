@@ -61,7 +61,7 @@ set_settings_fcn = @set_GUI_fields;
     end
 
     function value = get_numeric(hObject)
-		value = str2num(get(hObject, 'String'));
+		value = str2double(get(hObject, 'String'));
 	end
 
 	function settings = get_settings()
