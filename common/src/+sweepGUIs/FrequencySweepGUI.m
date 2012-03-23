@@ -1,4 +1,4 @@
-function settings_fcn = FrequencySweepGUI(parent, name)
+function settings_fcn = FrequencySweepGUI(parent, name, prevSettings)
 % FREQUENCYSWEEP_BUILD
 %-------------------------------------------------------------------------------
 % File name   : FrequencySweep_build.m        
@@ -28,6 +28,15 @@ else
 	name = ['Frequency settings ' name];
 end
 
+if nargin < 3
+    prevSettings = struct();
+    prevSettings.start = 0;
+    prevSettings.stop = 0;
+    prevSettings.step = 0;
+    prevSettings.genID = 'RFgen';
+end
+    
+
 % Create all UI controls
 build_gui();
 
@@ -43,6 +52,7 @@ settings_fcn = @get_settings;
         tmpVBox = uiextras.VBox('Parent', handles.mainPanel, 'Spacing', 2);
         tmpHBox1 =  uiextras.HBox('Parent', tmpVBox, 'Spacing', 5);
         [~, ~, handles.genID] = uiextras.labeledPopUpMenu(tmpHBox1, 'Generator:', 'genID',  {'RF','LO','Spec','Spec2'});
+        set(handles.genID, 'Value', find(strcmp(prevSettings.genID(1:end-3), get(handles.genID,'String'))));
         uiextras.Empty('Parent', tmpHBox1);
         tmpHBox2 = uiextras.HButtonBox('Parent', tmpVBox, 'Spacing', 5, 'VerticalAlignment', 'bottom');
         textParams = {'Parent', tmpHBox2, 'Style', 'text', 'FontSize', 10};
@@ -52,9 +62,9 @@ settings_fcn = @get_settings;
         
         tmpHBox3 = uiextras.HButtonBox('Parent', tmpVBox, 'Spacing', 5, 'VerticalAlignment', 'top');
         editParams = {'Parent', tmpHBox3, 'Style', 'edit', 'BackgroundColor', [1, 1, 1], 'FontSize', 10};
-        handles.startFreq = uicontrol(editParams{:}, 'String', 10);
-        handles.stopFreq = uicontrol(editParams{:}, 'String', 10);
-        handles.stepFreq = uicontrol(editParams{:}, 'String', 0.001);
+        handles.startFreq = uicontrol(editParams{:}, 'String', prevSettings.start);
+        handles.stopFreq = uicontrol(editParams{:}, 'String', prevSettings.stop);
+        handles.stepFreq = uicontrol(editParams{:}, 'String', prevSettings.step);
         
         %Try and patch up the sizing
         tmpVBox.Sizes = [-1.5, -1, -1];

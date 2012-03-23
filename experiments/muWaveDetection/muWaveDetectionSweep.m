@@ -9,7 +9,7 @@
  %
  %    Modified    By    Reason
  %    --------    --    ------
- %
+ %    March 2012 Colm Ryan to add GUI Layouts
  %
  % Copyright 2010 Raytheon BBN Technologies
  %
@@ -24,7 +24,8 @@
  % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  % See the License for the specific language governing permissions and
  % limitations under the License.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function status = muWaveDetectionSweep()
 % This script will execute the experiment muWaveDetection using the
 % default parameters found in the cfg file or specified using the GUI.
@@ -123,8 +124,8 @@ AWGTabPanel.SelectedChild = 1;
 rightVBox = uiextras.VBox('Parent', mainGrid, 'Spacing', 10);
 SweepPanel = uiextras.Panel('Parent', rightVBox, 'Title', 'Sweeps','FontSize',12, 'Padding', 5);
 SweepTabPanel = uiextras.TabPanel('Parent', SweepPanel, 'Padding', 5, 'HighlightColor', 'k');
-get_freqA_settings = sweepGUIs.FrequencySweepGUI(SweepTabPanel, 'A');
-get_freqB_settings = sweepGUIs.FrequencySweepGUI(SweepTabPanel, 'B');
+get_freqA_settings = sweepGUIs.FrequencySweepGUI(SweepTabPanel, 'A', prevSettings.SweepParams.frequencyA);
+get_freqB_settings = sweepGUIs.FrequencySweepGUI(SweepTabPanel, 'B', prevSettings.SweepParams.frequencyB);
 get_power_settings = sweepGUIs.PowerSweepGUI(SweepTabPanel, '');
 get_phase_settings = sweepGUIs.PhaseSweepGUI(SweepTabPanel, '');
 
@@ -144,12 +145,13 @@ ExpSetupVBox = uiextras.VBox('Parent', ExpSetupPanel, 'Spacing', 5);
 tmpGrid = uiextras.Grid('Parent', ExpSetupVBox, 'Spacing', 5);
 [~, ~, fastLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Fast Loop:', 'fastloop',  {'frequencyA', 'frequencyB', 'power', 'phase', 'dc', 'TekCh', 'nothing'});
 [~, ~, slowLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Slow Loop:', 'slowloop',  {'frequencyA', 'frequencyB', 'power', 'phase', 'dc', 'TekCh', 'nothing'});
-[~, ~, deviceName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Device Name:', 'deviceName', '');
-[~, ~, exptName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Experiment:', 'expName', '');
+set(slowLoop, 'Value', 7);
+[~, ~, deviceName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Device Name:', 'deviceName', prevSettings.deviceName);
+[~, ~, exptName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Experiment:', 'expName', prevSettings.exptName);
 set(tmpGrid, 'RowSizes', [-1, -1], 'ColumnSizes', [-1, -1]);
 
 tmpHBox = uiextras.HBox('Parent',ExpSetupVBox);
-[~, ~, fileNum_EditBox] = uiextras.labeledEditBox(tmpHBox, 'File Number:', 'fileNum', '001');
+[~, ~, fileNum_EditBox] = uiextras.labeledEditBox(tmpHBox, 'File Number:', 'fileNum', counter.value);
 %Add a listener to the file number edit box to update with the counter value
 fileNumberListener = addlistener(counter, 'valueChanged', @(src,~) set(fileNum_EditBox, 'String', sprintf('%03d',src.value)));
 %Clear the listener when the uicontrol is delete so they don't pile up
@@ -161,7 +163,7 @@ tmpButtonBox = uiextras.HButtonBox('Parent', tmpHBox);
 
 tmpHBox = uiextras.HBox('Parent',ExpSetupVBox, 'Spacing', 5);
 uicontrol('Parent', tmpHBox, 'Style', 'text', 'String', 'Data Path:', 'FontSize', 10);
-dataPath_EditBox = uicontrol('Parent', tmpHBox, 'Style', 'edit', 'BackgroundColor', [1,1,1], 'Max', 2, 'Min', 0);
+dataPath_EditBox = uicontrol('Parent', tmpHBox, 'Style', 'edit', 'BackgroundColor', [1,1,1], 'Max', 2, 'Min', 0, 'String', prevSettings.data_path);
 uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Reset', 'Callback', @(~,~) counter.reset(get(dataPath_EditBox, 'String')));
 tmpButtonBox = uiextras.HButtonBox('Parent', tmpHBox);
 uicontrol('Parent', tmpButtonBox, 'Style', 'pushbutton', 'String', 'Choose', 'Callback', @choose_data_path);
