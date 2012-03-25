@@ -56,7 +56,7 @@ if ~SD_mode
     for Instr_index = 1:numel(InstrumentNames)
         InstrName = InstrumentNames{Instr_index};
         switch class(Instr.(InstrName))
-            case 'deviceDrivers.AgilentAP120'
+            case 'deviceDrivers.AgilentAP240'
                 scope = Instr.(InstrName); % we're going to need this later
             otherwise
                 % unknown instrument type, for now do nothing
@@ -101,7 +101,7 @@ for loop2_index = 1:Loop.two.steps
             fprintf('Soft average %d\n', avg_index);
 
             % set the card to acquire
-            success = scope.acquire();
+            scope.acquire();
 
             % set the Tek to run
             masterAWG.run();
