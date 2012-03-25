@@ -25,7 +25,7 @@
  % See the License for the specific language governing permissions and
  % limitations under the License.
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function status = TimeDomain(cfg_file_name)
+function TimeDomain(cfg_file_name)
 % This script will execute a time domain (2D) experiment using the
 % default parameters found in the cfg file or specified using the GUI.
 
@@ -94,7 +94,7 @@ leftVBox = uiextras.VBox('Parent', mainGrid, 'Spacing', 10);
 %Add the Run/Stop buttons and scope checkbox
 tmpHBox = uiextras.HButtonBox('Parent', leftVBox, 'ButtonSize', [120, 40]);
 runButton = uicontrol('Parent', tmpHBox, 'Style', 'pushbutton', 'String', 'Run', 'FontSize', 10, 'Callback', @run_callback);
-stopButton = uicontrol('Parent', tmpHBox, 'Style', 'pushbutton', 'String', 'Stop', 'FontSize', 10, 'Callback', @(~,~)warndlg('Oops, Not implemented yet') );
+uicontrol('Parent', tmpHBox, 'Style', 'pushbutton', 'String', 'Stop', 'FontSize', 10, 'Callback', @stop_callback);
 scopeButton = uicontrol('Parent', tmpHBox, 'Style', 'checkbox', 'FontSize', 10, 'String', 'Scope:'); 
 
 leftVBox.Sizes = [-4,-1];
@@ -231,6 +231,9 @@ set(mainWindow, 'Visible', 'on');
 %Add the main run callback
 	function run_callback(~, ~)
 
+        %Disable the run button so we can't call it twice
+        set(runButton, 'Enable', 'off');
+        
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		%%%%%%%%%%%%%%%%%%%%%%%     WRITE CONFIG     %%%%%%%%%%%%%%%%%%%%%%%%%%%
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -324,14 +327,21 @@ set(mainWindow, 'Visible', 'on');
 		% Close the data file and end connection to all insturments.  This is 
 		% another method inherited from 'experiment'
 		Exp.finalizeData;
-
-		status = 0;
+        
+        %Call the stop button call_back to clean-up
+        stop_callback()
     end
 
     function keyPress(~, event)
         if strcmp(event.Modifier{1},'control') && strcmp(event.Key,'r')
             run_callback()
         end
+    end
+
+    function stop_callback(~,~)
+        %Reenable the start button
+        set(runButton, 'Enable', 'on');
+        
     end
 
 end

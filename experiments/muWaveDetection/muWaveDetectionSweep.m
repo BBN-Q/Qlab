@@ -96,7 +96,7 @@ leftVBox = uiextras.VBox('Parent', mainGrid, 'Spacing', 10);
 %Add the Run/Stop buttons and scope checkbox
 tmpHBox = uiextras.HButtonBox('Parent', leftVBox, 'ButtonSize', [120, 40]);
 runButton = uicontrol('Parent', tmpHBox, 'Style', 'pushbutton', 'String', 'Run', 'FontSize', 10, 'Callback', @run_callback);
-stopButton = uicontrol('Parent', tmpHBox, 'Style', 'pushbutton', 'String', 'Stop', 'FontSize', 10, 'Callback', @stop_callback );
+uicontrol('Parent', tmpHBox, 'Style', 'pushbutton', 'String', 'Stop', 'FontSize', 10, 'Callback', @stop_callback );
 scopeButton = uicontrol('Parent', tmpHBox, 'Style', 'checkbox', 'FontSize', 10, 'String', 'Scope:'); 
 
 leftVBox.Sizes = [-4,-1];
@@ -272,6 +272,7 @@ set(mainWindow, 'Visible', 'on');
         % create experiment object
 		Exp = expManager.homodyneDetection(data_path, cfg_file_name, basename, counter.value);
         
+        
         % parse cfg file
 		Exp.parseExpcfgFile;
 
@@ -289,13 +290,12 @@ set(mainWindow, 'Visible', 'on');
 		% Close the data file and end connection to all insturments.
 		Exp.finalizeData;
 
-        %Reenable the start button
-        set(runButton, 'Enable', 'on');
+        %Call the stop button call_back to clean-up
+        stop_callback()
     end
 
     
     function stop_callback(~,~)
-        
         %Reenable the start button
         set(runButton, 'Enable', 'on');
         

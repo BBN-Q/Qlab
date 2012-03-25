@@ -1,4 +1,4 @@
-classdef AgilentAP240 < handle
+classdef AgilentAP240 < hgsetget
     %Agilent Acqiris AP120
     %
     %
@@ -11,24 +11,6 @@ classdef AgilentAP240 < handle
     properties (Constant = true)
         clockTypes = containers.Map({'int', 'ext', 'ref'}, {0, 1, 2});
     end % end constant properties
-    
-    
-    % Class-specific private properties
-    properties (Access = private)
-        
-    end % end private properties
-    
-    
-    % Class-specific public properties
-    properties (Access = public)
-        
-    end % end public properties
-    
-    
-    % Device properties correspond to instrument parameters
-    properties (Access = private)
-        
-    end
     
     properties (Access = public)
         instrID; %
