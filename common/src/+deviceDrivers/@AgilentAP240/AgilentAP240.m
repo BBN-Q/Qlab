@@ -225,24 +225,20 @@ classdef AgilentAP240 < handle
         end % end reset
         
         %%destructor the device
-        function status=delete(obj)
+        function delete(obj)
             disp('Cleaning up Agilent Test Card');
             % Close the instrument
-            status = Aq_close(obj.instrID);
-            if (status ~= 0)
-                %disp(sprintf('Error in Aq_close (not sure why we need this?): %d', status));
-                fprintf('Acqiris card is already closed');
-            end
+            Aq_close(obj.instrID);
             
             % Free remaining resources
-            status = Aq_closeAll();
-            assert(status == 0, 'Acqiris card is already closed');
+            Aq_closeAll();
         end
         
         % disconnect device
         function disconnect(obj)
-            status=delete(obj);
-            assert(status == 0, 'Acqiris card is already closed');
+            if isvalid(obj)
+                delete(obj);
+            end
         end
         
         % instrument meta-setter
