@@ -25,8 +25,8 @@ persistent figureHandle;
 persistent figureHandle2D;
 
 if isempty(figureHandle)
-	figureHandle = figure;
-	figureHandle2D = figure;
+    figureHandle = figure;
+    figureHandle2D = figure;
 end
 
 % Loop is a reparsing of the strucutres LoopParams and TaskParams that we
@@ -51,7 +51,7 @@ else
 end
 
 if Loop.two.steps > 1 && ~exist('figureHandle2D','var')
-	figureHandle2D = figure(2);
+    figureHandle2D = figure(2);
 end
 
 %pre allocate memory
@@ -68,9 +68,9 @@ if ~SD_mode
             case 'deviceDrivers.Tek5014'
                 %Instr.(InstrName).stop; % just to be safe
                 tekInstrName = InstrName; % so we have this later
-				% set the tek awg running, and make sure that it actually
+                % set the tek awg running, and make sure that it actually
                 % starts running.
-				Instr.(tekInstrName).run();
+                Instr.(tekInstrName).run();
                 [success_flag_AWG] = Instr.(tekInstrName).waitForAWGtoStartRunning();
                 if success_flag_AWG ~= 1, error('AWG timed out'), end
             case 'deviceDrivers.APS'
@@ -89,23 +89,23 @@ end
 % want to change this.
 for loop3_index = 1:Loop.three.steps
     if setLoop3Params
-		Loop.three.sweep.step(loop3_index);
-	end
-	Amp2D = [];
-	Phase2D = [];
+        Loop.three.sweep.step(loop3_index);
+    end
+    Amp2D = [];
+    Phase2D = [];
     for loop2_index = 1:Loop.two.steps
         if setLoop2Params
-			Loop.two.sweep.step(loop2_index);
-			fprintf('Loop 2: Step %d of %d\n', [loop2_index, Loop.two.steps]);
+            Loop.two.sweep.step(loop2_index);
+            fprintf('Loop 2: Step %d of %d\n', [loop2_index, Loop.two.steps]);
         end
         if ~SD_mode
-			amp = zeros(Loop.one.steps,1);
-			phase = zeros(Loop.one.steps,1);
-		end
-		fprintf('Loop 1: %d steps\n', Loop.one.steps);
+            amp = zeros(Loop.one.steps,1);
+            phase = zeros(Loop.one.steps,1);
+        end
+        fprintf('Loop 1: %d steps\n', Loop.one.steps);
         for loop1_index = 1:Loop.one.steps
             if setLoop1Params
-				Loop.one.sweep.step(loop1_index);
+                Loop.one.sweep.step(loop1_index);
             end
             % get the x-axis for the plot
             x_range = Loop.one.sweep.points;
@@ -117,48 +117,48 @@ for loop3_index = 1:Loop.three.steps
                 % convert I/Q to Amp/Phase
                 amp(loop1_index) = sqrt(iavg.^2 + qavg.^2);
                 phase(loop1_index) = (180.0/pi) * atan2(qavg, iavg);
-
+                
                 % Next we write the data to our data file
                 fprintf(fid,'%d+%di,',[iavg;qavg]);
                 fprintf(fid,'\n');
                 % and plot it for the user
                 figure(figureHandle);
                 subplot(2,1,1)
-				plot(x_range(1:loop1_index),amp(1:loop1_index));
-				ylabel('Amplitude');
-				grid on
+                plot(x_range(1:loop1_index),amp(1:loop1_index));
+                ylabel('Amplitude');
+                grid on
                 %axis tight
                 subplot(2,1,2)
                 %cla
-				plot(x_range(1:loop1_index),phase(1:loop1_index));
-				ylabel('Phase');
+                plot(x_range(1:loop1_index),phase(1:loop1_index));
+                ylabel('Phase');
                 grid on
             else
                 percentComplete = 100*(loop1_index-1 + (loop2_index)/Loop.two.steps)/Loop.one.steps;
                 fprintf(fid,'%d\n',percentComplete);
             end
-		end
-		
-		Amp2D = [Amp2D amp];
-		Phase2D = [Phase2D phase];
-		% display 2D data sets if there is a 2D loop
-		if Loop.two.steps > 1
-			if isfield(Loop.two,'plotRange')
-				y_range = Loop.two.plotRange;
-			else
-				y_range = 1:Loop.two.sweep.points;
-			end
-			figure(figureHandle2D);
-			subplot(2,1,1);
-			imagesc(x_range, y_range(1:loop2_index), Amp2D.');
-			ylabel('Amplitude');
-			axis tight;
-			subplot(2,1,2);
-			imagesc(x_range, y_range(1:loop2_index), Phase2D.');
-			ylabel('Phase');
-			axis tight;
-		end
-		
+        end
+        
+        Amp2D = [Amp2D amp];
+        Phase2D = [Phase2D phase];
+        % display 2D data sets if there is a 2D loop
+        if Loop.two.steps > 1
+            if isfield(Loop.two,'plotRange')
+                y_range = Loop.two.plotRange;
+            else
+                y_range = 1:Loop.two.sweep.points;
+            end
+            figure(figureHandle2D);
+            subplot(2,1,1);
+            imagesc(x_range, y_range(1:loop2_index), Amp2D.');
+            ylabel('Amplitude');
+            axis tight;
+            subplot(2,1,2);
+            imagesc(x_range, y_range(1:loop2_index), Phase2D.');
+            ylabel('Phase');
+            axis tight;
+        end
+        
         if loop2_index < Loop.two.steps
             fprintf(fid,'\n### iterating loop2_index \n');
         end
