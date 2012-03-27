@@ -1,4 +1,4 @@
-function [errorMsg] = homodyneDetection2DDo(obj)
+function homodyneDetection2DDo(obj)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % USAGE: [errorMsg] = homodyneDetection2DDo(obj)
 %
@@ -17,15 +17,16 @@ fid = obj.DataFileHandle;
 SD_mode = obj.inputStructure.SoftwareDevelopmentMode;
 displayScope = obj.inputStructure.displayScope;
 
-errorMsg = '';
-
 persistent figureHandle;
 persistent figureHandle2D;
 persistent scopeHandle;
-if isempty(figureHandle) || ~isa(figureHandle, 'handle')
+
+if isempty(figureHandle) || ~ishandle(figureHandle)
 	figureHandle = figure;
 end
-
+if isempty(figureHandle2D) || ~ishandle(figureHandle2D)
+        figureHandle2D = figure;
+end
 if isempty(scopeHandle) && displayScope
     scopeHandle = figure;
 end
@@ -40,13 +41,9 @@ if isempty(Loop.two)
     setLoop2Params = false;
 else
     setLoop2Params = true;
-    if isempty(figureHandle2D) || ~isa(figureHandle2D, 'handle')
-        figureHandle2D = figure;
-    end
 end
 
 %% Main Loop
-tic
 
 %% If there's anything thats particular to any device do it here
 

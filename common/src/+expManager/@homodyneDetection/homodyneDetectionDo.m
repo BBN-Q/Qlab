@@ -24,11 +24,12 @@ errorMsg = '';
 persistent figureHandle;
 persistent figureHandle2D;
 
-if isempty(figureHandle)
+if isempty(figureHandle) || ~ishandle(figureHandle)
     figureHandle = figure;
-    figureHandle2D = figure;
 end
-
+if isempty(figureHandle2D) || ~ishandle(figureHandle2D)
+        figureHandle2D = figure;
+end
 % Loop is a reparsing of the strucutres LoopParams and TaskParams that we
 % will use in this method
 Loop = obj.populateLoopStructure;
@@ -51,7 +52,7 @@ else
 end
 
 if Loop.two.steps > 1 && ~exist('figureHandle2D','var')
-    figureHandle2D = figure(2);
+    
 end
 
 %pre allocate memory
