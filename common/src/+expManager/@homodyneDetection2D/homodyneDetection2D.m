@@ -38,7 +38,7 @@ classdef homodyneDetection2D < expManager.expBase
     properties %This is only for properties not defined in the 'experiment' superlcass
         awg = [];
     end
-    methods (Static)
+    methods 
         %% Class constructor
         function obj = homodyneDetection2D(data_path, cfgFileName, basename, filenumber)
             script = mfilename('fullpath');
@@ -56,8 +56,7 @@ classdef homodyneDetection2D < expManager.expBase
 			% finally we inherit methods and properties from the experiment class
             obj = obj@expManager.expBase(basename, data_path, cfgFileName, filenumber);
         end
-    end
-    methods
+        
         %% Base functions
         function Init(obj)
             %%% The next function is experiment specific %%%
@@ -112,4 +111,12 @@ classdef homodyneDetection2D < expManager.expBase
             
         end
     end
+    
+    methods (Static)
+        % Forward reference the digitalHomodyne function defined in
+        % separate file
+        [DI DQ] =  digitalHomodyne(signal, IFfreq, sampInterval, integrationStart, integrationWindow)
+        
+    end
+
 end
