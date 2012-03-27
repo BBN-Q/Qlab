@@ -246,16 +246,13 @@ set(mainWindow, 'Visible', 'on');
 		settings.SoftwareDevelopmentMode = 0;
         
         % get file path, counter, device name, and experiment name
-        tmpDataPath = get(dataPath_EditBox, 'String');
+        expDataPath = get(dataPath_EditBox, 'String');
         deviceName = get(deviceName_EditBox, 'String');
         exptName = get(exptName_EditBox, 'String');
-        if ~isempty(tmpDataPath)
-            data_path = tmpDataPath;
-        end
         if ~isempty(exptName) && ~isempty(deviceName)
             basename = [deviceName '_' exptName];
         end
-        settings.data_path = data_path;
+        settings.data_path = expDataPath;
         settings.deviceName = deviceName;
         settings.exptName = exptName;
         settings.counter = counter.value;
@@ -270,7 +267,7 @@ set(mainWindow, 'Visible', 'on');
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		
         % create experiment object
-		Exp = expManager.homodyneDetection(data_path, cfg_file_name, basename, counter.value);
+		Exp = expManager.homodyneDetection(expDataPath, cfg_file_name, basename, counter.value);
         
         
         % parse cfg file
