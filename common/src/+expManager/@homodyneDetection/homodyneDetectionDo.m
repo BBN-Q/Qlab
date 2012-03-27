@@ -93,18 +93,19 @@ end
 x_range = Loop.one.sweep.points;
 
 axesHandle1DAmp = subplot(2,1,1,'Parent', figureHandle);
-ylabel(axesHandle1DAmp, 'Amplitude');
 grid(axesHandle1DAmp, 'on')
 axesHandle1DPhase = subplot(2,1,2,'Parent', figureHandle);
-ylabel(axesHandle1DPhase, 'Phase');
 grid(axesHandle1DPhase, 'on')
 
 plotHandle1DAmp = plot(axesHandle1DAmp, x_range, nan(1,Loop.one.steps));
+ylabel(axesHandle1DAmp, 'Amplitude (V)');
+xlabel(axesHandle1DAmp, 'Frequency (GHz)');
 plotHandle1DPhase = plot(axesHandle1DPhase, x_range, nan(1,Loop.one.steps));
+ylabel(axesHandle1DPhase, 'Phase (degrees)');
+xlabel(axesHandle1DPhase, 'Frequency (GHz)');
 
 if Loop.two.steps > 1
     axesHandle2DAmp = subplot(2,1,1,'Parent', figureHandle2D);
-    ylabel(axesHandle2DAmp,'Amplitude');
     axesHandle2DPhase = subplot(2,1,2,'Parent', figureHandle2D);
     ylabel(axesHandle2DPhase, 'Phase');
     if isfield(Loop.two,'plotRange')
@@ -113,7 +114,11 @@ if Loop.two.steps > 1
         y_range = 1:Loop.two.sweep.points;
     end
     plotHandle2DAmp = imagesc(x_range, y_range, nan(Loop.two.steps, Loop.one.steps), 'Parent', axesHandle2DAmp);
+    xlabel(axesHandle2DAmp, 'Frequency (GHz)');
+    ylabel(axesHandle2DAmp, Loop.two.name);
     plotHandle2DPhase = imagesc(x_range, y_range, nan(Loop.two.steps, Loop.one.steps), 'Parent', axesHandle2DPhase);
+    xlabel(axesHandle2DPhase, 'Frequency (GHz)');
+    ylabel(axesHandle2DPhase, Loop.two.name);
 end
 
 for loop3_index = 1:Loop.three.steps
