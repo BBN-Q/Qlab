@@ -332,18 +332,14 @@ classdef AgilentAP240 < hgsetget
             
             % chop off initial unused points
             nbrSamples = obj.averager.record_length * obj.averager.nbrSegments;
-            % fix off-by-one error in indexFirstPoint
-            %firstPt = dataDesc.indexFirstPoint + 1;
-            firstPt = dataDesc.indexFirstPoint;
-            subrange = 1+firstPt:firstPt+nbrSamples;
-            AqDataBuffer = AqDataBuffer(subrange);
+            % fix off-by-five(?) error in indexFirstPoint
+            firstPt = 6;
+            %firstPt = dataDesc.indexFirstPoint;
+            AqDataBuffer = reshape(AqDataBuffer(1:nbrSamples), obj.averager.record_length, obj.averager.nbrSegments);
+            % lop off first 5 points from each segment
+            AqDataBuffer = AqDataBuffer(firstPt:end, :);
             
-            % if more than one segment, reshape into 2D array
-            if obj.averager.nbrSegments > 1
-                AqDataBuffer = reshape(AqDataBuffer, obj.averager.record_length, obj.averager.nbrSegments);
-            end
-            
-            times = linspace(0,double(obj.averager.record_length - 1) * double(dataDesc.sampTime),obj.averager.record_length);
+            times = linspace(firstPt*double(dataDesc.sampTime),double(obj.averager.record_length - 1) * double(dataDesc.sampTime),obj.averager.record_length-firstPt);
             
             assert(status == 0, 'Error in AqD1_readData: %d', status);
         end
