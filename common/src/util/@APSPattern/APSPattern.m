@@ -526,11 +526,11 @@ classdef APSPattern < handle
             for ii = 1:length(linkList)
                 entry = linkList{ii};
                 % split an entry only if the entry is at least twice the
-                % minimum width
+                % minimum width + 4
                 if entry.hasMarkerData && entry.isZero && length(entry.markerDelay) > 1
                     % if the entry is too short to split, clear the marker
                     % data
-                    if entry.repeat < 2*MIN_LL_ENTRY_LENGTH
+                    if entry.repeat < 2*MIN_LL_ENTRY_LENGTH + 4
                         entry.hasMarkerData = 0;
                         splitList{ii} = entry;
                         kk = kk + 1;
@@ -542,8 +542,10 @@ classdef APSPattern < handle
 
                         for jj = 1:length(delays)-1
                             newEntries{jj} = entry;
-                            % make sure the entry is at least the minimum length
-                            newEntries{jj}.repeat = max(delays(jj), MIN_LL_ENTRY_LENGTH);
+                            % make sure the entry is at least the minimum
+                            % length (plus a little extra to avoid putting
+                            % the trigger right on the boundary)
+                            newEntries{jj}.repeat = max(delays(jj)+4, MIN_LL_ENTRY_LENGTH);
                             % subtract the consumed length from the remaining
                             % delay
                             newEntries{jj}.markerDelay = delays(jj) - newEntriesLength;

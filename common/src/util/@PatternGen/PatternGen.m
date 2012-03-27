@@ -630,7 +630,7 @@ classdef PatternGen < handle
                     % check if falling edge falls within the current entry
                     if time + entryWidth > width
                         entry.hasMarkerData = 1;
-                        entry.markerDelay = abs(width - time);
+                        entry.markerDelay = max(width - time, 0);
                         entry.markerMode = 2; % 0 - pulse, 1 - rising, 2 - falling, 3 - none
                         if width < time
                             warning('PatternGen:addTrigger:padding', 'Trigger padded to extend over multiple entries.');
@@ -674,7 +674,7 @@ classdef PatternGen < handle
                 entryWidth = linkList{ii}.length * linkList{ii}.repeat;
                 if linkList{ii}.isZero
                     % check if we need to switch low
-                    if state == 1 && entryWidth > obj.bufferReset
+                    if state == 1 && entryWidth > endDelay + obj.bufferReset
                         linkList{ii}.hasMarkerData = 1;
                         linkList{ii}.markerDelay = endDelay;
                         linkList{ii}.markerMode = 0; % 0 = pulse mode
@@ -687,6 +687,12 @@ classdef PatternGen < handle
                         % marker data on this entry
                         if linkList{ii}.hasMarkerData == 1
                             linkList{ii}.markerDelay(end+1) = entryWidth - startDelay;
+                            % check that the distance between markers is at
+                            % least the bufferReset time
+                            if linkList{ii}.markerDelay(2) - linkList{ii}.markerDelay(1) < obj.bufferReset
+                                linkList{ii}.hasMarkerData = 0;
+                                linkList{ii}.markerDelay = 0;
+                            end
                         else
                             linkList{ii}.hasMarkerData = 1;
                             linkList{ii}.markerDelay = entryWidth - startDelay;
