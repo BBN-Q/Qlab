@@ -61,7 +61,7 @@ function exportAPSConfig(path, basename, varargin)
     h5writeatt(fileName,'/', 'Version Number', VersionNum);
     %Now create each channel group and put the associated data
     for channel = channelDataFor
-        channelStr = sprintf('/ch%d', channel);
+        channelStr = sprintf('/chan_%d', channel);
         
         %The waveform library
         h5create(fileName, [channelStr, '/waveformLib'], size(WaveformLibs{channel}), 'Datatype', 'int16');

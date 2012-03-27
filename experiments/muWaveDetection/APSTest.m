@@ -14,23 +14,26 @@ settings.chan_4.amplitude = 1.0;
 settings.chan_4.offset = 0;
 settings.samplingRate = 1200;
 settings.triggerSource = 'external';
-settings.seqfile = 'U:\APS\AllXY\AllXYBBNAPS12.mat';
+settings.seqfile = 'U:\APS\Ramsey\RamseyBBNAPS12.h5';
 %settings.seqfile = 'U:\APS\PiCal\PiCal56.mat';
 %settings.seqfile = 'C:\Qlab software\experiments\muWaveDetection\sequences\EchoTest.mat';
 settings.seqforce = true;
 
 awg = deviceDrivers.APS();
+awg.verbose=1;
 awg.open(0,1);
 if ~awg.is_open
     error('Fail')
 end
 awg.stop();
-forceLoadBitFile = 0;
+forceLoadBitFile = 1;
 awg.init(forceLoadBitFile);
 awg.setAll(settings);
 awg.run();
 
 keyboard
+awg.disableFpga(0);
+awg.disableFpga(2);
 awg.stop();
 awg.close();
 delete(awg); clear awg

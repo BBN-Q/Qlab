@@ -299,8 +299,8 @@ classdef APSWaveform < handle
                 return
             end
             
-            if ~isfield(wf.ellData,'bankA')
-                wf.log('ELL link list is required to have a bank A')
+            if ~isfield(wf.ellData,'bank1')
+                wf.log('ELL link list is required to have at least one bank')
                 return
             end
             
@@ -310,34 +310,34 @@ classdef APSWaveform < handle
             end
             
             for i = 1:length(requiredFields)
-                if ~isfield(wf.ellData.bankA,requiredFields{i})
-                    wf.log(sprintf('ELL Bank is required to have field %s', requiredFields{i}))
+                if ~isfield(wf.ellData.bank1,requiredFields{i})
+                    wf.log(sprintf('ELL Bank 1 is required to have field %s', requiredFields{i}))
                 end
-                if isfield(wf.ellData,'bankB')
-                    if ~isfield(wf.ellData.bankB,requiredFields{i})
-                        wf.log(sprintf('ELL Bank is required to have field %s', requiredFields{i}))
+                if isfield(wf.ellData,'bank2')
+                    if ~isfield(wf.ellData.bank2,requiredFields{i})
+                        wf.log(sprintf('ELL Bank 2 is required to have field %s', requiredFields{i}))
                     end
                 end
             end
             
             for i = matchingLengthIdx
-                if length(wf.ellData.bankA.(requiredFields{1})) ~= length(wf.ellData.bankA.(requiredFields{i}))
+                if length(wf.ellData.bank1.(requiredFields{i})) ~= wf.ellData.bank1.length
                     wf.log(sprintf('ELL Bank Fields must match length'))
                 end
-                if isfield(wf.ellData,'bankB')
-                    if length(wf.ellData.bankB.(requiredFields{1})) ~= length(wf.ellData.bankB.(requiredFields{i}))
+                if isfield(wf.ellData,'bank2')
+                    if length(wf.ellData.bank2.(requiredFields{i})) ~= wf.ellData.bank2.length
                         wf.log(sprintf('ELL Bank Fields must match length'))
                     end
                 end
             end
             
             % counts must be at least 3
-            if (wf.ellData.bankA.count(wf.ellData.bankA.count < 3))
+            if any(wf.ellData.bank1.count < 3)
                 wf.log(sprintf('ELL minimum count field value is 3'));
                 return
             end
-            if isfield(wf.ellData,'bankB')
-                if (wf.ellData.bankB.count(wf.ellData.bankB.count < 3))
+            if isfield(wf.ellData,'bank2')
+                if any(wf.ellData.bank2.count < 3)
                     wf.log(sprintf('ELL minimum count field value is 3'));
                     return
                 end
