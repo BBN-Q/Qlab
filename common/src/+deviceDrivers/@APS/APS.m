@@ -123,7 +123,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         FPGA0 = 0;
         FPGA1 = 2;
         
-        DAC2_SERIALS = {'A6UQZB7Z','A6001nBU'};
+        DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV'};
         
         channelStruct = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
     end
