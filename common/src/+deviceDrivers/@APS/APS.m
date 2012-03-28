@@ -664,8 +664,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         end
 
                         %aps.setLinkListRepeat(ch-1,ell.repeatCount);
-                        aps.setLinkListRepeat(ch-1,10000);
-                        %aps.setLinkListRepeat(ch-1,0);
+                        %aps.setLinkListRepeat(ch-1,10000);
+                        aps.setLinkListRepeat(ch-1,0);
                     end
                     aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                 end
@@ -920,6 +920,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
     end
     methods(Static)
+        
+        function setDebugLevel(level)
+            calllib('libaps', 'APS_SetDebugLevel', level);
+        end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function unload_library()

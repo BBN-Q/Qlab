@@ -1427,9 +1427,8 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 	char * dac_type;
 	int dac_sm_enable, dac_sw_led, dac_trig_src, dac_sw_trig, dac_sm_reset;
 
-  dlog(DEBUG_INFO,"Trigger FPGA DAC%i type %i \n", dac, trigger_type);
-
-	fpga = dac2fpga(dac);
+  fpga = dac2fpga(dac);
+  dlog(DEBUG_INFO,"Trigger FPGA%i type %i \n", fpga, trigger_type);
 	if (fpga < 0) {
 		return -1;
 	}
@@ -1468,24 +1467,26 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 	}
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
-	  dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
-		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
-		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
+    dlog(DEBUG_VERBOSE,"Current CSR: 0x%x TRIGLED: 0x%x\n",
+		APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
+    APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
 		);
+    // read the individual FPGAs for testing
+    APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 1);
+    APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 2);
+    APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 3);
 	}
 
 	if (trigger_type == SOFTWARE_TRIGGER) {
-		dlog(DEBUG_VERBOSE, "Trigger %s State Machine ... \n", dac_type);
+		dlog(DEBUG_VERBOSE, "Setting SW Trigger ... \n", dac_type);
 
 		APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
 	  APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
 
 	} else if (trigger_type == HARDWARE_TRIGGER) {
+    dlog(DEBUG_VERBOSE,"Setting HW Trigger ... \n");
 
 		APS_ClearBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
-
-		dlog(DEBUG_VERBOSE,"Setting HW Trigger ... \n");
-
 		APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
 
 	} else {
@@ -1494,7 +1495,7 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 	}
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
-	    dlog(DEBUG_VERBOSE,"New CSR: %x TRIGLED %i\n",
+	    dlog(DEBUG_VERBOSE,"New CSR: 0x%x TRIGLED 0x%x\n",
 	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
 	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
 	    );

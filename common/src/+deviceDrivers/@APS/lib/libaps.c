@@ -1035,7 +1035,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 
 		// sleep to allow init to take place
 		// if the sleep is left out the next test might fail
-		sleep(1);
+		usleep(1000);
 
 		// Read the Status to see that INITN is deasserted in response to PROGRAMN deassertion
 		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1) return(-6);
@@ -1103,7 +1103,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1) return(-3);
 		dlog(DEBUG_VERBOSE, "%02X %02X\n", ReadByte, DoneMask);
 		if (ReadByte & DoneMask == DoneMask) ok = 1;
-		sleep(1); // if done has not set wait a bit
+		usleep(1000); // if done has not set wait a bit
 	}
 
 	if (!ok) return -8;
