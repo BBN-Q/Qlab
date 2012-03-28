@@ -18,7 +18,7 @@ IQchannels = obj.channelMap.(qubit);
 IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
 
 fixedPt = 6000;
-cycleLength = 10000;
+cycleLength = 19000;
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));

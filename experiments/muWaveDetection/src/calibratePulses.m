@@ -19,7 +19,7 @@ end
 ExpParams = struct();
 ExpParams.Qubit = qubit;
 ExpParams.DoMixerCal = 0;
-ExpParams.DoRabiAmp = 1;
+ExpParams.DoRabiAmp = 0;
 ExpParams.DoRamsey = 0;
 ExpParams.DoPi2Cal = 1;
 ExpParams.DoPiCal = 1;
@@ -27,7 +27,7 @@ ExpParams.DoDRAGCal = 0;
 ExpParams.OffsetNorm = 4;
 ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;
 ExpParams.filter = commonSettings.ExpParams.filter;
-ExpParams.softAvgs = 4;
+ExpParams.softAvgs = 3;
 
 cfg = struct('ExpParams', ExpParams, ...
     'SoftwareDevelopmentMode', 0, ...

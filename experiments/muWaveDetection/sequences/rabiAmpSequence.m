@@ -15,7 +15,7 @@ end
 
 basename = 'Rabi';
 fixedPt = 6000;
-cycleLength = 10000;
+cycleLength = 19000;
 numsteps = 81; % 81 or 100
 nbrRepeats = 1;
 stepsize = 200; % 200 or 80

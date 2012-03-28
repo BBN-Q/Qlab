@@ -15,7 +15,7 @@ end
 
 basename = 'RB';
 fixedPt = 20000; %15000
-cycleLength = 24000; %19000
+cycleLength = 33000; %19000
 nbrRepeats = 1;
 introduceError = 0;
 errorAmp = 0.2;
@@ -27,7 +27,7 @@ qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 
 % if using SSB, set the frequency here
-SSBFreq = -150e6;
+SSBFreq = 0e6;
 
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 

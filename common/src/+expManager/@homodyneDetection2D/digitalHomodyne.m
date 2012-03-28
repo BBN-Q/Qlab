@@ -41,7 +41,7 @@ function [DI DQ] =  digitalHomodyne(signal, IFfreq, sampInterval, integrationSta
     %The signal is a 2D array with acquisition along a column
     
     %Create the weighted reference signal
-    refSignal = exp(1i*2*pi*IFfreq*sampInterval*(1:1:size(signal,1)))';
+    refSignal = (1/integrationPts)*exp(1i*2*pi*IFfreq*sampInterval*(1:1:size(signal,1)))';
     
     %Demodulate and filter
     demodSignal = filter(b,a, signal.*repmat(refSignal,[1,size(signal,2)]));
