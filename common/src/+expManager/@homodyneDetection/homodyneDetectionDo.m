@@ -116,10 +116,10 @@ if Loop.two.steps > 1
     end
     plotHandle2DAmp = imagesc(x_range, y_range, nan(Loop.two.steps, Loop.one.steps), 'Parent', axesHandle2DAmp);
     xlabel(axesHandle2DAmp, 'Frequency (GHz)');
-    ylabel(axesHandle2DAmp, Loop.two.name);
+    ylabel(axesHandle2DAmp, Loop.two.sweep.name);
     plotHandle2DPhase = imagesc(x_range, y_range, nan(Loop.two.steps, Loop.one.steps), 'Parent', axesHandle2DPhase);
     xlabel(axesHandle2DPhase, 'Frequency (GHz)');
-    ylabel(axesHandle2DPhase, Loop.two.name);
+    ylabel(axesHandle2DPhase, Loop.two.sweep.name);
 end
 
 for loop3_index = 1:Loop.three.steps
