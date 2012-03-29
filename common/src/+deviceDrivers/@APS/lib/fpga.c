@@ -96,7 +96,7 @@ EXPORT int APS_WriteFPGA(int device, ULONG addr, ULONG data, UCHAR fpga)
  * Inputs :
  *               Addr  - Address to write to
  *              Data   - Data to write
- *              FPGA - FPGA selection bit (1 or 2)
+ *              FPGA - FPGA selection bit (1 or 2, 3 = both)
  *
  * Returns :
  *
@@ -177,6 +177,11 @@ EXPORT ULONG APS_ReadFPGA(int device, ULONG addr, UCHAR fpga)
 {
 	ULONG data;
 	UCHAR read[2];
+  
+  if (fpga == 3) {
+    // can only read from one FPGA at a time, assume we want data from FPGA 1
+    fpga = 1;
+  }
 
 	read[0] = (addr >> 8) & LSB_MASK;
 	read[1] = addr & LSB_MASK;
@@ -474,12 +479,45 @@ int APS_SetBit(int device, int fpga, int addr, int mask)
  *
  ********************************************************************/
 {
-	int current_state;
-	current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
+	int current_state, current_state2;
+  if (fpga == 3) { // read the two FPGAs serially
+    current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+    current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+    if (current_state != current_state2) {
+      // note the mismatch in the log file but continue on using FPGA1's data
+      dlog(DEBUG_VERBOSE,"APS_SetBit: FPGA registers don't match. Addr: 0x%x FPGA1: 0x%x FPGA2: 0x%x\n", addr, current_state, current_state2);
+    }
+  } else {
+    current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
+  }
+
   dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Mask: 0x%x Writing 0x%x\n",
 	      addr, current_state, mask, current_state | mask);
 
+  // test writes
+  /*usleep(100);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x00ff, fpga);
+  usleep(100);
+  current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+  current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+  dlog(DEBUG_VERBOSE,"Test writes of 00ff to addr: 0x%x FPGA1: 0x%x FPGA2 0x%x\n", addr, current_state, current_state2);
+  usleep(100);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x0000, fpga);
+  usleep(100);
+  current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+  current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+  dlog(DEBUG_VERBOSE,"Test writes of 0000 to addr: 0x%x FPGA1: 0x%x FPGA2 0x%x\n", addr, current_state, current_state2);
+  */
+  usleep(100);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state | mask, fpga);
+  
+  if (getDebugLevel() >= DEBUG_VERBOSE2) {
+    // verify write
+    usleep(100);
+    current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+    current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+    dlog(DEBUG_VERBOSE2,"Addr: 0x%x FPGA1: 0x%x FPGA2 0x%x\n", addr, current_state, current_state2);
+  }
 }
 
 int APS_ClearBit(int device, int fpga, int addr, int mask)
@@ -503,12 +541,29 @@ int APS_ClearBit(int device, int fpga, int addr, int mask)
  *
  ********************************************************************/
 {
-	int current_state;
-	current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
-
+	int current_state, current_state2;
+  if (fpga == 3) { // read the two FPGAs serially
+    current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+    current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+    if (current_state != current_state2) {
+      // note the mismatch in the log file but continue on using FPGA1's data
+      dlog(DEBUG_VERBOSE,"APS_ClearBit: FPGA registers don't match. Addr: 0x%x FPGA1: 0x%x FPGA2: 0x%x\n", addr, current_state, current_state2);
+    }
+  } else {
+    current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
+  }
 	dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Writing 0x%x\n", addr, current_state, current_state & ~mask);
 
+  usleep(100);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state & ~mask, fpga);
+  
+  if (getDebugLevel() >= DEBUG_VERBOSE2) {
+    // verify write
+    usleep(100);
+    current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+    current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+    dlog(DEBUG_VERBOSE2,"Addr: 0x%x FPGA1: 0x%x FPGA2 0x%x\n", addr, current_state, current_state2);
+  }
 }
 
 
@@ -1471,10 +1526,6 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 		APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
 		);
-    // read the individual FPGAs for testing
-    APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 1);
-    APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 2);
-    APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 3);
 	}
 
 	if (trigger_type == SOFTWARE_TRIGGER) {
