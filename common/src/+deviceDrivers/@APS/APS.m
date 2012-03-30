@@ -22,6 +22,7 @@
 %    --------    --    ------
 %                BCD
 %    10/5/2011   BRJ   Making compatible with expManager init sequence
+%    30 Mar. 2012 CAR  HDF5 File Version. 
 %
 % $Author: bdonovan $
 % $Date$
@@ -603,6 +604,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             %See which channels are defined in this file
             channelDataFor = h5read(filename, '/channelDataFor');
+            
+            %Now, the obvious thing to do is have one loop for the
+            %channels, and load the waveform and then the LL for each
+            %channel.  Unfortunately, it appears that there is an adverse
+            %interaction between loadWaveform and loadLLData so they have
+            %do be done for each channel separately! 
             for ch = 1:aps.num_channels
                 if any(ch == channelDataFor)
                     channelStr = aps.channelStrs{ch};
@@ -613,11 +620,18 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     wf.set_scale_factor(aps.(channelStr).amplitude);
                     aps.loadWaveform(ch-1, wf.prep_vector());
                     aps.(channelStr).waveform = wf;
-                    
+               
                     % set zero register value
                     offset = aps.(channelStr).offset;
                     aps.setOffset(ch, offset);
                     
+                end
+            end
+            
+            %Redo the loop for loading the waveforms. 
+            for ch = 1:aps.num_channels
+                if any(ch == channelDataFor)
+                    channelStr = aps.channelStrs{ch};
                     %Load LL data if it exists
                     if(h5read(filename, ['/', channelStr, '/isLinkListData']) == 1)
                         tmpLinkList = struct();
@@ -635,6 +649,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         tmpLinkList.repeatCount = h5read(filename, ['/', channelStr, '/linkListData/repeatCount']);
                         
                         %Add the LL data to the wf
+                        wf = aps.(channelStr).waveform;
                         wf.ellData = tmpLinkList;
                         wf.ell = true;
                         %Do some error checking
@@ -747,29 +762,26 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 trigger(ct) = aps.(aps.channelStrs{ct}).enabled;
             end
             
-%             triggeredFPGA = [false false];
-% %             if trigger % all channels enabled
-% %                 aps.triggerFpga(aps.ALL_DACS, trigger_type);
-% %                 triggeredFPGA = [true true];
-%             if trigger(1:2) %FPGA0
-%                 triggeredFPGA(1) = true;
-%                 aps.triggerFpga(aps.FPGA0, trigger_type)
-%             end
-%             if trigger(3:4) %FPGA1
-%                 triggeredFPGA(2) = true;
-%                 aps.triggerFpga(aps.FPGA1, trigger_type)
-%             end
-%             
-%             % look at individual channels
-%             % NOTE: Poorly defined syncronization between channels in this
-%             % case.
-%             for channel = 1:4
-%                 if ~triggeredFPGA(ceil(channel / 2)) && trigger(channel)
-%                     aps.triggerWaveform(channel-1,trigger_type)
-%                 end
-%             end
-            aps.triggerFpga(aps.FPGA0, trigger_type);
-            aps.triggerFpga(aps.FPGA1, trigger_type);
+            triggeredFPGA = [false false];
+            if trigger % all channels enabled
+                aps.triggerFpga(aps.ALL_DACS, trigger_type);
+                triggeredFPGA = [true true];
+            elseif trigger(1:2) %FPGA0
+                triggeredFPGA(1) = true;
+                aps.triggerFpga(aps.FPGA0, trigger_type)
+            elseif trigger(3:4) %FPGA1
+                triggeredFPGA(2) = true;
+                aps.triggerFpga(aps.FPGA1, trigger_type)
+            end
+            
+            % look at individual channels
+            % NOTE: Poorly defined syncronization between channels in this
+            % case.
+            for channel = 1:4
+                if ~triggeredFPGA(ceil(channel / 2)) && trigger(channel)
+                    aps.triggerWaveform(channel-1,trigger_type)
+                end
+            end
             aps.is_running = true;
         end
         

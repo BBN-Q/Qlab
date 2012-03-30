@@ -26,10 +26,13 @@ if ~awg.is_open
     error('Fail')
 end
 awg.stop();
-forceLoadBitFile = 1;
+forceLoadBitFile = 0;
 awg.init(forceLoadBitFile);
 awg.setAll(settings);
-awg.run();
+%awg.run();
+awg.triggerFpga(awg.FPGA0, awg.TRIGGER_HARDWARE);
+awg.triggerFpga(awg.FPGA1, awg.TRIGGER_HARDWARE);
+
 
 keyboard
 awg.disableFpga(0);
