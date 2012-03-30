@@ -491,7 +491,7 @@ int APS_SetBit(int device, int fpga, int addr, int mask)
     current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
   }
 
-  dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Mask: 0x%x Writing 0x%x\n",
+  dlog(DEBUG_VERBOSE2,"Addr: 0x%x Current State: 0x%x Mask: 0x%x Writing 0x%x\n",
 	      addr, current_state, mask, current_state | mask);
 
   // test writes
@@ -514,9 +514,13 @@ int APS_SetBit(int device, int fpga, int addr, int mask)
   if (getDebugLevel() >= DEBUG_VERBOSE2) {
     // verify write
     usleep(100);
-    current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
-    current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
-    dlog(DEBUG_VERBOSE2,"Addr: 0x%x FPGA1: 0x%x FPGA2 0x%x\n", addr, current_state, current_state2);
+    if (fpga == 3) {
+      current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+      current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+      dlog(DEBUG_VERBOSE2,"Addr: 0x%x FPGA1: 0x%x FPGA2 0x%x\n", addr, current_state, current_state2);
+    } else {
+      current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
+    }
   }
 }
 
@@ -552,7 +556,7 @@ int APS_ClearBit(int device, int fpga, int addr, int mask)
   } else {
     current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
   }
-	dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Writing 0x%x\n", addr, current_state, current_state & ~mask);
+	dlog(DEBUG_VERBOSE2,"Addr: 0x%x Current State: 0x%x Writing 0x%x\n", addr, current_state, current_state & ~mask);
 
   usleep(100);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state & ~mask, fpga);
@@ -560,9 +564,13 @@ int APS_ClearBit(int device, int fpga, int addr, int mask)
   if (getDebugLevel() >= DEBUG_VERBOSE2) {
     // verify write
     usleep(100);
-    current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
-    current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
-    dlog(DEBUG_VERBOSE2,"Addr: 0x%x FPGA1: 0x%x FPGA2 0x%x\n", addr, current_state, current_state2);
+    if (fpga == 3) {
+      current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+      current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+      dlog(DEBUG_VERBOSE2,"Addr: 0x%x FPGA1: 0x%x FPGA2 0x%x\n", addr, current_state, current_state2);
+    } else {
+      current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
+    }
   }
 }
 

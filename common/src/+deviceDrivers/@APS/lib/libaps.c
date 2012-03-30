@@ -1000,7 +1000,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 	 * 1) clear PGM and RESET
 	 * 2) issue status READ and verify init bits are low
 	 * 3) set PGM and RESET high
-	 * 4) verify bits are HIGH
+	 * 4) verify init bits are HIGH
 	 * 5) write program
 	 * 6) test done bits
 	 */
@@ -1087,7 +1087,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 #endif
 
 			// Write out the last buffer
-			if(APS_WriteReg(device, APS_CONF_DATA, 0, Sel, LastBuf) != 61)  // Defaults to 61 bytes for CONF_DATA
+			if(APS_WriteReg(device, APS_CONF_DATA, 0, Sel, LastBuf) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
 				return(-9);
 		}
 
@@ -1101,12 +1101,12 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 	// check done bits
 	for(i = 0, ok = 0; i < maxAttemptCnt && !ok; i++) {
 		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1) return(-3);
-		dlog(DEBUG_VERBOSE, "%02X %02X\n", ReadByte, DoneMask);
-		if (ReadByte & DoneMask == DoneMask) ok = 1;
+		dlog(DEBUG_VERBOSE, "Read 4: %02X (looking for %02X HIGH)\n", ReadByte, DoneMask);
+		if ((ReadByte & DoneMask) == DoneMask) ok = 1;
 		usleep(1000); // if done has not set wait a bit
 	}
 
-	if (!ok) return -8;
+	if (!ok) return -10;
 
 	dlog(DEBUG_VERBOSE, "Done\n");
 
