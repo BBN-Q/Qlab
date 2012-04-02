@@ -52,13 +52,17 @@ function exportAPSConfig(path, basename, varargin)
     channelDataFor = uint16(find(cellfun(@(x) ~isempty(x), WaveformLibs)));
 
     %Now write things out to the hdf5 file
-    if exist(fileName, 'file')
-        delete(fileName);
-    end
-    %First which channel we have data for
-    h5create(fileName, '/channelDataFor', size(channelDataFor), 'Datatype', 'uint16');
-    h5write(fileName, '/channelDataFor', channelDataFor);
+    
+    %First create it with overwrite if it is there
+    tmpFID = H5F.create(fileName,'H5F_ACC_TRUNC', H5P.create('H5P_FILE_CREATE'),H5P.create('H5P_FILE_ACCESS'));
+    H5F.close(tmpFID);
+    
+    %Version number
     h5writeatt(fileName,'/', 'Version Number', VersionNum);
+
+    %And then specify which channels we have data for
+    h5writeatt(fileName, '/', 'channelDataFor', channelDataFor);
+
     %Now create each channel group and put the associated data
     for channel = channelDataFor
         channelStr = sprintf('/chan_%d', channel);
@@ -67,22 +71,15 @@ function exportAPSConfig(path, basename, varargin)
         h5create(fileName, [channelStr, '/waveformLib'], size(WaveformLibs{channel}), 'Datatype', 'int16');
         h5write(fileName, [channelStr, '/waveformLib'], WaveformLibs{channel});
         
-        %The linklist data
-        h5create(fileName, [channelStr, '/isLinkListData'], [1, 1], 'Datatype', 'uint16');
-        h5write(fileName, [channelStr, '/isLinkListData'], uint16(LinkLists{channel}.numBanks > 0 ));
+        %An attribute whether there is LinkList data specified
+        h5writeatt(fileName, channelStr, 'isLinkListData', uint16(LinkLists{channel}.numBanks > 0));
         
-        %Then the number of banks
-        h5create(fileName, [channelStr, '/linkListData/numBanks'], [1, 1], 'Datatype', 'uint16');
-        h5write(fileName, [channelStr, '/linkListData/numBanks'], uint16(LinkLists{channel}.numBanks));
-
         %Now loop over each bank
         for bankct = 1:LinkLists{channel}.numBanks
             bankStr = sprintf('bank%d',bankct);
             curBank = LinkLists{channel}.(bankStr);
             groupStr = [channelStr, '/linkListData/', bankStr];
             bankLength = double(curBank.length);
-            h5create(fileName, [groupStr, '/length'], [1, 1], 'Datatype', 'uint16');
-            h5write(fileName, [groupStr, '/length'], uint16(bankLength));
             h5create(fileName, [groupStr, '/offset'], [1, bankLength], 'Datatype', 'uint16');
             h5write(fileName, [groupStr, '/offset'], curBank.offset);
             h5create(fileName, [groupStr, '/count'], [1, bankLength], 'Datatype', 'uint16');
@@ -91,12 +88,13 @@ function exportAPSConfig(path, basename, varargin)
             h5write(fileName, [groupStr, '/trigger'], curBank.trigger);
             h5create(fileName, [groupStr, '/repeat'], [1, bankLength], 'Datatype', 'uint16');
             h5write(fileName, [groupStr, '/repeat'], curBank.repeat);
+            h5writeatt(fileName, groupStr, 'length', uint16(bankLength));
         end
         
+        %Then the number of banks
+        h5writeatt(fileName, [channelStr, '/linkListData'], 'numBanks',  uint16(LinkLists{channel}.numBanks));
+        
         %Finally the repeatCount
-        h5create(fileName, [channelStr, '/linkListData/repeatCount'], [1, 1], 'Datatype', 'uint16');
-        h5write(fileName, [channelStr, '/linkListData/repeatCount'], uint16(LinkLists{channel}.repeatCount));
-        
-        
+        h5writeatt(fileName, [channelStr, '/linkListData'], 'repeatCount',  uint16(LinkLists{channel}.repeatCount));
     end
 end

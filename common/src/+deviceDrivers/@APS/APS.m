@@ -603,7 +603,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             wf = APSWaveform();
             
             %See which channels are defined in this file
-            channelDataFor = h5read(filename, '/channelDataFor');
+            channelDataFor = h5readatt(filename, '/', 'channelDataFor');
             
             %Now, the obvious thing to do is have one loop for the
             %channels, and load the waveform and then the LL for each
@@ -633,10 +633,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 if any(ch == channelDataFor)
                     channelStr = aps.channelStrs{ch};
                     %Load LL data if it exists
-                    if(h5read(filename, ['/', channelStr, '/isLinkListData']) == 1)
+                    if(h5readatt(filename, ['/', channelStr], 'isLinkListData') == 1)
                         tmpLinkList = struct();
                         %Create the linkList structure from the hdf5file
-                        for bankct = 1:h5read(filename, ['/', channelStr, '/linkListData/numBanks'])
+                        for bankct = 1:h5readatt(filename, ['/', channelStr, '/linkListData'], 'numBanks')
                             bankStr = sprintf('bank%d',bankct);
                             bankGroupStr = ['/' , channelStr, '/linkListData/', bankStr];
                             tmpLinkList.(bankStr) = struct();
@@ -644,9 +644,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                             tmpLinkList.(bankStr).offset = h5read(filename, [bankGroupStr, '/offset']);
                             tmpLinkList.(bankStr).repeat = h5read(filename, [bankGroupStr, '/repeat']);
                             tmpLinkList.(bankStr).trigger = h5read(filename, [bankGroupStr, '/trigger']);
-                            tmpLinkList.(bankStr).length = h5read(filename, [bankGroupStr, '/length']);
+                            tmpLinkList.(bankStr).length = h5readatt(filename, bankGroupStr, 'length');
                         end
-                        tmpLinkList.repeatCount = h5read(filename, ['/', channelStr, '/linkListData/repeatCount']);
+                        tmpLinkList.repeatCount = h5readatt(filename, ['/', channelStr, '/linkListData'], 'repeatCount');
                         
                         %Add the LL data to the wf
                         wf = aps.(channelStr).waveform;
