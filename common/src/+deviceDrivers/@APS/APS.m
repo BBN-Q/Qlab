@@ -583,16 +583,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function loadConfig(aps, filename)
             % loads a complete, 4 channel configuration file
             
-            % pseudocode:
-            % foreach channel
-            %  if there is data
-            %  load and scale/shift waveform data
-            %  save channel waveform lib in chan_i struct
-            %  clear old link list data
-            %  load link list data (if any)
-            %  save channel LL data in chan_i struct
-            %  set link list mode
-            
+            %Check the file version number
+            assert(h5readatt(filename, '/', 'Version') == 1.6, 'Oops! This code expects version APS HDF5 version 1.6.')
+
             % clear old link list data
             aps.clearLinkListELL(0);
             aps.clearLinkListELL(1);

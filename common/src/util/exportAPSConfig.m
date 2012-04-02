@@ -58,7 +58,7 @@ function exportAPSConfig(path, basename, varargin)
     H5F.close(tmpFID);
     
     %Version number
-    h5writeatt(fileName,'/', 'Version Number', VersionNum);
+    h5writeatt(fileName,'/', 'Version', VersionNum);
 
     %And then specify which channels we have data for
     h5writeatt(fileName, '/', 'channelDataFor', channelDataFor);
