@@ -22,7 +22,7 @@ class APSMatlabFile(object):
     FOURCHANNELMODE = 0;
     SINGLECHANNELMODE = 1;
     
-    CHANNELNAMES = ('ch1','ch2','ch3','ch4')
+    CHANNELNAMES = ('chan_1','chan_2','chan_3','chan_4')
     
     def __init__(self, mode=0, fileName=None):
         self.mode = mode
@@ -35,9 +35,9 @@ class APSMatlabFile(object):
             FID = h5py.File(fileName,'r')
         except:
             print('Error could not open file.')
-            print('\tThe matlab file may need to be saved using a recent')
-            print('\tversion of matlab to be a HDF5 file.')
-        
+
+        assert FID.attrs['Version'] == 1.6, 'Oops! This code expects APS HDF5 file version 1.6.'
+           
         self.WFData = {}
         self.LLData = {}
         
@@ -50,20 +50,20 @@ class APSMatlabFile(object):
                     self.WFData[channel] = tmpChan['waveformLib'].value
                     self.LLData[channel] = {}
                     tmpLLData = tmpChan['linkListData']
-                    self.LLData[channel]['repeatCount'] = int(tmpLLData['repeatCount'].value[0][0])
+                    self.LLData[channel]['repeatCount'] = int(tmpLLData.attrs['repeatCount'][0])
 
                     #Here we just directly load bank1 into bankA and bank2 into bankB
                     self.LLData[channel]['bankA'] = {}
-                    if 'chan1' in tmpLLData.keys(): 
+                    if 'bank1' in tmpLLData.keys(): 
                         for key,value in tmpLLData['bank1'].items():
                             self.LLData[channel]['bankA'][key] = value.value
-                        self.LLData[channel]['bankA']['length'] = int(self.LLData[channel]['bankA']['length'][0][0])
+                        self.LLData[channel]['bankA']['length'] = int(tmpLLData['bank1'].attrs['length'][0])
                     
-                    if 'chan2' in tmpLLData.keys(): 
+                    if 'bank2' in tmpLLData.keys(): 
                         self.LLData[channel]['bankB'] = {}
                         for key,value in tmpLLData['bank2'].items():
                             self.LLData[channel]['bankB'][key] = value.value
-                        self.LLData[channel]['bankB']['length'] = int(self.LLData[channel]['bankB']['length'][0][0])
+                        self.LLData[channel]['bankB']['length'] = int(tmpLLData['bank2'].attrs['length'][0])
                 
         else:
             if 'WFVec' in FID:

@@ -73,14 +73,14 @@ class APS:
     
     VALID_FREQUENCIES = [1200,600,300,100,40];
 
-    CHANNELNAMES = ('ch1','ch2','ch3','ch4')
+    CHANNELNAMES = ('chan_1','chan_2','chan_3','chan_4')
     
     lastSeqFile = ''
     
     #DAC2 devices use a different bit file
     DAC2Serials = ('A6UQZB7Z')
 
-    def __init__(self,libPath= libPathDebug, bitFilePath = ''):
+    def __init__(self, libPath=libPathDebug, bitFilePath=''):
         #Load the approriate library with some platform/architecture checks
         #Check for 32bit 64bit python from sys.maxsize
         #We do this because we can run 32bit programs on 64bit architectures so
@@ -355,7 +355,7 @@ class APS:
         samplingRates = [self.getFrequency(tmpDAC) for tmpDAC in [0, 2]]
         
         if samplingRates[0] == samplingRates[1]:
-            return samplingRate[0]
+            return samplingRates[0]
         else:
             return None
             
@@ -441,7 +441,7 @@ class APS:
         #If we are in 4 channel mode then try and load the file for all four channels
         if mode == 0:        
             fileData = APSMatlabFile.APSMatlabFile(mode, filename)
-            
+
             #Load the WF vectors and LLs into memory
             for ct,channelName in enumerate(self.CHANNELNAMES):
                 tmpWF = fileData.get_vector(scale_factor=self.channelSettings[channelName]['amplitude'], offset=self.channelSettings[channelName]['offset'], channelName=channelName)
@@ -452,7 +452,7 @@ class APS:
                 
                 bankB = fileData.LLData[channelName]['bankB']
                 if bankB['length'] > 0:
-                    self.loadLinkListELL(ct, bankA['offset'], bankA['count'], bankA['trigger'], bankA['repeat'], bankA['length'], self.BANKB)  
+                    self.loadLinkListELL(ct, bankB['offset'], bankB['count'], bankB['trigger'], bankB['repeat'], bankB['length'], self.BANKB)  
                     
                 self.setLinkListRepeat(ct, fileData.LLData[channelName]['repeatCount'])
                             
@@ -517,7 +517,6 @@ class APS:
         self.setFrequency(self.FPGA1, settings['frequency'])
         
         self.triggerSource = settings['triggerSource']
-
 
     def run(self):
         '''

@@ -144,7 +144,7 @@ class APScontrol(object):
             self.printMessage("Error bitfile not found: %s" % self.bitFileName.text() )
             return
         #If it does then create a thread (loading the bit file takes a few seconds)
-        #Have to keep a reference around otherwise it gets deleted to early        
+        #Have to keep a reference around otherwise it gets deleted too early        
         bitFileLoader = LoadBitFileRunner(self._bitFileName, self.aps, self.ui.deviceIDComboBox.currentIndex())
         bitFileLoader.signals.message.connect(self.printFromThread)
         #Disable the run button while we are programming        
@@ -162,7 +162,7 @@ class APScontrol(object):
         self.threadPool.start(PLLTester)
                 
     def waveformDialog(self, textBox):
-        fileName, fileFilter = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Matlab Files (*.mat);;Waveform files (*.m);;Sequence files (*.seq)')
+        fileName, fileFilter = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'HDF5 Files (*.h5);;Matlab Files (*.mat)')
         textBox.setText(fileName)
         
     def update_channel_enablers(self):
