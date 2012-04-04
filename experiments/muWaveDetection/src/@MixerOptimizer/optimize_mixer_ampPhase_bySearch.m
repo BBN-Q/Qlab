@@ -17,7 +17,7 @@
 % Description: Searches for optimal amplitude and phase correction on an
 % I/Q mixer.
 
-function T = optimize_mixer_ampPhase(obj, i_offset, q_offset)
+function T = optimize_mixer_ampPhase_bySearch(obj, i_offset, q_offset)
     % unpack constants from cfg file
     ExpParams = obj.inputStructure.ExpParams;
     spec_analyzer_span = ExpParams.SpecAnalyzer.span;
