@@ -51,8 +51,10 @@ offsetPts = linspace(-max_offset, max_offset, 100);
 vertex = struct();
 %Sweep the I with Q at 0
 measPowers1 = nan(1, length(offsetPts));
-figure()
-tmpLine = plot(offsetPts, measPowers1, 'b*');
+figure();
+axesH = axes();
+tmpLine = plot(axesH,offsetPts, measPowers1, 'b*');
+hold on
 set(get(get(tmpLine,'Annotation'),'LegendInformation'),...
     'IconDisplayStyle','off'); % Exclude line from legend
 xlabel('Offset Voltage (V)');
@@ -68,13 +70,12 @@ end
 [i_offset, goodOffsetPts, goodPowers] = find_null_offset(measPowers1, offsetPts);
 fprintf('Found I offset of %f on first iteration\n',i_offset);
 
-hold on
-plot(goodOffsetPts, goodPowers,'b--')
-drawnow
+plot(axesH,goodOffsetPts, goodPowers,'b--');
+drawnow()
 
 %Sweep the Q with I at the new best pt
 measPowers2 = nan(1, length(offsetPts));
-tmpLine = plot(offsetPts, measPowers2, 'r*');
+tmpLine = plot(axesH,offsetPts, measPowers2, 'r*');
 set(get(get(tmpLine,'Annotation'),'LegendInformation'),...
     'IconDisplayStyle','off'); % Exclude line from legend
 
@@ -89,12 +90,12 @@ end
 [q_offset, goodOffsetPts, goodPowers]  = find_null_offset(measPowers2, offsetPts);
 fprintf('Found Q offset of %f on first iteration\n',q_offset);
 
-plot(goodOffsetPts, goodPowers,'r--')
+plot(axesH,goodOffsetPts, goodPowers,'r--')
 drawnow()
 
 %Sweep the I again with Q at best pt
 measPowers3 = nan(1, length(offsetPts));
-tmpLine = plot(offsetPts, measPowers3, 'g*');
+tmpLine = plot(axesH,offsetPts, measPowers3, 'g*');
 set(get(get(tmpLine,'Annotation'),'LegendInformation'),...
     'IconDisplayStyle','off'); % Exclude line from legend
 for ct = 1:length(offsetPts)
@@ -107,7 +108,7 @@ end
 
 [i_offset, goodOffsetPts, goodPowers] = find_null_offset(measPowers3, offsetPts);
 fprintf('Found I offset of %f on second iteration\n',i_offset);
-plot(goodOffsetPts, goodPowers,'g--')
+plot(axesH,goodOffsetPts, goodPowers,'g--')
 
 legend({'First I Sweep','First Q Sweep', 'Second I Sweep'})
 drawnow()

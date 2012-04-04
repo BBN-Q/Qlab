@@ -33,7 +33,6 @@ awg_amp = InstrParams.AWG.(['chan_' num2str(ExpParams.Mixer.I_channel)]).Amplitu
 sa = obj.sa;
 awg = obj.awg;
 
-
 awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).offset = i_offset;
 awg.(['chan_' num2str(ExpParams.Mixer.Q_channel)]).offset = q_offset;
 
@@ -54,11 +53,17 @@ fprintf('\nStarting sweep search for optimal amp/phase\n');
 %First we scan the amplitude with the phase at zero
 ampPts = linspace(0.75*awg_amp, 1.25*awg_amp, 100);
 
-figure()
-subplot(2,1,1)
+figure();
+axesHAmp = subplot(2,1,1);
 measPowers1 = nan(1, length(ampPts));
-tmpLine = plot(ampPts/awg_amp, measPowers1, 'b*');
-xlabel('Amplitude Factor')
+tmpLine = plot(axesHAmp, ampPts/awg_amp, measPowers1, 'b*');
+hold on
+xlabel('Amplitude Factor');
+ylabel('Peak Power (dBm)');
+
+axesHPhase = subplot(2,1,2);
+hold on
+xlabel('Channel Skew (degrees)');
 ylabel('Peak Power (dBm)');
 
 for ct = 1:length(ampPts);
@@ -69,18 +74,13 @@ for ct = 1:length(ampPts);
 end
 [bestAmp, goodXPts, goodPowers] = find_null_offset(measPowers1,ampPts);
 fprintf('Found best amplitude factor of %f on first iteration.\n',bestAmp/awg_amp);
-hold on
-plot(goodXPts/awg_amp, goodPowers,'r--')
-drawnow
+plot(axesHAmp, goodXPts/awg_amp, goodPowers,'r--')
+drawnow()
 
-ampFactor = bestAmp/awg_amp;
-
+%Now we scan the channel skew withe amp factor set appropriately
 skewPts = linspace(-pi/10,pi/10,100);
 measPowers2 = nan(1, length(skewPts));
-subplot(2,1,2)
-tmpLine = plot(skewPts*180/pi, measPowers2, 'b*');
-xlabel('Channel Skew (degrees)');
-ylabel('Peak Power (dBm)');
+tmpLine = plot(axesHPhase, skewPts*180/pi, measPowers2, 'b*');
 for ct = 1:length(skewPts);
     obj.setInstrument(bestAmp, skewPts(ct));
     measPowers2(ct) = readPower();
@@ -90,15 +90,12 @@ end
 
 [bestSkew, goodXPts, goodPowers] = find_null_offset(measPowers2,skewPts);
 fprintf('Found best skew angle of %f on first iteration.\n',bestSkew*180/pi);
-
-hold on
-plot(goodXPts*180/pi, goodPowers,'r--')
+plot(axesHPhase, goodXPts*180/pi, goodPowers,'r--')
 drawnow()
 
-subplot(2,1,1)
-hold on
+%Finally we rescan the amp factor
 measPowers3 = nan(1, length(ampPts));
-tmpLine = plot(ampPts/awg_amp, measPowers3, 'g*');
+tmpLine = plot(axesHAmp, ampPts/awg_amp, measPowers3, 'g*');
 xlabel('Amplitude Factor')
 ylabel('Peak Power (dBm)');
 
@@ -110,10 +107,10 @@ for ct = 1:length(ampPts);
 end
 [bestAmp, goodXPts, goodPowers] = find_null_offset(measPowers3,ampPts);
 fprintf('Found best amplitude factor of %f on second iteration.\n',bestAmp/awg_amp);
-hold on
-plot(goodXPts/awg_amp, goodPowers,'r--')
+plot(axesHAmp, goodXPts/awg_amp, goodPowers,'r--')
 drawnow
 
+ampFactor = bestAmp/awg_amp;
 
 fprintf('Optimal amp/phase parameters:\n');
 fprintf('a: %.3g, skew: %.3f (%.3f degrees)\n', [ampFactor, bestSkew, bestSkew*180/pi]);
@@ -133,9 +130,6 @@ sa.sweep();
 sa.peakAmplitude();
 
 obj.setInstrument(bestAmp, bestSkew);
-
-
-
 
     function power = readPower()
         %We try twice to overcome the flakey network analsyer
