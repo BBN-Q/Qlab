@@ -61,7 +61,7 @@ end
 calseq = {{pg.pulse('QId')},{pg.pulse('QId')},{pg.pulse('Xp')},{pg.pulse('Xp')}};
 
 compiler = ['compileSequence' IQkey];
-compileArgs = {basename, pg, patSeqs, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 25};
+compileArgs = {basename, pg, patSeqs, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 43};
 if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
     feval(compiler, compileArgs{:});
 end

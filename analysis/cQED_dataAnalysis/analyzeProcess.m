@@ -22,7 +22,7 @@ numberofmeasurements = nbrPosPulses^nbrQubits;
 measurementoperators = {diag(mean(reshape(Cals, nbrRepeats, 2^nbrQubits)))};
 measurementoperators = repmat(measurementoperators, 1, numberofpreps);
 mvecs = mean(reshape(Raws, nbrRepeats, numberofpreps*numberofmeasurements));
-meas_matrix = reshape(mvecs, numberofmeasurements, numberofpreps);
+meas_matrix = reshape(mvecs, numberofmeasurements, numberofpreps)';
 
 % setup SDP problem
 tmp = PauliOperators_(nbrQubits);

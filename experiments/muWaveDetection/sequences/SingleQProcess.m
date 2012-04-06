@@ -44,8 +44,8 @@ Xp = pg.pulse('Xp');
 xpulse = Xp(1,0);
 nutFreq = 0.5/(sum(xpulse)/pg.samplingRate);
 
-process = pg.pulse('Up', 'polarAngle', pi/4, 'aziAngle', 0, 'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', 0);
-
+% process = pg.pulse('Utheta', 'rotAngle', -2*pi/3, 'polarAngle', acos(1/sqrt(3)) , 'aziAngle', pi/4, 'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', 0);
+process = pg.pulse('QId', 'rotAngle', pi/2, 'polarAngle', 0, 'aziAngle', 0,'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', 0);
 for ii = 1:6
     for jj = 1:6
         patseq{end+1} = { pulseLib.(pulses{ii}), process, pulseLib.(pulses{jj}) };
@@ -58,7 +58,7 @@ calseq{end+1} = {pg.pulse('QId')};
 calseq{end+1} = {pg.pulse('Xp')};
 
 compiler = ['compileSequence' IQkey];
-compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 15};
+compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 31};
 if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
     feval(compiler, compileArgs{:});
 end

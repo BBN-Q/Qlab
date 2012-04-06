@@ -223,16 +223,16 @@ classdef PatternGen < handle
             gaussPulse = exp(-0.5*(timePts.^2)) - exp(-2);
             
             calScale = (rotAngle/2/pi)*sampRate/sum(gaussPulse);
-            
+            % calculate phase steps given the polar angle
             phaseSteps = -2*pi*cos(polarAngle)*calScale*gaussPulse/sampRate;
-            
+            % calculate DRAG correction to phase steps
             phaseSteps = phaseSteps + 2*pi*params.delta*(sin(polarAngle)*(1/sampRate)*calScale*gaussPulse).^2;
-            
+            % center phase ramp around the middle of the pulse
             phaseRamp = cumsum(phaseSteps) - phaseSteps/2;
             
             frameChange = sum(phaseSteps);
             
-            complexPulse = (1/nutFreq)*sin(polarAngle)*calScale*exp(1i*aziAngle)*gaussPulse.*exp(-1i*phaseRamp);
+            complexPulse = (1/nutFreq)*sin(polarAngle)*calScale*exp(1i*aziAngle)*gaussPulse.*exp(1i*phaseRamp);
             
             outx = real(complexPulse)';
             outy = imag(complexPulse)';
@@ -335,7 +335,7 @@ classdef PatternGen < handle
                 xpat(len+1:len+increment) = xpulse;
                 ypat(len+1:len+increment) = ypulse;
                 len = len + increment;
-                accumulatedPhase = accumulatedPhase - 2*pi*obj.dmodFrequency*timeStep*increment - frameChange;
+                accumulatedPhase = accumulatedPhase - 2*pi*obj.dmodFrequency*timeStep*increment + frameChange;
             end
             
             xpat = xpat(1:len);
