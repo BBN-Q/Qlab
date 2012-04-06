@@ -38,6 +38,8 @@ switch Gate
         Uideal = expm(-1i*pi*sx/8);
     case '1QX22p'
         Uideal = expm(-1i*pi*sx/16);
+    case '1QHad'
+        Uideal = expm(-1i*(pi/2)*(1/sqrt(2))*(sx+sz));
     case 'Id'
         Uideal = speye(4);
     case 'XI'

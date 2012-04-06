@@ -56,12 +56,14 @@ phase_fidelity = real(evecs(:,1)'*choi_ideal*evecs(:,1))
 
 
 % create red-blue colorscale
-num = 200;
-cmap = [hot(num); 1-hot(num)];
-cmap = cmap(70:end-70,:);
+%num = 200;
+%cmap = [hot(num); 1-hot(num)];
+%cmap = cmap(70:end-70,:);
+cmap = [hot(50); 1-hot(50)];
+cmap = cmap(18:18+63,:); % make a 64-entry colormap
 
 
-figure(1);clf;
+figure()
 imagesc(real(pauliMapMLE),[-1,1])
 colormap(cmap)
 colorbar
@@ -73,9 +75,9 @@ set(gca, 'YTick', 1:4^nbrQubits);
 set(gca, 'YTickLabel', paulistrings);
 xlabel('Input Pauli Operator');
 ylabel('Output Pauli Operator');
+title('MLE Reconstruction');
 
-
-figure(2);clf;
+figure()
 imagesc(real(pauliMapTheory),[-1,1])
 colormap(cmap)
 colorbar
@@ -87,13 +89,13 @@ set(gca, 'YTick', 1:4^nbrQubits);
 set(gca, 'YTickLabel', paulistrings);
 xlabel('Input Pauli Operator');
 ylabel('Output Pauli Operator');
-
+title('Ideal Map');
 % also look at the data without MLE
 
 pauli_raw = MeasMat2PauliMap_(meas_matrix, measurementoperators, U_preps, U_meas, paulis, nbrQubits);
 choi_raw = PauliMap2Choi_(pauli_raw, paulis, nbrQubits);
 
-figure(3);clf;
+figure()
 imagesc(real(pauli_raw),[-1,1])
 colormap(cmap)
 colorbar
@@ -105,7 +107,7 @@ set(gca, 'YTick', 1:4^nbrQubits);
 set(gca, 'YTickLabel', paulistrings);
 xlabel('Input Pauli Operator');
 ylabel('Output Pauli Operator');
-
+title('Unconstrained Raw Map');
 % how much did MLE change the process maps?
 dist2_mle_ideal = sqrt(abs(trace((choi_mle-choi_ideal)'*(choi_mle-choi_ideal))))/2
 dist2_mle_raw = sqrt(abs(trace((choi_mle-choi_raw)'*(choi_mle-choi_raw))))/2
