@@ -15,7 +15,7 @@ end
 
 basename = 'Pi2Cal';
 fixedPt = 6000;
-cycleLength = 10000;
+cycleLength = 16000;
 nbrRepeats = 2;
 numsteps = 1;
 
@@ -28,7 +28,7 @@ qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 
 % if using SSB, set the frequency here
-SSBFreq = -150e6;
+SSBFreq = 0e6;
 
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 

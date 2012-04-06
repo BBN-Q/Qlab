@@ -27,7 +27,7 @@ ExpParams.DoDRAGCal = 0;
 ExpParams.OffsetNorm = 4;
 ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;
 ExpParams.filter = commonSettings.ExpParams.filter;
-ExpParams.softAvgs = 3;
+ExpParams.softAvgs = 4;
 
 cfg = struct('ExpParams', ExpParams, ...
     'SoftwareDevelopmentMode', 0, ...

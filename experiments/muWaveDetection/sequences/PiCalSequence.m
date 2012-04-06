@@ -16,7 +16,7 @@ end
 
 basename = 'PiCal';
 fixedPt = 6000;
-cycleLength = 10000;
+cycleLength = 16000;
 nbrRepeats = 2;
 numsteps = 1;
 
