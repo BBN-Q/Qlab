@@ -207,6 +207,37 @@ classdef PatternGen < handle
             outy = zeros(numPoints,1);
         end
         
+        function [outx, outy, frameChange] = arbAxisDRAGPulse(params)
+            
+            rotAngle = params.rotAngle;
+            polarAngle = params.polarAngle;
+            aziAngle = params.aziAngle;
+            nutFreq = params.nutFreq; %nutation frequency for 1 unit of pulse amplitude
+            sampRate = params.sampRate;
+            
+            n = params.width;
+            sigma = params.sigma;
+            
+            
+            timePts = linspace(-0.5, 0.5, n)*(n/sigma); 
+            gaussPulse = exp(-0.5*(timePts.^2)) - exp(-2);
+            
+            calScale = (rotAngle/2/pi)*sampRate/sum(gaussPulse);
+            
+            phaseSteps = -2*pi*cos(polarAngle)*calScale*gaussPulse/sampRate;
+            
+            phaseSteps = phaseSteps + 2*pi*params.delta*(sin(polarAngle)*(1/sampRate)*calScale*gaussPulse).^2;
+            
+            phaseRamp = cumsum(phaseSteps) - phaseSteps/2;
+            
+            frameChange = sum(phaseSteps);
+            
+            complexPulse = (1/nutFreq)*sin(polarAngle)*calScale*exp(1i*aziAngle)*gaussPulse.*exp(-1i*phaseRamp);
+            
+            outx = real(complexPulse)';
+            outy = imag(complexPulse)';
+        end
+        
         function [outx, outy] = arbitraryPulse(params)
             persistent arbPulses;
             if isempty(arbPulses)
@@ -298,12 +329,13 @@ classdef PatternGen < handle
             len = 0;
 
             for i = 1:numPatterns
-                [xpulse ypulse] = patList{i}(n, accumulatedPhase); % call the current pulse function
+                [xpulse, ypulse, frameChange] = patList{i}(n, accumulatedPhase); % call the current pulse function;
+                
                 increment = length(xpulse);
                 xpat(len+1:len+increment) = xpulse;
                 ypat(len+1:len+increment) = ypulse;
                 len = len + increment;
-                accumulatedPhase = accumulatedPhase - 2*pi*obj.dmodFrequency*timeStep*increment;
+                accumulatedPhase = accumulatedPhase - 2*pi*obj.dmodFrequency*timeStep*increment - frameChange;
             end
             
             xpat = xpat(1:len);
@@ -418,6 +450,7 @@ classdef PatternGen < handle
             nbrPulses = max(structfun(@getlength, params));
             pulses = cell(nbrPulses,1);
             modAngles = cell(nbrPulses,1);
+            frameChanges = zeros(nbrPulses,1);
             % construct cell array of pulses for all parameter vectors
             for n = 1:nbrPulses
                 % pick out the nth element of parameters provided as
@@ -426,7 +459,21 @@ classdef PatternGen < handle
                 duration = elementParams.duration;
                 width = elementParams.width;
                 
-                [xpulse, ypulse] = pf(elementParams);
+                %It seems we shoud be able to do this with nargout but all
+                %the pulse functions have vargout i.e. return -1 for
+                %nargout
+                %Try for the frame change version 
+                try  
+                    [xpulse, ypulse, frameChanges(n)] = pf(elementParams);
+                catch exception
+                    %If we don't have enough output arguments try for the
+                    %non frame-change version
+                   if strcmp(exception.identifier,'MATLAB:maxlhs')
+                       [xpulse,ypulse] = pf(elementParams);
+                   else 
+                       rethrow(exception);
+                   end
+                end
                 
                 % add buffer padding
                 if (duration > width)
@@ -445,7 +492,7 @@ classdef PatternGen < handle
             end
             
             % create closure with the parameters defined above
-            function [xpulse, ypulse] = pulseFunction(n, accumulatedPhase)
+            function [xpulse, ypulse, frameChange] = pulseFunction(n, accumulatedPhase)
                 % n - index into parameter arrays
                 % accumulatedPhase - allows dynamic updating of the basis
                 %   based upon the position in time of the pulse
@@ -458,6 +505,8 @@ classdef PatternGen < handle
                 xypairs = self.correctionT*[real(complexPulse) imag(complexPulse)].';
                 xpulse = xypairs(1,:).';
                 ypulse = xypairs(2,:).';
+                
+                frameChange = frameChanges(n);
             end
             
             if obj.linkList
