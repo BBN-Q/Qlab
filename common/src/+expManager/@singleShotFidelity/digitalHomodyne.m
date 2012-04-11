@@ -41,7 +41,7 @@ function [DI DQ] =  digitalHomodyne(signal, IFfreq, sampInterval, integrationSta
     %The signal is a 2D array with acquisition along a column
     
     %Create the scaled reference signal
-    refSignal = (1/integrationPts)*exp(1i*2*pi*IFfreq*sampInterval*(1:1:size(signal,1)))';
+    refSignal = exp(1i*2*pi*IFfreq*sampInterval*(1:1:size(signal,1)))';
     
     %Demodulate and filter
     demodSignal = filter(b,a, signal.*repmat(refSignal,[1,size(signal,2)]));
@@ -49,13 +49,13 @@ function [DI DQ] =  digitalHomodyne(signal, IFfreq, sampInterval, integrationSta
     %Return the summed real and imaginary parts (as column vectors for no
     %good reason).
     %Add an additional weighting of a filtered (by the cavity) T1 decay
-    T1 = 2e-6;
-    kappa = 1.5e-6;
+    T1 = 1e-6;
+    kappa = 2e-6;
     k = sampInterval/kappa;
     b = [0, k]; a = [1, k-1];
     shiftedPts = (1:size(signal,1)) - integrationStart;
     weighting = filter(b,a, (0.5*(sign(shiftedPts)+1)).*exp(-(shiftedPts*sampInterval/T1)));
-    weighting = weighting*(integrationPts/sum(weighting));
+    weighting = weighting/sum(weighting);
     demodSignal = demodSignal.*repmat(weighting',1,size(signal,2));
     tmpSum = sum(demodSignal(integrationStart:integrationStart+L-1,:))';
     DI = real(tmpSum);

@@ -92,6 +92,26 @@ for loopct1 = 1:Loop.one.steps
         end
         
         %Analyse the data
+        %Calculate the centres of the distributions
+        meanGround = mean(groundData);
+        meanExcited = mean(excitedData);
+        %Assume they are symmetric and calculate the variance
+        varGround = mean(diag(cov([real(groundData), imag(groundData)])));
+        varExcited = mean(diag(cov([real(excitedData), imag(excitedData)])));
+        %Calculate the unormalized probabilities of prep|meas assuming
+        %Gaussian distributions
+        ggProb = (1/varGround)*exp(-(1/2/varGround)*(abs(groundData-meanGround).^2));
+        geProb = (1/varExcited)*exp(-(1/2/varExcited)*(abs(groundData-meanExcited).^2));
+        egProb = (1/varGround)*exp(-(1/2/varGround)*(abs(excitedData-meanGround).^2));
+        eeProb = (1/varExcited)*exp(-(1/2/varExcited)*(abs(excitedData-meanExcited).^2));
+        %Average probability of getting it right
+        meanProb = 0.5*(length(find(ggProb>geProb))/40000 + length(find(eeProb>egProb))/40000);
+        %Fidelity 
+        combFidelity = 2*meanProb-1;
+        fprintf('Max fidelity with radial basis functions: %.1f\n',100*(2*meanProb-1))
+
+        
+        
         
         %Phase to rotate by to get two blobs on either side of I axis
         phaseRot = 0.5*( angle(mean(groundData)) +  angle(mean(excitedData)));
