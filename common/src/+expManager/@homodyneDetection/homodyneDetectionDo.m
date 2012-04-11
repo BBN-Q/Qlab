@@ -33,31 +33,7 @@ end
 % Loop is a reparsing of the strucutres LoopParams and TaskParams that we
 % will use in this method
 Loop = obj.populateLoopStructure;
-if isempty(Loop.one)
-    Loop.two.steps = 1;
-else
-    setLoop1Params = true;
-end
-if isempty(Loop.two)
-    Loop.two.steps = 1;
-    setLoop2Params = false;
-else
-    setLoop2Params = true;
-end
-if isempty(Loop.three)
-    Loop.three.steps = 1;
-    setLoop3Params = false;
-else
-    setLoop3Params = true;
-end
 
-if Loop.two.steps > 1 && ~exist('figureHandle2D','var')
-    
-end
-
-%pre allocate memory
-%% Main Loop
-tic
 
 %% If there's anything thats particular to any device do it here
 
@@ -123,17 +99,14 @@ if Loop.two.steps > 1
 end
 
 for loop3_index = 1:Loop.three.steps
-    if setLoop3Params
-        Loop.three.sweep.step(loop3_index);
-    end
+    Loop.three.sweep.step(loop3_index);
+    
     %Initialize the arrays for the 2D plotting
     Amp2D = nan(Loop.two.steps, Loop.one.steps);
     Phase2D = nan(Loop.two.steps, Loop.one.steps);
     for loop2_index = 1:Loop.two.steps
-        if setLoop2Params
-            Loop.two.sweep.step(loop2_index);
-            fprintf('Loop 2: Step %d of %d\n', [loop2_index, Loop.two.steps]);
-        end
+        Loop.two.sweep.step(loop2_index);
+        fprintf('Loop 2: Step %d of %d\n', [loop2_index, Loop.two.steps]);
         if ~SD_mode
             amp = nan(1,Loop.one.steps);
             phase = nan(1,Loop.one.steps);
@@ -141,9 +114,7 @@ for loop3_index = 1:Loop.three.steps
         fprintf('Loop 1: %d steps\n', Loop.one.steps);
             
         for loop1_index = 1:Loop.one.steps
-            if setLoop1Params
-                Loop.one.sweep.step(loop1_index);
-            end
+            Loop.one.sweep.step(loop1_index);
             
             if ~SD_mode
                 
