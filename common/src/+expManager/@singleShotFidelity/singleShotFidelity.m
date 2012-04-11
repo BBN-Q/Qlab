@@ -95,9 +95,9 @@ classdef singleShotFidelity < expManager.expBase
                         obj.scope = obj.Instr.(InstrName);
                 end
             end
-            % create a generic 'time' sweep
-            timeSweep = struct('type', 'sweeps.Time', 'number', 1, 'start', 0, 'step', 1);
-            obj.inputStructure.SweepParams = struct('time', timeSweep);
+%             % create a generic 'time' sweep
+%             timeSweep = struct('type', 'sweeps.Time', 'number', 1, 'start', 0, 'step', 1);
+%             obj.inputStructure.SweepParams = struct('time', timeSweep);
         end
         
         function Do(obj)

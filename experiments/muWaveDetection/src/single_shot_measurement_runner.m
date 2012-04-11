@@ -26,10 +26,15 @@ ExpParams.softAvgs = 10;
 ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;
 ExpParams.filter = commonSettings.ExpParams.filter;
 
+Sweeps = struct();
+Sweeps.frequency = struct('type','sweeps.Frequency', 'start', 8.18715, 'stop', 8.18715, 'step', 50e-6, 'genID', 'RFgen', 'number', 1);
+Sweeps.power = struct('type','sweeps.Power', 'start', 6, 'stop', 6, 'step', 0.5, 'units', 'dBm', 'genID', 'RFgen', 'number', 2);
+
 cfg = struct('ExpParams', ExpParams, ...
     'SoftwareDevelopmentMode', 0, ...
     'displayScope', 0, ...
-    'InstrParams', commonSettings.InstrParams);
+    'InstrParams', commonSettings.InstrParams, ...
+    'SweepParams', Sweeps);
 
 writeCfgFromStruct(fullfile(cfg_path, 'singleShotFidelity.cfg'), cfg);
 

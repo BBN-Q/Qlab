@@ -16,80 +16,166 @@ for i = 2:length(obj.awg)
     if success_flag_AWG ~= 1, error('AWG %d timed out', i), end
 end
 
+% Setup loops
+Loop = obj.populateLoopStructure();
+
 %%
 
-samplesPerAvg = obj.scope.averager.nbrSegments/2;
-nbrSamples = ExpParams.softAvgs*samplesPerAvg;
-groundData = zeros([nbrSamples, 1]);
-excitedData = zeros([nbrSamples, 1]);
-for avgct = 1:ExpParams.softAvgs
-    fprintf('Soft average %d\n', avgct);
-    
-    % set the card to acquire
-    obj.scope.acquire();
-    
-    % set the Tek to run
-    masterAWG.run();
-    pause(0.5);
-    
-    %Poll the digitizer until it has all the data
-    success = obj.scope.wait_for_acquisition(60);
-    if success ~= 0
-        error('Failed to acquire waveform.')
-    end
-    
-    % Then we retrive our data
-    Amp_I = obj.scope.transfer_waveform(1);
-%     Amp_Q = obj.scope.transfer_waveform(2);
-%     assert(numel(Amp_I) == numel(Amp_Q), 'I and Q outputs have different lengths.')
-    
-    % signal processing and analysis
-    [iavg qavg] = obj.digitalHomodyne(Amp_I, ...
-                ExpParams.digitalHomodyne.IFfreq*1e6, ...
-                obj.scope.horizontal.sampleInterval, ExpParams.filter.start, ExpParams.filter.length);
-    
-    % convert I/Q to Amp/Phase
-    amp = sqrt(iavg.^2 + qavg.^2);
-%     phase = (180.0/pi) * atan2(qavg, iavg);
-    
-    %Store the data
-    groundData(1+(avgct-1)*samplesPerAvg:avgct*samplesPerAvg) = amp(1:2:end);
-    excitedData(1+(avgct-1)*samplesPerAvg:avgct*samplesPerAvg) = amp(2:2:end);
-    
+ampFidelity = zeros(Loop.one.steps,Loop.two.steps);
+phaseFidelity = zeros(Loop.one.steps,Loop.two.steps);
 
-    masterAWG.stop();
-    % restart the slave AWGs so we can resync
-    for i = 2:length(obj.awg)
-        awg = obj.awg{i};
-        awg.stop();
-        awg.run();
-    end
-    pause(0.2);
+persistent figH;
+persistent figH2D;
+if isempty(figH) || ~ishandle(figH)
+    figH = figure();
+end
+if isempty(figH2D) || ~ishandle(figH2D)
+    figH2D = figure();
 end
 
-%Analyse the data
-%Setup bins from the minimum to maximum measured voltage
-bins = linspace(min([groundData; excitedData]), max([groundData; excitedData]));
 
-groundCounts = histc(groundData, bins);
-excitedCounts = histc(excitedData, bins);
 
-maxFidelity = (1/2/double(nbrSamples))*sum(abs(groundCounts-excitedCounts));
 
-figure()
-groundBars = bar(bins, groundCounts, 'histc');
-set(groundBars, 'FaceColor','r','EdgeColor','w')
-alpha(groundBars,0.5)
-hold on
-excitedBars = bar(bins, excitedCounts, 'histc');
-set(excitedBars, 'FaceColor','b','EdgeColor','w')
-alpha(excitedBars,0.5)
-
-legend({'ground','excited'})
-xlabel('Measurement Voltage');
-ylabel('Counts');
-
-fprintf('Best single shot fidelity of %f\n', maxFidelity);
-
+for loopct1 = 1:Loop.one.steps
+    
+    Loop.one.sweep.step(loopct1);
+    fprintf('Loop 1: Step %d of %d\n', [loopct1, Loop.one.steps]);
+    
+    for loopct2 = 1:Loop.two.steps
+        
+        Loop.two.sweep.step(loopct2);
+        fprintf('Loop 2: Step %d of %d\n', [loopct2, Loop.two.steps]);
+        
+        samplesPerAvg = obj.scope.averager.nbrSegments/2;
+        nbrSamples = ExpParams.softAvgs*samplesPerAvg;
+        groundData = zeros([nbrSamples, 1]);
+        excitedData = zeros([nbrSamples, 1]);
+        for avgct = 1:ExpParams.softAvgs
+            fprintf('Soft average %d\n', avgct);
+            
+            % set the card to acquire
+            obj.scope.acquire();
+            
+            % set the Tek to run
+            masterAWG.run();
+            pause(0.5);
+            
+            %Poll the digitizer until it has all the data
+            success = obj.scope.wait_for_acquisition(60);
+            if success ~= 0
+                error('Failed to acquire waveform.')
+            end
+            
+            % Then we retrive our data
+            Amp_I = obj.scope.transfer_waveform(1);
+            %     Amp_Q = obj.scope.transfer_waveform(2);
+            %     assert(numel(Amp_I) == numel(Amp_Q), 'I and Q outputs have different lengths.')
+            
+            % signal processing and analysis
+            [iavg qavg] = obj.digitalHomodyne(Amp_I, ...
+                ExpParams.digitalHomodyne.IFfreq*1e6, ...
+                obj.scope.horizontal.sampleInterval, ExpParams.filter.start, ExpParams.filter.length);
+            
+            %Store the data
+            groundData(1+(avgct-1)*samplesPerAvg:avgct*samplesPerAvg) = iavg(1:2:end) + 1i*qavg(1:2:end);
+            excitedData(1+(avgct-1)*samplesPerAvg:avgct*samplesPerAvg) = iavg(2:2:end) + 1i*qavg(2:2:end);
+            
+            
+            masterAWG.stop();
+            % restart the slave AWGs so we can resync
+            for i = 2:length(obj.awg)
+                awg = obj.awg{i};
+                awg.stop();
+                awg.run();
+            end
+            pause(0.2);
+        end
+        
+        %Analyse the data
+        
+        %Phase to rotate by to get two blobs on either side of I axis
+        phaseRot = 0.5*( angle(mean(groundData)) +  angle(mean(excitedData)));
+        
+        groundAmpData = real(exp(-1i*phaseRot)*groundData);
+        excitedAmpData = real(exp(-1i*phaseRot)*excitedData);
+        
+        groundPhaseData = imag(exp(-1i*phaseRot)*groundData);
+        excitedPhaseData = imag(exp(-1i*phaseRot)*excitedData);
+        
+        %Setup bins from the minimum to maximum measured voltage
+        bins = linspace(min([groundAmpData; excitedAmpData]), max([groundAmpData; excitedAmpData]));
+        
+        groundCounts = histc(groundAmpData, bins);
+        excitedCounts = histc(excitedAmpData, bins);
+        
+        maxAmpFidelity = (1/2/double(nbrSamples))*sum(abs(groundCounts-excitedCounts));
+        
+        figure(figH)
+        subplot(2,1,1)
+        cla()
+        groundBars = bar(bins, groundCounts, 'histc');
+        set(groundBars, 'FaceColor','r','EdgeColor','w')
+        alpha(groundBars,0.5)
+        hold on
+        excitedBars = bar(bins, excitedCounts, 'histc');
+        set(excitedBars, 'FaceColor','b','EdgeColor','w')
+        alpha(excitedBars,0.5)
+        legend({'ground','excited'})
+        xlabel('Measurement Voltage');
+        ylabel('Counts');
+        text(0.1, 0.75, sprintf('Fidelity: %.1f%%',100*maxAmpFidelity), 'Units', 'normalized', 'FontSize', 14)
+        
+        bins = linspace(min([groundPhaseData; excitedPhaseData]), max([groundPhaseData; excitedPhaseData]));
+        
+        groundCounts = histc(groundPhaseData, bins);
+        excitedCounts = histc(excitedPhaseData, bins);
+        
+        maxPhaseFidelity = (1/2/double(nbrSamples))*sum(abs(groundCounts-excitedCounts));
+        
+        subplot(2,1,2)
+        cla()
+        groundBars = bar(bins, groundCounts, 'histc');
+        set(groundBars, 'FaceColor','r','EdgeColor','w')
+        alpha(groundBars,0.5)
+        hold on
+        excitedBars = bar(bins, excitedCounts, 'histc');
+        set(excitedBars, 'FaceColor','b','EdgeColor','w')
+        alpha(excitedBars,0.5)
+        legend({'ground','excited'})
+        xlabel('Measurement Voltage');
+        ylabel('Counts');
+        text(0.1, 0.75, sprintf('Fidelity: %.1f%%',100*maxPhaseFidelity), 'Units', 'normalized', 'FontSize', 14)
+        
+        ampFidelity(loopct1, loopct2) = maxAmpFidelity;
+        phaseFidelity(loopct1, loopct2) = maxPhaseFidelity;
+        
+        figure(figH2D)
+        subplot(2,1,1)
+        cla()
+        if Loop.two.steps == 1
+            plot(Loop.one.plotRange, ampFidelity);
+            xlabel(Loop.one.sweep.name);
+        else
+            imagesc(Loop.two.plotRange, Loop.one.plotRange, ampFidelity);
+            xlabel(Loop.two.sweep.name);
+            ylabel(Loop.one.sweep.name);
+            colorbar()
+        end
+        title('Amplitude Measurement Fidelity');
+        subplot(2,1,2)
+        cla()
+        if Loop.two.steps == 1
+            plot(Loop.one.plotRange, phaseFidelity);
+            xlabel(Loop.one.sweep.name);
+        else
+            imagesc(Loop.two.plotRange, Loop.one.plotRange, phaseFidelity);
+            xlabel(Loop.two.sweep.name);
+            ylabel(Loop.one.sweep.name);
+            colorbar()
+        end
+        title('Phase Measurement Fidelity');
+        
+    end
+end
 
 end
