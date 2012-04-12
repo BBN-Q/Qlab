@@ -696,17 +696,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 aps.log(mesg);
             end
                         
-            switch size(varargin,2)
-                case 0
-                    val = calllib(aps.library_name,func,aps.device_id);
-                case 1
-                    val = calllib(aps.library_name,func,aps.device_id, varargin{1});
-                case 2
-                    val = calllib(aps.library_name,func,aps.device_id, varargin{1}, varargin{2});
-                case 3
-                    val = calllib(aps.library_name,func,aps.device_id, varargin{1}, varargin{2}, varargin{3});
-                otherwise
-                    error('More than 3 varargin arguments to librarycall are not supported\n');
+            if size(varargin,2) == 0
+                val = calllib(aps.library_name, func, aps.device_id);
+            else
+                val = calllib(aps.library_name, func, aps.device_id, varargin{:});
             end
             if (aps.verbose)
                 aps.log('Done');
@@ -917,6 +910,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function setModeR5(aps)
             aps.bit_file = 'cbl_aps2_r5_d6ma_fx.bit';
             aps.expected_bit_file_ver = 5;
+        end
+        
+        function regWriteTest(aps, addr)
+            val = aps.librarycall(sprintf('Register write test'), ...
+                'APS_RegWriteTest', addr);
         end
     end
     methods(Static)
