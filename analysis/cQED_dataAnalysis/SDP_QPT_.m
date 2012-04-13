@@ -81,7 +81,7 @@ choi_correct = choi_SDP; % no correction
 chicorrected = Choi2Chi_(choi_correct, pauliopts, nbrQubits);
 chitheory = Choi2Chi_(choi_th, pauliopts, nbrQubits);
 
-pauliMapMLE = Choi2PauliMap_(choi_correct, pauliopts, nbrQubits);
-pauliMapTheory = Choi2PauliMap_(choi_th, pauliopts, nbrQubits);
+pauliMapMLE = Choi2PauliMap_(choi_correct);
+pauliMapTheory = Choi2PauliMap_(choi_th);
 
 end

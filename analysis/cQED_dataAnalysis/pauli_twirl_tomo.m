@@ -20,7 +20,7 @@ if ~exist('verbose', 'var')
 end
 
 %Choi matrix 
-%choiSDP = sdpvar(4, 4, 'hermitian', 'complex');
+choiSDP = sdpvar(4, 4, 'hermitian', 'complex');
 
 pauliOps = cell(4,1);
 pauliOps{1} = eye(2);
@@ -70,20 +70,22 @@ for tiltct = 1:numTilts
     
 end
 
+fprintf('Rank of predictorMat is %d\n', rank(predictorMat));
+
 % Constrain the Choi matrix to be positive definite
-%constraint = choiSDP > 0;
+constraint = choiSDP > 0;
+
+%Trace preservation condition: partial trace over input space gives
+%identity
+constraint = [constraint, choiSDP(1,1)+choiSDP(2,2)==0.5, choiSDP(1,3)+choiSDP(2,4)==0, choiSDP(3,1)+choiSDP(4,2)==0, choiSDP(3,3)+choiSDP(4,4)==0.5];
+
+
 
 % Call the solver, minimizing the distance between the vectors of predicted and actual
 % measurements
-%solvesdp(constraint, norm(predictedResults(:) - expResults(:), 2), sdpsettings('verbose',verbose));
+solvesdp(constraint, norm(predictorMat*choiSDP(:) - expResults(:), 2), sdpsettings('verbose',verbose));
 
-%out = double(choiSDP);
-out = expResults(:) \ predictorMat;
+out = double(choiSDP);
+% out = expResults(:) \ predictorMat;
 
-    function cohVec = pauli_decompose(inputMat)
-        cohVec = zeros(4,1);
-        for ct = 1:4
-            cohVec(ct) = trace(inputMat*pauliOps{ct})/2;
-        end
-    end
 end

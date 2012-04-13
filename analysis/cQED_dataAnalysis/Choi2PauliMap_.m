@@ -1,7 +1,7 @@
-function [pauliMap] = Choi2PauliMap_(choi,pauliopts,numberofqubits)
+function [pauliMap] = Choi2PauliMap_(choi)
 % Jay Gambetta, feb 28th 2011
+% Patched by Colm and Blake
 % 
-% takes a rho matrix and list the pauli components for n qubits
 % Input 
 %	numberofqubits = number of qubits
 %   pauliopts = a cell containing the pauliopts
@@ -11,11 +11,17 @@ function [pauliMap] = Choi2PauliMap_(choi,pauliopts,numberofqubits)
 % 
 %
 % 
-d2=4^numberofqubits;
 
+d2=size(choi,1);
+
+%Create the pauli operators
+tmpStruct = PauliOperators_(log2(sqrt(d2)));
+pauliOps = tmpStruct.opt;
+
+pauliMap = zeros(d2,d2);
 for ii=1:d2
 	for jj=1:d2 
- 	pauliMap(jj,ii)= trace(choi*kron(pauliopts{ii}.',pauliopts{jj})); 
+ 	pauliMap(jj,ii)= real(trace(choi*kron(pauliOps{ii}.',pauliOps{jj}))); 
 	end
 end
 
