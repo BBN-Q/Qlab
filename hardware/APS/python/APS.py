@@ -248,7 +248,7 @@ class APS:
         data = open(filename,'rb').read()
         
         print 'Read', len(data), 'bytes'
-        self.programFPGA(data, len(data), Sel, self.expected_bit_file_ver)
+        return self.programFPGA(data, len(data), Sel, self.expected_bit_file_ver)
         
     def loadWaveform(self, ID, waveform, offset = 0, validate = 0, useSlowWrite = 0):
         if not self.is_open and not self.mock_aps:
@@ -473,7 +473,9 @@ class APS:
         
         if (curBitFileVer != self.expected_bit_file_ver ) or (self.read_PLL_status()) or force:
             print('Got here!')
-            self.loadBitFile()
+            status = self.loadBitFile()
+            if status:
+                raise RuntimeError('Failed to program FPGAs')
             
             # Default all channels to 1.2 GS/s
             self.setFrequency(0, 1200, testLock=0)

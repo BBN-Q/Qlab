@@ -1103,7 +1103,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1) return(-3);
 		dlog(DEBUG_VERBOSE, "Read 4: %02X (looking for %02X HIGH)\n", ReadByte, DoneMask);
 		if ((ReadByte & DoneMask) == DoneMask) ok = 1;
-		usleep(1000); // if done has not set wait a bit
+		usleep(10000); // if done has not set wait a bit
 	}
 
 	if (!ok) return -10;
