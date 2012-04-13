@@ -2045,54 +2045,86 @@ EXPORT short APS_ReadChannelOffset(int device, int dac)
 EXPORT int APS_RegWriteTest(int device, int addr)
 {
 	int current_state, current_state2;
+	int i, data;
 	// test writes
-	dlog(DEBUG_INFO, "WRITE TEST to addr: 0x%x\n", addr);
+	// write to FPGAs one at a time
+	dlog(DEBUG_INFO, "WRITE TEST to addr: 0x%x\nIndividual writes\n", addr);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xffff, 1);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xffff, 2);
 	usleep(100);
 	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
 	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
-	dlog(DEBUG_INFO,"individual write of 0xffff\nFPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	dlog(DEBUG_INFO,"0xffff FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xaaaa, 1);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xaaaa, 2);
+	usleep(100);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0xaaaa FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x5555, 1);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x5555, 2);
+	usleep(100);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0x5555 FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x0000, 1);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x0000, 2);
 	usleep(100);
 	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
 	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
-	dlog(DEBUG_INFO,"individual write of 0x0000\nFPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
-	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x00ff, 3);
-	usleep(100);
+	dlog(DEBUG_INFO,"0x0000 FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	dlog(DEBUG_INFO,"Simultaneous writes\n");
+	// simultaneous writes of single HIGH bits
+	for (i = 0; i < 16; i++) {
+		data = 1 << i;
+		APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, data, 3);
+		current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+		current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+		dlog(DEBUG_INFO,"0x%4x FPGA1: 0x%x FPGA2 0x%x\n", data, current_state, current_state2);
+	}
+	// simultaneous writes with multiple HIGH bits
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xaaaa, 3);
 	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
 	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
-	dlog(DEBUG_INFO,"write 0x00ff\nFPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	dlog(DEBUG_INFO,"0xaaaa FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x5555, 3);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0x5555 FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x00ff, 3);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0x00ff FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
 	usleep(100);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xff00, 3);
 	usleep(100);
 	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
 	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
-	dlog(DEBUG_INFO,"write 0xff00\nFPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	dlog(DEBUG_INFO,"0xff00 FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xffff, 3);
 	usleep(100);
 	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
 	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
-	dlog(DEBUG_INFO,"write 0xffff\nFPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	dlog(DEBUG_INFO,"0xffff FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
 	usleep(100);
 	usleep(100);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x0000, 3);
 	usleep(100);
 	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
 	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
-	dlog(DEBUG_INFO,"write 0x0000\nFPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	dlog(DEBUG_INFO,"0x0000 FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x0000, 3);
 	usleep(100);
 	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
 	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
-	dlog(DEBUG_INFO,"Try again to write 0x0000\nFPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	dlog(DEBUG_INFO,"Try again to write 0x0000 FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
 	// clear the registers
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x0000, 1);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x0000, 2);
 	usleep(100);
 	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
 	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
-	dlog(DEBUG_INFO,"Cleared values\nFPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	dlog(DEBUG_INFO,"Cleared values FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
 	return 0;
 }

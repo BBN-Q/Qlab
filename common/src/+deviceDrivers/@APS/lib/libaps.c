@@ -1119,6 +1119,8 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 		if (version == expectedVersion) ok = 1;
 		usleep(1000); // if doesn't match, wait a bit and try again
 	}
+	
+	if (!ok) return -11;
 
 	// Return the number of data bytes written
 	return numBytesProgrammed;
