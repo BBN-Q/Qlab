@@ -105,10 +105,10 @@ for loopct1 = 1:Loop.one.steps
         egProb = (1/varGround)*exp(-(1/2/varGround)*(abs(excitedData-meanGround).^2));
         eeProb = (1/varExcited)*exp(-(1/2/varExcited)*(abs(excitedData-meanExcited).^2));
         %Average probability of getting it right
-        meanProb = 0.5*(length(find(ggProb>geProb))/40000 + length(find(eeProb>egProb))/40000);
+        meanProb = 0.5*(length(find(ggProb>geProb))/length(groundData) + length(find(eeProb>egProb))/length(groundData));
         %Fidelity 
-        combFidelity = 2*meanProb-1;
-        fprintf('Max fidelity with radial basis functions: %.1f\n',100*(2*meanProb-1))
+        RBFidelity = 2*meanProb-1;
+        fprintf('Max fidelity with radial basis functions: %.1f\n',100*RBFidelity)
 
         
         
@@ -194,6 +194,19 @@ for loopct1 = 1:Loop.one.steps
             colorbar()
         end
         title('Phase Measurement Fidelity');
+        
+%         subplot(3,1,3)
+%         cla()
+%         if Loop.two.steps == 1
+%             plot(Loop.one.plotRange, RBFidelity);
+%             xlabel(Loop.one.sweep.name);
+%         else
+%             imagesc(Loop.two.plotRange, Loop.one.plotRange, RBFidelity);
+%             xlabel(Loop.two.sweep.name);
+%             ylabel(Loop.one.sweep.name);
+%             colorbar()
+%         end
+%         title('RB Measurement Fidelity');
         
     end
 end

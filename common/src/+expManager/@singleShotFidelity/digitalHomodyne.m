@@ -48,6 +48,7 @@ function [DI DQ] =  digitalHomodyne(signal, IFfreq, sampInterval, integrationSta
     
     %Return the summed real and imaginary parts (as column vectors for no
     %good reason).
+%     weighting = ones(1, size(signal,1));
     %Add an additional weighting of a filtered (by the cavity) T1 decay
     T1 = 1e-6;
     kappa = 2e-6;
