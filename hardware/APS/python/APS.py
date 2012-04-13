@@ -78,7 +78,7 @@ class APS:
     lastSeqFile = ''
     
     #DAC2 devices use a different bit file
-    DAC2Serials = ('A6UQZB7Z')
+    DAC2Serials = ('A6UQZB7Z', 'A6001nBU', 'A6001ixV')
 
     def __init__(self,libPath= libPathDebug, bitFilePath = ''):
         #Load the approriate library with some platform/architecture checks
@@ -207,12 +207,12 @@ class APS:
         self.max_waveform_points = self.ELL_MAX_WAVFORM
         self.max_ll_points = self.ELL_MAX_LL
         
-    def programFPGA(self, data, bytecount, sel):
+    def programFPGA(self, data, bytecount, sel, version):
         if not self.is_open and not self.mock_aps:
             print 'APS unit is not open'
             return -1
         print "APS Program FPGA"
-        val = self.lib.APS_ProgramFpga(self.device_id,data,bytecount,sel)
+        val = self.lib.APS_ProgramFpga(self.device_id, data, bytecount, sel, version)
         if val < 0:
             print 'APS_ProgramFPGA returned an error code of:', val
         else:
@@ -248,7 +248,7 @@ class APS:
         data = open(filename,'rb').read()
         
         print 'Read', len(data), 'bytes'
-        self.programFPGA(data,len(data),Sel)
+        self.programFPGA(data, len(data), Sel, self.expected_bit_file_ver)
         
     def loadWaveform(self, ID, waveform, offset = 0, validate = 0, useSlowWrite = 0):
         if not self.is_open and not self.mock_aps:
@@ -331,9 +331,6 @@ class APS:
     def triggerFpga(self, ID, trigger_type):
         return self.librarycall('Trigger Waveform %i Type: %i' %(ID, trigger_type), 
                                'APS_TriggerFpga',ID,trigger_type)
-                               
-    def pauseFpga(self, ID):                           
-        return self.librarycall('Pause FPGA %i' % (ID), 'APS_PauseFpga',ID)
         
     def disableFpga(self, ID):                           
         return self.librarycall('Disable FPGA %i' % (ID), 'APS_DisableFpga',ID)
@@ -378,8 +375,8 @@ class APS:
     def setupVCX0(self):
         self.librarycall('Setup VCX0', 'APS_SetupVCXO');
     
-    def readAllRegisters(self):
-        self.librarycall('Read Registers', 'APS_ReadAllRegisters');
+    def readAllRegisters(self, fpga):
+        self.librarycall('Read Registers', 'APS_ReadAllRegisters', fpga);
         
     def testWaveformMemory(self, ID, numBytes):
         self.librarycall('Test WaveformMemory','APS_TestWaveformMemory',ID,numBytes);
