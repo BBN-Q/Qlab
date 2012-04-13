@@ -916,17 +916,17 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             val = aps.librarycall(sprintf('Register write test'), ...
                 'APS_RegWriteTest', addr);
         end
+        
+        function setDebugLevel(aps, level)
+            calllib(aps.library_name, 'APS_SetDebugLevel', level);
+        end
     end
     methods(Static)
         
-        function setDebugLevel(level)
-            calllib('libaps', 'APS_SetDebugLevel', level);
-        end
-        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function unload_library()
-            if libisloaded('libaps')
-                unloadlibrary libaps
+            if libisloaded(aps.library_name)
+                unloadlibrary(aps.library_name);
             end
         end
         
