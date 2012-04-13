@@ -926,7 +926,7 @@ static const UCHAR BitReverse[256] =
 // passed in the Data array.  A total of ByteCount bytes are sent.
 //
 
-EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
+EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int expectedVersion)
 {
 	/********************************************************************
 	 *
@@ -953,7 +953,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 	ReadByte,
 	WriteByte,
 	LastBuf[64];
-	int i, j;
+	int i, j, version;
 
 	// To configure the FPGAs, you initialize them, send the byte stream, and
 	// then wait for the DONE flag to be asserted.
@@ -1108,10 +1108,17 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 
 	if (!ok) return -10;
 
-	dlog(DEBUG_VERBOSE, "Done\n");
+	dlog(DEBUG_VERBOSE, "Done programming\n");
+	
+	// wait 10ms for FPGA to deal with the bitfile data
+	usleep(10000);
 
 	// Read Bit File Version
-	APS_ReadBitFileVersion(device);
+	for (i = 0, ok = 0; i < maxAttemptCnt && !ok; i++) {
+		version = APS_ReadBitFileVersion(device);
+		if (version == expectedVersion) ok = 1;
+		usleep(1000); // if doesn't match, wait a bit and try again
+	}
 
 	// Return the number of data bytes written
 	return numBytesProgrammed;
@@ -1159,7 +1166,7 @@ EXPORT int APS_SetupPLL(int device)
 	dlog(DEBUG_INFO,"Setting up PLL\n");
 
 	// Disable DDRs
-	int ddr_mask = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
+	int ddr_mask = CSRMSK_ENVDDR_ELL | CSRMSK_PHSDDR_ELL;
 	APS_ClearBit(device, 3, FPGA_OFF_CSR, ddr_mask);
 
 	for(i = 0; i <  sizeof(PllSetup)/sizeof(APS_SPI_REC); i++) {
@@ -1262,7 +1269,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 	fpgaFrequencies[fpga - 1] = freq;
 
 	// Disable DDRs
-	int ddr_mask = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
+	int ddr_mask = CSRMSK_ENVDDR_ELL | CSRMSK_PHSDDR_ELL;
 	APS_ClearBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
 
 	// Disable oscillator by clearing APS_STATUS_CTRL register
@@ -1416,7 +1423,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 	}
 
 	// Disable DDRs
-	int ddr_mask = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
+	int ddr_mask = CSRMSK_ENVDDR_ELL | CSRMSK_PHSDDR_ELL;
 	APS_ClearBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
 
 	// test for PLL lock

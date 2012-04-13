@@ -356,7 +356,7 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 
   dlog(DEBUG_VERBOSE,"Initialize Control and Status Register to initial state\n");
   // State machines should be reset and DDRs enabled
-  int csr_init = CSRMSK_ENVSMRST_ELL | CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMRST_ELL | CSRMSK_PHSSMEN_ELL;
+  int csr_init = CSRMSK_ENVSMRST_ELL | CSRMSK_ENVDDR_ELL | CSRMSK_PHSSMRST_ELL | CSRMSK_PHSDDR_ELL;
 
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_CSR, csr_init, fpga);
 
@@ -620,7 +620,7 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 				dac_trig_src  = CSRMSK_ENVTRIGSRC ;
 				dac_sm_reset  = CSRMSK_ENVSMRST;
 			} else {
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL;
+				dac_sm_enable = CSRMSK_ENVDDR_ELL;
 				dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL;
 				dac_sm_reset  = CSRMSK_ENVSMRST_ELL;
 			}
@@ -638,7 +638,7 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 				dac_trig_src  = CSRMSK_PHSTRIGSRC ;
 				dac_sm_reset  = CSRMSK_PHSSMRST;
 			} else {
-				dac_sm_enable = CSRMSK_PHSSMEN_ELL;
+				dac_sm_enable = CSRMSK_PHSDDR_ELL;
 				dac_trig_src  = CSRMSK_PHSTRIGSRC_ELL;
 				dac_sm_reset  = CSRMSK_PHSSMRST_ELL;
 			}
@@ -722,7 +722,7 @@ EXPORT int APS_PauseDac(int device, int dac)
 			} else {
 				dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL;
 				dac_sm_reset  = CSRMSK_ENVSMRST_ELL;
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL;
+				dac_sm_enable = CSRMSK_ENVDDR_ELL;
 			}
 
 
@@ -739,7 +739,7 @@ EXPORT int APS_PauseDac(int device, int dac)
 			} else {
 				dac_trig_src  = CSRMSK_PHSTRIGSRC_ELL;
 				dac_sm_reset  = CSRMSK_PHSSMRST_ELL;
-				dac_sm_enable = CSRMSK_PHSSMEN_ELL;
+				dac_sm_enable = CSRMSK_PHSDDR_ELL;
 			}
 			break;
 		default:
@@ -794,7 +794,7 @@ EXPORT int APS_DisableDac(int device, int dac)
 				dac_sm_enable = CSRMSK_ENVSMEN ;
 			} else {
 				dac_sm_reset  = CSRMSK_ENVSMRST_ELL;
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL;
+				dac_sm_enable = CSRMSK_ENVDDR_ELL;
 			}
 
 			break;
@@ -809,7 +809,7 @@ EXPORT int APS_DisableDac(int device, int dac)
 				dac_sm_enable = CSRMSK_PHSSMEN ;
 			} else {
 				dac_sm_reset  = CSRMSK_PHSSMRST_ELL;
-				dac_sm_enable = CSRMSK_PHSSMEN_ELL;
+				dac_sm_enable = CSRMSK_PHSDDR_ELL;
 			}
 
 			break;
@@ -1519,7 +1519,7 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 				dac_trig_src  = CSRMSK_ENVTRIGSRC | CSRMSK_PHSTRIGSRC;
 				dac_sm_reset  = CSRMSK_ENVSMRST | CSRMSK_PHSSMRST;
 			} else {
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL ;
+				dac_sm_enable = CSRMSK_ENVDDR_ELL | CSRMSK_PHSDDR_ELL ;
 				dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL | CSRMSK_PHSTRIGSRC_ELL;
 				dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL ;
 			}
@@ -1574,7 +1574,7 @@ EXPORT int APS_PauseFpga(int device, int dac)
  *
  * Function Name : APS_PauseFPGA()
  *
- * Description :  Pauses both DACs on a signal FPGA
+ * Description :  Disables DDR output to DACs and turns off software triggering
  *
  * Inputs : None
  *
@@ -1589,8 +1589,7 @@ EXPORT int APS_PauseFpga(int device, int dac)
  ********************************************************************/
 {
 	int fpga;
-	char * dac_type;
-	int dac_sw_trig, dac_trig_src, dac_sm_reset, dac_sm_enable;
+	int dac_sw_trig, dac_sm_reset, dac_sm_enable;
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -1609,17 +1608,14 @@ EXPORT int APS_PauseFpga(int device, int dac)
 		case 2:
 			// fall through
 		case 3:
-			dac_type      = BOTH_DACS;
 			dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG | TRIGLEDMSK_PHSSWTRIG;
 
 			if (gBitFileVersion < VERSION_ELL) {
-				dac_trig_src  = CSRMSK_ENVTRIGSRC | CSRMSK_PHSTRIGSRC;
 				dac_sm_reset  = CSRMSK_ENVSMRST | CSRMSK_PHSSMRST;
 				dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
 			} else {
-				dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL | CSRMSK_PHSTRIGSRC_ELL ;
 				dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
+				dac_sm_enable = CSRMSK_ENVDDR_ELL | CSRMSK_PHSDDR_ELL;
 			}
 
 			break;
@@ -1681,7 +1677,7 @@ EXPORT int APS_DisableFpga(int device, int dac)
 				dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
 			} else {
 				dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
+				dac_sm_enable = CSRMSK_ENVDDR_ELL | CSRMSK_PHSDDR_ELL;
 			}
 
 			break;
@@ -1703,55 +1699,48 @@ EXPORT int APS_DisableFpga(int device, int dac)
 
 
 EXPORT int APS_ReadBitFileVersion(int device) {
-	// Reads version information from device
-	// Location to read version from moved between r 0x5 and 0x10
-	// so we read assuming r 0x5 and then try the location for r 0x10
-	int version;
-	int fpga = 1;
-
-	version = APS_ReadFPGA(device, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, fpga);
-	if (version != VERSION_R5) { // tried to read invalid address
-
-		version = APS_ReadFPGA(device, FPGA_ADDR_ELL_REGREAD | FPGA_OFF_VERSION, fpga);
-
-		version = version & 0x1FF; // First 9 bits hold version
+	// read bit file version and return if the same, otherwise return an error (-1)
+	int version1, version2;
+	version1 = APS_ReadFpgaBitFileVersion(device, 1);
+	version2 = APS_ReadFpgaBitFileVersion(device, 2);
+	dlog(DEBUG_VERBOSE, "Bitfile versions FPGA1: 0x%x, FPGA2: 0x%x\n", version1, version2);
+	
+	if (version1 == version2) {
+		gBitFileVersion = version1;
+		gRegRead = (version1 >= VERSION_ELL) ? FPGA_ADDR_ELL_REGREAD : FPGA_ADDR_REGREAD;
+		dlog(DEBUG_VERBOSE, "gRegRead set to: 0x%x\n", gRegRead );
+		return version1;
+	} else {
+		dlog(DEBUG_INFO, "Bitfile versions do not match, FPGA1: 0x%x, FPGA2: 0x%x\n", version1, version2);
+		return -1;
 	}
-    dlog(DEBUG_INFO,"Found BitFile Version 0x%x\n", version);
+}
 
-	gBitFileVersion = version;
-	gRegRead = (version >= VERSION_ELL) ? FPGA_ADDR_ELL_REGREAD : FPGA_ADDR_REGREAD;
-	dlog(DEBUG_VERBOSE,"gRegRead set to: 0x%x\n", gRegRead );
+int APS_ReadFpgaBitFileVersion(int device, int fpga) {
+	// Reads version information from register 0x8006
+	int version;
+
+	version = APS_ReadFPGA(device, FPGA_ADDR_ELL_REGREAD | FPGA_OFF_VERSION, fpga);
+	version = version & 0x1FF; // First 9 bits hold version
+	
 	return version;
 }
 
-EXPORT int APS_ReadAllRegisters(int device) {
+EXPORT int APS_ReadAllRegisters(int device, int fpga) {
 	int cnt;
 	int val;
-	int fpga = 1;
 	static int readCnt = 0;
-	int ok, attempt;
-	int expected_values[] = {-1, 0,0,-1, 0,0,-1,0,0,0,0,0,0,0xdead,0xdead,0xdead};
+	int expected_values[] = {-1,-1,0,-1,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0xdead,-1,-1,0,0};
 
 	dlog(DEBUG_VERBOSE,"====== Register Read %3i ======\n", readCnt++);
 
-	for(cnt = 0; cnt < 16; cnt++) {
-		ok = 0;
-		attempt = 0;
-		while(!ok) {
-			val = APS_ReadFPGA(device, gRegRead | cnt, fpga);
+	for(cnt = 0; cnt < 20; cnt++) {
+		val = APS_ReadFPGA(device, gRegRead | cnt, fpga);
 
-			if ((expected_values[cnt] != -1) && (expected_values[cnt] != val)) {
-				attempt++;
-				if (attempt == 1)
-					dlog(DEBUG_VERBOSE,"Error reading 0x%x: expected 0x%x read ",  gRegRead | cnt,expected_values[cnt]);
-				dlog(DEBUG_VERBOSE,"0x%x ", val);
-			} else {
-				ok = 1;
-			}
-			if (attempt)
-				dlog(DEBUG_VERBOSE, "attempts %i\n", attempt);
+		if ((expected_values[cnt] != -1) && (expected_values[cnt] != val)) {
+			dlog(DEBUG_VERBOSE,"Error reading 0x%x: expected 0x%x read 0x%x\n",  gRegRead | cnt, expected_values[cnt], val);
 		}
-		// register values will be dumped to lob by APS_ReadFPGA
+		// register values will be dumped to log by APS_ReadFPGA
 	}
 	return 0;
 }
@@ -1958,7 +1947,7 @@ EXPORT int APS_IsRunning(int device)
  *
  * Inputs : device device id
  *
- * APS is running if any of the channels are enableddevice
+ * APS is running if any of the channels are enabled
  *
  ********************************************************************/
 {
@@ -1969,20 +1958,15 @@ EXPORT int APS_IsRunning(int device)
   csrReg1 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 1);
   csrReg2 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 2);
 
-  if (gBitFileVersion < VERSION_ELL) {
-      dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
+  // these bits need to be cleared for the channels to be running
+  dac_sm_enable = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
 
-    } else {
-      dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL ;
-
-    }
-
-  // test for output enable on each channel
+  // test for output disabled on each channel
   csrReg1 &= dac_sm_enable;
   csrReg2 &= dac_sm_enable;
 
   // or each channel together to determine if the aps is running
-  running = csrReg1 | csrReg2;
+  running = ~csrReg1 | ~csrReg2;
   if (running)
     running = 1;  // return 1 if running otherwise return 0;
 

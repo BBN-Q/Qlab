@@ -432,13 +432,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function val = programFPGA(aps, data, bytecount,sel)
+        function val = programFPGA(aps, data, bytecount,sel, expectedVersion)
             if ~(aps.is_open)
                 warning('APS:ProgramFPGA','APS is not open');
                 return
             end
             aps.log('Programming FPGA ');
-            val = calllib(aps.library_name,'APS_ProgramFpga',aps.device_id,data, bytecount,sel);
+            val = calllib(aps.library_name,'APS_ProgramFpga',aps.device_id,data, bytecount, sel, expectedVersion);
             if (val < 0)
                 errordlg(sprintf('APS_ProgramFPGA returned an error code of: %i\n', val), ...
                     'Programming Error');
@@ -485,7 +485,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             [DataVec, DataCount] = fread(DataFileID, inf, 'uint8=>uint8');
             aps.log(sprintf('Read %i bytes.', DataCount));
             
-            val = aps.programFPGA(DataVec, DataCount,Sel);
+            val = aps.programFPGA(DataVec, DataCount, Sel, aps.expected_bit_file_ver);
             fclose(DataFileID);
         end
         
@@ -892,9 +892,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
         end
         
-        function readAllRegisters(aps)
+        function readAllRegisters(aps, fpga)
             val = aps.librarycall(sprintf('Read Registers'), ...
-                'APS_ReadAllRegisters');
+                'APS_ReadAllRegisters', fpga);
         end
         
         function testWaveformMemory(aps, id, numBytes)
