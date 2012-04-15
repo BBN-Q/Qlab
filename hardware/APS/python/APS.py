@@ -469,12 +469,10 @@ class APS:
         '''
         #Try to determine whether we need to program the bitfile
         curBitFileVer = self.readBitFileVersion();
-        print(self.read_PLL_status())
-        
         if (curBitFileVer != self.expected_bit_file_ver ) or (self.read_PLL_status()) or force:
-            print('Got here!')
             status = self.loadBitFile()
-            if status:
+            print('Programmed {0} bytes.'.format(status))
+            if status<0:
                 raise RuntimeError('Failed to program FPGAs')
             
             # Default all channels to 1.2 GS/s
