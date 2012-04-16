@@ -60,6 +60,7 @@ class APSRunner(QtCore.QRunnable):
             self.aps.init()
             self.signals.message.emit('Finished Initalization')            
             self.aps.setAll(self.settings)
+            self.signals.message.emit('Finished SetAll')
             self.aps.run()
             self.signals.message.emit('Running.')
 

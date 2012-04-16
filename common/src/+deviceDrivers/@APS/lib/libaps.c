@@ -989,7 +989,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 	if(Sel & 1) RstMask |= APS_FRST01_BIT;
 	if(Sel & 2) RstMask |= APS_FRST23_BIT;
 
-	const int maxAttemptCnt = 3; // max retries is something faails along the way
+	const int maxAttemptCnt = 3; // max retries is something fails along the way
 	int numBytesProgrammed;
 
 	int ok = 0; // flag to indicate test worked
@@ -1027,7 +1027,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 	if (!ok) return -4;
 
 	for(i = 0, ok = 0; i < maxAttemptCnt && ok == 0; i++) {
-		dlog(DEBUG_VERBOSE, "Attempt: %i \n", i);
+		dlog(DEBUG_VERBOSE, "Attempt: %i \n", i+1);
 		// Set Program and Reset Bits
 		WriteByte = (PgmMask | RstMask) & 0xF;
 		dlog(DEBUG_VERBOSE, "Write 2: %02X \n", WriteByte);
@@ -1103,10 +1103,13 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1) return(-3);
 		dlog(DEBUG_VERBOSE, "Read 4: %02X (looking for %02X HIGH)\n", ReadByte, DoneMask);
 		if ((ReadByte & DoneMask) == DoneMask) ok = 1;
-		usleep(10000); // if done has not set wait a bit
+		usleep(1000); // if done has not set wait a bit
 	}
 
-	if (!ok) return -10;
+	//if (!ok) return -10;
+	if (!ok) {
+		dlog(DEBUG_INFO, "WARNING: FPGAs did not set DONE bits after programming, attempting to continue.\n");
+	}
 
 	dlog(DEBUG_VERBOSE, "Done programming\n");
 	
