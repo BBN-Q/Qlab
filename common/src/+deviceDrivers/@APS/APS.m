@@ -382,7 +382,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % Determine if APS needs to be programmed
             bitFileVer = obj.readBitFileVersion();
             if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver || obj.readPllStatus() ~= 0 || force
-                obj.loadBitFile();
+                status = obj.loadBitFile();
+                if status < 0
+                    error('Failed to program FPGA');
+                end
 
                 % set all channels to 1.2 GS/s
                 obj.setFrequency(0, 1200, 0);
