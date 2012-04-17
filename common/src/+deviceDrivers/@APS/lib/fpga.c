@@ -1471,7 +1471,8 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
  *
  * Function Name : APS_TriggerFPGA()
  *
- * Description : Triggers Both DACs on FPGA at the same time
+ * Description : Triggers Both DACs on FPGA at the same time. We do all operations
+ * serially except the last one, to try to avoid simultaneous write errors.
  *
  * Inputs : dac - dac id
  *               trigger_type  - 1 software 2 hardware
@@ -1514,39 +1515,57 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 			dac_type      = BOTH_DACS;
 			dac_sw_led    = TRIGLEDMSK_SWLED0 | TRIGLEDMSK_SWLED1;
 			dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG | TRIGLEDMSK_PHSSWTRIG;
-			if (gBitFileVersion < VERSION_ELL) {
-				dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
-				dac_trig_src  = CSRMSK_ENVTRIGSRC | CSRMSK_PHSTRIGSRC;
-				dac_sm_reset  = CSRMSK_ENVSMRST | CSRMSK_PHSSMRST;
-			} else {
-				dac_sm_enable = CSRMSK_ENVDDR_ELL | CSRMSK_PHSDDR_ELL ;
-				dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL | CSRMSK_PHSTRIGSRC_ELL;
-				dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL ;
-			}
+
+			dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL | CSRMSK_PHSTRIGSRC_ELL;
+			dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
 
 			break;
 		default:
 			return -2;
 	}
 
-	if (getDebugLevel() >= DEBUG_VERBOSE) {
-    dlog(DEBUG_VERBOSE,"Current CSR: 0x%x TRIGLED: 0x%x\n",
-		APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
-    APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
+	if (fpga == 3) {
+		dlog(DEBUG_VERBOSE,"FPGA1 Current CSR: 0x%x TRIGLED: 0x%x\n",
+		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 1),
+		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, 1)
+		);
+		dlog(DEBUG_VERBOSE,"FPGA2 Current CSR: 0x%x TRIGLED: 0x%x\n",
+		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 2),
+		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, 2)
+		);
+	} else {
+		dlog(DEBUG_VERBOSE,"FPGA%d Current CSR: 0x%x TRIGLED: 0x%x\n",
+		     fpga,
+		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
+		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
 		);
 	}
 
 	if (trigger_type == SOFTWARE_TRIGGER) {
 		dlog(DEBUG_VERBOSE, "Setting SW Trigger ... \n", dac_type);
 
-		APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
-	  APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
+		if (fpga == 3) {
+			APS_ClearBit(device, 1, FPGA_OFF_CSR, dac_trig_src);
+			APS_SetBit(device, 1, FPGA_OFF_TRIGLED, dac_sw_trig);
+			APS_ClearBit(device, 2, FPGA_OFF_CSR, dac_trig_src);
+			APS_SetBit(device, 2, FPGA_OFF_TRIGLED, dac_sw_trig);
+		} else {
+			APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
+			APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
+		}
 
 	} else if (trigger_type == HARDWARE_TRIGGER) {
-    dlog(DEBUG_VERBOSE,"Setting HW Trigger ... \n");
-
-		APS_ClearBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
-		APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
+		dlog(DEBUG_VERBOSE,"Setting HW Trigger ... \n");
+		
+		if (fpga == 3) {
+			APS_ClearBit(device, 1, FPGA_OFF_TRIGLED, dac_sw_trig);
+			APS_SetBit(device, 1, FPGA_OFF_CSR, dac_trig_src);
+			APS_ClearBit(device, 2, FPGA_OFF_TRIGLED, dac_sw_trig);
+			APS_SetBit(device, 2, FPGA_OFF_CSR, dac_trig_src);
+		} else {
+			APS_ClearBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
+			APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
+		}
 
 	} else {
 		dlog(DEBUG_VERBOSE, "Invalid Trigger Type\n");
@@ -1554,17 +1573,16 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 	}
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
-	    dlog(DEBUG_VERBOSE,"New CSR: 0x%x TRIGLED 0x%x\n",
-	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
-	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
+		dlog(DEBUG_VERBOSE,"New CSR: 0x%x TRIGLED 0x%x\n",
+		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
+		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
 	    );
-	  }
+	}
 
 	dlog(DEBUG_VERBOSE,"Enable %s State Machine ... \n", dac_type);
 
-  APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
-	//APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
-
+	// do this last operation simultaneously, if necessary
+	APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_sm_reset);
 
 	return 0;
 }
@@ -1685,14 +1703,21 @@ EXPORT int APS_DisableFpga(int device, int dac)
 			return -2;
 	}
 
-	//dlog(DEBUG_VERBOSE, "Disable %s State Machine ... \n", dac_type);
-
-	APS_ClearBit(device, fpga,FPGA_OFF_TRIGLED, dac_sw_trig);
-	//APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
+	if (fpga == 3) {
+		APS_ClearBit(device, 1, FPGA_OFF_TRIGLED, dac_sw_trig);
+		APS_ClearBit(device, 2, FPGA_OFF_TRIGLED, dac_sw_trig);
+	} else {
+		APS_ClearBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
+	}
 
 	dlog(DEBUG_VERBOSE,"Reset %s State Machine ... \n", dac_type);
 
-	APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
+	if (fpga == 3) {
+		APS_SetBit(device, 1, FPGA_OFF_CSR, dac_sm_reset);
+		APS_SetBit(device, 2, FPGA_OFF_CSR, dac_sm_reset);
+	} else {
+		APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_sm_reset);
+	}
 	return 0;
 }
 
