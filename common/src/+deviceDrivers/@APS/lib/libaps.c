@@ -1115,7 +1115,11 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 
 	// Read Bit File Version
 	for (i = 0, ok = 0; i < maxAttemptCnt && !ok; i++) {
-		version = APS_ReadBitFileVersion(device);
+		if (Sel == 3) {
+			version = APS_ReadBitFileVersion(device);
+		} else {
+			version = APS_ReadFpgaBitFileVersion(device, Sel);
+		}
 		if (version == expectedVersion) ok = 1;
 		usleep(1000); // if doesn't match, wait a bit and try again
 	}
@@ -1429,6 +1433,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 	APS_ClearBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
 
 	// test for PLL lock
+	inSync = 0;
 	for (test_cnt = 0; test_cnt < 20; test_cnt++) {
 		if (APS_ReadPllStatus(device, fpga) == 0) {
 			inSync = 1;
