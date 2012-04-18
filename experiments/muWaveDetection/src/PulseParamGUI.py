@@ -9,7 +9,7 @@ import math
 from copy import deepcopy
 import hashlib
 
-from optparse import OptionParser
+import argparse
 
 from PySide import QtGui, QtUiTools, QtCore
 
@@ -193,7 +193,18 @@ class PulseParamGUI(object):
     def refreshParameters(self, fileName=''):
         self.loadParameters()
         #Update the combo boxes from the file parameters
+        #First grab the current setting. We should probably be string matching in case we add channels
+        #but this will work for now
+        curChannelIndex = self.ui.channelComboBox.currentIndex() if self.ui.channelComboBox.currentIndex() >= 0 else 0
+        curQubitIndex = self.ui.qubitComboBox.currentIndex() if self.ui.qubitComboBox.currentIndex() >= 0 else 0
+        print curChannelIndex
+        print curQubitIndex 
+        print self.ui.channelComboBox.currentIndex()
+        print self.ui.qubitComboBox.currentIndex()
+        
         self.update_combo_boxes()
+        self.ui.channelComboBox.setCurrentIndex(curChannelIndex)
+        self.ui.qubitComboBox.setCurrentIndex(curQubitIndex)
         self.updateQubitParameters(saveBeforeSwitch=False)
         self.updateChannelParameters(saveBeforeSwitch=False)
         self.ui.statusbar.showMessage('Loaded Cfg. File {0}'.format(os.path.basename(fileName)), 5000 )        
@@ -284,9 +295,9 @@ class PulseParamGUI(object):
 
 if __name__ == '__main__':
     #See if we have been passed a cfg file
-    parser = OptionParser()
-    parser.add_option('-f', action='store', type='string', dest='fileName', default=None)    
-    (options, args) =  parser.parse_args(sys.argv[1:])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', action='store', dest='fileName', default=None)    
+    options =  parser.parse_args(sys.argv[1:])
 
     # create the Qt application
     app = QtGui.QApplication(sys.argv)
