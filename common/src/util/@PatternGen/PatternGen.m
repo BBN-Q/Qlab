@@ -506,7 +506,7 @@ classdef PatternGen < handle
                 xpulse = xypairs(1,:).';
                 ypulse = xypairs(2,:).';
                 
-                frameChange = frameChanges(n);
+                frameChange = frameChanges(1+mod(n-1, length(frameChanges)));
             end
             
             if obj.linkList
