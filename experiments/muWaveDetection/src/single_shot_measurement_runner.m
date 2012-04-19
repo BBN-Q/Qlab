@@ -15,20 +15,21 @@ else
 end
 
 %Update some relevant parameters
-commonSettings.InstrParams.TekAWG.seqfile = 'U:\AWG\SingleShot\SingleShotTekAWG12.awg';
+channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+commonSettings.InstrParams.TekAWG.seqfile = ['U:\AWG\SingleShot\SingleShot', channelMap.(qubit).IQkey, '.awg'];
 commonSettings.InstrParams.TekAWG.seqforce = 1;
 commonSettings.InstrParams.scope.averager.nbrSegments = 8000;
 commonSettings.InstrParams.scope.averager.nbrRoundRobins = 1;
 
 % construct minimal cfg file
 ExpParams = struct();
-ExpParams.softAvgs = 10;
+ExpParams.softAvgs = 5;
 ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;
 ExpParams.filter = commonSettings.ExpParams.filter;
 
 Sweeps = struct();
-Sweeps.frequency = struct('type','sweeps.Frequency', 'start', 8.18751, 'stop', 8.18751, 'step', 10e-6, 'genID', 'RFgen', 'number', 1);
-Sweeps.power = struct('type','sweeps.Power', 'start', -5.5, 'stop', -5.5, 'step', 0.5, 'units', 'dBm', 'genID', 'RFgen', 'number', 2);
+Sweeps.frequency = struct('type','sweeps.Frequency', 'start', 8.3315, 'stop', 8.3345, 'step', 25e-6, 'genID', 'RFgen', 'number', 1);
+Sweeps.power = struct('type','sweeps.Power', 'start', 0, 'stop', 6, 'step', 1, 'units', 'dBm', 'genID', 'RFgen', 'number', 2);
 
 cfg = struct('ExpParams', ExpParams, ...
     'SoftwareDevelopmentMode', 0, ...
@@ -40,7 +41,7 @@ writeCfgFromStruct(fullfile(cfg_path, 'singleShotFidelity.cfg'), cfg);
 
 % create object instance
 SSMeasurement = expManager.singleShotFidelity(path, fullfile(cfg_path, 'singleShotFidelity.cfg'), 'singleShotFidelity', 1);
-
+SSMeasurement.qubit = qubit;
 SSMeasurement.Init();
 SSMeasurement.Do();
 SSMeasurement.CleanUp();

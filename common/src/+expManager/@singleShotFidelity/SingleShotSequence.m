@@ -1,13 +1,4 @@
-function SingleShotSequence(varargin)
-
-%varargin assumes qubit and then makePlot
-qubit = 'q1';
-
-% if length(varargin) == 1
-%     qubit = varargin{1};
-% elseif length(varargin) > 1
-%     error('Too many input arguments.')
-% end
+function SingleShotSequence(qubit)
 
 basename = 'SingleShot';
 fixedPt = 2000;

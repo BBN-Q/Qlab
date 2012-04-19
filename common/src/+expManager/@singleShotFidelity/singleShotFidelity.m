@@ -35,9 +35,9 @@ classdef singleShotFidelity < expManager.expBase
     
     properties
         ExpParams
-        channelMap
         scope
         awg
+        qubit
     end
     
     methods
@@ -70,10 +70,8 @@ classdef singleShotFidelity < expManager.expBase
             obj.parseExpcfgFile();
             obj.ExpParams = obj.inputStructure.ExpParams;
             
-            obj.channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
-            
             %Create the sequence of two QId two inversion pulses
-            obj.SingleShotSequence()
+            obj.SingleShotSequence(obj.qubit)
 
            % Open all instruments
             obj.openInstruments();
@@ -125,6 +123,8 @@ classdef singleShotFidelity < expManager.expBase
         % Forward reference the digitalHomodyne function defined in
         % separate file
         [DI DQ] =  digitalHomodyne(signal, IFfreq, sampInterval, integrationStart, integrationWindow)
+        
+        SingleShotSequence(qubit)
     
     end    
     
