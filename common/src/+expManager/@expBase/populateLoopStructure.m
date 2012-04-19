@@ -7,20 +7,21 @@ function Loop = populateLoopStructure(obj, sweepPtsOnly)
 
     SweepNames = fieldnames(SweepParams);
     numSweepVariables = numel(SweepNames);
-    Loop = struct('one',[],'two',[],'three',[]);
+    emptySweep = struct('type','sweeps.Nothing');
+    Loop = struct('one',emptySweep,'two',emptySweep,'three',emptySweep);
     % error checking
     for i_loop = 1:numSweepVariables
         % find all sweeps that have a number
         if isfield(SweepParams.(SweepNames{i_loop}), 'number')
             switch SweepParams.(SweepNames{i_loop}).number
                 case 1
-                    if ~isempty(Loop.one),error('there can only be one structure assigned to loop 1'),end
+                    assert(strcmp(Loop.one.type,'sweeps.Nothing'), 'There can only be one structure assigned to loop 1')
                     Loop.one = SweepParams.(SweepNames{i_loop});
                 case 2
-                    if ~isempty(Loop.two),error('there can only be one structure assigned to loop 2'),end
+                    assert(strcmp(Loop.two.type,'sweeps.Nothing'), 'There can only be one structure assigned to loop 2')
                     Loop.two = SweepParams.(SweepNames{i_loop});
                 case 3
-                    if ~isempty(Loop.three),error('there can only be one structure assigned to loop 3'),end
+                    assert(strcmp(Loop.three.type,'sweeps.Nothing'), 'There can only be one structure assigned to loop 3')
                     Loop.three = SweepParams.(SweepNames{i_loop});
                 otherwise
                     % if a sweep 'number' is a string, assign a loop with

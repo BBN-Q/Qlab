@@ -35,14 +35,6 @@ end
 % will use in this method
 Loop = obj.populateLoopStructure;
 
-% Loop 2 is what we iterate over
-if isempty(Loop.two)
-    Loop.two.steps = 1;
-    setLoop2Params = false;
-else
-    setLoop2Params = true;
-end
-
 %% Main Loop
 
 %% If there's anything thats particular to any device do it here
@@ -110,10 +102,8 @@ end
 
 
 for loop2_index = 1:Loop.two.steps
-    if setLoop2Params
-        Loop.two.sweep.step(loop2_index);
-        fprintf('Loop 1: Step %d of %d\n', [loop2_index, Loop.two.steps]);
-    end
+    Loop.two.sweep.step(loop2_index);
+    fprintf('Loop 1: Step %d of %d\n', [loop2_index, Loop.two.steps]);
     
     if ~SD_mode
         softAvgs = ExpParams.softAvgs;
