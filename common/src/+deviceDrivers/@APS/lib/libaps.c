@@ -1572,7 +1572,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 				// wait for lock
 				inSync =  0;
 				for(cnt = 0; cnt < 20; cnt++) {
-					pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
+					pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
 					pll_unlock = (pll_bit >> PLL_LOCK_TEST[pll]) & 0x1;
 					if (!pll_unlock) {
 						inSync = 1;
