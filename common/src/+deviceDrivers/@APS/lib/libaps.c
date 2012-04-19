@@ -559,20 +559,22 @@ int APS_ReadReg
 		status = DLL_FT_Write(usb_handle, Packet, 1, &BytesWritten);
 
 		if (status != FT_OK || BytesWritten != 1) {
-			dlog(DEBUG_VERBOSE2,"APS_ReadReg: Error writing to USB status %i bytes written %i / 1 repeats %i\n",
+			dlog(DEBUG_VERBOSE,"APS_ReadReg: Error writing to USB status %i, bytes written %i / 1 repeats %i\n",
 					status,BytesWritten, repeats);
 			continue;
 		}
 		usleep(10);
-		status = DLL_FT_Read(usb_handle, Data, Length, &BytesRead);
+		
 		if (repeats > 0) dlog(DEBUG_VERBOSE2,"Retry USB Read %i\n", repeats);
-		if (status == FT_OK && BytesRead == Length) break;
+		status = DLL_FT_Read(usb_handle, Data, Length, &BytesRead);
+		if (status != FT_OK || BytesRead != Length)
+			dlog(DEBUG_VERBOSE,"APS_ReadReg: Error reading from USB status %i, bytes read %i\n", status, BytesRead);
+		else
+			break;
 	}
 	if (status != FT_OK || BytesRead != Length) {
-		dlog(DEBUG_VERBOSE,"APS_ReadReg: Error reading from USB! status %i bytes read %i / %i repeats = %i\n", status,BytesRead,Length,repeats);
+		dlog(DEBUG_INFO,"APS_ReadReg: Error reading from USB! status %i bytes read %i / %i repeats = %i\n", status,BytesRead,Length,repeats);
 	}
-
-
 
 	return(BytesRead);
 }
@@ -660,8 +662,6 @@ int APS_WriteReg
 		dlog(DEBUG_VERBOSE,"APS_WriteReg: Error writing to USB status %i bytes written %i / %i repeats %i\n",
 				status,BytesWritten, Length+1, repeats);
 	}
-
-
 
 	// Adjust for command byte when returning bytes written
 	return(BytesWritten - 1);
@@ -1520,6 +1520,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 					inSync = 1;
 					break;
 				}
+				usleep(1000);
 			}
 			if (!inSync) {
 				dlog(DEBUG_INFO,"PLLs did not re-sync after reset\n");
@@ -1571,7 +1572,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 				// wait for lock
 				inSync =  0;
 				for(cnt = 0; cnt < 20; cnt++) {
-					pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
+					pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD, fpga);
 					pll_unlock = (pll_bit >> PLL_LOCK_TEST[pll]) & 0x1;
 					if (!pll_unlock) {
 						inSync = 1;
@@ -1598,20 +1599,25 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 }
 
 int APS_ReadPllStatus(int device, int fpga) {
-	int pll_1_unlock, pll_2_unlock, pll_3_unlock;
+	int pll_02_unlock, pll_13_unlock, pll_ref_unlock;
 	int pll_bit;
 
 	if (fpga < 0 || fpga > 2) {
 		return -1;
 	}
 
-	pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
-	pll_1_unlock = (pll_bit >> PLL_02_LOCK_BIT) & 0x1;
-	pll_2_unlock = (pll_bit >> PLL_13_LOCK_BIT) & 0x1;
-	pll_3_unlock = (pll_bit >> REFERENCE_PLL_LOCK_BIT) & 0x1;
+	pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga); // latched to 200 MHz PLL (has version 0x010)
+	//pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD, fpga); // latched to USB clock (has version 0x020)
+	if ((pll_bit & 0x1ff) != 0x010) {
+		dlog(DEBUG_INFO, "Error: Reg 0x8006 bitfile version does not match. Read 0x%x\n", pll_bit & 0x1ff);
+		return -1;
+	}
+	pll_02_unlock = (pll_bit >> PLL_02_LOCK_BIT) & 0x1;
+	pll_13_unlock = (pll_bit >> PLL_13_LOCK_BIT) & 0x1;
+	pll_ref_unlock = (pll_bit >> REFERENCE_PLL_LOCK_BIT) & 0x1;
 	// lock bit == 1 means not-locked
-	if (!pll_1_unlock && !pll_2_unlock && !pll_3_unlock) {
-		//dlog(DEBUG_INFO,"PLLs locked on FPGA%i\n", fpga);
+	dlog(DEBUG_VERBOSE2, "FPGA%d PLL status 02: %d 13: %d REF: %d\n", fpga, pll_02_unlock, pll_13_unlock, pll_ref_unlock);
+	if (!pll_02_unlock && !pll_13_unlock && !pll_ref_unlock) {
 		return 0;
 	}
 	//return -1;
