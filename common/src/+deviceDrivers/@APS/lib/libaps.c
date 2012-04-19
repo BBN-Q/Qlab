@@ -1572,7 +1572,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 				// wait for lock
 				inSync =  0;
 				for(cnt = 0; cnt < 20; cnt++) {
-					pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD, fpga);
+					pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
 					pll_unlock = (pll_bit >> PLL_LOCK_TEST[pll]) & 0x1;
 					if (!pll_unlock) {
 						inSync = 1;
@@ -1606,8 +1606,9 @@ int APS_ReadPllStatus(int device, int fpga) {
 		return -1;
 	}
 
+	pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga); // latched to USB clock (has version 0x020)
 	pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga); // latched to 200 MHz PLL (has version 0x010)
-	//pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD, fpga); // latched to USB clock (has version 0x020)
+
 	if ((pll_bit & 0x1ff) != 0x010) {
 		dlog(DEBUG_INFO, "Error: Reg 0x8006 bitfile version does not match. Read 0x%x\n", pll_bit & 0x1ff);
 		return -1;
