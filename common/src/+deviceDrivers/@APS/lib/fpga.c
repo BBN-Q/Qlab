@@ -2062,9 +2062,17 @@ EXPORT UCHAR APS_ReadStatusCtrl(int device)
 	return ReadByte;
 }
 
+// sets Status/CTRL register to default state when running (OSCEN enabled)
 EXPORT int APS_ResetStatusCtrl(int device)
 {
-	UCHAR WriteByte = APS_SYNC_BIT | APS_OSCEN_BIT;
+	UCHAR WriteByte = APS_OSCEN_BIT;
+	return APS_WriteReg(device, APS_STATUS_CTRL, 0, 0, &WriteByte);
+}
+
+// clears Status/CTRL register. This is the required state to program the VCXO and PLL
+EXPORT int APS_ClearStatusCtrl(int device)
+{
+	UCHAR WriteByte = APS_OSCEN_BIT;
 	return APS_WriteReg(device, APS_STATUS_CTRL, 0, 0, &WriteByte);
 }
 

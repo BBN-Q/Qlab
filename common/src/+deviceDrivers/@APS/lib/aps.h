@@ -87,7 +87,7 @@
 #define FPGA1_PLL_RESET_BIT 0x2
 #define FPGA2_PLL_RESET_BIT 0x200
 
-#define MAX_PHASE_TEST_CNT 25
+#define MAX_PHASE_TEST_CNT 40
 #define FIRMWARE_VERSION 0X010
 
 typedef struct

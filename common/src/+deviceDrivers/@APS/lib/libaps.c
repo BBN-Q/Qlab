@@ -1181,6 +1181,10 @@ EXPORT int APS_SetupPLL(int device)
 	for(i = 0; i <  sizeof(PllSetup)/sizeof(APS_SPI_REC); i++) {
 		APS_WriteSPI(device, APS_PLL_SPI, PllSetup[i].Address, &PllSetup[i].Data);
 	}
+	
+	// enable the oscillator
+	if (APS_ResetStatusCtrl(device) != 1)
+		return -1;
 
 	// Enable DDRs
 	APS_SetBit(device, 3, FPGA_OFF_CSR, ddr_mask);
@@ -1208,7 +1212,6 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 	ULONG pll_cycles_addr, pll_bypass_addr;
 	UCHAR pll_cycles_val, pll_bypass_val;
 
-	UCHAR WriteByte;
 	int fpga;
 	int sync_status;
 	int numSyncChannels;
@@ -1282,8 +1285,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 	APS_ClearBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
 
 	// Disable oscillator by clearing APS_STATUS_CTRL register
-	WriteByte = 0;
-	if(APS_WriteReg(device,APS_STATUS_CTRL, 1, 0, &WriteByte) != 1)
+	if (APS_ClearStatusCtrl(device) != 1)
 		return(-4);
 
 	APS_WriteSPI(device, APS_PLL_SPI, pll_cycles_addr, &pll_cycles_val);
@@ -1295,8 +1297,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 	}
 
 	// Enable Oscillator
-	WriteByte = APS_OSCEN_BIT;
-	if(APS_WriteReg(device, APS_STATUS_CTRL, 1, 0, &WriteByte) != 1)
+	if (APS_ResetStatusCtrl(device) != 1)
 		return(-4);
 
 	// Enable DDRs
@@ -1649,9 +1650,14 @@ EXPORT int APS_SetupVCXO(int device)
 {
 
 	dlog(DEBUG_INFO, "Setting up VCX0\n");
+	
+	// ensure the oscillator is disabled before programming
+	if (APS_ClearStatusCtrl(device) != 1)
+		return -1;
 
 	APS_WriteSPI(device, APS_VCXO_SPI, 0, Reg00Bytes);
 	APS_WriteSPI(device, APS_VCXO_SPI, 0, Reg01Bytes);
+
 	return 0;
 }
 

@@ -391,6 +391,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 obj.setFrequency(0, 1200, 0);
                 obj.setFrequency(2, 1200, 0);
                 
+                % reset status/CTRL in case setFrequency screwed things up
+                obj.resetStatusCtrl();
+                
                 % test PLL sync on each FPGA
                 status = obj.testPllSync(0) || obj.testPllSync(2);
                 if status ~= 0
@@ -471,7 +474,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 return
             end
 
-            %obj.resetStatusCtrl();
             aps.setupVCX0();
             aps.setupPLL();
             

@@ -100,6 +100,7 @@ EXPORT short APS_ReadChannelOffset(int device, int dac);
 
 EXPORT UCHAR APS_ReadStatusCtrl(int device);
 EXPORT int APS_ResetStatusCtrl(int device);
+EXPORT int APS_ClearStatusCtrl(int device);
 EXPORT int APS_RegWriteTest(int device, int addr);
 
 // Waveform related functions
