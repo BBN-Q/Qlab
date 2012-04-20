@@ -470,6 +470,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 warning('APS:loadBitFile','APS is not open');
                 return
             end
+
+            %obj.resetStatusCtrl();
             aps.setupVCX0();
             aps.setupPLL();
             
@@ -915,8 +917,16 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.expected_bit_file_ver = 5;
         end
         
+        function val = readStatusCtrl(aps)
+            val = aps.librarycall('Read status/ctrl', 'APS_ReadStatusCtrl');
+        end
+        
+        function resetStatusCtrl(aps)
+            aps.librarycall('Read status/ctrl', 'APS_ResetStatusCtrl');
+        end
+        
         function regWriteTest(aps, addr)
-            val = aps.librarycall(sprintf('Register write test'), ...
+            val = aps.librarycall('Register write test', ...
                 'APS_RegWriteTest', addr);
         end
         

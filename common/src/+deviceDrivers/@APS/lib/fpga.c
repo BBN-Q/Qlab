@@ -2055,6 +2055,19 @@ EXPORT short APS_ReadChannelOffset(int device, int dac)
   return APS_ReadFPGA(device, gRegRead | zero_register_addr, fpga);
 }
 
+EXPORT UCHAR APS_ReadStatusCtrl(int device)
+{
+	UCHAR ReadByte;
+	APS_ReadReg(device, APS_STATUS_CTRL, 0, 0, &ReadByte);
+	return ReadByte;
+}
+
+EXPORT int APS_ResetStatusCtrl(int device)
+{
+	UCHAR WriteByte = APS_SYNC_BIT | APS_OSCEN_BIT;
+	return APS_WriteReg(device, APS_STATUS_CTRL, 0, 0, &WriteByte);
+}
+
 EXPORT int APS_RegWriteTest(int device, int addr)
 {
 	int current_state, current_state2;
