@@ -23,12 +23,14 @@ y = ydata(:);
 
 % Model: A Exp(-t/tau) + offset
 t1f = inline('p(1)*exp(-tdata/p(2)) + p(3)','p','tdata');
+%t1f = inline('2*exp(-tdata/p(1)) - 1','p','tdata');
 
 % if xdata is a single value, assume that it is the time step
 if length(xdata) == 1
     xdata = 0:xdata:xdata*(length(y)-1);
 end
 p = [max(y)-min(y) max(xdata)/3. 0];
+%p = max(xdata)/3.;
 
 tic
 [beta,r,j,cov] = nlinfit(xdata, y, t1f, p);
@@ -52,10 +54,12 @@ xlabel('Time [\mus]')
 title(plotTitle)
 
 t1 = beta(2);
+%t1 = beta(1);
 ci = nlparci(beta,r,j);
 t1error = (ci(2,2)-ci(2,1))/2;
-fprintf('Covariance matrix:\n');
-disp(cov)
+%t1error = (ci(1,2)-ci(1,1))/2;
+%fprintf('Covariance matrix:\n');
+%disp(cov)
 
 % annotate the graph with T_1 result
 subplot(3,1,2:3)

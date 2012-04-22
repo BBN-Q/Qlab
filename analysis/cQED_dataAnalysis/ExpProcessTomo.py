@@ -21,7 +21,7 @@ from scipy.constants import pi
 
 from QTomo import qpt_iter, Liouville2Pauli, createCartPOVM
 
-dataFile = '/home/cryan/Desktop/tomoData.mat'
+dataFile = r'C:\Qlab Software\experiments\muWaveDetection\data\IBM_PhaseI_1\120213\tomoData.mat'
 numQubits = 1
 nbrRepeats = 2
 

@@ -1,7 +1,7 @@
 function OverkillTomoSequence(varargin)
 
 %varargin assumes qubit and then makePlot
-qubit = 'q2';
+qubit = 'q1';
 makePlot = true;
 
 if length(varargin) == 1
@@ -24,9 +24,10 @@ qParams = params.(qubit);
 qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 
-% if using SSB, uncomment the following line
-% params.(IQkey).T = eye(2);
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
+% if using SSB, set the frequency here
+SSBFreq = -150e6;
+
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 patseq = {};
 
 pulses = {'QId', 'Xp', 'X90p', 'Y90p'};

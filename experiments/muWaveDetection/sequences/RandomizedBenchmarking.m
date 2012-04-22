@@ -14,9 +14,11 @@ elseif length(varargin) > 2
 end
 
 basename = 'RB';
-fixedPt = 15000;
-cycleLength = 19000;
+fixedPt = 20000; %15000
+cycleLength = 33000; %19000
 nbrRepeats = 1;
+introduceError = 0;
+errorAmp = 0.2;
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
@@ -24,12 +26,14 @@ qParams = params.(qubit);
 qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 
-% if using SSB, uncomment the following line
-% params.(IQkey).T = eye(2);
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
+% if using SSB, set the frequency here
+SSBFreq = 0e6;
+
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
 % load in random Clifford sequences from text file
 FID = fopen('RBsequences-long.txt');
+% FID = fopen('RB-interleave-Y90p.txt');
 if ~FID
     error('Could not open Clifford sequence list')
 end
@@ -46,7 +50,13 @@ for ii = 1:length(seqStrings)
     for jj = 1:length(seqStrings{ii})
         pulseName = seqStrings{ii}{jj};
         if ~isKey(pulseLibrary, pulseName)
-            pulseLibrary(pulseName) = pg.pulse(pulseName);
+            % intentionally introduce an error in one of the
+            % pulses, if desired
+            if introduceError && strcmp(pulseName, 'X90p')
+                pulseLibrary(pulseName) = pg.pulse('Xtheta', 'amp', qParams.pi2Amp*(1+errorAmp));
+            else
+                pulseLibrary(pulseName) = pg.pulse(pulseName);
+            end
         end
         currentSeq{jj} = pulseLibrary(pulseName);
     end

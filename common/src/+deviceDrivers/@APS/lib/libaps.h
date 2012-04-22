@@ -66,7 +66,7 @@ EXPORT int APS_LoadLinkList(int device, unsigned short *OffsetData, unsigned sho
 
 EXPORT int APS_SetLinkListRepeat(int device, unsigned short repeat, int dac);
 
-EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel);
+EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int expectedVersion);
 EXPORT int APS_SetupPLL(int device);
 EXPORT int APS_SetupVCXO(int device);
 
@@ -88,7 +88,7 @@ EXPORT int APS_ReadPllStatus(int device, int fpga);
 
 EXPORT int  APS_ReadBitFileVersion(int device);
 EXPORT void APS_ReadLibraryVersion(void * buffer, int maxlen);
-EXPORT int  APS_ReadAllRegisters(int device);
+EXPORT int  APS_ReadAllRegisters(int device, int fpga);
 EXPORT int  APS_TestWaveformMemory(int device, int dac, int byteCount);
 EXPORT int  APS_SetDebugLevel(int level);
 EXPORT int  APS_ReadLinkListStatus(int device, int dac);
@@ -98,6 +98,11 @@ EXPORT int  APS_ClearLinkListELL(int device,int dac, int bank);
 
 EXPORT int   APS_SetChannelOffset(int device, int dac, short offset);
 EXPORT short APS_ReadChannelOffset(int device, int dac);
+
+EXPORT UCHAR APS_ReadStatusCtrl(int device);
+EXPORT int   APS_ResetStatusCtrl(int device);
+EXPORT int   APS_ClearStatusCtrl(int device);
+EXPORT int   APS_RegWriteTest(int device, int addr);
 
 // Waveform related functions
 

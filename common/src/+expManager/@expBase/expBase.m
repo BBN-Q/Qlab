@@ -195,11 +195,10 @@ classdef  expBase < handle
             SD_mode = obj.inputStructure.SoftwareDevelopmentMode;
             InstrumentNames = fieldnames(obj.Instr);
             for Instr_index = 1:numel(InstrumentNames)
-                cmdString = ['obj.Instr.' InstrumentNames{Instr_index} '.disconnect'];
                 if SD_mode
-                    disp(cmdString);
+                    fprintf('Closing %s',InstrumentNames{Instr_index});
                 else
-                    eval(cmdString);
+                    obj.Instr.(InstrumentNames{Instr_index}).disconnect()
                 end
             end
 		end

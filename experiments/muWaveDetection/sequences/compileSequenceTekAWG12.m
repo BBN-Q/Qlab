@@ -39,7 +39,7 @@ end
 
 % trigger at beginning of measurement pulse
 % measure from (6000:9000)
-measLength = 3000;
+measLength =9600;
 measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = repmat(pg.makePattern([], fixedPt-500, ones(100,1), cycleLength), 1, segments)';
 ch1m2 = repmat(int32(pg.getPatternSeq(measSeq, 1, params.measDelay, fixedPt+measLength)), 1, segments)';
@@ -57,6 +57,8 @@ if makePlot
     grid on
     hold off
 end
+
+save('testRB.mat', 'ch1', 'ch2')
 
 % add offsets to unused channels
 ch3 = ch3 + params.TekAWG34.offset;

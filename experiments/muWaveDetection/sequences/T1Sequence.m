@@ -14,8 +14,8 @@ elseif length(varargin) > 2
 end
 
 basename = 'T1';
-fixedPt = 30000; %40000
-cycleLength = 34000; %44000
+fixedPt = 40000; %40000
+cycleLength = 44000; %44000
 nbrRepeats = 1;
 
 % load config parameters from file
@@ -28,8 +28,8 @@ IQkey = qubitMap.(qubit).IQkey;
 % params.(IQkey).T = eye(2);
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
 
-numsteps = 160 ; %250
-stepsize = 180; %24
+numsteps = 80 ; %250
+stepsize = 240; %24
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {{...
     pg.pulse('Xp'), ...

@@ -13,16 +13,18 @@ cis = (ci(:,2)-ci(:,1))./2;
 
 if plotflag
     %figure
-    yfit = model(seqlengths, beta);
-    yfit = reshape(yfit, length(seqlengths), 4);
+    %yfit = model(seqlengths, beta);
+    %yfit = reshape(yfit, length(seqlengths), 4);
+    yfit = model(1:max(seqlengths), beta);
+    yfit = reshape(yfit, max(seqlengths), 4);
     %offset = beta(6);
 %    offset = 0.25;
 %    semilogy(seqlengths,ydat-offset,seqlengths,yfit-offset,'r')
     hold on
-    plot(seqlengths,yfit(:,1),'b')
-    plot(seqlengths,yfit(:,2),'r')
-    plot(seqlengths,yfit(:,3),'g')
-    plot(seqlengths,yfit(:,4),'k')
+    plot(yfit(:,1),'b')
+    plot(yfit(:,2),'r')
+    plot(yfit(:,3),'g')
+    plot(yfit(:,4),'k')
     hold off
     xlim([0 max(seqlengths)])
     ylim([-0.05 1.05])
@@ -33,6 +35,8 @@ r2=beta(2);
 r12=beta(3);
 
 fprintf('r1 = %.04f +/- %.04f, r2 = %.04f +/- %.04f, r12 = %.04f +/- %.04f\n', [r1 cis(1) r2 cis(2), r12, cis(3)]);
+fprintf('Offsets:\n');
+disp(beta(4:7))
 
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -57,7 +61,7 @@ for ct = 1:length(n)
     yfit(:,ct) = expm(n(ct)*propMat)*[1; 0; 0; 0];
 end
 
-yfit = yfit + repmat(vec(4:7)', 1,11);
+yfit = yfit + repmat(vec(4:7)', 1,length(n));
 yfit = yfit';
 yfit = yfit(:);
 end

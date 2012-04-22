@@ -38,6 +38,10 @@ switch Gate
         Uideal = expm(-1i*pi*sx/8);
     case '1QX22p'
         Uideal = expm(-1i*pi*sx/16);
+    case '1QHad'
+        Uideal = expm(-1i*(pi/2)*(1/sqrt(2))*(sx+sz));
+    case '1QZ90'
+        Uideal = expm(-1i*(pi/4)*sz);
     case 'Id'
         Uideal = speye(4);
     case 'XI'
@@ -77,7 +81,7 @@ choi_correct = choi_SDP; % no correction
 chicorrected = Choi2Chi_(choi_correct, pauliopts, nbrQubits);
 chitheory = Choi2Chi_(choi_th, pauliopts, nbrQubits);
 
-pauliMapMLE = Choi2PauliMap_(choi_correct, pauliopts, nbrQubits);
-pauliMapTheory = Choi2PauliMap_(choi_th, pauliopts, nbrQubits);
+pauliMapMLE = Choi2PauliMap_(choi_correct);
+pauliMapTheory = Choi2PauliMap_(choi_th);
 
 end

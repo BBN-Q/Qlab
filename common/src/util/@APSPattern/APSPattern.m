@@ -316,7 +316,7 @@ classdef APSPattern < handle
                 offsetVal = bitset(offsetVal, ELL_ZERO_BIT);
             end
 
-            if entry.hasTrigger
+            if entry.hasMarkerData
                 offsetVal = bitset(offsetVal, ELL_VALID_TRIGGER_BIT);
             end
 
@@ -357,18 +357,31 @@ classdef APSPattern < handle
             %% Trigger Delay
             %  15  14  13   12   11  10 9 8 7 6 5 4 3 2 1 0
             % | Mode |                Delay                |
-            % Delay = time in 3.333 ns increments ( 0 - 54.5 usec )
+            % Mode 0 0 = short pulse (0)
+            %      0 1 = rising edge (1)
+            %      1 0 = falling edge (2)
+            %      1 1 = no change (3)
+            % Delay = time in 4 sample increments ( 0 - 54.5 usec at max rate)
             
             ELL_TRIGGER_DELAY      = 16383; %hex2dec('3FFF')
             ELL_TRIGGER_MODE_SHIFT = 14;
+            TRIGGER_INCREMENT      = 4;
 
-            % TODO:  hard code trigger for now, need to think about how to
-            % describe
-            triggerMode = 3; % do nothing
-            triggerDelay = 0;
+            if entry.hasMarkerData
+                % only currently supported markerMode in hardware is 'short
+                % pulse' (0)
+                if entry.markerMode ~= 3
+                    entry.markerMode = 0;
+                end
+                triggerMode = bitand(entry.markerMode, 3);
+                triggerDelay = entry.markerDelay;
+            else
+                triggerMode = 3; % do nothing
+                triggerDelay = 0;
+            end
 
             triggerMode = bitshift(triggerMode, ELL_TRIGGER_MODE_SHIFT);
-            triggerDelay = fix(triggerDelay);
+            triggerDelay = fix(triggerDelay / TRIGGER_INCREMENT);
 
             triggerVal = bitand(triggerDelay, ELL_TRIGGER_DELAY);
             triggerVal = bitor(triggerVal, triggerMode);
@@ -393,7 +406,6 @@ classdef APSPattern < handle
                 miniLinkRepeat = 0;
             end
 
-
             wf = APSWaveform();
             wf.data = waveformLibrary.waveforms;
 
@@ -401,7 +413,7 @@ classdef APSPattern < handle
             [banks{curBank} idx] = aps.allocateBank();
 
             for i = 1:length(pattern.linkLists)
-                linkList = pattern.linkLists{i};
+                linkList = aps.preprocessLL(pattern.linkLists{i});
 
                 lenLL = length(linkList);
 
@@ -423,11 +435,6 @@ classdef APSPattern < handle
                     if aps.verbose
                         fprintf('Entry %i: key: %s length: %2i repeat: %4i \n', j, entry.key, entry.length, ...
                             entry.repeat);
-                    end
-
-                    % for test, put trigger on first entry of every mini-LL
-                    if j == 1
-                        entry.hasTrigger = 1;
                     end
 
                     [offsetVal countVal] = aps.entryToOffsetCount(entry, waveformLibrary, j == 1, j == lenLL - 1);
@@ -460,7 +467,7 @@ classdef APSPattern < handle
                         offsetVal = bitset(offsetVal, aps.ELL_FIRST_ENTRY_BIT); 
                     end
 
-                    triggerVal = aps.entryToTrigger(j == lenLL);
+                    triggerVal = aps.entryToTrigger(entry);
 
                     banks{curBank}.offset(idx) = uint16(offsetVal);
                     banks{curBank}.count(idx) = uint16(countVal);
@@ -508,6 +515,58 @@ classdef APSPattern < handle
             bank.offset(end) = bitset(bank.offset(end), self.ELL_FIRST_ENTRY_BIT, 0);
         end
 
+        function splitList = preprocessLL(linkList)
+            % Perform any tasks necessary to processing a link list before
+            % the main loop. At present, this only requires breaking 'zero'
+            % entries with multiple triggers into separate entries
+            MIN_LL_ENTRY_LENGTH = 16;
+            splitList = linkList;
+
+            kk = 1; % index into splitList
+            for ii = 1:length(linkList)
+                entry = linkList{ii};
+                % split an entry only if the entry is at least twice the
+                % minimum width + 4
+                if entry.hasMarkerData && entry.isZero && length(entry.markerDelay) > 1
+                    % if the entry is too short to split, clear the marker
+                    % data
+                    if entry.repeat < 2*MIN_LL_ENTRY_LENGTH + 4
+                        entry.hasMarkerData = 0;
+                        splitList{ii} = entry;
+                        kk = kk + 1;
+                    else
+                        origLength = entry.repeat;
+                        delays = entry.markerDelay;
+                        newEntriesLength = 0;
+                        newEntries = cell(length(delays),1);
+
+                        for jj = 1:length(delays)-1
+                            newEntries{jj} = entry;
+                            % make sure the entry is at least the minimum
+                            % length (plus a little extra to avoid putting
+                            % the trigger right on the boundary)
+                            newEntries{jj}.repeat = max(delays(jj)+4, MIN_LL_ENTRY_LENGTH);
+                            % subtract the consumed length from the remaining
+                            % delay
+                            newEntries{jj}.markerDelay = delays(jj) - newEntriesLength;
+                            newEntriesLength = newEntriesLength + newEntries{jj}.repeat;
+                        end
+
+                        % the final entry has the balance of the original
+                        % length
+                        newEntries{end} = entry;
+                        newEntries{end}.repeat = origLength - newEntriesLength;
+                        newEntries{end}.markerDelay = delays(end) - newEntriesLength;
+
+                        % insert the new entries
+                        splitList = [splitList(1:kk-1); newEntries; linkList(ii+1:end)];
+                        kk = kk + length(delays);
+                    end
+                else
+                    kk = kk + 1;
+                end
+            end
+        end
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function [pattern] = linkListToPattern(wf, banks)
             aps = APSPattern;

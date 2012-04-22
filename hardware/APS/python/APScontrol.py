@@ -9,6 +9,65 @@ import APS
 
 libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
 
+class ThreadSignals(QtCore.QObject):
+    message = QtCore.Signal(str)
+    finished = QtCore.Signal()
+
+class LoadBitFileRunner(QtCore.QRunnable):
+
+    def __init__(self, bitFileName, aps, apsNum):
+        super(LoadBitFileRunner, self).__init__()
+        self.bitFileName = bitFileName
+        self.aps = aps
+        self.apsNum = apsNum
+        self.signals = ThreadSignals()
+
+    def run(self):
+        self.signals.message.emit('Programming FPGA bitfile....')
+        self.aps.connect(self.apsNum)
+        self.aps.loadBitFile(self.bitFileName)
+        self.signals.message.emit('Loaded firmware version {0}'.format(self.aps.readBitFileVersion()))
+        self.aps.disconnect()
+        self.signals.finished.emit()
+        
+class PLLSyncTestRunner(QtCore.QRunnable):
+    def __init__(self, aps, apsNum):
+        super(PLLSyncTestRunner, self).__init__()
+        self.aps = aps
+        self.apsNum = apsNum
+        self.signals = ThreadSignals()
+        
+    def run(self):
+        self.signals.message.emit('Testing the PLL sync....')
+        self.aps.connect(self.apsNum)
+        self.signals.message.emit('PLL Sync Test for DAC {0} returned {1}'.format(0, self.aps.test_PLL_sync(0)))
+        self.signals.message.emit('PLL Sync Test for DAC {0} returned {1}'.format(2, self.aps.test_PLL_sync(2)))
+        self.aps.disconnect()
+        self.signals.finished.emit()
+
+class APSRunner(QtCore.QRunnable):
+    def __init__(self, aps, apsNum, settings):
+        super(APSRunner, self).__init__()
+        self.aps = aps
+        self.apsNum = apsNum
+        self.settings = settings
+        self.signals = ThreadSignals()
+        
+    def run(self):
+        try:
+            self.aps.connect(self.apsNum)
+            self.signals.message.emit('Initializing APS...')            
+            self.aps.init()
+            self.signals.message.emit('Finished Initalization')            
+            self.aps.setAll(self.settings)
+            self.signals.message.emit('Finished SetAll')
+            self.aps.run()
+            self.signals.message.emit('Running.')
+
+        except:
+            self.signals.message.emit('WARNING: Could not get APS running!')
+
+        
 class APScontrol(object):
     _bitFileName = ''
     def __init__(self):
@@ -48,16 +107,19 @@ class APScontrol(object):
             
         #Create an APS class instance for interacting with the instrument
         self.aps = APS.APS(libPath)
-        
+
         #Enumerate the number of connected APS devices and fill out the combo box
         (numAPS, deviceSerials) = self.aps.enumerate()
         self.printMessage('Found {0} APS units'.format(numAPS))
         
         #Fill out the device ID combo box
         self.ui.deviceIDComboBox.clear()
-        self.ui.deviceIDComboBox.insertItems(0,['{0} ({1})'.format(num, deviceSerials[num]) for num in range(numAPS)])
-        
-        self._bitfilename = self.aps.getDefaultBitFileName()
+        if numAPS > 0:
+            self.ui.deviceIDComboBox.insertItems(0,['{0} ({1})'.format(num, deviceSerials[num]) for num in range(numAPS)])
+            self._bitfilename = self.aps.getDefaultBitFileName()
+
+        #Create a reference to the global thread pool
+        self.threadPool = QtCore.QThreadPool.globalInstance()
 
         self.ui.show()
         
@@ -70,27 +132,40 @@ class APScontrol(object):
         
     def printMessage(self, message):
         self.ui.messageLog.append(message)
+    
+    #A slot to recieve log messages from threads.
+    @QtCore.Slot(str)
+    def printFromThread(self, message):
+        self.printMessage(message)
 
     def bitFileDialog(self):
+        #Launch a dialog to poll the user for the file name       
         self._bitFileName = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Bit files (*.bit)')[0]
-        self.programFPGA()
-        
-    def waveformDialog(self, textBox):
-        fileName, fileFilter = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Matlab Files (*.mat);;Waveform files (*.m);;Sequence files (*.seq)')
-        textBox.setText(fileName)
-        
-    def programFPGA(self):
         #Check that file exists
         if not os.path.isfile(self._bitFileName):
             self.printMessage("Error bitfile not found: %s" % self.bitFileName.text() )
             return
+        #If it does then create a thread (loading the bit file takes a few seconds)
+        #Have to keep a reference around otherwise it gets deleted to early        
+        bitFileLoader = LoadBitFileRunner(self._bitFileName, self.aps, self.ui.deviceIDComboBox.currentIndex())
+        bitFileLoader.signals.message.connect(self.printFromThread)
+        #Disable the run button while we are programming        
+        self.ui.runButton.setEnabled(False)
+        bitFileLoader.signals.finished.connect(lambda : self.ui.runButton.setEnabled(True))
+        self.threadPool.start(bitFileLoader)
         
-        #Load the file
-        self.printMessage('Programming FPGA bitfile.')
-        self.connect()
-        self.aps.loadBitFile(self._bitFileName)
-        self.printMessage("Loaded firmware version %i" % self.aps.readBitFileVersion())
-        self.aps.disconnect()
+    def test_PLL_sync(self):
+        #Start a background thread for testing the PLL sync
+        PLLTester = PLLSyncTestRunner(self.aps, self.ui.deviceIDComboBox.currentIndex())
+        PLLTester.signals.message.connect(self.printFromThread)
+        #Disable the run button while we are programming        
+        self.ui.runButton.setEnabled(False)
+        PLLTester.signals.finished.connect(lambda : self.ui.runButton.setEnabled(True))
+        self.threadPool.start(PLLTester)
+                
+    def waveformDialog(self, textBox):
+        fileName, fileFilter = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Matlab Files (*.mat);;Waveform files (*.m);;Sequence files (*.seq)')
+        textBox.setText(fileName)
         
     def update_channel_enablers(self):
         '''
@@ -103,9 +178,6 @@ class APScontrol(object):
             
         
     def run(self):
-        self.ui.runButton.setEnabled(0)
-        self.ui.stopButton.setEnabled(1)
-
         #Pull the settings from the gui
         settings = {}
         
@@ -130,6 +202,13 @@ class APScontrol(object):
             self.printMessage('Hardware trigger.')
             settings['triggerSource'] = self.aps.TRIGGER_HARDWARE
         
+        
+        #Get the four channel mode stuff
+        settings['fourChannelMode'] = bool(self.ui.chAllOnOff.isChecked())
+        if settings['fourChannelMode']:
+            settings['chAll'] = {}
+            settings['chAll']['seqfile'] = self.ui.chAllfile.text()
+
         #Pull out specific channel properties
         for ct,channelName in enumerate(self.aps.CHANNELNAMES):
             settings[channelName] = {}
@@ -137,52 +216,32 @@ class APScontrol(object):
             settings[channelName]['offset'] = float(getattr(self.ui,'ch{0}offset'.format(ct+1)).text())
             settings[channelName]['enabled'] = bool(getattr(self.ui,'ch{0}enable'.format(ct+1)).isChecked())
             settings[channelName]['seqfile'] = getattr(self.ui,'ch{0}file'.format(ct+1)).text()
-            
-        #Get the four channel mode stuff
-        settings['fourChannelMode'] = bool(self.ui.chAllOnOff.isChecked())
-        if settings['fourChannelMode']:
-            settings['chAll'] = {}
-            settings['chAll']['seqfile'] = self.ui.chAllfile.text()
+            #Do a check whether the file exists
+            if (not settings['fourChannelMode']) and settings[channelName]['enabled'] and (not os.path.isfile(settings[channelName]['seqfile'])):
+                QtGui.QMessageBox.warning(self.ui, 'Oops!', 'Channel {0} is enabled with a non-existent file.'.format(ct+1))
+                self.stop()
+                raise
 
-        self.connect()
-        self.aps.init()
-        self.aps.setAll(settings)
-        self.aps.run()
+        #Disable buttons we don't want while running
+        self.ui.runButton.setEnabled(False)
+        self.ui.stopButton.setEnabled(True)
+        self.ui.actionLoad_Bit_File.setEnabled(False)
+        self.ui.actionTest_PLL_Sync.setEnabled(False)        
+
+        #Do the slow work (loading large sequences) lifting in another thread
+        tmpAPSRunner = APSRunner(self.aps, self.ui.deviceIDComboBox.currentIndex(), settings )        
+        tmpAPSRunner.signals.message.connect(self.printFromThread)        
+        self.threadPool.start(tmpAPSRunner)        
         
-        self.printMessage('Running')
-
     def stop(self):
-        self.ui.stopButton.setEnabled(0)
-        self.ui.runButton.setEnabled(1)
-        
+        self.ui.stopButton.setEnabled(False)
+        self.ui.runButton.setEnabled(True)
+        self.ui.actionLoad_Bit_File.setEnabled(True)
+        self.ui.actionTest_PLL_Sync.setEnabled(True)        
         self.aps.stop()
         self.aps.disconnect()
         self.printMessage('Stopped')
     
-            
-    def setScaleFactor(self,channel,value):
-        value = '%.2f' % value
-        if channel in range(1,5):
-            textBox = getattr(self, 'ch%iscale' % channel)
-            textBox.setText(value)
-        else:
-            print 'Unknown channel', channel
-            
-    def setOffset(self,channel,value):
-        value = '%.2f' % value
-        if channel in range(1,5):
-            textBox = getattr(self, 'ch%ioffset' % channel)
-            textBox.setText(value)
-        else:
-            print 'Unknown channel', channel
-            
-    def test_PLL_sync(self):
-        self.connect()
-        status = self.aps.test_PLL_sync(0)
-        self.printMessage('PLL Sync Test for DAC {0} returned {1}'.format(0, status))
-        status = self.aps.test_PLL_sync(2)
-        self.printMessage('PLL Sync Test for DAC {0} returned {1}'.format(2, status))
-        self.aps.disconnect()
         
 if __name__ == '__main__':
     # create the Qt application

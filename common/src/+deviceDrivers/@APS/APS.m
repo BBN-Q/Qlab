@@ -124,7 +124,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         FPGA0 = 0;
         FPGA1 = 2;
         
-        DAC2_SERIALS = {'A6UQZB7Z','A6001nBU'};
+        DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV'};
         
         channelStruct = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
     end
@@ -392,11 +392,17 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % Determine if APS needs to be programmed
             bitFileVer = obj.readBitFileVersion();
             if ~isnumeric(bitFileVer) || bitFileVer ~= obj.expected_bit_file_ver || obj.readPllStatus() ~= 0 || force
-                obj.loadBitFile();
+                status = obj.loadBitFile();
+                if status < 0
+                    error('Failed to program FPGA');
+                end
 
                 % set all channels to 1.2 GS/s
                 obj.setFrequency(0, 1200, 0);
                 obj.setFrequency(2, 1200, 0);
+                
+                % reset status/CTRL in case setFrequency screwed things up
+                obj.resetStatusCtrl();
                 
                 % test PLL sync on each FPGA
                 status = obj.testPllSync(0) || obj.testPllSync(2);
@@ -442,13 +448,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function val = programFPGA(aps, data, bytecount,sel)
+        function val = programFPGA(aps, data, bytecount,sel, expectedVersion)
             if ~(aps.is_open)
                 warning('APS:ProgramFPGA','APS is not open');
                 return
             end
             aps.log('Programming FPGA ');
-            val = calllib(aps.library_name,'APS_ProgramFpga',aps.device_id,data, bytecount,sel);
+            val = calllib(aps.library_name,'APS_ProgramFpga',aps.device_id,data, bytecount, sel, expectedVersion);
             if (val < 0)
                 errordlg(sprintf('APS_ProgramFPGA returned an error code of: %i\n', val), ...
                     'Programming Error');
@@ -477,6 +483,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 warning('APS:loadBitFile','APS is not open');
                 return
             end
+
             aps.setupVCX0();
             aps.setupPLL();
             
@@ -495,7 +502,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             [DataVec, DataCount] = fread(DataFileID, inf, 'uint8=>uint8');
             aps.log(sprintf('Read %i bytes.', DataCount));
             
-            val = aps.programFPGA(DataVec, DataCount,Sel);
+            val = aps.programFPGA(DataVec, DataCount, Sel, aps.expected_bit_file_ver);
             fclose(DataFileID);
         end
         
@@ -698,8 +705,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         end
 
                         %aps.setLinkListRepeat(ch-1,ell.repeatCount);
-                        aps.setLinkListRepeat(ch-1,10000);
-                        %aps.setLinkListRepeat(ch-1,0);
+                        %aps.setLinkListRepeat(ch-1,10000);
+                        aps.setLinkListRepeat(ch-1,0);
                     end
                     aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                 end
@@ -730,17 +737,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 aps.log(mesg);
             end
                         
-            switch size(varargin,2)
-                case 0
-                    val = calllib(aps.library_name,func,aps.device_id);
-                case 1
-                    val = calllib(aps.library_name,func,aps.device_id, varargin{1});
-                case 2
-                    val = calllib(aps.library_name,func,aps.device_id, varargin{1}, varargin{2});
-                case 3
-                    val = calllib(aps.library_name,func,aps.device_id, varargin{1}, varargin{2}, varargin{3});
-                otherwise
-                    error('More than 3 varargin arguments to librarycall are not supported\n');
+            if size(varargin,2) == 0
+                val = calllib(aps.library_name, func, aps.device_id);
+            else
+                val = calllib(aps.library_name, func, aps.device_id, varargin{:});
             end
             if (aps.verbose)
                 aps.log('Done');
@@ -938,9 +938,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
         end
         
-        function readAllRegisters(aps)
+        function readAllRegisters(aps, fpga)
             val = aps.librarycall(sprintf('Read Registers'), ...
-                'APS_ReadAllRegisters');
+                'APS_ReadAllRegisters', fpga);
         end
         
         function testWaveformMemory(aps, id, numBytes)
@@ -957,13 +957,30 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.bit_file = 'cbl_aps2_r5_d6ma_fx.bit';
             aps.expected_bit_file_ver = 5;
         end
+        
+        function val = readStatusCtrl(aps)
+            val = aps.librarycall('Read status/ctrl', 'APS_ReadStatusCtrl');
+        end
+        
+        function resetStatusCtrl(aps)
+            aps.librarycall('Read status/ctrl', 'APS_ResetStatusCtrl');
+        end
+        
+        function regWriteTest(aps, addr)
+            val = aps.librarycall('Register write test', ...
+                'APS_RegWriteTest', addr);
+        end
+        
+        function setDebugLevel(aps, level)
+            calllib(aps.library_name, 'APS_SetDebugLevel', level);
+        end
     end
     methods(Static)
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function unload_library()
-            if libisloaded('libaps')
-                unloadlibrary libaps
+            if libisloaded(aps.library_name)
+                unloadlibrary(aps.library_name);
             end
         end
         

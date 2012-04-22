@@ -1,4 +1,6 @@
 function setInstrument(obj, amp, phase)
+    %Helper function to set the amplitude and phase be IQ calibration
+    
     ExpParams = obj.inputStructure.ExpParams;
     fssb = 2*pi*ExpParams.SSBFreq;
     samplingRate = obj.awg.samplingRate;
@@ -18,6 +20,7 @@ function setInstrument(obj, amp, phase)
                 fprintf('Skew: %.3f ns\n', skew*1e9);
             end
             obj.awg.(['chan_' num2str(Q_channel)]).Skew = skew;
+            obj.awg.operationComplete()
         case 'deviceDrivers.APS'
             samplingRate = samplingRate*1e6; % APS gives sampling rate in MHz
             % on the APS we generate a new waveform and upload it
@@ -42,5 +45,6 @@ function setInstrument(obj, amp, phase)
             obj.awg.loadWaveform(3, wf.prep_vector());
             obj.awg.(['chan_' num2str(Q_channel)]).waveform = wf;
             obj.awg.run();
+            pause(0.2);
     end
 end

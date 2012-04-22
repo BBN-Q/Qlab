@@ -12,7 +12,6 @@ function analyzeRB(ypts)
     end
 
     %seqlengths = [2, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96];
-    %seqlengths = 2*seqlengths;
     seqlengths = [2, 4, 8, 16, 32, 64, 96, 128, 192, 256, 320];
     xpts2 = seqlengths(1 + floor((0:length(ypts)-1)./32));
     
@@ -51,7 +50,7 @@ function analyzeRB(ypts)
     labelStr = sprintf('Fit function: a*(1-b)^n+c\n');
     labelStr = [labelStr sprintf(' a = %.03f +/- %.03f\n b = %.03f +/- %.03f\n c = %.03f +/- %.03f\n', [beta(1) cis(1) beta(2) cis(2) beta(3) cis(3)])];
     
-    text(.75, .9, labelStr, 'FontSize', 12, 'Units', 'normalized');
+    text(.7, .85, labelStr, 'FontSize', 12, 'Units', 'normalized');
     
     ylim([min(fidelity) 1.05])
 end

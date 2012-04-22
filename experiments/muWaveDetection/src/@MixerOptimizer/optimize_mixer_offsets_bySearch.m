@@ -22,7 +22,7 @@
 % Nelder-Mead Simplex implementation adapted from code in Numerical Recipes
 % in C.
 
-function [i_offset, q_offset] = optimize_mixer_offsets(obj)
+function [i_offset, q_offset] = optimize_mixer_offsets_bySearch(obj)
     % unpack constants from cfg file
     ExpParams = obj.inputStructure.ExpParams;
     spec_analyzer_span = ExpParams.SpecAnalyzer.span;

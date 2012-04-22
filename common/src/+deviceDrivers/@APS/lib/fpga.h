@@ -116,26 +116,26 @@
 
 #define CSRMSK_ENVSMRST_ELL 	 0x1 // state machine reset
 #define CSRMSK_ENVPLLRST_ELL 	 0x2 // pll reset
-#define CSRMSK_ENVSMEN_ELL		 0x4 // DDR enable
-#define CSRMSK_ENVMEMLCK_ELL 	 0x8
-#define CSRMSK_ENVTRIGSRC_ELL  0x10
-#define CSRMSK_ENVOUTMODE_ELL  0x20
-#define CSRMSK_ENVLLMODE_ELL   0x40
-#define CSRMSK_ENVLLSTATUS_ELL 0x80
+#define CSRMSK_ENVDDR_ELL		 0x4 // DDR enable
+#define CSRMSK_ENVMEMLCK_ELL 	 0x8 // waveform memory lock (1 = locked, 0 = unlocked)
+#define CSRMSK_ENVTRIGSRC_ELL  0x10 // trigger source (1 = external, 0 = internal)
+#define CSRMSK_ENVOUTMODE_ELL  0x20 // output mode (1 = link list, 0 = waveform)
+#define CSRMSK_ENVLLMODE_ELL   0x40 // LL repeat mode (1 = one-shot, 0 = continuous)
+#define CSRMSK_ENVLLSTATUS_ELL 0x80 // LL status (1 = LL A active, 0 = LL B active)
 
 #define CSRMSK_PHSSMRST_ELL 	 0x100 // state machine reset
 #define CSRMSK_PHSPLLRST_ELL 	 0x200 // pll reset
-#define CSRMSK_PHSSMEN_ELL		 0x400 // DDR enable
+#define CSRMSK_PHSDDR_ELL		 0x400 // DDR enable
 #define CSRMSK_PHSMEMLCK_ELL 	 0x800
 #define CSRMSK_PHSTRIGSRC_ELL  0x1000
 #define CSRMSK_PHSOUTMODE_ELL  0x2000
 #define CSRMSK_PHSLLMODE_ELL   0x4000
 #define CSRMSK_PHSLLSTATUS_ELL 0x8000
 
-#define TRIGLEDMSK_ENVSWTRIG 	0x1
-#define TRIGLEDMSK_PHSSWTRIG 	0x2
-#define TRIGLEDMSK_SWLED0 		0x4
-#define TRIGLEDMSK_SWLED1 		0x8
+#define TRIGLEDMSK_ENVSWTRIG 	0x1 // Channel 0/2 internal trigger (1 = enabled, 0 = disabled)
+#define TRIGLEDMSK_PHSSWTRIG 	0x2 // Channel 1/3 internal trigger (1 = enabled, 0 = disabled)
+#define TRIGLEDMSK_SWLED0 		0x4 // LED 0
+#define TRIGLEDMSK_SWLED1 		0x8 // LED 1
 
 #define MAX_WF_LEN_SAMPLES 4092
 #define MAX_WF_AMP_SAMPLES 8192
@@ -163,5 +163,6 @@
 int APS_WriteFPGA(int device, ULONG addr, ULONG data, UCHAR fpga);
 ULONG APS_ReadFPGA(int device,ULONG addr, UCHAR fpga);
 int dac2fpga(int dac);
+int APS_ReadFpgaBitFileVersion(int device, int fpga);
 
 #endif
