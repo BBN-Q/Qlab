@@ -43,7 +43,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         deviceSerials = {}; % cell array of serial numbers indexed by the (device_id+1)'s
         message_manager = [];
         bit_file_path = '';
-        bit_file = 'mqco_aps_latest.bit';
         expected_bit_file_ver = hex2dec('10');
         Address = 0;
         verbose = 0;
@@ -951,11 +950,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function val =  readLinkListStatus(aps,id)
             val = aps.librarycall(sprintf('Read Link List Status'), ...
                 'APS_ReadLinkListStatus',id);
-        end
-        
-        function setModeR5(aps)
-            aps.bit_file = 'cbl_aps2_r5_d6ma_fx.bit';
-            aps.expected_bit_file_ver = 5;
         end
         
         function val = readStatusCtrl(aps)
