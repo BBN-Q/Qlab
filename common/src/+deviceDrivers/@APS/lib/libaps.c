@@ -960,7 +960,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 
 	// Note that FPGAs can be programmed with the same image by setting Sel = 3.
 	// However, the pinouts of the connections to the DAC are different for the two
-	// FPGAs.  Unless there is a post-configuration modification of the DAC output
+	// FPGAs. Unless there is a post-configuration modification of the DAC output
 	// mapping, a different image must be written to each FPGA.
 
 	// Create bit masks matching Config Status Register bits for the active FPGAs ...
@@ -1014,7 +1014,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 		// Clear Program and Reset Masks
 		WriteByte = ~PgmMask & ~RstMask & 0xF;
 		dlog(DEBUG_VERBOSE, "Write 1: %02X \n", WriteByte);
-		if(APS_WriteReg(device,  APS_CONF_STAT, 1, 0, &WriteByte) != 1)	return(-2);
+		if(APS_WriteReg(device,	 APS_CONF_STAT, 1, 0, &WriteByte) != 1) return(-2);
 
 		// Read the Status to see that INITN is asserted in response to PROGRAMN
 		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1) return(-3);
@@ -1053,7 +1053,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 
 #define BLOCKSIZE 61
 
-	//original loading code (did not use driver to buffer memory) (took 7.25 secs to load)
+	// original loading code (did not use driver to buffer memory) (took 7.25 secs to load)
 	// current must use original code as buffered version does not appear to work with
 	// hardware (may be a hardware limitation)
 
@@ -1061,7 +1061,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 	// Write out all of the bytes in groups of 61 bytes, since that is the most that
 	// can be written in a single USB packet.
 
-	for(i = 0; i < ByteCount; i += BLOCKSIZE)
+	for(i = 0; i < ByteCount; i += BLOCKSIZE) {
 		// Write a full buffer if not at the end of the input data
 
 		if(i + BLOCKSIZE < ByteCount) {
@@ -1070,7 +1070,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 				fprintf(test,"%031 ", Data[i+cnt]);
 			fprintf(test,"\n");
 #endif
-			if(APS_WriteReg(device, APS_CONF_DATA, 0, Sel, Data+i) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
+			if(APS_WriteReg(device, APS_CONF_DATA, 0, Sel, Data+i) != BLOCKSIZE)	// Defaults to 61 bytes for CONF_DATA
 				return(-8);
 		} else {
 
@@ -1087,9 +1087,10 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 #endif
 
 			// Write out the last buffer
-			if(APS_WriteReg(device, APS_CONF_DATA, 0, Sel, LastBuf) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
+			if(APS_WriteReg(device, APS_CONF_DATA, 0, Sel, LastBuf) != BLOCKSIZE)	 // Defaults to 61 bytes for CONF_DATA
 				return(-9);
 		}
+	}
 
 #ifdef OUTPUTBITFILE
 	fprintf(test,"\n");
@@ -1480,8 +1481,8 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
 		// due to clock skews, need to accept a range of counts as "0" and "1"
 		if ( (xor_flag_cnt < 5 || xor_flag_cnt > 15) &&
-				(xor_flag_cnt2 < 5 || xor_flag_cnt2 > 15) &&
-				(xor_flag_cnt3 < 5 || xor_flag_cnt3 > 15) ) {
+			 (xor_flag_cnt2 < 5 || xor_flag_cnt2 > 15) &&
+			 (xor_flag_cnt3 < 5 || xor_flag_cnt3 > 15) ) {
 			// 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase, so 600 MHz clocks
 			// from DAC must be in phase. Move on.
 			dlog(DEBUG_VERBOSE,"DAC clocks in phase with reference (XOR counts %i and %i and %i)\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
