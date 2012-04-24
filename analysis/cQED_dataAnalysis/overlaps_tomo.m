@@ -9,7 +9,7 @@ function out = overlaps_tomo(expResults)
 % 3. Form inner product of overlap Unitary super-super operator with
 % Liouville
 
-numOverlaps = 8;
+numOverlaps = 10;
 assert(length(expResults) == numOverlaps, 'Input does not have numOverlaps entries');
 
 % Default to quiet
@@ -27,15 +27,16 @@ Z = [1, 0;0, -1];
 
 % overlap unitaries
 Uoverlaps = cell(numOverlaps,1);
-Uoverlaps{1} = expm(-1i*pi/4*X);
-Uoverlaps{2} = expm(-1i*pi/2*X);
-Uoverlaps{3} = expm(-1i*pi/4*Y);
-Uoverlaps{4} = expm(-1i*pi/2*Y);
-Uoverlaps{5} = expm(-1i*pi/4*Z);
-Uoverlaps{6} = expm(-1i*pi/2*Z);
-Uoverlaps{7} = expm(-1i*pi/2*(X+Y)/sqrt(2));
-Uoverlaps{8} = expm(-1i*pi/2*(X+Z)/sqrt(2));
-%Uoverlaps{9} = expm(-1i*pi/2*(Y+Z)/sqrt(2)); % should be here but I forgot it
+Uoverlaps{1} = eye(2);
+Uoverlaps{2} = expm(-1i*pi/4*X);
+Uoverlaps{3} = expm(-1i*pi/2*X);
+Uoverlaps{4} = expm(-1i*pi/4*Y);
+Uoverlaps{5} = expm(-1i*pi/2*Y);
+Uoverlaps{6} = expm(-1i*pi/4*Z);
+Uoverlaps{7} = expm(-1i*pi/2*Z);
+Uoverlaps{8} = expm(-1i*pi/2*(X+Y)/sqrt(2));
+Uoverlaps{9} = expm(-1i*pi/2*(X+Z)/sqrt(2));
+Uoverlaps{10} = expm(-1i*pi/2*(Y+Z)/sqrt(2));
 
 %Shuffle matrix for Choi -> Liouville (cannonical column stack basis)
 shuffleMat = zeros(16,16);
@@ -76,6 +77,5 @@ constraint = [constraint, choiSDP(1,1)+choiSDP(2,2)==0.5, choiSDP(1,3)+choiSDP(2
 solvesdp(constraint, norm(predictorMat*choiSDP(:) - expResults(:), 2), sdpsettings('verbose',verbose));
 
 out = double(choiSDP);
-% out = expResults(:) \ predictorMat;
 
 end
