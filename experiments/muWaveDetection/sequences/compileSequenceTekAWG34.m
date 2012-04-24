@@ -1,7 +1,11 @@
-function compileSequenceTekAWG34(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot, plotIdx)
+function compileSequenceTekAWG34(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot, plotIdx, seqSuffix)
 
 if ~exist('plotIdx', 'var')
     plotIdx = 20;
+end
+
+if ~exist('seqSuffix', 'var')
+    seqSuffix = '';
 end
 
 % load config parameters from file
@@ -65,7 +69,7 @@ ch2 = ch2 + params.TekAWG12.offset;
 
 % make TekAWG file
 strippedBasename = basename;
-basename = [basename 'TekAWG34'];
+basename = [basename 'TekAWG34' seqSuffix];
 options = struct('m21_high', 2.0, 'm41_high', 2.0);
 TekPattern.exportTekSequence(tempdir, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
 disp('Moving AWG file to destination');
