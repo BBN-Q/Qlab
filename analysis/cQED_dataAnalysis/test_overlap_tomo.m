@@ -39,7 +39,7 @@ predictorMat = zeros(numOverlaps, 16);
 UnitarySSOp = zeros(numOverlaps,16);
 for ct = 1:numOverlaps
     UnitarySOp = kron(conj(Uoverlaps{ct}), Uoverlaps{ct});
-    UnitarySSOp(ct,:) = UnitarySOp(:);
+    UnitarySSOp(ct,:) = conj(UnitarySOp(:));
 end
 
 % construct the theoretical choi map for an X90 gate

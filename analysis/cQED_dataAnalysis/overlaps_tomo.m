@@ -57,7 +57,7 @@ predictorMat = zeros(numOverlaps, 16);
 UnitarySSOp = zeros(numOverlaps,16);
 for ct = 1:numOverlaps
     UnitarySOp = kron(conj(Uoverlaps{ct}), Uoverlaps{ct});
-    UnitarySSOp(ct,:) = UnitarySOp(:);
+    UnitarySSOp(ct,:) = conj(UnitarySOp(:));
 end
 
 d = 2;
@@ -70,11 +70,23 @@ constraint = choiSDP > 0;
 
 %Trace preservation condition: partial trace over input space gives
 %identity
-constraint = [constraint, choiSDP(1,1)+choiSDP(2,2)==0.5, choiSDP(1,3)+choiSDP(2,4)==0, choiSDP(3,1)+choiSDP(4,2)==0, choiSDP(3,3)+choiSDP(4,4)==0.5];
+constraint = [constraint, ...
+              choiSDP(1,1)+choiSDP(2,2)==0.5, ...
+              choiSDP(1,3)+choiSDP(2,4)==0, ...
+              choiSDP(3,1)+choiSDP(4,2)==0, ...
+              choiSDP(3,3)+choiSDP(4,4)==0.5];
+
+pinv(predictorMat)*expResults
 
 % Call the solver, minimizing the distance between the vectors of predicted and actual
 % measurements
-solvesdp(constraint, norm(predictorMat*choiSDP(:) - expResults(:), 2), sdpsettings('verbose',verbose));
+sym = solvesdp(constraint, norm(predictorMat*choiSDP(:) - expResults(:), 2), sdpsettings('verbose',verbose));
+
+ll = norm(predictorMat*double(choiSDP(:)) - expResults(:), 2);
+
+constraint = [ constraint, norm(predictorMat*choiSDP(:) - expResults(:), 2) == ll ];
+
+solvesdp(constraint, 1-norm(choiSDP(:),2), sdpsettings('verbose',verbose));
 
 out = double(choiSDP);
 
