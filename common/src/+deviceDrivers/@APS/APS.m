@@ -1001,15 +1001,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 end
             end
             
-            fprintf('Reading Bitfiled Version: \n');
-            
-            ver = aps.readBitFileVersion();
-            fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
-            if ver ~= aps.expected_bit_file_ver
-                val = aps.loadBitFile();
-                ver = aps.readBitFileVersion();
-                fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
-            end
+            aps.init()
 
             validate = 0;
             useSlowWrite = 0;
@@ -1017,11 +1009,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             wf = aps.getNewWaveform();
             wf.data = [zeros([1,2000]) ones([1,2000])];
             wf.set_scale_factor(0.8);
+            wf.dataMode = wf.REAL_DATA;
             
             for ch = 0:3
-                aps.setFrequency(ch, 1200)
                 aps.loadWaveform(ch, wf.get_vector(), 0, validate,useSlowWrite);
-                
             end
             
             aps.triggerFpga(0,1);
