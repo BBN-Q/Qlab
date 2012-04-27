@@ -96,7 +96,7 @@ for i = 1:length(ch_fields)
     disp(['measuring_' ch])
     for j=1:2
         fprintf(speca,sprintf('CF %dMHz',frset(i)*1000)) % in MHz
-        fprintf(speca,sprintf('SP %dKHz',100))%1 MHz span
+        fprintf(speca,sprintf('SP %dKHz',20))%100 KHz span
         pause(1.5)
         fprintf(speca,sprintf('MKPK HI;'))
         %keyboard
