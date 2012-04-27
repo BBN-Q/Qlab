@@ -653,6 +653,7 @@ classdef PatternGen < handle
             % delay - delay (in samples) from the beginning of the link list to the
             %   trigger rising edge
             % width - width (in samples) of the trigger pulse
+            
             for kk = 1:length(seq.linkLists)
                 linkList = seq.linkLists{kk};
                 time = 0;
@@ -691,6 +692,67 @@ classdef PatternGen < handle
                 end
                 
                 seq.linkLists{kk} = linkList;
+            end
+        end
+        
+        function seq = addTriggerPulse(obj, seq, delay, single)
+            % adds a trigger pulse to each link list in the sequence
+            % delay - delay (in samples) from the beginning of the link list to the
+            %   trigger pulse
+            % single specifies only generation of marker at begining of LL
+            if exist('single', 'var')
+            single=1;
+            else
+            single=0;
+            end
+            if single
+            for kk = 1
+                linkList = seq.linkLists{kk};
+                time = 0;
+                for ii = 1:length(linkList)
+                    entry = linkList{ii};
+                    entryWidth = entry.length * entry.repeat;
+                    % check if rising edge falls within the current entry
+                    if (time + entryWidth > delay)
+                        entry.hasMarkerData = 1;
+                        entry.markerDelay = delay - time;
+                        entry.markerMode = 0; % 0 - pulse, 1 - rising, 2 - falling, 3 - none
+                        % break from the loop, leaving time set to the delay
+                        % from the end of the entry
+                        time = entryWidth - entry.markerDelay;
+                        linkList{ii} = entry;
+                        break
+                    end
+                    time = time + entryWidth;
+                end
+                
+                seq.linkLists{kk} = linkList;
+            end
+            
+            else
+     
+            for kk = 1:length(seq.linkLists)
+                linkList = seq.linkLists{kk};
+                time = 0;
+                for ii = 1:length(linkList)
+                    entry = linkList{ii};
+                    entryWidth = entry.length * entry.repeat;
+                    % check if rising edge falls within the current entry
+                    if (time + entryWidth > delay)
+                        entry.hasMarkerData = 1;
+                        entry.markerDelay = delay - time;
+                        entry.markerMode = 0; % 0 - pulse, 1 - rising, 2 - falling, 3 - none
+                        % break from the loop, leaving time set to the delay
+                        % from the end of the entry
+                        time = entryWidth - entry.markerDelay;
+                        linkList{ii} = entry;
+                        break
+                    end
+                    time = time + entryWidth;
+                end
+                
+                seq.linkLists{kk} = linkList;
+            end
             end
         end
         
