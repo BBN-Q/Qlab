@@ -952,6 +952,35 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 'APS_ReadLinkListStatus',id);
         end
         
+        function setModeR5(aps)
+            aps.bit_file = 'cbl_aps2_r5_d6ma_fx.bit';
+            aps.expected_bit_file_ver = 5;
+        end
+        
+        function val = BIT(aps)
+           % read FPGA1
+           val1 = aps.librarycall('WriteRegBIT','APS_WriteRegBIT');
+           
+        end
+        
+        function val = threadTest(aps)
+           % read FPGA1
+           val1 = aps.librarycall('WriteRegBIT','APS_StartLinkListThread',0);
+           pause(1);
+           val1 = aps.librarycall('WriteRegBIT','APS_StartLinkListThread',1);
+           pause(10);
+           val1 = aps.librarycall('WriteRegBIT','APS_StopLinkListThread',1);
+           pause(2);
+           val1 = aps.librarycall('WriteRegBIT','APS_StopLinkListThread',0);
+           
+        end
+
+        function unload_library(aps)
+            if libisloaded(aps.library_name)
+                unloadlibrary(aps.library_name)
+            end
+        end
+
         function val = readStatusCtrl(aps)
             val = aps.librarycall('Read status/ctrl', 'APS_ReadStatusCtrl');
         end
@@ -970,14 +999,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
     end
     methods(Static)
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function unload_library()
-            if libisloaded(aps.library_name)
-                unloadlibrary(aps.library_name);
-            end
-        end
-        
+                
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function wf = getNewWaveform()
             % Utility function to get a APS wavform object from APS Driver
@@ -1033,23 +1055,16 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     error('Could not open aps')
                 end
             end
-            
-            fprintf('Reading Bitfiled Version: \n');
-            
-            ver = aps.readBitFileVersion();
-            fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
-            if ver ~= aps.expected_bit_file_ver
-                val = aps.loadBitFile();
-                ver = aps.readBitFileVersion();
-                fprintf('Found Bit File Version: 0x%s\n', dec2hex(ver));
-            end
 
+            aps.init()
+            
             validate = 0;
             useSlowWrite = 0;
 
             wf = aps.getNewWaveform();
             wf.data = [zeros([1,2000]) ones([1,2000])];
             wf.set_scale_factor(0.8);
+            wf.dataMode = wf.REAL_DATA;
             
             for ch = 0:3
                 aps.setFrequency(ch, 1200);

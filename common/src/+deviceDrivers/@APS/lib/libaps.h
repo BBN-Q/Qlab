@@ -119,4 +119,9 @@ EXPORT int   APS_SetLinkList(int device, int channel,
                            int length, int bank);
 EXPORT int APS_SaveWaveformCache(int device, char * filename);
 EXPORT int APS_LoadWaveformCache(int device, char * filename);
+EXPORT int APS_WriteRegBIT(int device);
+
+EXPORT int APS_StartLinkListThread(int device, int channel);
+EXPORT int APS_StopLinkListThread(int device, int channel);
+
 #endif

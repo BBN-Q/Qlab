@@ -132,6 +132,12 @@ int APS_Init()
 {
 	/* Initialize function points to ftd2xx library  */
 
+	// check to see if INIT has already occurred
+	// if the handle to the ftd2xx dll is non-zero the library
+	// has already be inited.
+	if (hdll != 0)
+		return 0;
+
 #if defined(DEBUG) && defined(BUILD_DLL)
 	freopen("libaps.log","w", stderr);
 #endif

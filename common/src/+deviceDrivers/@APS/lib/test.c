@@ -94,6 +94,7 @@ typedef int (*pfunc)();
 #define openbyserial      APS_OpenByID
 #define saveCache         APS_SaveWaveformCache
 #define loadCache         APS_LoadWaveformCache
+#define startThread       APS_StartLinkListThread
 #endif
 
 void programFPGA(HANDLE hdll, int dac, char * bitFile, int progamTest) {
@@ -154,7 +155,7 @@ void programFPGA(HANDLE hdll, int dac, char * bitFile, int progamTest) {
 		printf("Programming FPGAS %i: ", progCnt);
 		fflush(stdout);
 		int numBytesProg;
-		numBytesProg = prog(0, bitFileData, bitFileSize, 3);
+		numBytesProg = prog(0, bitFileData, bitFileSize, 3, 0x10);
 		printf("Done \n");
 
 		printf("Programmed: %i bytes\n", numBytesProg);
@@ -413,6 +414,7 @@ void printHelp(){
 	printf("   -s List Available APS Serial Numbers\n");
 	printf("   -ks List Known APS Serial Numbers\n");
 	printf("   -w  Run Waveform StoreLoad Tests\n");
+	printf("   -x  Test Threading\n");
 	printf("   -h  Print This Help Message\n");
 }
 
@@ -427,6 +429,7 @@ int main (int argc, char** argv) {
 	pfunc listserials;
 	pfunc openbyserial;
 	pfunc getserial;
+	pfunc startThread;
 	char *libName;
 #endif
 
@@ -467,6 +470,7 @@ int main (int argc, char** argv) {
 	listserials  = (pfunc)GetFunction(hdll,"APS_PrintSerialNumbers");
 	getserial    = (pfunc)GetFunction(hdll,"APS_GetSerial");
 	openbyserial = (pfunc)GetFunction(hdll,"APS_OpenByID");
+	startThread  = (pfunc)GetFunction(hdll,"APS_StartLinkListThread");
 #endif
 
 	char serialBuffer[100];
@@ -493,6 +497,11 @@ int main (int argc, char** argv) {
 		}
 		if (strcmp(argv[cnt],"-h") == 0)
 			printHelp();
+		if (strcmp(argv[cnt],"-x") == 0) {
+			startThread(0,0);
+			startThread(0,1);
+			sleep(10);
+		}
 		if (strcmp(argv[cnt],"-w") == 0) {
 			// allow bit file to be passed in otherwise use default
 			if (argc > (cnt+1)) bitFile = argv[cnt+1];
