@@ -22,15 +22,13 @@
 % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 % See the License for the specific language governing permissions and
 % limitations under the License.
-function initQPC(mrknum1, mrknum2, mrknum3,sernum1,sernum2,sernum3,fr1,fr2,fr3)
-%%
-temp = instrfind;
-if ~isempty(temp)
-    fclose(temp)
-    delete(temp)
-end
-clear temp
+function initQPC(mrknum1, mrknum2, mrknum3,serialNums,freqs)
 
+%Clean up any old instruments (not particularly friendly to other
+%instruments)
+delete(instrfind);
+
+%Setup some basic settings for the APS with all the channels off 
 fprintf('Initializing APS\n');
 settings = struct();
 settings.chan_1.enabled = false;
@@ -49,35 +47,24 @@ settings.samplingRate = 1200;
 settings.triggerSource = 'internal';
 settings.seqfile = 'U:\APS\initQPC\initQPCBBNAPS12.mat';
 settings.seqforce = true;
-%open spectrum analyzer (must modify this for individual setups eg address,cmds etc.)
+
+
+%Open and connect to spectrum analyzer (must modify this for individual setups eg address,cmds etc.)
 %BBN is currently using a HP71000 SA GPIB 18
 speca=gpib('ni',0,18);
-fopen(speca)
-%open Labricks
-out1=deviceDrivers.Labbrick();
-out2=deviceDrivers.Labbrick();
-out3=deviceDrivers.Labbrick();
-%connect to Labricks
-try
-connect(out1,sernum1)
-catch
-    disp('error connecting')
+fopen(speca);
+
+%Open Labricks
+labBricks(3,1) = deviceDrivers.Labbrick();
+for ct = 1:3
+    try
+        labBricks(ct).connect(serialNums(ct))
+    catch exception
+        fprintf('Error connecting to Labbrick %s.', exception.message)
+    end
+    labBricks(ct).frequency = freqs(ct);
 end
-try
-connect(out2,sernum2)
-catch
-    disp('error connecting')
-end
-try
-connect(out3,sernum3)
-catch
-    disp('error connecting')
-end
-%set frequencies
-frset=[fr1 fr2 fr3];
-out1.frequency=fr1;
-out2.frequency=fr2;
-out3.frequency=fr3;
+
 %open AWG
 chan=[mrknum1 mrknum2 mrknum3];
 awg = deviceDrivers.APS();
@@ -90,25 +77,28 @@ forceLoadBitFile = 0;
 awg.init(forceLoadBitFile);
 awg.setAll(settings);
 ch_fields = {['chan_' num2str(mrknum1)], ['chan_' num2str(mrknum2)], ['chan_' num2str(mrknum3)]};
-for i = 1:length(ch_fields)
-    ch = ch_fields{i};
-    awg.setLinkListMode(chan(i)-1, awg.LL_ENABLE, awg.LL_ONESHOT);
+a = zeros(2,1);
+for ct = 1:length(ch_fields)
+    ch = ch_fields{ct};
+    awg.setLinkListMode(chan(ct)-1, awg.LL_ENABLE, awg.LL_ONESHOT);
     awg.(ch).enabled= true;
-    disp(['measuring_chan_' num2str(chan(i))])
+    disp(['measuring_chan_' num2str(chan(ct))])
+    %Now flip the switch 
     for j=1:2
-        fprintf(speca,sprintf('CF %dMHz',frset(i)*1000)) % in MHz
-        fprintf(speca,sprintf('SP %dKHz',20))%100 KHz span
+        fprintf(speca,'CF %dMHz',freqs(ct)*1000); % in MHz
+        fprintf(speca,'SP %dKHz',20);%100 KHz span
         pause(1.5)
-        fprintf(speca,sprintf('MKPK HI;'))
+        fprintf(speca,sprintf('MKPK HI;'));
         %keyboard
         awg.run();
         awg.stop();
         %measure leakage amplitude for each generator
         pause(1) 
-        fprintf(speca,sprintf('MKA?;'))
-        a(j)=str2num(fscanf(speca,'%s'));
+        fprintf(speca,sprintf('MKA?;'));
+        a(j) = str2double(fscanf(speca,'%s'));
         
     end
+    %Check to see which direction had the switch open or closed
     if a(2)<a(1)
         display('inverted')
         awg.run();
@@ -120,9 +110,10 @@ for i = 1:length(ch_fields)
     awg.(ch).enabled = false;
     disp([ch '_initialized'])
 end
-disp(['QPC initialization complete'])
-awg.close();disconnect(out1);disconnect(out2);disconnect(out3)
-fclose(speca)
-delete(awg);delete(out1);delete(out2);delete(out3);delete(speca)
-clear awg out1 out2 out3 speca
+disp('QPC initialization complete')
+for ct = 1:3
+    labBricks(ct).disconnect();
+end
+awg.close();
+fclose(speca);
 
