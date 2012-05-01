@@ -47,7 +47,7 @@ settings.chan_4.amplitude = 1.0;
 settings.chan_4.offset = 0;
 settings.samplingRate = 1200;
 settings.triggerSource = 'internal';
-settings.seqfile = 'U:\APS\intQPC\intQPCBBNAPS12.mat';
+settings.seqfile = 'U:\APS\initQPC\initQPCBBNAPS12.mat';
 settings.seqforce = true;
 %open spectrum analyzer (must modify this for individual setups eg address,cmds etc.)
 %BBN is currently using a HP71000 SA GPIB 18
@@ -61,17 +61,17 @@ out3=deviceDrivers.Labbrick();
 try
 connect(out1,sernum1)
 catch
-    disp('stupid Labbrick')
+    disp('error connecting')
 end
 try
 connect(out2,sernum2)
 catch
-    disp('stupid Labbrick')
+    disp('error connecting')
 end
 try
 connect(out3,sernum3)
 catch
-    disp('stupid Labbrick')
+    disp('error connecting')
 end
 %set frequencies
 frset=[fr1 fr2 fr3];
@@ -79,6 +79,7 @@ out1.frequency=fr1;
 out2.frequency=fr2;
 out3.frequency=fr3;
 %open AWG
+chan=[mrknum1 mrknum2 mrknum3];
 awg = deviceDrivers.APS();
 awg.open(0,1);
 if ~awg.is_open
@@ -91,9 +92,9 @@ awg.setAll(settings);
 ch_fields = {['chan_' num2str(mrknum1)], ['chan_' num2str(mrknum2)], ['chan_' num2str(mrknum3)]};
 for i = 1:length(ch_fields)
     ch = ch_fields{i};
-    awg.setLinkListMode(i-1, awg.LL_ENABLE, awg.LL_ONESHOT);
+    awg.setLinkListMode(chan(i)-1, awg.LL_ENABLE, awg.LL_ONESHOT);
     awg.(ch).enabled= true;
-    disp(['measuring_' ch])
+    disp(['measuring_chan_' num2str(chan(i))])
     for j=1:2
         fprintf(speca,sprintf('CF %dMHz',frset(i)*1000)) % in MHz
         fprintf(speca,sprintf('SP %dKHz',20))%100 KHz span

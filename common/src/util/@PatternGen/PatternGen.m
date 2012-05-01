@@ -775,8 +775,8 @@ classdef PatternGen < handle
             % split when compiled for the particular hardware.
             
             state = 0; % 0 = low, 1 = high
-            startDelay = fix(obj.bufferPadding - obj.dBuffer/2 - obj.bufferDelay);
-            endDelay = fix(obj.bufferPadding - obj.dBuffer/2 + obj.bufferDelay);
+            startDelay = fix(obj.bufferPadding - obj.dBuffer/2 + obj.bufferDelay);
+            endDelay = fix(obj.bufferPadding - obj.dBuffer/2 - obj.bufferDelay);
             if startDelay < 0 || endDelay < 0
                 error('PatternGen:addGatePulses', 'Negative gate delays');
             end
