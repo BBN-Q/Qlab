@@ -68,7 +68,9 @@ classdef MixerOptimizer < expManager.expBase
             switch obj.optimMode
                 case 'sweep'
                     obj.setup_SSB_AWG(0,0);
-                    [i_offset, q_offset] = obj.optimize_mixer_offsets_bySweep();
+%                     [i_offset, q_offset] = obj.optimize_mixer_offsets_bySweep();
+                    i_offset = 0;
+                    q_offset = 0;
                     T = obj.optimize_mixer_ampPhase_bySweep(i_offset, q_offset);
                 case 'search'
                     [i_offset, q_offset] = obj.optimize_mixer_offsets_bySearch();
@@ -156,14 +158,6 @@ classdef MixerOptimizer < expManager.expBase
                     obj.awg.loadWaveform(awg_Q_channel-1, qwf.prep_vector());
                     obj.awg.setOffset(awg_Q_channel, q_offset);
                     obj.awg.(['chan_' num2str(awg_Q_channel)]).waveform = qwf;
-                    
-                    % copy onto outputs 3 and 4 for testing
-                    obj.awg.loadWaveform(2, iwf.prep_vector());
-                    obj.awg.loadWaveform(3, qwf.prep_vector());
-                    obj.awg.setLinkListMode(2, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
-                    obj.awg.setLinkListMode(3, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
-                    obj.awg.chan_3.enabled = 1;
-                    obj.awg.chan_4.enabled = 1;
                     
                     obj.awg.triggerSource = 'internal';
                     obj.awg.setLinkListMode(awg_I_channel-1, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);

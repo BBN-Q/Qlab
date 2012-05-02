@@ -34,7 +34,6 @@ max_offset = ExpParams.Search.max_offset; % max I/Q offset voltage
 % grab instrument objects
 sa = obj.sa;
 awg = obj.awg;
-specgen = obj.specgen;
 
 % center on the current spec generator frequency
 sa.center_frequency = obj.specgen.frequency * 1e9;
@@ -125,21 +124,33 @@ sa.peakAmplitude();
 
 
     function power = readPower()
+        sa.sweep()
+        power = sa.peakAmplitude();
 %         [~, powerTrace] = sa.downloadTrace();
 %         power = log10(sum(10.^(powerTrace/10)));
         %We try twice to overcome the flakey network analsyer
-        sa.sweep();
-        p1 = sa.peakAmplitude();
-        sa.sweep();
-        p2 = sa.peakAmplitude();
-        power = max(p1, p2);
+%         sa.sweep();
+%         p1 = sa.peakAmplitude();
+%         sa.sweep();
+%         p2 = sa.peakAmplitude();
+%         power = max(p1, p2);
     end
 
     function setOffsets(vertex)
-        awg.(['chan_' num2str(awg_I_channel)]).offset = vertex.a;
-        awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
-        awg.operationComplete();
-        pause(0.1);
+        
+        switch class(awg)
+            case 'deviceDrivers.Tek5014'
+                awg.(['chan_' num2str(awg_I_channel)]).offset = vertex.a;
+                awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
+                awg.operationComplete();
+                pause(0.1);
+            case 'deviceDrivers.APS'
+                awg.stop();
+                awg.setOffset(awg_I_channel, vertex.a);
+                awg.setOffset(awg_Q_channel, vertex.b);
+                awg.run();
+        end
+        
     end
 
 end

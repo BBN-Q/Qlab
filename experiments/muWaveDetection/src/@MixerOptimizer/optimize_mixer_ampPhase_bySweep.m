@@ -26,15 +26,25 @@ spec_analyzer_span = ExpParams.SpecAnalyzer.span;
 spec_resolution_bw = ExpParams.SpecAnalyzer.resolution_bw;
 spec_sweep_points = ExpParams.SpecAnalyzer.sweep_points;
 fssb = ExpParams.SSBFreq; % SSB modulation frequency (usually 10 MHz)
-awg_amp = InstrParams.AWG.(['chan_' num2str(ExpParams.Mixer.I_channel)]).Amplitude;
+awg_amp = InstrParams.AWG.(['chan_' num2str(ExpParams.Mixer.I_channel)]).amplitude;
 
 % initialize instruments
 % grab instrument objects
 sa = obj.sa;
 awg = obj.awg;
 
-awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).offset = i_offset;
-awg.(['chan_' num2str(ExpParams.Mixer.Q_channel)]).offset = q_offset;
+switch class(awg)
+    case 'deviceDrivers.Tek5014'
+        awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).offset = i_offset;
+        awg.(['chan_' num2str(ExpParams.Mixer.Q_channel)]).offset = q_offset;
+        awg.operationComplete();
+        pause(0.1);
+    case 'deviceDrivers.APS'
+        awg.stop();
+        awg.setOffset(ExpParams.Mixer.I_channel, i_offset);
+        awg.setOffset(ExpParams.Mixer.Q_channel, q_offset);
+        awg.run();
+end
 
 sa.center_frequency = obj.specgen.frequency * 1e9 - fssb;
 sa.span = spec_analyzer_span;
