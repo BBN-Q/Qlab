@@ -146,9 +146,19 @@ sa.peakAmplitude();
                 pause(0.1);
             case 'deviceDrivers.APS'
                 awg.stop();
-                awg.setOffset(awg_I_channel, vertex.a);
-                awg.setOffset(awg_Q_channel, vertex.b);
-                awg.run();
+                % scale I waveform
+                wf = obj.awg.(['chan_' num2str(awg_I_channel)]).waveform;
+                wf.offset = vertex.a;
+                obj.awg.loadWaveform(awg_I_channel-1, wf.prep_vector());
+                obj.awg.(['chan_' num2str(awg_I_channel)]).waveform = wf;
+
+                % generate new Q waveform with phase shift
+                wf = obj.awg.(['chan_' num2str(awg_Q_channel)]).waveform;
+                wf.offset = vertex.b;
+                obj.awg.loadWaveform(awg_Q_channel-1, wf.prep_vector());
+                obj.awg.(['chan_' num2str(awg_Q_channel)]).waveform = wf;
+                obj.awg.run();
+                pause(0.2);
         end
         
     end

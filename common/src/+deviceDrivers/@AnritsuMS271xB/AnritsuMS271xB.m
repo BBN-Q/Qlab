@@ -16,7 +16,7 @@
 %
 % Description: Instrument driver for the Antritsu spectrum analyzer (copy of HP71000).
 
-classdef AnritsuMS271xB < deviceDrivers.lib.GPIB
+classdef AnritsuMS271xB < handle
    properties
        center_frequency
        span
@@ -26,11 +26,34 @@ classdef AnritsuMS271xB < deviceDrivers.lib.GPIB
        video_averaging
        number_averages
        sweep_points
+       socket
    end
    
    methods
        %Constructor
        function obj = AnritsuMS271xB()
+       end
+   
+       function connect(obj, address)
+           obj.socket = visa('ni', ['TCPIP::', address, '::INSTR']);
+           fopen(obj.socket);
+       end
+       
+       function disconnect(obj)
+           fclose(obj.socket);
+       end
+       
+       function delete(obj)
+           delete(obj.socket)
+       end
+       
+       function Write(obj, writeStr)
+           fprintf(obj.socket, writeStr);
+       end
+       
+       function val = Query(obj, queryStr)
+           fprintf(obj.socket, queryStr);
+           val = fscanf(obj.socket);
        end
        
        function sweep(obj)
@@ -131,7 +154,7 @@ classdef AnritsuMS271xB < deviceDrivers.lib.GPIB
             if strcmp(value,'auto')
                 obj.Write(':BAND:BWID:RES:AUTO ON');
             else
-                assert(value > 10 && valu < 3e6);
+                assert(value > 10 && value < 3e6);
                 obj.Write(sprintf(':BAND:BWID:RES %E',value));
             end
         end
@@ -148,7 +171,7 @@ classdef AnritsuMS271xB < deviceDrivers.lib.GPIB
         function set.sweep_mode(obj, value)
             % Validate input
             checkMapObj = containers.Map({'single','continuous','cont'},...
-                {'OFF','ON','ON');
+                {'OFF','ON','ON'});
             if not (checkMapObj.isKey( lower(value) ))
                 error('Invalid input');
             end

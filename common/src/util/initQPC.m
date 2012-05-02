@@ -45,14 +45,16 @@ settings.chan_4.amplitude = 1.0;
 settings.chan_4.offset = 0;
 settings.samplingRate = 1200;
 settings.triggerSource = 'internal';
-settings.seqfile = 'U:\APS\initQPC\initQPCBBNAPS12.mat';
+settings.seqfile = 'C:\AWG\initQPC\initQPCBBNAPS12.mat';
 settings.seqforce = true;
 
 
 %Open and connect to spectrum analyzer (must modify this for individual setups eg address,cmds etc.)
 %BBN is currently using a HP71000 SA GPIB 18
-speca= deviceDrivers.HP71000();
-speca.connect(18);
+% speca= deviceDrivers.HP71000();
+% speca.connect(18);
+speca= deviceDrivers.AnritsuMS271xB();
+speca.connect('9.2.178.135');
 
 %Open Labricks
 labBricks(3,1) = deviceDrivers.Labbrick();
