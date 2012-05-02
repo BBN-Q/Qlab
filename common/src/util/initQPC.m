@@ -51,8 +51,8 @@ settings.seqforce = true;
 
 %Open and connect to spectrum analyzer (must modify this for individual setups eg address,cmds etc.)
 %BBN is currently using a HP71000 SA GPIB 18
-speca=gpib('ni',0,18);
-fopen(speca);
+speca= deviceDrivers.HP71000();
+speca.connect(18);
 
 %Open Labricks
 labBricks(3,1) = deviceDrivers.Labbrick();
@@ -85,18 +85,15 @@ for ct = 1:length(ch_fields)
     disp(['measuring_chan_' num2str(chan(ct))])
     %Now flip the switch 
     for j=1:2
-        fprintf(speca,'CF %dMHz',freqs(ct)*1000); % in MHz
-        fprintf(speca,'SP %dKHz',20);%100 KHz span
+        speca.center_frequency = freqs(ct)*1e9;
+        speca.span = 100e3;
         pause(1.5)
-        fprintf(speca,sprintf('MKPK HI;'));
         %keyboard
         awg.run();
         awg.stop();
         %measure leakage amplitude for each generator
         pause(1) 
-        fprintf(speca,sprintf('MKA?;'));
-        a(j) = str2double(fscanf(speca,'%s'));
-        
+        a(j) = speca.peakAmplitude();
     end
     %Check to see which direction had the switch open or closed
     if a(2)<a(1)
@@ -115,5 +112,5 @@ for ct = 1:3
     labBricks(ct).disconnect();
 end
 awg.close();
-fclose(speca);
+speca.disconnect();
 
