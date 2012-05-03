@@ -125,7 +125,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV'};
         
-        channelStruct = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
     end
     
     methods
@@ -146,13 +145,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             d.bit_file_path = script_path(1:baseIdx);
             
             % init channel structs and waveform objects
-            d.chan_1 = d.channelStruct;
+            d.chan_1 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
             d.chan_1.waveform = APSWaveform();
-            d.chan_2 = d.channelStruct;
+            d.chan_2 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
             d.chan_2.waveform = APSWaveform();
-            d.chan_3 = d.channelStruct;
+            d.chan_3 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
             d.chan_3.waveform = APSWaveform();
-            d.chan_4 = d.channelStruct;
+            d.chan_4 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
             d.chan_4.waveform = APSWaveform();
         end
         
@@ -629,9 +628,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.clearLinkListELL(3);
             
             % load waveform data
-            wf = APSWaveform();
             for ch = 1:aps.num_channels
                 if ch <= length(WaveformLibs) && ~isempty(WaveformLibs{ch})
+                    wf = APSWaveform();
                     % load and scale/shift waveform data
                     wf.set_vector(WaveformLibs{ch});
                     wf.set_offset(aps.(['chan_' num2str(ch)]).offset);

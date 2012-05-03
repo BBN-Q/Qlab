@@ -69,9 +69,7 @@ classdef MixerOptimizer < expManager.expBase
                 case 'sweep'
                     obj.setup_SSB_AWG(0,0);
                     [i_offset, q_offset] = obj.optimize_mixer_offsets_bySweep();
-%                     i_offset = 0;
-%                     q_offset = 0;
-%                     T = obj.optimize_mixer_ampPhase_bySweep(i_offset, q_offset);
+                    T = obj.optimize_mixer_ampPhase_bySweep(i_offset, q_offset);
                 case 'search'
                     [i_offset, q_offset] = obj.optimize_mixer_offsets_bySearch();
                     T = obj.optimize_mixer_ampPhase_bySearch(i_offset, q_offset);
