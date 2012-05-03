@@ -78,15 +78,15 @@ classdef MixerOptimizer < expManager.expBase
             end
 
             % restore instruments to a normal state
-            obj.center_frequency = obj.specgen.frequency * 1e9;
-            obj.span = 25e6;
-            obj.sweep_mode = 'cont';
-            obj.resolution_bw = 'auto';
-            obj.sweep_points = 800;
-            obj.number_averages = 10;
-            obj.video_averaging = 1;
-            obj.sweep();
-            obj.peakAmplitude();
+            obj.sa.center_frequency = obj.specgen.frequency * 1e9;
+            obj.sa.span = 25e6;
+            obj.sa.sweep_mode = 'cont';
+            obj.sa.resolution_bw = 'auto';
+            obj.sa.sweep_points = 800;
+            obj.sa.number_averages = 10;
+            obj.sa.video_averaging = 1;
+            obj.sa.sweep();
+            obj.sa.peakAmplitude();
 
             % save transformation and offsets to file
             save([obj.cfg_path '/mixercal.mat'], 'i_offset', 'q_offset', 'T', '-v7.3');

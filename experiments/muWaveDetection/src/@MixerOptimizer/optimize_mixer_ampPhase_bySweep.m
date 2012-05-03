@@ -143,16 +143,6 @@ fprintf('SSB power: %.2f\n', min(goodPowers));
 % correction transformation
 T = [ampFactor ampFactor*tan(bestSkew); 0 sec(bestSkew)];
 
-% restore instruments to a normal state
-sa.center_frequency = obj.specgen.frequency * 1e9;
-sa.span = 25e6;
-sa.sweep_mode = 'cont';
-sa.resolution_bw = 'auto';
-sa.sweep_points = 800;
-sa.video_averaging = 1;
-sa.sweep();
-sa.peakAmplitude();
-
 obj.setInstrument(bestAmp, bestSkew);
 
     function power = readPower()
