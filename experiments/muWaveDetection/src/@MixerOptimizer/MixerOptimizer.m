@@ -32,7 +32,6 @@ classdef MixerOptimizer < expManager.expBase
         costFunctionGoal = -70;
         testMode = false
         optimMode = 'sweep' %optimize by naive sweeping ('sweep') or clever searching ('search')
-        dummyLL %work around the default trigger mode in waveform mode with a dummy link list
     end
     
     methods
@@ -77,6 +76,17 @@ classdef MixerOptimizer < expManager.expBase
                 otherwise
                     error('Unknown optimMode');
             end
+
+            % restore instruments to a normal state
+            obj.center_frequency = obj.specgen.frequency * 1e9;
+            obj.span = 25e6;
+            obj.sweep_mode = 'cont';
+            obj.resolution_bw = 'auto';
+            obj.sweep_points = 800;
+            obj.number_averages = 10;
+            obj.video_averaging = 1;
+            obj.sweep();
+            obj.peakAmplitude();
 
             % save transformation and offsets to file
             save([obj.cfg_path '/mixercal.mat'], 'i_offset', 'q_offset', 'T', '-v7.3');
@@ -135,8 +145,6 @@ classdef MixerOptimizer < expManager.expBase
                     obj.awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
                     obj.awg.(['chan_' num2str(awg_Q_channel)]).Enabled = 1;
                 case 'deviceDrivers.APS'
-                    %Clear the old link list data
-                    obj.awg.clearLinkListELL(awg_I_channel-1); obj.awg.clearLinkListELL(awg_Q_channel-1);
 
                     %Setup a waveform with a 1200 sinusoid for both
                     %channels
@@ -163,21 +171,8 @@ classdef MixerOptimizer < expManager.expBase
                     
                     obj.awg.triggerSource = 'internal';
                     
-                    %Setup the fake LL 
-                    obj.dummyLL = struct();
-                    numRepeats = 10;
-                    obj.dummyLL.offset = zeros([1, numRepeats], 'uint16');
-                    obj.dummyLL.count = (fix(waveformLength/4)-1)*ones([1, numRepeats], 'uint16');
-                    obj.dummyLL.trigger = 49152*ones([1,numRepeats], 'uint16');
-                    obj.dummyLL.repeat = zeros([1,numRepeats], 'uint16');
-                    obj.dummyLL.length = numRepeats;
-                    
-                    obj.awg.loadLinkListELL(awg_I_channel-1, obj.dummyLL.offset, obj.dummyLL.count, obj.dummyLL.trigger, obj.dummyLL.repeat, obj.dummyLL.length, 0);
-                    obj.awg.loadLinkListELL(awg_Q_channel-1, obj.dummyLL.offset, obj.dummyLL.count, obj.dummyLL.trigger, obj.dummyLL.repeat, obj.dummyLL.length, 0);
-                    obj.awg.setLinkListRepeat(awg_I_channel-1,0);
-                    obj.awg.setLinkListRepeat(awg_Q_channel-1,0);
-                    obj.awg.setLinkListMode(awg_I_channel-1, obj.awg.LL_ENABLE, obj.awg.LL_CONTINUOUS);
-                    obj.awg.setLinkListMode(awg_Q_channel-1, obj.awg.LL_ENABLE, obj.awg.LL_CONTINUOUS);
+                    obj.awg.setLinkListMode(awg_I_channel-1, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
+                    obj.awg.setLinkListMode(awg_Q_channel-1, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
                     obj.awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
                     obj.awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
             end

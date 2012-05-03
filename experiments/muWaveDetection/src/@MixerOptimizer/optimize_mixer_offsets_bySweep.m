@@ -46,7 +46,7 @@ sa.video_averaging = 0;
 awg.run();
 awg.waitForAWGtoStartRunning();
 
-offsetPts = linspace(-ExpParams.Sweep.offset.range, ExpParams.Sweep.offset.range, ExpParams.Sweep.offset.numPoints);
+offsetPts = linspace(ExpParams.Sweep.offset.start, ExpParams.Sweep.offset.stop, ExpParams.Sweep.offset.numPoints);
 vertex = struct();
 %Sweep the I with Q at 0
 measPowers1 = nan(1, length(offsetPts));
@@ -147,9 +147,6 @@ sa.peakAmplitude();
             case 'deviceDrivers.APS'
                 awg.stop();
                 
-                %Clear the old link list data
-                obj.awg.clearLinkListELL(awg_I_channel-1); obj.awg.clearLinkListELL(awg_I_channel-1); 
-
                 %We have to set the offset in the waveform
                 % scale I waveform
                 wf = obj.awg.(['chan_' num2str(awg_I_channel)]).waveform;
@@ -164,13 +161,6 @@ sa.peakAmplitude();
                 
                 obj.awg.setOffset(awg_I_channel, vertex.a);
                 obj.awg.setOffset(awg_Q_channel, vertex.b);
-                
-                obj.awg.loadLinkListELL(awg_I_channel-1, obj.dummyLL.offset, obj.dummyLL.count, obj.dummyLL.trigger, obj.dummyLL.repeat, obj.dummyLL.length, 0);
-                obj.awg.loadLinkListELL(awg_Q_channel-1, obj.dummyLL.offset, obj.dummyLL.count, obj.dummyLL.trigger, obj.dummyLL.repeat, obj.dummyLL.length, 0);
-                obj.awg.setLinkListRepeat(awg_I_channel-1,0);
-                obj.awg.setLinkListRepeat(awg_Q_channel-1,0);
-                obj.awg.setLinkListMode(awg_I_channel-1, obj.awg.LL_ENABLE, obj.awg.LL_CONTINUOUS);
-                obj.awg.setLinkListMode(awg_Q_channel-1, obj.awg.LL_ENABLE, obj.awg.LL_CONTINUOUS);
                 
                 obj.awg.run();
                 pause(0.2);

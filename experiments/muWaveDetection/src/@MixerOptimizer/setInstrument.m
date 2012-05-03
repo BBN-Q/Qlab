@@ -30,9 +30,6 @@ function setInstrument(obj, amp, phase)
 
             obj.awg.stop();
             
-            %Clear the old link list data
-            obj.awg.clearLinkListELL(I_channel-1); obj.awg.clearLinkListELL(I_channel-1); 
-
             % scale I waveform
             wf = obj.awg.(['chan_' num2str(I_channel)]).waveform;
             wf.set_scale_factor(amp);
@@ -45,13 +42,6 @@ function setInstrument(obj, amp, phase)
             
             obj.awg.loadWaveform(Q_channel-1, wf.prep_vector());
             obj.awg.(['chan_' num2str(Q_channel)]).waveform = wf;
-
-            obj.awg.loadLinkListELL(I_channel-1, obj.dummyLL.offset, obj.dummyLL.count, obj.dummyLL.trigger, obj.dummyLL.repeat, obj.dummyLL.length, 0);
-            obj.awg.loadLinkListELL(Q_channel-1, obj.dummyLL.offset, obj.dummyLL.count, obj.dummyLL.trigger, obj.dummyLL.repeat, obj.dummyLL.length, 0);
-            obj.awg.setLinkListRepeat(I_channel-1,0);
-            obj.awg.setLinkListRepeat(Q_channel-1,0);
-            obj.awg.setLinkListMode(I_channel-1, obj.awg.LL_ENABLE, obj.awg.LL_CONTINUOUS);
-            obj.awg.setLinkListMode(Q_channel-1, obj.awg.LL_ENABLE, obj.awg.LL_CONTINUOUS);
 
             obj.awg.run();
             pause(0.2);

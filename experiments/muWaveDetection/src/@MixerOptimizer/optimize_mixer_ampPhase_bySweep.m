@@ -41,8 +41,22 @@ switch class(awg)
         pause(0.1);
     case 'deviceDrivers.APS'
         awg.stop();
+        
+        %We have to set the offset in the waveform
+        % scale I waveform
+        wf = awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).waveform;
+        wf.offset = i_offset;
+        awg.loadWaveform(ExpParams.Mixer.I_channel-1, wf.prep_vector());
+        awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).waveform = wf;
+
+        wf = awg.(['chan_' num2str(ExpParams.Mixer.Q_channel)]).waveform;
+        wf.offset = q_offset;
+        awg.loadWaveform(ExpParams.Mixer.Q_channel-1, wf.prep_vector());
+        awg.(['chan_' num2str(ExpParams.Mixer.Q_channel)]).waveform = wf;
+
         awg.setOffset(ExpParams.Mixer.I_channel, i_offset);
         awg.setOffset(ExpParams.Mixer.Q_channel, q_offset);
+
         awg.run();
 end
 
@@ -61,7 +75,7 @@ awg.waitForAWGtoStartRunning();
 fprintf('\nStarting sweep search for optimal amp/phase\n');
 
 %First we scan the amplitude with the phase at zero
-ampPts = linspace((1-ExpParams.Sweep.ampFactor.range)*awgAmp, (1+ExpParams.Sweep.ampFactor.range)*awgAmp, ExpParams.Sweep.ampFactor.numPoints);
+ampPts = linspace(ExpParams.Sweep.ampFactor.start*awgAmp, ExpParams.Sweep.ampFactor.stop*awgAmp, ExpParams.Sweep.ampFactor.numPoints);
 
 figure();
 axesHAmp = subplot(2,1,1);
@@ -88,7 +102,7 @@ plot(axesHAmp, goodXPts/awgAmp, goodPowers,'r--')
 drawnow()
 
 %Now we scan the channel skew withe amp factor set appropriately
-skewPts = linspace(-(pi/180)*ExpParams.Sweep.phaseSkew.range,(pi/180)*ExpParams.Sweep.phaseSkew.range, ExpParams.Sweep.phaseSkew.numPoints);
+skewPts = linspace((pi/180)*ExpParams.Sweep.phaseSkew.start,(pi/180)*ExpParams.Sweep.phaseSkew.stop, ExpParams.Sweep.phaseSkew.numPoints);
 measPowers2 = nan(1, length(skewPts));
 tmpLine = plot(axesHPhase, skewPts*180/pi, measPowers2, 'b*');
 for ct = 1:length(skewPts);
