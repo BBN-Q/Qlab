@@ -923,7 +923,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         function resetStatusCtrl(aps)
-            aps.librarycall('Read status/ctrl', 'APS_ResetStatusCtrl');
+            aps.librarycall('Reset status/ctrl', 'APS_ResetStatusCtrl');
+        end
+        
+        function resetChecksums(aps, fpga)
+            aps.librarycall('Reset checksum register', 'APS_ResetCheckSum', fpga);
         end
         
         function regWriteTest(aps, addr)

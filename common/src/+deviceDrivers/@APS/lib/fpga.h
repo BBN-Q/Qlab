@@ -88,8 +88,8 @@
 #define FPGA_OFF_ELL_PHSLL_A_CTRL 0xA  // A Control Register
 #define FPGA_OFF_ELL_PHSLL_B_CTRL 0xB  // B Control Register
 #define FPGA_OFF_ELL_PHSLL_REPEAT 0xC  // Repeat Count
-#define FPGA_OFF_ADDR_CHECKSUM    0xD  // Address Checksum Register
-#define FPGA_OFF_DATA_CHECKSUM    0xE  // Data Checksum Register
+#define FPGA_OFF_DATA_CHECKSUM    0xD  // Data Checksum Register
+#define FPGA_OFF_ADDR_CHECKSUM    0xE  // Address Checksum Register
 #define FPGA_OFF_DAC02_ZERO       0x10 // DAC0/2 zero offset register
 #define FPGA_OFF_DAC13_ZERO       0x11 // DAC1/3 zero offset register
 
