@@ -131,26 +131,26 @@ set_settings_fcn = @set_GUI_fields;
 		settings.scaleMode = get_selected(handles.scaleMode);
 		switch settings.scaleMode
 			case 'Amp/Off'
-				upperField = 'Amplitude';
+				upperField = 'amplitude';
 				lowerField = 'offset';
 			case 'Hi/Lo'
-				upperField = 'AnalogHigh';
-				lowerField = 'AnalogLow';
+				upperField = 'analogHigh';
+				lowerField = 'analogLow';
 			otherwise
 				error('AWG5014GUI', 'Unknown scale mode');
 		end
 		settings.chan_1.(upperField) = get_numeric(handles.ch1amp);
 		settings.chan_1.(lowerField) = get_numeric(handles.ch1off);
-		settings.chan_1.Enabled = get(handles.ch1enable, 'Value');
+		settings.chan_1.enabled = get(handles.ch1enable, 'Value');
 		settings.chan_2.(upperField) = get_numeric(handles.ch2amp);
 		settings.chan_2.(lowerField) = get_numeric(handles.ch2off);
-		settings.chan_2.Enabled = get(handles.ch2enable, 'Value');
+		settings.chan_2.enabled = get(handles.ch2enable, 'Value');
 		settings.chan_3.(upperField) = get_numeric(handles.ch3amp);
 		settings.chan_3.(lowerField) = get_numeric(handles.ch3off);
-		settings.chan_3.Enabled = get(handles.ch3enable, 'Value');
+		settings.chan_3.enabled = get(handles.ch3enable, 'Value');
 		settings.chan_4.(upperField) = get_numeric(handles.ch4amp);
 		settings.chan_4.(lowerField) = get_numeric(handles.ch4off);
-		settings.chan_4.Enabled = get(handles.ch4enable, 'Value');
+		settings.chan_4.enabled = get(handles.ch4enable, 'Value');
 		settings.seqfile = get(handles.seqfile, 'String');
 		settings.seqforce = get(handles.seqforce, 'Value');
 		settings.triggerSource = get_selected(handles.triggerSource);
@@ -191,9 +191,9 @@ set_settings_fcn = @set_GUI_fields;
 		set_selected(handles.scaleMode, defaults.scaleMode);
         for i = 1:4
             channel = ['chan_' num2str(i)];
-            set(handles.(['ch' num2str(i) 'amp']), 'String', defaults.(channel).Amplitude);
+            set(handles.(['ch' num2str(i) 'amp']), 'String', defaults.(channel).amplitude);
             set(handles.(['ch' num2str(i) 'off']), 'String', defaults.(channel).offset);
-            set(handles.(['ch' num2str(i) 'enable']), 'Value', defaults.(channel).Enabled);
+            set(handles.(['ch' num2str(i) 'enable']), 'Value', defaults.(channel).enabled);
         end
 		set(handles.seqfile, 'String', defaults.seqfile);
 		set(handles.seqforce, 'Value', defaults.seqforce);
