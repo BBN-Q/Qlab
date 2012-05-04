@@ -168,9 +168,9 @@ set_settings_fcn = @set_GUI_fields;
 		defaults.scaleMode = 'Amp/Off';
         for i = 1:4
             channel = ['chan_' num2str(i)];
-            defaults.(channel).Amplitude = 1;
+            defaults.(channel).amplitude = 1;
             defaults.(channel).offset = 0;
-            defaults.(channel).Enabled = 1;
+            defaults.(channel).enabled = 1;
         end
         defaults.seqfile = 'U:\AWG\Trigger\Trigger.awg';
         defaults.seqforce = 0;

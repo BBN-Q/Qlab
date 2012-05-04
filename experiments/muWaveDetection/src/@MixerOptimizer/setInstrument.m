@@ -12,14 +12,14 @@ function setInstrument(obj, amp, phase)
     
     switch class(obj.awg)
         case 'deviceDrivers.Tek5014'
-            obj.awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).Amplitude = amp;
+            obj.awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).amplitude = amp;
             % on the Tek5014 we just update the channel skew to change the
             % phase
             skew = phase/fssb;
             if obj.inputStructure.verbose
                 fprintf('Skew: %.3f ns\n', skew*1e9);
             end
-            obj.awg.(['chan_' num2str(Q_channel)]).Skew = skew;
+            obj.awg.(['chan_' num2str(Q_channel)]).skew = skew;
             obj.awg.operationComplete()
         case 'deviceDrivers.APS'
             samplingRate = samplingRate*1e6; % APS gives sampling rate in MHz

@@ -171,8 +171,8 @@ for ct = 1:length(measPowers)
     filteredPowers(ct) = median(extendedPowers(ct:ct+2*shift));
 end
 
-%We arbitrarily choose a cutoff of 6dB spikes
-goodPts = find(abs(measPowers - filteredPowers) < 6);
+%We arbitrarily choose a cutoff of 10dB spikes
+goodPts = find(abs(measPowers - filteredPowers) < 10);
 
 goodOffsetPts = xPts(goodPts);
 measPowers = measPowers(goodPts);

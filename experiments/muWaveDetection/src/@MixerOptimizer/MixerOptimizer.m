@@ -133,17 +133,17 @@ classdef MixerOptimizer < expManager.expBase
             
             switch class(obj.awg)
                 case 'deviceDrivers.Tek5014'
-                    awg_amp = obj.awg.(['chan_' num2str(awg_I_channel)]).Amplitude;
+                    awg_amp = obj.awg.(['chan_' num2str(awg_I_channel)]).amplitude;
                     obj.awg.openConfig(awgfile);
                     obj.awg.(['chan_' num2str(awg_I_channel)]).offset = i_offset;
                     obj.awg.(['chan_' num2str(awg_Q_channel)]).offset = q_offset;
                     obj.awg.runMode = 'CONT';
-                    obj.awg.(['chan_' num2str(awg_I_channel)]).Amplitude = awg_amp;
-                    obj.awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = awg_amp;
-                    obj.awg.(['chan_' num2str(awg_I_channel)]).Skew = 0;
-                    obj.awg.(['chan_' num2str(awg_Q_channel)]).Skew = 0;
-                    obj.awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
-                    obj.awg.(['chan_' num2str(awg_Q_channel)]).Enabled = 1;
+                    obj.awg.(['chan_' num2str(awg_I_channel)]).amplitude = awg_amp;
+                    obj.awg.(['chan_' num2str(awg_Q_channel)]).amplitude = awg_amp;
+                    obj.awg.(['chan_' num2str(awg_I_channel)]).skew = 0;
+                    obj.awg.(['chan_' num2str(awg_Q_channel)]).skew = 0;
+                    obj.awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
+                    obj.awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
                 case 'deviceDrivers.APS'
 
                     %Setup a waveform with a 1200 sinusoid for both

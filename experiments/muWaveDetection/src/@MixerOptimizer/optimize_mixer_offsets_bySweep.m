@@ -185,7 +185,7 @@ for ct = 1:length(measPowers)
 end
 
 %We arbitrarily choose a cutoff of 6dB spikes
-goodPts = find(abs(measPowers - filteredPowers) < 6);
+goodPts = find(abs(measPowers - filteredPowers) < 10);
 
 goodOffsetPts = xPts(goodPts);
 measPowers = measPowers(goodPts);
