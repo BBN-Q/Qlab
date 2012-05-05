@@ -65,25 +65,34 @@ int APS_FormatForFPGA_ELL(BYTE * buffer, ULONG addr,
 		                    ULONG offset, ULONG count,
 		                    ULONG trigger, ULONG repeat, UCHAR fpga)
 {
-	BYTE cmd;
+	BYTE cmd = APS_FPGA_IO | (fpga<<2) | 2;
 
-	cmd = APS_FPGA_IO | (fpga<<2) | 2;
-
-	buffer[0] = cmd;
-	buffer[1] = (addr >> 8) & LSB_MASK;
+	buffer[0]  = cmd;
+	buffer[1]  = (addr >> 8) & LSB_MASK;
 	buffer[2]  = addr & LSB_MASK;
-
 	buffer[3]  = (offset >> 8) & LSB_MASK;
 	buffer[4]  = offset & LSB_MASK;
 
-	buffer[5]  = (count >> 8) & LSB_MASK;
-	buffer[6]  = count & LSB_MASK;
+	addr++;
+	buffer[5] = cmd;
+	buffer[6] = (addr >> 8) & LSB_MASK;
+	buffer[7] = addr & LSB_MASK;
+	buffer[8] = (count >> 8) & LSB_MASK;
+	buffer[9] = count & LSB_MASK;
 
-	buffer[7]  = (trigger >> 8) & LSB_MASK;
-	buffer[8]  = trigger & LSB_MASK;
+	addr++;
+	buffer[10] = cmd;
+	buffer[11] = (addr >> 8) & LSB_MASK;
+	buffer[12] = addr & LSB_MASK;
+	buffer[13] = (trigger >> 8) & LSB_MASK;
+	buffer[14] = trigger & LSB_MASK;
 
-	buffer[9]  = (repeat >> 8) & LSB_MASK;
-	buffer[10]  = repeat & LSB_MASK;
+	addr++;
+	buffer[15] = cmd;
+	buffer[16] = (addr >> 8) & LSB_MASK;
+	buffer[17] = addr & LSB_MASK;
+	buffer[18] = (repeat >> 8) & LSB_MASK;
+	buffer[19] = repeat & LSB_MASK;
 	return 0;
 }
 
@@ -1001,15 +1010,9 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	int ctrl_reg, ctrl_reg_read;
 	int readVal;
 
-	/*
-	int lastEntryAddress;
-
-	ULONG write_addr;
-	ULONG wf_length;
-
+	ULONG formated_length;
 	BYTE * formatedData;
 	BYTE * formatedDataIdx;
-	 */
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -1140,10 +1143,10 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 
   }
 
+	// ADDRDATASIZE_ELL 4 cmd 8 addr 2 offset 2 count 2 trigger 2 repeat
+#define ADDRDATASIZE_ELL 20
+	formated_length  = ADDRDATASIZE_ELL * length;  // link list write buffer length in bytes
 #else
-	// ADDRDATASIZE_ELL 1 cmd 2 addr 2 offset 2 count 2 trigger 2 repeat
-#define ADDRDATASIZE_ELL 11
-	formated_length  = ADDRDATASIZE_ELL * length;  // Expanded length 1 byte command 2 bytes addr 2 bytes data per data sample
 	formatedData = (BYTE *) malloc(formated_length);
 	if (!formatedData)
 		return -5;
@@ -1153,7 +1156,7 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	// This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
 
 	for(cnt = 0; cnt < length; cnt++) {
-		APS_FormatForFPGA_ELL(formatedDataIdx, dac_write + cnt,
+		APS_FormatForFPGA_ELL(formatedDataIdx, dac_write + 4*cnt,
 								OffsetData[cnt], CountData[cnt],
 								TriggerData[cnt], RepeatData[cnt],
 								fpga );
