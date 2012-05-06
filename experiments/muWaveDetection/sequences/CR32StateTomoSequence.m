@@ -1,4 +1,4 @@
-function CR32StateTomoSequence(makePlot)
+function CR12StateTomoSequence(makePlot)
 
 if ~exist('makePlot', 'var')
     makePlot = true;
@@ -8,11 +8,14 @@ pathAWG = 'U:\AWG\CrossRes\';
 pathAPS = 'U:\APS\CrossRes\';
 basename = 'CrossRes';
 
-fixedPt = 13000;
-cycleLength = 16000;
+fixedPt = 2000;
+cycleLength = 12000;
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+
+
 measDelay = -64;
 
 q3Params = params.q3; 

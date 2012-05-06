@@ -16,6 +16,11 @@ settings.chan_4.offset = 0;
 settings.samplingRate = 1200;
 settings.triggerSource = 'external';
 settings.seqfile = 'U:\APS\Rabi\RabiBBNAPS12.mat';
+<<<<<<< Updated upstream
+=======
+%settings.seqfile = 'U:\APS\PiCal\PiCal56.mat';
+%settings.seqfile = 'C:\Qlab software\experiments\muWaveDetection\sequences\EchoTest.mat';
+>>>>>>> Stashed changes
 settings.seqforce = true;
 
 awg = deviceDrivers.APS();

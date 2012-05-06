@@ -33,7 +33,7 @@ pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', 
 angle = pi/2;
 numPsQId = 4; % number pseudoidentities
 numsteps = 11; %number of drag parameters (11)
-deltamax=1;
+deltamax=1.0;
 deltamin=-1.0;
 delta=linspace(deltamin,deltamax,numsteps);
 

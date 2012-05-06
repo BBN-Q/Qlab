@@ -15,7 +15,7 @@ end
 
 basename = 'Echo';
 fixedPt = 20000;
-cycleLength = 24000;
+cycleLength = 30000;
 nbrRepeats = 1;
 
 % load config parameters from file
