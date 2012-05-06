@@ -76,8 +76,8 @@ class PulseParamGUI(object):
         file.close()
         
         #Set some validators to help ensure we don't get bogus input
-        self.ui.piAmp.setValidator(QtGui.QDoubleValidator())
-        self.ui.pi2Amp.setValidator(QtGui.QDoubleValidator())
+        self.ui.piAmp.setValidator(QtGui.QDoubleValidator(-8192, 8191, 0, None))
+        self.ui.pi2Amp.setValidator(QtGui.QDoubleValidator(-8192, 8191, 0, None))
         self.ui.pulseLength.setValidator(QtGui.QIntValidator())
         self.ui.sigma.setValidator(QtGui.QIntValidator())
         self.ui.delta.setValidator(QtGui.QDoubleValidator())
@@ -88,8 +88,8 @@ class PulseParamGUI(object):
         self.ui.bufferDelay.setValidator(QtGui.QIntValidator())
         self.ui.offset.setValidator(QtGui.QIntValidator())
         self.ui.piAmp.setValidator(QtGui.QIntValidator())
-        self.ui.ampFactor.setValidator(QtGui.QDoubleValidator())
-        self.ui.phaseSkew.setValidator(QtGui.QDoubleValidator())
+        self.ui.ampFactor.setValidator(QtGui.QDoubleValidator(0, 2, 4, None))
+        self.ui.phaseSkew.setValidator(QtGui.QDoubleValidator(-180, 180, 4, None))
     
 
         # connect UI element to signals
@@ -217,8 +217,8 @@ class PulseParamGUI(object):
         # update GUI with parameters for newly selected channel
         qubit = self.ui.qubitComboBox.currentText()
         if qubit in self._params.keys():
-            self.ui.piAmp.setText(str(self._params[qubit]['piAmp']))
-            self.ui.pi2Amp.setText(str(self._params[qubit]['pi2Amp']))
+            self.ui.piAmp.setText(str(round(self._params[qubit]['piAmp'], 0)))
+            self.ui.pi2Amp.setText(str(round(self._params[qubit]['pi2Amp'], 0)))
             self.ui.sigma.setText(str(self._params[qubit]['sigma']))
             self.ui.delta.setText(str(self._params[qubit]['delta']))
             self.ui.pulseLength.setText(str(self._params[qubit]['pulseLength']))
@@ -241,8 +241,8 @@ class PulseParamGUI(object):
             self.ui.delay.setText(str(self._params[channel]['delay']))
             #Covert the T into amp factor and phase info
             tmpT = self._params[channel]['T']
-            self.ui.ampFactor.setText(str(tmpT[0][0]))
-            self.ui.phaseSkew.setText(str((180/math.pi)*math.atan(tmpT[0][1]/tmpT[0][0])))
+            self.ui.ampFactor.setText(str(round(tmpT[0][0],4)))
+            self.ui.phaseSkew.setText(str(round((180/math.pi)*math.atan(tmpT[0][1]/tmpT[0][0]), 4)))
             if self._params[channel]['linkListMode']:
                 self.ui.linkListModeCB.setChecked(QtCore.Qt.Checked)
             else:
