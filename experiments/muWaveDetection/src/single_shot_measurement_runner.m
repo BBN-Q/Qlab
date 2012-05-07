@@ -28,8 +28,8 @@ ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;
 ExpParams.filter = commonSettings.ExpParams.filter;
 
 Sweeps = struct();
-Sweeps.frequency = struct('type','sweeps.Frequency', 'start', 8.3315, 'stop', 8.3345, 'step', 25e-6, 'genID', 'RFgen', 'number', 1);
-Sweeps.power = struct('type','sweeps.Power', 'start', 0, 'stop', 6, 'step', 1, 'units', 'dBm', 'genID', 'RFgen', 'number', 2);
+%Sweeps.frequency = struct('type','sweeps.Frequency', 'start', 8.331, 'stop', 8.3335, 'step', 50e-6, 'genID', 'RFgen', 'number', 1);
+%Sweeps.power = struct('type','sweeps.Power', 'start', 13, 'stop', 18, 'step', 1, 'units', 'dBm', 'genID', 'RFgen', 'number', 2);
 
 cfg = struct('ExpParams', ExpParams, ...
     'SoftwareDevelopmentMode', 0, ...

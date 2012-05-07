@@ -117,29 +117,15 @@ classdef HP71000 < deviceDrivers.lib.GPIB
         % property settors
         
         function set.center_frequency(obj, value)
-            gpib_string = 'CF %dGHz;';
-
             % Validate input
-            if ~isnumeric(value)
-                error('Invalid input');
-            end
-            
-            gpib_string = sprintf(gpib_string, value/1e9);
-
-            obj.Write(gpib_string);
+            assert(isnumeric(value), 'Invalid input');
+            obj.Write(sprintf('CF %E;',value));
         end
         
         function set.span(obj, value)
-            gpib_string = 'SP %dMHz;';
-
             % Validate input
-            if ~isnumeric(value)
-                error('Invalid input');
-            end
-            
-            gpib_string = sprintf(gpib_string, value/1e6);
-
-            obj.Write(gpib_string);
+            assert(isnumeric(value), 'Invalid input');
+            obj.Write(sprintf('SP %E;',value));
         end
         
         function set.resolution_bw(obj, value)

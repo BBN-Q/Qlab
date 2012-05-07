@@ -12,14 +12,14 @@ function setInstrument(obj, amp, phase)
     
     switch class(obj.awg)
         case 'deviceDrivers.Tek5014'
-            obj.awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).Amplitude = amp;
+            obj.awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).amplitude = amp;
             % on the Tek5014 we just update the channel skew to change the
             % phase
             skew = phase/fssb;
             if obj.inputStructure.verbose
                 fprintf('Skew: %.3f ns\n', skew*1e9);
             end
-            obj.awg.(['chan_' num2str(Q_channel)]).Skew = skew;
+            obj.awg.(['chan_' num2str(Q_channel)]).skew = skew;
             obj.awg.operationComplete()
         case 'deviceDrivers.APS'
             samplingRate = samplingRate*1e6; % APS gives sampling rate in MHz
@@ -29,12 +29,11 @@ function setInstrument(obj, amp, phase)
             tpts = timeStep*(0:(waveform_length-1));
 
             obj.awg.stop();
-
+            
             % scale I waveform
             wf = obj.awg.(['chan_' num2str(I_channel)]).waveform;
             wf.set_scale_factor(amp);
             obj.awg.loadWaveform(I_channel-1, wf.prep_vector());
-            obj.awg.loadWaveform(2, wf.prep_vector());
             obj.awg.(['chan_' num2str(I_channel)]).waveform = wf;
             
             % generate new Q waveform with phase shift
@@ -42,8 +41,8 @@ function setInstrument(obj, amp, phase)
             wf.data = -0.5 * sin(fssb.*tpts + phase);
             
             obj.awg.loadWaveform(Q_channel-1, wf.prep_vector());
-            obj.awg.loadWaveform(3, wf.prep_vector());
             obj.awg.(['chan_' num2str(Q_channel)]).waveform = wf;
+
             obj.awg.run();
             pause(0.2);
     end

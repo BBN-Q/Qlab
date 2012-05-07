@@ -1,7 +1,7 @@
-function analyzeRB(ypts)
+function gerror = analyzeRB(ypts)
     %[xpts ypts] = calScale;
     % if no input arguments, try to get the data from the current figure
-    if nargin < 2
+    if nargin < 1
         h = gcf;
         line = findall(h, 'Type', 'Line');
         ypts = get(line(1), 'ydata');
@@ -9,8 +9,9 @@ function analyzeRB(ypts)
         plotTitle = get(get(gca, 'Title'), 'String');
     else
         h = figure;
+        plotTitle = '';
     end
-
+    
     %seqlengths = [2, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96];
     seqlengths = [2, 4, 8, 16, 32, 64, 96, 128, 192, 256, 320];
     xpts2 = seqlengths(1 + floor((0:length(ypts)-1)./32));
@@ -53,4 +54,6 @@ function analyzeRB(ypts)
     text(.7, .85, labelStr, 'FontSize', 12, 'Units', 'normalized');
     
     ylim([min(fidelity) 1.05])
+    
+    gerror = beta(2)/2;
 end

@@ -77,6 +77,17 @@ classdef MixerOptimizer < expManager.expBase
                     error('Unknown optimMode');
             end
 
+            % restore instruments to a normal state
+            obj.sa.center_frequency = obj.specgen.frequency * 1e9;
+            obj.sa.span = 25e6;
+            obj.sa.sweep_mode = 'cont';
+            obj.sa.resolution_bw = 'auto';
+            obj.sa.sweep_points = 800;
+            obj.sa.number_averages = 10;
+            obj.sa.video_averaging = 1;
+            obj.sa.sweep();
+            obj.sa.peakAmplitude();
+
             % save transformation and offsets to file
             save([obj.cfg_path '/mixercal.mat'], 'i_offset', 'q_offset', 'T', '-v7.3');
         end
@@ -122,24 +133,25 @@ classdef MixerOptimizer < expManager.expBase
             
             switch class(obj.awg)
                 case 'deviceDrivers.Tek5014'
-                    awg_amp = obj.awg.(['chan_' num2str(awg_I_channel)]).Amplitude;
+                    awg_amp = obj.awg.(['chan_' num2str(awg_I_channel)]).amplitude;
                     obj.awg.openConfig(awgfile);
                     obj.awg.(['chan_' num2str(awg_I_channel)]).offset = i_offset;
                     obj.awg.(['chan_' num2str(awg_Q_channel)]).offset = q_offset;
                     obj.awg.runMode = 'CONT';
-                    obj.awg.(['chan_' num2str(awg_I_channel)]).Amplitude = awg_amp;
-                    obj.awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = awg_amp;
-                    obj.awg.(['chan_' num2str(awg_I_channel)]).Skew = 0;
-                    obj.awg.(['chan_' num2str(awg_Q_channel)]).Skew = 0;
-                    obj.awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
-                    obj.awg.(['chan_' num2str(awg_Q_channel)]).Enabled = 1;
+                    obj.awg.(['chan_' num2str(awg_I_channel)]).amplitude = awg_amp;
+                    obj.awg.(['chan_' num2str(awg_Q_channel)]).amplitude = awg_amp;
+                    obj.awg.(['chan_' num2str(awg_I_channel)]).skew = 0;
+                    obj.awg.(['chan_' num2str(awg_Q_channel)]).skew = 0;
+                    obj.awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
+                    obj.awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
                 case 'deviceDrivers.APS'
-                    awg_amp = obj.awg.(['chan_' num2str(awg_I_channel)]).amplitude;
-                    
+
+                    %Setup a waveform with a 1200 sinusoid for both
+                    %channels
                     samplingRate = 1.2e9;
-                    waveform_length = 1200;
+                    waveformLength = 1200;
                     timeStep = 1/samplingRate;
-                    tpts = timeStep*(0:(waveform_length-1));
+                    tpts = timeStep*(0:(waveformLength-1));
                     % i waveform
                     iwf = obj.awg.(['chan_' num2str(awg_I_channel)]).waveform;
                     iwf.dataMode = iwf.REAL_DATA;
@@ -157,15 +169,8 @@ classdef MixerOptimizer < expManager.expBase
                     obj.awg.setOffset(awg_Q_channel, q_offset);
                     obj.awg.(['chan_' num2str(awg_Q_channel)]).waveform = qwf;
                     
-                    % copy onto outputs 3 and 4 for testing
-                    obj.awg.loadWaveform(2, iwf.prep_vector());
-                    obj.awg.loadWaveform(3, qwf.prep_vector());
-                    obj.awg.setLinkListMode(2, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
-                    obj.awg.setLinkListMode(3, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
-                    obj.awg.chan_3.enabled = 1;
-                    obj.awg.chan_4.enabled = 1;
-                    
                     obj.awg.triggerSource = 'internal';
+                    
                     obj.awg.setLinkListMode(awg_I_channel-1, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
                     obj.awg.setLinkListMode(awg_Q_channel-1, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
                     obj.awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;

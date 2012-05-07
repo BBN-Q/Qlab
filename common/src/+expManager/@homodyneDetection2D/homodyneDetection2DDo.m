@@ -22,13 +22,13 @@ persistent figureHandle2D;
 persistent scopeHandle;
 
 if isempty(figureHandle) || ~ishandle(figureHandle)
-	figureHandle = figure;
+	figureHandle = figure('HandleVisibility', 'callback');
 end
 if isempty(figureHandle2D) || ~ishandle(figureHandle2D)
-        figureHandle2D = figure;
+        figureHandle2D = figure('HandleVisibility', 'callback');
 end
 if isempty(scopeHandle) && displayScope
-    scopeHandle = figure;
+    scopeHandle = figure('HandleVisibility', 'callback');
 end
 
 % Loop is a reparsing of the strucutres LoopParams and TaskParams that we

@@ -54,8 +54,8 @@ while true
     
     if(strcmp(linedat(1), comment)), continue; end
     value_str = char(linedat{2});
-    if isstrprop(value_str(1), 'digit') || (strcmp(value_str(1), '-')) || (strcmp(value_str(1), '+')) ...
-       || (strcmp(value_str(1), '.') &&  isstrprop(value_str(2), 'digit'))
+    if (isstrprop(value_str(1), 'digit') || (strcmp(value_str(1), '-')) || (strcmp(value_str(1), '+')) ...
+       || (strcmp(value_str(1), '.') &&  isstrprop(value_str(2), 'digit'))) && length(strfind(value_str,'.')) <= 1 %avoid IP address
         % Number assignments
         eval(['CFG.',linedat{1},' = str2num(linedat{2});']);
     elseif(strcmp(value_str(1), '['))

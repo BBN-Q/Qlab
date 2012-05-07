@@ -26,15 +26,39 @@ spec_analyzer_span = ExpParams.SpecAnalyzer.span;
 spec_resolution_bw = ExpParams.SpecAnalyzer.resolution_bw;
 spec_sweep_points = ExpParams.SpecAnalyzer.sweep_points;
 fssb = ExpParams.SSBFreq; % SSB modulation frequency (usually 10 MHz)
-awg_amp = InstrParams.AWG.(['chan_' num2str(ExpParams.Mixer.I_channel)]).Amplitude;
+awgAmp = InstrParams.AWG.(['chan_' num2str(ExpParams.Mixer.I_channel)]).amplitude;
 
 % initialize instruments
 % grab instrument objects
 sa = obj.sa;
 awg = obj.awg;
 
-awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).offset = i_offset;
-awg.(['chan_' num2str(ExpParams.Mixer.Q_channel)]).offset = q_offset;
+switch class(awg)
+    case 'deviceDrivers.Tek5014'
+        awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).offset = i_offset;
+        awg.(['chan_' num2str(ExpParams.Mixer.Q_channel)]).offset = q_offset;
+        awg.operationComplete();
+        pause(0.1);
+    case 'deviceDrivers.APS'
+        awg.stop();
+        
+        %We have to set the offset in the waveform
+        % scale I waveform
+        wf = awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).waveform;
+        wf.offset = i_offset;
+        awg.loadWaveform(ExpParams.Mixer.I_channel-1, wf.prep_vector());
+        awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).waveform = wf;
+
+        wf = awg.(['chan_' num2str(ExpParams.Mixer.Q_channel)]).waveform;
+        wf.offset = q_offset;
+        awg.loadWaveform(ExpParams.Mixer.Q_channel-1, wf.prep_vector());
+        awg.(['chan_' num2str(ExpParams.Mixer.Q_channel)]).waveform = wf;
+
+        awg.setOffset(ExpParams.Mixer.I_channel, i_offset);
+        awg.setOffset(ExpParams.Mixer.Q_channel, q_offset);
+
+        awg.run();
+end
 
 sa.center_frequency = obj.specgen.frequency * 1e9 - fssb;
 sa.span = spec_analyzer_span;
@@ -51,12 +75,12 @@ awg.waitForAWGtoStartRunning();
 fprintf('\nStarting sweep search for optimal amp/phase\n');
 
 %First we scan the amplitude with the phase at zero
-ampPts = linspace(0.75*awg_amp, 1.25*awg_amp, 100);
+ampPts = linspace(ExpParams.Sweep.ampFactor.start*awgAmp, ExpParams.Sweep.ampFactor.stop*awgAmp, ExpParams.Sweep.ampFactor.numPoints);
 
 figure();
 axesHAmp = subplot(2,1,1);
 measPowers1 = nan(1, length(ampPts));
-tmpLine = plot(axesHAmp, ampPts/awg_amp, measPowers1, 'b*');
+tmpLine = plot(axesHAmp, ampPts/awgAmp, measPowers1, 'b*');
 hold on
 xlabel('Amplitude Factor');
 ylabel('Peak Power (dBm)');
@@ -73,12 +97,12 @@ for ct = 1:length(ampPts);
     drawnow()
 end
 [bestAmp, goodXPts, goodPowers] = find_null_offset(measPowers1,ampPts);
-fprintf('Found best amplitude factor of %f on first iteration.\n',bestAmp/awg_amp);
-plot(axesHAmp, goodXPts/awg_amp, goodPowers,'r--')
+fprintf('Found best amplitude factor of %f on first iteration.\n',bestAmp/awgAmp);
+plot(axesHAmp, goodXPts/awgAmp, goodPowers,'r--')
 drawnow()
 
 %Now we scan the channel skew withe amp factor set appropriately
-skewPts = linspace(-pi/10,pi/10,100);
+skewPts = linspace((pi/180)*ExpParams.Sweep.phaseSkew.start,(pi/180)*ExpParams.Sweep.phaseSkew.stop, ExpParams.Sweep.phaseSkew.numPoints);
 measPowers2 = nan(1, length(skewPts));
 tmpLine = plot(axesHPhase, skewPts*180/pi, measPowers2, 'b*');
 for ct = 1:length(skewPts);
@@ -95,7 +119,7 @@ drawnow()
 
 %Finally we rescan the amp factor
 measPowers3 = nan(1, length(ampPts));
-tmpLine = plot(axesHAmp, ampPts/awg_amp, measPowers3, 'g*');
+tmpLine = plot(axesHAmp, ampPts/awgAmp, measPowers3, 'g*');
 xlabel('Amplitude Factor')
 ylabel('Peak Power (dBm)');
 
@@ -106,11 +130,11 @@ for ct = 1:length(ampPts);
     drawnow()
 end
 [bestAmp, goodXPts, goodPowers] = find_null_offset(measPowers3,ampPts);
-fprintf('Found best amplitude factor of %f on second iteration.\n',bestAmp/awg_amp);
-plot(axesHAmp, goodXPts/awg_amp, goodPowers,'r--')
+fprintf('Found best amplitude factor of %f on second iteration.\n',bestAmp/awgAmp);
+plot(axesHAmp, goodXPts/awgAmp, goodPowers,'r--')
 drawnow
 
-ampFactor = bestAmp/awg_amp;
+ampFactor = bestAmp/awgAmp;
 
 fprintf('Optimal amp/phase parameters:\n');
 fprintf('a: %.3g, skew: %.3f (%.3f degrees)\n', [ampFactor, bestSkew, bestSkew*180/pi]);
@@ -119,25 +143,17 @@ fprintf('SSB power: %.2f\n', min(goodPowers));
 % correction transformation
 T = [ampFactor ampFactor*tan(bestSkew); 0 sec(bestSkew)];
 
-% restore instruments to a normal state
-sa.center_frequency = obj.specgen.frequency * 1e9;
-sa.span = 25e6;
-sa.sweep_mode = 'cont';
-sa.resolution_bw = 'auto';
-sa.sweep_points = 800;
-sa.video_averaging = 1;
-sa.sweep();
-sa.peakAmplitude();
-
 obj.setInstrument(bestAmp, bestSkew);
 
     function power = readPower()
-        %We try twice to overcome the flakey network analsyer
         sa.sweep();
-        p1 = sa.peakAmplitude();
-        sa.sweep();
-        p2 = sa.peakAmplitude();
-        power = max(p1, p2);
+        power = sa.peakAmplitude();
+%         %We try twice to overcome the flakey network analsyer
+%         sa.sweep();
+%         p1 = sa.peakAmplitude();
+%         sa.sweep();
+%         p2 = sa.peakAmplitude();
+%         power = max(p1, p2);
     end
 end
 
@@ -155,8 +171,8 @@ for ct = 1:length(measPowers)
     filteredPowers(ct) = median(extendedPowers(ct:ct+2*shift));
 end
 
-%We arbitrarily choose a cutoff of 6dB spikes
-goodPts = find(abs(measPowers - filteredPowers) < 6);
+%We arbitrarily choose a cutoff of 10dB spikes
+goodPts = find(abs(measPowers - filteredPowers) < 10);
 
 goodOffsetPts = xPts(goodPts);
 measPowers = measPowers(goodPts);

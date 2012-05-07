@@ -211,16 +211,15 @@ EXPORT int APS_Open(int device, int force)
 	// Global FTDI Device usb_handle, must be set by call to FT_Open()
 	FT_STATUS status;
 
+	if (device > MAX_APS_DEVICES) {
+		return -1;
+	}
+
 	// If the ftd2xx dll has not been loaded, loadit.
 	if (!hdll) {
 		if (APS_Init() != 0) {
-			return -1;
+			return -2;
 		};
-	}
-
-	if (device > MAX_APS_DEVICES) {
-		dlog(DEBUG_INFO,"Device %i exceeds max of %i\n", device, MAX_APS_DEVICES);
-		return -2;
 	}
 
 	// allow a forced reopen of the device
@@ -255,9 +254,6 @@ EXPORT int APS_Open(int device, int force)
 #endif
 		return -status;
 	}
-
-	// assume the device is running and attempt to read version
-	APS_ReadBitFileVersion(device);
 
 	return 0;
 }
@@ -1082,7 +1078,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 	// Write out all of the bytes in groups of 61 bytes, since that is the most that
 	// can be written in a single USB packet.
 
-	for(i = 0; i < ByteCount; i += BLOCKSIZE)
+	for(i = 0; i < ByteCount; i += BLOCKSIZE) {
 		// Write a full buffer if not at the end of the input data
 
 		if(i + BLOCKSIZE < ByteCount) {
@@ -1111,6 +1107,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 			if(APS_WriteReg(device, APS_CONF_DATA, 0, Sel, LastBuf) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
 				return(-9);
 		}
+	}
 
 #ifdef OUTPUTBITFILE
 	fprintf(test,"\n");
@@ -1753,7 +1750,7 @@ EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 	if (!WF_GetIsLoaded(wfArray,channel)) {
 		dataPtr = WF_GetDataPtr(wfArray, channel);
 		length = WF_GetLength(wfArray, channel);
-		APS_LoadWaveform(device, dataPtr, length, 0 ,channel, 0, 0);
+		APS_LoadWaveform(device, dataPtr, length, 0 ,channel - 1, 0, 0);
 		WF_SetIsLoaded(wfArray,  channel,1);
 	}
 	return 0;

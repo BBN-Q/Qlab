@@ -34,7 +34,6 @@ max_offset = ExpParams.Search.max_offset; % max I/Q offset voltage
 % grab instrument objects
 sa = obj.sa;
 awg = obj.awg;
-specgen = obj.specgen;
 
 % center on the current spec generator frequency
 sa.center_frequency = obj.specgen.frequency * 1e9;
@@ -47,7 +46,7 @@ sa.video_averaging = 0;
 awg.run();
 awg.waitForAWGtoStartRunning();
 
-offsetPts = linspace(-max_offset, max_offset, 100);
+offsetPts = linspace(ExpParams.Sweep.offset.start, ExpParams.Sweep.offset.stop, ExpParams.Sweep.offset.numPoints);
 vertex = struct();
 %Sweep the I with Q at 0
 measPowers1 = nan(1, length(offsetPts));
@@ -125,21 +124,48 @@ sa.peakAmplitude();
 
 
     function power = readPower()
+        sa.sweep()
+        power = sa.peakAmplitude();
 %         [~, powerTrace] = sa.downloadTrace();
 %         power = log10(sum(10.^(powerTrace/10)));
         %We try twice to overcome the flakey network analsyer
-        sa.sweep();
-        p1 = sa.peakAmplitude();
-        sa.sweep();
-        p2 = sa.peakAmplitude();
-        power = max(p1, p2);
+%         sa.sweep();
+%         p1 = sa.peakAmplitude();
+%         sa.sweep();
+%         p2 = sa.peakAmplitude();
+%         power = max(p1, p2);
     end
 
     function setOffsets(vertex)
-        awg.(['chan_' num2str(awg_I_channel)]).offset = vertex.a;
-        awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
-        awg.operationComplete();
-        pause(0.1);
+        
+        switch class(awg)
+            case 'deviceDrivers.Tek5014'
+                awg.(['chan_' num2str(awg_I_channel)]).offset = vertex.a;
+                awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
+                awg.operationComplete();
+                pause(0.1);
+            case 'deviceDrivers.APS'
+                awg.stop();
+                
+                %We have to set the offset in the waveform
+                % scale I waveform
+                wf = obj.awg.(['chan_' num2str(awg_I_channel)]).waveform;
+                wf.offset = vertex.a;
+                obj.awg.loadWaveform(awg_I_channel-1, wf.prep_vector());
+                obj.awg.(['chan_' num2str(awg_I_channel)]).waveform = wf;
+
+                wf = obj.awg.(['chan_' num2str(awg_Q_channel)]).waveform;
+                wf.offset = vertex.b;
+                obj.awg.loadWaveform(awg_Q_channel-1, wf.prep_vector());
+                obj.awg.(['chan_' num2str(awg_Q_channel)]).waveform = wf;
+                
+                obj.awg.setOffset(awg_I_channel, vertex.a);
+                obj.awg.setOffset(awg_Q_channel, vertex.b);
+                
+                obj.awg.run();
+                pause(0.2);
+        end
+        
     end
 
 end
@@ -159,7 +185,7 @@ for ct = 1:length(measPowers)
 end
 
 %We arbitrarily choose a cutoff of 6dB spikes
-goodPts = find(abs(measPowers - filteredPowers) < 6);
+goodPts = find(abs(measPowers - filteredPowers) < 10);
 
 goodOffsetPts = xPts(goodPts);
 measPowers = measPowers(goodPts);

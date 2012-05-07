@@ -23,8 +23,12 @@ delayDiff = params.TekAWG34.delay - ChParams.delay;
 for n = 1:nbrPatterns;
     IQ_seq{n} = pg.build(patseq{floor((n-1)/nbrRepeats)+1}, numsteps, ChParams.delay, fixedPt);
     
-    % for testing, put a trigger in each sequence
+    %for testing, put a trigger in each sequence
     %IQ_seq{n} = pg.addTrigger(IQ_seq{n}, fixedPt - 100, 100);
+    %for testing, put a single trigger pulse in each sequence
+    %IQ_seq{n} = pg.addTriggerPulse(IQ_seq{n}, fixedPt - 100);
+    %for QPC initialization, put a single trigger pulse in first sequence
+    %IQ_seq{n} = pg.addTriggerPulse(IQ_seq{n}, fixedPt - 100,true);
 
     for stepct = 1:numsteps
         [patx, paty] = pg.linkListToPattern(IQ_seq{n}, stepct);

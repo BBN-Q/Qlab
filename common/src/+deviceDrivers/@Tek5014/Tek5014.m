@@ -203,6 +203,8 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
 					case 'chan_4'
 						obj.chan_4.setAll(settings.chan_4);
 					case 'scaleMode'
+                    case 'Level'
+                        obj.Level = settings.Level;
 					case 'triggerSource'
 						obj.triggerSource = settings.triggerSource;
 					case 'InternalRate'
@@ -274,9 +276,9 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
 			if ~isa(name, 'char')
 				error('Invalid file name');
             end
-            if ~exist(name, 'file')
-                error('Could not find %s');
-            end
+            %if ~exist(name, 'file')
+            %    error('Could not find %s', name);
+            %end
 			name = ['"' name '"'];
             gpib_string = ['AWGControl:SREStore ' name];
             obj.write(gpib_string);
@@ -632,7 +634,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
             else
                 gpib_string = ['TRIGger' seq_string(obj) ':LEVel ', num2str(value)];
                 obj.write(gpib_string);
-                obj.Level = check_value; 
+                %obj.Level = check_value; 
             end
 		end
 		function obj = set.Polarity(obj, value) % trigger polarity

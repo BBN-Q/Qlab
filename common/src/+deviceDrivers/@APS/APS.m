@@ -125,7 +125,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV'};
         
-        channelStruct = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
     end
     
     methods
@@ -146,13 +145,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             d.bit_file_path = script_path(1:baseIdx);
             
             % init channel structs and waveform objects
-            d.chan_1 = d.channelStruct;
+            d.chan_1 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
             d.chan_1.waveform = APSWaveform();
-            d.chan_2 = d.channelStruct;
+            d.chan_2 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
             d.chan_2.waveform = APSWaveform();
-            d.chan_3 = d.channelStruct;
+            d.chan_3 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
             d.chan_3.waveform = APSWaveform();
-            d.chan_4 = d.channelStruct;
+            d.chan_4 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
             d.chan_4.waveform = APSWaveform();
         end
         
@@ -551,14 +550,15 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.log('Done');
         end
         
-        function storeAPSWaveform(aps, dac,wf)
-            if ~strcmp(class(wf), 'APSWaveform')
+        function storeAPSWaveform(aps, waveform, dac)
+            if ~strcmp(class(waveform), 'APSWaveform')
                 error('APS:storeAPSWaveform:params', 'waveform must be of class APSWaveform')
             end
                 
             % store waveform data
             
-            val = aps.librarycall('Storing waveform','APS_SetWaveform', dac, wf.data, length(wf.data));
+            val = calllib(aps.library_name,'APS_SetWaveform', aps.device_id, dac, ...
+                waveform.data, length(waveform));
             if (val < 0), error('APS:storeAPSWaveform:set', 'error in set waveform'),end;
            
             return
@@ -662,9 +662,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.clearLinkListELL(3);
             
             % load waveform data
-            wf = APSWaveform();
             for ch = 1:aps.num_channels
                 if ch <= length(WaveformLibs) && ~isempty(WaveformLibs{ch})
+                    wf = APSWaveform();
                     % load and scale/shift waveform data
                     wf.set_vector(WaveformLibs{ch});
                     wf.set_offset(aps.(['chan_' num2str(ch)]).offset);
@@ -854,7 +854,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if ~exist('numSyncChannels', 'var')
                 numSyncChannels = 4;
             end
-            val = aps.librarycall(sprintf('Test Pll Sync: DAC: %i',id),'APS_TestPllSync',id, numSyncChannels);
+            val = aps.librarycall('Test Pll Sync: DAC: %i','APS_TestPllSync',id, numSyncChannels);
             if val ~= 0
                 fprintf('Warning: APS::testPllSync returned %i\n', val);
             end
@@ -986,7 +986,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         function resetStatusCtrl(aps)
-            aps.librarycall('Read status/ctrl', 'APS_ResetStatusCtrl');
+            aps.librarycall('Reset status/ctrl', 'APS_ResetStatusCtrl');
+        end
+        
+        function resetChecksums(aps, fpga)
+            aps.librarycall('Reset checksum register', 'APS_ResetCheckSum', fpga);
         end
         
         function regWriteTest(aps, addr)
@@ -1067,9 +1071,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             wf.dataMode = wf.REAL_DATA;
             
             for ch = 0:3
-                aps.setFrequency(ch, 1200);
                 aps.loadWaveform(ch, wf.get_vector(), 0, validate,useSlowWrite);
-                
             end
             
             aps.triggerFpga(0,1);

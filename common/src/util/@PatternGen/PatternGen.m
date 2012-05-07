@@ -46,11 +46,11 @@ classdef PatternGen < handle
         cycleLength = 10000;
         samplingRate = 1.2e9; % in samples per second
         correctionT = eye(2,2);
-        arbPulses = containers.Map();
+        arbPulses;
         dArbfname = '';
         linkList = false; % enable to construct link lists
         sha = java.security.MessageDigest.getInstance('SHA-1');
-        pulseCollection = containers.Map();
+        pulseCollection;
     end
     
     methods (Static)
@@ -303,6 +303,11 @@ classdef PatternGen < handle
     methods
         % constructor
         function obj = PatternGen(varargin)
+            %For some reason (perhaps because they are thin wrapper of java
+            %hashtable's) the containers.Map aren't properly reinitialized
+            %for each instance of PatternGen
+            obj.pulseCollection = containers.Map();
+            obj.arbPulses = containers.Map();
             % set any default parameters passed in
             if nargin > 0 && mod(nargin, 2) == 0
                 for i=1:2:nargin
@@ -523,7 +528,11 @@ classdef PatternGen < handle
                     retVal.hashKeys{ii} = obj.hashArray(retVal.pulseArray{ii});
                 end
                 if strcmp(params.pType, 'square')
+                    %Square pulses are time/amplitude pairs
                     retVal.isTimeAmplitude = 1;
+                    %We only want to hash the first point as only the
+                    %amplitude matters. 
+                    retVal.hashKeys{ii} = obj.hashArray(retVal.pulseArray{ii}(1,:));
                 end
                 if ismember(p, identityPulses)
                     retVal.isZero = 1;
@@ -583,7 +592,7 @@ classdef PatternGen < handle
                 if pulse.isTimeAmplitude
                     % repeat = width for time/amplitude pulses
                     entry.length = 1;
-                    entry.repeat = length(pulse.pulseArray{reducedIndex});
+                    entry.repeat = size(pulse.pulseArray{reducedIndex},1);
                     entry.isTimeAmplitude = 1;
                 else
                     entry.length = length(pulse.pulseArray{reducedIndex});
@@ -597,6 +606,11 @@ classdef PatternGen < handle
                         obj.pulseCollection.remove(entry.key);
                     end
                     entry.key = padWaveformKey;
+                elseif entry.isTimeAmplitude
+                    %Shorten up square waveforms to the first point so as
+                    %not to waste waveform memory
+                    tmpPulse = obj.pulseCollection(entry.key);
+                    obj.pulseCollection(entry.key) = tmpPulse(1,:);
                 end
                 entry.hasMarkerData = 0;
                 entry.markerDelay = 0;
@@ -653,6 +667,7 @@ classdef PatternGen < handle
             % delay - delay (in samples) from the beginning of the link list to the
             %   trigger rising edge
             % width - width (in samples) of the trigger pulse
+            
             for kk = 1:length(seq.linkLists)
                 linkList = seq.linkLists{kk};
                 time = 0;
@@ -694,6 +709,67 @@ classdef PatternGen < handle
             end
         end
         
+        function seq = addTriggerPulse(obj, seq, delay, single)
+            % adds a trigger pulse to each link list in the sequence
+            % delay - delay (in samples) from the beginning of the link list to the
+            %   trigger pulse
+            % single specifies only generation of marker at begining of LL
+            if exist('single', 'var')
+            single=1;
+            else
+            single=0;
+            end
+            if single
+            for kk = 1
+                linkList = seq.linkLists{kk};
+                time = 0;
+                for ii = 1:length(linkList)
+                    entry = linkList{ii};
+                    entryWidth = entry.length * entry.repeat;
+                    % check if rising edge falls within the current entry
+                    if (time + entryWidth > delay)
+                        entry.hasMarkerData = 1;
+                        entry.markerDelay = delay - time;
+                        entry.markerMode = 0; % 0 - pulse, 1 - rising, 2 - falling, 3 - none
+                        % break from the loop, leaving time set to the delay
+                        % from the end of the entry
+                        time = entryWidth - entry.markerDelay;
+                        linkList{ii} = entry;
+                        break
+                    end
+                    time = time + entryWidth;
+                end
+                
+                seq.linkLists{kk} = linkList;
+            end
+            
+            else
+     
+            for kk = 1:length(seq.linkLists)
+                linkList = seq.linkLists{kk};
+                time = 0;
+                for ii = 1:length(linkList)
+                    entry = linkList{ii};
+                    entryWidth = entry.length * entry.repeat;
+                    % check if rising edge falls within the current entry
+                    if (time + entryWidth > delay)
+                        entry.hasMarkerData = 1;
+                        entry.markerDelay = delay - time;
+                        entry.markerMode = 0; % 0 - pulse, 1 - rising, 2 - falling, 3 - none
+                        % break from the loop, leaving time set to the delay
+                        % from the end of the entry
+                        time = entryWidth - entry.markerDelay;
+                        linkList{ii} = entry;
+                        break
+                    end
+                    time = time + entryWidth;
+                end
+                
+                seq.linkLists{kk} = linkList;
+            end
+            end
+        end
+        
         function linkList = addGatePulses(obj, linkList)
             % uses the following class buffer parameters to add gating
             % pulses:
@@ -713,8 +789,8 @@ classdef PatternGen < handle
             % split when compiled for the particular hardware.
             
             state = 0; % 0 = low, 1 = high
-            startDelay = fix(obj.bufferPadding - obj.dBuffer/2 - obj.bufferDelay);
-            endDelay = fix(obj.bufferPadding - obj.dBuffer/2 + obj.bufferDelay);
+            startDelay = fix(obj.bufferPadding - obj.dBuffer/2 + obj.bufferDelay);
+            endDelay = fix(obj.bufferPadding - obj.dBuffer/2 - obj.bufferDelay);
             if startDelay < 0 || endDelay < 0
                 error('PatternGen:addGatePulses', 'Negative gate delays');
             end
