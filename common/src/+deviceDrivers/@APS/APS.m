@@ -670,7 +670,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                         end
 
                         %aps.setLinkListRepeat(ch-1,ell.repeatCount);
-                        %aps.setLinkListRepeat(ch-1,10000);
                         aps.setLinkListRepeat(ch-1,0);
                     end
                     aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);

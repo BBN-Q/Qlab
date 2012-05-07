@@ -19,6 +19,11 @@ aps_dac2_r10_p16.bit - Turns LED off if USB sync (or bad addr) error is detected
                        Resets w/good write to write address (4 writes)
 aps_dac2_r10_p17.bit - p16, but using "rising edge" of CPLD interface clock.
 aps_dac2_r10_p20.bit - p17, with added debug header signals
+aps_dac2_r10_p25.bit - p20, with debug header signals removed.
+                     - Added "on_led" register definition (Trig/LED Register bit 0x0010)
+                     - When "on_led" is '0' (default) panel LED = all PLLs locked
+                     - When "on_led" is '1' panel LED = either channel is running (state machine not in reset)
+aps_dac2_r10_p27.bit - p25, with added logic to insure checksum registers occur only once per cycle 
 
 
 =================

@@ -297,7 +297,7 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 
 
 	if (nbrSamples % WF_MODULUS != 0) {
-		dlog(DEBUG_VERBOSE,"[WARNING] Waveform data needs to be padded");
+		dlog(DEBUG_INFO,"[WARNING] Waveform data needs to be padded");
 	}
 
 	fpga = dac2fpga(dac);
@@ -822,11 +822,7 @@ EXPORT int APS_DisableDac(int device, int dac)
 			return -2;
 	}
 
-
-	//dlog(DEBUG_VERBOSE,"Disable %s State Machine ... \n", dac_type);
-
 	APS_ClearBit(device, fpga,FPGA_OFF_TRIGLED, dac_sw_trig);
-	//APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
 
 	dlog(DEBUG_VERBOSE, "Reset %s State Machine ... \n", dac_type);
 
@@ -928,11 +924,10 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 
 	dlog(DEBUG_VERBOSE,"ELL: Current Link List Control Reg: 0x%x\n", ctrl_reg);
 
-	//set link list size
-	// ELL Mode does not require shift due to different control registers
+	// set link list size
 	ctrl_reg = (length-1) & 0x3FFF;
 
-	// if bank is Bank B need to add based 0x200 to length
+	// if bank is Bank B need to add 0x200 to length
 	if (bank == 1) {
 		ctrl_reg = ctrl_reg + 0x200;  // Link List B offset is 0x200 (on DAC side)
 	}
@@ -954,7 +949,8 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	// clear checksums
 	APS_ResetCheckSum(device, fpga);
 
-#if 1
+#if 0
+	// legacy code for unbuffered loading of link list data
   for(cnt = 0; cnt < length; cnt++) {
     dlog(DEBUG_VERBOSE,"Writing LL Entry: %3i => Addr: 0x%X Count: %i: Repeat %i\n",
         cnt,dac_write + 4*cnt,  CountData[cnt], RepeatData[cnt]);
@@ -985,10 +981,10 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 
   }
 
-	// ADDRDATASIZE_ELL 4 cmd 8 addr 2 offset 2 count 2 trigger 2 repeat
+#else
+// ADDRDATASIZE_ELL 4 cmd 8 addr 2 offset 2 count 2 trigger 2 repeat
 #define ADDRDATASIZE_ELL 20
 	formated_length  = ADDRDATASIZE_ELL * length;  // link list write buffer length in bytes
-#else
 	formatedData = (BYTE *) malloc(formated_length);
 	if (!formatedData)
 		return -5;
@@ -1018,28 +1014,30 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	free(formatedData);
 #endif
 
-	// always verify the checksum
+	// verify the checksum
 	ULONG data = APS_CompareCheckSum(device, fpga);
 	if (!data) {
-		dlog(DEBUG_INFO, "APS_LoadWaveform ERROR: Checksum does not match\n");
+		dlog(DEBUG_INFO, "APS_LoadLinkList ERROR: Checksum does not match\n");
 	}
 	
 	if (validate) {
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt  ,  fpga) ;
-      if (readVal != OffsetData[cnt])
-         dlog(DEBUG_INFO,"Error writing offset 0x%X != 0x%X \n", readVal, OffsetData[cnt]);
+		for(cnt = 0; cnt < length; cnt++) {
+			readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt  ,  fpga) ;
+			if (readVal != OffsetData[cnt])
+				dlog(DEBUG_INFO,"Error writing offset 0x%X != 0x%X \n", readVal, OffsetData[cnt]);
 
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+1  ,  fpga) ;
-      if (readVal != CountData[cnt])
-        dlog(DEBUG_INFO,"Error writing count 0x%X != 0x%X \n", readVal, CountData[cnt]);
+			readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+1  ,  fpga) ;
+			if (readVal != CountData[cnt])
+				dlog(DEBUG_INFO,"Error writing count 0x%X != 0x%X \n", readVal, CountData[cnt]);
 
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+2  ,  fpga) ;
-      if (readVal != TriggerData[cnt])
-        dlog(DEBUG_INFO,"Error writing trigger 0x%X != 0x%X \n", readVal, TriggerData[cnt]);
+			readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+2  ,  fpga) ;
+			if (readVal != TriggerData[cnt])
+				dlog(DEBUG_INFO,"Error writing trigger 0x%X != 0x%X \n", readVal, TriggerData[cnt]);
 
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+3  ,  fpga) ;
-      if (readVal != RepeatData[cnt])
-        dlog(DEBUG_INFO,"Error writing repeat 0x%X != 0x%X \n", readVal, RepeatData[cnt]);
+			readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+3  ,  fpga) ;
+			if (readVal != RepeatData[cnt])
+				dlog(DEBUG_INFO,"Error writing repeat 0x%X != 0x%X \n", readVal, RepeatData[cnt]);
+		}
     }
 
 	// zero repeat register
