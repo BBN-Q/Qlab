@@ -117,6 +117,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         TRIGGER_SOFTWARE = 1;
         TRIGGER_HARDWARE = 2;
         
+        LEDMODE_PLLSYNC = 1;
+        LEDMODE_RUNNING = 2;
+        
         ALL_DACS = -1;
         FORCE_OPEN = 1;
         
@@ -401,6 +404,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 
                 % set all channel offsets to zero
                 for ch=1:4, obj.setOffset(ch, 0); end
+                
+                obj.setLEDMode(3, obj.LEDMODE_RUNNING);
             end
             
             obj.bit_file_programmed = 1;
@@ -794,7 +799,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             out = true;
         end
         
-        function setLinkListMode(aps, id, enable, mode)
+        function val = setLinkListMode(aps, id, enable, mode)
             % id : DAC channel (0-3)
             % enable : 1 = on, 0 = off
             % mode : 1 = one shot, 0 = continuous
@@ -802,9 +807,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 'APS_SetLinkListMode',enable,mode,id);
         end
         
-        function setLinkListRepeat(aps,id, repeat)
+        function val = setLinkListRepeat(aps,id, repeat)
             val = aps.librarycall(sprintf('Dac: %i Link List Repeat: %i', id, repeat), ...
                 'APS_SetLinkListRepeat',repeat,id);
+        end
+        
+        function val = setLEDMode(aps, fpga, mode)
+            val = aps.librarycall(sprintf('Setting LED mode: %i', mode), ...
+                'APS_SetLEDMode', fpga, mode);
         end
         
         function val = testPllSync(aps, id, numSyncChannels)

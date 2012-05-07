@@ -64,6 +64,8 @@ EXPORT int APS_LoadLinkList(int device, unsigned short *OffsetData, unsigned sho
 		                                     int length, int dac, int bank, int validate);
 
 EXPORT int APS_SetLinkListRepeat(int device, unsigned short repeat, int dac);
+EXPORT int APS_SetLinkListMode(int device, int enable, int mode, int dac);
+EXPORT int APS_SetLEDMode(int device, int fpga, int mode);
 
 EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int expectedVersion);
 EXPORT int APS_SetupPLL(int device);
@@ -79,18 +81,15 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type);
 EXPORT int APS_PauseFpga(int device, int dac);
 EXPORT int APS_DisableFpga(int device, int dac);
 
-EXPORT int APS_SetLinkListMode(int device, int enable, int mode, int dac);
 EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock);
 EXPORT int APS_GetPllFreq(int device, int dac);
 EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels);
 EXPORT int APS_ReadPllStatus(int device, int fpga);
 
 EXPORT int APS_ReadBitFileVersion(int device);
+EXPORT int APS_ReadLinkListStatus(int device, int dac);
 EXPORT void APS_ReadLibraryVersion(void * buffer, int maxlen);
 EXPORT int APS_ReadAllRegisters(int device, int fpga);
-EXPORT int APS_TestWaveformMemory(int device, int dac, int byteCount);
-EXPORT int APS_SetDebugLevel(int level);
-EXPORT int APS_ReadLinkListStatus(int device, int dac);
 
 EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int maxlen );
 EXPORT int APS_ClearLinkListELL(int device,int dac, int bank);
@@ -105,6 +104,10 @@ EXPORT UINT APS_ResetAllCheckSum();
 EXPORT UCHAR APS_ReadStatusCtrl(int device);
 EXPORT int APS_ResetStatusCtrl(int device);
 EXPORT int APS_ClearStatusCtrl(int device);
+
+// Debug methods
+EXPORT int APS_SetDebugLevel(int level);
+EXPORT int APS_TestWaveformMemory(int device, int dac, int byteCount);
 EXPORT int APS_RegWriteTest(int device, int addr);
 
 // Waveform related functions

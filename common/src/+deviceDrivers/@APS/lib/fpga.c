@@ -1364,6 +1364,47 @@ EXPORT int APS_SetLinkListMode(int device, int enable, int mode, int dac) {
     }
 }
 
+EXPORT int APS_SetLEDMode(int device, int fpga, int mode)
+/********************************************************************
+ *
+ * Function Name : APS_SetLEDMode()
+ *
+ * Description : Controls whether the front panel LEDs show the PLL sync
+ *		status or the channel output status.
+ *
+ * Inputs : fpga - 1, 2, or 3
+ *          mode  - 1 PLL sync, 2 channel output
+ *
+ * Returns : 0
+ *
+ * Error Conditions :
+ *
+ * Unit Tested on:
+ *
+ * Unit Tested by:
+ *
+ ********************************************************************/
+{
+	if (fpga < 0 || fpga > 3) {
+		dlog(DEBUG_INFO, "APS_SetLEDMode ERROR: unknown fpga %d\n", fpga);
+		return -1;
+	}
+	
+	switch (mode) {
+	case 1:
+		APS_ClearBit(device, fpga, FPGA_OFF_TRIGLED, TRIGLEDMSK_MODE);
+		break;
+	case 2:
+		APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, TRIGLEDMSK_MODE);
+		break;
+	default:
+		dlog(DEBUG_INFO, "APS_SetLEDMode ERROR: unknown mode %d\n", mode);
+		return -2;
+	}
+	
+	return 0;
+}
+
 EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 /********************************************************************
  *
@@ -1387,10 +1428,10 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 {
 	int fpga;
 	char * dac_type;
-	int dac_sm_enable, dac_sw_led, dac_trig_src, dac_sw_trig, dac_sm_reset;
+	int dac_sw_led, dac_trig_src, dac_sw_trig, dac_sm_reset;
 
-  fpga = dac2fpga(dac);
-  dlog(DEBUG_INFO,"Trigger FPGA%i type %i \n", fpga, trigger_type);
+	fpga = dac2fpga(dac);
+	dlog(DEBUG_INFO,"Trigger FPGA%i type %i \n", fpga, trigger_type);
 	if (fpga < 0) {
 		return -1;
 	}
