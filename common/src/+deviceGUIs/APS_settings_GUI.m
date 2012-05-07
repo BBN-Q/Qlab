@@ -92,8 +92,17 @@ set_settings_fcn = @set_GUI_fields;
         
         tmpHBox5 = uiextras.HBox('Parent', tmpVBox_main, 'Spacing', 5);
         uicontrol('Parent', tmpHBox5, 'Style', 'text', 'String', 'Sequence File:');
-        handles.seqfile = uicontrol('Parent', tmpHBox5, 'Style', 'edit', 'BackgroundColor', [1 1 1]);
-        handles.seqforce = uicontrol('Parent', tmpHBox5, 'Style', 'checkbox', 'String', 'Force Reload?');
+        handles.seqfile = uicontrol('Parent', tmpHBox5, 'Style', 'edit', 'BackgroundColor', [1 1 1], 'Callback', @update_seqfile_callback);
+        handles.seqforce = uicontrol('Parent', tmpHBox5, 'Style', 'checkbox', 'String', 'Force Reload?', 'Tag', 'seqForceBox');
+        
+        %Setup a file system watcher to see if the file changes and recheck
+        %the sequence force checkbox
+        handles.seqFileWatcher = System.IO.FileSystemWatcher();
+        
+        seqFileListener = addlistener(handles.seqFileWatcher, 'Changed', @(~,~) set(handles.seqforce, 'Value', true));
+        %Clear the listener when the uicontrol is deleted so they don't pile up
+        set(handles.seqfile, 'DeleteFcn', @(~,~) delete(seqFileListener));
+
         
         %Try and size things up
         tmpHBox5.Sizes = [-1, -3.5, -1.25];
@@ -104,6 +113,16 @@ set_settings_fcn = @set_GUI_fields;
         tmpVBox_main.Sizes = [-1, -8, -1];
         
         
+    end
+
+    function update_seqfile_callback(~,~)
+        %Point the FileSystemWatcher to the new file
+        [path, name, ext] = fileparts(get(handles.seqfile, 'String'));
+        handles.seqFileWatcher.Path = path;
+        handles.seqFileWatcher.Filter = [name, ext];
+        handles.seqFileWatcher.EnableRaisingEvents = true;
+        %Update the force loader checkbox
+        set(handles.seqforce, 'Value', true);
     end
 
     function selected = get_selected(hObject)
@@ -188,6 +207,7 @@ set_settings_fcn = @set_GUI_fields;
         end
         set(handles.seqfile, 'String', defaults.seqfile);
         set(handles.seqforce, 'Value', defaults.seqforce);
+        update_seqfile_callback()
         set_selected(handles.triggerSource, defaults.triggerSource);
         index = find(pmval_to_sample_rate == defaults.samplingRate);
         if ~isempty(index)
