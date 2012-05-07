@@ -1,10 +1,10 @@
 %%
 fprintf('Initializing APS\n');
 settings = struct();
-settings.chan_1.enabled = false;
+settings.chan_1.enabled = true;
 settings.chan_1.amplitude = 1.0;
 settings.chan_1.offset = 0;
-settings.chan_2.enabled = false;
+settings.chan_2.enabled = true;
 settings.chan_2.amplitude = 1.0;
 settings.chan_2.offset = 0;
 settings.chan_3.enabled = true;
@@ -14,13 +14,10 @@ settings.chan_4.enabled = true;
 settings.chan_4.amplitude = 1.0;
 settings.chan_4.offset = 0;
 settings.samplingRate = 1200;
-settings.triggerSource = 'external';
+settings.triggerSource = 'internal';
 settings.seqfile = 'U:\APS\Rabi\RabiBBNAPS12.mat';
-<<<<<<< Updated upstream
-=======
 %settings.seqfile = 'U:\APS\PiCal\PiCal56.mat';
 %settings.seqfile = 'C:\Qlab software\experiments\muWaveDetection\sequences\EchoTest.mat';
->>>>>>> Stashed changes
 settings.seqforce = true;
 
 awg = deviceDrivers.APS();

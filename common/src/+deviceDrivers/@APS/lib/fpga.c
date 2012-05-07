@@ -65,34 +65,10 @@ int APS_FormatForFPGA_ELL(BYTE * buffer, ULONG addr,
 		                    ULONG offset, ULONG count,
 		                    ULONG trigger, ULONG repeat, UCHAR fpga)
 {
-	BYTE cmd = APS_FPGA_IO | (fpga<<2) | 2;
-
-	buffer[0]  = cmd;
-	buffer[1]  = (addr >> 8) & LSB_MASK;
-	buffer[2]  = addr & LSB_MASK;
-	buffer[3]  = (offset >> 8) & LSB_MASK;
-	buffer[4]  = offset & LSB_MASK;
-
-	addr++;
-	buffer[5] = cmd;
-	buffer[6] = (addr >> 8) & LSB_MASK;
-	buffer[7] = addr & LSB_MASK;
-	buffer[8] = (count >> 8) & LSB_MASK;
-	buffer[9] = count & LSB_MASK;
-
-	addr++;
-	buffer[10] = cmd;
-	buffer[11] = (addr >> 8) & LSB_MASK;
-	buffer[12] = addr & LSB_MASK;
-	buffer[13] = (trigger >> 8) & LSB_MASK;
-	buffer[14] = trigger & LSB_MASK;
-
-	addr++;
-	buffer[15] = cmd;
-	buffer[16] = (addr >> 8) & LSB_MASK;
-	buffer[17] = addr & LSB_MASK;
-	buffer[18] = (repeat >> 8) & LSB_MASK;
-	buffer[19] = repeat & LSB_MASK;
+	APS_FormatForFPGA(buffer, addr, offset, fpga);
+	APS_FormatForFPGA(buffer+5, addr+1, count, fpga);
+	APS_FormatForFPGA(buffer+10, addr+2, trigger, fpga);
+	APS_FormatForFPGA(buffer+15, addr+3, repeat, fpga);
 	return 0;
 }
 
@@ -125,19 +101,19 @@ EXPORT int APS_WriteFPGA(int device, ULONG addr, ULONG data, UCHAR fpga)
 	outdata[2] = (data >> 8) & LSB_MASK;
 	outdata[3] = data & LSB_MASK;
 
-	// address checksum is defined as (bits 0-11: addr, 12-14: cmd, 15: 0)
-	// since the cmd is always = 000, we can mimic this by settings bits 12-15 to zero
+	// address checksum is defined as (bits 0-14: addr, 15: 0)
+	// so, set bit 15 to zero
 	if (fpga == 3) {
-		gAddrCheckSum[device][0] += addr & 0xFFF;
+		gAddrCheckSum[device][0] += addr & 0x7FFF;
 		gCheckSum[device][0] += data;
-		gAddrCheckSum[device][1] += addr & 0xFFF;
+		gAddrCheckSum[device][1] += addr & 0x7FFF;
 		gCheckSum[device][1] += data;
 	} else {
-		gAddrCheckSum[device][fpga - 1] += addr & 0xFFF;
+		gAddrCheckSum[device][fpga - 1] += addr & 0x7FFF;
 		gCheckSum[device][fpga - 1] += data;
 	}
 
-	dlog(DEBUG_VERBOSE2,"Writting Addr 0x%x Data 0x%x\n", addr, data);
+	dlog(DEBUG_VERBOSE2,"Writing Addr 0x%x Data 0x%x\n", addr, data);
 
 	APS_WriteReg(device, APS_FPGA_IO, 2, fpga, outdata);
 }
@@ -160,11 +136,11 @@ EXPORT int APS_CompareCheckSum(int device, int fpga) {
 }
 
 EXPORT UINT APS_ResetCheckSum(int device, int fpga) {
-	gCheckSum[device][fpga-1] = 0;
-	gAddrCheckSum[device][fpga-1] = 0;
 	// write to registers to clear them
 	APS_WriteFPGA(device, FPGA_OFF_DATA_CHECKSUM, 0, fpga);
 	APS_WriteFPGA(device, FPGA_OFF_ADDR_CHECKSUM, 0, fpga);
+	gCheckSum[device][fpga-1] = 0;
+	gAddrCheckSum[device][fpga-1] = 0;
 }
 
 EXPORT UINT APS_ResetAllCheckSum() {
@@ -430,33 +406,33 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 		}
 	} else {
 
-	// faster buffered write
+		// faster buffered write
 
-	formated_length	 = ADDRDATASIZE * nbrSamples;  // Expanded length = 1 byte command + 2 bytes addr + 2 bytes data per sample
-	formatedData = (BYTE *) malloc(formated_length);
-	if (!formatedData)
-		return -5;
-	formatedDataIdx = formatedData;
+		formated_length	 = ADDRDATASIZE * nbrSamples;  // Expanded length = 1 byte command + 2 bytes addr + 2 bytes data per sample
+		formatedData = (BYTE *) malloc(formated_length);
+		if (!formatedData)
+			return -5;
+		formatedDataIdx = formatedData;
 
-	// Format data as would be expected for FPGA
-	// This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
+		// Format data as would be expected for FPGA
+		// This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
 
-	WORD addr;
-	for(cnt = 0; cnt < nbrSamples; cnt++) {
-		APS_FormatForFPGA(formatedDataIdx, dac_write + cnt, Data[cnt], fpga);
-		formatedDataIdx += ADDRDATASIZE;
-		// address checksum is defined as (bits 0-11: addr, 12-14: cmd, 15: 0)
-		// since the cmd is always = 000, we can mimic this by settings bits 12-15 to zero
-		addr = dac_write + cnt;
-		addr &= 0xFFF;
-		gAddrCheckSum[device][fpga-1] += addr;
-		gCheckSum[device][fpga-1] += Data[cnt];
-	}
-	APS_WriteBlock(device, formated_length, formatedData);
-	free(formatedData);
+		WORD addr;
+		for(cnt = 0; cnt < nbrSamples; cnt++) {
+			APS_FormatForFPGA(formatedDataIdx, dac_write + cnt, Data[cnt], fpga);
+			formatedDataIdx += ADDRDATASIZE;
+			// address checksum is defined as (bits 0-14: addr, 15: 0)
+			// so, set bit 15 to zero
+			addr = dac_write + cnt;
+			addr &= 0x7FFF;
+			gAddrCheckSum[device][fpga-1] += addr;
+			gCheckSum[device][fpga-1] += Data[cnt];
+		}
+		APS_WriteBlock(device, formated_length, formatedData);
+		free(formatedData);
 	}
 	
-	// always verify the checksum
+	// verify the checksum
 	data = APS_CompareCheckSum(device, fpga);
 	if (!data) {
 		dlog(DEBUG_INFO, "APS_LoadWaveform ERROR: Checksum does not match\n");
@@ -685,7 +661,7 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 		dlog(DEBUG_VERBOSE, "Trigger %s State Machine ... \n", dac_type);
 
 		APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
-	  APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
+		APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
 
 	} else if (trigger_type == HARDWARE_TRIGGER) {
 
@@ -696,7 +672,7 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 		APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
 
 	} else {
-	  dlog(DEBUG_VERBOSE, "Invalid Trigger Type\n");
+		dlog(DEBUG_VERBOSE, "Invalid Trigger Type\n");
 		return -1;
 	}
 
@@ -858,125 +834,6 @@ EXPORT int APS_DisableDac(int device, int dac)
 	return 0;
 }
 
-
-int LoadLinkList_V5(int device, unsigned short *OffsetData, unsigned short *CountData,
-		            int length, int dac)
-/********************************************************************
- *
- * Function Name : APS_LoadLinkList()
- *
- * Description : Loads LinkList to FPGA
- *
- * Inputs :
-*              OffsetData - pointer to link list offsets
-*              CountData - pointer to link list counts
-*              length - length of link list
-*              Dac - dac ID
-*
-* Returns : 0 on success < 0 on failure
-*
-* Error Conditions :
-*
-* Unit Tested on:
-*
-* Unit Tested by:
-*
-********************************************************************/
-{
-	int dac_shift, dac_write_offset, dac_write_cnt;
-	int fpga;
-	int cnt;
-	char * dac_type;
-	int ctrl_reg;
-
-	BYTE * formatedData;
-	BYTE * formatedDataIdx;
-	int formated_length;
-
-	fpga = dac2fpga(dac);
-	if (fpga < 0) {
-		return -1;
-	}
-
-	dlog(DEBUG_INFO,"Loading LinkList length %i into FPGA%i DAC%i \n", length, fpga, dac);
-
-	// setup register addressing based on DAC
-	switch(dac) {
-		case 0:
-			// fall through
-		case 2:
-			dac_type   			= ENVELOPE;
-			dac_shift 			= LL_SIZE_ENVSHIFT;
-			dac_write_offset 	= FPGA_ADDR_ENVLLOFF_WRITE;
-			dac_write_cnt 		= FPGA_ADDR_ENVLLCNT_WRITE;
-			break;
-		case 1:
-			// fall through
-		case 3:
-			dac_type   			= PHASE;
-			dac_shift 			= LL_SIZE_PHSSHIFT;
-			dac_write_offset 	= FPGA_ADDR_PHSLLOFF_WRITE;
-			dac_write_cnt 		= FPGA_ADDR_PHSLLCNT_WRITE;
-			break;
-		default:
-			return -2;
-	}
-
-	if ( length > MAX_LL_LENGTH)  {
-		return -3;
-	}
-
-	// load current cntrl reg
-	ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_LLCTRL, fpga);
-
-  dlog(DEBUG_VERBOSE,"Current Link List Control Reg: 0x%x\n", ctrl_reg);
-
-	// zero current dac settings
-	ctrl_reg &= ~(0xFF << dac_shift);
-
-  dlog(DEBUG_VERBOSE,"Zeroed Link List Control Reg: 0x%x\n", ctrl_reg);
-
-	//set link list size
-	ctrl_reg |= (length << dac_shift);
-
-	//length = length - 1;
-
-	dlog(DEBUG_VERBOSE,"Writing Link List Control Reg: 0x%x\n", ctrl_reg);
-
-	// write control reg
-	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_LLCTRL, ctrl_reg, fpga);
-
-	// load current ctrl reg
-	ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_LLCTRL, fpga);
-
-	dlog(DEBUG_VERBOSE,"Written Link List Control Reg: 0x%x\n", ctrl_reg);
-  dlog(DEBUG_VERBOSE,"Loading Link List %s DAC%i...\n", dac_type, dac);
-
-	// Expanded length 1 byte command 2 bytes addr 2 bytes data per data sample
-	// * 2 from two entries offset and count
-	formated_length  = ADDRDATASIZE * 2 * length;
-	formatedData = (BYTE *) malloc(formated_length);
-	if (!formatedData)
-		return -5;
-	formatedDataIdx = formatedData;
-
-	// Format data as would be expected for FPGA
-	// This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
-
-	for(cnt = 0; cnt < length; cnt++) {
-		APS_FormatForFPGA(formatedDataIdx, dac_write_offset + cnt,OffsetData[cnt], fpga );
-		formatedDataIdx += ADDRDATASIZE;
-		APS_FormatForFPGA(formatedDataIdx, dac_write_cnt + cnt, CountData[cnt], fpga );
-		formatedDataIdx += ADDRDATASIZE;
-	}
-	APS_WriteBlock(device,formated_length, formatedData);
-	free(formatedData);
-
-	dlog(DEBUG_VERBOSE,"Done\n");
-
-	return 0;
-}
-
 int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *CountData,
 		             unsigned short *TriggerData, unsigned short *RepeatData,
 		             int length, int dac, int bank, int validate)
@@ -1093,10 +950,13 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	if (ctrl_reg_read != ctrl_reg) {
 		dlog(DEBUG_VERBOSE, "WARNING: LinkList Control Reg Did Not Write Correctly\n");
 	}
+	
+	// clear checksums
+	APS_ResetCheckSum(device, fpga);
 
 #if 1
   for(cnt = 0; cnt < length; cnt++) {
-    dlog(DEBUG_VERBOSE,"Writting LL Entry: %3i => Addr: 0x%X Count: %i: Repeat %i\n",
+    dlog(DEBUG_VERBOSE,"Writing LL Entry: %3i => Addr: 0x%X Count: %i: Repeat %i\n",
         cnt,dac_write + 4*cnt,  CountData[cnt], RepeatData[cnt]);
     dlog(DEBUG_VERBOSE,"                          TriggerMode: %i TriggerCount %i\n",
         TriggerData[cnt] >> 14,
@@ -1123,24 +983,6 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
     APS_WriteFPGA(device, dac_write + 4*cnt+3, RepeatData[cnt], fpga);
     dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Repeat  Value 0x%X\n",dac_write + 4*cnt+3, RepeatData[cnt]);
 
-    if (validate) {
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt  ,  fpga) ;
-      if (readVal != OffsetData[cnt])
-         dlog(DEBUG_INFO,"Error writing offset 0x%X != 0x%X \n", readVal, OffsetData[cnt]);
-
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+1  ,  fpga) ;
-      if (readVal != CountData[cnt])
-        dlog(DEBUG_INFO,"Error writing count 0x%X != 0x%X \n", readVal, CountData[cnt]);
-
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+2  ,  fpga) ;
-      if (readVal != TriggerData[cnt])
-        dlog(DEBUG_INFO,"Error writing trigger 0x%X != 0x%X \n", readVal, TriggerData[cnt]);
-
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+3  ,  fpga) ;
-      if (readVal != RepeatData[cnt])
-        dlog(DEBUG_INFO,"Error writing repeat 0x%X != 0x%X \n", readVal, RepeatData[cnt]);
-    }
-
   }
 
 	// ADDRDATASIZE_ELL 4 cmd 8 addr 2 offset 2 count 2 trigger 2 repeat
@@ -1161,10 +1003,44 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 								TriggerData[cnt], RepeatData[cnt],
 								fpga );
 		formatedDataIdx += ADDRDATASIZE_ELL;
+		// address checksum is defined as (bits 0-14: addr, 15: 0)
+		// so, set bit 15 to zero
+		gAddrCheckSum[device][fpga-1] += (dac_write + 4*cnt) & 0x7FFF;
+		gAddrCheckSum[device][fpga-1] += (dac_write + 4*cnt+1) & 0x7FFF;
+		gAddrCheckSum[device][fpga-1] += (dac_write + 4*cnt+2) & 0x7FFF;
+		gAddrCheckSum[device][fpga-1] += (dac_write + 4*cnt+3) & 0x7FFF;
+		gCheckSum[device][fpga-1] += OffsetData[cnt];
+		gCheckSum[device][fpga-1] += CountData[cnt];
+		gCheckSum[device][fpga-1] += TriggerData[cnt];
+		gCheckSum[device][fpga-1] += RepeatData[cnt];
 	}
 	APS_WriteBlock(device,formated_length, formatedData);
 	free(formatedData);
 #endif
+
+	// always verify the checksum
+	ULONG data = APS_CompareCheckSum(device, fpga);
+	if (!data) {
+		dlog(DEBUG_INFO, "APS_LoadWaveform ERROR: Checksum does not match\n");
+	}
+	
+	if (validate) {
+      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt  ,  fpga) ;
+      if (readVal != OffsetData[cnt])
+         dlog(DEBUG_INFO,"Error writing offset 0x%X != 0x%X \n", readVal, OffsetData[cnt]);
+
+      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+1  ,  fpga) ;
+      if (readVal != CountData[cnt])
+        dlog(DEBUG_INFO,"Error writing count 0x%X != 0x%X \n", readVal, CountData[cnt]);
+
+      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+2  ,  fpga) ;
+      if (readVal != TriggerData[cnt])
+        dlog(DEBUG_INFO,"Error writing trigger 0x%X != 0x%X \n", readVal, TriggerData[cnt]);
+
+      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+3  ,  fpga) ;
+      if (readVal != RepeatData[cnt])
+        dlog(DEBUG_INFO,"Error writing repeat 0x%X != 0x%X \n", readVal, RepeatData[cnt]);
+    }
 
 	// zero repeat register
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_rpt_reg, 0, fpga);
@@ -1178,9 +1054,10 @@ EXPORT int APS_LoadLinkList(int device,
 		                          unsigned short *TriggerData, unsigned short *RepeatData,
 		                          int length, int dac, int bank, int validate)
 {
-  dlog(DEBUG_VERBOSE,"APS_LoadLinkList\n");
+	dlog(DEBUG_VERBOSE,"APS_LoadLinkList\n");
 	if (gBitFileVersion < VERSION_ELL) {
-		return LoadLinkList_V5(device, OffsetData, CountData, length, dac);
+		dlog(DEBUG_INFO, "Link lists not supported on this bitfile version\n.");
+		return -1;
 	} else {
 		return LoadLinkList_ELL(device, OffsetData, CountData, TriggerData, RepeatData,
 				         length, dac, bank, validate);
@@ -1778,7 +1655,7 @@ EXPORT int APS_ReadAllRegisters(int device, int fpga) {
 	int cnt;
 	int val;
 	static int readCnt = 0;
-	int expected_values[] = {-1,-1,0,-1,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0xdead,-1,-1,0,0};
+	int expected_values[] = {-1,-1,0,-1,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0xc0de,-1,-1,0xbadd,0xbadd};
 
 	dlog(DEBUG_VERBOSE,"====== Register Read %3i ======\n", readCnt++);
 
