@@ -498,6 +498,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             val = aps.programFPGA(DataVec, DataCount, Sel, aps.expected_bit_file_ver);
             fclose(DataFileID);
+            
+            aps.librarycall('Setup DACs', 'APS_SetupDACs');
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

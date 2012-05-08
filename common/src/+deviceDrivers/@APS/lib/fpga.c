@@ -444,8 +444,10 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 		
 		for(cnt = 0; cnt < nbrSamples; cnt++) {
 			data = APS_ReadFPGA(device, dac_read + cnt, fpga);
-			if (data != Data[cnt]) {
-				dlog(DEBUG_VERBOSE,"Error reading back memory: cnt = %i expected 0x%x read 0x%x\n", cnt,Data[cnt], data);
+			// only lower word is valid
+			data &= 0xFFFF;
+			if (data != (Data[cnt] & 0xFFFF)) {
+				dlog(DEBUG_INFO,"Error reading back memory: cnt = %i expected 0x%x read 0x%x\n", cnt, Data[cnt] & 0xFFFF, data);
 				error = 1;
 			}
 		}

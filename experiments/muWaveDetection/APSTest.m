@@ -17,7 +17,7 @@ settings.samplingRate = 1200;
 settings.triggerSource = 'external';
 %settings.seqfile = 'U:\APS\Rabi\RabiBBNAPS12.mat';
 settings.seqfile = 'U:\APS\PiCal\PiCalBBNAPS12.mat';
-%settings.seqfile = 'C:\Qlab software\experiments\muWaveDetection\sequences\EchoTest.mat';
+%settings.seqfile = 'U:\APS\Echo\EchoBBNAPS12.mat';
 settings.seqforce = true;
 
 awg = deviceDrivers.APS();
