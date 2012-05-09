@@ -50,8 +50,8 @@ endif
 endif
 endif
 
-OBJECTS=aps.o fpga.o sha1.o common.o waveform.o
-OBJECTS64=aps64.o fpga64.o sha164.o common64.o waveform64.o
+OBJECTS=aps.o fpga.o sha1.o common.o waveform.o threadedll.o
+OBJECTS64=aps64.o fpga64.o sha164.o common64.o waveform64.o threadedll64.o
 
 ######################## Default Build ########################################
 
