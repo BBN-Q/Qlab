@@ -59,7 +59,7 @@ OBJECTS64=aps64.o fpga64.o sha164.o common64.o waveform64.o
 all: ${LIBNAME} test testLocal ${GLOBAL_ALL}
 
 ${LIBNAME}: ${OBJECTS}
-	${CC}  ${CFLAGS}  -shared  -o ${LIBNAME} ${OBJECTS} ${EXFLAGS}
+	${CC}  ${CFLAGS}  -shared  -o ${LIBNAME} ${OBJECTS} ${EXFLAGS} -lpthread
 
 waveform.o: waveform.c waveform.h
 	${CC}  ${CFLAGS} -c  waveform.c -o waveform.o
@@ -71,16 +71,19 @@ aps.o: libaps.c aps.h
 	${CC}  ${CFLAGS} -c  libaps.c -o aps.o
 
 fpga.o: fpga.c fpga.h aps.h
-	${CC}  ${CFLAGS} -c  fpga.c -o fpga.o
+	${CC}  ${CFLAGS} -c  fpga.c -o ${BUILD}fpga.o
 
 common.o: common.c common.h	
-	${CC}  ${CFLAGS} -c  common.c -o common.o
+	${CC}  ${CFLAGS} -c  common.c -o ${BUILD}common.o
+	
+threadedll.o: threadedll.c threadedll.h	
+	${CC}  ${CFLAGS} -c  threadedll.c -o ${BUILD}threadedll.o
 
 test: test.c ${LIBNAME}
 	${CC} ${CFLAGS} ${LFLAGS} -ggdb -o test test.c
 	
 testLocal: test.c 
-	${CC} ${CFLAGS_STATIC} ${LFLAGS} -ggdb -o testLocal *.c
+	${CC} ${CFLAGS_STATIC} ${LFLAGS} -ggdb -o testLocal *.c -lpthread
 	
 
 ######################## 64-Bit ########################################
@@ -88,7 +91,7 @@ testLocal: test.c
 all64: ${LIBNAME64} test64 testLocal64
 
 ${LIBNAME64}: ${OBJECTS64}
-	${CC64}  ${CFLAGS} -shared  -o ${LIBNAME64} ${OBJECTS64} ${EXFLAGS}
+	${CC64}  ${CFLAGS} -shared  -o ${LIBNAME64} ${OBJECTS64} ${EXFLAGS} -lpthread
 
 waveform64.o: waveform.c waveform.h
 	${CC64}  ${CFLAGS} -c  waveform.c -o waveform64.o
@@ -104,12 +107,15 @@ fpga64.o: fpga.c fpga.h aps.h
 
 common64.o: common.c common.h	
 	${CC64}  ${CFLAGS}  -c  common.c -o common64.o
+
+threadedll64.o: threadedll.c threadedll.h	
+	${CC64}  ${CFLAGS}  -c  threadedll.c -o ${BUILD}threadedll64.o	
 	
 test64: test.c ${LIBNAME64}
 	${CC64} ${CFLAGS} ${LFLAGS} -ggdb -o test64 test.c
 	
 testLocal64: test.c 
-	${CC64} ${CFLAGS_STATIC} ${LFLAGS} -ggdb -o testLocal64 *.c
+	${CC64} ${CFLAGS_STATIC} ${LFLAGS} -ggdb -o testLocal64 *.c -lpthread
 	
 ######################## Misc ########################################
 	
