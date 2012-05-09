@@ -10,6 +10,7 @@ classdef AgilentAP240 < hgsetget
     % Class-specific constant properties
     properties (Constant = true)
         clockTypes = containers.Map({'int', 'ext', 'ref'}, {0, 1, 2});
+        maxAveragingSamples = 8000*1024;
     end % end constant properties
     
     properties (Access = public)
@@ -23,8 +24,8 @@ classdef AgilentAP240 < hgsetget
         acquire_mode;  %fieldnames of value and flags
         clockType; % internal, external, or external reference
         
-        memory;  %fields of record_length and nbrSegments
-        %record_length - Nominal number of samples to record
+        memory;  %fields of recordLength and nbrSegments
+        %recordLength - Nominal number of samples to record
         %(per segment!)
         %nbrSegments - Number of segments to acquire.
         %1 corresponds to the normal single-trace acquisition mode.
@@ -39,7 +40,7 @@ classdef AgilentAP240 < hgsetget
         %corresponds to a trigger before the beginning of the
         %record (post-trigger recording). A negative number
         %corresponds to pre-trigger recording. It can’t be less
-        %than -(sampInterval * record_length), which
+        %than -(sampInterval * recordLength), which
         %corresponds to 100% pre-trigger.
         
         vertical;   %Configures the vertical control parameters
@@ -94,10 +95,10 @@ classdef AgilentAP240 < hgsetget
         %where n is 0 for single instruments
         
         averager;  %Configures the averager
-        %fields of record_length, nbrSegments, num_avg,
+        %fields of recordLength, nbrSegments, num_avg,
         %ditherRange, trigResync, data_start, data_stop
         
-        %record_length  - Number of data samples per waveform segment.
+        %recordLength  - Number of data samples per waveform segment.
         %May assume values between 16 or 32 and the available
         %memory length, in multiples of 16 or 32 as ref to manual
         
@@ -122,10 +123,10 @@ classdef AgilentAP240 < hgsetget
         %trigResync - 0 (no resync), 1 (resync) and 2 (free run)
         
         %data_start - point to start from, value between 16 and
-        %record_length, in samples, need to be multiple of 16
+        %recordLength, in samples, need to be multiple of 16
         
         %data_stop - point to stop at, value between 16 and
-        %record_length ,in samples, need to be multiple of 16
+        %recordLength ,in samples, need to be multiple of 16
         
         timeout = 10000;   %Timeout for acquisition in milliseconds
         
@@ -311,13 +312,13 @@ classdef AgilentAP240 < hgsetget
             AqReadParameters.firstSegment = 0;
             AqReadParameters.nbrSegments = obj.averager.nbrSegments;
             AqReadParameters.firstSampleInSeg = 0;
-            AqReadParameters.nbrSamplesInSeg = obj.averager.record_length;
-            AqReadParameters.segmentOffset = obj.averager.record_length;
-            % SC: dataArraySize should be at least record_length * nbrSegments *
+            AqReadParameters.nbrSamplesInSeg = obj.averager.recordLength;
+            AqReadParameters.segmentOffset = obj.averager.recordLength;
+            % SC: dataArraySize should be at least recordLength * nbrSegments *
             % size_of_dataType - see the discusiion of AcqrsD1_readData function in the
             % Programmer Reference
             
-            AqReadParameters.dataArraySize = (obj.averager.record_length + 32) * obj.averager.nbrSegments * 8;
+            AqReadParameters.dataArraySize = (obj.averager.recordLength + 32) * obj.averager.nbrSegments * 8;
             
             % SC: Segment Descriptor for Averaged Waveforms (readMode = 2,5,6) in AqSegmentDescriptorAvg
             AqReadParameters.segDescArraySize = 40 * obj.averager.nbrSegments;
@@ -331,15 +332,15 @@ classdef AgilentAP240 < hgsetget
             [status dataDesc , ~, AqDataBuffer] = AqD1_readData(obj.instrID, channel, AqReadParameters);
             
             % chop off initial unused points
-            nbrSamples = obj.averager.record_length * obj.averager.nbrSegments;
+            nbrSamples = obj.averager.recordLength * obj.averager.nbrSegments;
             % fix off-by-five(?) error in indexFirstPoint
             firstPt = 6;
             %firstPt = dataDesc.indexFirstPoint;
-            AqDataBuffer = reshape(AqDataBuffer(1:nbrSamples), obj.averager.record_length, obj.averager.nbrSegments);
+            AqDataBuffer = reshape(AqDataBuffer(1:nbrSamples), obj.averager.recordLength, obj.averager.nbrSegments);
             % lop off first 5 points from each segment
             AqDataBuffer = AqDataBuffer(firstPt:end, :);
             
-            times = linspace(firstPt*double(dataDesc.sampTime),double(obj.averager.record_length - 1) * double(dataDesc.sampTime),obj.averager.record_length-firstPt);
+            times = linspace(firstPt*double(dataDesc.sampTime),double(obj.averager.recordLength - 1) * double(dataDesc.sampTime),obj.averager.recordLength-firstPt);
             
             assert(status == 0, 'Error in AqD1_readData: %d', status);
         end
@@ -368,13 +369,13 @@ classdef AgilentAP240 < hgsetget
         end
         
         function val = get.memory(obj)
-            [status record_length nbrSegments] = AqD1_getMemory(obj.instrID);
+            [status recordLength nbrSegments] = AqD1_getMemory(obj.instrID);
             if (status ~= 0)
                 fprintf('Error in AqD1_getMemory: %d', status);
-                val.record_length = -10;
+                val.recordLength = -10;
                 val.nbrSegments = -10;
             else
-                val.record_length = record_length;
+                val.recordLength = recordLength;
                 val.nbrSegments = nbrSegments;
             end
             
@@ -422,9 +423,9 @@ classdef AgilentAP240 < hgsetget
             [status retVal] = AqD1_getAvgConfigInt32(obj.instrID, obj.channel_on, 'NbrSamples');
             if (status ~= 0)
                 fprintf('Error in AqD1_getAvgConfigInt32: %d', status);
-                val.record_length = -10;
+                val.recordLength = -10;
             else
-                val.record_length = retVal;
+                val.recordLength = retVal;
             end
             
             % SC: configure the number of segments
@@ -516,11 +517,11 @@ classdef AgilentAP240 < hgsetget
         
         %%not really useful for the averager mode - left it in anyway
         function obj = set.memory(obj, memVal)
-            if (isfield(memVal, 'record_length') && isfield(memVal, 'nbrSegments'))
-                status = AqD1_configMemory(obj.instrID, memVal.record_length, memVal.nbrSegments);
+            if (isfield(memVal, 'recordLength') && isfield(memVal, 'nbrSegments'))
+                status = AqD1_configMemory(obj.instrID, memVal.recordLength, memVal.nbrSegments);
                 assert(status == 0, 'Error in AqD1_configMemory: %d', status);
             else
-                error('Error in set memory - arg should be struct with fields of record_length and nbrSegments');
+                error('Error in set memory - arg should be struct with fields of recordLength and nbrSegments');
             end
         end
         
@@ -590,6 +591,10 @@ classdef AgilentAP240 < hgsetget
         
         function obj = set.averager(obj, avgVal)
             if(isfield(avgVal, 'recordLength') && isfield(avgVal, 'nbrSegments') && (isfield(avgVal, 'num_avg') || isfield(avgVal, 'nbrWaveforms')) && isfield(avgVal, 'nbrRoundRobins') &&isfield(avgVal, 'ditherRange') && isfield(avgVal, 'trigResync'))
+                
+                %Check we fit the memory of the board
+                assert(avgVal.recordLength*avgVal.nbrSegments < obj.maxAveragingSamples, 'Oops! You have asked for too many total samples: %d where the card can only store %d', avgVal.recordLength*avgVal.nbrSegments, obj.maxAveragingSamples);
+                
                 %Metafunction which configures all of the averaging parameters
                 obj.channel_on = 0;
                 status = obj.config_parameter('NbrSamples', avgVal.recordLength);
@@ -632,7 +637,7 @@ classdef AgilentAP240 < hgsetget
                 status = obj.config_parameter('StopDelay', avgVal.data_stop);
                 assert(status == 0, 'Error in AqD1_configAvgConfigInt32: %d', status);
             else
-                error('Error in set averager - arg should be struct with fields of record_length, nbrSegments, num_avg, ditherRange, trigResync, data_start, and data_stop');
+                error('Error in set averager - arg should be struct with fields of recordLength, nbrSegments, num_avg, ditherRange, trigResync, data_start, and data_stop');
             end
         end
         

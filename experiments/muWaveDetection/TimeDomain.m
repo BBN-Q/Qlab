@@ -325,6 +325,11 @@ set(mainWindow, 'Visible', 'on');
 		% another method inherited from 'experiment'
 		Exp.finalizeData;
         
+        %After a succesful run uncheck the force reload buttons
+        for tmpAWGPanel = AWGTabPanel.Children
+            set(findobj(tmpAWGPanel, 'Tag', 'seqForceBox'), 'Value', false); 
+        end
+        
         %Call the stop button call_back to clean-up
         stop_callback()
     end
