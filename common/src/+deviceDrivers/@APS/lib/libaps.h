@@ -99,6 +99,10 @@ EXPORT int APS_ClearLinkListELL(int device,int dac, int bank);
 EXPORT int APS_SetChannelOffset(int device, int dac, short offset);
 EXPORT short APS_ReadChannelOffset(int device, int dac);
 
+EXPORT int APS_SetTriggerDelay(int device, int dac, short delay);
+EXPORT short APS_ReadTriggerDelay(int device, int dac);
+EXPORT int APS_SetWaveformTriggerMode(int device, int mode);
+
 EXPORT int APS_CompareCheckSum(int device, int fpga);
 EXPORT UINT APS_ResetCheckSum(int device, int fpga);
 EXPORT UINT APS_ResetAllCheckSum();

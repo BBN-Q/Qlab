@@ -1790,7 +1790,7 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int nbrSamples) {
 
 	dac_read = gRegRead | dac_write;
 
-  dlog(DEBUG_VERBOSE,"Clearing Control and Status Register ...\n");
+	dlog(DEBUG_VERBOSE,"Clearing Control and Status Register ...\n");
 
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_CSR, 0x0, fpga);
 
@@ -1859,49 +1859,49 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int nbrSamples) {
 }
 
 EXPORT int APS_ReadLinkListStatus(int device, int dac) {
-  int csr, link_list_status;
-  int fpga;
-
-  int val;
-  int status;
-  char * dac_type;
-
-  fpga = dac2fpga(dac);
-  if (fpga < 0) {
-    return -1;
-  }
-
-  if (gBitFileVersion < VERSION_ELL) {
-    dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
-    return -1;
-  }
-
-  csr = FPGA_OFF_CSR;
-
-  // setup register addressing based on DAC
-  switch(dac) {
-    case 0:
-      // fall through
-    case 2:
-      dac_type = ENVELOPE;
-      link_list_status  = CSRMSK_ENVLLSTATUS_ELL;
-      break;
-    case 1:
-      // fall through
-    case 3:
-      dac_type = PHASE;
-      link_list_status  = CSRMSK_PHSLLSTATUS_ELL;
-      break;
-    default:
-      return -2;
-  }
-  // read CSR
-  val = APS_ReadFPGA(device, gRegRead | csr, fpga);
-  status = (val & link_list_status) == link_list_status;
-
-  dlog(DEBUG_VERBOSE,"CSR = 0x%x LL Status = %i\n", val,status);
-
-  return status;
+	int csr, link_list_status;
+	int fpga;
+	
+	int val;
+	int status;
+	char * dac_type;
+	
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+	
+	if (gBitFileVersion < VERSION_ELL) {
+		dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
+		return -1;
+	}
+	
+	csr = FPGA_OFF_CSR;
+	
+	// setup register addressing based on DAC
+	switch(dac) {
+		case 0:
+			// fall through
+		case 2:
+			dac_type = ENVELOPE;
+			link_list_status  = CSRMSK_ENVLLSTATUS_ELL;
+			break;
+		case 1:
+			// fall through
+		case 3:
+			dac_type = PHASE;
+			link_list_status  = CSRMSK_PHSLLSTATUS_ELL;
+			break;
+		default:
+			return -2;
+	}
+	// read CSR
+	val = APS_ReadFPGA(device, gRegRead | csr, fpga);
+	status = (val & link_list_status) == link_list_status;
+	
+	dlog(DEBUG_VERBOSE,"CSR = 0x%x LL Status = %i\n", val,status);
+	
+	return status;
 }
 
 EXPORT int APS_IsRunning(int device)
@@ -1917,26 +1917,26 @@ EXPORT int APS_IsRunning(int device)
  *
  ********************************************************************/
 {
-  int csrReg1, csrReg2;
-  int dac_sm_enable;
-  int running;
-  // load current cntrl reg
-  csrReg1 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 1);
-  csrReg2 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 2);
-
-  // these bits need to be cleared for the channels to be running
-  dac_sm_enable = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
-
-  // test for output disabled on each channel
-  csrReg1 &= dac_sm_enable;
-  csrReg2 &= dac_sm_enable;
-
-  // or each channel together to determine if the aps is running
-  running = ~csrReg1 | ~csrReg2;
-  if (running)
-    running = 1;  // return 1 if running otherwise return 0;
-
-  return running;
+	int csrReg1, csrReg2;
+	int dac_sm_enable;
+	int running;
+	// load current cntrl reg
+	csrReg1 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 1);
+	csrReg2 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 2);
+	
+	// these bits need to be cleared for the channels to be running
+	dac_sm_enable = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
+	
+	// test for output disabled on each channel
+	csrReg1 &= dac_sm_enable;
+	csrReg2 &= dac_sm_enable;
+	
+	// or each channel together to determine if the aps is running
+	running = ~csrReg1 | ~csrReg2;
+	if (running)
+		running = 1;  // return 1 if running otherwise return 0;
+	
+	return running;
 }
 
 EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
@@ -1945,37 +1945,37 @@ EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
  * offset - signed 14-bit value (-8192, 8192) representing the channel offset
  */
 {
-  int fpga, zero_register_addr;
-  
-  fpga = dac2fpga(dac);
-  if (fpga < 0) {
-    return -1;
-  }
-  
-  switch (dac) {
-    case 0:
-      // fall through
-    case 2:
-      zero_register_addr = FPGA_OFF_DAC02_ZERO;
-      break;
-    case 1:
-      // fall through
-    case 3:
-      zero_register_addr = FPGA_OFF_DAC13_ZERO;
-      break;
-    default:
-      return -2;
-  }
-  
-  // clip the offset value to the allowed range
-  if (offset > 8191)
-    offset = 8191;
-  if (offset < -8191)
-    offset = -8191;
-  dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, offset);
-  
-  APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset, fpga);
-  return 0;
+	int fpga, zero_register_addr;
+	
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+	
+	switch (dac) {
+		case 0:
+			// fall through
+		case 2:
+			zero_register_addr = FPGA_OFF_DAC02_ZERO;
+			break;
+		case 1:
+			// fall through
+		case 3:
+			zero_register_addr = FPGA_OFF_DAC13_ZERO;
+			break;
+		default:
+			return -2;
+	}
+	
+	// clip the offset value to the allowed range
+	if (offset > 8191)
+		offset = 8191;
+	if (offset < -8191)
+		offset = -8191;
+	dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, offset);
+	
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset, fpga);
+	return 0;
 }
 
 EXPORT short APS_ReadChannelOffset(int device, int dac)
@@ -1983,29 +1983,134 @@ EXPORT short APS_ReadChannelOffset(int device, int dac)
  * Read the zero register for the associated channel
  */
 {
-  int fpga, zero_register_addr;
-  
-  fpga = dac2fpga(dac);
-  if (fpga < 0) {
-    return -1;
-  }
-  
-  switch (dac) {
-    case 0:
-      // fall through
-    case 2:
-      zero_register_addr = FPGA_OFF_DAC02_ZERO;
-      break;
-    case 1:
-      // fall through
-    case 3:
-      zero_register_addr = FPGA_OFF_DAC13_ZERO;
-      break;
-    default:
-      return -2;
-  }
-  
-  return APS_ReadFPGA(device, gRegRead | zero_register_addr, fpga);
+	int fpga, zero_register_addr;
+	
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+	
+	switch (dac) {
+		case 0:
+			// fall through
+		case 2:
+			zero_register_addr = FPGA_OFF_DAC02_ZERO;
+			break;
+		case 1:
+			// fall through
+		case 3:
+			zero_register_addr = FPGA_OFF_DAC13_ZERO;
+			break;
+		default:
+			return -2;
+	}
+	
+	return APS_ReadFPGA(device, gRegRead | zero_register_addr, fpga);
+}
+
+EXPORT int APS_SetTriggerDelay(int device, int dac, unsigned short delay)
+/* APS_SetTriggerDelay
+ * Write the trigger delay register for the associated channel
+ * delay - unsigned 16-bit value (0, 65535) representing the trigger delay in units of FPGA clock cycles
+ *         ie., delay of 1 is 3.333 ns at full sampling rate.
+ */
+{
+	int fpga, triggerDelay_register_addr;
+	
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+	
+	switch (dac) {
+		case 0:
+			// fall through
+		case 2:
+			triggerDelay_register_addr = FPGA_OFF_DAC02_TRIG_DELAY;
+			break;
+		case 1:
+			// fall through
+		case 3:
+			triggerDelay_register_addr = FPGA_OFF_DAC13_TRIG_DELAY;
+			break;
+		default:
+			return -2;
+	}
+	
+	dlog(DEBUG_INFO, "Setting DAC%i trigger delay register to %i\n", dac, delay);
+	
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | triggerDelay_register_addr, delay, fpga);
+	return 0;
+}
+
+EXPORT short APS_ReadTriggerDelay(int device, int dac)
+/* APS_ReadTriggerDelay
+ * Read the trigger delay register for the associated channel
+ */
+{
+	int fpga, triggerDelay_register_addr;
+	
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+	
+	switch (dac) {
+		case 0:
+			// fall through
+		case 2:
+			triggerDelay_register_addr = FPGA_OFF_DAC02_TRIG_DELAY;
+			break;
+		case 1:
+			// fall through
+		case 3:
+			triggerDelay_register_addr = FPGA_OFF_DAC13_TRIG_DELAY;
+			break;
+		default:
+			return -2;
+	}
+	
+	return APS_ReadFPGA(device, gRegRead | triggerDelay_register_addr, fpga);
+}
+
+EXPORT int APS_SetWaveformTriggerMode(int device, int dac, int mode)
+/* APS_SetWaveformTriggerMode
+ * Enables or disables the output of a trigger in waveform mode
+ * dac - channel (0-3)
+ * mode - 1 (enable trigger), 0 (disable trigger)
+ */
+{
+	int fpga, triggerMode_register, trigger_mask;
+	
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+
+	switch (dac) {
+		case 0:
+			// fall through
+		case 2:
+			trigger_mask = TRIGLEDMSK_WFMTRIG02;
+			break;
+		case 1:
+			// fall through
+		case 3:
+			trigger_mask = TRIGLEDMSK_WFMTRIG13;
+			break;
+		default:
+			return -2;
+	}
+
+	dlog(DEBUG_INFO, "Setting DAC%i waveform output mode %i\n", dac, mode);
+
+	if (mode) {
+		APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, trigger_mask);
+	} else {
+		APS_ClearBit(device, fpga, FPGA_OFF_TRIGLED, trigger_mask);
+	}
+	
+	return 0;
 }
 
 EXPORT UCHAR APS_ReadStatusCtrl(int device)

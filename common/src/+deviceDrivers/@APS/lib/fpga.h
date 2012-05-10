@@ -71,46 +71,48 @@
 
 // Register Locations
 
-#define FPGA_OFF_CSR 		  0x0
-#define FPGA_OFF_TRIGLED 	0x1
-#define FPGA_OFF_ENVOFF 	0x2
-#define FPGA_OFF_ENVSIZE 	0x3
-#define FPGA_OFF_PHSOFF 	0x4
-#define FPGA_OFF_PHSSIZE 	0x5
-#define FPGA_OFF_VERSION	0x6
-#define FPGA_OFF_LLCTRL		0x7
+#define FPGA_OFF_CSR 	    0x0
+#define FPGA_OFF_TRIGLED    0x1
+#define FPGA_OFF_ENVOFF     0x2
+#define FPGA_OFF_ENVSIZE    0x3
+#define FPGA_OFF_PHSOFF     0x4
+#define FPGA_OFF_PHSSIZE    0x5
+#define FPGA_OFF_VERSION    0x6
+#define FPGA_OFF_LLCTRL	    0x7
 
 // Version 0x10 Additional Registers
 
-#define FPGA_OFF_ELL_ENVLL_A_CTRL 0x7  // A Control Register
-#define FPGA_OFF_ELL_ENVLL_B_CTRL 0x8  // B Control Register
-#define FPGA_OFF_ELL_ENVLL_REPEAT 0x9  // Repeat Count
-#define FPGA_OFF_ELL_PHSLL_A_CTRL 0xA  // A Control Register
-#define FPGA_OFF_ELL_PHSLL_B_CTRL 0xB  // B Control Register
-#define FPGA_OFF_ELL_PHSLL_REPEAT 0xC  // Repeat Count
-#define FPGA_OFF_DATA_CHECKSUM    0xD  // Data Checksum Register
-#define FPGA_OFF_ADDR_CHECKSUM    0xE  // Address Checksum Register
+#define FPGA_OFF_ELL_ENVLL_A_CTRL  0x7  // A Control Register
+#define FPGA_OFF_ELL_ENVLL_B_CTRL  0x8  // B Control Register
+#define FPGA_OFF_ELL_ENVLL_REPEAT  0x9  // Repeat Count
+#define FPGA_OFF_ELL_PHSLL_A_CTRL  0xA  // A Control Register
+#define FPGA_OFF_ELL_PHSLL_B_CTRL  0xB  // B Control Register
+#define FPGA_OFF_ELL_PHSLL_REPEAT  0xC  // Repeat Count
+#define FPGA_OFF_DATA_CHECKSUM     0xD  // Data Checksum Register
+#define FPGA_OFF_ADDR_CHECKSUM     0xE  // Address Checksum Register
 #define FPGA_OFF_DAC02_ZERO       0x10 // DAC0/2 zero offset register
 #define FPGA_OFF_DAC13_ZERO       0x11 // DAC1/3 zero offset register
+#define FPGA_OFF_DAC02_TRIG_DELAY 0x12 // DAC0/2 trigger delay
+#define FPGA_OFF_DAC13_TRIG_DELAY 0x13 // DAC1/3 trigger delay
 
 #define LL_SIZE_PHSSHIFT	8
 #define LL_SIZE_ENVSHIFT	0
 
-#define LLMSK_PHSENABLE		0x4000
-#define LLMSK_PHSMODE		  0x8000
-#define LLMSK_ENVENABLE		0x40
-#define LLMSK_ENVMODE		  0x80
+#define LLMSK_PHSENABLE	    0x4000
+#define LLMSK_PHSMODE	    0x8000
+#define LLMSK_ENVENABLE	      0x40
+#define LLMSK_ENVMODE         0x80
 
-#define CSRMSK_ENVMEMRST 	0x1
-#define CSRMSK_ENVSMRST 	0x2
-#define CSRMSK_ENVSMEN 		0x4
-#define CSRMSK_ENVMEMLCK 	0x8
-#define CSRMSK_ENVTRIGSRC 0x10
+#define CSRMSK_ENVMEMRST     0x1
+#define CSRMSK_ENVSMRST      0x2
+#define CSRMSK_ENVSMEN 	     0x4
+#define CSRMSK_ENVMEMLCK     0x8
+#define CSRMSK_ENVTRIGSRC   0x10
 #define CSRMSK_PHSMEMRST 	0x20
 #define CSRMSK_PHSSMRST 	0x40
 #define CSRMSK_PHSSMEN 		0x80
-#define CSRMSK_PHSMEMLCK 	0x100
-#define CSRMSK_PHSTRIGSRC 0x200
+#define CSRMSK_PHSMEMLCK   0x100
+#define CSRMSK_PHSTRIGSRC  0x200
 
 // Version 0x10 Register Masks
 
@@ -132,18 +134,20 @@
 #define CSRMSK_PHSLLMODE_ELL   0x4000
 #define CSRMSK_PHSLLSTATUS_ELL 0x8000
 
-#define TRIGLEDMSK_ENVSWTRIG 	0x1 // Channel 0/2 internal trigger (1 = enabled, 0 = disabled)
-#define TRIGLEDMSK_PHSSWTRIG 	0x2 // Channel 1/3 internal trigger (1 = enabled, 0 = disabled)
-#define TRIGLEDMSK_SWLED0 		0x4 // internal LED 0
-#define TRIGLEDMSK_SWLED1 		0x8 // internal LED 1
+#define TRIGLEDMSK_ENVSWTRIG    0x1 // Channel 0/2 internal trigger (1 = enabled, 0 = disabled)
+#define TRIGLEDMSK_PHSSWTRIG    0x2 // Channel 1/3 internal trigger (1 = enabled, 0 = disabled)
+#define TRIGLEDMSK_WFMTRIG02    0x4 // Waveform trigger output channel 0/2 (1 = enabled, 0 = disabled)
+#define TRIGLEDMSK_WFMTRIG13    0x8 // Waveform trigger output channel 1/3 (1 = enabled, 0 = disabled)
 #define TRIGLEDMSK_MODE        0x10 // LED mode (0 = PLL sync, 1 = statement machine enabled)
+#define TRIGLEDMSK_SWLED0 	   0x20 // internal LED 0
+#define TRIGLEDMSK_SWLED1 	   0x40 // internal LED 1
 
 #define MAX_WF_LEN_SAMPLES 4092
 #define MAX_WF_AMP_SAMPLES 8192
-#define WF_MODULUS		     4
-#define MAX_WF_OFFSET	     0xFFF
-#define MAX_LL_LENGTH	     64
-#define MAX_LL_LENGTH_ELL  512
+#define WF_MODULUS	          4
+#define MAX_WF_OFFSET     0xFFF
+#define MAX_LL_LENGTH        64
+#define MAX_LL_LENGTH_ELL   512
 
 #define SOFTWARE_TRIGGER 1
 #define HARDWARE_TRIGGER 2
@@ -154,11 +158,11 @@
 
 #define ELL_ENTRY_LENGTH 4
 
-#define PLL_GLOBAL_XOR_BIT 15
-#define PLL_02_XOR_BIT     14
-#define PLL_13_XOR_BIT     13
-#define PLL_02_LOCK_BIT 12
-#define PLL_13_LOCK_BIT 11
+#define PLL_GLOBAL_XOR_BIT     15
+#define PLL_02_XOR_BIT         14
+#define PLL_13_XOR_BIT         13
+#define PLL_02_LOCK_BIT        12
+#define PLL_13_LOCK_BIT        11
 #define REFERENCE_PLL_LOCK_BIT 10
 
 int APS_WriteFPGA(int device, ULONG addr, ULONG data, UCHAR fpga);
