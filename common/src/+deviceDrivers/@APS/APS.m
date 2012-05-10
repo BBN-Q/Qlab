@@ -126,7 +126,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         FPGA0 = 0;
         FPGA1 = 2;
         
-        DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV'};
+        DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV', 'A6001nBT'};
         
     end
     
@@ -865,7 +865,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if ~exist('numSyncChannels', 'var')
                 numSyncChannels = 4;
             end
-            val = aps.librarycall('Test Pll Sync: DAC: %i','APS_TestPllSync',id, numSyncChannels);
+            val = aps.librarycall(sprintf('Test Pll Sync: DAC: %i',id), ...
+                'APS_TestPllSync',id, numSyncChannels);
             if val ~= 0
                 fprintf('Warning: APS::testPllSync returned %i\n', val);
             end
