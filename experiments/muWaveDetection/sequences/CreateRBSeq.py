@@ -10,7 +10,9 @@ from scipy.linalg import expm
 from scipy.constants import pi
 
 from functools import reduce
-from itertools import permutations
+from itertools import product
+
+from random import choice
 
 import csv
 
@@ -75,27 +77,27 @@ Cliff[23] = expm(-2j*(pi/3)*(1/np.sqrt(3))*(-X+Y+Z))
 inverseMap = [0, 3, 2, 1, 6, 5, 4, 9, 8, 7, 10, 11, 12, 13, 14, 15, 17, 16, 19, 18, 21, 20, 23, 22]
 
 #Pulses that we can apply
-generatorPulses = [0, 1, 3, 4, 6, 2, 2, 5, 5]
+generatorPulses = [0, 1, 3, 4, 6, 2, 5]
 #A function that returns the string corresponding to a generator (randomly chooses between Xp and Xm for X)
 def generatorString(G):
     generatorStrings = {0:('QId',), 1:('X90p',), 3:('X90m',), 4:('Y90p',), 6:('Y90m',), 2:('Xp','Xm'), 5:('Yp','Ym')}
-    tmpString = generatorStrings[G]
-    return tmpString[np.random.randint(0, len(tmpString))]
-
+    return choice(generatorStrings[G])
+    
 #Get all generator sequences up to length four TODO: why do we need 4?
-generatorSeqs = [x for x in permutations(generatorPulses,1)] + \
-                [x for x in permutations(generatorPulses,2)] + \
-		[x for x in permutations(generatorPulses,3)] + \
-		[x for x in permutations(generatorPulses,4)] 
+generatorSeqs = [x for x in product(generatorPulses,repeat=1)] + \
+                [x for x in product(generatorPulses,repeat=2)] + \
+		[x for x in product(generatorPulses,repeat=3)]
 
 #Find the effective unitary for each generator sequence
 reducedSeqs = np.array([ reduce(clifford_multiply,x) for x in generatorSeqs ])
-
-#Pick first generator sequence (and thus shortest) that gives each Clifford
-shortestSeqs = [np.nonzero(reducedSeqs==x)[0][0] for x in range(24)]
+iter
+#Pick first generator sequence (and thus shortest) that gives each Clifford and all those that have the same length
+allCliffordSeqs = [np.nonzero(reducedSeqs==x)[0] for x in range(24)]
+seqLengths = [len(generatorSeqs[tmpSeqs[0]]) for tmpSeqs in allCliffordSeqs]
+shortestSeqs = [[tmpSeq for tmpSeq in tmpSeqs if len(generatorSeqs[tmpSeq]) == minSeqLength] for (minSeqLength,tmpSeqs) in zip(seqLengths, allCliffordSeqs)]
 
 #Mean number of generators
-meanNumGens = np.mean([len(generatorSeqs[shortestSeqs[ct]]) for ct in range(24)])
+meanNumGens = np.mean(seqLengths)
 print('Mean number of generators per Clifford is {0}'.format(meanNumGens))
 
 #Generate random sequences
@@ -113,8 +115,8 @@ for tmpSeq in randomSeqs:
     
 #Each Clifford corresponds to a sequence of generators pulses we can apply so convert from sequences of Clifford numbers to generator strings
 #For each sequences of numbers create a list of strings: for each Clifford gate convert each generator in the generator sequence to a string
-IpulseSeqs = [[generatorString(tmpGenCliff) for tmpCliff in tmpSeq for tmpGenCliff in generatorSeqs[shortestSeqs[tmpCliff]] ] for tmpSeq in randomISeqs]
-XpulseSeqs = [[generatorString(tmpGenCliff) for tmpCliff in tmpSeq for tmpGenCliff in generatorSeqs[shortestSeqs[tmpCliff]] ] for tmpSeq in randomXSeqs]
+IpulseSeqs = [[generatorString(tmpGenCliff) for tmpCliff in tmpSeq for tmpGenCliff in generatorSeqs[choice(shortestSeqs[tmpCliff])] ] for tmpSeq in randomISeqs]
+XpulseSeqs = [[generatorString(tmpGenCliff) for tmpCliff in tmpSeq for tmpGenCliff in generatorSeqs[choice(shortestSeqs[tmpCliff])] ] for tmpSeq in randomXSeqs]
 
 #Write out the files now
 with open('RB_ISeqs.txt','wt') as ISeqFID:
