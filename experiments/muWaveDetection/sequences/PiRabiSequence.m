@@ -36,7 +36,7 @@ minWidth = 16+6*CRParams.sigma;
 stepsize = 4;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 
-amps = 6500:50:8000;
+amps = 6500:25:7250;
 pulseLength = 300*ones(numsteps,1);
 
 patseq1  = {pg1.pulse('Xp'), pg1.pulse('QId', 'duration', pulseLength), pg1.pulse('Xp')};

@@ -11,8 +11,8 @@ basename = 'Rabi';
 IQchannels = obj.channelMap.(qubit);
 IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
 
-fixedPt = 6000;
-cycleLength = 16000;
+fixedPt = 2000;
+cycleLength = 19000;
 numsteps = 40; %should be even
 stepsize = 400;
 

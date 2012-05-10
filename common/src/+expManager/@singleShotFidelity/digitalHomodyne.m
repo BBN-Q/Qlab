@@ -46,18 +46,26 @@ function [DI DQ] =  digitalHomodyne(signal, IFfreq, sampInterval, integrationSta
     %Demodulate and filter
     demodSignal = filter(b,a, signal.*repmat(refSignal,[1,size(signal,2)]));
     
+    %Let's decimate the signal down by a factor of eight
+    [b,a] = my_butter(0.5/8);
+    demodSignal = filter(b,a, demodSignal);
+    demodSignal = demodSignal(1:8:end,:);
+    integrationStart = fix(integrationStart/8);
+    L = fix(L/8);
+%     
+%     save(['SSResults-'  datestr(now, 'yyyy-mm-dd-HH-MM-SS')], 'demodSignal');
     %Return the summed real and imaginary parts (as column vectors for no
     %good reason).
-%     weighting = ones(1, size(signal,1));
+    weighting = ones(1, size(demodSignal,1));
     %Add an additional weighting of a filtered (by the cavity) T1 decay
-    T1 = 1e-6;
-    kappa = 2e-6;
-    k = sampInterval/kappa;
-    b = [0, k]; a = [1, k-1];
-    shiftedPts = (1:size(signal,1)) - integrationStart;
-    weighting = filter(b,a, (0.5*(sign(shiftedPts)+1)).*exp(-(shiftedPts*sampInterval/T1)));
+%     T1 = 1e-6;
+%     kappa = 2e-6;
+%     k = sampInterval/kappa;
+%     b = [0, k]; a = [1, k-1];
+%     shiftedPts = (1:size(signal,1)) - integrationStart;
+%     weighting = filter(b,a, (0.5*(sign(shiftedPts)+1)).*exp(-(shiftedPts*sampInterval/T1)));
     weighting = weighting/sum(weighting);
-    demodSignal = demodSignal.*repmat(weighting',1,size(signal,2));
+    demodSignal = demodSignal.*repmat(weighting',1,size(demodSignal,2));
     tmpSum = sum(demodSignal(integrationStart:integrationStart+L-1,:))';
     DI = real(tmpSum);
     DQ = imag(tmpSum);

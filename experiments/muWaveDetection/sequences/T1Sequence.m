@@ -15,7 +15,7 @@ end
 
 basename = 'T1';
 fixedPt = 34000; %40000
-cycleLength = 44000; %44000
+cycleLength = 51000; %44000
 nbrRepeats = 1;
 
 % load config parameters from file

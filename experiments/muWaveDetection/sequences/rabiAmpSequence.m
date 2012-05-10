@@ -15,10 +15,10 @@ end
 
 basename = 'Rabi';
 fixedPt = 1000;
-cycleLength = 16000;
+cycleLength = 18000;
 numsteps = 81; % 81 or 100
 nbrRepeats = 1;
-stepsize = 200; % 200 or 80
+stepsize = 100; % 200 or 80
 
 % load config parameters from files
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
@@ -33,7 +33,7 @@ pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', 
 %pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
 amps = -((numsteps-1)/2)*stepsize:stepsize:((numsteps-1)/2)*stepsize;
-%amps = 0:stepsize:(numsteps-1)*stepsize;
+amps = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {{pg.pulse('Xtheta', 'amp', amps)}};
 calseq = {};
 

@@ -14,8 +14,8 @@ elseif length(varargin) > 2
 end
 
 basename = 'Ramsey';
-fixedPt = 20000;
-cycleLength = 30000;
+fixedPt = 14000;
+cycleLength = 31000;
 nbrRepeats = 1;
 
 % load config parameters from file
@@ -31,6 +31,7 @@ numsteps = 100; %150
 stepsize = 120; %24 (300)
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 anglepts = 0:pi/8:(numsteps-1)*pi/8;
+anglepts = -anglepts;
 anglepts = 0;
 patseq = {{...
     pg.pulse('X90p'), ...
