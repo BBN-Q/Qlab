@@ -71,6 +71,8 @@ EXPORT int APS_SetLEDMode(int device, int fpga, int mode);
 EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int expectedVersion);
 EXPORT int APS_SetupPLL(int device);
 EXPORT int APS_SetupVCXO(int device);
+EXPORT int APS_SetupDAC(int device, int dac);
+EXPORT int APS_SetupDACs(int device);
 
 EXPORT int APS_IsRunning(int device);
 

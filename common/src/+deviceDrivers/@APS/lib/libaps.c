@@ -1213,6 +1213,113 @@ EXPORT int APS_SetupPLL(int device)
 	return 0;
 }
 
+EXPORT int APS_SetupDAC(int device, int dac)
+/*
+ * APS_SetupDAC
+ * Description: Enables the data-skew monitoring and auto-calibration
+ * inputs: dac = 0, 1, 2, or 3
+ */
+{
+	BYTE data;
+	BYTE SD, MSD, MHD;
+	BYTE edge_MSD, edge_MHD;
+	ULONG interrupt_addr, controller_addr, sd_addr, msd_mhd_addr;
+	int check;
+	// For DAC SPI writes, we put DAC select in bits 6:5 of address
+	interrupt_addr = 0x1 | (dac << 5);
+	controller_addr = 0x6 | (dac << 5);
+	sd_addr = 0x5 | (dac << 5);
+	msd_mhd_addr = 0x4 | (dac << 5);
+	
+	if (dac < 0 || dac > 3) {
+		dlog(DEBUG_INFO, "APS_SetupDAC ERROR: Unknown dac %i\n", dac);
+		return -1;
+	}
+	dlog(DEBUG_INFO, "Setting up DAC%i\n", dac);
+
+	// Step 1: calibrate and set the LVDS controller.
+	// Ensure that surveilance and auto modes are off
+	// get initial states of registers
+	APS_ReadSPI(device, APS_DAC_SPI, interrupt_addr, &data);
+	dlog(DEBUG_VERBOSE, "Reg 0x%x Val 0x%x\n", interrupt_addr & 0x1F, data & 0xFF);
+	APS_ReadSPI(device, APS_DAC_SPI, msd_mhd_addr, &data);
+	dlog(DEBUG_VERBOSE, "Reg 0x%x Val 0x%x\n", msd_mhd_addr & 0x1F, data & 0xFF);
+	APS_ReadSPI(device, APS_DAC_SPI, sd_addr, &data);
+	dlog(DEBUG_VERBOSE, "Reg 0x%x Val 0x%x\n", sd_addr & 0x1F, data & 0xFF);
+	APS_ReadSPI(device, APS_DAC_SPI, controller_addr, &data);
+	dlog(DEBUG_VERBOSE, "Reg 0x%x Val 0x%x\n", controller_addr & 0x1F, data & 0xFF);
+	data = 0;
+	APS_WriteSPI(device, APS_DAC_SPI, controller_addr, &data);
+	
+	// Slide the data valid window left (with MSD) and check for the interrupt
+	SD = 0;  //(sample delay nibble, stored in Reg. 5, bits 7:4)
+	MSD = 0; //(setup delay nibble, stored in Reg. 4, bits 7:4)
+	MHD = 0; //(hold delay nibble,  stored in Reg. 4, bits 3:0)
+	data = SD << 4;
+	APS_WriteSPI(device, APS_DAC_SPI, sd_addr, &data);
+	
+	for (MSD = 0; MSD < 16; MSD++) {
+		dlog(DEBUG_VERBOSE, "Setting MSD: %i\n", MSD);
+		data = (MSD << 4) | MHD;
+		APS_WriteSPI(device, APS_DAC_SPI, msd_mhd_addr, &data);
+		dlog(DEBUG_VERBOSE2, "Write reg 0x%x, value 0x%x\n", msd_mhd_addr & 0x1F, data & 0xFF);
+		//APS_ReadSPI(device, APS_DAC_SPI, msd_mhd_addr, &data);
+		//dlog(DEBUG_VERBOSE2, "Read reg 0x%x, value 0x%x\n", msd_mhd_addr & 0x1F, data & 0xFF);
+		APS_ReadSPI(device, APS_DAC_SPI, sd_addr, &data);
+		dlog(DEBUG_VERBOSE2, "Read reg 0x%x, value 0x%x, ", sd_addr & 0x1F, data & 0xFF);
+		check = data & 1;
+		dlog(DEBUG_VERBOSE2, " Check %i\n", check);
+		if (!check)
+			break;
+	}
+	edge_MSD = MSD;
+	dlog(DEBUG_INFO, "Found MSD = %i\n", edge_MSD);
+	
+	// Clear the MSD, then slide right (with MHD)
+	MSD = 0;
+	for (MHD = 0; MHD < 16; MHD++) {
+		dlog(DEBUG_VERBOSE, "Setting MHD: %i\n", MHD);
+		data = (MSD << 4) | MHD;
+		APS_WriteSPI(device, APS_DAC_SPI, msd_mhd_addr, &data);
+		APS_ReadSPI(device, APS_DAC_SPI, sd_addr, &data);
+		dlog(DEBUG_VERBOSE2, "Read 0x%x, ", data & 0xFF);
+		check = data & 1;
+		dlog(DEBUG_VERBOSE2, " Check %i\n", check);
+		if (!check)
+			break;
+	}
+	edge_MHD = MHD;
+	dlog(DEBUG_INFO, "Found MHD = %i\n", edge_MHD);
+	SD = (edge_MHD - edge_MSD) / 2;
+	dlog(DEBUG_INFO, "Setting SD = %i\n", SD);
+	
+	// Clear MSD and MHD
+	MHD = 0;
+	data = (MSD << 4) | MHD;
+	APS_WriteSPI(device, APS_DAC_SPI, msd_mhd_addr, &data);
+	// Set the optimal sample delay (SD)
+	data = SD << 4;
+	APS_WriteSPI(device, APS_DAC_SPI, sd_addr, &data);
+	
+	// AD9376 data sheet advises us to enable surveilance and auto modes, but this 
+	// has introduced output glitches in limited testing
+	// set the filter length, threshold, and enable surveilance mode and auto mode
+	/*int filter_length = 12;
+	int threshold = 1;
+	data = (1 << 7) | (1 << 6) | (filter_length << 2) | (threshold & 0x3);
+	APS_WriteSPI(device, APS_DAC_SPI, controller_addr, &data);
+	*/
+	return 0;
+}
+
+EXPORT int APS_SetupDACs(int device)
+{
+	int i;
+	for (i = 0; i < 4; i++) {
+		APS_SetupDAC(device, i);
+	}
+	return 0;
+}
 
 APS_SPI_REC PllFinish[] =
 {

@@ -23,7 +23,10 @@ aps_dac2_r10_p25.bit - p20, with debug header signals removed.
                      - Added "on_led" register definition (Trig/LED Register bit 0x0010)
                      - When "on_led" is '0' (default) panel LED = all PLLs locked
                      - When "on_led" is '1' panel LED = either channel is running (state machine not in reset)
-aps_dac2_r10_p27.bit - p25, with added logic to insure checksum registers occur only once per cycle 
+aps_dac2_r10_p27.bit - p25, with added logic to insure checksum registers occur only once per cycle
+aps_dac2_r10_p28.bit - Added Trigger Offset Registers (0x12, 0x13)
+                       Rearranged the TRIG/LED Register bit fields and added "Waveform Mode Output Trigger Enable" bits
+                       Added trigger output delay logic (2-stage counter), using the Trigger Offset Registers (LL Mode Only) 
 
 
 =================
