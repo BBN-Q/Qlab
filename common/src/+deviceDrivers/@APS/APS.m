@@ -148,13 +148,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             d.bit_file_path = script_path(1:baseIdx);
             
             % init channel structs and waveform objects
-            d.chan_1 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
+            d.chan_1 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'trigDelay', 0);
             d.chan_1.waveform = APSWaveform();
-            d.chan_2 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
-            d.chan_2.waveform = APSWaveform();
-            d.chan_3 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
-            d.chan_3.waveform = APSWaveform();
-            d.chan_4 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
+            d.chan_2 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'trigDelay', 0);
+            d.chan_2.waveform = APSWaveform();                                                 , 'trigDelay', 0
+            d.chan_3 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'trigDelay', 0);
+            d.chan_3.waveform = APSWaveform();                                                 , 'trigDelay', 0
+            d.chan_4 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'trigDelay', 0);
             d.chan_4.waveform = APSWaveform();
         end
         
@@ -864,6 +864,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             val = aps.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*aps.MAX_WAVEFORM_VALUE);
             aps.(['chan_' num2str(ch)]).offset = offset;
         end
+
+		function val = setTriggerDelay(aps, ch, delay)
+            val = aps.librarycall('Set channel trigger delay','APS_SetTriggerDelay', ch-1, delay);
+            aps.(['chan_' num2str(ch)]).trigDelay = delay;
+        end
         
         function val = setupPLL(aps)
             val = aps.librarycall('Setup PLL', 'APS_SetupPLL');
@@ -923,14 +928,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 'APS_TestWaveformMemory',id,numBytes);
         end
         
-        function val =  readLinkListStatus(aps,id)
+        function val = readLinkListStatus(aps,id)
             val = aps.librarycall(sprintf('Read Link List Status'), ...
                 'APS_ReadLinkListStatus',id);
-        end
-        
-        function setModeR5(aps)
-            aps.bit_file = 'cbl_aps2_r5_d6ma_fx.bit';
-            aps.expected_bit_file_ver = 5;
         end
         
         function val = readStatusCtrl(aps)

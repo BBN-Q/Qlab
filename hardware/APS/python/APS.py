@@ -433,6 +433,9 @@ class APS:
     def set_offset(self, ch, offset):
         return self.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*self.MAX_WAVEFORM_VALUE)
         
+    def set_offset(self, ch, delay):
+       return self.librarycall('Set channel trigger delay','APS_SetTriggerDelay', ch-1, delay)
+        
     def load_sequence_file(self, filename, mode, channelNum=None):
         '''
         Load a complete 4 channel linklist file.close
