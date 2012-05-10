@@ -181,4 +181,8 @@ classdef MixerOptimizer < expManager.expBase
         
         
     end
+    
+    methods(Static)
+       [bestOffset, goodOffsetPts, measPowers] = find_null_offset(measPowers, xPts)
+    end
 end

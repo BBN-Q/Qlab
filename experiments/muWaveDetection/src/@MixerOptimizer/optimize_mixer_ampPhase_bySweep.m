@@ -96,9 +96,9 @@ for ct = 1:length(ampPts);
     set(tmpLine,'YData', measPowers1);
     drawnow()
 end
-[bestAmp, goodXPts, goodPowers] = find_null_offset(measPowers1,ampPts);
+[bestAmp, fitData] = obj.find_null_offset(measPowers1,ampPts);
 fprintf('Found best amplitude factor of %f on first iteration.\n',bestAmp/awgAmp);
-plot(axesHAmp, goodXPts/awgAmp, goodPowers,'r--')
+plot(axesHAmp, ampPts/awgAmp, fitData,'r--')
 drawnow()
 
 %Now we scan the channel skew withe amp factor set appropriately
@@ -112,9 +112,9 @@ for ct = 1:length(skewPts);
     drawnow()
 end
 
-[bestSkew, goodXPts, goodPowers] = find_null_offset(measPowers2,skewPts);
+[bestSkew, fitData] = obj.find_null_offset(measPowers2, skewPts);
 fprintf('Found best skew angle of %f on first iteration.\n',bestSkew*180/pi);
-plot(axesHPhase, goodXPts*180/pi, goodPowers,'r--')
+plot(axesHPhase, skewPts*180/pi, fitData,'r--')
 drawnow()
 
 %Finally we rescan the amp factor
@@ -129,16 +129,16 @@ for ct = 1:length(ampPts);
     set(tmpLine,'YData', measPowers3);
     drawnow()
 end
-[bestAmp, goodXPts, goodPowers] = find_null_offset(measPowers3,ampPts);
+[bestAmp, fitData] = obj.find_null_offset(measPowers3,ampPts);
 fprintf('Found best amplitude factor of %f on second iteration.\n',bestAmp/awgAmp);
-plot(axesHAmp, goodXPts/awgAmp, goodPowers,'r--')
+plot(axesHAmp, ampPts/awgAmp, fitData,'r--')
 drawnow
 
 ampFactor = bestAmp/awgAmp;
 
 fprintf('Optimal amp/phase parameters:\n');
 fprintf('a: %.3g, skew: %.3f (%.3f degrees)\n', [ampFactor, bestSkew, bestSkew*180/pi]);
-fprintf('SSB power: %.2f\n', min(goodPowers));
+fprintf('SSB power: %.2f\n', min(measPowers3));
 
 % correction transformation
 T = [ampFactor ampFactor*tan(bestSkew); 0 sec(bestSkew)];
@@ -157,26 +157,3 @@ obj.setInstrument(bestAmp, bestSkew);
     end
 end
 
-function [bestOffset, goodOffsetPts, measPowers] = find_null_offset(measPowers, xPts)
-%Find the offset corresponding to the minimum power with some crude
-%spike detection and removal
-
-%First apply an n-pt median filter
-n = 5;
-%Extrapolate the first and last points
-extendedPowers = [measPowers(1)*ones(1,floor(n/2)), measPowers, measPowers(end)*ones(1,floor(n/2))];
-filteredPowers = zeros(1,length(measPowers));
-shift = floor(n/2);
-for ct = 1:length(measPowers)
-    filteredPowers(ct) = median(extendedPowers(ct:ct+2*shift));
-end
-
-%We arbitrarily choose a cutoff of 10dB spikes
-goodPts = find(abs(measPowers - filteredPowers) < 10);
-
-goodOffsetPts = xPts(goodPts);
-measPowers = measPowers(goodPts);
-
-[~, goodIdx] = min(measPowers);
-bestOffset = goodOffsetPts(goodIdx);
-end

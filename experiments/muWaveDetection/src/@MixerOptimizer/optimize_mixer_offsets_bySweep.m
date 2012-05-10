@@ -66,10 +66,10 @@ for ct = 1:length(offsetPts)
     drawnow()
 end
 
-[i_offset, goodOffsetPts, goodPowers] = find_null_offset(measPowers1, offsetPts);
+[i_offset, fitData] = obj.find_null_offset(measPowers1, offsetPts);
 fprintf('Found I offset of %f on first iteration\n',i_offset);
 
-plot(axesH,goodOffsetPts, goodPowers,'b--');
+plot(axesH, offsetPts, fitData,'b--');
 drawnow()
 
 %Sweep the Q with I at the new best pt
@@ -86,10 +86,10 @@ for ct = 1:length(offsetPts)
     drawnow()
 end
 
-[q_offset, goodOffsetPts, goodPowers]  = find_null_offset(measPowers2, offsetPts);
+[q_offset, fitData]  = obj.find_null_offset(measPowers2, offsetPts);
 fprintf('Found Q offset of %f on first iteration\n',q_offset);
 
-plot(axesH,goodOffsetPts, goodPowers,'r--')
+plot(axesH, offsetPts, fitData,'r--')
 drawnow()
 
 %Sweep the I again with Q at best pt
@@ -105,9 +105,9 @@ for ct = 1:length(offsetPts)
     drawnow()
 end
 
-[i_offset, goodOffsetPts, goodPowers] = find_null_offset(measPowers3, offsetPts);
+[i_offset, fitData] = obj.find_null_offset(measPowers3, offsetPts);
 fprintf('Found I offset of %f on second iteration\n',i_offset);
-plot(axesH,goodOffsetPts, goodPowers,'g--')
+plot(axesH, offsetPts, fitData,'g--')
 
 legend({'First I Sweep','First Q Sweep', 'Second I Sweep'})
 drawnow()
@@ -170,27 +170,4 @@ sa.peakAmplitude();
 
 end
 
-function [bestOffset, goodOffsetPts, measPowers] = find_null_offset(measPowers, xPts)
-%Find the offset corresponding to the minimum power with some crude
-%spike detection and removal
-
-%First apply an n-pt median filter
-n = 5;
-%Extrapolate the first and last points
-extendedPowers = [measPowers(1)*ones(1,floor(n/2)), measPowers, measPowers(end)*ones(1,floor(n/2))];
-filteredPowers = zeros(1,length(measPowers));
-shift = floor(n/2);
-for ct = 1:length(measPowers)
-    filteredPowers(ct) = median(extendedPowers(ct:ct+2*shift));
-end
-
-%We arbitrarily choose a cutoff of 6dB spikes
-goodPts = find(abs(measPowers - filteredPowers) < 10);
-
-goodOffsetPts = xPts(goodPts);
-measPowers = measPowers(goodPts);
-
-[~, goodIdx] = min(measPowers);
-bestOffset = goodOffsetPts(goodIdx);
-end
 
