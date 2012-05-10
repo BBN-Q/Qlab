@@ -180,6 +180,9 @@ int APS_Init()
 		waveforms[cnt] = 0;
 	}
 
+	// init thread data
+	APS_InitLinkListThreads();
+
 	return 0;
 }
 

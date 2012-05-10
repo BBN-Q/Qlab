@@ -35,6 +35,7 @@ int APS_InitLinkListThreads() {
 			linkListThreadData[dev][chan].channel = chan;
 		}
 	}
+	return 0;
 }
 
 void * APS_LinkListThread(void * data) {
@@ -42,10 +43,9 @@ void * APS_LinkListThread(void * data) {
 	threadData = (linkListThreadData_t *) data;
 
 	while(threadData->runThread) {
-		while(1) {
-			dlog(DEBUG_INFO,"Dev: %i  Channel: %i Hello World\n", threadData->dev, threadData->channel);
-			sleep(1);
-		}
+		dlog(DEBUG_INFO,"Dev: %i  Channel: %i Hello World: Addr: 0x%x\n", threadData->dev, threadData->channel, threadData);
+		sleep(1);
+
 	}
 	pthread_exit(NULL);
 }
@@ -65,7 +65,7 @@ EXPORT int APS_StartLinkListThread(int device, int channel) {
 
 	threadData->runThread = 1;
 
-	dlog(DEBUG_INFO,"Starting thread for device: %i channel: %i\n, device, channel");
+	dlog(DEBUG_INFO,"Starting thread for device: %i channel: %i data addr: 0x%x\n", device, channel, threadData);
 
 	int rc;
 	rc = pthread_create(channelThread,NULL,APS_LinkListThread, (void *) threadData);
@@ -80,6 +80,7 @@ EXPORT int APS_StopLinkListThread(int device, int channel) {
 
 	if (channel < 0 || channel >= MAX_APS_CHANNELS) return APSERR_INVALID_CHANNEL;
 
-	dlog(DEBUG_INFO,"Stoping thread for device: %i channel: %i\n, device, channel");
+	dlog(DEBUG_INFO,"Stopping thread for device: %i channel: %i\n", device, channel);
 	linkListThreadData[device][channel].runThread = 0;
+	return 0;
 }

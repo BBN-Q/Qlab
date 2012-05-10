@@ -1010,6 +1010,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function setDebugLevel(aps, level)
             calllib(aps.library_name, 'APS_SetDebugLevel', level);
         end
+        
+        function startThreads(aps, channel)
+            val = aps.librarycall('Start threads', 'APS_StartLinkListThread', channel);
+        end
+        
+        function stopThreads(aps, channel)
+             val = aps.librarycall('Start threads', 'APS_StopLinkListThread', channel);
+        end
     end
     methods(Static)
                 
