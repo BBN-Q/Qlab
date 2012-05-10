@@ -499,7 +499,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             val = aps.programFPGA(DataVec, DataCount, Sel, aps.expected_bit_file_ver);
             fclose(DataFileID);
             
-            aps.librarycall('Setup DACs', 'APS_SetupDACs');
+            aps.setupDACs();
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -865,12 +865,16 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.(['chan_' num2str(ch)]).offset = offset;
         end
         
-        function setupPLL(aps)
+        function val = setupPLL(aps)
             val = aps.librarycall('Setup PLL', 'APS_SetupPLL');
         end
         
-        function setupVCX0(aps)
+        function val = setupVCX0(aps)
             val = aps.librarycall('Setup VCX0', 'APS_SetupVCXO');
+        end
+        
+        function val = setupDACs(aps)
+           val = aps.librarycall('Setup DACs', 'APS_SetupDACs');
         end
         
         function aps = set.samplingRate(aps, rate)
