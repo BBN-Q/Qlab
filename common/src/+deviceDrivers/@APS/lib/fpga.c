@@ -2043,7 +2043,7 @@ EXPORT int APS_SetTriggerDelay(int device, int dac, unsigned short delay)
 	return 0;
 }
 
-EXPORT short APS_ReadTriggerDelay(int device, int dac)
+EXPORT unsigned short APS_ReadTriggerDelay(int device, int dac)
 /* APS_ReadTriggerDelay
  * Read the trigger delay register for the associated channel
  */
@@ -2080,7 +2080,7 @@ EXPORT int APS_SetWaveformTriggerMode(int device, int dac, int mode)
  * mode - 1 (enable trigger), 0 (disable trigger)
  */
 {
-	int fpga, triggerMode_register, trigger_mask;
+	int fpga, trigger_mask;
 	
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {

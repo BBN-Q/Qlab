@@ -151,9 +151,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             d.chan_1 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'trigDelay', 0);
             d.chan_1.waveform = APSWaveform();
             d.chan_2 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'trigDelay', 0);
-            d.chan_2.waveform = APSWaveform();                                                 , 'trigDelay', 0
+            d.chan_2.waveform = APSWaveform();
             d.chan_3 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'trigDelay', 0);
-            d.chan_3.waveform = APSWaveform();                                                 , 'trigDelay', 0
+            d.chan_3.waveform = APSWaveform();
             d.chan_4 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'trigDelay', 0);
             d.chan_4.waveform = APSWaveform();
         end
