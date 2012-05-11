@@ -14,8 +14,8 @@ elseif length(varargin) > 2
 end
 
 basename = 'Ramsey';
-fixedPt = 14000;
-cycleLength = 31000;
+fixedPt = 19000;
+cycleLength = 36000;
 nbrRepeats = 1;
 
 % load config parameters from file
@@ -27,12 +27,11 @@ IQkey = qubitMap.(qubit).IQkey;
 % params.(IQkey).T = eye(2);
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
 
-numsteps = 100; %150
+numsteps = 150; %150
 stepsize = 120; %24 (300)
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 anglepts = 0:pi/8:(numsteps-1)*pi/8;
-anglepts = -anglepts;
-anglepts = 0;
+% anglepts = 0;
 patseq = {{...
     pg.pulse('X90p'), ...
     pg.pulse('QId', 'width', delaypts), ...

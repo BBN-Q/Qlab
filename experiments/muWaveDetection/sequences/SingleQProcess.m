@@ -15,7 +15,7 @@ end
 
 basename = 'SingleQProcess';
 fixedPt = 3000;
-cycleLength = 13000;
+cycleLength = 20000;
 nbrRepeats = 2;
 
 % load config parameters from file
@@ -40,12 +40,14 @@ end
 %The map we want to characterize
 %Figure out the approximate nutation frequency calibration from the
 %X180 and the the samplingRate
-Xp = pg.pulse('Xp');
-xpulse = Xp(1,0);
-nutFreq = 0.5/(sum(xpulse)/pg.samplingRate);
-
-% process = pg.pulse('Utheta', 'rotAngle', -2*pi/3, 'polarAngle', acos(1/sqrt(3)) , 'aziAngle', pi/4, 'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', 0);
-process = pg.pulse('QId', 'rotAngle', pi/2, 'polarAngle', 0, 'aziAngle', 0,'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', 0);
+% Xp = pg.pulse('Xp');
+% xpulse = Xp(1,0);
+% nutFreq = 0.5/(sum(xpulse)/pg.samplingRate);
+% 
+% % process = pg.pulse('Utheta', 'rotAngle', -2*pi/3, 'polarAngle', acos(1/sqrt(3)) , 'aziAngle', pi/4, 'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', 0);
+% process = pg.pulse('QId', 'rotAngle', pi/2, 'polarAngle', 0, 'aziAngle', 0,'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', 0);
+%process = pg.pulse('Xtheta', 'amp', qParams.pi2Amp*(1.2));
+process = pg.pulse('X90p');
 for ii = 1:6
     for jj = 1:6
         patseq{end+1} = { pulseLib.(pulses{ii}), process, pulseLib.(pulses{jj}) };

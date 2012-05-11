@@ -15,7 +15,7 @@ end
 
 basename = 'APE';
 fixedPt = 6000;
-cycleLength = 19000;
+cycleLength = 23000;
 nbrRepeats = 2;
 
 % load config parameters from files
@@ -33,7 +33,7 @@ pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', 
 angle = pi/2;
 numPsQId = 4; % number pseudoidentities
 numsteps = 11; %number of drag parameters (11)
-deltamax=1.0;
+deltamax=0.0;
 deltamin=-1.0;
 delta=linspace(deltamin,deltamax,numsteps);
 
