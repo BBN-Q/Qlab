@@ -15,37 +15,28 @@
 waveform_t * WF_Init() {
   waveform_t * wfArray;
 
+  dlog(DEBUG_INFO,"WF_Init\n");
+
   wfArray = (waveform_t *) malloc (MAX_APS_CHANNELS * sizeof(waveform_t));
 
   if (!wfArray) {
     dlog(DEBUG_INFO,"Failed to allocate memory for waveform array\n");
   }
 
-  int cnt, bank;
+  // zero contents on memory
+  memset(wfArray,0, MAX_APS_CHANNELS * sizeof(waveform_t));
 
-  for (cnt = 0; cnt < MAX_APS_CHANNELS; cnt++) {
-    wfArray[cnt].pData = 0;
-    wfArray[cnt].pFormatedData = 0;
-    wfArray[cnt].offset = 0.0;
-    wfArray[cnt].scale = 1.0;
-    wfArray[cnt].allocatedLength = 0;
-    wfArray[cnt].isLoaded = 0;
-
-    for (bank = 0; bank < 2; bank++) {
-      wfArray[cnt].linkListBanks[bank].count = 0;
-      wfArray[cnt].linkListBanks[bank].offset = 0;
-      wfArray[cnt].linkListBanks[bank].trigger = 0;
-      wfArray[cnt].linkListBanks[bank].repeat = 0;
-      wfArray[cnt].linkListBanks[bank].length = 0;
-    }
-
-  }
+  int channel;
+  for(channel = 0; channel < MAX_APS_CHANNELS; channel++)
+	  wfArray[channel].scale = 1.0;
 
   return wfArray;
 }
 
 void WF_Destroy(waveform_t * wfArray) {
   int cnt;
+
+  dlog(DEBUG_VERBOSE2,"WF_Destroy: 0x%x\n", wfArray);
 
   if (!wfArray) return; // waveform array does not exist
 
@@ -61,6 +52,8 @@ void WF_Destroy(waveform_t * wfArray) {
 
 int    WF_SetWaveform(waveform_t * wfArray, int channel, float * data, int length) {
   if (!wfArray) return 0;
+
+  dlog(DEBUG_VERBOSE,"SetWaveform channel %i length %i\n", channel, length);
 
   // free any memory associated with channel if it exists
   WF_Free(wfArray,channel);
@@ -100,26 +93,36 @@ int    WF_SetWaveform(waveform_t * wfArray, int channel, float * data, int lengt
   return 0;
 }
 
-int    WF_Free(waveform_t * wfArray, int channel) {
+int WF_Free(waveform_t * wfArray, int channel) {
   if (!wfArray) return 0;
+
+  dlog(DEBUG_VERBOSE2,"WF_Free Channel: %i\n", channel);
+
+  dlog(DEBUG_VERBOSE2,"wfArray[channel] = 0x%x\n", &(wfArray[channel]));
+  dlog(DEBUG_VERBOSE2,"wfArray[channel].pData = 0x%x\n", wfArray[channel].pData);
+  dlog(DEBUG_VERBOSE2,"wfArray[channel].pFormatedData = 0x%x\n", wfArray[channel].pFormatedData);
 
   if (wfArray[channel].pData) free(wfArray[channel].pData);
   if (wfArray[channel].pFormatedData) free(wfArray[channel].pFormatedData);
+
+  int bank;
+
+  for (bank = 0; bank < MAX_APS_BANKS; bank++) {
+    WF_FreeBank(&(wfArray[channel].linkListBanks[bank]));
+  }
+
 
   // reset pointers to null
   wfArray[channel].pData = 0;
   wfArray[channel].pFormatedData = 0;
 
-  int bank;
-
-  for (bank = 0; bank < 2; bank++) {
-    WF_FreeBank(&(wfArray[channel].linkListBanks[bank]));
-  }
-
   return 0;
 }
 
 void WF_FreeBank(bank_t * bank) {
+
+  dlog(DEBUG_VERBOSE2,"WF_FreeBank\n");
+
   if (bank->count)   free(bank->count);
   if (bank->offset)  free(bank->offset);
   if (bank->trigger) free(bank->trigger);
@@ -131,6 +134,15 @@ void WF_FreeBank(bank_t * bank) {
   bank->trigger = 0;
   bank->repeat = 0;
   bank->length = 0;
+}
+
+bank_t * WF_GetLinkListBank(waveform_t * wfArray, int channel, unsigned int bank) {
+	bank_t * ret;
+	if (!wfArray) return 0;
+	if (bank > 1) return 0;
+
+	ret = &(wfArray[channel].linkListBanks[bank]);
+	return ret;
 }
 
 void  WF_SetOffset(waveform_t * wfArray,int channel, float offset) {
@@ -192,10 +204,14 @@ void   WF_Prep(waveform_t * wfArray, int channel) {
         maxAbsValue = abs(wfArray[channel].pData[cnt]);
   }
 
+  printf("Prep maxABS = %f scale = %f offset = %i MAX_WF_VALUE = %f\n", maxAbsValue, scale, offset, MAX_WF_VALUE);
   scale = wfArray[channel].scale * 1.0 / maxAbsValue;
+  printf("Prep maxABS = %f scale = %f offset = %i MAX_WF_VALUE = %f\n", maxAbsValue, scale, offset, MAX_WF_VALUE);
   scale = scale * MAX_WF_VALUE;
 
   offset = wfArray[channel].offset * MAX_WF_VALUE;
+
+  printf("Prep maxABS = %f scale = %f offset = %i MAX_WF_VALUE = %f\n", maxAbsValue, scale, offset, MAX_WF_VALUE);
 
   for (cnt = 0; cnt < wfArray[channel].allocatedLength; cnt++) {
     prepValue = wfArray[channel].pData[cnt];
@@ -254,5 +270,95 @@ int WF_SetLinkList(waveform_t * wfArray, int channel,
   memcpy(bank->repeat,  RepeatData,  length * sizeof(uint16_t));
 
   bank->length = length;
+  bank->isLoaded = 0;
   return 0;
+}
+
+int WF_SaveCache(waveform_t * wfArray, char * filename) {
+	int channel, bank, length;
+	FILE *fid;
+
+	fid = fopen(filename,"wb");
+
+	// serialize waveform data to disk
+	// need to save:
+
+	// 1) waveform structure
+	// 2) data stored at pData
+	// 3) data stored at pFormatedData
+	// 4) data stored at bank[1,2].{count,trigger,repeat}
+
+	for(channel = 0; channel < MAX_APS_CHANNELS; channel++) {
+		// write waveform
+		fwrite(&(wfArray[channel]), sizeof(waveform_t), 1, fid);
+		length = wfArray[channel].allocatedLength;
+		if ( length > 0) {
+			fwrite(wfArray[channel].pData,         sizeof(float),    length, fid);
+			fwrite(wfArray[channel].pFormatedData, sizeof(uint16_t), length, fid);
+		}
+		for(bank = 0; bank < MAX_APS_BANKS; bank++) {
+			length = wfArray[channel].linkListBanks[bank].length;
+			if ( length > 0) {
+
+				fwrite(wfArray[channel].linkListBanks[bank].count,   sizeof(uint16_t), length, fid);
+				fwrite(wfArray[channel].linkListBanks[bank].trigger, sizeof(uint16_t), length, fid);
+				fwrite(wfArray[channel].linkListBanks[bank].repeat,  sizeof(uint16_t), length, fid);
+			}
+		}
+	}
+	fclose(fid);
+	return 0;
+}
+
+int WF_LoadCache(waveform_t * wfArray, char * filename) {
+
+	int channel, bank, length;
+	FILE *fid;
+
+	waveform_t tempWaveform;
+
+
+	fid = fopen(filename,"rb");
+
+	for(channel = 0; channel < MAX_APS_CHANNELS; channel++) {
+		fread(&(tempWaveform), sizeof(waveform_t),1, fid);
+		length = tempWaveform.allocatedLength;
+
+		// free existing memory if necessary
+		WF_Free(wfArray, channel);
+
+		// over write channel entry then reallocate pointers
+
+		memcpy(&(wfArray[channel]), &tempWaveform, sizeof(waveform_t));
+
+		if (length > 0) {
+			// allocate new memory banks
+			wfArray[channel].pData         = (float *)     malloc(length * sizeof(float));
+			wfArray[channel].pFormatedData = (uint16_t *) malloc(length * sizeof(uint16_t));
+
+			// read in data
+			fread(wfArray[channel].pData,         sizeof(float),    length, fid);
+			fread(wfArray[channel].pFormatedData, sizeof(uint16_t), length, fid);
+		}
+
+		for(bank = 0; bank < MAX_APS_BANKS; bank++) {
+			length = tempWaveform.linkListBanks[bank].length;
+
+			if ( length > 0) {
+				// allocate new memory banks
+				wfArray[channel].linkListBanks[bank].count = (uint16_t *) malloc(length * sizeof(uint16_t));
+				wfArray[channel].linkListBanks[bank].trigger = (uint16_t *) malloc(length * sizeof(uint16_t));
+				wfArray[channel].linkListBanks[bank].repeat = (uint16_t *) malloc(length * sizeof(uint16_t));
+
+				// read in data
+				fread(wfArray[channel].linkListBanks[bank].count,   sizeof(uint16_t), length, fid);
+				fread(wfArray[channel].linkListBanks[bank].trigger, sizeof(uint16_t), length, fid);
+				fread(wfArray[channel].linkListBanks[bank].repeat,  sizeof(uint16_t), length, fid);
+			}
+		}
+
+	}
+	fclose(fid);
+
+	return 0;
 }

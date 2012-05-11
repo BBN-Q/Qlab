@@ -151,6 +151,7 @@ EXPORT UINT APS_ResetAllCheckSum() {
 		gAddrCheckSum[i][0] = 0;
 		gAddrCheckSum[i][1] = 0;
 	}
+	return 0;
 }
 
 
@@ -529,6 +530,8 @@ int APS_SetBit(int device, int fpga, int addr, int mask)
 	if ((current_state & mask) == 0)
 		dlog(DEBUG_VERBOSE,"ERROR: APS_SetBit data does not match\n");
   }
+
+	return 0;
 }
 
 int APS_ClearBit(int device, int fpga, int addr, int mask)
@@ -579,6 +582,8 @@ int APS_ClearBit(int device, int fpga, int addr, int mask)
 		  current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
 		}
 	}
+
+	return 0;
 }
 
 
@@ -1078,7 +1083,7 @@ EXPORT int APS_ClearLinkListELL(int device,int dac, int bank)
       return -1;
     }
 
-    dlog(DEBUG_VERBOSE,"Load Link List ELL\n");
+	dlog(DEBUG_VERBOSE,"Clear Link List ELL\n");
 
     if (gBitFileVersion < VERSION_ELL) {
       dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
