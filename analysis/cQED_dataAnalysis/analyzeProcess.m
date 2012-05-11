@@ -48,7 +48,7 @@ choi_mle = PauliMap2Choi_(pauliMapMLE, paulis, nbrQubits);
 %choi_mle == choiSDP check this!
 
 % compute metrics and plot
-processFidelity = trace(chitheory*chicorrected)
+processFidelity = real(trace(chitheory*chicorrected))
 gateFidelity = (2^nbrQubits*processFidelity+1)/(2^nbrQubits+1)
 
 [evecs,~] = eig(choi_mle);
@@ -60,7 +60,7 @@ phase_fidelity = real(evecs(:,1)'*choi_ideal*evecs(:,1))
 %cmap = [hot(num); 1-hot(num)];
 %cmap = cmap(70:end-70,:);
 cmap = [hot(50); 1-hot(50)];
-cmap = cmap(18:18+63,:); % make a 64-entry colormap
+cmap = cmap(19:19+63,:); % make a 64-entry colormap
 
 
 figure()
