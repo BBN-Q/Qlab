@@ -402,6 +402,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     error('APS failed to initialize');
                 end
                 
+                % align DAC data clock boundaries
+                obj.setupDACs();
+                
                 % set all channel offsets to zero
                 for ch=1:4, obj.setOffset(ch, 0); end
                 
@@ -498,8 +501,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             val = aps.programFPGA(DataVec, DataCount, Sel, aps.expected_bit_file_ver);
             fclose(DataFileID);
-            
-            aps.setupDACs();
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

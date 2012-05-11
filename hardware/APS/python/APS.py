@@ -250,8 +250,6 @@ class APS:
         print 'Read', len(data), 'bytes'
         val = self.programFPGA(data, len(data), Sel, self.expected_bit_file_ver)
         
-        self.setupDACs()
-        
         return val
         
     def loadWaveform(self, ID, waveform, offset = 0, validate = 0, useSlowWrite = 0):
@@ -488,12 +486,18 @@ class APS:
             # Default all channels to 1.2 GS/s
             self.setFrequency(0, 1200, testLock=0)
             self.setFrequency(2, 1200, testLock=0)
+			
+			# reset status/CTRL in case setFrequency screwed it up
+			self.resetStatusCtrl()
             
             # Test PLL sync on each FPGA
             status = self.test_PLL_sync(0) or self.test_PLL_sync(2)
             if status:
                 raise RuntimeError('APS failed to initialize')
         
+			# align DAC data clock boundaries
+			self.setupDACs()
+			
             #Set all channel offsets to zero
             for ch in range(1,5):
                 self.set_offset(ch, 0)
@@ -556,6 +560,9 @@ class APS:
     def stop(self):
         ''' Stop everything '''
         self.disableFpga(self.ALL_DACS)
+	
+	def resetStatusCtrl(self):
+		self.librarycall('Reset status/ctrl', 'APS_ResetStatusCtrl')
         
     def unitTestBasic(self):
         self.open(0)
