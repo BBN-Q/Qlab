@@ -1,3 +1,14 @@
+fab1_p38
+- half scale, 12 sample high, 12 sample zero, repeating pulse
+- 3.333 ns (1/300 MHz) trigger output.
+
+P178
+- Added Trigger Offset Registers (0x12, 0x13)
+- Rearranged the TRIG/LED Register bit fields and added "Waveform Mode Output Trigger Enable" bits
+- Added trigger output delay logic (2-stage counter), using the Trigger Offset Registers (LL Mode Only) 
+P177 (equal to aps_dac2_r10_p08)
+- Corrected continuous waveform mode operation issues with extra zero outputs.
+- Corrected Mini Link List issues with transitions from LLA->LLB, LLB->LLA
 P176
 - Corrected dac_if_sm, for initial load (added state 0x0040)
   Holds one state to insure initial LL values are out and loaded.
