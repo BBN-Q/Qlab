@@ -7,8 +7,8 @@ if ~exist('nbrQubits', 'var')
     nbrQubits = 1;
 end
 
-nbrAnalysisPulses = 6;
-nbrPosPulses  = 6;
+nbrAnalysisPulses = 12;
+nbrPosPulses  = 12;
 nbrRepeats = 2;
 
 % seperate calibration experiments from tomography data, and reshape
