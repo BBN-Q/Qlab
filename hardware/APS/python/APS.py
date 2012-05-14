@@ -357,6 +357,18 @@ class APS:
             return samplingRate[0]
         else:
             return None
+    
+    @samplingRate.setter
+    def samplingRate(self, freq):
+        if self.samplingRate ~= freq:
+            self.setFrequency(0, freq, testLock=0)
+            self.setFrequency(2, freq, testLock=0)
+            self.resetStatusCtrl(); # in case setFrequency left the oscillator disabled
+        
+            # Test PLL sync on each FPGA
+            status = self.test_PLL_sync(0) or self.test_PLL_sync(2)
+            if status:
+                raise RuntimeError('APS clocks failed to sync')
             
     def getFrequency(self, DAC):
         '''
