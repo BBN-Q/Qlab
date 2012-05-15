@@ -429,8 +429,8 @@ class APS:
         print 'getNewWaveform not yet implemented in Python'
         return None
         
-    def test_PLL_sync(self, DACNum=0, numSyncChannels=4):
-        return self.librarycall('Test Pll Sync: DAC: {0}'.format(DACNum),'APS_TestPllSync', DACNum, numSyncChannels)
+    def test_PLL_sync(self, DACNum=0, numRetries=5):
+        return self.librarycall('Test Pll Sync: DAC: {0}'.format(DACNum),'APS_TestPllSync', DACNum, numRetries)
 
     def read_PLL_status(self):
         #Read FPGA1

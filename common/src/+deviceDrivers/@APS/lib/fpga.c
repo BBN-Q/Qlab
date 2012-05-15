@@ -1701,11 +1701,11 @@ EXPORT int APS_ReadAllRegisters(int device, int fpga) {
 	int cnt;
 	int val;
 	static int readCnt = 0;
-	int expected_values[] = {-1,-1,0,-1,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0xc0de,-1,-1,0xbadd,0xbadd};
+	int expected_values[] = {-1,-1,0,-1,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0xc0de,-1,-1,-1,-1,0xbadd,0xbadd};
 
 	dlog(DEBUG_VERBOSE,"====== Register Read %3i ======\n", readCnt++);
 
-	for(cnt = 0; cnt < 20; cnt++) {
+	for(cnt = 0; cnt < 22; cnt++) {
 		val = APS_ReadFPGA(device, gRegRead | cnt, fpga);
 
 		if ((expected_values[cnt] != -1) && (expected_values[cnt] != val)) {

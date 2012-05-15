@@ -1435,11 +1435,11 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 		// test only works for channels running at 1.2 GHz
 		numSyncChannels = (fpgaFrequencies[0] == 1200 && fpgaFrequencies[1] == 1200) ? 4 : 2;
 		if (numSyncChannels == 4) {
-			APS_TestPllSync(device, 0, numSyncChannels);
-			sync_status = APS_TestPllSync(device, 2, numSyncChannels);
+			APS_TestPllSync(device, 0, 5);
+			sync_status = APS_TestPllSync(device, 2, 5);
 		}
 		else if (fpgaFrequencies[fpga] == 1200)
-			sync_status = APS_TestPllSync(device, dac, numSyncChannels);
+			sync_status = APS_TestPllSync(device, dac, 5);
 	}
 
 	return sync_status;
@@ -1517,7 +1517,7 @@ EXPORT int APS_GetPllFreq(int device, int dac) {
 	4) Test channel 1/3 PLL against reference PLL. Reset until in phase.
 	5) Verify that sync worked by testing 0/2 XOR 1/3 (global phase).
  */
-EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
+EXPORT int APS_TestPllSync(int device, int dac, int numRetries) {
 
 	// Test for DAC clock phase match
 	int inSync, globalSync;
@@ -1529,6 +1529,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 	int pll_bit;
 	UINT pll_reg_value;
 	UINT pll_reset_addr, pll_reset_bit, pll_enable_addr, pll_enable_addr2;
+	UCHAR WriteByte;
 
 	pll_reset_addr = FPGA_PLL_RESET_ADDR;
 	pll_reset_bit  = CSRMSK_PHSPLLRST_ELL | CSRMSK_ENVPLLRST_ELL;
@@ -1598,6 +1599,10 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
 		for(cnt = 0; cnt < 20; cnt++) {
 			pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
+			if ((pll_bit & 0x1ff) != 2*FIRMWARE_VERSION) {
+				dlog(DEBUG_INFO, "Error: Reg 0xF006 bitfile version does not match. Read 0x%x\n", pll_bit & 0x1ff);
+				return -6;
+			}
 			xor_flag_cnt += (pll_bit >> PLL_GLOBAL_XOR_BIT) & 0x1;
 			xor_flag_cnt2 += (pll_bit >> PLL_02_XOR_BIT) & 0x1;
 			xor_flag_cnt3 += (pll_bit >> PLL_13_XOR_BIT) & 0x1;
@@ -1615,7 +1620,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 		else {
 			// 600 MHz clocks out of phase, reset DAC clocks that are 90/270 degrees out of phase with reference
 			dlog(DEBUG_VERBOSE,"DAC clocks out of phase; resetting (XOR counts %i and %i and %i)\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
-			UCHAR WriteByte = 0x2; //disable clock outputs
+			WriteByte = 0x2; //disable clock outputs
 			if (xor_flag_cnt2 >= 5 || xor_flag_cnt2 <= 15) {
 				dac02_reset = 1;
 				APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
@@ -1669,6 +1674,10 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
 			for(cnt = 0; cnt < 10; cnt++) {
 				pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
+				if ((pll_bit & 0x1ff) != 2*FIRMWARE_VERSION) {
+					dlog(DEBUG_INFO, "Error: Reg 0xF006 bitfile version does not match. Read 0x%x\n", pll_bit & 0x1ff);
+					return -8;
+				}
 				xor_flag_cnt += (pll_bit >> PLL_XOR_TEST[pll]) & 0x1;
 			}
 
@@ -1679,13 +1688,27 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 				break; // passed, move on to next channel
 			} else {
 				// PLLs out of sync, reset
-				dlog(DEBUG_INFO,"Channel %s PLL not in sync resetting (XOR count %i)\n", pllStr, xor_flag_cnt);
+				dlog(DEBUG_VERBOSE,"Channel %s PLL not in sync resetting (XOR count %i)\n", pllStr, xor_flag_cnt);
 
 				globalSync = 0;
 
 				if (pll == 2) { // global pll compare did not sync
-					dlog(DEBUG_INFO,"Error could not sync PLLs\n");
-					return -6;
+					if (numRetries > 0) {
+						dlog(DEBUG_INFO, "Global sync failed; retrying.\n");
+						// restart both DAC clocks and try again
+						WriteByte = 0x2;
+						APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
+						APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr2, &WriteByte);
+						APS_UpdatePllReg(device);
+						WriteByte = 0x0;
+						APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
+						APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr2, &WriteByte);
+						APS_UpdatePllReg(device);
+
+						return APS_TestPllSync(device, dac, numRetries - 1);
+					}
+					dlog(DEBUG_INFO,"Error could not sync PLLs\n"); 
+					return -9;
 				}
 
 				// Read PLL reg
@@ -1707,7 +1730,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 				}
 				if (!inSync) {
 					dlog(DEBUG_INFO,"PLL %s did not re-sync after reset\n", pllStr);
-					return -7;
+					return -10;
 				}
 			}
 		}
@@ -1718,7 +1741,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
 	if (!globalSync) {
 		dlog(DEBUG_INFO,"Warning: PLLs are not in sync\n");
-		return -8;
+		return -11;
 	}
 	dlog(DEBUG_INFO,"Sync test complete\n");
 	return 0;

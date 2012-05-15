@@ -836,15 +836,15 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 'APS_SetLEDMode', fpga, mode);
         end
         
-        function val = testPllSync(aps, id, numSyncChannels)
+        function val = testPllSync(aps, id, numRetries)
             if ~exist('id','var')
                 id = 0;
             end
-            if ~exist('numSyncChannels', 'var')
-                numSyncChannels = 4;
+            if ~exist('numRetries', 'var')
+                numRetries = 10;
             end
             val = aps.librarycall(sprintf('Test Pll Sync: DAC: %i',id), ...
-                'APS_TestPllSync',id, numSyncChannels);
+                'APS_TestPllSync',id, numRetries);
             if val ~= 0
                 fprintf('Warning: APS::testPllSync returned %i\n', val);
             end
