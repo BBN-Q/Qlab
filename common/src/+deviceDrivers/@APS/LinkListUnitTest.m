@@ -123,7 +123,7 @@ miniLinkRepeat = 1000; %10
 
 for seq = 1:length(sequences1)
     
-    sequence = sequences1{seq};
+    sequence = sequences1{seq}.llpatxy;
     [xWfLib, yWfLib] = APSPattern.buildWaveformLibrary(sequence, useVarients);
     [wf, xbanks] = APSPattern.convertLinkListFormat(sequence, useVarients, xWfLib, miniLinkRepeat);
     [wf2, ybanks] = APSPattern.convertLinkListFormat(sequence, useVarients, yWfLib, miniLinkRepeat);
@@ -184,7 +184,7 @@ for seq = 1:length(sequences1)
                 %aps.setLinkListRepeat(1,1);
                 %aps.setLinkListMode(1,aps.LL_ENABLE,aps.LL_CONTINUOUS);
                 
-                aps.triggerWaveform(0,aps.TRIGGER_HARDWARE);
+                aps.triggerWaveform(0,aps.TRIGGER_SOFTWARE);
                 %aps.triggerWaveform(1,aps.TRIGGER_HARDWARE);
                 %keyboard
                 %aps.triggerFpga(0,aps.TRIGGER_HARDWARE);
