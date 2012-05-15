@@ -19,7 +19,7 @@ classdef Repeat < sweeps.Sweep
 	
 	methods
 		% constructor
-		function obj = Repeat(SweepParams, Instr, ExpParams, sweepPtsOnly)
+		function obj = Repeat(SweepParams, Instr, params, sweepPtsOnly)
 			if nargin < 3
 				error('Usage: Repeat(SweepParams, Instr, ExpParams)');
 			end

@@ -19,7 +19,7 @@ classdef TekChannel < sweeps.Sweep
 	
 	methods
 		% constructor
-		function obj = TekChannel(SweepParams, Instr, ExpParams, sweepPtsOnly)
+		function obj = TekChannel(SweepParams, Instr, params, sweepPtsOnly)
 			if nargin < 3
 				error('Usage: TekChannel(SweepParams, Instr, ExpParams)');
 			end

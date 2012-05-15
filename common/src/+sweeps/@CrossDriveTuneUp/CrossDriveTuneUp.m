@@ -20,7 +20,7 @@ classdef CrossDriveTuneUp < sweeps.Sweep
 	
 	methods
 		% constructor
-		function obj = CrossDriveTuneUp(SweepParams, Instr, ExpParams, sweepPtsOnly)
+		function obj = CrossDriveTuneUp(SweepParams, Instr, params, sweepPtsOnly)
 			if nargin < 3
 				error('Usage: CrossDriveTuneUp(SweepParams, Instr, ExpParams)');
 			end
