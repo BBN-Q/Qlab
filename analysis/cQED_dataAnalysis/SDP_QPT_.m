@@ -1,4 +1,4 @@
-function [chitheory, chicorrected, pauliMapTheory, pauliMapMLE, choi_SDP] = SDP_QPT_(measmat,measurementoperators, pauliopts, U_preps, U_meas, Gate, nbrQubits)
+function [chitheory, chicorrected, pauliMapTheory, pauliMapMLE, choi_SDP] = SDP_QPT_(measMat, measOps, measMap, pauliopts, U_preps, U_meas, Gate, nbrQubits)
 %  This programs uses semidefinite programming to work out the QPT
 % Input 
 %   rhoRaw = a cell of raw rhos
@@ -73,7 +73,7 @@ switch Gate
 end
 
 %choi_SDP = SDPTomoMeasMat_(measmat, measurementoperators, U_preps, U_meas, pauliopts, nbrQubits);
-choi_SDP = SimpleSDPTomoMeasMat_(measmat, measurementoperators, U_preps, U_meas, nbrQubits);
+choi_SDP = SimpleSDPTomoMeasMat_(measMat, measOps, measMap, U_preps, U_meas, nbrQubits);
 choi_th  = Unitary2Choi_(Uideal);
 
 % Without ML
