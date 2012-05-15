@@ -22,7 +22,7 @@ classdef Frequency < sweeps.Sweep
 	
 	methods
 		% constructor
-		function obj = Frequency(SweepParams, Instr, ExpParams, sweepPtsOnly)
+		function obj = Frequency(SweepParams, Instr, params, sweepPtsOnly)
 			if nargin < 3
 				error('Usage: Frequency(SweepParams, Instr, ExpParams)');
 			end
@@ -44,6 +44,7 @@ classdef Frequency < sweeps.Sweep
 
                 % if we are sweeping RFgen, find LOgen and the IF frequency
                 if strcmp(SweepParams.genID, 'RFgen')
+                    ExpParams = params.ExpParams;
                     if isfield(Instr, 'LOgen') && isfield(ExpParams, 'digitalHomodyne') && ~strcmp(ExpParams.digitalHomodyne.DHmode, 'OFF')
                         obj.LOInstr = Instr.LOgen;
                         % IF frequency is in MHz: convert to GHz

@@ -113,9 +113,9 @@ for loop2_index = 1:Loop.two.steps
             % set the card to acquire
             scope.acquire();
 
-            % set the Tek to run
+            % set the Tek to run and wait and wait and wait for it to go
             masterAWG.run();
-            pause(0.5);
+            masterAWG.operationComplete();
             
             %Poll the digitizer until it has all the data
             success = scope.wait_for_acquisition(60);

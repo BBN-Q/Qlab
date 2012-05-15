@@ -12,6 +12,7 @@
 #include <math.h>
 
 #define MAX_APS_CHANNELS 4
+#define MAX_APS_BANKS 2
 
 #define APS_WAVEFORM_UNIT_LENGTH 4
 
@@ -27,6 +28,7 @@ typedef struct {
   uint16_t *trigger;
   uint16_t *repeat;
   unsigned int length;
+  int isLoaded;
 } bank_t;
 
 typedef struct {
@@ -36,7 +38,7 @@ typedef struct {
   float scale;
   int allocatedLength;
   int isLoaded;
-  bank_t linkListBanks[2];
+  bank_t linkListBanks[MAX_APS_BANKS];
 } waveform_t;
 
 waveform_t * WF_Init();
@@ -57,5 +59,9 @@ int WF_SetLinkList(waveform_t * wfArray, int channel,
     uint16_t *TriggerData, uint16_t *RepeatData,
     int length, int bank);
 void WF_FreeBank(bank_t * bank);
+bank_t * WF_GetLinkListBank(waveform_t * wfArray, int channel, unsigned int bank);
+
+int WF_SaveCache(waveform_t * wfArray, char * fileNameHeader);
+int WF_LoadCache(waveform_t * wfArray, char * fileNameHeader);
 
 #endif /* WAVEFORM_H_ */

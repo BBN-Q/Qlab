@@ -41,10 +41,10 @@ function Loop = populateLoopStructure(obj, sweepPtsOnly)
         if ~isempty(Loop.(i_loop_str))
             if sweepPtsOnly
                 Loop.(i_loop_str).sweep = feval(Loop.(i_loop_str).type, ...
-                    Loop.(i_loop_str), obj.inputStructure.InstrParams, obj.inputStructure.ExpParams, sweepPtsOnly);
+                    Loop.(i_loop_str), [], obj.inputStructure, sweepPtsOnly);
             else
                 Loop.(i_loop_str).sweep = feval(Loop.(i_loop_str).type, ...
-                    Loop.(i_loop_str), obj.Instr, obj.inputStructure.ExpParams, sweepPtsOnly);
+                    Loop.(i_loop_str), obj.Instr, obj.inputStructure, sweepPtsOnly);
             end
             Loop.(i_loop_str).steps = length(Loop.(i_loop_str).sweep.points);
             Loop.(i_loop_str).plotRange = Loop.(i_loop_str).sweep.points;

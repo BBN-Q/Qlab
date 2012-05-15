@@ -132,6 +132,12 @@ int APS_Init()
 {
 	/* Initialize function points to ftd2xx library  */
 
+	// check to see if INIT has already occurred
+	// if the handle to the ftd2xx dll is non-zero the library
+	// has already be inited.
+	if (hdll != 0)
+		return 0;
+
 #if defined(DEBUG) && defined(BUILD_DLL)
 	freopen("libaps.log","w", stderr);
 #endif
@@ -152,8 +158,11 @@ int APS_Init()
 	}
 #endif
 
-	dlog(DEBUG_VERBOSE,"Library Loaded\n");
-
+#ifdef BUILD_DLL
+	dlog(DEBUG_VERBOSE,"Library Dynamically Loaded\n");
+#else
+	dlog(DEBUG_VERBOSE,"Library Statically loaded\n");
+#endif
 
 	DLL_FT_Open  = (pFT_Open) GetFunction(hdll,"FT_Open");
 	DLL_FT_Close = (pFT_Close) GetFunction(hdll,"FT_Close");
@@ -231,6 +240,13 @@ EXPORT int APS_Open(int device, int force)
 		} else {
 			dlog(DEBUG_INFO,"Set Timeouts Failed %i\n", status);
 		}
+
+		// destroy old memory if it exists
+		if (waveforms[device]) {
+			WF_Destroy(waveforms[device]);
+		}
+		// allocate new memory
+		waveforms[device] = WF_Init();
 
 	} else {
 #ifdef DEBUG
@@ -482,7 +498,8 @@ EXPORT int APS_Close(int device)
 	DLL_FT_Close(usb_handles[device]);
 	usb_handles[device] = 0;
 
-	//WF_Destroy(waveforms[device]);
+	WF_Destroy(waveforms[device]);
+	waveforms[device] = 0;  // clear pointer to waveform library for device
 
 	return 0;
 }
@@ -960,7 +977,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 
 	// Note that FPGAs can be programmed with the same image by setting Sel = 3.
 	// However, the pinouts of the connections to the DAC are different for the two
-	// FPGAs. Unless there is a post-configuration modification of the DAC output
+	// FPGAs.  Unless there is a post-configuration modification of the DAC output
 	// mapping, a different image must be written to each FPGA.
 
 	// Create bit masks matching Config Status Register bits for the active FPGAs ...
@@ -1014,7 +1031,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 		// Clear Program and Reset Masks
 		WriteByte = ~PgmMask & ~RstMask & 0xF;
 		dlog(DEBUG_VERBOSE, "Write 1: %02X \n", WriteByte);
-		if(APS_WriteReg(device,	 APS_CONF_STAT, 1, 0, &WriteByte) != 1) return(-2);
+		if(APS_WriteReg(device,  APS_CONF_STAT, 1, 0, &WriteByte) != 1)	return(-2);
 
 		// Read the Status to see that INITN is asserted in response to PROGRAMN
 		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1) return(-3);
@@ -1053,7 +1070,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 
 #define BLOCKSIZE 61
 
-	// original loading code (did not use driver to buffer memory) (took 7.25 secs to load)
+	//original loading code (did not use driver to buffer memory) (took 7.25 secs to load)
 	// current must use original code as buffered version does not appear to work with
 	// hardware (may be a hardware limitation)
 
@@ -1070,7 +1087,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 				fprintf(test,"%031 ", Data[i+cnt]);
 			fprintf(test,"\n");
 #endif
-			if(APS_WriteReg(device, APS_CONF_DATA, 0, Sel, Data+i) != BLOCKSIZE)	// Defaults to 61 bytes for CONF_DATA
+			if(APS_WriteReg(device, APS_CONF_DATA, 0, Sel, Data+i) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
 				return(-8);
 		} else {
 
@@ -1087,7 +1104,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int e
 #endif
 
 			// Write out the last buffer
-			if(APS_WriteReg(device, APS_CONF_DATA, 0, Sel, LastBuf) != BLOCKSIZE)	 // Defaults to 61 bytes for CONF_DATA
+			if(APS_WriteReg(device, APS_CONF_DATA, 0, Sel, LastBuf) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
 				return(-9);
 		}
 	}
@@ -1588,8 +1605,8 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
 		// due to clock skews, need to accept a range of counts as "0" and "1"
 		if ( (xor_flag_cnt < 5 || xor_flag_cnt > 15) &&
-			 (xor_flag_cnt2 < 5 || xor_flag_cnt2 > 15) &&
-			 (xor_flag_cnt3 < 5 || xor_flag_cnt3 > 15) ) {
+				(xor_flag_cnt2 < 5 || xor_flag_cnt2 > 15) &&
+				(xor_flag_cnt3 < 5 || xor_flag_cnt3 > 15) ) {
 			// 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase, so 600 MHz clocks
 			// from DAC must be in phase. Move on.
 			dlog(DEBUG_VERBOSE,"DAC clocks in phase with reference (XOR counts %i and %i and %i)\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
@@ -1846,6 +1863,38 @@ EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 	return 0;
 }
 
+EXPORT int APS_LoadAllWaveforms(int device) {
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+
+	int channel;
+	for(channel = 0; channel < MAX_APS_CHANNELS; channel++) {
+		APS_LoadStoredWaveform(device, channel);
+	}
+	return 0;
+}
+
+EXPORT int APS_LoadStoredLinkLists(int device, int channel) {
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	bank_t * bankPtr;
+	const int validate = 0;
+	int bank;
+
+	for (bank = 0; bank < 2; bank++) {
+		bankPtr = WF_GetLinkListBank(wfArray,channel,bank);
+		if (!bankPtr->isLoaded) {
+			LoadLinkList_ELL(device, bankPtr->offset, bankPtr->count, bankPtr->trigger,
+				bankPtr->repeat, bankPtr->length, channel,bank,validate);
+			bankPtr->isLoaded = 1;
+		}
+	}
+
+	return 0;
+}
+
 EXPORT int APS_SetLinkList(int device, int channel,
 		unsigned short *OffsetData, unsigned short *CountData,
 		unsigned short *TriggerData, unsigned short *RepeatData,
@@ -1868,4 +1917,37 @@ EXPORT int APS_SetLinkList(int device, int channel,
 
 }
 
+EXPORT int APS_SaveWaveformCache(int device, char * filename) {
 
+	const int strLen = 100;
+	char altFilename[strLen];
+	char serialNumber[strLen];
+
+	memset(serialNumber, 0, strLen);
+
+	if (filename == NULL) {
+		APS_GetSerialNum(device, serialNumber, 100);
+		snprintf(altFilename,strLen,"aps_%i_cache.dat", serialNumber);
+		filename = altFilename;
+	}
+
+
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	return WF_SaveCache(wfArray,filename);
+}
+
+EXPORT int APS_LoadWaveformCache(int device, char * filename) {
+	char altFilename[100];
+
+	if (filename == NULL) {
+		sprintf(altFilename,"aps_%i_cache.dat", device);
+		filename = altFilename;
+	}
+
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	return WF_LoadCache(wfArray,filename);
+}

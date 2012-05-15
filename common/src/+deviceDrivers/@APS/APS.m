@@ -126,7 +126,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         FPGA0 = 0;
         FPGA1 = 2;
         
-        DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV'};
+        DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV', 'A6001nBT'};
         
     end
     
@@ -197,7 +197,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function load_library(d)
+        function load_library(d, reloadLibrary)
+            
+            if ~exist('reloadLibrary','var')
+                reloadLibrary = 0;
+            end
+            
             if strcmp(computer,'PCWIN64')
                 libfname = 'libaps64.dll';
                 d.library_name = 'libaps64';
@@ -207,6 +212,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 libfname = 'libaps.dylib';
             else
                 libfname = 'libaps.so';
+            end
+            
+            if reloadLibrary && libisloaded(d.library_name)
+                unloadlibrary(d.library_name)
             end
             
             % build library path
@@ -562,14 +571,16 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
            
             % set offset
             
-            val = calllib(aps.library_name,'APS_SetWaveformOffset', aps.device_id, dac, ...
-                waveform.offset);
+            val = aps.librarycall('Setting waveform offet','APS_SetWaveformOffset', dac, wf.offset);
             
             % set scale
             
-            val = calllib(aps.library_name,'APS_SetWaveformOffset', aps.device_id, dac, ...
-                waveform.scale_factor);
-            
+            val = aps.librarycall('Setting wavform scale','APS_SetWaveformScale', dac, wf.scale_factor);
+           
+        end
+        
+        function loadAPSWaveforms(aps)
+            val = aps.librarycall('Loading waveforms','APS_LoadAllWaveforms');
         end
         
         
@@ -748,6 +759,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function run(aps)
             % global run method
             
+            if aps.use_c_waveforms
+                % tell C layer to load waveforms
+                aps.loadAPSWaveforms();
+            end
+            
             trigger_type = aps.TRIGGER_SOFTWARE;
             if strcmp(aps.triggerSource, 'external')
                 trigger_type = aps.TRIGGER_HARDWARE;
@@ -827,7 +843,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if ~exist('numSyncChannels', 'var')
                 numSyncChannels = 4;
             end
-            val = aps.librarycall('Test Pll Sync: DAC: %i','APS_TestPllSync',id, numSyncChannels);
+            val = aps.librarycall(sprintf('Test Pll Sync: DAC: %i',id), ...
+                'APS_TestPllSync',id, numSyncChannels);
             if val ~= 0
                 fprintf('Warning: APS::testPllSync returned %i\n', val);
             end
@@ -934,6 +951,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 'APS_ReadLinkListStatus',id);
         end
         
+        function unload_library()
+            if libisloaded(aps.library_name)
+                unloadlibrary(aps.library_name);
+            end
+        end
+
         function val = readStatusCtrl(aps)
             val = aps.librarycall('Read status/ctrl', 'APS_ReadStatusCtrl');
         end
@@ -957,12 +980,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
     end
     methods(Static)
         
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function unload_library()
-            if libisloaded(aps.library_name)
-                unloadlibrary(aps.library_name);
-            end
-        end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function wf = getNewWaveform()
@@ -1043,5 +1060,50 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
       
         end
         
+        function aps = UnitTestCWaveform()
+            % work around for not knowing full name
+            % of class - can not use simply APS when in 
+            % experiment framework
+            classname = mfilename('class');
+            
+            % tests channel 0 & 1 output for basic bit file testing
+            aps = eval(sprintf('%s();', classname));
+            aps.verbose = 1;
+            apsId = 0;
+            
+            fprintf('Openning Device: %i\n', apsId);
+
+            aps.use_c_waveforms = true;
+            
+            aps.open(apsId);
+            aps.loadBitFile();
+
+            wf = aps.getNewWaveform();
+            wf.data = 0:1/1000:1;
+            wf.data = wf.data(1:1000) * 8192.0;
+            wf.set_scale_factor(1.0);
+            
+            fprintf('Setting Sample Rate\n');
+            aps.samplingRate = 1200;
+            
+            fprintf('Storing waveforms\n')
+            for ch = 0:3
+                chS = sprintf('chan_%i',ch+1);
+                aps.(chS).waveform = wf;
+                aps.(chS).enabled = 1;
+                aps.storeAPSWaveform(ch,wf);
+            end
+            
+            running = 1;
+            
+            while running
+                fprintf('APS::Run\n')
+                aps.run()
+                keyboard
+                aps.stop()
+            end
+
+            aps.close();
+        end
     end
 end

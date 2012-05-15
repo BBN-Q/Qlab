@@ -789,43 +789,32 @@ classdef PatternGen < handle
             % split when compiled for the particular hardware.
             
             state = 0; % 0 = low, 1 = high
+            %Time from end of previous LL entry that trigger needs to go
+            %high to gate pulse
             startDelay = fix(obj.bufferPadding - obj.dBuffer/2 + obj.bufferDelay);
-            endDelay = fix(obj.bufferPadding - obj.dBuffer/2 - obj.bufferDelay);
-            if startDelay < 0 || endDelay < 0
-                error('PatternGen:addGatePulses', 'Negative gate delays');
-            end
-            LLlength = length(linkList);
-            for ii = 1:LLlength
-                entryWidth = linkList{ii}.length * linkList{ii}.repeat;
-                if linkList{ii}.isZero
-                    % check if we need to switch low
-                    if state == 1 && entryWidth > endDelay + obj.bufferReset
-                        linkList{ii}.hasMarkerData = 1;
-                        linkList{ii}.markerDelay = endDelay;
-                        linkList{ii}.markerMode = 0; % 0 = pulse mode
-                        state = 0;
-                    end
-                    
-                    % check if we need to switch high
-                    if state == 0 && ii + 1 < LLlength && ~linkList{ii+1}.isZero
-                        % add to the markerDelay vector if we already have
-                        % marker data on this entry
-                        if linkList{ii}.hasMarkerData == 1
-                            linkList{ii}.markerDelay(end+1) = entryWidth - startDelay;
-                            % check that the distance between markers is at
-                            % least the bufferReset time
-                            if linkList{ii}.markerDelay(2) - linkList{ii}.markerDelay(1) < obj.bufferReset
-                                linkList{ii}.hasMarkerData = 0;
-                                linkList{ii}.markerDelay = 0;
-                            end
-                        else
-                            linkList{ii}.hasMarkerData = 1;
-                            linkList{ii}.markerDelay = entryWidth - startDelay;
-                            linkList{ii}.markerMode = 0;
-                        end
+            assert(startDelay > 0, 'PatternGen:addGatePulses Negative gate delays');
 
-                        state = 1;
-                    end
+            LLlength = length(linkList);
+            for ii = 1:LLlength-1
+                entryWidth = linkList{ii}.length * linkList{ii}.repeat;
+                %If current state is low and next linkList is pulse, then
+                %we go high in this entry.
+                %If current state is high and next entry is TAZ then go low
+                %in this one (but check bufferReset)
+                if state == 0 && ~linkList{ii+1}.isZero
+                    linkList{ii}.hasMarkerData = 1;
+                    linkList{ii}.markerDelay = entryWidth - startDelay;
+                    linkList{ii}.markerMode = 0;
+                    state = 1;
+                elseif state == 1 && linkList{ii+1}.isZero && linkList{ii+1}.length * linkList{ii+1}.repeat > obj.bufferReset
+                    %Time from beginning of pulse LL entry that trigger needs to go
+                    %low to end gate pulse
+                    endDelay = fix(entryWidth + obj.bufferPadding - obj.dBuffer/2 - obj.bufferDelay);
+                    assert(endDelay > 0, 'PatternGen:addGatePulses Negative gate delays');
+                    linkList{ii}.hasMarkerData = 1;
+                    linkList{ii}.markerDelay = endDelay;
+                    linkList{ii}.markerMode = 0; % 0 = pulse mode
+                    state = 0;
                 end
             end % end for
         end
