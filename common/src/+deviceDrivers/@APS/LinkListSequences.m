@@ -41,7 +41,9 @@ switch sequence
         buffer = 0;
         
         pulseType = 'gaussian';
-        pg = PatternGen('dPulseType', pulseType, 'dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dPulseLength', piWidth, 'dBuffer', buffer, 'cycleLength', cycleLength, 'linkList', 1);
+        pg = PatternGen('dPulseType', pulseType, 'dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, ...
+                        'dPulseLength', piWidth, 'dBuffer', buffer, 'cycleLength', cycleLength, ...
+                        'linkList', 1);
         
         numsteps = 50;
         %numsteps = 4;
@@ -57,7 +59,9 @@ switch sequence
             pg.pulse('X90p')},...
             };
         
-        pg2 = PatternGen('dPulseType', pulseType, 'dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dPulseLength', piWidth, 'dBuffer', buffer, 'cycleLength', cycleLength, 'linkList', 0);
+        pg2 = PatternGen('dPulseType', pulseType, 'dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, ...
+                         'dPulseLength', piWidth, 'dBuffer', buffer, 'cycleLength', cycleLength, ...
+                         'linkList', 0);
         patseq = {
             pg2.pulse('X90p'), ...
             pg2.pulse('QId', 'width', delaypts), ...
@@ -74,11 +78,18 @@ switch sequence
         stepsize = 200;
         sigma = 10;
         pulseLength = 4*sigma;
-        pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dPulseLength', pulseLength, 'cycleLength', cycleLength, 'linkList', 1);
+        pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, ...
+                        'dPulseLength', pulseLength, 'cycleLength', cycleLength, 'linkList', 1);
         
         amps = 0:stepsize:(numsteps-1)*stepsize;
         patSeqLL = {
             {pg.pulse('Xtheta', 'amp', amps)}};
+        
+        pg2 = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma,...
+                         'dPulseLength', pulseLength, 'cycleLength', cycleLength, 'linkList', 0);
+                     
+        patseq = {{pg.pulse('Xtheta', 'amp', amps)}};
+            
     case 3
         % Ramsey
         
@@ -86,7 +97,8 @@ switch sequence
         piWidth = 27;
         piAmp = 8000;
         pi2Width = 14;
-        pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dPulseLength', piWidth, 'cycleLength', cycleLength, 'linkList', 1);
+        pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dPulseLength', piWidth, ...
+                        'cycleLength', cycleLength, 'linkList', 1);
         
         stepsize = 5;
         delaypts = 0:stepsize:(numsteps-1)*stepsize;
@@ -95,13 +107,23 @@ switch sequence
             pg.pulse('QId', 'width', delaypts), ...
             pg.pulse('X90p', 'pType', 'square')} ...
             };
+        
+        pg2 = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dPulseLength', piWidth, ...
+                        'cycleLength', cycleLength, 'linkList', 0);
+        patseq = {...
+            {pg.pulse('X90p', 'pType', 'square'), ...
+            pg.pulse('QId', 'width', delaypts), ...
+            pg.pulse('X90p', 'pType', 'square')} ...
+            };
+    
     case 4
         % URamseySequence
         
         numsteps = 50;
         piAmp = 8000;
         sigma = 6;
-        pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dPulseLength', 6*sigma, 'cycleLength', cycleLength, 'linkList', 1);
+        pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dPulseLength', 6*sigma, ...
+                        'cycleLength', cycleLength, 'linkList', 1);
         
         stepsize = 10;
         delaypts = 0:stepsize:(numsteps-1)*stepsize;
@@ -118,6 +140,14 @@ switch sequence
             pg.pulse('U90p', 'angle', anglepts)} ...
             };
         
+        pg2 = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dSigma', sigma, 'dPulseLength', 6*sigma, ...
+                        'cycleLength', cycleLength, 'linkList', 0);
+
+        patseq = {...
+            {pg.pulse('X90p'), ...
+            pg.pulse('QId', 'width', delaypts), ...
+            pg.pulse('U90p', 'angle', anglepts)} ...
+            };
     case 5
         % AllXY Sequencce
         
@@ -136,6 +166,10 @@ switch sequence
         pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, ...
             'correctionT', T, 'dBuffer', buffer, 'dPulseLength', pulseLength, ...
             'cycleLength', cycleLength, 'linkList', 1);
+        
+        pg2 = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, ...
+            'correctionT', T, 'dBuffer', buffer, 'dPulseLength', pulseLength, ...
+            'cycleLength', cycleLength, 'linkList', 0);
         
         % ground state:
         % QId
@@ -230,6 +264,10 @@ switch sequence
         patSeqLL{33} = {{'X90m'},{'X90m'}};
         patSeqLL{34} = {{'Y90p'},{'Y90p'}};
         patSeqLL{35} = {{'Y90m'},{'Y90m'}};
+        
+        patseq = patSeqLL;
+        
+        
     case 6
         fixedPt = 7000; % override fixedPt
         numsteps = 50;
@@ -242,8 +280,14 @@ switch sequence
 
         T = eye(2);
         
-        pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', 'drag', 'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength, 'linkList', 1);
-        
+        pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', 'drag', ...
+                        'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength, ...
+                         'linkList', 1);
+                     
+        pg2 = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseType', 'drag', ...
+                        'correctionT', T, 'dBuffer', 5, 'dPulseLength', pulseLength, 'cycleLength', cycleLength, ...
+                         'linkList', 0);
+                     
         sequenceFile = 'RBsequences.txt';
         
         % check for sequence file in current directory
@@ -280,6 +324,8 @@ switch sequence
             patSeqLL{end+1} = pulseList;
             %allPatseq{end+1} = pulseFunctions;
         end
+        
+        patseq = patSeqLL;
     case 7
         % Rabi width sequence        
         fixedPt = 7000;
@@ -287,7 +333,11 @@ switch sequence
         piAmp = 8000;
         buffer = 4;
 
-        pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dBuffer', buffer, 'cycleLength', cycleLength, 'linkList', 1);
+        pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dBuffer', buffer, 'cycleLength', cycleLength, ...
+                        'linkList', 1);
+                    
+        pg2 = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', piAmp/2, 'dBuffer', buffer, 'cycleLength', cycleLength, ...
+                        'linkList', 0);
 
         numsteps = 10;
         minWidth = 0;
@@ -298,6 +348,9 @@ switch sequence
             {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')}...
             };
         
+        patSeq = {...
+            {pg2.pulse('Xp', 'width', pulseLength, 'pType', 'square')}...
+            };
         
 end
 
