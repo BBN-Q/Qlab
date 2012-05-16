@@ -18,7 +18,7 @@ function choi_SDP2 = SimpleSDPTomoMeasMat_(measMat, measOps, measMap, U_preps, U
 
 % Default to quiet
 if ~exist('verbose', 'var')
-    verbose = 1;
+    verbose = 0;
 end
 
 % Clear yalmip (why?)

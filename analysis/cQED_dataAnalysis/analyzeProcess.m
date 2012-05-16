@@ -1,4 +1,4 @@
-function analyzeProcess(data, process, nbrQubits)
+function [gateFidelity, choiSDP] = analyzeProcess(data, process, nbrQubits)
 
 if ~exist('process', 'var')
     process = '1QId';
@@ -9,7 +9,7 @@ end
 
 nbrAnalysisPulses = 6;
 nbrPosPulses  = 6;
-nbrRepeats = 1;
+nbrRepeats = 2;
 
 % seperate calibration experiments from tomography data, and reshape
 % accordingly
@@ -19,22 +19,19 @@ nbrRepeats = 1;
 %through each column and extract the calibration data and record a map of
 %which measurement operator each experiment corresponds to.
 
-
-
-
 numPreps = nbrAnalysisPulses^nbrQubits;
 numMeas = nbrPosPulses^nbrQubits;
 
 measMap = zeros(numMeas, numPreps, 'uint8');
 measMat = zeros(numMeas, numPreps, 'double');
-numSeqs = size(data.abs_Data,2);
-expPerSeq = round((size(data.abs_Data,1)-2^nbrQubits*nbrRepeats)/nbrRepeats); 
+numSeqs = size(data,2);
+expPerSeq = round((size(data,1)-2^nbrQubits*nbrRepeats)/nbrRepeats); 
 measOps = cell(numSeqs,1);
 
 idx=1;
-for seqct = 1:size(data.abs_Data,2)
-    cals = data.abs_Data(end-2^nbrQubits*nbrRepeats+1:end,seqct);
-    raws = data.abs_Data(1:end-2^nbrQubits*nbrRepeats,seqct);
+for seqct = 1:size(data,2)
+    cals = data(end-2^nbrQubits*nbrRepeats+1:end,seqct);
+    raws = data(1:end-2^nbrQubits*nbrRepeats,seqct);
     measOps{seqct} = diag(mean(reshape(cals, nbrRepeats, 2^nbrQubits),1));
     measMat(idx:idx+expPerSeq-1) = mean(reshape(raws, nbrRepeats, expPerSeq),1);
     measMap(idx:idx+expPerSeq-1) = seqct;
@@ -73,9 +70,6 @@ phase_fidelity = real(evecs(:,1)'*choi_ideal*evecs(:,1))
 
 
 % create red-blue colorscale
-%num = 200;
-%cmap = [hot(num); 1-hot(num)];
-%cmap = cmap(70:end-70,:);
 cmap = [hot(50); 1-hot(50)];
 cmap = cmap(19:19+63,:); % make a 64-entry colormap
 
