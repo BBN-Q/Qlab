@@ -34,10 +34,10 @@ patseq = {};
 %Tomography gate sets
 
 %4-Pulse Set (QId, Xp, X90p, Y90p)
-gateSet = [1, 3, 2, 5];
+% gateSet = [1, 3, 2, 5];
 
 %6-Pulse Set ('QId', 'Xp', 'X90p', 'Y90p', 'X90m', 'Y90m')
-gateSet = [1, 3, 2, 5, 4, 7];
+% gateSet = [1, 3, 2, 5, 4, 7];
 
 %12-Pulse Set 
 gateSet = [1, 3, 6, 9, 21, 19, 23, 18, 17, 20, 24, 22];

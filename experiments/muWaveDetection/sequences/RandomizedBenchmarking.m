@@ -15,7 +15,7 @@ end
 
 basename = 'RB';
 fixedPt = 13000; %15000
-cycleLength = 30000; %19000
+cycleLength = 22000; %19000
 nbrRepeats = 1;
 introduceError = 0;
 errorAmp = 0.2;

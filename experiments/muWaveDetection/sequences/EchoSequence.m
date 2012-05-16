@@ -28,9 +28,10 @@ IQkey = qubitMap.(qubit).IQkey;
 % params.(IQkey).T = eye(2);
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T,'bufferDelay',params.(IQkey).bufferDelay,'bufferReset',params.(IQkey).bufferReset,'bufferPadding',params.(IQkey).bufferPadding, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
 
-numsteps = 100; %150
+numsteps = 10; %150
 stepsize = 60;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
+delaypts = 512*ones(numsteps,1);
 anglepts = 0:pi/8:(numsteps-1)*pi/8;
 anglepts = 0;
 patseq = {{...

@@ -14,8 +14,8 @@ elseif length(varargin) > 2
 end
 
 basename = 'SingleQProcess';
-fixedPt = 3000;
-cycleLength = 20000;
+fixedPt = 1000;
+cycleLength = 5000;
 nbrRepeats = 2;
 
 % load config parameters from file
