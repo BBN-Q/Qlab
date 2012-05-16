@@ -127,9 +127,10 @@ get_freqA_settings = sweepGUIs.FrequencySweepGUI(SweepTabPanel, 'A');
 get_power_settings = sweepGUIs.PowerSweepGUI(SweepTabPanel, '');
 get_phase_settings = sweepGUIs.PhaseSweepGUI(SweepTabPanel, '');
 [get_time_settings, set_time_settings] = sweepGUIs.TimeSweepGUI(SweepTabPanel, '');
+get_AWGSequence_settings = sweepGUIs.AWGSequenceSweepGUI(SweepTabPanel, '');
 
 
-SweepTabPanel.TabNames = {'Freq. A', 'Power', 'Phase', 'X-Axis'};
+SweepTabPanel.TabNames = {'Freq. A', 'Power', 'Phase', 'X-Axis', 'AWG Sequence'};
 SweepTabPanel.SelectedChild = 1;
 
 % Add the measurement settings panels
@@ -144,8 +145,8 @@ ExpSetupVBox = uiextras.VBox('Parent', ExpSetupPanel, 'Spacing', 5);
 
 %Add sweep/loop selector
 tmpGrid = uiextras.Grid('Parent', ExpSetupVBox, 'Spacing', 5);
-[~, ~, fastLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Fast Loop:', 'fastloop',  {'frequencyA', 'power', 'phase', 'dc', 'TekCh', 'CrossDriveTuneUp', 'Repeat', 'nothing'});
-set(fastLoop, 'Value', 8);
+[~, ~, fastLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Fast Loop:', 'fastloop',  {'frequencyA', 'power', 'phase', 'dc', 'TekCh', 'CrossDriveTuneUp', 'Repeat', 'AWGSequence', 'nothing'});
+set(fastLoop, 'Value', 9);
 [~, ~, softAvgs] = uiextras.labeledEditBox(tmpGrid, 'Soft Averages:', 'softAvgs', prevSettings.ExpParams.softAvgs);
 [~, ~, deviceName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Device Name:', 'deviceName', prevSettings.deviceName);
 [~, ~, exptName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Experiment:', 'expName', prevSettings.exptName);
@@ -257,6 +258,7 @@ set(mainWindow, 'Visible', 'on');
 		settings.SweepParams.phase = get_phase_settings();
 % 		settings.SweepParams.dc = get_dc_settings();
         settings.SweepParams.time = get_time_settings();
+        settings.SweepParams.AWGSequence = get_AWGSequence_settings();
 %         settings.SweepParams.TekCh = get_tekChannel_settings();
   
         %%%%%%%%%%%%%%%%%%%%%%% Hacked-in sweeps %%%%%%%%%%%%%%%%%%%%%%%%%%
