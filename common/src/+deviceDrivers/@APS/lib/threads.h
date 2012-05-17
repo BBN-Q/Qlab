@@ -15,7 +15,7 @@ typedef struct {
 	int runThread;
 	int dev;
 	int channel;
-	// bank data
+	waveform_t *waveform;
 } linkListThreadData_t;
 
 

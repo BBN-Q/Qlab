@@ -38,7 +38,7 @@ typedef struct {
   float scale;
   int allocatedLength;
   int isLoaded;
-  bank_t linkListBanks[MAX_APS_BANKS];
+  bank_t linkListBanks[MAX_APS_BANKS]; // TODO change from array to link list
 } waveform_t;
 
 waveform_t * WF_Init();

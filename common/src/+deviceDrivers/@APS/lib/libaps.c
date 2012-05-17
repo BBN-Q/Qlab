@@ -1829,6 +1829,13 @@ EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int ma
 	//dlog(DEBUG_VERBOSE,"HASH %s\n",(char*) hashStr);
 }
 
+waveform_t * APS_GetWaveform(int device, int channel) {
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return 0;
+	return &(wfArray[channel]);
+}
+
 
 EXPORT int APS_SetWaveform(int device, int channel, float * data, int length) {
 	waveform_t * wfArray;

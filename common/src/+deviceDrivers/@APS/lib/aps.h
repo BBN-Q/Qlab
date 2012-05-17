@@ -27,6 +27,7 @@
 // Functions and defines not exported by DLL
 
 #include "ftd2xx.h"
+#include "waveform.h"
 
 #ifndef APS_H
 #define APS_H
@@ -141,4 +142,5 @@ int APS_WriteBlock
 
 void APS_UpdatePllReg(int device);
 
+waveform_t * APS_GetWaveform(int device, int channel);
 #endif // APS_H

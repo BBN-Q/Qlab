@@ -26,6 +26,7 @@ void *logCounter(void * threadid) {
 	pthread_exit(NULL);
 }
 
+
 int APS_InitLinkListThreads() {
 	int dev,chan;
 	for (dev = 0; dev < MAX_APS_DEVICES; dev++) {
@@ -33,6 +34,7 @@ int APS_InitLinkListThreads() {
 			linkListThreadData[dev][chan].runThread = 0;
 			linkListThreadData[dev][chan].dev = dev;
 			linkListThreadData[dev][chan].channel = chan;
+			linkListThreadData[dev][chan].waveform = 0;
 		}
 	}
 	return 0;
@@ -41,10 +43,28 @@ int APS_InitLinkListThreads() {
 void * APS_LinkListThread(void * data) {
 	linkListThreadData_t *threadData;
 	threadData = (linkListThreadData_t *) data;
+	bank_t *firstBankData, *loadBankData;
+	int currentBankID, pollBankID;
+	int validate = 0;
 
+	currentBankID  = APS_ReadLinkListStatus(threadData->dev, threadData->channel);
 	while(threadData->runThread) {
-		dlog(DEBUG_INFO,"Dev: %i  Channel: %i Hello World: Addr: 0x%x\n", threadData->dev, threadData->channel, threadData);
-		sleep(1);
+				// poll for current bank to see if bank has switched
+		pollBankID = APS_ReadLinkListStatus(threadData->dev, threadData->channel);
+		dlog(DEBUG_INFO,"Dev: %i  Channel: %i Current Bank: Addr: 0x%x\n", threadData->dev, threadData->channel, pollBankID);
+
+		if (pollBankID != currentBankID) {
+			dlog("Dev: %i  Channel: %i Loading Bank: %i\n", threadData->dev, threadData->channel, currentBankID);
+			loadBankData = &(threadData->waveform->linkListBanks[currentBankID]);
+			LoadLinkList_ELL(threadData->dev, loadBankData->offset, loadBankData->count, loadBankData->trigger,
+							 loadBankData->repeat, loadBankData->length, threadData->channel,currentBankID,validate);
+			currentBankID = pollBankID;
+			pollBankID = APS_ReadLinkListStatus(threadData->dev, threadData->channel);
+			if (pollBankID != currentBankID) {
+				dlog(DEBUG_INFO,"WARNING: Channel: %i BANK Swapped during load of link list\n", threadData->channel);
+			}
+		}
+		usleep(100);
 
 	}
 	pthread_exit(NULL);
@@ -64,6 +84,7 @@ EXPORT int APS_StartLinkListThread(int device, int channel) {
 	threadData = &(linkListThreadData[device][channel]);
 
 	threadData->runThread = 1;
+	threadData->waveform = APS_GetWaveform(device,channel);
 
 	dlog(DEBUG_INFO,"Starting thread for device: %i channel: %i data addr: 0x%x\n", device, channel, threadData);
 
