@@ -569,6 +569,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 waveform.data, length(waveform));
             if (val < 0), error('APS:storeAPSWaveform:set', 'error in set waveform'),end;
            
+            return
+            
             % set offset
             
             val = aps.librarycall('Setting waveform offet','APS_SetWaveformOffset', dac, wf.offset);
@@ -576,7 +578,28 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % set scale
             
             val = aps.librarycall('Setting wavform scale','APS_SetWaveformScale', dac, wf.scale_factor);
-           
+            
+            % check for link list data
+            if wf.have_link_list
+               ell = wf.get_ell_link_list();
+               if isfield(ell,'bankA') && ell.bankA.length > 0
+                            
+                   bankA = ell.bankA;
+                   
+                   % store link list
+                   val = aps.librarycall('Storing LL BankA','APS_SetLinkList',dac,bankA.offset,bankA.count, ...
+                       bankA.trigger, bankA.repeat, bankA.length, 0);
+               end
+               
+               if isfield(ell,'bankB')
+                   bankB = ell.bankB;
+                   val = aps.librarycall('Storing LL BankB','APS_SetLinkList',dac,bankB.offset,bankB.count, ...
+                       bankB.trigger, bankB.repeat, bankB.length, 1);
+               end
+               
+               %aps.setLinkListRepeat(ch-1,ell.repeatCount);
+               aps.setLinkListRepeat(ch-1,10000);
+            end
         end
         
         function loadAPSWaveforms(aps)
@@ -882,7 +905,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             val = aps.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*aps.MAX_WAVEFORM_VALUE);
             aps.(['chan_' num2str(ch)]).offset = offset;
         end
-
+        
 		function val = setTriggerDelay(aps, ch, delay)
             val = aps.librarycall('Set channel trigger delay','APS_SetTriggerDelay', ch-1, delay);
             aps.(['chan_' num2str(ch)]).trigDelay = delay;
@@ -946,14 +969,37 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 'APS_TestWaveformMemory',id,numBytes);
         end
         
-        function val = readLinkListStatus(aps,id)
+        function val =  readLinkListStatus(aps,id)
             val = aps.librarycall(sprintf('Read Link List Status'), ...
                 'APS_ReadLinkListStatus',id);
         end
         
-        function unload_library()
+        function setModeR5(aps)
+            aps.bit_file = 'cbl_aps2_r5_d6ma_fx.bit';
+            aps.expected_bit_file_ver = 5;
+        end
+        
+        function val = BIT(aps)
+           % read FPGA1
+           val1 = aps.librarycall('WriteRegBIT','APS_WriteRegBIT');
+           
+        end
+        
+        function val = threadTest(aps)
+           % read FPGA1
+           val1 = aps.librarycall('WriteRegBIT','APS_StartLinkListThread',0);
+           pause(1);
+           val1 = aps.librarycall('WriteRegBIT','APS_StartLinkListThread',1);
+           pause(10);
+           val1 = aps.librarycall('WriteRegBIT','APS_StopLinkListThread',1);
+           pause(2);
+           val1 = aps.librarycall('WriteRegBIT','APS_StopLinkListThread',0);
+           
+        end
+
+        function unload_library(aps)
             if libisloaded(aps.library_name)
-                unloadlibrary(aps.library_name);
+                unloadlibrary(aps.library_name)
             end
         end
 
@@ -977,10 +1023,17 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function setDebugLevel(aps, level)
             calllib(aps.library_name, 'APS_SetDebugLevel', level);
         end
+        
+        function startThreads(aps, channel)
+            val = aps.librarycall('Start threads', 'APS_StartLinkListThread', channel);
+        end
+        
+        function stopThreads(aps, channel)
+             val = aps.librarycall('Start threads', 'APS_StopLinkListThread', channel);
+        end
     end
     methods(Static)
-        
-        
+                
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function wf = getNewWaveform()
             % Utility function to get a APS wavform object from APS Driver
@@ -1036,9 +1089,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     error('Could not open aps')
                 end
             end
-            
-            aps.init()
 
+            aps.init()
+            
             validate = 0;
             useSlowWrite = 0;
 

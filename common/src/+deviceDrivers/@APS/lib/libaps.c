@@ -180,6 +180,8 @@ int APS_Init()
 		waveforms[cnt] = 0;
 	}
 
+	// init thread data
+	APS_InitLinkListThreads();
 	return 0;
 }
 
@@ -1435,11 +1437,11 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 		// test only works for channels running at 1.2 GHz
 		numSyncChannels = (fpgaFrequencies[0] == 1200 && fpgaFrequencies[1] == 1200) ? 4 : 2;
 		if (numSyncChannels == 4) {
-			APS_TestPllSync(device, 0, 5);
-			sync_status = APS_TestPllSync(device, 2, 5);
+			APS_TestPllSync(device, 0, numSyncChannels);
+			sync_status = APS_TestPllSync(device, 2, numSyncChannels);
 		}
 		else if (fpgaFrequencies[fpga] == 1200)
-			sync_status = APS_TestPllSync(device, dac, 5);
+			sync_status = APS_TestPllSync(device, dac, numSyncChannels);
 	}
 
 	return sync_status;
