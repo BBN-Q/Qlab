@@ -19,7 +19,7 @@ classdef DC < sweeps.Sweep
 	
 	methods
 		% constructor
-		function obj = DC(SweepParams, Instr, ExpParams, sweepPtsOnly)
+		function obj = DC(SweepParams, Instr, params, sweepPtsOnly)
 			if nargin < 3
 				error('Usage: DC(SweepParams, Instr, ExpParams)');
 			end

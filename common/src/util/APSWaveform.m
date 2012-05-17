@@ -68,6 +68,8 @@ classdef APSWaveform < handle
        message_manager = [];
        
        num_bits = 12;
+       
+       stored = false; % stored in c library
    end
    
    properties %(Access = 'private')
@@ -143,6 +145,7 @@ classdef APSWaveform < handle
        
        function set_vector(wf, data)
            wf.data = data;
+           wf.stored = false;
        end
        
        
@@ -157,6 +160,7 @@ classdef APSWaveform < handle
            end
            
            wf.offset = offset;
+           wf.stored = false;
        end
        
        function data = prep_vector(wf)

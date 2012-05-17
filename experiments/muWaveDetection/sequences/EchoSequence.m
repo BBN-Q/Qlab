@@ -15,7 +15,7 @@ end
 
 basename = 'Echo';
 fixedPt = 20000;
-cycleLength = 24000;
+cycleLength = 30000;
 nbrRepeats = 1;
 
 % load config parameters from file
@@ -26,13 +26,13 @@ IQkey = qubitMap.(qubit).IQkey;
 
 % if using SSB, uncomment the following line
 % params.(IQkey).T = eye(2);
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T,'bufferDelay',params.(IQkey).bufferDelay,'bufferReset',params.(IQkey).bufferReset,'bufferPadding',params.(IQkey).bufferPadding, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
 
 numsteps = 100; %150
-stepsize = 90;
+stepsize = 60;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 anglepts = 0:pi/8:(numsteps-1)*pi/8;
-%anglepts = 0;
+anglepts = 0;
 patseq = {{...
     pg.pulse('X90p'), ...
     pg.pulse('QId', 'width', delaypts), ...

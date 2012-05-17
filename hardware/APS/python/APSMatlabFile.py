@@ -4,12 +4,6 @@
 
 import numpy as np
 import h5py
-try:
-    import matplotlib.pyplot as plt
-    haveMatplotlib = True
-except:
-    haveMatplotlib = False
-    
     
 
 class APSMatlabFile(object):
@@ -95,22 +89,14 @@ class APSMatlabFile(object):
         WF[WF < -self.MAX_AMP_VALUE] = -self.MAX_AMP_VALUE
         
         return WF
-            
-    def plotWaveformLibrary(self):
-        if haveMatplotlib:
-            plt.plot(self.waveform)
-            plt.show()
-        else:
-            print 'Matplotlib is unavailable'
            
     @classmethod
     def unitTest(cls):
         filename = "pulse4000.mat"
         llfile = APSMatlabFile()
         llfile.readFile(filename)
-        #llfile.plotWaveformLibrary()
-        plt.plot(llfile.get_vector())
-        plt.show()
+        #plt.plot(llfile.get_vector())
+        #plt.show()
         
         
             

@@ -1,7 +1,11 @@
-function compileSequenceTekAWG12(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot, plotIdx)
+function compileSequenceTekAWG12(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot, plotIdx, seqSuffix)
 
 if ~exist('plotIdx', 'var')
     plotIdx = 20;
+end
+
+if ~exist('seqSuffix', 'var')
+    seqSuffix = '';
 end
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
@@ -39,7 +43,7 @@ end
 
 % trigger at beginning of measurement pulse
 % measure from (6000:9000)
-measLength = 3000;
+measLength =16000;
 measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = repmat(pg.makePattern([], fixedPt-500, ones(100,1), cycleLength), 1, segments)';
 ch1m2 = repmat(int32(pg.getPatternSeq(measSeq, 1, params.measDelay, fixedPt+measLength)), 1, segments)';
@@ -58,13 +62,15 @@ if makePlot
     hold off
 end
 
+save('testRB.mat', 'ch1', 'ch2')
+
 % add offsets to unused channels
 ch3 = ch3 + params.TekAWG34.offset;
 ch4 = ch4 + params.TekAWG34.offset;
 
 % make TekAWG file
 strippedBasename = basename;
-basename = [basename 'TekAWG12'];
+basename = [basename 'TekAWG12' seqSuffix];
 options = struct('m21_high', 2.0, 'm41_high', 2.0);
 TekPattern.exportTekSequence(tempdir, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
 disp('Moving AWG file to destination');

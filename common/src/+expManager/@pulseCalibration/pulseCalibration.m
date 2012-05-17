@@ -1,11 +1,10 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Module Name :  pulseCalibration.m
 %
 % Author/Date : Blake Johnson / Aug 24, 2011
 %
 % Description : Loops over a set of homodyneDetection2D experiments to
 % optimize qubit operations
-%
+
 % Restrictions/Limitations : UNRESTRICTED
 %
 % Change Descriptions :
@@ -32,7 +31,6 @@
 % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 % See the License for the specific language governing permissions and
 % limitations under the License.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 classdef pulseCalibration < expManager.homodyneDetection2D
     properties
@@ -48,7 +46,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         testMode = false;
         costFunctionGoal = 0.075; % tweak experimentally
     end
-    methods (Static)
+    methods
         %% Class constructor
         function obj = pulseCalibration(data_path, cfgFileName, basename, filenumber)
             if ~exist('filenumber', 'var')
@@ -67,73 +65,9 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             obj.mixerCalPath = [script 'cfg/mixercal.mat'];
             obj.pulseParamPath = getpref('qlab', 'pulseParamsBundleFile');
             
-            % to do: load channel mapping from file
             obj.channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
         end
-        
-        % externally defined static methods
-        [cost, J] = RepPulseCostFunction(data, angle);
-        [amp, offsetPhase]  = analyzeRabiAmp(data);
-        
-        function UnitTest()
-            script = java.io.File(mfilename('fullpath'));
-            path = char(script.getParent());
-            
-            % construct minimal cfg file
-            ExpParams = struct();
-            ExpParams.Qubit = 'q1';
-            ExpParams.DoMixerCal = 0;
-            ExpParams.DoRabiAmp = 1;
-            ExpParams.DoRamsey = 0;
-            ExpParams.DoPi2Cal = 1;
-            ExpParams.DoPiCal = 1;
-            ExpParams.DoDRAGCal = 0;
-            ExpParams.OffsetNorm = 1;
-            
-            cfg = struct('ExpParams', ExpParams, 'SoftwareDevelopmentMode', 1, 'InstrParams', struct());
-            cfg_path = [path '/unit_test.cfg'];
-            writeCfgFromStruct(cfg_path, cfg);
-            
-            % create object instance
-            pulseCal = expManager.pulseCalibration(path, cfg_path, 'unit_test', 1);
-            
-            %pulseCal.pulseParams = struct('piAmp', 6000, 'pi2Amp', 2800, 'delta', -0.5, 'T', eye(2,2), 'pulseType', 'drag',...
-            %                         'i_offset', 0.110, 'q_offset', 0.138);
-            %pulseCal.rabiAmpChannelSequence('q1q2', true);
-            %pulseCal.rabiAmpChannelSequence('q2', false);
-            %pulseCal.Pi2CalChannelSequence('q1q2', 'X', true);
-            %pulseCal.Pi2CalChannelSequence('q2', 'Y', false);
-            %pulseCal.PiCalChannelSequence('q1q2', 'Y', true);
-            %pulseCal.PiCalChannelSequence('q2', 'X', false);
-            
-            % rabi Amp data
-            %xpts = 0:100:80*100;
-            %piAmp = 6200;
-            %data = 0.5 - 0.1 * cos(2*pi*xpts/(2*piAmp));
-            %piAmpGuess = pulseCal.analyzeRabiAmp(data);
-            %fprintf('Initial guess for piAmp: %.1f\n', piAmpGuess);
-            
-            % perfect Pi2Cal data
-            %data = [0 0 .5*ones(1,36)];
-            %[cost, J] = pulseCal.Pi2CostFunction(data);
-            %fprintf('Pi2Cost for ''perfect'' data. Cost: %.4f, Jacobian: (%.4f, %.4f)\n', sum(cost.^2/length(cost)), sum(J(:,1)), sum(J(:,2)));
-            
-            % data representing amplitude error
-            %n = 1:9;
-            %data = 0.65 + 0.1*(-1).^n .* n./10;
-            %data = data(floor(1:.5:9.5));
-            %data = [0.5 0.5 data data];
-            %[cost, J] = pulseCal.Pi2CostFunction(data);
-            %fprintf('Pi2Cost for more realistic data. Cost: %.4f, Jacobian: (%.4f, %.4f)\n', sum(cost.^2/length(cost)), sum(J(:,1)), sum(J(:,2)));
-            %cost = pulseCal.PiCostFunction(data);
-            %fprintf('PiCost for more realistic data: %f\n', cost);
-            
-            pulseCal.Init();
-            %pulseCal.Do();
-            %pulseCal.CleanUp();
-        end
-    end
-    methods
+
         function out = homodyneMeasurement(obj, nbrSegments)
             % homodyneMeasurement calls homodyneDetection2DDo and returns
             % the amplitude data
@@ -219,7 +153,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                         if strcmp(InstrName, IQchannels.instr)
                             obj.targetAWGIdx = numAWGs;
                         end
-                    case 'deviceDrivers.AgilentAP120'
+                    case 'deviceDrivers.AgilentAP240'
                         obj.scope = obj.Instr.(InstrName);
                         obj.scopeParams = obj.inputStructure.InstrParams.(InstrName);
                 end
@@ -255,6 +189,71 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             if ~isfield(ExpParams, 'OffsetNorm')
                 ExpParams.OffsetNorm = 2;
             end
+        end
+    end
+        
+    methods (Static)
+        
+        % externally defined static methods
+        [cost, J] = RepPulseCostFunction(data, angle);
+        [amp, offsetPhase]  = analyzeRabiAmp(data);
+        
+        function UnitTest()
+            script = java.io.File(mfilename('fullpath'));
+            path = char(script.getParent());
+            
+            % construct minimal cfg file
+            ExpParams = struct();
+            ExpParams.Qubit = 'q1';
+            ExpParams.DoMixerCal = 0;
+            ExpParams.DoRabiAmp = 1;
+            ExpParams.DoRamsey = 0;
+            ExpParams.DoPi2Cal = 1;
+            ExpParams.DoPiCal = 1;
+            ExpParams.DoDRAGCal = 0;
+            ExpParams.OffsetNorm = 1;
+            
+            cfg = struct('ExpParams', ExpParams, 'SoftwareDevelopmentMode', 1, 'InstrParams', struct());
+            cfg_path = [path '/unit_test.cfg'];
+            writeCfgFromStruct(cfg_path, cfg);
+            
+            % create object instance
+            pulseCal = expManager.pulseCalibration(path, cfg_path, 'unit_test', 1);
+            
+            %pulseCal.pulseParams = struct('piAmp', 6000, 'pi2Amp', 2800, 'delta', -0.5, 'T', eye(2,2), 'pulseType', 'drag',...
+            %                         'i_offset', 0.110, 'q_offset', 0.138);
+            %pulseCal.rabiAmpChannelSequence('q1q2', true);
+            %pulseCal.rabiAmpChannelSequence('q2', false);
+            %pulseCal.Pi2CalChannelSequence('q1q2', 'X', true);
+            %pulseCal.Pi2CalChannelSequence('q2', 'Y', false);
+            %pulseCal.PiCalChannelSequence('q1q2', 'Y', true);
+            %pulseCal.PiCalChannelSequence('q2', 'X', false);
+            
+            % rabi Amp data
+            %xpts = 0:100:80*100;
+            %piAmp = 6200;
+            %data = 0.5 - 0.1 * cos(2*pi*xpts/(2*piAmp));
+            %piAmpGuess = pulseCal.analyzeRabiAmp(data);
+            %fprintf('Initial guess for piAmp: %.1f\n', piAmpGuess);
+            
+            % perfect Pi2Cal data
+            %data = [0 0 .5*ones(1,36)];
+            %[cost, J] = pulseCal.Pi2CostFunction(data);
+            %fprintf('Pi2Cost for ''perfect'' data. Cost: %.4f, Jacobian: (%.4f, %.4f)\n', sum(cost.^2/length(cost)), sum(J(:,1)), sum(J(:,2)));
+            
+            % data representing amplitude error
+            %n = 1:9;
+            %data = 0.65 + 0.1*(-1).^n .* n./10;
+            %data = data(floor(1:.5:9.5));
+            %data = [0.5 0.5 data data];
+            %[cost, J] = pulseCal.Pi2CostFunction(data);
+            %fprintf('Pi2Cost for more realistic data. Cost: %.4f, Jacobian: (%.4f, %.4f)\n', sum(cost.^2/length(cost)), sum(J(:,1)), sum(J(:,2)));
+            %cost = pulseCal.PiCostFunction(data);
+            %fprintf('PiCost for more realistic data: %f\n', cost);
+            
+            pulseCal.Init();
+            pulseCal.Do();
+            pulseCal.CleanUp();
         end
     end
 end

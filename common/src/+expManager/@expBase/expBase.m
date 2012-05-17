@@ -96,7 +96,7 @@ classdef  expBase < handle
                 return
             end
             % construct full path
-			fullname = [obj.DataPath '/' obj.DataFileName];
+			fullname = fullfile(obj.DataPath, obj.DataFileName);
             % open up the file with write/create permission
             [obj.DataFileHandle errorMsg] = fopen(fullname,'w');
             % If the file was opened sucessfully then errorMsg will be
@@ -195,11 +195,10 @@ classdef  expBase < handle
             SD_mode = obj.inputStructure.SoftwareDevelopmentMode;
             InstrumentNames = fieldnames(obj.Instr);
             for Instr_index = 1:numel(InstrumentNames)
-                cmdString = ['obj.Instr.' InstrumentNames{Instr_index} '.disconnect'];
                 if SD_mode
-                    disp(cmdString);
+                    fprintf('Closing %s',InstrumentNames{Instr_index});
                 else
-                    eval(cmdString);
+                    obj.Instr.(InstrumentNames{Instr_index}).disconnect()
                 end
             end
 		end
@@ -218,9 +217,18 @@ classdef  expBase < handle
 		end
         %Class destructor
         function delete(obj)
+            %Try to close any instruments left hanging open
             try
-                obj.closeInstruments;
+                obj.closeInstruments();
             catch %#ok<CTCH>
+            end
+            %Clean up the output file and rename if we didn't finish it
+            %properly
+            if ~isempty(fopen(obj.DataFileHandle))
+                fclose(obj.DataFileHandle);
+                fullname = fullfile(obj.DataPath, obj.DataFileName);
+                [path, name, ~] = fileparts(fullname);
+                movefile(fullname, fullfile(path, [name '.incomplete']));
             end
         end
     end

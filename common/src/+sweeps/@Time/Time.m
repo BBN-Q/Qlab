@@ -19,7 +19,7 @@ classdef Time < sweeps.Sweep
 	
 	methods
 		% constructor
-		function obj = Time(SweepParams, Instr, ExpParams, sweepPtsOnly)
+		function obj = Time(SweepParams, Instr, params, sweepPtsOnly)
 			if nargin < 3
 				error('Usage: Time(SweepParams, Instr, ExpParams)');
 			end
@@ -27,8 +27,8 @@ classdef Time < sweeps.Sweep
             
             %if ~sweepPtsOnly
                 % look for an instrument with the name 'scope'
-                if isfield(Instr, 'scope')
-                    settings = Instr.scope.averager;
+                if isfield(params.InstrParams, 'scope')
+                    settings = params.InstrParams.scope.averager;
                     obj.numSegments = settings.nbrSegments;
                 else
                     error('Could not infer number of segments');

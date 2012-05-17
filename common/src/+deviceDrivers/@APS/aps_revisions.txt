@@ -3,6 +3,33 @@ aps_dac2_r10_p04.bit - Version w/SW Sync, B-A Fix, Latched PLL_INT lock
 aps_dac2_r10_p05.bit - Version w/SW Sync, B-A Fix, Latched PLL_INT, PLL02, PLL13 locks
 aps_dac2_r10_p06.bit - Corrected dac_if_sm, for initial load (added state 0x0040)
                        Holds one state to insure initial LL values are out and loaded.
+aps_dac2_r10_p06.bit - Inverted trig13 signal (per updated schematic)
+                       Updated trigger output logic for waveform mode
+aps_dac2_r10_p07.bit - Corrected continuous waveform mode operation issues with extra zero outputs.
+aps_dac2_r10_p08.bit - Corrected Mini Link List issues with transitions from LLA->LLB, LLB->LLA
+
+(Issues with bit errors)
+aps_dac2_r10_p12.bit - intermediate build 1
+aps_dac2_r10_p13.bit - intermediate build 2
+aps_dac2_r10_p14.bit - Slowed down internal clock from 200 MHz to 150 MHz
+
+(Dual write issues)
+aps_dac2_r10_p15.bit - Turns LED off if USB sync (or bad addr) error is detected. (Also, "memlock" disabled)
+aps_dac2_r10_p16.bit - Turns LED off if USB sync (or bad addr) error is detected. (Also, "memlock" disabled)
+                       Resets w/good write to write address (4 writes)
+aps_dac2_r10_p17.bit - p16, but using "rising edge" of CPLD interface clock.
+aps_dac2_r10_p20.bit - p17, with added debug header signals
+aps_dac2_r10_p25.bit - p20, with debug header signals removed.
+                     - Added "on_led" register definition (Trig/LED Register bit 0x0010)
+                     - When "on_led" is '0' (default) panel LED = all PLLs locked
+                     - When "on_led" is '1' panel LED = either channel is running (state machine not in reset)
+aps_dac2_r10_p27.bit - p25, with added logic to insure checksum registers occur only once per cycle
+aps_dac2_r10_p28.bit - Added Trigger Offset Registers (0x12, 0x13)
+                       Rearranged the TRIG/LED Register bit fields and added "Waveform Mode Output Trigger Enable" bits
+                       Added trigger output delay logic (2-stage counter), using the Trigger Offset Registers (LL Mode Only) 
+
+
+=================
 
 aps_fab1_p07.bit - repetative half height positive square pulse
                    12 samples high, 12 samples low
@@ -10,3 +37,4 @@ aps_fab1_p07.bit - repetative half height positive square pulse
 aps_fab1_p08.bit - repetative half height positive square pulse
                    12 samples high, 12 samples low
                    trigger out 1/300 MHz width
+aps_fab1_p09.bit - Inverted trig13 signal (per updated schematic)

@@ -10,6 +10,10 @@ function data = loadData(makePlot, fullpath)
     % get path of file to load
     if ~exist('fullpath', 'var')
         [filename, pathname] = uigetfile('*.out');
+        if isequal(filename,0) || isequal(pathname,0)
+           data = [];
+           return
+        end
         fullpath = [pathname '/' filename];
     else
         [pathname, filename, ext] = fileparts(fullpath);

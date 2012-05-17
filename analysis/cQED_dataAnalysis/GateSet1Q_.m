@@ -1,18 +1,45 @@
 function [Uset] = GateSet1Q_(nbrPulses)
 % Blake Johnson, Feb 10, 2012
  
-sm = destroy_(2);
+sm = full(destroy_(2));
 sp = sm';
-sx = sp+sm;
-sy = +1i*sp-1i*sm;
-sz = sparse([1 0;0 -1]);
-si = speye(2);
+X = sp+sm;
+Y = +1i*sp-1i*sm;
+Z = [1 0;0 -1];
+I = eye(2);
 
-Uset{1}=speye(2);
-Uset{2}=expm(-1i*pi*sx/2);
-Uset{3}=expm(-1i*pi*sx/4);
-Uset{4}=expm(-1i*pi*sy/4);
-Uset{5}=expm(1i*pi*sx/4);
-Uset{6}=expm(1i*pi*sy/4);
+
+switch nbrPulses
+    case 4
+        %Four pulse set
+        Uset{1}=speye(2);
+        Uset{2}=expm(-1i*(pi/2)*X);
+        Uset{3}=expm(-1i*(pi/4)*X);
+        Uset{4}=expm(-1i*(pi/4)*Y);
+    case 6
+        %Six pulse set
+        Uset{1}=speye(2);
+        Uset{2}=expm(-1i*(pi/2)*X);
+        Uset{3}=expm(-1i*(pi/4)*X);
+        Uset{4}=expm(-1i*(pi/4)*Y);
+        Uset{5}=expm(1i*(pi/4)*X);
+        Uset{6}=expm(1i*(pi/4)*Y);
+    case 12
+        %12 pulse set
+        Uset{1} = I;
+        Uset{2} = expm(-1i*(pi/2)*X);
+        Uset{3} = expm(-1i*(pi/2)*Y);
+        Uset{4} = expm(-1i*(pi/2)*Z);
+        Uset{5} = expm(-1i*(pi/3)*(1/sqrt(3))*(X+Y-Z));  %X+Y-Z 120
+        Uset{6} = expm(-1i*(pi/3)*(1/sqrt(3))*(X-Y+Z));  %X-Y+Z 120
+        Uset{7} = expm(-1i*(pi/3)*(1/sqrt(3))*(-X+Y+Z));  %-X+Y+Z 120
+        Uset{8} = expm(-1i*(pi/3)*(1/sqrt(3))*(-X-Y-Z));  %X+Y+Z -120 (equivalent to -X-Y-Z 120)
+        Uset{9} = expm(-1i*(pi/3)*(1/sqrt(3))*(X+Y+Z));  %X+Y+Z 120
+        Uset{10} = expm(-1i*(pi/3)*(1/sqrt(3))*(-X+Y-Z));  %X-Y+Z -120 (equivalent to -X+Y-Z 120)
+        Uset{11} = expm(-1i*(pi/3)*(1/sqrt(3))*(X-Y-Z));  %-X+Y+Z -120 (equivalent to X-Y-Z 120
+        Uset{12} = expm(-1i*(pi/3)*(1/sqrt(3))*(-X-Y+Z));  %%X+Y-Z -120 (equivalent to -X-Y+Z 120
+    otherwise
+        error('Unable to handle number of pulses %d', nbrPulses);
+end
 
 end

@@ -37,28 +37,28 @@ classdef awg_channel < handle
 		deviceObj_awg;			%
         channelName;			%
         
-        Amplitude;              %	       
-        AnalogHigh;             %	
-        AnalogLow;              %	
+        amplitude;              %	       
+        analogHigh;             %	
+        analogLow;              %	
         DACResolution;          %	
-        Delay;                 	%
-        Enabled;				%
-        LowpassFilterFrequency;	%
-        Marker1High;			%	
-        Marker1Level;			%
-        Marker1Low;				%
-        Marker1Offset;			%
-        Marker1Amplitude;		%
-        Marker2High;			%
-        Marker2Level;			%
-        Marker2Low;				%
-        Marker2Offset;			%
-        Marker2Amplitude;		%
-        Name;					%
+        delay;                 	%
+        enabled;				%
+        lowpassFilterFrequency;	%
+        marker1High;			%	
+        marker1Level;			%
+        marker1Low;				%
+        marker1Offset;			%
+        marker1Amplitude;		%
+        marker2High;			%
+        marker2Level;			%
+        marker2Low;				%
+        marker2Offset;			%
+        marker2Amplitude;		%
+        name;					%
         outputWaveformName;		%
         offset;					%
-        Skew;					%	
-		Phase; 					%
+        skew;					%	
+		phase; 					%
     end % end properties
 
     % Define methods
@@ -118,15 +118,15 @@ classdef awg_channel < handle
 		% property get accessors 
 		%
 		% property get functions for channel group object
-		function val = get.Amplitude(obj)
+		function val = get.amplitude(obj)
             gpib_string = ['SOURce', obj.channelName ,':VOLTage:AMPLitude?'];
             val = str2double(obj.Query(gpib_string));
         end
-        function val = get.AnalogHigh(obj)
+        function val = get.analogHigh(obj)
             gpib_string = ['SOURce', obj.channelName ,':VOLTage:HIGH?'];
             val = str2double(obj.Query(gpib_string));
         end
-        function val = get.AnalogLow(obj)
+        function val = get.analogLow(obj)
             gpib_string = ['SOURce', obj.channelName ,':VOLTage:LOW?'];
             val = str2double(obj.Query(gpib_string));
         end
@@ -134,43 +134,43 @@ classdef awg_channel < handle
             gpib_string = ['SOURce', obj.channelName ,':DAC:RESolution?'];
             val = obj.Query(gpib_string);
         end
-        function val = get.Delay(obj)
+        function val = get.delay(obj)
             gpib_string = ['SOURce', obj.channelName ,':DELay?'];
             val = obj.Query(gpib_string);
         end
-        function val = get.Enabled(obj)
+        function val = get.enabled(obj)
             gpib_string = ['OUTPut', obj.channelName, ':STATe?'];
             val = obj.Query(gpib_string);
         end
-        function val = get.LowpassFilterFrequency(obj)
+        function val = get.lowpassFilterFrequency(obj)
             gpib_string = ['OUTPut', obj.channelName, ':FILTer:LPASs:FREQuency?'];
             val = obj.Query(gpib_string);
         end
-        function val = get.Marker1High(obj)
+        function val = get.marker1High(obj)
             gpib_string = ['SOURce', obj.channelName ,':MARKer1:VOLTage:HIGH?'];
             val = str2double(obj.Query(gpib_string));
         end
-        function val = get.Marker1Low(obj)
+        function val = get.marker1Low(obj)
             gpib_string = ['SOURce', obj.channelName ,':MARKer1:VOLTage:LOW?'];
             val = str2double(obj.Query(gpib_string));
         end
-        function val = get.Marker1Offset(obj)
+        function val = get.marker1Offset(obj)
             gpib_string = ['SOURce', obj.channelName ,':MARKer1:VOLTage:OFFSet?'];
             val = str2double(obj.Query(gpib_string));
         end
-        function val = get.Marker2High(obj)
+        function val = get.marker2High(obj)
             gpib_string = ['SOURce', obj.channelName ,':MARKer2:VOLTage:HIGH?'];
             val = str2double(obj.Query(gpib_string));
         end
-        function val = get.Marker2Low(obj)
+        function val = get.marker2Low(obj)
             gpib_string = ['SOURce', obj.channelName ,':MARKer2:VOLTage:LOW?'];
             val = str2double(obj.Query(gpib_string));
         end
-        function val = get.Marker2Offset(obj)
+        function val = get.marker2Offset(obj)
             gpib_string = ['SOURce', obj.channelName ,':MARKer2:VOLTage:OFFSet?'];
             val = str2double(obj.Query(gpib_string));
         end
-        function val = get.Name(obj)
+        function val = get.name(obj)
             val = obj.outputWaveformName();
         end
         function val = get.outputWaveformName(obj)
@@ -181,7 +181,7 @@ classdef awg_channel < handle
             gpib_string = ['SOURce', obj.channelName ,':VOLTage:OFFSet?'];
             val = str2double(obj.Query(gpib_string));
         end
-        function val = get.Skew(obj)
+        function val = get.skew(obj)
             gpib_string = ['SOURce', obj.channelName ,':SKEW?'];
             val = str2double(obj.Query(gpib_string));
         end
@@ -190,20 +190,20 @@ classdef awg_channel < handle
 		% property set accessors 
 		%
 		% property set ('put') functions for channel group object
-		function obj = set.Amplitude(obj, value)
+		function obj = set.amplitude(obj, value)
             gpib_string = ['SOURce', obj.channelName ,':VOLTage:AMPLitude ', num2str(value)];
             obj.Write(gpib_string);
-            obj.Amplitude = value;
+            obj.amplitude = value;
         end
-        function obj = set.AnalogHigh(obj, value)
+        function obj = set.analogHigh(obj, value)
             gpib_string = ['SOURce', obj.channelName ,':VOLTage:HIGH ', num2str(value)];
             obj.Write(gpib_string);
-            obj.AnalogHigh = value;
+            obj.analogHigh = value;
         end
-        function obj = set.AnalogLow(obj, value)
+        function obj = set.analogLow(obj, value)
             gpib_string = ['SOURce', obj.channelName ,':VOLTage:LOW ', num2str(value)];
             obj.Write(gpib_string);
-            obj.AnalogLow = value;
+            obj.analogLow = value;
         end
         function obj = set.DACResolution(obj, value)
             checkSet = [8 10 14];
@@ -214,12 +214,12 @@ classdef awg_channel < handle
             obj.Write(gpib_string);
             obj.DACResolution = value; 
         end
-        function obj = set.Delay(obj, value)
+        function obj = set.delay(obj, value)
             gpib_string = ['SOURce', obj.channelName ,':DELay ', num2str(value)];
             obj.Write(gpib_string);
-            obj.Delay = value;
+            obj.delay = value;
         end
-        function obj = set.Enabled(obj, value)
+        function obj = set.enabled(obj, value)
             if isnumeric(value)
                 value = num2str(value);
             end
@@ -229,54 +229,54 @@ classdef awg_channel < handle
             end
             gpib_string = ['OUTPut', obj.channelName, ':STATe ', propMapObj(value)];
             obj.Write(gpib_string);
-            obj.Enabled = value;
+            obj.enabled = value;
         end
-        function obj = set.LowpassFilterFrequency(obj, value)
+        function obj = set.lowpassFilterFrequency(obj, value)
             gpib_string = ['OUTPut', obj.channelName, ':FILTer:LPASs:FREQuency', num2str(value)];
             obj.Write(gpib_string);
-            obj.LowpassFilterFrequency = value;
+            obj.lowpassFilterFrequency = value;
         end
-        function obj = set.Marker1High(obj, value)
+        function obj = set.marker1High(obj, value)
             gpib_string = ['SOURce', obj.channelName ,':MARKer1:VOLTage:HIGH ', num2str(value)];
             obj.Write(gpib_string);
-            obj.Marker1High = value;
+            obj.marker1High = value;
         end
-        function obj = set.Marker1Low(obj, value)
+        function obj = set.marker1Low(obj, value)
             gpib_string = ['SOURce', obj.channelName ,':MARKer1:VOLTage:LOW ', num2str(value)];
             obj.Write(gpib_string);
-            obj.Marker1Low = value;
+            obj.marker1Low = value;
         end
-        function obj = set.Marker1Offset(obj, value)
+        function obj = set.marker1Offset(obj, value)
             gpib_string = ['SOURce', obj.channelName ,':MARKer1:VOLTage:OFFSet ', num2str(value)];
             obj.Write(gpib_string);
-            obj.Marker1Offset = value;
+            obj.marker1Offset = value;
         end
-        function obj = set.Marker1Amplitude(obj, value)
+        function obj = set.marker1Amplitude(obj, value)
             gpib_string = ['SOURce', obj.channelName ,':MARKer1:VOLTage:AMPLitude ', num2str(value)];
             obj.Write(gpib_string);
-            obj.Marker1Amplitude = value;
+            obj.marker1Amplitude = value;
         end
-        function obj = set.Marker2High(obj, value)
+        function obj = set.marker2High(obj, value)
             gpib_string = ['SOURce', obj.channelName ,':MARKer2:VOLTage:HIGH ', num2str(value)];
             obj.Write(gpib_string);
-            obj.Marker2High = value;
+            obj.marker2High = value;
         end
-        function obj = set.Marker2Low(obj, value)
+        function obj = set.marker2Low(obj, value)
             gpib_string = ['SOURce', obj.channelName ,':MARKer2:VOLTage:LOW ', num2str(value)];
             obj.Write(gpib_string);
-            obj.Marker2Low = value;
+            obj.marker2Low = value;
         end
-        function obj = set.Marker2Offset(obj, value)
+        function obj = set.marker2Offset(obj, value)
             gpib_string = ['SOURce', obj.channelName ,':MARKer2:VOLTage:OFFSet ', num2str(value)];
             obj.Write(gpib_string);
-            obj.Marker2Offset = value;
+            obj.marker2Offset = value;
         end
-        function obj = set.Marker2Amplitude(obj, value)
+        function obj = set.marker2Amplitude(obj, value)
             gpib_string = ['SOURce', obj.channelName ,':MARKer2:VOLTage:AMPLitude ', num2str(value)];
             obj.Write(gpib_string);
-            obj.Marker2Amplitude = value;
+            obj.marker2Amplitude = value;
         end
-        function obj = set.Name(obj, value)
+        function obj = set.name(obj, value)
             obj.outputWaveformName = value;
         end
         function obj = set.outputWaveformName(obj, value)
@@ -289,10 +289,10 @@ classdef awg_channel < handle
             obj.Write(gpib_string);
             obj.offset = value;
         end
-        function obj = set.Skew(obj, value)
+        function obj = set.skew(obj, value)
             gpib_string = ['SOURce', obj.channelName ,':SKEW ', num2str(value)];
             obj.Write(gpib_string);
-            obj.Skew = value;
+            obj.skew = value;
         end
     end	% end private methods  
 end     

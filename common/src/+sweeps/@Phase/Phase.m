@@ -18,7 +18,7 @@ classdef Phase < sweeps.Sweep
 	
 	methods
 		% constructor
-		function obj = Phase(SweepParams, Instr, ExpParams, sweepPtsOnly)
+		function obj = Phase(SweepParams, Instr, params, sweepPtsOnly)
 			if nargin < 3
 				error('Usage: Power(SweepParams, Instr, ExpParams)');
 			end

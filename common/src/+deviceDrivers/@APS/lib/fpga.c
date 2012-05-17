@@ -45,7 +45,8 @@ FILE * outfile = 0;
 
 int gBitFileVersion = 0; // set default version to 0 as all valid version numbers are > 0
 int gRegRead =  FPGA_ADDR_REGREAD; // register read address to or
-unsigned int gCheckSum[MAX_APS_DEVICES][2] = {0}; // checksum for data written to each fpga
+WORD gCheckSum[MAX_APS_DEVICES][2] = {0}; // checksum for data written to each fpga
+WORD gAddrCheckSum[MAX_APS_DEVICES][2] = {0}; // checksum for addresses written to each fpga
 
 int APS_FormatForFPGA(BYTE * buffer, ULONG addr, ULONG data, UCHAR fpga)
 {
@@ -64,25 +65,10 @@ int APS_FormatForFPGA_ELL(BYTE * buffer, ULONG addr,
 		                    ULONG offset, ULONG count,
 		                    ULONG trigger, ULONG repeat, UCHAR fpga)
 {
-	BYTE cmd;
-
-	cmd = APS_FPGA_IO | (fpga<<2) | 2;
-
-	buffer[0] = cmd;
-	buffer[1] = (addr >> 8) & LSB_MASK;
-	buffer[2]  = addr & LSB_MASK;
-
-	buffer[3]  = (offset >> 8) & LSB_MASK;
-	buffer[4]  = offset & LSB_MASK;
-
-	buffer[5]  = (count >> 8) & LSB_MASK;
-	buffer[6]  = count & LSB_MASK;
-
-	buffer[7]  = (trigger >> 8) & LSB_MASK;
-	buffer[8]  = trigger & LSB_MASK;
-
-	buffer[9]  = (repeat >> 8) & LSB_MASK;
-	buffer[10]  = repeat & LSB_MASK;
+	APS_FormatForFPGA(buffer, addr, offset, fpga);
+	APS_FormatForFPGA(buffer+5, addr+1, count, fpga);
+	APS_FormatForFPGA(buffer+10, addr+2, trigger, fpga);
+	APS_FormatForFPGA(buffer+15, addr+3, repeat, fpga);
 	return 0;
 }
 
@@ -96,7 +82,7 @@ EXPORT int APS_WriteFPGA(int device, ULONG addr, ULONG data, UCHAR fpga)
  * Inputs :
  *               Addr  - Address to write to
  *              Data   - Data to write
- *              FPGA - FPGA selection bit (1 or 2)
+ *              FPGA - FPGA selection bit (1 or 2, 3 = both)
  *
  * Returns :
  *
@@ -115,42 +101,57 @@ EXPORT int APS_WriteFPGA(int device, ULONG addr, ULONG data, UCHAR fpga)
 	outdata[2] = (data >> 8) & LSB_MASK;
 	outdata[3] = data & LSB_MASK;
 
+	// address checksum is defined as (bits 0-14: addr, 15: 0)
+	// so, set bit 15 to zero
 	if (fpga == 3) {
-	  gCheckSum[device][0] += addr;
-	  gCheckSum[device][0] += data;
-	  gCheckSum[device][1] += addr;
-	  gCheckSum[device][1] += data;
+		gAddrCheckSum[device][0] += addr & 0x7FFF;
+		gCheckSum[device][0] += data;
+		gAddrCheckSum[device][1] += addr & 0x7FFF;
+		gCheckSum[device][1] += data;
 	} else {
-    gCheckSum[device][fpga - 1] += addr;
-    gCheckSum[device][fpga - 1] += data;
+		gAddrCheckSum[device][fpga - 1] += addr & 0x7FFF;
+		gCheckSum[device][fpga - 1] += data;
 	}
 
-	dlog(DEBUG_VERBOSE2,"Writting Addr 0x%x Data 0x%x\n", addr, data);
+	dlog(DEBUG_VERBOSE2,"Writing Addr 0x%x Data 0x%x\n", addr, data);
 
 	APS_WriteReg(device, APS_FPGA_IO, 2, fpga, outdata);
 }
 
-EXPORT int APS_CompareCheckSum(int device, int dac) {
-  unsigned int checksum;
-  int fpga;
-  fpga = dac2fpga(dac);
-  if (fpga < 0 || fpga == 3) {
-    return -1;
-  }
-  checksum = APS_ReadFPGA(device, gRegRead | FPGA_OFF_DATA_CHECKSUM, fpga);
-  return (checksum == gCheckSum[device][fpga - 1]);
+EXPORT int APS_CompareCheckSum(int device, int fpga) {
+	// returns true (1) if both the address and data checksums match, otherwise returns 0
+	unsigned int data_checksum, addr_checksum;
+	if (fpga < 0 || fpga == 3) {
+		return -1;
+	}
+	data_checksum = APS_ReadFPGA(device, gRegRead | FPGA_OFF_DATA_CHECKSUM, fpga);
+	addr_checksum = APS_ReadFPGA(device, gRegRead | FPGA_OFF_ADDR_CHECKSUM, fpga);
+	
+	int success = ((data_checksum == gCheckSum[device][fpga - 1]) &&
+		(addr_checksum == gAddrCheckSum[device][fpga-1]));
+	
+	dlog(DEBUG_INFO, "Checksum Addr: 0x%x (0x%x), Data: 0x%x (0x%x), Success: %d\n", addr_checksum, gAddrCheckSum[device][fpga-1], data_checksum, gCheckSum[device][fpga-1], success);
+	
+	return success;
 }
 
-EXPORT UINT APS_ResetCheckSum(int device, int dac) {
-  gCheckSum[device][dac2fpga(dac) - 1] = 0;
+EXPORT UINT APS_ResetCheckSum(int device, int fpga) {
+	// write to registers to clear them
+	APS_WriteFPGA(device, FPGA_OFF_DATA_CHECKSUM, 0, fpga);
+	APS_WriteFPGA(device, FPGA_OFF_ADDR_CHECKSUM, 0, fpga);
+	gCheckSum[device][fpga-1] = 0;
+	gAddrCheckSum[device][fpga-1] = 0;
 }
 
 EXPORT UINT APS_ResetAllCheckSum() {
-  int i;
-  for (i = 0; i < MAX_APS_DEVICES; i++) {
-    gCheckSum[i][0] = 0;
-    gCheckSum[i][1] = 0;
-  }
+	int i;
+	for (i = 0; i < MAX_APS_DEVICES; i++) {
+		gCheckSum[i][0] = 0;
+		gCheckSum[i][1] = 0;
+		gAddrCheckSum[i][0] = 0;
+		gAddrCheckSum[i][1] = 0;
+	}
+	return 0;
 }
 
 
@@ -177,6 +178,11 @@ EXPORT ULONG APS_ReadFPGA(int device, ULONG addr, UCHAR fpga)
 {
 	ULONG data;
 	UCHAR read[2];
+  
+	if (fpga == 3) {
+		// can only read from one FPGA at a time, assume we want data from FPGA 1
+		fpga = 1;
+	}
 
 	read[0] = (addr >> 8) & LSB_MASK;
 	read[1] = addr & LSB_MASK;
@@ -237,7 +243,7 @@ int dac2fpga(int dac)
 }
 
 EXPORT int APS_LoadWaveform(int device, short *Data,
-		                      int ByteCount, int offset,int dac,
+		                      int nbrSamples, int offset, int dac,
 		                      int validate, int useSlowWrite)
 /********************************************************************
  *
@@ -246,7 +252,7 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
  * Description : LoadsWaveform to FPGA
  *
  * Inputs : Data - pointer to waveform buffer
- *              ByteCount - length of waveform in bytes
+ *              nbrSamples - length of waveform in samples
  *              Dac - dac ID
  *
  * Returns : 0 on success < 0 on failure
@@ -277,22 +283,22 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	BYTE * formatedDataIdx;
 
 	if(gBitFileVersion < VERSION_ELL) {
-	  max_wf_length = K4;
+		max_wf_length = K4;
 	} else {
-	  max_wf_length = K8;
+		max_wf_length = K8;
 	}
 
-	if(ByteCount > max_wf_length ) {
+	if(nbrSamples > max_wf_length ) {
 		dlog(DEBUG_INFO,"[WARNING] Waveform length > Maximum. Truncating waveform");
-		ByteCount = max_wf_length;
+		nbrSamples = max_wf_length;
 	}
 
-	// waveform length used by FPGA must be ByteCount /4  - 1
-	wf_length = ByteCount / WF_MODULUS - 1;
+	// waveform length used by FPGA must be an integer multiple of WF_MODULUS
+	wf_length = nbrSamples / WF_MODULUS - 1;
 
 
-	if (ByteCount % WF_MODULUS != 0) {
-		dlog(DEBUG_VERBOSE,"[WARNING] Waveform data needs to be padded");
+	if (nbrSamples % WF_MODULUS != 0) {
+		dlog(DEBUG_INFO,"[WARNING] Waveform data needs to be padded");
 	}
 
 	fpga = dac2fpga(dac);
@@ -300,7 +306,7 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 		return -1;
 	}
 
-	dlog(DEBUG_INFO,"Loading Waveform length %i into FPGA%i DAC%i \n", ByteCount, fpga, dac);
+	dlog(DEBUG_INFO,"Loading Waveform length %i into FPGA%i DAC%i \n", nbrSamples, fpga, dac);
 
 	// setup register addressing based on DAC
 	switch(dac) {
@@ -345,32 +351,32 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	}
 
 	// check to make sure that waveform will fit
-	if ((offset + ByteCount) > max_wf_length) {
+	if ((offset + nbrSamples) > max_wf_length) {
 		return -4;
 	}
 
-  dlog(DEBUG_VERBOSE,"Initialize Control and Status Register to initial state\n");
-  // State machines should be reset and DDRs enabled
-  int csr_init = CSRMSK_ENVSMRST_ELL | CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMRST_ELL | CSRMSK_PHSSMEN_ELL;
+	dlog(DEBUG_VERBOSE,"Initialize Control and Status Register to initial state\n");
+	// State machines should be reset and DDRs enabled
+	int csr_init = CSRMSK_ENVSMRST_ELL | CSRMSK_ENVDDR_ELL | CSRMSK_PHSSMRST_ELL | CSRMSK_PHSDDR_ELL;
 
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_CSR, csr_init, fpga);
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
-	  data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
-	  dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
-	  dlog(DEBUG_VERBOSE,"Initializing %s (%i) Offset and Size\n", dac_type, dac);
+		data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
+		dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
+		dlog(DEBUG_VERBOSE,"Initializing %s (%i) Offset and Size\n", dac_type, dac);
 	}
 
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_offset, offset, fpga);
-	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_size,   wf_length, fpga);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_size, wf_length, fpga);
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
-	  data = APS_ReadFPGA(device, gRegRead | dac_offset, fpga);
-	  dlog(DEBUG_VERBOSE,"Offset set to: %i\n", data);
+		data = APS_ReadFPGA(device, gRegRead | dac_offset, fpga);
+		dlog(DEBUG_VERBOSE,"Offset set to: %i\n", data);
 
-	  data = APS_ReadFPGA(device, gRegRead | dac_size, fpga);
-	  dlog(DEBUG_VERBOSE,"Size set to: %i\n", data);
-	  dlog(DEBUG_VERBOSE,"Loading %s (%i) Waveform at 0x%x ...\n", dac_type, dac, dac_write);
+		data = APS_ReadFPGA(device, gRegRead | dac_size, fpga);
+		dlog(DEBUG_VERBOSE,"Size set to: %i\n", data);
+		dlog(DEBUG_VERBOSE,"Loading %s (%i) Waveform at 0x%x ...\n", dac_type, dac, dac_write);
 	}
 
 	int error = 0;
@@ -383,55 +389,74 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	dac_write += offset;
 
 	#define ADDRDATASIZE 5
+	
+	// clear checksums
+	APS_ResetCheckSum(device, fpga);
 
 	// slow write of data one sample at a time
 	UCHAR dummyRead[2];
 	if (useSlowWrite != 0) {
-	  dlog(DEBUG_VERBOSE,"Using slow write\n");
+		dlog(DEBUG_VERBOSE,"Using slow write\n");
 
-	  for(cnt = 0; cnt < ByteCount; cnt++) {
-	    APS_WriteFPGA(device, dac_write + cnt, Data[cnt], fpga);
-	    if (cnt % 4 == 0 && cnt != 0) {
-	      // dummy read to slow down the cpld
-	      APS_ReadReg(device, APS_FPGA_IO, 1, fpga, dummyRead);
-	    }
-	  }
+		for(cnt = 0; cnt < nbrSamples; cnt++) {
+			APS_WriteFPGA(device, dac_write + cnt, Data[cnt], fpga);
+			if (cnt % 4 == 0 && cnt != 0) {
+				// dummy read to slow down the cpld
+				APS_ReadReg(device, APS_FPGA_IO, 1, fpga, dummyRead);
+			}
+		}
 	} else {
 
-	  // faster buffered write
+		// faster buffered write
 
-    formated_length  = ADDRDATASIZE * ByteCount;  // Expanded length 1 byte command 2 bytes addr 2 bytes data per data sample
-    formatedData = (BYTE *) malloc(formated_length);
-    if (!formatedData)
-      return -5;
-    formatedDataIdx = formatedData;
+		formated_length	 = ADDRDATASIZE * nbrSamples;  // Expanded length = 1 byte command + 2 bytes addr + 2 bytes data per sample
+		formatedData = (BYTE *) malloc(formated_length);
+		if (!formatedData)
+			return -5;
+		formatedDataIdx = formatedData;
 
-    // Format data as would be expected for FPGA
-    // This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
+		// Format data as would be expected for FPGA
+		// This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
 
-    for(cnt = 0; cnt < ByteCount; cnt++) {
-      APS_FormatForFPGA(formatedDataIdx, dac_write + cnt, Data[cnt], fpga);
-      formatedDataIdx += ADDRDATASIZE;
-    }
-    APS_WriteBlock(device,formated_length, formatedData);
-    free(formatedData);
+		WORD addr;
+		for(cnt = 0; cnt < nbrSamples; cnt++) {
+			APS_FormatForFPGA(formatedDataIdx, dac_write + cnt, Data[cnt], fpga);
+			formatedDataIdx += ADDRDATASIZE;
+			// address checksum is defined as (bits 0-14: addr, 15: 0)
+			// so, set bit 15 to zero
+			addr = dac_write + cnt;
+			addr &= 0x7FFF;
+			gAddrCheckSum[device][fpga-1] += addr;
+			gCheckSum[device][fpga-1] += Data[cnt];
+		}
+		APS_WriteBlock(device, formated_length, formatedData);
+		free(formatedData);
 	}
-  
-  if (validate != 0) {
-	  dlog(DEBUG_VERBOSE,"Validating Waveform\n");
-
-	  for(cnt = 0; cnt < ByteCount; cnt++) {
-      data = APS_ReadFPGA(device, dac_read + cnt, fpga);
-      if (data != Data[cnt]) {
-        dlog(DEBUG_VERBOSE,"Error reading back memory: cnt = %i expected 0x%x read 0x%x\n", cnt,Data[cnt], data);
-        error = 1;
-      }
-	  }
-
-	  if (!error) {
-		  dlog(DEBUG_VERBOSE,"Read back complete: no errors found\n");
-	  }
-  }
+	
+	// verify the checksum
+	data = APS_CompareCheckSum(device, fpga);
+	if (!data) {
+		dlog(DEBUG_INFO, "APS_LoadWaveform ERROR: Checksum does not match\n");
+	}
+	
+	// this section does a word by word comparison of the written data
+	if (validate != 0) {
+		dlog(DEBUG_VERBOSE,"Validating Waveform\n");
+		
+		for(cnt = 0; cnt < nbrSamples; cnt++) {
+			data = APS_ReadFPGA(device, dac_read + cnt, fpga);
+			// only lower word is valid
+			data &= 0xFFFF;
+			if (data != (Data[cnt] & 0xFFFF)) {
+				dlog(DEBUG_INFO,"Error reading back memory: cnt = %i expected 0x%x read 0x%x\n", cnt, Data[cnt] & 0xFFFF, data);
+				error = 1;
+			}
+		}
+		
+		if (!error) {
+			dlog(DEBUG_VERBOSE,"Read back complete: no errors found\n");
+		}
+	}
   
 	dlog(DEBUG_VERBOSE,"LoadWaveform Done\n");
 
@@ -439,10 +464,10 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	fclose(logwaveform);
 	#endif
 
-  if (getDebugLevel() >= DEBUG_VERBOSE) {
-	  data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
-	  dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
-  }
+	if (getDebugLevel() >= DEBUG_VERBOSE) {
+	    data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
+	    dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
+	}
 
 	// make sure that link list mode is disabled by default
 	APS_SetLinkListMode(device, 0, 0, dac);
@@ -474,12 +499,39 @@ int APS_SetBit(int device, int fpga, int addr, int mask)
  *
  ********************************************************************/
 {
-	int current_state;
-	current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
-  dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Mask: 0x%x Writing 0x%x\n",
-	      addr, current_state, mask, current_state | mask);
+	int current_state, current_state2;
+  if (fpga == 3) { // read the two FPGAs serially
+    current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+    current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+    if (current_state != current_state2) {
+      // note the mismatch in the log file but continue on using FPGA1's data
+      dlog(DEBUG_VERBOSE,"APS_SetBit: FPGA registers don't match. Addr: 0x%x FPGA1: 0x%x FPGA2: 0x%x\n", addr, current_state, current_state2);
+    }
+  } else {
+    current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
+  }
 
+	dlog(DEBUG_VERBOSE2,"Addr: 0x%x Current State: 0x%x Mask: 0x%x Writing 0x%x\n",
+	     addr, current_state, mask, current_state | mask);
+
+	usleep(100);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state | mask, fpga);
+  
+  if (getDebugLevel() >= DEBUG_VERBOSE2) {
+    // verify write
+    usleep(100);
+    if (fpga == 3) {
+      current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+      current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+      dlog(DEBUG_VERBOSE2,"Addr: 0x%x FPGA1: 0x%x FPGA2 0x%x\n", addr, current_state, current_state2);
+    } else {
+      current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
+    }
+	if ((current_state & mask) == 0)
+		dlog(DEBUG_VERBOSE,"ERROR: APS_SetBit data does not match\n");
+  }
+
+	return 0;
 }
 
 int APS_ClearBit(int device, int fpga, int addr, int mask)
@@ -503,12 +555,35 @@ int APS_ClearBit(int device, int fpga, int addr, int mask)
  *
  ********************************************************************/
 {
-	int current_state;
-	current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
+	int current_state, current_state2;
+	if (fpga == 3) { // read the two FPGAs serially
+		current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+		current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+		if (current_state != current_state2) {
+			// note the mismatch in the log file but continue on using FPGA1's data
+			dlog(DEBUG_VERBOSE,"APS_ClearBit: FPGA registers don't match. Addr: 0x%x FPGA1: 0x%x FPGA2: 0x%x\n", addr, current_state, current_state2);
+		}
+	} else {
+		current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
+	}
+	dlog(DEBUG_VERBOSE2,"Addr: 0x%x Current State: 0x%x Writing 0x%x\n", addr, current_state, current_state & ~mask);
 
-	dlog(DEBUG_VERBOSE,"Addr: 0x%x Current State: 0x%x Writing 0x%x\n", addr, current_state, current_state & ~mask);
-
+	usleep(100);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, current_state & ~mask, fpga);
+  
+	if (getDebugLevel() >= DEBUG_VERBOSE2) {
+		// verify write
+		usleep(100);
+		if (fpga == 3) {
+		  current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+		  current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+		  dlog(DEBUG_VERBOSE2,"Addr: 0x%x FPGA1: 0x%x FPGA2 0x%x\n", addr, current_state, current_state2);
+		} else {
+		  current_state = APS_ReadFPGA(device, gRegRead | addr, fpga);
+		}
+	}
+
+	return 0;
 }
 
 
@@ -557,7 +632,7 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 				dac_trig_src  = CSRMSK_ENVTRIGSRC ;
 				dac_sm_reset  = CSRMSK_ENVSMRST;
 			} else {
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL;
+				dac_sm_enable = CSRMSK_ENVDDR_ELL;
 				dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL;
 				dac_sm_reset  = CSRMSK_ENVSMRST_ELL;
 			}
@@ -575,7 +650,7 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 				dac_trig_src  = CSRMSK_PHSTRIGSRC ;
 				dac_sm_reset  = CSRMSK_PHSSMRST;
 			} else {
-				dac_sm_enable = CSRMSK_PHSSMEN_ELL;
+				dac_sm_enable = CSRMSK_PHSDDR_ELL;
 				dac_trig_src  = CSRMSK_PHSTRIGSRC_ELL;
 				dac_sm_reset  = CSRMSK_PHSSMRST_ELL;
 			}
@@ -593,7 +668,7 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 		dlog(DEBUG_VERBOSE, "Trigger %s State Machine ... \n", dac_type);
 
 		APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
-	  APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
+		APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
 
 	} else if (trigger_type == HARDWARE_TRIGGER) {
 
@@ -604,7 +679,7 @@ EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
 		APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
 
 	} else {
-	  dlog(DEBUG_VERBOSE, "Invalid Trigger Type\n");
+		dlog(DEBUG_VERBOSE, "Invalid Trigger Type\n");
 		return -1;
 	}
 
@@ -659,7 +734,7 @@ EXPORT int APS_PauseDac(int device, int dac)
 			} else {
 				dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL;
 				dac_sm_reset  = CSRMSK_ENVSMRST_ELL;
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL;
+				dac_sm_enable = CSRMSK_ENVDDR_ELL;
 			}
 
 
@@ -676,7 +751,7 @@ EXPORT int APS_PauseDac(int device, int dac)
 			} else {
 				dac_trig_src  = CSRMSK_PHSTRIGSRC_ELL;
 				dac_sm_reset  = CSRMSK_PHSSMRST_ELL;
-				dac_sm_enable = CSRMSK_PHSSMEN_ELL;
+				dac_sm_enable = CSRMSK_PHSDDR_ELL;
 			}
 			break;
 		default:
@@ -731,7 +806,7 @@ EXPORT int APS_DisableDac(int device, int dac)
 				dac_sm_enable = CSRMSK_ENVSMEN ;
 			} else {
 				dac_sm_reset  = CSRMSK_ENVSMRST_ELL;
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL;
+				dac_sm_enable = CSRMSK_ENVDDR_ELL;
 			}
 
 			break;
@@ -746,7 +821,7 @@ EXPORT int APS_DisableDac(int device, int dac)
 				dac_sm_enable = CSRMSK_PHSSMEN ;
 			} else {
 				dac_sm_reset  = CSRMSK_PHSSMRST_ELL;
-				dac_sm_enable = CSRMSK_PHSSMEN_ELL;
+				dac_sm_enable = CSRMSK_PHSDDR_ELL;
 			}
 
 			break;
@@ -754,134 +829,11 @@ EXPORT int APS_DisableDac(int device, int dac)
 			return -2;
 	}
 
-
-	//dlog(DEBUG_VERBOSE,"Disable %s State Machine ... \n", dac_type);
-
 	APS_ClearBit(device, fpga,FPGA_OFF_TRIGLED, dac_sw_trig);
-	//APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
 
 	dlog(DEBUG_VERBOSE, "Reset %s State Machine ... \n", dac_type);
 
 	APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
-	return 0;
-}
-
-
-int LoadLinkList_V5(int device, unsigned short *OffsetData, unsigned short *CountData,
-		            int length, int dac)
-/********************************************************************
- *
- * Function Name : APS_LoadLinkList()
- *
- * Description : Loads LinkList to FPGA
- *
- * Inputs :
-*              OffsetData - pointer to link list offsets
-*              CountData - pointer to link list counts
-*              length - length of link list
-*              Dac - dac ID
-*
-* Returns : 0 on success < 0 on failure
-*
-* Error Conditions :
-*
-* Unit Tested on:
-*
-* Unit Tested by:
-*
-********************************************************************/
-{
-	int dac_shift, dac_write_offset, dac_write_cnt;
-	int fpga;
-	int cnt;
-	char * dac_type;
-	int ctrl_reg;
-
-	BYTE * formatedData;
-	BYTE * formatedDataIdx;
-	int formated_length;
-
-	fpga = dac2fpga(dac);
-	if (fpga < 0) {
-		return -1;
-	}
-
-	dlog(DEBUG_INFO,"Loading LinkList length %i into FPGA%i DAC%i \n", length, fpga, dac);
-
-	// setup register addressing based on DAC
-	switch(dac) {
-		case 0:
-			// fall through
-		case 2:
-			dac_type   			= ENVELOPE;
-			dac_shift 			= LL_SIZE_ENVSHIFT;
-			dac_write_offset 	= FPGA_ADDR_ENVLLOFF_WRITE;
-			dac_write_cnt 		= FPGA_ADDR_ENVLLCNT_WRITE;
-			break;
-		case 1:
-			// fall through
-		case 3:
-			dac_type   			= PHASE;
-			dac_shift 			= LL_SIZE_PHSSHIFT;
-			dac_write_offset 	= FPGA_ADDR_PHSLLOFF_WRITE;
-			dac_write_cnt 		= FPGA_ADDR_PHSLLCNT_WRITE;
-			break;
-		default:
-			return -2;
-	}
-
-	if ( length > MAX_LL_LENGTH)  {
-		return -3;
-	}
-
-	// load current cntrl reg
-	ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_LLCTRL, fpga);
-
-  dlog(DEBUG_VERBOSE,"Current Link List Control Reg: 0x%x\n", ctrl_reg);
-
-	// zero current dac settings
-	ctrl_reg &= ~(0xFF << dac_shift);
-
-  dlog(DEBUG_VERBOSE,"Zeroed Link List Control Reg: 0x%x\n", ctrl_reg);
-
-	//set link list size
-	ctrl_reg |= (length << dac_shift);
-
-	//length = length - 1;
-
-	dlog(DEBUG_VERBOSE,"Writing Link List Control Reg: 0x%x\n", ctrl_reg);
-
-	// write control reg
-	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_LLCTRL, ctrl_reg, fpga);
-
-	// load current ctrl reg
-	ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_LLCTRL, fpga);
-
-	dlog(DEBUG_VERBOSE,"Written Link List Control Reg: 0x%x\n", ctrl_reg);
-  dlog(DEBUG_VERBOSE,"Loading Link List %s DAC%i...\n", dac_type, dac);
-
-	// Expanded length 1 byte command 2 bytes addr 2 bytes data per data sample
-	// * 2 from two entries offset and count
-	formated_length  = ADDRDATASIZE * 2 * length;
-	formatedData = (BYTE *) malloc(formated_length);
-	if (!formatedData)
-		return -5;
-	formatedDataIdx = formatedData;
-
-	// Format data as would be expected for FPGA
-	// This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
-
-	for(cnt = 0; cnt < length; cnt++) {
-		APS_FormatForFPGA(formatedDataIdx, dac_write_offset + cnt,OffsetData[cnt], fpga );
-		formatedDataIdx += ADDRDATASIZE;
-		APS_FormatForFPGA(formatedDataIdx, dac_write_cnt + cnt, CountData[cnt], fpga );
-		formatedDataIdx += ADDRDATASIZE;
-	}
-	APS_WriteBlock(device,formated_length, formatedData);
-	free(formatedData);
-
-	dlog(DEBUG_VERBOSE,"Done\n");
-
 	return 0;
 }
 
@@ -918,15 +870,9 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	int ctrl_reg, ctrl_reg_read;
 	int readVal;
 
-	/*
-	int lastEntryAddress;
-
-	ULONG write_addr;
-	ULONG wf_length;
-
+	ULONG formated_length;
 	BYTE * formatedData;
 	BYTE * formatedDataIdx;
-	 */
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -983,13 +929,12 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	// load current cntrl reg
 	ctrl_reg = APS_ReadFPGA(device, gRegRead | dac_ctrl_reg, fpga);
 
-  dlog(DEBUG_VERBOSE,"ELL: Current Link List Control Reg: 0x%x\n", ctrl_reg);
+	dlog(DEBUG_VERBOSE,"ELL: Current Link List Control Reg: 0x%x\n", ctrl_reg);
 
-	//set link list size
-	// ELL Mode does not require shift due to different control registers
+	// set link list size
 	ctrl_reg = (length-1) & 0x3FFF;
 
-	// if bank is Bank B need to add based 0x200 to length
+	// if bank is Bank B need to add 0x200 to length
 	if (bank == 1) {
 		ctrl_reg = ctrl_reg + 0x200;  // Link List B offset is 0x200 (on DAC side)
 	}
@@ -1002,15 +947,19 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	// load current ctrl reg
 	ctrl_reg_read = APS_ReadFPGA(device, gRegRead | dac_ctrl_reg, fpga);
 
-  dlog(DEBUG_VERBOSE,"Loaded Link List %s DAC%i... Ctrl Reg = 0x%x\n", dac_type, dac, ctrl_reg_read);
+	dlog(DEBUG_VERBOSE,"Loaded Link List %s DAC%i... Ctrl Reg = 0x%x\n", dac_type, dac, ctrl_reg_read);
 
-  if (ctrl_reg_read != ctrl_reg) {
-    dlog(DEBUG_VERBOSE, "WARNING: LinkList Control Reg Did Not Write Correctly\n");
-  }
+	if (ctrl_reg_read != ctrl_reg) {
+		dlog(DEBUG_VERBOSE, "WARNING: LinkList Control Reg Did Not Write Correctly\n");
+	}
+	
+	// clear checksums
+	APS_ResetCheckSum(device, fpga);
 
-#if 1
+#if 0
+	// legacy code for unbuffered loading of link list data
   for(cnt = 0; cnt < length; cnt++) {
-    dlog(DEBUG_VERBOSE,"Writting LL Entry: %3i => Addr: 0x%X Count: %i: Repeat %i\n",
+    dlog(DEBUG_VERBOSE,"Writing LL Entry: %3i => Addr: 0x%X Count: %i: Repeat %i\n",
         cnt,dac_write + 4*cnt,  CountData[cnt], RepeatData[cnt]);
     dlog(DEBUG_VERBOSE,"                          TriggerMode: %i TriggerCount %i\n",
         TriggerData[cnt] >> 14,
@@ -1037,30 +986,12 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
     APS_WriteFPGA(device, dac_write + 4*cnt+3, RepeatData[cnt], fpga);
     dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Repeat  Value 0x%X\n",dac_write + 4*cnt+3, RepeatData[cnt]);
 
-    if (validate) {
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt  ,  fpga) ;
-      if (readVal != OffsetData[cnt])
-         dlog(DEBUG_INFO,"Error writing offset 0x%X != 0x%X \n", readVal, OffsetData[cnt]);
-
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+1  ,  fpga) ;
-      if (readVal != CountData[cnt])
-        dlog(DEBUG_INFO,"Error writing count 0x%X != 0x%X \n", readVal, CountData[cnt]);
-
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+2  ,  fpga) ;
-      if (readVal != TriggerData[cnt])
-        dlog(DEBUG_INFO,"Error writing trigger 0x%X != 0x%X \n", readVal, TriggerData[cnt]);
-
-      readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+3  ,  fpga) ;
-      if (readVal != RepeatData[cnt])
-        dlog(DEBUG_INFO,"Error writing repeat 0x%X != 0x%X \n", readVal, RepeatData[cnt]);
-    }
-
   }
 
 #else
-	// ADDRDATASIZE_ELL 1 cmd 2 addr 2 offset 2 count 2 trigger 2 repeat
-#define ADDRDATASIZE_ELL 11
-	formated_length  = ADDRDATASIZE_ELL * length;  // Expanded length 1 byte command 2 bytes addr 2 bytes data per data sample
+// ADDRDATASIZE_ELL 4 cmd 8 addr 2 offset 2 count 2 trigger 2 repeat
+#define ADDRDATASIZE_ELL 20
+	formated_length  = ADDRDATASIZE_ELL * length;  // link list write buffer length in bytes
 	formatedData = (BYTE *) malloc(formated_length);
 	if (!formatedData)
 		return -5;
@@ -1070,15 +1001,51 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	// This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
 
 	for(cnt = 0; cnt < length; cnt++) {
-		APS_FormatForFPGA_ELL(formatedDataIdx, dac_write + cnt,
+		APS_FormatForFPGA_ELL(formatedDataIdx, dac_write + 4*cnt,
 								OffsetData[cnt], CountData[cnt],
 								TriggerData[cnt], RepeatData[cnt],
 								fpga );
 		formatedDataIdx += ADDRDATASIZE_ELL;
+		// address checksum is defined as (bits 0-14: addr, 15: 0)
+		// so, set bit 15 to zero
+		gAddrCheckSum[device][fpga-1] += (dac_write + 4*cnt) & 0x7FFF;
+		gAddrCheckSum[device][fpga-1] += (dac_write + 4*cnt+1) & 0x7FFF;
+		gAddrCheckSum[device][fpga-1] += (dac_write + 4*cnt+2) & 0x7FFF;
+		gAddrCheckSum[device][fpga-1] += (dac_write + 4*cnt+3) & 0x7FFF;
+		gCheckSum[device][fpga-1] += OffsetData[cnt];
+		gCheckSum[device][fpga-1] += CountData[cnt];
+		gCheckSum[device][fpga-1] += TriggerData[cnt];
+		gCheckSum[device][fpga-1] += RepeatData[cnt];
 	}
 	APS_WriteBlock(device,formated_length, formatedData);
 	free(formatedData);
 #endif
+
+	// verify the checksum
+	ULONG data = APS_CompareCheckSum(device, fpga);
+	if (!data) {
+		dlog(DEBUG_INFO, "APS_LoadLinkList ERROR: Checksum does not match\n");
+	}
+	
+	if (validate) {
+		for(cnt = 0; cnt < length; cnt++) {
+			readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt  ,  fpga) ;
+			if (readVal != OffsetData[cnt])
+				dlog(DEBUG_INFO,"Error writing offset 0x%X != 0x%X \n", readVal, OffsetData[cnt]);
+
+			readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+1  ,  fpga) ;
+			if (readVal != CountData[cnt])
+				dlog(DEBUG_INFO,"Error writing count 0x%X != 0x%X \n", readVal, CountData[cnt]);
+
+			readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+2  ,  fpga) ;
+			if (readVal != TriggerData[cnt])
+				dlog(DEBUG_INFO,"Error writing trigger 0x%X != 0x%X \n", readVal, TriggerData[cnt]);
+
+			readVal = APS_ReadFPGA(device, gRegRead | dac_write + 4*cnt+3  ,  fpga) ;
+			if (readVal != RepeatData[cnt])
+				dlog(DEBUG_INFO,"Error writing repeat 0x%X != 0x%X \n", readVal, RepeatData[cnt]);
+		}
+    }
 
 	// zero repeat register
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_rpt_reg, 0, fpga);
@@ -1092,9 +1059,10 @@ EXPORT int APS_LoadLinkList(int device,
 		                          unsigned short *TriggerData, unsigned short *RepeatData,
 		                          int length, int dac, int bank, int validate)
 {
-  dlog(DEBUG_VERBOSE,"APS_LoadLinkList\n");
+	dlog(DEBUG_VERBOSE,"APS_LoadLinkList\n");
 	if (gBitFileVersion < VERSION_ELL) {
-		return LoadLinkList_V5(device, OffsetData, CountData, length, dac);
+		dlog(DEBUG_INFO, "Link lists not supported on this bitfile version\n.");
+		return -1;
 	} else {
 		return LoadLinkList_ELL(device, OffsetData, CountData, TriggerData, RepeatData,
 				         length, dac, bank, validate);
@@ -1115,7 +1083,7 @@ EXPORT int APS_ClearLinkListELL(int device,int dac, int bank)
       return -1;
     }
 
-    dlog(DEBUG_VERBOSE,"Load Link List ELL\n");
+	dlog(DEBUG_VERBOSE,"Clear Link List ELL\n");
 
     if (gBitFileVersion < VERSION_ELL) {
       dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
@@ -1403,12 +1371,54 @@ EXPORT int APS_SetLinkListMode(int device, int enable, int mode, int dac) {
     }
 }
 
+EXPORT int APS_SetLEDMode(int device, int fpga, int mode)
+/********************************************************************
+ *
+ * Function Name : APS_SetLEDMode()
+ *
+ * Description : Controls whether the front panel LEDs show the PLL sync
+ *		status or the channel output status.
+ *
+ * Inputs : fpga - 1, 2, or 3
+ *          mode  - 1 PLL sync, 2 channel output
+ *
+ * Returns : 0
+ *
+ * Error Conditions :
+ *
+ * Unit Tested on:
+ *
+ * Unit Tested by:
+ *
+ ********************************************************************/
+{
+	if (fpga < 0 || fpga > 3) {
+		dlog(DEBUG_INFO, "APS_SetLEDMode ERROR: unknown fpga %d\n", fpga);
+		return -1;
+	}
+	
+	switch (mode) {
+	case 1:
+		APS_ClearBit(device, fpga, FPGA_OFF_TRIGLED, TRIGLEDMSK_MODE);
+		break;
+	case 2:
+		APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, TRIGLEDMSK_MODE);
+		break;
+	default:
+		dlog(DEBUG_INFO, "APS_SetLEDMode ERROR: unknown mode %d\n", mode);
+		return -2;
+	}
+	
+	return 0;
+}
+
 EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 /********************************************************************
  *
  * Function Name : APS_TriggerFPGA()
  *
- * Description : Triggers Both DACs on FPGA at the same time
+ * Description : Triggers Both DACs on FPGA at the same time. We do all operations
+ * serially except the last one, to try to avoid simultaneous write errors.
  *
  * Inputs : dac - dac id
  *               trigger_type  - 1 software 2 hardware
@@ -1425,11 +1435,10 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 {
 	int fpga;
 	char * dac_type;
-	int dac_sm_enable, dac_sw_led, dac_trig_src, dac_sw_trig, dac_sm_reset;
-
-  dlog(DEBUG_INFO,"Trigger FPGA DAC%i type %i \n", dac, trigger_type);
+	int dac_sw_led, dac_trig_src, dac_sw_trig, dac_sm_reset;
 
 	fpga = dac2fpga(dac);
+	dlog(DEBUG_INFO,"Trigger FPGA%i type %i \n", fpga, trigger_type);
 	if (fpga < 0) {
 		return -1;
 	}
@@ -1452,41 +1461,57 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 			dac_type      = BOTH_DACS;
 			dac_sw_led    = TRIGLEDMSK_SWLED0 | TRIGLEDMSK_SWLED1;
 			dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG | TRIGLEDMSK_PHSSWTRIG;
-			if (gBitFileVersion < VERSION_ELL) {
-				dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
-				dac_trig_src  = CSRMSK_ENVTRIGSRC | CSRMSK_PHSTRIGSRC;
-				dac_sm_reset  = CSRMSK_ENVSMRST | CSRMSK_PHSSMRST;
-			} else {
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL ;
-				dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL | CSRMSK_PHSTRIGSRC_ELL;
-				dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL ;
-			}
+
+			dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL | CSRMSK_PHSTRIGSRC_ELL;
+			dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
 
 			break;
 		default:
 			return -2;
 	}
 
-	if (getDebugLevel() >= DEBUG_VERBOSE) {
-	  dlog(DEBUG_VERBOSE,"Current CSR: %x TRIGLED: %x\n",
-		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
-		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
+	if (fpga == 3) {
+		dlog(DEBUG_VERBOSE,"FPGA1 Current CSR: 0x%x TRIGLED: 0x%x\n",
+		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 1),
+		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, 1)
+		);
+		dlog(DEBUG_VERBOSE,"FPGA2 Current CSR: 0x%x TRIGLED: 0x%x\n",
+		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 2),
+		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, 2)
+		);
+	} else {
+		dlog(DEBUG_VERBOSE,"FPGA%d Current CSR: 0x%x TRIGLED: 0x%x\n",
+		     fpga,
+		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
+		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
 		);
 	}
 
 	if (trigger_type == SOFTWARE_TRIGGER) {
-		dlog(DEBUG_VERBOSE, "Trigger %s State Machine ... \n", dac_type);
+		dlog(DEBUG_VERBOSE, "Setting SW Trigger ... \n", dac_type);
 
-		APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
-	  APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
+		if (fpga == 3) {
+			APS_ClearBit(device, 1, FPGA_OFF_CSR, dac_trig_src);
+			APS_SetBit(device, 1, FPGA_OFF_TRIGLED, dac_sw_trig);
+			APS_ClearBit(device, 2, FPGA_OFF_CSR, dac_trig_src);
+			APS_SetBit(device, 2, FPGA_OFF_TRIGLED, dac_sw_trig);
+		} else {
+			APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
+			APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
+		}
 
 	} else if (trigger_type == HARDWARE_TRIGGER) {
-
-		APS_ClearBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
-
 		dlog(DEBUG_VERBOSE,"Setting HW Trigger ... \n");
-
-		APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
+		
+		if (fpga == 3) {
+			APS_ClearBit(device, 1, FPGA_OFF_TRIGLED, dac_sw_trig);
+			APS_SetBit(device, 1, FPGA_OFF_CSR, dac_trig_src);
+			APS_ClearBit(device, 2, FPGA_OFF_TRIGLED, dac_sw_trig);
+			APS_SetBit(device, 2, FPGA_OFF_CSR, dac_trig_src);
+		} else {
+			APS_ClearBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
+			APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_trig_src);
+		}
 
 	} else {
 		dlog(DEBUG_VERBOSE, "Invalid Trigger Type\n");
@@ -1494,17 +1519,16 @@ EXPORT int APS_TriggerFpga(int device, int dac, int trigger_type)
 	}
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
-	    dlog(DEBUG_VERBOSE,"New CSR: %x TRIGLED %i\n",
-	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
-	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
+		dlog(DEBUG_VERBOSE,"New CSR: 0x%x TRIGLED 0x%x\n",
+		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
+		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
 	    );
-	  }
+	}
 
 	dlog(DEBUG_VERBOSE,"Enable %s State Machine ... \n", dac_type);
 
-  APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
-	//APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
-
+	// do this last operation simultaneously, if necessary
+	APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_sm_reset);
 
 	return 0;
 }
@@ -1514,7 +1538,7 @@ EXPORT int APS_PauseFpga(int device, int dac)
  *
  * Function Name : APS_PauseFPGA()
  *
- * Description :  Pauses both DACs on a signal FPGA
+ * Description :  Disables DDR output to DACs and turns off software triggering
  *
  * Inputs : None
  *
@@ -1529,8 +1553,7 @@ EXPORT int APS_PauseFpga(int device, int dac)
  ********************************************************************/
 {
 	int fpga;
-	char * dac_type;
-	int dac_sw_trig, dac_trig_src, dac_sm_reset, dac_sm_enable;
+	int dac_sw_trig, dac_sm_reset, dac_sm_enable;
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -1549,17 +1572,14 @@ EXPORT int APS_PauseFpga(int device, int dac)
 		case 2:
 			// fall through
 		case 3:
-			dac_type      = BOTH_DACS;
 			dac_sw_trig   = TRIGLEDMSK_ENVSWTRIG | TRIGLEDMSK_PHSSWTRIG;
 
 			if (gBitFileVersion < VERSION_ELL) {
-				dac_trig_src  = CSRMSK_ENVTRIGSRC | CSRMSK_PHSTRIGSRC;
 				dac_sm_reset  = CSRMSK_ENVSMRST | CSRMSK_PHSSMRST;
 				dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
 			} else {
-				dac_trig_src  = CSRMSK_ENVTRIGSRC_ELL | CSRMSK_PHSTRIGSRC_ELL ;
 				dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
+				dac_sm_enable = CSRMSK_ENVDDR_ELL | CSRMSK_PHSDDR_ELL;
 			}
 
 			break;
@@ -1621,7 +1641,7 @@ EXPORT int APS_DisableFpga(int device, int dac)
 				dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
 			} else {
 				dac_sm_reset  = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
-				dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
+				dac_sm_enable = CSRMSK_ENVDDR_ELL | CSRMSK_PHSDDR_ELL;
 			}
 
 			break;
@@ -1629,74 +1649,74 @@ EXPORT int APS_DisableFpga(int device, int dac)
 			return -2;
 	}
 
-	//dlog(DEBUG_VERBOSE, "Disable %s State Machine ... \n", dac_type);
-
-	APS_ClearBit(device, fpga,FPGA_OFF_TRIGLED, dac_sw_trig);
-	//APS_ClearBit(device, fpga,FPGA_OFF_CSR, dac_sm_enable);
+	if (fpga == 3) {
+		APS_ClearBit(device, 1, FPGA_OFF_TRIGLED, dac_sw_trig);
+		APS_ClearBit(device, 2, FPGA_OFF_TRIGLED, dac_sw_trig);
+	} else {
+		APS_ClearBit(device, fpga, FPGA_OFF_TRIGLED, dac_sw_trig);
+	}
 
 	dlog(DEBUG_VERBOSE,"Reset %s State Machine ... \n", dac_type);
 
-	APS_SetBit(device, fpga,FPGA_OFF_CSR, dac_sm_reset);
+	if (fpga == 3) {
+		APS_SetBit(device, 1, FPGA_OFF_CSR, dac_sm_reset);
+		APS_SetBit(device, 2, FPGA_OFF_CSR, dac_sm_reset);
+	} else {
+		APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_sm_reset);
+	}
 	return 0;
 }
 
 
 
 EXPORT int APS_ReadBitFileVersion(int device) {
-	// Reads version information from device
-	// Location to read version from moved between r 0x5 and 0x10
-	// so we read assuming r 0x5 and then try the location for r 0x10
-	int version;
-	int fpga = 1;
-
-	version = APS_ReadFPGA(device, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, fpga);
-	if (version != VERSION_R5) { // tried to read invalid address
-
-		version = APS_ReadFPGA(device, FPGA_ADDR_ELL_REGREAD | FPGA_OFF_VERSION, fpga);
-
-		version = version & 0x1FF; // First 9 bits hold version
+	// read bit file version and return if the same, otherwise return an error (-1)
+	int version1, version2;
+	version1 = APS_ReadFpgaBitFileVersion(device, 1);
+	version2 = APS_ReadFpgaBitFileVersion(device, 2);
+	dlog(DEBUG_VERBOSE, "Bitfile versions FPGA1: 0x%x, FPGA2: 0x%x\n", version1, version2);
+	
+	if (version1 == version2) {
+		gBitFileVersion = version1;
+		gRegRead = (version1 >= VERSION_ELL) ? FPGA_ADDR_ELL_REGREAD : FPGA_ADDR_REGREAD;
+		dlog(DEBUG_VERBOSE, "gRegRead set to: 0x%x\n", gRegRead );
+		return version1;
+	} else {
+		dlog(DEBUG_INFO, "Bitfile versions do not match, FPGA1: 0x%x, FPGA2: 0x%x\n", version1, version2);
+		return -1;
 	}
-    dlog(DEBUG_INFO,"Found BitFile Version 0x%x\n", version);
+}
 
-	gBitFileVersion = version;
-	gRegRead = (version >= VERSION_ELL) ? FPGA_ADDR_ELL_REGREAD : FPGA_ADDR_REGREAD;
-	dlog(DEBUG_VERBOSE,"gRegRead set to: 0x%x\n", gRegRead );
+int APS_ReadFpgaBitFileVersion(int device, int fpga) {
+	// Reads version information from register 0x8006
+	int version;
+
+	version = APS_ReadFPGA(device, FPGA_ADDR_ELL_REGREAD | FPGA_OFF_VERSION, fpga);
+	version = version & 0x1FF; // First 9 bits hold version
+	
 	return version;
 }
 
-EXPORT int APS_ReadAllRegisters(int device) {
+EXPORT int APS_ReadAllRegisters(int device, int fpga) {
 	int cnt;
 	int val;
-	int fpga = 1;
 	static int readCnt = 0;
-	int ok, attempt;
-	int expected_values[] = {-1, 0,0,-1, 0,0,-1,0,0,0,0,0,0,0xdead,0xdead,0xdead};
+	int expected_values[] = {-1,-1,0,-1,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0xc0de,-1,-1,-1,-1,0xbadd,0xbadd};
 
 	dlog(DEBUG_VERBOSE,"====== Register Read %3i ======\n", readCnt++);
 
-	for(cnt = 0; cnt < 16; cnt++) {
-		ok = 0;
-		attempt = 0;
-		while(!ok) {
-			val = APS_ReadFPGA(device, gRegRead | cnt, fpga);
+	for(cnt = 0; cnt < 22; cnt++) {
+		val = APS_ReadFPGA(device, gRegRead | cnt, fpga);
 
-			if ((expected_values[cnt] != -1) && (expected_values[cnt] != val)) {
-				attempt++;
-				if (attempt == 1)
-					dlog(DEBUG_VERBOSE,"Error reading 0x%x: expected 0x%x read ",  gRegRead | cnt,expected_values[cnt]);
-				dlog(DEBUG_VERBOSE,"0x%x ", val);
-			} else {
-				ok = 1;
-			}
-			if (attempt)
-				dlog(DEBUG_VERBOSE, "attempts %i\n", attempt);
+		if ((expected_values[cnt] != -1) && (expected_values[cnt] != val)) {
+			dlog(DEBUG_VERBOSE,"Error reading 0x%x: expected 0x%x read 0x%x\n",  gRegRead | cnt, expected_values[cnt], val);
 		}
-		// register values will be dumped to lob by APS_ReadFPGA
+		// register values will be dumped to log by APS_ReadFPGA
 	}
 	return 0;
 }
 
-EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
+EXPORT int APS_TestWaveformMemory(int device, int dac, int nbrSamples) {
 	int dac_offset, dac_size, dac_write, dac_read, dac_mem_lock;
 	int fpga;
 	int cnt;
@@ -1710,19 +1730,19 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 	ULONG wf_length;
 
 
-	if(gBitFileVersion < VERSION_ELL && ByteCount > K4 ) {
+	if(gBitFileVersion < VERSION_ELL && nbrSamples > K4 ) {
 		dlog(DEBUG_INFO,"[WARNING] Waveform length > 4K. Truncating waveform\n");
-		ByteCount = K4;
+		nbrSamples = K4;
 
-	} else if(gBitFileVersion >= VERSION_ELL && ByteCount > K8 ) {
+	} else if(gBitFileVersion >= VERSION_ELL && nbrSamples > K8 ) {
 		dlog(DEBUG_INFO,"[WARNING] Waveform length > 8K. Truncating waveform\n");
-		ByteCount = K8;
+		nbrSamples = K8;
 	}
 
-	wf_length = ByteCount / WF_MODULUS;
+	wf_length = nbrSamples / WF_MODULUS;
 
 
-	if (ByteCount % WF_MODULUS != 0) {
+	if (nbrSamples % WF_MODULUS != 0) {
 		dlog(DEBUG_VERBOSE,"[WARNING] Waveform data needs to be padded");
 	}
 
@@ -1734,7 +1754,7 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 
 	dlog(DEBUG_VERBOSE,"Testing device %i dac %i fpga %i\n",device,dac, fpga);
 
-	dlog(DEBUG_VERBOSE,"Loading Waveform length %i into FPGA%i DAC%i \n", ByteCount, fpga, dac);
+	dlog(DEBUG_VERBOSE,"Loading Waveform length %i into FPGA%i DAC%i \n", nbrSamples, fpga, dac);
 
 	// setup register addressing based on DAC
 	switch(dac) {
@@ -1775,7 +1795,7 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 
 	dac_read = gRegRead | dac_write;
 
-  dlog(DEBUG_VERBOSE,"Clearing Control and Status Register ...\n");
+	dlog(DEBUG_VERBOSE,"Clearing Control and Status Register ...\n");
 
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_CSR, 0x0, fpga);
 
@@ -1786,7 +1806,7 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 	int ok, attempt;
 	int out;
 
-	for(cnt = 0; cnt < ByteCount; cnt++) {
+	for(cnt = 0; cnt < nbrSamples; cnt++) {
 
 		if (cnt % 100 == 0) {
 			dlog(DEBUG_VERBOSE,"Writing to addr: 0x%x\n", dac_write+cnt);
@@ -1814,7 +1834,7 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 	int round;
 	for(round = 0; round < 1; round++) {
 		//dlog(DEBUG_VERBOSE,"======== %i =========\n", round);
-		for(cnt = 0; cnt < ByteCount; cnt++) {
+		for(cnt = 0; cnt < nbrSamples; cnt++) {
 			if (cnt % 100 == 0) {
 				dlog(DEBUG_VERBOSE,"Reading from addr: 0x%x\n", dac_read+cnt);
 			}
@@ -1844,49 +1864,49 @@ EXPORT int APS_TestWaveformMemory(int device, int dac, int ByteCount) {
 }
 
 EXPORT int APS_ReadLinkListStatus(int device, int dac) {
-  int csr, link_list_status;
-  int fpga;
-
-  int val;
-  int status;
-  char * dac_type;
-
-  fpga = dac2fpga(dac);
-  if (fpga < 0) {
-    return -1;
-  }
-
-  if (gBitFileVersion < VERSION_ELL) {
-    dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
-    return -1;
-  }
-
-  csr = FPGA_OFF_CSR;
-
-  // setup register addressing based on DAC
-  switch(dac) {
-    case 0:
-      // fall through
-    case 2:
-      dac_type = ENVELOPE;
-      link_list_status  = CSRMSK_ENVLLSTATUS_ELL;
-      break;
-    case 1:
-      // fall through
-    case 3:
-      dac_type = PHASE;
-      link_list_status  = CSRMSK_PHSLLSTATUS_ELL;
-      break;
-    default:
-      return -2;
-  }
-  // read CSR
-  val = APS_ReadFPGA(device, gRegRead | csr, fpga);
-  status = (val & link_list_status) == link_list_status;
-
-  dlog(DEBUG_VERBOSE,"CSR = 0x%x LL Status = %i\n", val,status);
-
-  return status;
+	int csr, link_list_status;
+	int fpga;
+	
+	int val;
+	int status;
+	char * dac_type;
+	
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+	
+	if (gBitFileVersion < VERSION_ELL) {
+		dlog(DEBUG_INFO,"ERROR => Hardware Version: %i does not support ELL mode.\n", gBitFileVersion);
+		return -1;
+	}
+	
+	csr = FPGA_OFF_CSR;
+	
+	// setup register addressing based on DAC
+	switch(dac) {
+		case 0:
+			// fall through
+		case 2:
+			dac_type = ENVELOPE;
+			link_list_status  = CSRMSK_ENVLLSTATUS_ELL;
+			break;
+		case 1:
+			// fall through
+		case 3:
+			dac_type = PHASE;
+			link_list_status  = CSRMSK_PHSLLSTATUS_ELL;
+			break;
+		default:
+			return -2;
+	}
+	// read CSR
+	val = APS_ReadFPGA(device, gRegRead | csr, fpga);
+	status = (val & link_list_status) == link_list_status;
+	
+	dlog(DEBUG_VERBOSE,"CSR = 0x%x LL Status = %i\n", val,status);
+	
+	return status;
 }
 
 EXPORT int APS_IsRunning(int device)
@@ -1898,35 +1918,30 @@ EXPORT int APS_IsRunning(int device)
  *
  * Inputs : device device id
  *
- * APS is running if any of the channels are enableddevice
+ * APS is running if any of the channels are enabled
  *
  ********************************************************************/
 {
-  int csrReg1, csrReg2;
-  int dac_sm_enable;
-  int running;
-  // load current cntrl reg
-  csrReg1 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 1);
-  csrReg2 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 2);
-
-  if (gBitFileVersion < VERSION_ELL) {
-      dac_sm_enable = CSRMSK_ENVSMEN | CSRMSK_PHSSMEN;
-
-    } else {
-      dac_sm_enable = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL ;
-
-    }
-
-  // test for output enable on each channel
-  csrReg1 &= dac_sm_enable;
-  csrReg2 &= dac_sm_enable;
-
-  // or each channel together to determine if the aps is running
-  running = csrReg1 | csrReg2;
-  if (running)
-    running = 1;  // return 1 if running otherwise return 0;
-
-  return running;
+	int csrReg1, csrReg2;
+	int dac_sm_enable;
+	int running;
+	// load current cntrl reg
+	csrReg1 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 1);
+	csrReg2 = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 2);
+	
+	// these bits need to be cleared for the channels to be running
+	dac_sm_enable = CSRMSK_ENVSMRST_ELL | CSRMSK_PHSSMRST_ELL;
+	
+	// test for output disabled on each channel
+	csrReg1 &= dac_sm_enable;
+	csrReg2 &= dac_sm_enable;
+	
+	// or each channel together to determine if the aps is running
+	running = ~csrReg1 | ~csrReg2;
+	if (running)
+		running = 1;  // return 1 if running otherwise return 0;
+	
+	return running;
 }
 
 EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
@@ -1935,37 +1950,37 @@ EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
  * offset - signed 14-bit value (-8192, 8192) representing the channel offset
  */
 {
-  int fpga, zero_register_addr;
-  
-  fpga = dac2fpga(dac);
-  if (fpga < 0) {
-    return -1;
-  }
-  
-  switch (dac) {
-    case 0:
-      // fall through
-    case 2:
-      zero_register_addr = FPGA_OFF_DAC02_ZERO;
-      break;
-    case 1:
-      // fall through
-    case 3:
-      zero_register_addr = FPGA_OFF_DAC13_ZERO;
-      break;
-    default:
-      return -2;
-  }
-  
-  // clip the offset value to the allowed range
-  if (offset > 8191)
-    offset = 8191;
-  if (offset < -8191)
-    offset = -8191;
-  dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, offset);
-  
-  APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset, fpga);
-  return 0;
+	int fpga, zero_register_addr;
+	
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+	
+	switch (dac) {
+		case 0:
+			// fall through
+		case 2:
+			zero_register_addr = FPGA_OFF_DAC02_ZERO;
+			break;
+		case 1:
+			// fall through
+		case 3:
+			zero_register_addr = FPGA_OFF_DAC13_ZERO;
+			break;
+		default:
+			return -2;
+	}
+	
+	// clip the offset value to the allowed range
+	if (offset > 8191)
+		offset = 8191;
+	if (offset < -8191)
+		offset = -8191;
+	dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, offset);
+	
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset, fpga);
+	return 0;
 }
 
 EXPORT short APS_ReadChannelOffset(int device, int dac)
@@ -1973,27 +1988,240 @@ EXPORT short APS_ReadChannelOffset(int device, int dac)
  * Read the zero register for the associated channel
  */
 {
-  int fpga, zero_register_addr;
-  
-  fpga = dac2fpga(dac);
-  if (fpga < 0) {
-    return -1;
-  }
-  
-  switch (dac) {
-    case 0:
-      // fall through
-    case 2:
-      zero_register_addr = FPGA_OFF_DAC02_ZERO;
-      break;
-    case 1:
-      // fall through
-    case 3:
-      zero_register_addr = FPGA_OFF_DAC13_ZERO;
-      break;
-    default:
-      return -2;
-  }
-  
-  return APS_ReadFPGA(device, gRegRead | zero_register_addr, fpga);
+	int fpga, zero_register_addr;
+	
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+	
+	switch (dac) {
+		case 0:
+			// fall through
+		case 2:
+			zero_register_addr = FPGA_OFF_DAC02_ZERO;
+			break;
+		case 1:
+			// fall through
+		case 3:
+			zero_register_addr = FPGA_OFF_DAC13_ZERO;
+			break;
+		default:
+			return -2;
+	}
+	
+	return APS_ReadFPGA(device, gRegRead | zero_register_addr, fpga);
+}
+
+EXPORT int APS_SetTriggerDelay(int device, int dac, unsigned short delay)
+/* APS_SetTriggerDelay
+ * Write the trigger delay register for the associated channel
+ * delay - unsigned 16-bit value (0, 65535) representing the trigger delay in units of FPGA clock cycles
+ *         ie., delay of 1 is 3.333 ns at full sampling rate.
+ */
+{
+	int fpga, triggerDelay_register_addr;
+	
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+	
+	switch (dac) {
+		case 0:
+			// fall through
+		case 2:
+			triggerDelay_register_addr = FPGA_OFF_DAC02_TRIG_DELAY;
+			break;
+		case 1:
+			// fall through
+		case 3:
+			triggerDelay_register_addr = FPGA_OFF_DAC13_TRIG_DELAY;
+			break;
+		default:
+			return -2;
+	}
+	
+	dlog(DEBUG_INFO, "Setting DAC%i trigger delay register to %i\n", dac, delay);
+	
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | triggerDelay_register_addr, delay, fpga);
+	return 0;
+}
+
+EXPORT unsigned short APS_ReadTriggerDelay(int device, int dac)
+/* APS_ReadTriggerDelay
+ * Read the trigger delay register for the associated channel
+ */
+{
+	int fpga, triggerDelay_register_addr;
+	
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+	
+	switch (dac) {
+		case 0:
+			// fall through
+		case 2:
+			triggerDelay_register_addr = FPGA_OFF_DAC02_TRIG_DELAY;
+			break;
+		case 1:
+			// fall through
+		case 3:
+			triggerDelay_register_addr = FPGA_OFF_DAC13_TRIG_DELAY;
+			break;
+		default:
+			return -2;
+	}
+	
+	return APS_ReadFPGA(device, gRegRead | triggerDelay_register_addr, fpga);
+}
+
+EXPORT int APS_SetWaveformTriggerMode(int device, int dac, int mode)
+/* APS_SetWaveformTriggerMode
+ * Enables or disables the output of a trigger in waveform mode
+ * dac - channel (0-3)
+ * mode - 1 (enable trigger), 0 (disable trigger)
+ */
+{
+	int fpga, trigger_mask;
+	
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+
+	switch (dac) {
+		case 0:
+			// fall through
+		case 2:
+			trigger_mask = TRIGLEDMSK_WFMTRIG02;
+			break;
+		case 1:
+			// fall through
+		case 3:
+			trigger_mask = TRIGLEDMSK_WFMTRIG13;
+			break;
+		default:
+			return -2;
+	}
+
+	dlog(DEBUG_INFO, "Setting DAC%i waveform output mode %i\n", dac, mode);
+
+	if (mode) {
+		APS_SetBit(device, fpga, FPGA_OFF_TRIGLED, trigger_mask);
+	} else {
+		APS_ClearBit(device, fpga, FPGA_OFF_TRIGLED, trigger_mask);
+	}
+	
+	return 0;
+}
+
+EXPORT UCHAR APS_ReadStatusCtrl(int device)
+{
+	UCHAR ReadByte;
+	APS_ReadReg(device, APS_STATUS_CTRL, 0, 0, &ReadByte);
+	return ReadByte;
+}
+
+// sets Status/CTRL register to default state when running (OSCEN enabled)
+EXPORT int APS_ResetStatusCtrl(int device)
+{
+	UCHAR WriteByte = APS_OSCEN_BIT;
+	return APS_WriteReg(device, APS_STATUS_CTRL, 0, 0, &WriteByte);
+}
+
+// clears Status/CTRL register. This is the required state to program the VCXO and PLL
+EXPORT int APS_ClearStatusCtrl(int device)
+{
+	UCHAR WriteByte = APS_OSCEN_BIT;
+	return APS_WriteReg(device, APS_STATUS_CTRL, 0, 0, &WriteByte);
+}
+
+EXPORT int APS_RegWriteTest(int device, int addr)
+{
+	int current_state, current_state2;
+	int i, data;
+	// test writes
+	// write to FPGAs one at a time
+	dlog(DEBUG_INFO, "WRITE TEST to addr: 0x%x\nIndividual writes\n", addr);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xffff, 1);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xffff, 2);
+	usleep(100);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0xffff FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xaaaa, 1);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xaaaa, 2);
+	usleep(100);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0xaaaa FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x5555, 1);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x5555, 2);
+	usleep(100);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0x5555 FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x0000, 1);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x0000, 2);
+	usleep(100);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0x0000 FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	dlog(DEBUG_INFO,"Simultaneous writes\n");
+	// simultaneous writes of single HIGH bits
+	for (i = 0; i < 16; i++) {
+		data = 1 << i;
+		APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, data, 3);
+		current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+		current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+		dlog(DEBUG_INFO,"0x%4x FPGA1: 0x%x FPGA2 0x%x\n", data, current_state, current_state2);
+	}
+	// simultaneous writes with multiple HIGH bits
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xaaaa, 3);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0xaaaa FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x5555, 3);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0x5555 FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x00ff, 3);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0x00ff FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	usleep(100);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xff00, 3);
+	usleep(100);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0xff00 FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0xffff, 3);
+	usleep(100);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0xffff FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	usleep(100);
+	usleep(100);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x0000, 3);
+	usleep(100);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"0x0000 FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x0000, 3);
+	usleep(100);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"Try again to write 0x0000 FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	// clear the registers
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x0000, 1);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | addr, 0x0000, 2);
+	usleep(100);
+	current_state = APS_ReadFPGA(device, gRegRead | addr, 1);
+	current_state2 = APS_ReadFPGA(device, gRegRead | addr, 2);
+	dlog(DEBUG_INFO,"Cleared values FPGA1: 0x%x FPGA2 0x%x\n", current_state, current_state2);
+	return 0;
 }

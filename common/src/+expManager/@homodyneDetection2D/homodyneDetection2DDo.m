@@ -1,4 +1,4 @@
-function [errorMsg] = homodyneDetection2DDo(obj)
+function homodyneDetection2DDo(obj)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % USAGE: [errorMsg] = homodyneDetection2DDo(obj)
 %
@@ -17,37 +17,25 @@ fid = obj.DataFileHandle;
 SD_mode = obj.inputStructure.SoftwareDevelopmentMode;
 displayScope = obj.inputStructure.displayScope;
 
-errorMsg = '';
-
 persistent figureHandle;
 persistent figureHandle2D;
 persistent scopeHandle;
-if isempty(figureHandle)
-	figureHandle = figure;
-end
 
+if isempty(figureHandle) || ~ishandle(figureHandle)
+	figureHandle = figure('HandleVisibility', 'callback');
+end
+if isempty(figureHandle2D) || ~ishandle(figureHandle2D)
+        figureHandle2D = figure('HandleVisibility', 'callback');
+end
 if isempty(scopeHandle) && displayScope
-    scopeHandle = figure;
+    scopeHandle = figure('HandleVisibility', 'callback');
 end
 
 % Loop is a reparsing of the strucutres LoopParams and TaskParams that we
 % will use in this method
 Loop = obj.populateLoopStructure;
 
-% Loop 1 contains the time step information in the pattern file segments
-times = Loop.one.plotRange;
-
-% Loop 2 is what we iterate over
-if isempty(Loop.two)
-    Loop.two.steps = 1;
-    setLoop2Params = false;
-else
-    setLoop2Params = true;
-    if isempty(figureHandle2D), figureHandle2D = figure; end
-end
-
 %% Main Loop
-tic
 
 %% If there's anything thats particular to any device do it here
 
@@ -56,7 +44,7 @@ if ~SD_mode
     for Instr_index = 1:numel(InstrumentNames)
         InstrName = InstrumentNames{Instr_index};
         switch class(Instr.(InstrName))
-            case 'deviceDrivers.AgilentAP120'
+            case 'deviceDrivers.AgilentAP240'
                 scope = Instr.(InstrName); % we're going to need this later
             otherwise
                 % unknown instrument type, for now do nothing
@@ -80,45 +68,69 @@ end
 % for each loop we use the function iterateLoop to set the relevent
 % parameters.  For now hard coding in one loop is fine, someday we might
 % want to change this.
-%         I2D = zeroes(xpts,Loop.one.steps);
-%         Q2D = zeroes(xpts,Loop.one.steps);
-I2D = [];
-Q2D = [];
-% loop "1" contains the time step information in the pattern file segments
+Amp2D = nan(Loop.two.steps, Loop.one.steps);
+Phase2D = nan(Loop.two.steps, Loop.one.steps);
+% loop "1" contains the step information in the pattern file segments
 % so, we iterate over loop 2
-for loop2_index = 1:Loop.two.steps
-    if setLoop2Params
-        Loop.two.sweep.step(loop2_index);
-        fprintf('Loop 1: Step %d of %d\n', [loop2_index, Loop.two.steps]);
+
+x_range = Loop.one.sweep.points;
+
+axesHandle1DAmp = subplot(2,1,1,'Parent', figureHandle);
+grid(axesHandle1DAmp, 'on')
+axesHandle1DPhase = subplot(2,1,2,'Parent', figureHandle);
+grid(axesHandle1DPhase, 'on')
+
+plotHandle1DAmp = plot(axesHandle1DAmp, x_range, nan(1,Loop.one.steps));
+ylabel(axesHandle1DAmp, 'Amplitude');
+plotHandle1DPhase = plot(axesHandle1DPhase, x_range, nan(1,Loop.one.steps));
+ylabel(axesHandle1DPhase, 'Phase');
+
+if Loop.two.steps > 1
+    axesHandle2DAmp = subplot(2,1,1,'Parent', figureHandle2D);
+    axesHandle2DPhase = subplot(2,1,2,'Parent', figureHandle2D);
+    ylabel(axesHandle2DPhase, 'Phase');
+    if isfield(Loop.two, 'plotRange')
+        y_range = Loop.two.plotRange;
+    else
+        y_range = 1:Loop.two.sweep.points;
     end
+    plotHandle2DAmp = imagesc(x_range, y_range, Amp2D, 'Parent', axesHandle2DAmp);
+    ylabel(axesHandle2DAmp, 'Amplitude');
+    plotHandle2DPhase = imagesc(x_range, y_range, Phase2D, 'Parent', axesHandle2DPhase);
+    ylabel(axesHandle2DPhase, 'Phase');
+end
+
+
+for loop2_index = 1:Loop.two.steps
+    Loop.two.sweep.step(loop2_index);
+    fprintf('Loop 1: Step %d of %d\n', [loop2_index, Loop.two.steps]);
     
     if ~SD_mode
         softAvgs = ExpParams.softAvgs;
-        if softAvgs < 1, softAvgs = 1; end
-        isoftAvg = [];
-        qsoftAvg = [];
         for avg_index = 1:softAvgs
             fprintf('Soft average %d\n', avg_index);
 
             % set the card to acquire
-            success = scope.acquire();
+            scope.acquire();
 
-            % set the Tek to run
+            % set the Tek to run and wait and wait and wait for it to go
             masterAWG.run();
-            pause(0.5);
-
+            masterAWG.operationComplete();
+            
+            %Poll the digitizer until it has all the data
             success = scope.wait_for_acquisition(60);
             if success ~= 0
-                error('failed to acquire waveform')
+                error('Failed to acquire waveform.')
             end
 
             % Then we retrive our data
-            [Amp_I timesI] = scope.transfer_waveform(1);
-            [Amp_Q timesQ] = scope.transfer_waveform(2);
+            Amp_I = scope.transfer_waveform(1);
+            Amp_Q = scope.transfer_waveform(2);
             if numel(Amp_I) ~= numel(Amp_Q)
-                error('I and Q outputs have different lengths')
+                error('I and Q outputs have different lengths.')
             end
             
+            %For the first soft average initialize, otherwise sum
             if avg_index == 1
                 isoftAvg = Amp_I;
                 qsoftAvg = Amp_Q;
@@ -156,9 +168,9 @@ for loop2_index = 1:Loop.two.steps
                 case 'DH1'
                     % TODO: update digital homodyne to do point by
                     % point conversion
-                    [iavg qavg] = obj.digitalHomodyne(isoftAvg(range,:), ...
+                    [iavg qavg] = obj.digitalHomodyne(isoftAvg, ...
                         ExpParams.digitalHomodyne.IFfreq*1e6, ...
-                        scope.horizontal.sampleInterval);
+                        scope.horizontal.sampleInterval, ExpParams.filter.start, ExpParams.filter.length);
                 case 'DIQ'
                     [iavg qavg] = obj.digitalHomodyneIQ(isoftAvg(range,:), qsoftAvg(range,:), ...
                         ExpParams.digitalHomodyne.IFfreq*1e6, ...
@@ -167,27 +179,11 @@ for loop2_index = 1:Loop.two.steps
             % convert I/Q to Amp/Phase
             amp = sqrt(iavg.^2 + qavg.^2);
             phase = (180.0/pi) * atan2(qavg, iavg);
-            %amp=iavg;
-            %phase=qavg;
 
-            fprintf(fid,'\n');
-            % and plot it for the user
-            figure(figureHandle);
-            subplot(2,1,1)
-            %plot(iavg);
-            plot(times, amp);
-            xlabel('Time (ns)')
-            ylabel('Voltage Amplitdue (V)');
-            grid on
-            %axis tight
-            subplot(2,1,2)
-            %cla
-            %plot(qavg);
-            plot(times, phase);
-            xlabel('Time (ns)')
-            ylabel('Voltage Phase (degrees)');
-            grid on
-            
+            % Update the plots
+            set(plotHandle1DAmp, 'YData', amp)
+            set(plotHandle1DPhase, 'YData', phase)
+
             masterAWG.stop();
             % restart the slave AWGs so we can resync
             for i = 2:length(obj.awg)
@@ -199,29 +195,17 @@ for loop2_index = 1:Loop.two.steps
         end
 
         % write the data to file
-        for i = 1:length(iavg)
-            fprintf(fid,'%d+%di ',[iavg(i);qavg(i)]);
-        end
-        
-        I2D = [I2D amp];
-        Q2D = [Q2D phase];
+        fprintf(fid,'%g+%gi ',[iavg'; qavg']);
+        fprintf(fid,'\n');
+
+        %Store in the 2D array
+        Amp2D(loop2_index,:) = amp;
+        Phase2D(loop2_index,:) = phase;
         
         % display 2D data sets if there is a loop
         if Loop.two.steps > 1
-            y_range = Loop.two.sweep.points;
-            figure(figureHandle2D);
-            subplot(2,1,1);
-            imagesc(times, y_range(1:loop2_index), I2D');
-            title('I')
-            xlabel('Time (ns)')
-            ylabel(Loop.two.sweep.name)
-            axis tight;
-            subplot(2,1,2);
-            imagesc(times, y_range(1:loop2_index), Q2D');
-            title('Q')
-            xlabel('Time (ns)')
-            ylabel(Loop.two.sweep.name)
-            axis tight;
+            set(plotHandle2DAmp, 'CData', Amp2D);
+            set(plotHandle2DPhase, 'CData', Phase2D);
         end
         
     else
@@ -229,9 +213,6 @@ for loop2_index = 1:Loop.two.steps
         fprintf(fid,'%d\n',percentComplete);
     end
 end
-
-%fprintf('\n******END OF EXPERIMENT*****\n\n')
-%% Output Data
 
 %% If there's anything thats particular to any device do it here
 

@@ -15,26 +15,18 @@ classdef Counter < handle
         function reset(obj, data_path)
             % if the current data path is not empty, reset the counter to
             % one more than the highest value file name in the path
-            newval = 1;
-            add_one = 0; % state variable
+            newval = 0;
             if ~strcmp(data_path, '')
+                %Get the list of current output files
                 file_list = dir([data_path filesep '*.out']);
-                for i = 1:length(file_list)
-                    % pull out the number from ###_device_experiment.out
-                    tokens = regexp(file_list(i).name, '(\d+)_.*\.out', 'tokens');
-                    fnumber = str2double(tokens{1}{1});
-                    if fnumber > newval
-                        newval = fnumber;
-                        add_one = 1;
-                    end
-                end
-                % if we found at least one file with a number, increment by
-                % one
-                if add_one
-                    newval = newval + 1;
+                % pull out the number from ###_device_experiment.out
+                tokens = regexp({file_list.name}, '(\d+)_.*\.out', 'tokens', 'once');
+                if ~isempty(tokens)
+                    expNums = cellfun(@str2double, tokens);
+                    newval = max(expNums);
                 end
             end
-            obj.value = newval;
+            obj.value = newval+1;
         end
         
         function increment(obj)
@@ -47,24 +39,14 @@ classdef Counter < handle
         
         function set.value(obj, value)
             obj.value = int32(value);
-            
-            % loop through uihandles and update them
-            for h = obj.uihandles;
-                if ishandle(h) && strcmp(get(h, 'Type'), 'uicontrol') && strcmp(get(h, 'Style'), 'edit')
-                    set(h, 'String', sprintf('%03d', obj.value));
-                else
-                    % remove handle from list
-                    obj.uihandles = setdiff(obj.uihandles, h);
-                end
-            end
+            %Broadcast the notification that we've changed
+            notify(obj, 'valueChanged')
         end
         
-        function add_uihandle(obj, h)
-            % add a uicontrol text box handle to the uihandles vector
-            if ~ishandle(h)
-                error('Counter:NOT_HANDLE', 'Input to add_uihandle is not a handle object');
-            end
-            obj.uihandles(length(obj.uihandles)+1) = h;
-        end
     end
+    
+    events
+        valueChanged
+    end
+    
 end

@@ -132,6 +132,12 @@ int APS_Init()
 {
 	/* Initialize function points to ftd2xx library  */
 
+	// check to see if INIT has already occurred
+	// if the handle to the ftd2xx dll is non-zero the library
+	// has already be inited.
+	if (hdll != 0)
+		return 0;
+
 #if defined(DEBUG) && defined(BUILD_DLL)
 	freopen("libaps.log","w", stderr);
 #endif
@@ -152,8 +158,11 @@ int APS_Init()
 	}
 #endif
 
-	dlog(DEBUG_VERBOSE,"Library Loaded\n");
-
+#ifdef BUILD_DLL
+	dlog(DEBUG_VERBOSE,"Library Dynamically Loaded\n");
+#else
+	dlog(DEBUG_VERBOSE,"Library Statically loaded\n");
+#endif
 
 	DLL_FT_Open  = (pFT_Open) GetFunction(hdll,"FT_Open");
 	DLL_FT_Close = (pFT_Close) GetFunction(hdll,"FT_Close");
@@ -231,6 +240,13 @@ EXPORT int APS_Open(int device, int force)
 		} else {
 			dlog(DEBUG_INFO,"Set Timeouts Failed %i\n", status);
 		}
+
+		// destroy old memory if it exists
+		if (waveforms[device]) {
+			WF_Destroy(waveforms[device]);
+		}
+		// allocate new memory
+		waveforms[device] = WF_Init();
 
 	} else {
 #ifdef DEBUG
@@ -482,7 +498,8 @@ EXPORT int APS_Close(int device)
 	DLL_FT_Close(usb_handles[device]);
 	usb_handles[device] = 0;
 
-	//WF_Destroy(waveforms[device]);
+	WF_Destroy(waveforms[device]);
+	waveforms[device] = 0;  // clear pointer to waveform library for device
 
 	return 0;
 }
@@ -559,20 +576,22 @@ int APS_ReadReg
 		status = DLL_FT_Write(usb_handle, Packet, 1, &BytesWritten);
 
 		if (status != FT_OK || BytesWritten != 1) {
-			dlog(DEBUG_VERBOSE2,"APS_ReadReg: Error writing to USB status %i bytes written %i / 1 repeats %i\n",
+			dlog(DEBUG_VERBOSE,"APS_ReadReg: Error writing to USB status %i, bytes written %i / 1 repeats %i\n",
 					status,BytesWritten, repeats);
 			continue;
 		}
 		usleep(10);
-		status = DLL_FT_Read(usb_handle, Data, Length, &BytesRead);
+		
 		if (repeats > 0) dlog(DEBUG_VERBOSE2,"Retry USB Read %i\n", repeats);
-		if (status == FT_OK && BytesRead == Length) break;
+		status = DLL_FT_Read(usb_handle, Data, Length, &BytesRead);
+		if (status != FT_OK || BytesRead != Length)
+			dlog(DEBUG_VERBOSE,"APS_ReadReg: Error reading from USB status %i, bytes read %i\n", status, BytesRead);
+		else
+			break;
 	}
 	if (status != FT_OK || BytesRead != Length) {
-		dlog(DEBUG_VERBOSE,"APS_ReadReg: Error reading from USB! status %i bytes read %i / %i repeats = %i\n", status,BytesRead,Length,repeats);
+		dlog(DEBUG_INFO,"APS_ReadReg: Error reading from USB! status %i bytes read %i / %i repeats = %i\n", status,BytesRead,Length,repeats);
 	}
-
-
 
 	return(BytesRead);
 }
@@ -660,8 +679,6 @@ int APS_WriteReg
 		dlog(DEBUG_VERBOSE,"APS_WriteReg: Error writing to USB status %i bytes written %i / %i repeats %i\n",
 				status,BytesWritten, Length+1, repeats);
 	}
-
-
 
 	// Adjust for command byte when returning bytes written
 	return(BytesWritten - 1);
@@ -926,7 +943,7 @@ static const UCHAR BitReverse[256] =
 // passed in the Data array.  A total of ByteCount bytes are sent.
 //
 
-EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
+EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel, int expectedVersion)
 {
 	/********************************************************************
 	 *
@@ -953,7 +970,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 	ReadByte,
 	WriteByte,
 	LastBuf[64];
-	int i, j;
+	int i, j, version;
 
 	// To configure the FPGAs, you initialize them, send the byte stream, and
 	// then wait for the DONE flag to be asserted.
@@ -989,7 +1006,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 	if(Sel & 1) RstMask |= APS_FRST01_BIT;
 	if(Sel & 2) RstMask |= APS_FRST23_BIT;
 
-	const int maxAttemptCnt = 3; // max retries is something faails along the way
+	const int maxAttemptCnt = 3; // max retries is something fails along the way
 	int numBytesProgrammed;
 
 	int ok = 0; // flag to indicate test worked
@@ -1000,7 +1017,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 	 * 1) clear PGM and RESET
 	 * 2) issue status READ and verify init bits are low
 	 * 3) set PGM and RESET high
-	 * 4) verify bits are HIGH
+	 * 4) verify init bits are HIGH
 	 * 5) write program
 	 * 6) test done bits
 	 */
@@ -1027,7 +1044,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 	if (!ok) return -4;
 
 	for(i = 0, ok = 0; i < maxAttemptCnt && ok == 0; i++) {
-		dlog(DEBUG_VERBOSE, "Attempt: %i \n", i);
+		dlog(DEBUG_VERBOSE, "Attempt: %i \n", i+1);
 		// Set Program and Reset Bits
 		WriteByte = (PgmMask | RstMask) & 0xF;
 		dlog(DEBUG_VERBOSE, "Write 2: %02X \n", WriteByte);
@@ -1035,7 +1052,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 
 		// sleep to allow init to take place
 		// if the sleep is left out the next test might fail
-		sleep(1);
+		usleep(1000);
 
 		// Read the Status to see that INITN is deasserted in response to PROGRAMN deassertion
 		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1) return(-6);
@@ -1061,7 +1078,7 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 	// Write out all of the bytes in groups of 61 bytes, since that is the most that
 	// can be written in a single USB packet.
 
-	for(i = 0; i < ByteCount; i += BLOCKSIZE)
+	for(i = 0; i < ByteCount; i += BLOCKSIZE) {
 		// Write a full buffer if not at the end of the input data
 
 		if(i + BLOCKSIZE < ByteCount) {
@@ -1087,9 +1104,10 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 #endif
 
 			// Write out the last buffer
-			if(APS_WriteReg(device, APS_CONF_DATA, 0, Sel, LastBuf) != 61)  // Defaults to 61 bytes for CONF_DATA
+			if(APS_WriteReg(device, APS_CONF_DATA, 0, Sel, LastBuf) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
 				return(-9);
 		}
+	}
 
 #ifdef OUTPUTBITFILE
 	fprintf(test,"\n");
@@ -1101,17 +1119,33 @@ EXPORT int APS_ProgramFpga(int device, BYTE *Data, int ByteCount, int Sel)
 	// check done bits
 	for(i = 0, ok = 0; i < maxAttemptCnt && !ok; i++) {
 		if(APS_ReadReg(device, APS_CONF_STAT, 1, 0, &ReadByte) != 1) return(-3);
-		dlog(DEBUG_VERBOSE, "%02X %02X\n", ReadByte, DoneMask);
-		if (ReadByte & DoneMask == DoneMask) ok = 1;
-		sleep(1); // if done has not set wait a bit
+		dlog(DEBUG_VERBOSE, "Read 4: %02X (looking for %02X HIGH)\n", ReadByte, DoneMask);
+		if ((ReadByte & DoneMask) == DoneMask) ok = 1;
+		usleep(1000); // if done has not set wait a bit
 	}
 
-	if (!ok) return -8;
+	//if (!ok) return -10;
+	if (!ok) {
+		dlog(DEBUG_INFO, "WARNING: FPGAs did not set DONE bits after programming, attempting to continue.\n");
+	}
 
-	dlog(DEBUG_VERBOSE, "Done\n");
+	dlog(DEBUG_VERBOSE, "Done programming\n");
+	
+	// wait 10ms for FPGA to deal with the bitfile data
+	usleep(10000);
 
 	// Read Bit File Version
-	APS_ReadBitFileVersion(device);
+	for (i = 0, ok = 0; i < maxAttemptCnt && !ok; i++) {
+		if (Sel == 3) {
+			version = APS_ReadBitFileVersion(device);
+		} else {
+			version = APS_ReadFpgaBitFileVersion(device, Sel);
+		}
+		if (version == expectedVersion) ok = 1;
+		usleep(1000); // if doesn't match, wait a bit and try again
+	}
+	
+	if (!ok) return -11;
 
 	// Return the number of data bytes written
 	return numBytesProgrammed;
@@ -1159,12 +1193,16 @@ EXPORT int APS_SetupPLL(int device)
 	dlog(DEBUG_INFO,"Setting up PLL\n");
 
 	// Disable DDRs
-	int ddr_mask = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
+	int ddr_mask = CSRMSK_ENVDDR_ELL | CSRMSK_PHSDDR_ELL;
 	APS_ClearBit(device, 3, FPGA_OFF_CSR, ddr_mask);
 
 	for(i = 0; i <  sizeof(PllSetup)/sizeof(APS_SPI_REC); i++) {
 		APS_WriteSPI(device, APS_PLL_SPI, PllSetup[i].Address, &PllSetup[i].Data);
 	}
+	
+	// enable the oscillator
+	if (APS_ResetStatusCtrl(device) != 1)
+		return -1;
 
 	// Enable DDRs
 	APS_SetBit(device, 3, FPGA_OFF_CSR, ddr_mask);
@@ -1172,6 +1210,113 @@ EXPORT int APS_SetupPLL(int device)
 	return 0;
 }
 
+EXPORT int APS_SetupDAC(int device, int dac)
+/*
+ * APS_SetupDAC
+ * Description: Enables the data-skew monitoring and auto-calibration
+ * inputs: dac = 0, 1, 2, or 3
+ */
+{
+	BYTE data;
+	BYTE SD, MSD, MHD;
+	BYTE edge_MSD, edge_MHD;
+	ULONG interrupt_addr, controller_addr, sd_addr, msd_mhd_addr;
+	int check;
+	// For DAC SPI writes, we put DAC select in bits 6:5 of address
+	interrupt_addr = 0x1 | (dac << 5);
+	controller_addr = 0x6 | (dac << 5);
+	sd_addr = 0x5 | (dac << 5);
+	msd_mhd_addr = 0x4 | (dac << 5);
+	
+	if (dac < 0 || dac > 3) {
+		dlog(DEBUG_INFO, "APS_SetupDAC ERROR: Unknown dac %i\n", dac);
+		return -1;
+	}
+	dlog(DEBUG_INFO, "Setting up DAC%i\n", dac);
+
+	// Step 1: calibrate and set the LVDS controller.
+	// Ensure that surveilance and auto modes are off
+	// get initial states of registers
+	APS_ReadSPI(device, APS_DAC_SPI, interrupt_addr, &data);
+	dlog(DEBUG_VERBOSE, "Reg 0x%x Val 0x%x\n", interrupt_addr & 0x1F, data & 0xFF);
+	APS_ReadSPI(device, APS_DAC_SPI, msd_mhd_addr, &data);
+	dlog(DEBUG_VERBOSE, "Reg 0x%x Val 0x%x\n", msd_mhd_addr & 0x1F, data & 0xFF);
+	APS_ReadSPI(device, APS_DAC_SPI, sd_addr, &data);
+	dlog(DEBUG_VERBOSE, "Reg 0x%x Val 0x%x\n", sd_addr & 0x1F, data & 0xFF);
+	APS_ReadSPI(device, APS_DAC_SPI, controller_addr, &data);
+	dlog(DEBUG_VERBOSE, "Reg 0x%x Val 0x%x\n", controller_addr & 0x1F, data & 0xFF);
+	data = 0;
+	APS_WriteSPI(device, APS_DAC_SPI, controller_addr, &data);
+	
+	// Slide the data valid window left (with MSD) and check for the interrupt
+	SD = 0;  //(sample delay nibble, stored in Reg. 5, bits 7:4)
+	MSD = 0; //(setup delay nibble, stored in Reg. 4, bits 7:4)
+	MHD = 0; //(hold delay nibble,  stored in Reg. 4, bits 3:0)
+	data = SD << 4;
+	APS_WriteSPI(device, APS_DAC_SPI, sd_addr, &data);
+	
+	for (MSD = 0; MSD < 16; MSD++) {
+		dlog(DEBUG_VERBOSE, "Setting MSD: %i\n", MSD);
+		data = (MSD << 4) | MHD;
+		APS_WriteSPI(device, APS_DAC_SPI, msd_mhd_addr, &data);
+		dlog(DEBUG_VERBOSE2, "Write reg 0x%x, value 0x%x\n", msd_mhd_addr & 0x1F, data & 0xFF);
+		//APS_ReadSPI(device, APS_DAC_SPI, msd_mhd_addr, &data);
+		//dlog(DEBUG_VERBOSE2, "Read reg 0x%x, value 0x%x\n", msd_mhd_addr & 0x1F, data & 0xFF);
+		APS_ReadSPI(device, APS_DAC_SPI, sd_addr, &data);
+		dlog(DEBUG_VERBOSE2, "Read reg 0x%x, value 0x%x, ", sd_addr & 0x1F, data & 0xFF);
+		check = data & 1;
+		dlog(DEBUG_VERBOSE2, " Check %i\n", check);
+		if (!check)
+			break;
+	}
+	edge_MSD = MSD;
+	dlog(DEBUG_INFO, "Found MSD = %i\n", edge_MSD);
+	
+	// Clear the MSD, then slide right (with MHD)
+	MSD = 0;
+	for (MHD = 0; MHD < 16; MHD++) {
+		dlog(DEBUG_VERBOSE, "Setting MHD: %i\n", MHD);
+		data = (MSD << 4) | MHD;
+		APS_WriteSPI(device, APS_DAC_SPI, msd_mhd_addr, &data);
+		APS_ReadSPI(device, APS_DAC_SPI, sd_addr, &data);
+		dlog(DEBUG_VERBOSE2, "Read 0x%x, ", data & 0xFF);
+		check = data & 1;
+		dlog(DEBUG_VERBOSE2, " Check %i\n", check);
+		if (!check)
+			break;
+	}
+	edge_MHD = MHD;
+	dlog(DEBUG_INFO, "Found MHD = %i\n", edge_MHD);
+	SD = (edge_MHD - edge_MSD) / 2;
+	dlog(DEBUG_INFO, "Setting SD = %i\n", SD);
+	
+	// Clear MSD and MHD
+	MHD = 0;
+	data = (MSD << 4) | MHD;
+	APS_WriteSPI(device, APS_DAC_SPI, msd_mhd_addr, &data);
+	// Set the optimal sample delay (SD)
+	data = SD << 4;
+	APS_WriteSPI(device, APS_DAC_SPI, sd_addr, &data);
+	
+	// AD9376 data sheet advises us to enable surveilance and auto modes, but this 
+	// has introduced output glitches in limited testing
+	// set the filter length, threshold, and enable surveilance mode and auto mode
+	/*int filter_length = 12;
+	int threshold = 1;
+	data = (1 << 7) | (1 << 6) | (filter_length << 2) | (threshold & 0x3);
+	APS_WriteSPI(device, APS_DAC_SPI, controller_addr, &data);
+	*/
+	return 0;
+}
+
+EXPORT int APS_SetupDACs(int device)
+{
+	int i;
+	for (i = 0; i < 4; i++) {
+		APS_SetupDAC(device, i);
+	}
+	return 0;
+}
 
 APS_SPI_REC PllFinish[] =
 {
@@ -1192,7 +1337,6 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 	ULONG pll_cycles_addr, pll_bypass_addr;
 	UCHAR pll_cycles_val, pll_bypass_val;
 
-	UCHAR WriteByte;
 	int fpga;
 	int sync_status;
 	int numSyncChannels;
@@ -1262,12 +1406,11 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 	fpgaFrequencies[fpga - 1] = freq;
 
 	// Disable DDRs
-	int ddr_mask = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
+	int ddr_mask = CSRMSK_ENVDDR_ELL | CSRMSK_PHSDDR_ELL;
 	APS_ClearBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
 
 	// Disable oscillator by clearing APS_STATUS_CTRL register
-	WriteByte = 0;
-	if(APS_WriteReg(device,APS_STATUS_CTRL, 1, 0, &WriteByte) != 1)
+	if (APS_ClearStatusCtrl(device) != 1)
 		return(-4);
 
 	APS_WriteSPI(device, APS_PLL_SPI, pll_cycles_addr, &pll_cycles_val);
@@ -1279,8 +1422,7 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 	}
 
 	// Enable Oscillator
-	WriteByte = APS_OSCEN_BIT;
-	if(APS_WriteReg(device, APS_STATUS_CTRL, 1, 0, &WriteByte) != 1)
+	if (APS_ResetStatusCtrl(device) != 1)
 		return(-4);
 
 	// Enable DDRs
@@ -1293,11 +1435,11 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 		// test only works for channels running at 1.2 GHz
 		numSyncChannels = (fpgaFrequencies[0] == 1200 && fpgaFrequencies[1] == 1200) ? 4 : 2;
 		if (numSyncChannels == 4) {
-			APS_TestPllSync(device, 0, numSyncChannels);
-			sync_status = APS_TestPllSync(device, 2, numSyncChannels);
+			APS_TestPllSync(device, 0, 5);
+			sync_status = APS_TestPllSync(device, 2, 5);
 		}
 		else if (fpgaFrequencies[fpga] == 1200)
-			sync_status = APS_TestPllSync(device, dac, numSyncChannels);
+			sync_status = APS_TestPllSync(device, dac, 5);
 	}
 
 	return sync_status;
@@ -1375,7 +1517,7 @@ EXPORT int APS_GetPllFreq(int device, int dac) {
 	4) Test channel 1/3 PLL against reference PLL. Reset until in phase.
 	5) Verify that sync worked by testing 0/2 XOR 1/3 (global phase).
  */
-EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
+EXPORT int APS_TestPllSync(int device, int dac, int numRetries) {
 
 	// Test for DAC clock phase match
 	int inSync, globalSync;
@@ -1387,9 +1529,10 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 	int pll_bit;
 	UINT pll_reg_value;
 	UINT pll_reset_addr, pll_reset_bit, pll_enable_addr, pll_enable_addr2;
+	UCHAR WriteByte;
 
 	pll_reset_addr = FPGA_PLL_RESET_ADDR;
-	pll_reset_bit   = CSRMSK_PHSPLLRST_ELL | CSRMSK_ENVPLLRST_ELL;
+	pll_reset_bit  = CSRMSK_PHSPLLRST_ELL | CSRMSK_ENVPLLRST_ELL;
 
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -1416,10 +1559,11 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 	}
 
 	// Disable DDRs
-	int ddr_mask = CSRMSK_ENVSMEN_ELL | CSRMSK_PHSSMEN_ELL;
+	int ddr_mask = CSRMSK_ENVDDR_ELL | CSRMSK_PHSDDR_ELL;
 	APS_ClearBit(device, fpga, FPGA_OFF_CSR, ddr_mask);
 
 	// test for PLL lock
+	inSync = 0;
 	for (test_cnt = 0; test_cnt < 20; test_cnt++) {
 		if (APS_ReadPllStatus(device, fpga) == 0) {
 			inSync = 1;
@@ -1455,6 +1599,10 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
 		for(cnt = 0; cnt < 20; cnt++) {
 			pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
+			if ((pll_bit & 0x1ff) != 2*FIRMWARE_VERSION) {
+				dlog(DEBUG_INFO, "Error: Reg 0xF006 bitfile version does not match. Read 0x%x\n", pll_bit & 0x1ff);
+				return -6;
+			}
 			xor_flag_cnt += (pll_bit >> PLL_GLOBAL_XOR_BIT) & 0x1;
 			xor_flag_cnt2 += (pll_bit >> PLL_02_XOR_BIT) & 0x1;
 			xor_flag_cnt3 += (pll_bit >> PLL_13_XOR_BIT) & 0x1;
@@ -1472,7 +1620,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 		else {
 			// 600 MHz clocks out of phase, reset DAC clocks that are 90/270 degrees out of phase with reference
 			dlog(DEBUG_VERBOSE,"DAC clocks out of phase; resetting (XOR counts %i and %i and %i)\n", xor_flag_cnt, xor_flag_cnt2, xor_flag_cnt3);
-			UCHAR WriteByte = 0x2; //disable clock outputs
+			WriteByte = 0x2; //disable clock outputs
 			if (xor_flag_cnt2 >= 5 || xor_flag_cnt2 <= 15) {
 				dac02_reset = 1;
 				APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
@@ -1503,6 +1651,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 					inSync = 1;
 					break;
 				}
+				usleep(1000);
 			}
 			if (!inSync) {
 				dlog(DEBUG_INFO,"PLLs did not re-sync after reset\n");
@@ -1525,6 +1674,10 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
 			for(cnt = 0; cnt < 10; cnt++) {
 				pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
+				if ((pll_bit & 0x1ff) != 2*FIRMWARE_VERSION) {
+					dlog(DEBUG_INFO, "Error: Reg 0xF006 bitfile version does not match. Read 0x%x\n", pll_bit & 0x1ff);
+					return -8;
+				}
 				xor_flag_cnt += (pll_bit >> PLL_XOR_TEST[pll]) & 0x1;
 			}
 
@@ -1535,13 +1688,27 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 				break; // passed, move on to next channel
 			} else {
 				// PLLs out of sync, reset
-				dlog(DEBUG_INFO,"Channel %s PLL not in sync resetting (XOR count %i)\n", pllStr, xor_flag_cnt);
+				dlog(DEBUG_VERBOSE,"Channel %s PLL not in sync resetting (XOR count %i)\n", pllStr, xor_flag_cnt);
 
 				globalSync = 0;
 
 				if (pll == 2) { // global pll compare did not sync
-					dlog(DEBUG_INFO,"Error could not sync PLLs\n");
-					return -6;
+					if (numRetries > 0) {
+						dlog(DEBUG_INFO, "Global sync failed; retrying.\n");
+						// restart both DAC clocks and try again
+						WriteByte = 0x2;
+						APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
+						APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr2, &WriteByte);
+						APS_UpdatePllReg(device);
+						WriteByte = 0x0;
+						APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr, &WriteByte);
+						APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr2, &WriteByte);
+						APS_UpdatePllReg(device);
+
+						return APS_TestPllSync(device, dac, numRetries - 1);
+					}
+					dlog(DEBUG_INFO,"Error could not sync PLLs\n"); 
+					return -9;
 				}
 
 				// Read PLL reg
@@ -1563,7 +1730,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 				}
 				if (!inSync) {
 					dlog(DEBUG_INFO,"PLL %s did not re-sync after reset\n", pllStr);
-					return -7;
+					return -10;
 				}
 			}
 		}
@@ -1574,27 +1741,33 @@ EXPORT int APS_TestPllSync(int device, int dac, int numSyncChannels) {
 
 	if (!globalSync) {
 		dlog(DEBUG_INFO,"Warning: PLLs are not in sync\n");
-		return -8;
+		return -11;
 	}
 	dlog(DEBUG_INFO,"Sync test complete\n");
 	return 0;
 }
 
 int APS_ReadPllStatus(int device, int fpga) {
-	int pll_1_unlock, pll_2_unlock, pll_3_unlock;
+	int pll_02_unlock, pll_13_unlock, pll_ref_unlock;
 	int pll_bit;
 
 	if (fpga < 0 || fpga > 2) {
 		return -1;
 	}
 
-	pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga);
-	pll_1_unlock = (pll_bit >> PLL_02_LOCK_BIT) & 0x1;
-	pll_2_unlock = (pll_bit >> PLL_13_LOCK_BIT) & 0x1;
-	pll_3_unlock = (pll_bit >> REFERENCE_PLL_LOCK_BIT) & 0x1;
+	pll_bit = APS_ReadFPGA(device, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga); // latched to USB clock (has version 0x020)
+	pll_bit = APS_ReadFPGA(device, gRegRead | FPGA_OFF_VERSION, fpga); // latched to 200 MHz PLL (has version 0x010)
+
+	if ((pll_bit & 0x1ff) != FIRMWARE_VERSION) {
+		dlog(DEBUG_INFO, "Error: Reg 0x8006 bitfile version does not match. Read 0x%x\n", pll_bit & 0x1ff);
+		return -1;
+	}
+	pll_02_unlock = (pll_bit >> PLL_02_LOCK_BIT) & 0x1;
+	pll_13_unlock = (pll_bit >> PLL_13_LOCK_BIT) & 0x1;
+	pll_ref_unlock = (pll_bit >> REFERENCE_PLL_LOCK_BIT) & 0x1;
 	// lock bit == 1 means not-locked
-	if (!pll_1_unlock && !pll_2_unlock && !pll_3_unlock) {
-		//dlog(DEBUG_INFO,"PLLs locked on FPGA%i\n", fpga);
+	dlog(DEBUG_VERBOSE2, "FPGA%d PLL status 02: %d 13: %d REF: %d\n", fpga, pll_02_unlock, pll_13_unlock, pll_ref_unlock);
+	if (!pll_02_unlock && !pll_13_unlock && !pll_ref_unlock) {
 		return 0;
 	}
 	//return -1;
@@ -1625,9 +1798,14 @@ EXPORT int APS_SetupVCXO(int device)
 {
 
 	dlog(DEBUG_INFO, "Setting up VCX0\n");
+	
+	// ensure the oscillator is disabled before programming
+	if (APS_ClearStatusCtrl(device) != 1)
+		return -1;
 
 	APS_WriteSPI(device, APS_VCXO_SPI, 0, Reg00Bytes);
 	APS_WriteSPI(device, APS_VCXO_SPI, 0, Reg01Bytes);
+
 	return 0;
 }
 
@@ -1708,6 +1886,38 @@ EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 	return 0;
 }
 
+EXPORT int APS_LoadAllWaveforms(int device) {
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+
+	int channel;
+	for(channel = 0; channel < MAX_APS_CHANNELS; channel++) {
+		APS_LoadStoredWaveform(device, channel);
+	}
+	return 0;
+}
+
+EXPORT int APS_LoadStoredLinkLists(int device, int channel) {
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	bank_t * bankPtr;
+	const int validate = 0;
+	int bank;
+
+	for (bank = 0; bank < 2; bank++) {
+		bankPtr = WF_GetLinkListBank(wfArray,channel,bank);
+		if (!bankPtr->isLoaded) {
+			LoadLinkList_ELL(device, bankPtr->offset, bankPtr->count, bankPtr->trigger,
+				bankPtr->repeat, bankPtr->length, channel,bank,validate);
+			bankPtr->isLoaded = 1;
+		}
+	}
+
+	return 0;
+}
+
 EXPORT int APS_SetLinkList(int device, int channel,
 		unsigned short *OffsetData, unsigned short *CountData,
 		unsigned short *TriggerData, unsigned short *RepeatData,
@@ -1730,4 +1940,37 @@ EXPORT int APS_SetLinkList(int device, int channel,
 
 }
 
+EXPORT int APS_SaveWaveformCache(int device, char * filename) {
 
+	const int strLen = 100;
+	char altFilename[strLen];
+	char serialNumber[strLen];
+
+	memset(serialNumber, 0, strLen);
+
+	if (filename == NULL) {
+		APS_GetSerialNum(device, serialNumber, 100);
+		snprintf(altFilename,strLen,"aps_%i_cache.dat", serialNumber);
+		filename = altFilename;
+	}
+
+
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	return WF_SaveCache(wfArray,filename);
+}
+
+EXPORT int APS_LoadWaveformCache(int device, char * filename) {
+	char altFilename[100];
+
+	if (filename == NULL) {
+		sprintf(altFilename,"aps_%i_cache.dat", device);
+		filename = altFilename;
+	}
+
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	return WF_LoadCache(wfArray,filename);
+}

@@ -33,6 +33,7 @@ CC=gcc-3
 else
 ####### Windows #######
 CFLAGS=-mno-cygwin -D__CYGWIN__ -DBUILD_DLL -I./include -Wunused-variable
+CFLAGS_STATIC=-mno-cygwin -D__CYGWIN__ -I./include -Wunused-variable
 LIBNAME=libaps.dll
 LIBNAME64=libaps64.dll
 EXFLAGS=-Wl,--out-implib,libaps.a
@@ -49,13 +50,13 @@ endif
 endif
 endif
 
-OBJECTS=aps.o fpga.o sha1.o common.o waveform.o
-OBJECTS64=aps64.o fpga64.o sha164.o common64.o waveform64.o
+OBJECTS=aps.o fpga.o sha1.o common.o waveform.o 
+OBJECTS64=aps64.o fpga64.o sha164.o common64.o waveform64.o 
 
 ######################## Default Build ########################################
 
 
-all: ${LIBNAME} test ${GLOBAL_ALL}
+all: ${LIBNAME} test testLocal ${GLOBAL_ALL}
 
 ${LIBNAME}: ${OBJECTS}
 	${CC}  ${CFLAGS}  -shared  -o ${LIBNAME} ${OBJECTS} ${EXFLAGS}
@@ -74,16 +75,20 @@ fpga.o: fpga.c fpga.h aps.h
 
 common.o: common.c common.h	
 	${CC}  ${CFLAGS} -c  common.c -o common.o
-
+	
 test: test.c ${LIBNAME}
-	${CC} ${CFLAGS} ${LFLAGS} -o test test.c
+	${CC} ${CFLAGS} ${LFLAGS} -ggdb -o test test.c
+	
+testLocal: test.c 
+	${CC} ${CFLAGS_STATIC} ${LFLAGS} -ggdb -o testLocal *.c 
+	
 
 ######################## 64-Bit ########################################
 
-all64: ${LIBNAME64} test64
+all64: ${LIBNAME64} test64 testLocal64
 
 ${LIBNAME64}: ${OBJECTS64}
-	${CC64}  ${CFLAGS} -shared  -o ${LIBNAME64} ${OBJECTS64} ${EXFLAGS}
+	${CC64}  ${CFLAGS} -shared  -o ${LIBNAME64} ${OBJECTS64} ${EXFLAGS} 
 
 waveform64.o: waveform.c waveform.h
 	${CC64}  ${CFLAGS} -c  waveform.c -o waveform64.o
@@ -101,7 +106,10 @@ common64.o: common.c common.h
 	${CC64}  ${CFLAGS}  -c  common.c -o common64.o
 	
 test64: test.c ${LIBNAME64}
-	${CC64} ${CFLAGS} ${LFLAGS} -o test64 test.c
+	${CC64} ${CFLAGS} ${LFLAGS} -ggdb -o test64 test.c
+	
+testLocal64: test.c 
+	${CC64} ${CFLAGS_STATIC} ${LFLAGS} -ggdb -o testLocal64 *.c 
 	
 ######################## Misc ########################################
 	

@@ -15,7 +15,7 @@ end
 
 basename = 'SingleQProcess';
 fixedPt = 3000;
-cycleLength = 7000;
+cycleLength = 20000;
 nbrRepeats = 2;
 
 % load config parameters from file
@@ -24,9 +24,11 @@ qParams = params.(qubit);
 qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 
-% if using SSB, uncomment the following line
-% params.(IQkey).T = eye(2);
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
+% if using SSB, set the frequency here
+SSBFreq = 0e6;
+
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
+
 patseq = {};
 
 pulses = {'QId', 'Xp', 'X90p', 'Y90p', 'X90m', 'Y90m'};
@@ -35,11 +37,20 @@ for i = 1:length(pulses)
     pulseLib.(pulses{i}) = pg.pulse(pulses{i});
 end
 
-process = pulseLib.X90p;
-
+%The map we want to characterize
+%Figure out the approximate nutation frequency calibration from the
+%X180 and the the samplingRate
+% Xp = pg.pulse('Xp');
+% xpulse = Xp(1,0);
+% nutFreq = 0.5/(sum(xpulse)/pg.samplingRate);
+% 
+% % process = pg.pulse('Utheta', 'rotAngle', -2*pi/3, 'polarAngle', acos(1/sqrt(3)) , 'aziAngle', pi/4, 'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', 0);
+% process = pg.pulse('QId', 'rotAngle', pi/2, 'polarAngle', 0, 'aziAngle', 0,'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', 0);
+%process = pg.pulse('Xtheta', 'amp', qParams.pi2Amp*(1.2));
+process = pg.pulse('X90p');
 for ii = 1:6
     for jj = 1:6
-            patseq{end+1} = { pulseLib.(pulses{ii}), process, pulseLib.(pulses{jj}) };
+        patseq{end+1} = { pulseLib.(pulses{ii}), process, pulseLib.(pulses{jj}) };
     end
 end
                 
@@ -49,7 +60,7 @@ calseq{end+1} = {pg.pulse('QId')};
 calseq{end+1} = {pg.pulse('Xp')};
 
 compiler = ['compileSequence' IQkey];
-compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 10};
+compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 31};
 if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
     feval(compiler, compileArgs{:});
 end

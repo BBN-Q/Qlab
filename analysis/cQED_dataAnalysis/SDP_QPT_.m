@@ -1,4 +1,4 @@
-function [chitheory, chicorrected, pauliMapTheory, pauliMapMLE, choi_SDP] = SDP_QPT_(measmat,measurementoperators, pauliopts, U_preps, U_meas, Gate, nbrQubits)
+function [chitheory, chicorrected, pauliMapTheory, pauliMapMLE, choi_SDP] = SDP_QPT_(measMat, measOps, measMap, pauliopts, U_preps, U_meas, Gate, nbrQubits)
 %  This programs uses semidefinite programming to work out the QPT
 % Input 
 %   rhoRaw = a cell of raw rhos
@@ -38,6 +38,10 @@ switch Gate
         Uideal = expm(-1i*pi*sx/8);
     case '1QX22p'
         Uideal = expm(-1i*pi*sx/16);
+    case '1QHad'
+        Uideal = expm(-1i*(pi/2)*(1/sqrt(2))*(sx+sz));
+    case '1QZ90'
+        Uideal = expm(-1i*(pi/4)*sz);
     case 'Id'
         Uideal = speye(4);
     case 'XI'
@@ -69,15 +73,15 @@ switch Gate
 end
 
 %choi_SDP = SDPTomoMeasMat_(measmat, measurementoperators, U_preps, U_meas, pauliopts, nbrQubits);
-choi_SDP = SimpleSDPTomoMeasMat_(measmat, measurementoperators, U_preps, U_meas, nbrQubits);
-choi_th  = Unitary2Choi_(Uideal, nbrQubits);
+choi_SDP = SimpleSDPTomoMeasMat_(measMat, measOps, measMap, U_preps, U_meas, nbrQubits);
+choi_th  = Unitary2Choi_(Uideal);
 
 % Without ML
 choi_correct = choi_SDP; % no correction
 chicorrected = Choi2Chi_(choi_correct, pauliopts, nbrQubits);
 chitheory = Choi2Chi_(choi_th, pauliopts, nbrQubits);
 
-pauliMapMLE = Choi2PauliMap_(choi_correct, pauliopts, nbrQubits);
-pauliMapTheory = Choi2PauliMap_(choi_th, pauliopts, nbrQubits);
+pauliMapMLE = Choi2PauliMap_(choi_correct);
+pauliMapTheory = Choi2PauliMap_(choi_th);
 
 end

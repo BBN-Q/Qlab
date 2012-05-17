@@ -1,108 +1,52 @@
-% clear all;
-% clear classes;
-% clear import;
-addpath('../../common/src','-END');
-addpath('../../common/src/util/','-END');
+function T1Echosequence(varargin)
 
-path = 'U:\AWG\T1Echo\';
-%path = '';
-basename = 'T1Echo';
-delay = -10;
-measDelay = -53;
-fluxDelay = -27; % -27
-bufferDelay = 58;
-bufferReset = 100;
-bufferPadding = 10;
-fixedPt = 8000;
-cycleLength = 12000;
-offset = 8192;
-piAmp = 3400;
-pi2Amp = 1500;
-sigma = 4;
-pulseLength = 4*sigma;
-fluxsigma = 5;
-fluxpulseLength = 100;
-piZAmp = -250;
-pi2ZAmp = -120;
-%ramZdelay = fluxpulseLength+30;
-T = [.801 0; 0 1.0];
-%T = eye(2);
-pg = PatternGen('dPiAmp', piAmp, 'dPiOn2Amp', pi2Amp, 'dSigma', sigma, 'dPulseLength', pulseLength, 'correctionT', T, 'cycleLength', cycleLength);
-zpg = PatternGen('dSigma', fluxsigma, 'dPulseLength', fluxpulseLength, 'cycleLength', cycleLength);
+%varargin assumes qubit and then makePlot
+qubit = 'q1';
+makePlot = true;
 
-numsteps = 250; %200
-stepsize = 25; %15
-ramZdelay = 0:stepsize:(numsteps-1)*stepsize;
-ramZdelay = ramZdelay + fluxpulseLength + 10;
-patseq = {...
-    pg.pulse('Xp'), ...
-    pg.pulse('QId', 'duration', ramZdelay)
-    };
-
-zseq = {...
-    zpg.pulse('ZId', 'width', pulseLength), ...
-    zpg.pulse('Zf', 'amp', piZAmp, 'duration', ramZdelay, 'pType', 'tanh'),...
-    };
-
-ch1 = zeros(numsteps + 4, cycleLength);
-ch2 = ch1;
-ch4 = ch1;
-ch3m1 = ch1;
-
-for n = 1:numsteps;
-	[patx paty] = pg.getPatternSeq(patseq, n, delay, fixedPt);
-    [patz, ~] = zpg.getPatternSeq(zseq, n, fluxDelay, fixedPt);
-	ch1(n, :) = patx + offset;
-	ch2(n, :) = paty + offset;
-    ch4(n, :) = patz + offset;
-    ch3m1(n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
+if length(varargin) == 1
+    qubit = varargin{1};
+elseif length(varargin) == 2
+    qubit = varargin{1};
+    makePlot = varargin{2};
+elseif length(varargin) > 2
+    error('Too many input arguments.')
 end
+
+basename = 'T1Echo';
+fixedPt = 46000; %40000
+cycleLength = 49000; %44000
+nbrRepeats = 1;
+
+% load config parameters from file
+params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+qParams = params.(qubit);
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
+
+% if using SSB, uncomment the following line
+% params.(IQkey).T = eye(2);
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
+
+numsteps = 150;
+stepsize = 150;
+delays = 0:stepsize:(numsteps-1)*stepsize;
+
+patseq = {{...
+    pg.pulse('Xp'), ...
+    pg.pulse('QId', 'duration', delays), ...
+    pg.pulse('Xp'), pg.pulse('Yp'), ... % construct a Z with an X, Y sequence
+    pg.pulse('QId', 'duration', delays)
+    }};
 
 calseq = {{pg.pulse('QId')}, {pg.pulse('QId')}, {pg.pulse('Xp')}, {pg.pulse('Xp')}};
-zcalseq = {zpg.pulse('ZId')};
-for n = 1:length(calseq);
-	[patx paty] = pg.getPatternSeq(calseq{n}, n, delay, fixedPt);
-    [patz, ~] = zpg.getPatternSeq(zcalseq, n, fluxDelay, fixedPt);
-	ch1(numsteps+n, :) = patx + offset;
-	ch2(numsteps+n, :) = paty + offset;
-    ch4(numsteps+n, :) = patz + offset;
-    ch3m1(numsteps+n, :) = pg.bufferPulse(patx, paty, 0, bufferPadding, bufferReset, bufferDelay);
+
+compiler = ['compileSequence' IQkey];
+compileArgs = {basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot};
+if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
+    feval(compiler, compileArgs{:});
+else
+    error('Unable to find compiler for IQkey: %s',IQkey) 
 end
 
-numsteps = numsteps + length(calseq);
-
-% trigger at beginning of measurement pulse
-% measure from (6000:9000)
-measLength = 3000;
-measSeq = {pg.pulse('M', 'width', measLength)};
-ch1m1 = zeros(numsteps, cycleLength);
-ch1m2 = zeros(numsteps, cycleLength);
-for n = 1:numsteps;
-	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
-	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
 end
-
-myn = 10;
-figure
-plot(ch1(myn,:));
-hold on
-plot(ch2(myn,:), 'r')
-plot(ch4(myn,:), 'c')
-plot(5000*ch3m1(myn,:), 'k')
-plot(5000*ch1m2(myn,:), 'g')
-%plot(1000*ch3m1(myn,:))
-plot(5000*ch1m1(myn,:),'.')
-grid on
-hold off
-
-% fill remaining channels with empty stuff
-ch3 = zeros(numsteps, cycleLength);
-%ch4 = zeros(numsteps, cycleLength);
-ch2m1 = ch3;
-ch2m2 = ch4;
-ch3 = ch3 + offset;
-%ch4 = ch4 + offset;
-
-% make TekAWG file
-TekPattern.exportTekSequence(path, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-clear ch1 ch2 ch3 ch4 ch1m1 ch1m2 ch2m1 ch2m2 ch3m1

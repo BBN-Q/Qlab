@@ -19,7 +19,7 @@ classdef Power < sweeps.Sweep
 	
 	methods
 		% constructor
-		function obj = Power(SweepParams, Instr, ExpParams, sweepPtsOnly)
+		function obj = Power(SweepParams, Instr, params, sweepPtsOnly)
 			if nargin < 3
 				error('Usage: Power(SweepParams, Instr, ExpParams)');
 			end

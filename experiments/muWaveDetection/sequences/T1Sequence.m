@@ -14,8 +14,8 @@ elseif length(varargin) > 2
 end
 
 basename = 'T1';
-fixedPt = 30000; %40000
-cycleLength = 34000; %44000
+fixedPt = 34000; %40000
+cycleLength = 51000; %44000
 nbrRepeats = 1;
 
 % load config parameters from file

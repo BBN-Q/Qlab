@@ -106,7 +106,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             if isempty(obj.devID)
                 error('Could not find a Labbrick with serial %i', serial);
             end
-            %fprintf('Connecting to devID %i\n', obj.devID);
+            fprintf('Connecting to devID %i\n', obj.devID);
             status = calllib('vnx_fmsynth', 'fnLMS_InitDevice', obj.devID);
             if status ~= 0
                 error('Could not open device with id: %i, returned error %i', [obj.devID status])
