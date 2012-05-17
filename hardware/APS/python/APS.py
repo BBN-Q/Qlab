@@ -73,7 +73,7 @@ class APS:
     
     VALID_FREQUENCIES = [1200,600,300,100,40]
 
-    CHANNELNAMES = ('ch1','ch2','ch3','ch4')
+    CHANNELNAMES = ('chan_1','chan_2','chan_3','chan_4')
     
     lastSeqFile = ''
     
@@ -443,7 +443,7 @@ class APS:
     def set_offset(self, ch, offset):
         return self.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*self.MAX_WAVEFORM_VALUE)
         
-    def set_offset(self, ch, delay):
+    def set_trigger_delay(self, ch, delay):
        return self.librarycall('Set channel trigger delay','APS_SetTriggerDelay', ch-1, delay)
         
     def load_sequence_file(self, filename, mode, channelNum=None):
@@ -469,7 +469,7 @@ class APS:
                 
                 bankB = fileData.LLData[channelName]['bankB']
                 if bankB['length'] > 0:
-                    self.loadLinkListELL(ct, bankA['offset'], bankA['count'], bankA['trigger'], bankA['repeat'], bankA['length'], self.BANKB)  
+                    self.loadLinkListELL(ct, bankB['offset'], bankB['count'], bankB['trigger'], bankB['repeat'], bankB['length'], self.BANKB)
                     
                 self.setLinkListRepeat(ct, fileData.LLData[channelName]['repeatCount'])
                             
@@ -596,10 +596,8 @@ class APS:
         print 'Done with load Waveform'
         self.triggerWaveform(0,1)
         print 'Done with Trigger'
-        
-        
-        
-        
+
+
 if __name__ == '__main__':
     aps = APS(libPathDebug)
     aps.unitTestBasic()

@@ -22,6 +22,7 @@
 %    --------    --    ------
 %                BCD
 %    10/5/2011   BRJ   Making compatible with expManager init sequence
+%    30 Mar. 2012 CAR  HDF5 File Version. 
 %
 % $Author: bdonovan $
 % $Date$
@@ -58,6 +59,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         chan_2;
         chan_3;
         chan_4;
+        channelStrs = {'chan_1', 'chan_2', 'chan_3', 'chan_4'};
         
         samplingRate = 1200;   % Global sampling rate in units of MHz (1200, 600, 300, 100, 40)
         triggerSource = 'internal';  % Global trigger source ('internal', or 'external')
@@ -127,7 +129,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         FPGA1 = 2;
         
         DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV', 'A6001nBT'};
-        
+
+        channelStruct = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
     end
     
     methods
@@ -148,14 +151,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             d.bit_file_path = script_path(1:baseIdx);
             
             % init channel structs and waveform objects
-            d.chan_1 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'trigDelay', 0);
-            d.chan_1.waveform = APSWaveform();
-            d.chan_2 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'trigDelay', 0);
-            d.chan_2.waveform = APSWaveform();
-            d.chan_3 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'trigDelay', 0);
-            d.chan_3.waveform = APSWaveform();
-            d.chan_4 = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', [], 'trigDelay', 0);
-            d.chan_4.waveform = APSWaveform();
+            for ct = 1:4
+                d.(d.channelStrs{ct}) = d.channelStruct;
+                d.(d.channelStrs{ct}).waveform = APSWaveform();
+            end
         end
         
         %Destructor
@@ -269,14 +268,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
 
             % read in channel settings so we know how to scale waveform
             % data
-            ch_fields = {'chan_1', 'chan_2', 'chan_3', 'chan_4'};
-            for i = 1:length(ch_fields)
-                ch = ch_fields{i};
+            for ct = 1:4
+                ch = obj.channelStrs{ct};
                 obj.(ch).amplitude = settings.(ch).amplitude;
                 obj.(ch).offset = settings.(ch).offset;
                 obj.(ch).enabled = settings.(ch).enabled;
             end
-            settings = rmfield(settings, ch_fields);
+            settings = rmfield(settings, obj.channelStrs);
             
 			% load AWG file before doing anything else
 			if isfield(settings, 'seqfile')
@@ -497,13 +495,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             Sel = 3;
             
             aps.log(sprintf('Loading bit file: %s', filename));
-            eval(['[DataFileID, FOpenMessage] = fopen(''', filename, ''', ''r'');']);
+            [DataFileID, FOpenMessage] = fopen(filename, 'r');
             if ~isempty(FOpenMessage)
                 error('APS:loadBitFile', 'Input DataFile Not Found');
             end
-            
-            [filename, permission, machineformat, encoding] = fopen(DataFileID);
-            %eval(['disp(''Machine Format = ', machineformat, ''');']);
             
             [DataVec, DataCount] = fread(DataFileID, inf, 'uint8=>uint8');
             aps.log(sprintf('Read %i bytes.', DataCount));
@@ -620,26 +615,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function loadConfig(aps, filename)
             % loads a complete, 4 channel configuration file
             
-            % pseudocode:
-            % open file
-            % foreach channel
-            %   load and scale/shift waveform data
-            %   save channel waveform lib in chan_i struct
-            %   clear old link list data
-            %   load link list data (if any)
-            %   save channel LL data in chan_i struct
-            %   set link list mode
-            
-            % clear existing variable names
-            clear Version WaveformLibs LinkLists
-            load(filename)
-            % if any channel has a link list, all channels must have a link
-            % list
-            % TODO: add more error checking
-            if length(LinkLists) > 1 && (length(WaveformLibs) ~= length(LinkLists))
-                error('Malformed config file')
-            end
-            
+            %Check the file version number
+            assert(h5readatt(filename, '/', 'Version') == 1.6, 'Oops! This code expects version APS HDF5 version 1.6.')
+
             % clear old link list data
             aps.clearLinkListELL(0);
             aps.clearLinkListELL(1);
@@ -647,57 +625,88 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.clearLinkListELL(3);
             
             % load waveform data
+            wf = APSWaveform();
+            
+            %See which channels are defined in this file
+            channelDataFor = h5readatt(filename, '/', 'channelDataFor');
+            
+            %Now, the obvious thing to do is have one loop for the
+            %channels, and load the waveform and then the LL for each
+            %channel.  Unfortunately, it appears that there is an adverse
+            %interaction between loadWaveform and loadLLData so they have
+            %do be done for each channel separately! 
             for ch = 1:aps.num_channels
-                if ch <= length(WaveformLibs) && ~isempty(WaveformLibs{ch})
-                    wf = APSWaveform();
-                    % load and scale/shift waveform data
-                    wf.set_vector(WaveformLibs{ch});
-                    wf.set_offset(aps.(['chan_' num2str(ch)]).offset);
-                    wf.set_scale_factor(aps.(['chan_' num2str(ch)]).amplitude);
+                if any(ch == channelDataFor)
+                    channelStr = aps.channelStrs{ch};
+                    
+                    %Load and scale/shift waveform data
+                    wf.set_vector(h5read(filename,['/', channelStr, '/waveformLib']));
+                    wf.set_offset(aps.(channelStr).offset);
+                    wf.set_scale_factor(aps.(channelStr).amplitude);
                     aps.loadWaveform(ch-1, wf.prep_vector());
-                    aps.(['chan_' num2str(ch)]).waveform = wf;
-                    
+                    aps.(channelStr).waveform = wf;
+               
                     % set zero register value
-                    offset = aps.(['chan_' num2str(ch)]).offset;
+                    offset = aps.(channelStr).offset;
                     aps.setOffset(ch, offset);
-                end
-            end
-            
-            % load LL data (if any)
-            for ch = 1:aps.num_channels
-                wf = aps.(['chan_' num2str(ch)]).waveform;
-                
-                if ch <= length(LinkLists) && ~isempty(LinkLists{ch})
-                    wf.ellData = LinkLists{ch};
-                    wf.ell = true;
-                    if wf.check_ell_format()
-                        
-                        wf.have_link_list = 1;
                     
-                        ell = wf.get_ell_link_list();
-                        if isfield(ell,'bankA') && ell.bankA.length > 0
-                            
-                            bankA = ell.bankA;
-                            aps.loadLinkListELL(ch-1,bankA.offset,bankA.count, ...
-                                bankA.trigger, bankA.repeat, bankA.length, 0);
-                        end
-
-                        if isfield(ell,'bankB') && ~isempty(ell.bankB) && ell.bankB.length > 0
-                            bankB = ell.bankB;
-                            aps.loadLinkListELL(ch-1,bankB.offset,bankB.count, ...
-                                bankB.trigger, bankB.repeat, bankB.length, 1);
-                        end
-
-                        %aps.setLinkListRepeat(ch-1,ell.repeatCount);
-                        aps.setLinkListRepeat(ch-1,0);
-                    end
-                    aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                 end
-                
-                % update channel waveform object
-                aps.(['chan_' num2str(ch)]).waveform = wf;
             end
             
+            %Redo the loop for loading the link lists. 
+            for ch = 1:aps.num_channels
+                if any(ch == channelDataFor)
+                    channelStr = aps.channelStrs{ch};
+                    %Load LL data if it exists
+                    if(h5readatt(filename, ['/', channelStr], 'isLinkListData') == 1)
+                        tmpLinkList = struct();
+                        %Create the linkList structure from the hdf5file
+                        for bankct = 1:h5readatt(filename, ['/', channelStr, '/linkListData'], 'numBanks')
+                            bankStr = sprintf('bank%d',bankct);
+                            bankGroupStr = ['/' , channelStr, '/linkListData/', bankStr];
+                            tmpLinkList.(bankStr) = struct();
+                            tmpLinkList.(bankStr).count = h5read(filename, [bankGroupStr, '/count']);
+                            tmpLinkList.(bankStr).offset = h5read(filename, [bankGroupStr, '/offset']);
+                            tmpLinkList.(bankStr).repeat = h5read(filename, [bankGroupStr, '/repeat']);
+                            tmpLinkList.(bankStr).trigger = h5read(filename, [bankGroupStr, '/trigger']);
+                            tmpLinkList.(bankStr).length = h5readatt(filename, bankGroupStr, 'length');
+                        end
+                        tmpLinkList.repeatCount = h5readatt(filename, ['/', channelStr, '/linkListData'], 'repeatCount');
+                        
+                        %Add the LL data to the wf
+                        wf = aps.(channelStr).waveform;
+                        wf.ellData = tmpLinkList;
+                        wf.ell = true;
+                        %Do some error checking
+                        if wf.check_ell_format()
+                            
+                            wf.have_link_list = true;
+                            ell = wf.get_ell_link_list();
+                            
+                            %For now we just directly load the first two
+                            %banks into bankA and bankB
+                            if isfield(ell,'bank1') && ell.bank1.length > 0
+                                bankA = ell.bank1;
+                                aps.loadLinkListELL(ch-1,bankA.offset,bankA.count, ...
+                                    bankA.trigger, bankA.repeat, bankA.length, 0);
+                            end
+                            if isfield(ell,'bank2') && ~isempty(ell.bank2) && ell.bank2.length > 0
+                                bankB = ell.bank2;
+                                aps.loadLinkListELL(ch-1,bankB.offset,bankB.count, ...
+                                    bankB.trigger, bankB.repeat, bankB.length, 1);
+                            end
+                            
+                            %aps.setLinkListRepeat(ch-1,ell.repeatCount);
+                            %aps.setLinkListRepeat(ch-1,10000);
+                            aps.setLinkListRepeat(ch-1,0);
+                            aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
+                        end
+                        % update channel waveform object
+                        aps.(channelStr).waveform = wf;
+                        
+                    end
+                end
+            end
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -772,9 +781,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % based upon enabled channels, trigger both FPGAs, a single
             % FPGA, or individuals DACs
             trigger = [false false false false];
-            channels = {'chan_1','chan_2','chan_3','chan_4'};
-            for i = 1:4
-                trigger(i) = aps.(channels{i}).enabled;
+            for ct = 1:4
+                trigger(ct) = aps.(aps.channelStrs{ct}).enabled;
             end
             
             triggeredFPGA = [false false];

@@ -91,14 +91,13 @@ ch4 = ch4 + params.TekAWG34.offset;
 strippedBasename = basename;
 basename = [basename 'BBNAPS12'];
 % make APS file
-%exportAPSConfig(tempdir, basename, ch56seq);
 exportAPSConfig(tempdir, basename, ch56seq, ch56seq);
 disp('Moving APS file to destination');
 if ~exist(['U:\APS\' strippedBasename '\'], 'dir')
     mkdir(['U:\APS\' strippedBasename '\']);
 end
-pathAPS = ['U:\APS\' strippedBasename '\' basename '.mat'];
-movefile([tempdir basename '.mat'], pathAPS);
+pathAPS = ['U:\APS\' strippedBasename '\' basename '.h5'];
+movefile([tempdir basename '.h5'], pathAPS);
 % make TekAWG file
 options = struct('m21_high', 2.0, 'm41_high', 2.0);
 TekPattern.exportTekSequence(tempdir, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
