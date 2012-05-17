@@ -621,7 +621,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 end
             end
             
-            %Redo the loop for loading the waveforms. 
+            %Redo the loop for loading the link lists. 
             for ch = 1:aps.num_channels
                 if any(ch == channelDataFor)
                     channelStr = aps.channelStrs{ch};
@@ -658,7 +658,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                                 aps.loadLinkListELL(ch-1,bankA.offset,bankA.count, ...
                                     bankA.trigger, bankA.repeat, bankA.length, 0);
                             end
-                            if isfield(ell,'bank2') && ~isempty(ell.bank1) && ell.bank2.length > 0
+                            if isfield(ell,'bank2') && ~isempty(ell.bank2) && ell.bank2.length > 0
                                 bankB = ell.bank2;
                                 aps.loadLinkListELL(ch-1,bankB.offset,bankB.count, ...
                                     bankB.trigger, bankB.repeat, bankB.length, 1);
