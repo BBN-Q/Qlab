@@ -90,4 +90,20 @@ solvesdp(constraint, 1-norm(choiSDP(:),2), sdpsettings('verbose',verbose));
 
 out = double(choiSDP);
 
+% plot the result
+
+pauliMap = Choi2PauliMap_(double(choiSDP));
+cmap = [hot(50); 1-hot(50)];
+cmap = cmap(18:18+63,:); % make a 64-entry colormap
+figure()
+imagesc(real(pauliMap'),[-1,1])
+colormap(cmap)
+colorbar()
+set(gca, 'XTick', 1:4);
+set(gca, 'XTickLabel', {'X','Y','Z','I'});
+set(gca, 'YTick', 1:4);
+set(gca, 'YTickLabel', {'X','Y','Z','I'});
+xlabel('Input Pauli Operator');
+ylabel('Output Pauli Operator');
+
 end
