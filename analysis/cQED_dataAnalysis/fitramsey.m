@@ -12,39 +12,31 @@ if nargin < 2
     plotTitle = get(get(gca, 'Title'), 'String');
 else
     h = figure;
+    plotTitle = 'Fit to a Damped Sinusoid';
 end
-%y = ydata .* 1000;
+
 y = ydata(:);
 
 % if xdata is a single value, assume that it is the time step
 if length(xdata) == 1
     xdata = 0:xdata:xdata*(length(y)-1);
 end
-% construct finer step tdata
+% construct finer step tdata for plotting fit
 xdata_finer = linspace(0, max(xdata), 4*length(xdata));
 
 xdata = xdata(:);
 xdata_finer = xdata_finer(:);
 
+%Use KT estimation to get a guess for the fit
+[freqs,Ts,amps] = KT_estimation(ydata, xdata(2)-xdata(1),3);
+
+fprintf('KT Estimation: T2 = %.1fus; Freq. = %.0fkHz\n', Ts(1)/1e3, freqs(1)*1e6) 
+
 % model A + B Exp(-t/tau) * cos(w t + phi)
 rabif = inline('p(1) + p(2)*exp(-tdata/p(3)).*cos(p(4)*tdata + p(5))','p','tdata');
-
-% initial guess for amplitude is max - mean
-amp = max(y) - mean(y);
-
-% initial guess for Rabi time is length/3
-trabi = max(xdata)/3.;
-
-% use largest FFT frequency component to seed Rabi frequency
-yfft = fft(ydata);
-[freqamp freqpos] = max(abs( yfft(2:floor(end/2)) ));
-frabi = 2*pi*(freqpos-1)/xdata(end);
-
-p = [mean(y) amp trabi frabi 0];
-
-tic
+p = [mean(y) abs(amps(1)) Ts(1) 2*pi*freqs(1) 0];
 [beta,r,j] = nlinfit(xdata, y, rabif, p);
-toc
+
 
 figure(h)
 subplot(3,1,2:3)
