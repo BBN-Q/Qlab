@@ -360,7 +360,7 @@ class APS:
     
     @samplingRate.setter
     def samplingRate(self, freq):
-        if self.samplingRate ~= freq:
+        if self.samplingRate != freq:
             self.setFrequency(0, freq, testLock=0)
             self.setFrequency(2, freq, testLock=0)
             self.resetStatusCtrl(); # in case setFrequency left the oscillator disabled
@@ -499,16 +499,16 @@ class APS:
             self.setFrequency(0, 1200, testLock=0)
             self.setFrequency(2, 1200, testLock=0)
 			
-			# reset status/CTRL in case setFrequency screwed it up
-			self.resetStatusCtrl()
+            # reset status/CTRL in case setFrequency screwed it up
+            self.resetStatusCtrl()
             
             # Test PLL sync on each FPGA
             status = self.test_PLL_sync(0) or self.test_PLL_sync(2)
             if status:
                 raise RuntimeError('APS failed to initialize')
         
-			# align DAC data clock boundaries
-			self.setupDACs()
+            # align DAC data clock boundaries
+            self.setupDACs()
 			
             #Set all channel offsets to zero
             for ch in range(1,5):
