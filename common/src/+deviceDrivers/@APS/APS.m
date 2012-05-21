@@ -270,7 +270,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % validate - bool, reads back waveform data
             % useSlowWrite - bool, when false uses a faster buffered write
             %
-            % Use of this method disables link list mode
+            % Use of this method disables link list mode. If you intend to
+            % use sequence mode, use loadConfig() instead.
             if aps.mock_aps
                 aps.log('Mock load waveform')
                 return 
