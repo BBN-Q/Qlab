@@ -34,8 +34,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 classdef APS < deviceDrivers.lib.deviceDriverBase
-    %APS Summary of this class goes here
-    %   Detailed explanation goes here
     properties
         library_path = './lib/';
         library_name = 'libaps';
@@ -134,7 +132,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
     
     methods
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Public Methods
+        
         function d = APS()
+            % APS constructor
             d = d@deviceDrivers.lib.deviceDriverBase('APS');
             d.load_library();
             
@@ -156,19 +157,15 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
         end
         
-        %Destructor
         function delete(obj)
+            % APS Destructor
             if obj.is_open()
                 obj.close();
             end
         end
         
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function connect(obj,address)
-            
-            % Experiment Framework function for connecting to
-            % A APS, allow numeric or serial number based
-            % addressing
+            % address = device ID (number) or serial number (string)
             
             if isnumeric(address)
                 val = obj.open(address);
@@ -178,91 +175,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
         end
         
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function disconnect(obj)
             obj.close()
         end
         
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function log(aps,line)
-            if ~isempty(aps.message_manager)
-                aps.message_manager.disp(line)
-            else
-                if aps.verbose
-                    disp(line)
-                end
-            end
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function load_library(d, reloadLibrary)
-            
-            if ~exist('reloadLibrary','var')
-                reloadLibrary = 0;
-            end
-            
-            if strcmp(computer,'PCWIN64')
-                libfname = 'libaps64.dll';
-                d.library_name = 'libaps64';
-            elseif (ispc())
-                libfname = 'libaps.dll';
-            elseif (ismac())
-                libfname = 'libaps.dylib';
-            else
-                libfname = 'libaps.so';
-            end
-            
-            if reloadLibrary && libisloaded(d.library_name)
-                unloadlibrary(d.library_name)
-            end
-            
-            % build library path
-            script = mfilename('fullpath');
-            script = java.io.File(script);
-            path = char(script.getParent());
-            d.library_path = [path filesep 'lib' filesep];
-            if ~libisloaded(d.library_name)
-                [notfound warnings] = loadlibrary([d.library_path libfname], ...
-                    [d.library_path 'libaps.h']);
-            end
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %Return the number of devices and their serial numbers
-        function num_devices = enumerate(aps)
-            % Library may not be opened if a stale object is left in
-            % memory by matlab. So we reopen on if need be.
-            aps.load_library()
-
-            if aps.mock_aps && aps.num_devices == 0
-                aps.num_devices = 1;
-            else
-
-                aps.num_devices = calllib(aps.library_name,'APS_NumDevices');
-                num_devices = aps.num_devices;
-
-                %Reset cell array
-                aps.deviceSerials = cell(num_devices,1);
-                %For each device load the serial number
-                for ct = 1:num_devices
-                    [success, deviceSerial] = calllib(aps.library_name, 'APS_GetSerialNum',ct-1, blanks(64), 64);
-                    if success == 0
-                        aps.deviceSerials{ct} = deviceSerial;
-                    else
-                        error('Unable to get serial number');
-                    end
-                end
-            end
-        end
-        
-        
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % setAll is called as part of the Experiment initialize instruments
         function setAll(obj,settings)
+            % setAll sets up the APS with the parameters in the settings
+            % struct
             obj.init();
 
             % read in channel settings so we know how to scale waveform
@@ -301,83 +220,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     obj.(name) = settings.(name);
                 end
             end
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        function val = open(aps,id, force)
-            if (aps.is_open)
-                aps.close()
-            end
-            
-            if exist('id','var')
-                aps.device_id = id;
-            end
-            
-            if ~exist('force','var')
-                force = 0;
-            end
-            
-            % populate list of device id's and serials
-            aps.enumerate();
-            if id + 1 > aps.num_devices
-                error('Device id %i not found.', id);
-            end
-            
-            val = calllib(aps.library_name,'APS_Open' ,aps.device_id, force);
-            if (val == 0)
-                aps.log(sprintf('APS USB Connection Opened'));
-                aps.is_open = 1;
-            elseif (val == 1)
-                aps.log(sprintf('Could not open device %i.', aps.device_id))
-                aps.log(sprintf('Device may be open by a different process'));
-            elseif (val == 2)
-                aps.log(sprintf('APS Device Not Found'));
-            else
-                aps.log(sprintf('Unknown return from libaps: %i', val));
-            end
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function val = openBySerialNum(aps,serial)
-            if (aps.is_open)
-                aps.close()
-            end
-            
-            % populate list of device id's and serials
-            aps.enumerate();
-            if ~ismember(serial, aps.deviceSerials)
-                error('Device id %i not found.', id);
-            end
-            
-            val = calllib(aps.library_name,'APS_OpenBySerialNum' ,serial);
-            if (val >= 0)
-                aps.log(sprintf('APS USB Connection Opened'));
-                aps.is_open = 1;
-                aps.device_id = val;
-            elseif (val == -1)
-                aps.log(sprintf('Could not open device %i.', aps.device_id))
-                aps.log(sprintf('Device may be open by a different process'));
-            elseif (val == -2)
-                aps.log(sprintf('APS Device Not Found'));
-            else
-                aps.log(sprintf('Unknown return from LIBAPS: %i', val));
-            end
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function close(aps)
-            try
-                val = calllib(aps.library_name,'APS_Close',aps.device_id);
-            catch
-                val = 0;
-            end
-            if (val == 0)
-                aps.log(sprintf('APS USB Connection Closed\n'));
-            else
-                aps.log(sprintf('Error closing APS USB Connection: %i\n', val));
-            end
-            aps.is_open = 0;
         end
         
         function init(obj, force)
@@ -420,99 +262,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             obj.bit_file_programmed = 1;
         end
         
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function val = readBitFileVersion(aps)
-            if aps.mock_aps
-                 val = aps.ELL_VERSION;
-                 return
-            end
-            val = calllib(aps.library_name,'APS_ReadBitFileVersion', aps.device_id);
-            aps.bit_file_version = val;
-            if val >= aps.ELL_VERSION
-                aps.max_waveform_points = aps.ELL_MAX_WAVFORM;
-                aps.max_ll_length = aps.ELL_MAX_LL;
-            end
-        end
-        
-        function isr = isRunning(aps, fpga)
-            if ~exist('fpga', 'var')
-                fpga = 3;
-            end
-            isr = false;
-            if aps.is_open
-                val = aps.librarycall('Checking if running', 'APS_IsRunning', fpga);
-                if val > 0
-                    isr = true;
-                end
-            end
-        end
-        
-        function dbgForceELLMode(aps)
-            %% Force constants to ELL mode for debug testing
-            aps.max_waveform_points = aps.ELL_MAX_WAVFORM;
-            aps.max_ll_length = aps.ELL_MAX_LL;
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function val = programFPGA(aps, data, bytecount,sel, expectedVersion)
-            if ~(aps.is_open)
-                warning('APS:ProgramFPGA','APS is not open');
-                return
-            end
-            aps.log('Programming FPGA ');
-            val = calllib(aps.library_name,'APS_ProgramFpga',aps.device_id,data, bytecount, sel, expectedVersion);
-            if (val < 0)
-                errordlg(sprintf('APS_ProgramFPGA returned an error code of: %i\n', val), ...
-                    'Programming Error');
-            end
-            aps.log('Done');
-        end
-        
-        function fname = defaultBitFileName(obj)
-            % current device's serial number is at index device_id + 1 in
-            % deviceSerials cell array
-            if ismember(obj.deviceSerials{obj.device_id+1}, obj.DAC2_SERIALS)
-                fname = 'mqco_dac2_latest.bit';
-            else
-                fname = 'mqco_aps_latest.bit';
-            end
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function val = loadBitFile(aps,filename)
-            
-            if ~exist('filename','var')
-                filename = [aps.bit_file_path aps.defaultBitFileName];
-            end
-            
-            if ~(aps.is_open)
-                warning('APS:loadBitFile','APS is not open');
-                return
-            end
-
-            aps.setupVCX0();
-            aps.setupPLL();
-            
-            % assume we are programming both FPGA with the same bit file
-            Sel = 3;
-            
-            aps.log(sprintf('Loading bit file: %s', filename));
-            [DataFileID, FOpenMessage] = fopen(filename, 'r');
-            if ~isempty(FOpenMessage)
-                error('APS:loadBitFile', 'Input DataFile Not Found');
-            end
-            
-            [DataVec, DataCount] = fread(DataFileID, inf, 'uint8=>uint8');
-            aps.log(sprintf('Read %i bytes.', DataCount));
-            
-            val = aps.programFPGA(DataVec, DataCount, Sel, aps.expected_bit_file_ver);
-            fclose(DataFileID);
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %% Waveform / Link List Load Functions
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function loadWaveform(aps,id,waveform,offset,validate, useSlowWrite)
             % id - channel (0-3)
             % waveform - int16 format waveform data (-8192, 8191)
@@ -520,6 +269,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             %   shift of zero), integer multiple of 4
             % validate - bool, reads back waveform data
             % useSlowWrite - bool, when false uses a faster buffered write
+            %
+            % Use of this method disables link list mode
             if aps.mock_aps
                 aps.log('Mock load waveform')
                 return 
@@ -553,65 +304,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     'Programming Error');
             end
             aps.log('Done');
-        end
-        
-        function storeAPSWaveform(aps, waveform, dac)
-            if ~strcmp(class(waveform), 'APSWaveform')
-                error('APS:storeAPSWaveform:params', 'waveform must be of class APSWaveform')
-            end
-                
-            % store waveform data
-            
-            val = calllib(aps.library_name,'APS_SetWaveform', aps.device_id, dac, ...
-                waveform.data, length(waveform));
-            if (val < 0), error('APS:storeAPSWaveform:set', 'error in set waveform'),end;
-           
-            % set offset
-            
-            val = aps.librarycall('Setting waveform offet','APS_SetWaveformOffset', dac, wf.offset);
-            
-            % set scale
-            
-            val = aps.librarycall('Setting wavform scale','APS_SetWaveformScale', dac, wf.scale_factor);
-           
-        end
-        
-        function loadAPSWaveforms(aps)
-            val = aps.librarycall('Loading waveforms','APS_LoadAllWaveforms');
-        end
-        
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function loadLinkList(aps,id,offsets,counts, ll_len)
-            trigger = [];
-            repeat = [];
-            bank = 0;
-            aps.loadLinkListELL(aps,id,offsets,counts, trigger, repeat, ll_len, bank)
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function loadLinkListELL(aps,id,offsets,counts, trigger, repeat, ll_len, bank, validate)
-            if ~(aps.is_open)
-                warning('APS:loadLinkListELL','APS is not open');
-                return
-            end
-            
-            if ~exist('validate','var')
-                validate = 0;
-            end
-            
-            aps.log(sprintf('Loading Link List length: %i into DAC%i bank %i ', ll_len,id, bank));
-            val = calllib(aps.library_name,'APS_LoadLinkList',aps.device_id, offsets,counts,trigger,repeat,ll_len,id,bank, validate);
-            if (val < 0)
-                errordlg(sprintf('APS_LoadLinkList returned an error code of: %i\n', val), ...
-                    'Programming Error');
-            end
-            aps.log('Done');
-        end
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function clearLinkListELL(aps,id)
-            aps.librarycall('Clear Bank 0','APS_ClearLinkListELL',id,0); % bank 0
-            aps.librarycall('Clear Bank 1','APS_ClearLinkListELL',id,1); % bank 1
         end
         
         function loadConfig(aps, filename)
@@ -699,7 +391,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                             end
                             
                             %aps.setLinkListRepeat(ch-1,ell.repeatCount);
-                            %aps.setLinkListRepeat(ch-1,10000);
                             aps.setLinkListRepeat(ch-1,0);
                             aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                         end
@@ -709,62 +400,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     end
                 end
             end
-        end
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %% Trigger / Pause / Disable Waveform or FPGA
-        %% setLinkListMode
-        %% setFrequency
-        %%
-        %% These function share a common base function to wrap libaps
-        %%
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function val = librarycall(aps,mesg,func,varargin)
-            % common base call for a number of functions
-            if ~(aps.is_open)
-                warning('APS:librarycall','APS is not open');
-                val = -1;
-                return
-            end
-            if (aps.verbose)
-                aps.log(mesg);
-            end
-                        
-            if size(varargin,2) == 0
-                val = calllib(aps.library_name, func, aps.device_id);
-            else
-                val = calllib(aps.library_name, func, aps.device_id, varargin{:});
-            end
-            if (aps.verbose)
-                aps.log('Done');
-            end
-        end
-        
-        function triggerWaveform(aps,ch,trigger_type)
-            val = aps.librarycall(sprintf('Trigger Waveform %i Type: %i', ch, trigger_type), ...
-                'APS_TriggerDac',ch,trigger_type);
-        end
-        
-        function pauseWaveform(aps,ch)
-            val = aps.librarycall(sprintf('Pause Waveform %i', ch), 'APS_PauseDac',ch);
-        end
-        
-        function disableWaveform(aps,ch)
-            val = aps.librarycall(sprintf('Disable Waveform %i', ch), 'APS_DisableDac',ch);
-        end
-        
-        function triggerFpga(aps, ch, trigger_type)
-            val = aps.librarycall(sprintf('Trigger Waveform %i Type: %i', ch, trigger_type), ...
-                'APS_TriggerFpga',ch,trigger_type);
-        end
-        
-        function pauseFpga(aps,ch)
-            val = aps.librarycall(sprintf('Pause Waveform %i', ch), 'APS_PauseFpga',ch);
-        end
-        
-        function disableFpga(aps,ch)
-            val = aps.librarycall(sprintf('Disable Waveform %i', ch), 'APS_DisableFpga',ch);
         end
         
         function run(aps)
@@ -814,6 +449,16 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.disableFpga(aps.ALL_DACS);
         end
         
+        function isr = isRunning(aps)
+            isr = false;
+            if aps.is_open
+                val = aps.librarycall('Checking if running', 'APS_IsRunning', fpga);
+                if val > 0
+                    isr = true;
+                end
+            end
+        end
+        
         function out = waitForAWGtoStartRunning(aps)
             % for compatibility with Tek driver
             % checks the state of the CSR to verify that a state machine
@@ -824,6 +469,386 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             out = true;
         end
+        
+        function aps = set.samplingRate(aps, rate)
+            % sets the sampling rate for all channels/FPGAs
+            % rate - sampling rate in MHz (1200, 600, 300, 100, 40)
+            if aps.samplingRate ~= rate
+                aps.setFrequency(0, rate, 0);
+                aps.setFrequency(2, rate, 0);
+                aps.testPllSync(1);
+                aps.testPllSync(2);
+            end
+            aps.samplingRate = rate;
+        end
+        
+        function [rate1] = get.samplingRate(aps)
+            % polls APS hardware to get current PLL Sample Rate
+            % valid rates in MHz (1200, 600, 300, 100, 40)
+            rate1 = aps.getFrequency(0);
+            rate2 = aps.getFrequency(2);
+            if rate1 ~= rate2
+                fprintf('Expected sampling rate to be the same for each DAC read [%i %i]\n', rate1, rate2)
+            end
+        end
+        
+        function aps = set.triggerSource(aps, trig)
+            % sets internal or external trigger
+            checkMap = containers.Map({...
+	            'internal','external',...
+                'int', 'ext'
+	            },{'internal','external','internal','external'});
+            
+            trig = lower(trig);
+            if not(checkMap.isKey(trig))
+                error(['APS: Unrecognized trigger source value: ', trig]);
+            else
+                aps.triggerSource = checkMap(trig);
+            end
+        end
+        
+        function val = setOffset(aps, ch, offset)
+            % sets offset voltage of channel for time/amplitude zero
+            % entries
+            val = aps.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*aps.MAX_WAVEFORM_VALUE);
+            aps.(['chan_' num2str(ch)]).offset = offset;
+        end
+
+		function val = setTriggerDelay(aps, ch, delay)
+            % sets delay of channel marker output WRT the analog output in
+            % 4 sample increments (i.e. delay = 3 is a 12 sample delay)
+            val = aps.librarycall('Set channel trigger delay','APS_SetTriggerDelay', ch-1, delay);
+            aps.(['chan_' num2str(ch)]).trigDelay = delay;
+        end
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Private methods
+        %
+        % These methods are subject to change and should not be used by
+        % external code.
+        
+        function log(aps,line)
+            if ~isempty(aps.message_manager)
+                aps.message_manager.disp(line)
+            else
+                if aps.verbose
+                    disp(line)
+                end
+            end
+        end
+        
+        function load_library(d, reloadLibrary)
+            
+            if ~exist('reloadLibrary','var')
+                reloadLibrary = 0;
+            end
+            
+            if strcmp(computer,'PCWIN64')
+                libfname = 'libaps64.dll';
+                d.library_name = 'libaps64';
+            elseif (ispc())
+                libfname = 'libaps.dll';
+            elseif (ismac())
+                libfname = 'libaps.dylib';
+            else
+                libfname = 'libaps.so';
+            end
+            
+            if reloadLibrary && libisloaded(d.library_name)
+                unloadlibrary(d.library_name)
+            end
+            
+            % build library path
+            script = mfilename('fullpath');
+            script = java.io.File(script);
+            path = char(script.getParent());
+            d.library_path = [path filesep 'lib' filesep];
+            if ~libisloaded(d.library_name)
+                [notfound warnings] = loadlibrary([d.library_path libfname], ...
+                    [d.library_path 'libaps.h']);
+            end
+        end
+        
+        function val = librarycall(aps,mesg,func,varargin)
+            % calls DLL methods with logging
+            if ~(aps.is_open)
+                warning('APS:librarycall','APS is not open');
+                val = -1;
+                return
+            end
+            if (aps.verbose)
+                aps.log(mesg);
+            end
+                        
+            if size(varargin,2) == 0
+                val = calllib(aps.library_name, func, aps.device_id);
+            else
+                val = calllib(aps.library_name, func, aps.device_id, varargin{:});
+            end
+            if (aps.verbose)
+                aps.log('Done');
+            end
+        end
+        
+        function num_devices = enumerate(aps)
+            % Return the number of devices and their serial numbers
+            
+            % Library may not be opened if a stale object is left in
+            % memory by matlab. So we reopen on if need be.
+            aps.load_library()
+
+            if aps.mock_aps && aps.num_devices == 0
+                aps.num_devices = 1;
+            else
+
+                aps.num_devices = calllib(aps.library_name,'APS_NumDevices');
+                num_devices = aps.num_devices;
+
+                %Reset cell array
+                aps.deviceSerials = cell(num_devices,1);
+                %For each device load the serial number
+                for ct = 1:num_devices
+                    [success, deviceSerial] = calllib(aps.library_name, 'APS_GetSerialNum',ct-1, blanks(64), 64);
+                    if success == 0
+                        aps.deviceSerials{ct} = deviceSerial;
+                    else
+                        error('Unable to get serial number');
+                    end
+                end
+            end
+        end
+                
+        function val = open(aps, id, force)
+            % open by device ID
+            if (aps.is_open)
+                aps.close()
+            end
+            
+            if exist('id','var')
+                aps.device_id = id;
+            end
+            
+            if ~exist('force','var')
+                force = 0;
+            end
+            
+            % populate list of device id's and serials
+            aps.enumerate();
+            if id + 1 > aps.num_devices
+                error('Device id %i not found.', id);
+            end
+            
+            val = calllib(aps.library_name,'APS_Open' ,aps.device_id, force);
+            if (val == 0)
+                aps.log(sprintf('APS USB Connection Opened'));
+                aps.is_open = 1;
+            elseif (val == 1)
+                aps.log(sprintf('Could not open device %i.', aps.device_id))
+                aps.log(sprintf('Device may be open by a different process'));
+            elseif (val == 2)
+                aps.log(sprintf('APS Device Not Found'));
+            else
+                aps.log(sprintf('Unknown return from libaps: %i', val));
+            end
+        end
+        
+        function val = openBySerialNum(aps,serial)
+            % open by serial number
+            if (aps.is_open)
+                aps.close()
+            end
+            
+            % populate list of device id's and serials
+            aps.enumerate();
+            if ~ismember(serial, aps.deviceSerials)
+                error('Device id %i not found.', id);
+            end
+            
+            val = calllib(aps.library_name,'APS_OpenBySerialNum' ,serial);
+            if (val >= 0)
+                aps.log(sprintf('APS USB Connection Opened'));
+                aps.is_open = 1;
+                aps.device_id = val;
+            elseif (val == -1)
+                aps.log(sprintf('Could not open device %i.', aps.device_id))
+                aps.log(sprintf('Device may be open by a different process'));
+            elseif (val == -2)
+                aps.log(sprintf('APS Device Not Found'));
+            else
+                aps.log(sprintf('Unknown return from LIBAPS: %i', val));
+            end
+        end
+        
+        function close(aps)
+            try
+                val = calllib(aps.library_name,'APS_Close',aps.device_id);
+            catch
+                val = 0;
+            end
+            if (val == 0)
+                aps.log(sprintf('APS USB Connection Closed\n'));
+            else
+                aps.log(sprintf('Error closing APS USB Connection: %i\n', val));
+            end
+            aps.is_open = 0;
+        end
+        
+        function val = readBitFileVersion(aps)
+            if aps.mock_aps
+                 val = aps.ELL_VERSION;
+                 return
+            end
+            val = calllib(aps.library_name,'APS_ReadBitFileVersion', aps.device_id);
+            aps.bit_file_version = val;
+            if val >= aps.ELL_VERSION
+                aps.max_waveform_points = aps.ELL_MAX_WAVFORM;
+                aps.max_ll_length = aps.ELL_MAX_LL;
+            end
+        end
+        
+        function val = programFPGA(aps, data, bytecount,sel, expectedVersion)
+            if ~(aps.is_open)
+                warning('APS:ProgramFPGA','APS is not open');
+                return
+            end
+            aps.log('Programming FPGA ');
+            val = calllib(aps.library_name,'APS_ProgramFpga',aps.device_id,data, bytecount, sel, expectedVersion);
+            if (val < 0)
+                errordlg(sprintf('APS_ProgramFPGA returned an error code of: %i\n', val), ...
+                    'Programming Error');
+            end
+            aps.log('Done');
+        end
+        
+        function fname = defaultBitFileName(obj)
+            % current device's serial number is at index device_id + 1 in
+            % deviceSerials cell array
+            if ismember(obj.deviceSerials{obj.device_id+1}, obj.DAC2_SERIALS)
+                fname = 'mqco_dac2_latest.bit';
+            else
+                fname = 'mqco_aps_latest.bit';
+            end
+        end
+        
+        function val = loadBitFile(aps,filename)
+            
+            if ~exist('filename','var')
+                filename = [aps.bit_file_path aps.defaultBitFileName];
+            end
+            
+            if ~(aps.is_open)
+                warning('APS:loadBitFile','APS is not open');
+                return
+            end
+
+            aps.setupVCX0();
+            aps.setupPLL();
+            
+            % assume we are programming both FPGA with the same bit file
+            Sel = 3;
+            
+            aps.log(sprintf('Loading bit file: %s', filename));
+            [DataFileID, FOpenMessage] = fopen(filename, 'r');
+            if ~isempty(FOpenMessage)
+                error('APS:loadBitFile', 'Input DataFile Not Found');
+            end
+            
+            [DataVec, DataCount] = fread(DataFileID, inf, 'uint8=>uint8');
+            aps.log(sprintf('Read %i bytes.', DataCount));
+            
+            val = aps.programFPGA(DataVec, DataCount, Sel, aps.expected_bit_file_ver);
+            fclose(DataFileID);
+        end
+        
+        %% Private Waveform/Link list methods
+        function storeAPSWaveform(aps, waveform, dac)
+            if ~strcmp(class(waveform), 'APSWaveform')
+                error('APS:storeAPSWaveform:params', 'waveform must be of class APSWaveform')
+            end
+                
+            % store waveform data
+            
+            val = calllib(aps.library_name,'APS_SetWaveform', aps.device_id, dac, ...
+                waveform.data, length(waveform));
+            if (val < 0), error('APS:storeAPSWaveform:set', 'error in set waveform'),end;
+           
+            % set offset
+            
+            val = aps.librarycall('Setting waveform offet','APS_SetWaveformOffset', dac, wf.offset);
+            
+            % set scale
+            
+            val = aps.librarycall('Setting wavform scale','APS_SetWaveformScale', dac, wf.scale_factor);
+           
+        end
+        
+        function loadAPSWaveforms(aps)
+            val = aps.librarycall('Loading waveforms','APS_LoadAllWaveforms');
+        end
+        
+        
+        function loadLinkList(aps,id,offsets,counts, ll_len)
+            trigger = [];
+            repeat = [];
+            bank = 0;
+            aps.loadLinkListELL(aps,id,offsets,counts, trigger, repeat, ll_len, bank)
+        end
+        
+        function loadLinkListELL(aps,id,offsets,counts, trigger, repeat, ll_len, bank, validate)
+            if ~(aps.is_open)
+                warning('APS:loadLinkListELL','APS is not open');
+                return
+            end
+            
+            if ~exist('validate','var')
+                validate = 0;
+            end
+            
+            aps.log(sprintf('Loading Link List length: %i into DAC%i bank %i ', ll_len,id, bank));
+            val = calllib(aps.library_name,'APS_LoadLinkList',aps.device_id, offsets,counts,trigger,repeat,ll_len,id,bank, validate);
+            if (val < 0)
+                errordlg(sprintf('APS_LoadLinkList returned an error code of: %i\n', val), ...
+                    'Programming Error');
+            end
+            aps.log('Done');
+        end
+        
+        function clearLinkListELL(aps,id)
+            aps.librarycall('Clear Bank 0','APS_ClearLinkListELL',id,0); % bank 0
+            aps.librarycall('Clear Bank 1','APS_ClearLinkListELL',id,1); % bank 1
+        end
+        
+        %% Private Triggering/Stopping methods
+        
+        function triggerWaveform(aps,id,trigger_type)
+            val = aps.librarycall(sprintf('Trigger Waveform %i Type: %i', id, trigger_type), ...
+                'APS_TriggerDac',id,trigger_type);
+        end
+        
+        function pauseWaveform(aps,id)
+            % deprecated
+            val = aps.librarycall(sprintf('Pause Waveform %i', id), 'APS_PauseDac',id);
+        end
+        
+        function disableWaveform(aps,id)
+            val = aps.librarycall(sprintf('Disable Waveform %i', id), 'APS_DisableDac',id);
+        end
+        
+        function triggerFpga(aps,id,trigger_type)
+            val = aps.librarycall(sprintf('Trigger Waveform %i Type: %i', id, trigger_type), ...
+                'APS_TriggerFpga',id,trigger_type);
+        end
+        
+        function pauseFpga(aps,id)
+            % deprecated
+            val = aps.librarycall(sprintf('Pause Waveform %i', id), 'APS_PauseFpga',id);
+        end
+        
+        function disableFpga(aps,id)
+            val = aps.librarycall(sprintf('Disable Waveform %i', id), 'APS_DisableFpga',id);
+        end
+        
+        %% Private mode methods
         
         function val = setLinkListMode(aps, ch, enable, mode)
             % id : DAC channel (0-3)
@@ -884,17 +909,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 fprintf('Warning: APS::getFrequency returned error %i\n', freq);
             end
         end
-        
-        function val = setOffset(aps, ch, offset)
-            val = aps.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*aps.MAX_WAVEFORM_VALUE);
-            aps.(['chan_' num2str(ch)]).offset = offset;
-        end
 
-		function val = setTriggerDelay(aps, ch, delay)
-            val = aps.librarycall('Set channel trigger delay','APS_SetTriggerDelay', ch-1, delay);
-            aps.(['chan_' num2str(ch)]).trigDelay = delay;
+        function unload_library(aps)
+            if libisloaded(aps.library_name)
+                unloadlibrary(aps.library_name);
+            end
         end
         
+        %% low-level setup and debug methods
         function val = setupPLL(aps)
             val = aps.librarycall('Setup PLL', 'APS_SetupPLL');
         end
@@ -906,43 +928,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function val = setupDACs(aps)
            val = aps.librarycall('Setup DACs', 'APS_SetupDACs');
         end
-        
-        function aps = set.samplingRate(aps, rate)
-            % sets the sampling rate for all channels/FPGAs
-            % rate - sampling rate in MHz (1200, 600, 300, 100, 40)
-            if aps.samplingRate ~= rate
-                aps.setFrequency(0, rate, 0);
-                aps.setFrequency(2, rate, 0);
-                aps.testPllSync(0);
-                aps.testPllSync(2);
-            end
-            aps.samplingRate = rate;
-        end
-        
-        function [rate1] = get.samplingRate(aps)
-            % polls APS hardware to get current PLL Sample Rate
-            % valid rates in MHz (1200, 600, 300, 100, 40)
-            rate1 = aps.getFrequency(0);
-            rate2 = aps.getFrequency(2);
-            if rate1 ~= rate2
-                fprintf('Expected sampling rate to be the same for each DAC read [%i %i]\n', rate1, rate2)
-            end
-        end
-        
-        function aps = set.triggerSource(aps, trig)
-            checkMap = containers.Map({...
-	            'internal','external',...
-                'int', 'ext'
-	            },{'internal','external','internal','external'});
-            
-            trig = lower(trig);
-            if not(checkMap.isKey(trig))
-                error(['APS: Unrecognized trigger source value: ', trig]);
-            else
-                aps.triggerSource = checkMap(trig);
-            end
-        end
-        
+
         function readAllRegisters(aps, fpga)
             val = aps.librarycall(sprintf('Read Registers'), ...
                 'APS_ReadAllRegisters', fpga);
@@ -956,12 +942,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function val = readLinkListStatus(aps,id)
             val = aps.librarycall(sprintf('Read Link List Status'), ...
                 'APS_ReadLinkListStatus',id);
-        end
-        
-        function unload_library()
-            if libisloaded(aps.library_name)
-                unloadlibrary(aps.library_name);
-            end
         end
 
         function val = readStatusCtrl(aps)
@@ -1056,13 +1036,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             for ch = 0:3
                 aps.loadWaveform(ch, wf.get_vector(), 0, validate,useSlowWrite);
+                aps.(sprintf('ch_%d', ch+1)).enabled = 1;
             end
             
-            aps.triggerFpga(0,1);
-            aps.triggerFpga(2,1);
+            aps.run();
             keyboard
-            aps.pauseFpga(0);
-            aps.pauseFpga(2);
+            aps.stop();
             aps.close();
       
         end
