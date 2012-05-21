@@ -63,7 +63,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         samplingRate = 1200;   % Global sampling rate in units of MHz (1200, 600, 300, 100, 40)
         triggerSource = 'internal';  % Global trigger source ('internal', or 'external')
-        is_running = false;
     end
     properties %(Access = 'private')
         is_open = 0;
@@ -404,7 +403,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 obj.resetStatusCtrl();
                 
                 % test PLL sync on each FPGA
-                status = obj.testPllSync(0) || obj.testPllSync(2);
+                status = obj.testPllSync(1) || obj.testPllSync(2);
                 if status ~= 0
                     error('APS failed to initialize');
                 end
@@ -435,10 +434,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
         end
         
-        function isr = isRunning(aps)
+        function isr = isRunning(aps, fpga)
+            if ~exist('fpga', 'var')
+                fpga = 3;
+            end
             isr = false;
             if aps.is_open
-                val = calllib(aps.library_name,'APS_IsRunning',aps.device_id);
+                val = aps.librarycall('Checking if running', 'APS_IsRunning', fpga);
                 if val > 0
                     isr = true;
                 end
@@ -739,30 +741,30 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
         end
         
-        function triggerWaveform(aps,id,trigger_type)
-            val = aps.librarycall(sprintf('Trigger Waveform %i Type: %i', id, trigger_type), ...
-                'APS_TriggerDac',id,trigger_type);
+        function triggerWaveform(aps,ch,trigger_type)
+            val = aps.librarycall(sprintf('Trigger Waveform %i Type: %i', ch, trigger_type), ...
+                'APS_TriggerDac',ch,trigger_type);
         end
         
-        function pauseWaveform(aps,id)
-            val = aps.librarycall(sprintf('Pause Waveform %i', id), 'APS_PauseDac',id);
+        function pauseWaveform(aps,ch)
+            val = aps.librarycall(sprintf('Pause Waveform %i', ch), 'APS_PauseDac',ch);
         end
         
-        function disableWaveform(aps,id)
-            val = aps.librarycall(sprintf('Disable Waveform %i', id), 'APS_DisableDac',id);
+        function disableWaveform(aps,ch)
+            val = aps.librarycall(sprintf('Disable Waveform %i', ch), 'APS_DisableDac',ch);
         end
         
-        function triggerFpga(aps,id,trigger_type)
-            val = aps.librarycall(sprintf('Trigger Waveform %i Type: %i', id, trigger_type), ...
-                'APS_TriggerFpga',id,trigger_type);
+        function triggerFpga(aps, ch, trigger_type)
+            val = aps.librarycall(sprintf('Trigger Waveform %i Type: %i', ch, trigger_type), ...
+                'APS_TriggerFpga',ch,trigger_type);
         end
         
-        function pauseFpga(aps,id)
-            val = aps.librarycall(sprintf('Pause Waveform %i', id), 'APS_PauseFpga',id);
+        function pauseFpga(aps,ch)
+            val = aps.librarycall(sprintf('Pause Waveform %i', ch), 'APS_PauseFpga',ch);
         end
         
-        function disableFpga(aps,id)
-            val = aps.librarycall(sprintf('Disable Waveform %i', id), 'APS_DisableFpga',id);
+        function disableFpga(aps,ch)
+            val = aps.librarycall(sprintf('Disable Waveform %i', ch), 'APS_DisableFpga',ch);
         end
         
         function run(aps)
@@ -805,7 +807,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     aps.triggerWaveform(channel-1,trigger_type)
                 end
             end
-            aps.is_running = true;
         end
         
         function stop(aps)
@@ -818,25 +819,23 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % checks the state of the CSR to verify that a state machine
             % is running
         
-            % TODO!! Needs an appropriate method in C library.
-            % Kludgy workaround for now.
-            if ~aps.is_running
+            if ~aps.isRunning()
                 aps.run();
             end
             out = true;
         end
         
-        function val = setLinkListMode(aps, id, enable, mode)
+        function val = setLinkListMode(aps, ch, enable, mode)
             % id : DAC channel (0-3)
             % enable : 1 = on, 0 = off
             % mode : 1 = one shot, 0 = continuous
-            val = aps.librarycall(sprintf('Dac: %i Link List Enable: %i Mode: %i', id, enable, mode), ...
-                'APS_SetLinkListMode',enable,mode,id);
+            val = aps.librarycall(sprintf('Dac: %i Link List Enable: %i Mode: %i', ch, enable, mode), ...
+                'APS_SetLinkListMode',enable,mode,ch);
         end
         
-        function val = setLinkListRepeat(aps,id, repeat)
-            val = aps.librarycall(sprintf('Dac: %i Link List Repeat: %i', id, repeat), ...
-                'APS_SetLinkListRepeat',repeat,id);
+        function val = setLinkListRepeat(aps,ch, repeat)
+            val = aps.librarycall(sprintf('Dac: %i Link List Repeat: %i', ch, repeat), ...
+                'APS_SetLinkListRepeat',repeat,ch);
         end
         
         function val = setLEDMode(aps, fpga, mode)
@@ -844,15 +843,15 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 'APS_SetLEDMode', fpga, mode);
         end
         
-        function val = testPllSync(aps, id, numRetries)
+        function val = testPllSync(aps, ch, numRetries)
             if ~exist('id','var')
-                id = 0;
+                ch = 0;
             end
             if ~exist('numRetries', 'var')
                 numRetries = 10;
             end
-            val = aps.librarycall(sprintf('Test Pll Sync: DAC: %i',id), ...
-                'APS_TestPllSync',id, numRetries);
+            val = aps.librarycall(sprintf('Test Pll Sync: DAC: %i',ch), ...
+                'APS_TestPllSync',ch, numRetries);
             if val ~= 0
                 fprintf('Warning: APS::testPllSync returned %i\n', val);
             end
@@ -867,12 +866,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
            val = val1 && val2;
         end
         
-        function val = setFrequency(aps,id, freq, testLock)
+        function val = setFrequency(aps,ch, freq, testLock)
             if ~exist('testLock','var')
                 testLock = 1;
             end
-            val = aps.librarycall(sprintf('Dac: %i Freq : %i', id, freq), ...
-                'APS_SetPllFreq',id,freq,testLock);
+            val = aps.librarycall(sprintf('Dac: %i Freq : %i', ch, freq), ...
+                'APS_SetPllFreq',ch,freq,testLock);
             if val ~= 0
                 fprintf('Warning: APS::setFrequency returned %i\n', val);
             end
@@ -949,9 +948,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 'APS_ReadAllRegisters', fpga);
         end
         
-        function testWaveformMemory(aps, id, numBytes)
+        function testWaveformMemory(aps, ch, numBytes)
             val = aps.librarycall(sprintf('Test WaveformMemory'), ...
-                'APS_TestWaveformMemory',id,numBytes);
+                'APS_TestWaveformMemory',ch,numBytes);
         end
         
         function val = readLinkListStatus(aps,id)

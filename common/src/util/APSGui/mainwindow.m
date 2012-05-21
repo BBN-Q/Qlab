@@ -55,7 +55,7 @@ if nargin && ischar(varargin{1})
     callback(varargin{2:end});
 else
     gui = APSGui();
-    feval(@mainwindow_OpeningFcn, gui, [], guihandles(gui), varargin{:});
+    mainwindow_OpeningFcn(gui, [], guihandles(gui), varargin{:});
 end
 
 

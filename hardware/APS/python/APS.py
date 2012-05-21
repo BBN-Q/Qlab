@@ -429,8 +429,8 @@ class APS:
         print 'getNewWaveform not yet implemented in Python'
         return None
         
-    def test_PLL_sync(self, DACNum=0, numRetries=5):
-        return self.librarycall('Test Pll Sync: DAC: {0}'.format(DACNum),'APS_TestPllSync', DACNum, numRetries)
+    def test_PLL_sync(self, FGPA=1, numRetries=5):
+        return self.librarycall('Test Pll Sync: DAC: {0}'.format(FGPA),'APS_TestPllSync', FGPA, numRetries)
 
     def read_PLL_status(self):
         #Read FPGA1
@@ -503,7 +503,7 @@ class APS:
             self.resetStatusCtrl()
             
             # Test PLL sync on each FPGA
-            status = self.test_PLL_sync(0) or self.test_PLL_sync(2)
+            status = self.test_PLL_sync(1) or self.test_PLL_sync(2)
             if status:
                 raise RuntimeError('APS failed to initialize')
         

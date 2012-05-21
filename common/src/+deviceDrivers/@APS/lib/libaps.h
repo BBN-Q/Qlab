@@ -73,7 +73,7 @@ EXPORT int APS_SetupVCXO(int device);
 EXPORT int APS_SetupDAC(int device, int dac);
 EXPORT int APS_SetupDACs(int device);
 
-EXPORT int APS_IsRunning(int device);
+EXPORT int APS_IsRunning(int device, int fpga);
 
 EXPORT int APS_TriggerDac(int device, int dac, int trigger_type);
 EXPORT int APS_PauseDac(int device, int dac);

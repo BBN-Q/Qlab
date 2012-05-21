@@ -7,7 +7,9 @@ from PySide import QtGui, QtCore, QtUiTools
 
 import APS
 
-libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
+#libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
+libPath = './'
+bitFilePath = './'
 
 class ThreadSignals(QtCore.QObject):
     message = QtCore.Signal(str)
@@ -106,7 +108,7 @@ class APScontrol(object):
             tmpLineEdit.validator().setRange(-1,1,4)
             
         #Create an APS class instance for interacting with the instrument
-        self.aps = APS.APS(libPath)
+        self.aps = APS.APS(libPath, bitFilePath)
 
         #Enumerate the number of connected APS devices and fill out the combo box
         (numAPS, deviceSerials) = self.aps.enumerate()

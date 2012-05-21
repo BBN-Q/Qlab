@@ -1435,11 +1435,11 @@ EXPORT int APS_SetPllFreq(int device, int dac, int freq, int testLock)
 		// test only works for channels running at 1.2 GHz
 		numSyncChannels = (fpgaFrequencies[0] == 1200 && fpgaFrequencies[1] == 1200) ? 4 : 2;
 		if (numSyncChannels == 4) {
-			APS_TestPllSync(device, 0, 5);
+			APS_TestPllSync(device, 1, 5);
 			sync_status = APS_TestPllSync(device, 2, 5);
 		}
 		else if (fpgaFrequencies[fpga] == 1200)
-			sync_status = APS_TestPllSync(device, dac, 5);
+			sync_status = APS_TestPllSync(device, fpga, 5);
 	}
 
 	return sync_status;
@@ -1516,8 +1516,12 @@ EXPORT int APS_GetPllFreq(int device, int dac) {
 	3) Test channel 0/2 PLL against reference PLL. Reset until in phase.
 	4) Test channel 1/3 PLL against reference PLL. Reset until in phase.
 	5) Verify that sync worked by testing 0/2 XOR 1/3 (global phase).
+ *
+ * Inputs: device
+ *         fpga (1 or 2)
+ *         numRetries - number of times to restart the test if the global sync test fails (step 5)
  */
-EXPORT int APS_TestPllSync(int device, int dac, int numRetries) {
+EXPORT int APS_TestPllSync(int device, int fpga, int numRetries) {
 
 	// Test for DAC clock phase match
 	int inSync, globalSync;
@@ -1525,7 +1529,6 @@ EXPORT int APS_TestPllSync(int device, int dac, int numRetries) {
 	int dac02_reset, dac13_reset;
 	int pll_unlock;
 
-	int fpga;
 	int pll_bit;
 	UINT pll_reg_value;
 	UINT pll_reset_addr, pll_reset_bit, pll_enable_addr, pll_enable_addr2;
@@ -1534,23 +1537,18 @@ EXPORT int APS_TestPllSync(int device, int dac, int numRetries) {
 	pll_reset_addr = FPGA_PLL_RESET_ADDR;
 	pll_reset_bit  = CSRMSK_PHSPLLRST_ELL | CSRMSK_ENVPLLRST_ELL;
 
-	fpga = dac2fpga(dac);
-	if (fpga < 0) {
+	if (fpga < 1 || fpga > 2) {
 		return -1;
 	}
 
 	dlog(DEBUG_INFO,"Running channel sync test on FPGA%i\n", fpga);
 
-	switch(dac) {
-	case 0:
-		// fall through
+	switch(fpga) {
 	case 1:
 		pll_enable_addr = DAC0_ENABLE_ADDR;
 		pll_enable_addr2 = DAC1_ENABLE_ADDR;
 		break;
 	case 2:
-		// fall through
-	case 3:
 		pll_enable_addr = DAC2_ENABLE_ADDR;
 		pll_enable_addr2 = DAC3_ENABLE_ADDR;
 		break;
@@ -1705,7 +1703,7 @@ EXPORT int APS_TestPllSync(int device, int dac, int numRetries) {
 						APS_WriteSPI(device, APS_PLL_SPI, pll_enable_addr2, &WriteByte);
 						APS_UpdatePllReg(device);
 
-						return APS_TestPllSync(device, dac, numRetries - 1);
+						return APS_TestPllSync(device, fpga, numRetries - 1);
 					}
 					dlog(DEBUG_INFO,"Error could not sync PLLs\n"); 
 					return -9;
