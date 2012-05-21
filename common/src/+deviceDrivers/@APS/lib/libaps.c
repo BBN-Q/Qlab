@@ -1537,10 +1537,6 @@ EXPORT int APS_TestPllSync(int device, int fpga, int numRetries) {
 	pll_reset_addr = FPGA_PLL_RESET_ADDR;
 	pll_reset_bit  = CSRMSK_PHSPLLRST_ELL | CSRMSK_ENVPLLRST_ELL;
 
-	if (fpga < 1 || fpga > 2) {
-		return -1;
-	}
-
 	dlog(DEBUG_INFO,"Running channel sync test on FPGA%i\n", fpga);
 
 	switch(fpga) {

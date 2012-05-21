@@ -844,8 +844,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         function val = testPllSync(aps, ch, numRetries)
-            if ~exist('id','var')
-                ch = 0;
+            if ~exist('ch','var')
+                ch = 1;
             end
             if ~exist('numRetries', 'var')
                 numRetries = 10;
