@@ -122,7 +122,7 @@ if ExpParams.DoPiCal
     x0 = [obj.pulseParams.piAmp, obj.pulseParams.i_offset];
     
     % options for Levenberg-Marquardt
-    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
+    options = optimset('TolX', 1e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
     
     x0 = lsqnonlin(@obj.XpiObjectiveFnc,x0,[],[],options);
     X180Amp = real(x0(1));

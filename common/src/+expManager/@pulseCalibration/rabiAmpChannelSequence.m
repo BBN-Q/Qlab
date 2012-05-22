@@ -59,7 +59,7 @@ end
 
 filename{1} = [pathAWG basename IQkey '.awg'];
 if ismember(IQkey, {'BBNAPS12', 'BBNAPS34'})
-    filename{2} = [pathAPS basename IQkey '.mat'];
+    filename{2} = [pathAPS basename IQkey '.h5'];
 end
 
 end

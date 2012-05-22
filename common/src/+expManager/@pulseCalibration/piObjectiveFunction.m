@@ -35,7 +35,7 @@ function [cost, J] = piObjectiveFunction(obj, x, qubit, direction)
     [cost, J] = obj.RepPulseCostFunction(data, pi);
     % scale J rows by amplitude and offset->amplitude conversion factor
     J(:,1) = J(:,1)/piAmp;
-    offset2amp = 8192/2.0; % replace 2.0 by the max output voltage of the AWG
+    offset2amp = obj.ExpParams.offset2amp;
     J(:,2) = obj.ExpParams.OffsetNorm*J(:,2)*offset2amp/piAmp; % offset can have a different integral norm
     fprintf('Cost: %.4f (%.4f) \n', sum(cost.^2), sum(cost.^2/length(cost)));
 end

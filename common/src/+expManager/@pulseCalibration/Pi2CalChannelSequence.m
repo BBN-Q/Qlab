@@ -18,7 +18,7 @@ IQchannels = obj.channelMap.(qubit);
 IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
 
 fixedPt = 6000;
-cycleLength = 23000;
+cycleLength = 15000;
 numPi2s = 9; % number of odd numbered pi/2 sequences for each rotation direction
 
 % load config parameters from file
@@ -79,7 +79,7 @@ end
 
 filename{1} = [pathAWG basename IQkey '.awg'];
 if ismember(IQkey, {'BBNAPS12', 'BBNAPS34'})
-    filename{2} = [pathAPS basename IQkey '.mat'];
+    filename{2} = [pathAPS basename IQkey '.h5'];
 end
 
 end
