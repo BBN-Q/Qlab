@@ -224,11 +224,13 @@ classdef  expBase < handle
             end
             %Clean up the output file and rename if we didn't finish it
             %properly
-            if ~isempty(fopen(obj.DataFileHandle))
-                fclose(obj.DataFileHandle);
-                fullname = fullfile(obj.DataPath, obj.DataFileName);
-                [path, name, ~] = fileparts(fullname);
-                movefile(fullname, fullfile(path, [name '.incomplete']));
+            if ~isempty(obj.DataFileHandle)
+                if ~isempty(fopen(obj.DataFileHandle))
+                    fclose(obj.DataFileHandle);
+                    fullname = fullfile(obj.DataPath, obj.DataFileName);
+                    [path, name, ~] = fileparts(fullname);
+                    movefile(fullname, fullfile(path, [name '.incomplete']));
+                end
             end
         end
     end
