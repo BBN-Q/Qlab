@@ -127,7 +127,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV', 'A6001nBT'};
 
-        channelStruct = struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []);
     end
     
     methods
@@ -151,8 +150,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             d.bit_file_path = script_path(1:baseIdx);
             
             % init channel structs and waveform objects
+            channelStruct = @()(struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []));
             for ct = 1:4
-                d.(d.channelStrs{ct}) = d.channelStruct;
+                d.(d.channelStrs{ct}) = channelStruct();
                 d.(d.channelStrs{ct}).waveform = APSWaveform();
             end
         end
@@ -319,9 +319,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.clearLinkListELL(2);
             aps.clearLinkListELL(3);
             
-            % load waveform data
-            wf = APSWaveform();
-            
             %See which channels are defined in this file
             channelDataFor = h5readatt(filename, '/', 'channelDataFor');
             
@@ -335,11 +332,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     channelStr = aps.channelStrs{ch};
                     
                     %Load and scale/shift waveform data
+                    wf = aps.(channelStr).waveform;
                     wf.set_vector(h5read(filename,['/', channelStr, '/waveformLib']));
                     wf.set_offset(aps.(channelStr).offset);
                     wf.set_scale_factor(aps.(channelStr).amplitude);
                     aps.loadWaveform(ch-1, wf.prep_vector());
-                    aps.(channelStr).waveform = wf;
                
                     % set zero register value
                     offset = aps.(channelStr).offset;

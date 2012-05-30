@@ -199,12 +199,9 @@ classdef APSWaveform < handle
             else
                 scale = wf.scale_factor;
             end
-
-            % convert offset to ADC counts
-            offset = wf.offset * wf.max_wf_amp_value;
             
             % convert data to ADC counts and add offset;
-            data = data*scale + offset;
+            data = data*scale + wf.offset * wf.max_wf_amp_value;
 
             data = fix(data);
             
