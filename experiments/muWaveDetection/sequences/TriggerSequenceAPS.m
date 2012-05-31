@@ -18,5 +18,5 @@ IQseq = pg.build(patseq, 1, 0, fixedPt, false);
 % make APS file
 exportAPSConfig(tempdir, basename, IQseq, IQseq);
 disp('Moving APS file to destination');
-movefile([tempdir basename '.mat'], [pathAPS basename '.mat']);
+movefile([tempdir basename '.h5'], [pathAPS basename '.h5']);
 end
