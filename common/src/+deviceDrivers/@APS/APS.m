@@ -450,7 +450,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function isr = isRunning(aps)
             isr = false;
             if aps.is_open
-                val = aps.librarycall('Checking if running', 'APS_IsRunning', fpga);
+
+                
+                val = aps.librarycall('Checking if running', 'APS_IsRunning', 3);
                 if val > 0
                     isr = true;
                 end
