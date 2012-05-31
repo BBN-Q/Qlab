@@ -20,14 +20,14 @@ classdef HDF5DataHandler < handle
         
         function open1dDataFile(obj, fileName, headerStruct)
             %First create it with overwrite if it is there
-            obj.FID = H5F.create(fileName,'H5F_ACC_TRUNC', H5P.create('H5P_FILE_CREATE'),H5P.create('H5P_FILE_ACCESS'));
+            obj.FID = H5F.create(fileName,'H5F_ACC_TRUNC', 'H5P_DEFAULT', 'H5P_DEFAULT');
+            H5F.close(obj.FID);
             
             obj.fileName = fileName;
             obj.fileOpen = 1;
 
             %write header info
-            obj.writeString('/header', jsonlab.savejson('', headerStruct));
-            h5writeatt(fileName,'/', 'xpoints', headerStruct.xpoints);
+            obj.writeHeader(headerStruct, headerStruct.xpoints, headerStruct.xlabel);
 
             %open a data set
             h5create(fileName, '/idata', Inf, 'ChunkSize', 10);
@@ -38,15 +38,16 @@ classdef HDF5DataHandler < handle
         
         function open2dDataFile(obj, fileName, headerStruct)
             %First create it with overwrite if it is there
-            obj.FID = H5F.create(fileName,'H5F_ACC_TRUNC', H5P.create('H5P_FILE_CREATE'),H5P.create('H5P_FILE_ACCESS'));
+            obj.FID = H5F.create(fileName,'H5F_ACC_TRUNC', 'H5P_DEFAULT', 'H5P_DEFAULT');
+            H5F.close(obj.FID);
             
             obj.fileName = fileName;
             obj.fileOpen = 1;
 
             %write header info
-            obj.writeString('/header', jsonlab.savejson('', headerStruct));
-            h5writeatt(fileName,'/', 'xpoints', headerStruct.xpoints);
-            h5writeatt(fileName,'/', 'ypoints', headerStruct.ypoints);
+            obj.writeHeader(headerStruct, ...
+                headerStruct.xpoints, headerStruct.xlabel, ...
+                headerStruct.ypoints, headerStruct.ylabel);
             
             obj.rowSize = length(headerStruct.xpoints);
 
@@ -55,6 +56,31 @@ classdef HDF5DataHandler < handle
             h5create(fileName, '/qdata', [Inf obj.rowSize], 'ChunkSize', [10 obj.rowSize]);
 
             obj.idx = 1;
+        end
+        
+        function writeHeader(obj, headerStruct, xpoints, xlabel, ypoints, ylabel, zpoints, zlabel)
+            assert(obj.fileOpen == 1, 'File must be open first');
+            
+            obj.writeString('/header', jsonlab.savejson('', headerStruct));
+            if exist('xpoints', 'var') && exist('xlabel', 'var')
+                h5create(obj.fileName, '/xpoints', length(xpoints));
+                h5write(obj.fileName, '/xpoints', xpoints);
+                h5writeatt(obj.fileName, '/xpoints', 'xlabel', xlabel);
+            end
+            if exist('ypoints', 'var') && exist('ylabel', 'var')
+                h5create(obj.fileName, '/ypoints', length(ypoints));
+                h5write(obj.fileName, '/ypoints', ypoints);
+                h5writeatt(obj.fileName, '/ypoints', 'ylabel', ylabel);
+            end
+            if exist('zpoints', 'var') && exist('zlabel', 'var')
+                h5create(obj.fileName, '/zpoints', length(zpoints));
+                h5write(obj.fileName, '/zpoints', zpoints);
+                h5writeatt(obj.fileName, '/zpoints', 'zlabel', zlabel);
+            end
+        end
+        
+        function out = readHeader(obj)
+            out = jsonlab.loadjson(obj.readString('/header'));
         end
 
         function writePoint(obj, val)
@@ -72,15 +98,18 @@ classdef HDF5DataHandler < handle
         end
         
         function closeDataFile(obj)
-            % don't need to do anything
+            % all functions should close the FID, so don't need to do
+            % anything
+            %H5F.close(obj.FID);
             obj.fileOpen = 0;
         end
         
         % helper functions for reading and writing header data
         function writeString(obj, dataSetName, string)
+            obj.FID = H5F.open(obj.fileName, 'H5F_ACC_RDWR', 'H5P_DEFAULT');
+            
             % create data type
             datatypeID = H5T.copy('H5T_C_S1');
-            %H5T.set_size(datatypeID, 'H5T_VARIABLE');
             
             % create the data space
             dataspaceID = H5S.create_simple(1, length(string), []);
@@ -93,6 +122,7 @@ classdef HDF5DataHandler < handle
             H5D.close(datasetID);
             H5S.close(dataspaceID);
             H5T.close(datatypeID);
+            H5F.close(obj.FID);
         end
         
         function out = readString(obj, dataSpace)
@@ -100,7 +130,9 @@ classdef HDF5DataHandler < handle
         end
         
         function delete(obj)
-            H5F.close(obj.FID);
+            if obj.fileOpen
+                %H5F.close(obj.FID);
+            end
         end
     end
     methods (Static)
@@ -111,14 +143,13 @@ classdef HDF5DataHandler < handle
         function out = UnitTest1d(verbose)
             data = [1, -1i, 2];
             data = data(:);
-            header = struct('xpoints', [5 10 15]);
+            header = struct('xpoints', [5 10 15], 'xlabel', 'Frequency (GHz)');
             dataHandler = HDF5DataHandler(1, 'unit_test.h5', header);
             for ct = 1:3
                 dataHandler.writePoint(data(ct));
             end
 
-            readHeader = jsonlab.loadjson(dataHandler.readString('/header'));
-            disp(readHeader);
+            disp(dataHandler.readHeader());
             
             readData = h5read('unit_test.h5', '/idata') + 1i * h5read('unit_test.h5', '/qdata');
             if verbose
@@ -130,14 +161,14 @@ classdef HDF5DataHandler < handle
         
         function out = UnitTest2d(verbose)
             data = [1, 0, 1; 0, 1i, 0; 1, 0, 1];
-            header = struct('xpoints', [5 10 15], 'ypoints', [1 2 3]);
+            header = struct('xpoints', [5 10 15], 'xlabel', 'Frequency (GHz)',...
+                'ypoints', [1 2 3], 'ylabel', 'Time (us)');
             dataHandler = HDF5DataHandler(2, 'unit_test.h5', header);
             for ct = 1:3
                 dataHandler.writeRow(data(ct,:));
             end
             
-            readHeader = jsonlab.loadjson(dataHandler.readString('/header'));
-            disp(readHeader);
+            disp(dataHandler.readHeader());
             
             readData = h5read('unit_test.h5', '/idata') + 1i * h5read('unit_test.h5', '/qdata');
             if verbose
