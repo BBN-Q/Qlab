@@ -21,7 +21,6 @@ classdef HDF5DataHandler < handle
         function open1dDataFile(obj, fileName, headerStruct)
             %First create it with overwrite if it is there
             obj.FID = H5F.create(fileName,'H5F_ACC_TRUNC', H5P.create('H5P_FILE_CREATE'),H5P.create('H5P_FILE_ACCESS'));
-            H5F.close(obj.FID);
             
             obj.fileName = fileName;
             obj.fileOpen = 1;
@@ -40,7 +39,6 @@ classdef HDF5DataHandler < handle
         function open2dDataFile(obj, fileName, headerStruct)
             %First create it with overwrite if it is there
             obj.FID = H5F.create(fileName,'H5F_ACC_TRUNC', H5P.create('H5P_FILE_CREATE'),H5P.create('H5P_FILE_ACCESS'));
-            H5F.close(obj.FID);
             
             obj.fileName = fileName;
             obj.fileOpen = 1;
@@ -82,7 +80,7 @@ classdef HDF5DataHandler < handle
         function writeString(obj, dataSetName, string)
             % create data type
             datatypeID = H5T.copy('H5T_C_S1');
-            H5T.set_size(datatypeID, 'H5T_VARIABLE');
+            %H5T.set_size(datatypeID, 'H5T_VARIABLE');
             
             % create the data space
             dataspaceID = H5S.create_simple(1, length(string), []);
@@ -95,15 +93,15 @@ classdef HDF5DataHandler < handle
             H5D.close(datasetID);
             H5S.close(dataspaceID);
             H5T.close(datatypeID);
-            
-            %h5create(obj.fileName, dataSetName, length(string), 'DataType', 'uint8');
-            %h5write(obj.fileName, dataSetName, uint8(string));
         end
         
         function out = readString(obj, dataSpace)
-            out = char(h5read(obj.fileName, dataSpace)');
+            out = char(h5read(obj.fileName, dataSpace))';
         end
         
+        function delete(obj)
+            H5F.close(obj.FID);
+        end
     end
     methods (Static)
         function out = UnitTest()
