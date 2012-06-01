@@ -15,7 +15,7 @@ end
 
 basename = 'APE';
 fixedPt = 6000;
-cycleLength = 23000;
+cycleLength = 15000;
 nbrRepeats = 2;
 
 % load config parameters from files
@@ -34,7 +34,7 @@ angle = pi/2;
 numPsQId = 4; % number pseudoidentities
 numsteps = 11; %number of drag parameters (11)
 deltamax=0.0;
-deltamin=-1.0;
+deltamin=-2.0;
 delta=linspace(deltamin,deltamax,numsteps);
 
 sindex = 0;

@@ -68,10 +68,33 @@ calseq = {{pg.pulse('QId')},{pg.pulse('QId')},{pg.pulse('Xp')},{pg.pulse('Xp')}}
 
 
 compiler = ['compileSequence' IQkey];
+
+%Split into the number of randomizations and shuffle to try and fit into
+%two banks
+% strippedBasename = basename;
+% basename = [basename IQkey];
+% for seqct = 1:32
+%     tmpSeqs = circshift(patseq(seqct:32:end), [0, 1]);
+%     compileArgs = {strippedBasename, pg, tmpSeqs, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot,5};
+%     if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
+%         feval(compiler, compileArgs{:});
+%     end
+%     pathAWG = ['U:\AWG\' strippedBasename '\' basename '.awg'];
+%     pathAWGbis = ['U:\AWG\' strippedBasename '\' basename '_' num2str(seqct) '.awg'];
+%     movefile(pathAWG, pathAWGbis);
+% %     pathAPS = ['U:\APS\' strippedBasename '\' basename '.h5'];
+% %     pathAPSbis = ['U:\APS\' strippedBasename '\' basename '_' num2str(seqct) '.h5'];
+% %     movefile(pathAPS, pathAPSbis);
+% 
+% 
+% end
+
+
 compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot};
 if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
     feval(compiler, compileArgs{:});
 end
+
 
 
 end

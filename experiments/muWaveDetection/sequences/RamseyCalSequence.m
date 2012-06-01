@@ -14,8 +14,8 @@ elseif length(varargin) > 2
 end
 
 basename = 'Ramsey';
-fixedPt = 19000;
-cycleLength = 36000;
+fixedPt = 28000;
+cycleLength = 37000;
 nbrRepeats = 1;
 
 % load config parameters from file
@@ -24,11 +24,11 @@ qParams = params.(qubit);
 qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 % if using SSB, set the frequency here
-SSBFreq = 0e6;
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
+SSBFreq = -100e6;
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T,'bufferDelay',params.(IQkey).bufferDelay,'bufferReset',params.(IQkey).bufferReset,'bufferPadding',params.(IQkey).bufferPadding, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
-numsteps = 150; %150
-stepsize = 120; %24 (300)
+numsteps = 150;
+stepsize = 72; %24 (300)
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 anglepts = 0:pi/4:(numsteps-1)*pi/4;
 anglepts = 0;

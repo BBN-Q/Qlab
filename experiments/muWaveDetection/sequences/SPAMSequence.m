@@ -17,7 +17,7 @@ end
 
 basename = 'SPAM';
 fixedPt = 6000;
-cycleLength = 23000;
+cycleLength = 15000;
 nbrRepeats = 1;
 
 % load config parameters from file
