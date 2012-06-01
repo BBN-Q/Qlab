@@ -29,6 +29,14 @@ ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;
 ExpParams.filter = commonSettings.ExpParams.filter;
 ExpParams.softAvgs = 3;
 
+% force AWGs to use a simple sequence file
+if isfield(commonSettings.InstrParams, 'TekAWG')
+    commonSettings.InstrParams.TekAWG.seqfile = 'U:\AWG\Trigger\Trigger.awg';
+end
+if isfield(commonSettings.InstrParams, 'BBNAPS')
+    commonSettings.InstrParams.BBNAPS.seqfile = 'U:\APS\Trigger\Trigger.h5';
+end
+
 cfg = struct('ExpParams', ExpParams, ...
     'SoftwareDevelopmentMode', 0, ...
     'displayScope', 0, ...

@@ -12,10 +12,8 @@ function [errorMsg] = homodyneDetectionDo(obj)
 % v1.3 18 NOV 2010 Blake Johnson
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-TaskParams = obj.inputStructure.TaskParams;
 ExpParams = obj.inputStructure.ExpParams;
 Instr = obj.Instr;
-fid = obj.DataFileHandle;
 SD_mode = obj.inputStructure.SoftwareDevelopmentMode;
 displayScope = obj.inputStructure.displayScope;
 

@@ -15,7 +15,7 @@ function [Loop, dimension] = populateLoopStructure(obj, sweepPtsOnly)
         % find all sweeps that have a number
         if isfield(SweepParams.(SweepNames{i_loop}), 'number')
             % update the dimension of the sweep
-            if isnumeric(SweepParams.(SweepNames{i_loop}).number) && SweepParams.(SweepNames{i_loop}).number > dimension
+            if isnumeric(SweepParams.(SweepNames{i_loop}).number) && ~strcmp(SweepNames{i_loop}, 'nothing') && SweepParams.(SweepNames{i_loop}).number > dimension
                 dimension = SweepParams.(SweepNames{i_loop}).number;
             end
             % copy the Sweep params to the Loop struct

@@ -78,7 +78,7 @@ classdef  expBase < handle
         end
         %%
         function createDataFileName(obj)
-            obj.DataFileName = sprintf('%03d_%s.out', obj.filenumber, obj.Name);
+            obj.DataFileName = sprintf('%03d_%s.h5', obj.filenumber, obj.Name);
         end
         
         %%
@@ -88,7 +88,7 @@ classdef  expBase < handle
             % First we make sure the filename exists
             errorMsg = '';
             if isempty(obj.DataFileName)
-                errorMsg = 'FileNameNotFound';
+                errorMsg = 'No file name supplied';
                 return
             end
             if ~exist('dimension', 'var')

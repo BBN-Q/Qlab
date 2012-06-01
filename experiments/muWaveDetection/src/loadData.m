@@ -9,7 +9,7 @@ function data = loadData(makePlot, fullpath)
 
     % get path of file to load
     if ~exist('fullpath', 'var')
-        [filename, pathname] = uigetfile('*.out');
+        [filename, pathname] = uigetfile('*.h5');
         if isequal(filename,0) || isequal(pathname,0)
            data = [];
            return
@@ -58,14 +58,14 @@ function data = loadData(makePlot, fullpath)
                 title(sanitized_filedname);
             case 2
                 h1 = figure();
-                imagesc(data.xpoints(1:size(data.abs_Data,1)),data.ypoints(1:size(data.abs_Data,2)),data.abs_Data.')
+                imagesc(data.xpoints(1:size(data.abs_Data,2)),data.ypoints(1:size(data.abs_Data,1)),data.abs_Data)
                 xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
                 ylabel(['\fontname{Times}\fontsize{14}' data.ylabel]);
                 set(gca,'FontSize',12)
                 title(sanitized_filedname);
                 
                 h2 = figure();
-                imagesc(data.xpoints(1:size(data.phase_Data,1)),data.ypoints(1:size(data.phase_Data,2)),data.phase_Data.')
+                imagesc(data.xpoints(1:size(data.phase_Data,2)),data.ypoints(1:size(data.phase_Data,1)),data.phase_Data)
                 xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
                 ylabel(['\fontname{Times}\fontsize{14}' data.ylabel]);
                 set(gca,'FontSize',12)

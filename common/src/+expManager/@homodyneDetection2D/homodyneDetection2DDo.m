@@ -13,7 +13,6 @@ function homodyneDetection2DDo(obj)
 
 ExpParams = obj.inputStructure.ExpParams;
 Instr = obj.Instr;
-fid = obj.DataFileHandle;
 SD_mode = obj.inputStructure.SoftwareDevelopmentMode;
 displayScope = obj.inputStructure.displayScope;
 
