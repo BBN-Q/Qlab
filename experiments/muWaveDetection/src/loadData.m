@@ -2,14 +2,14 @@ function data = loadData(makePlot, fullpath)
     if ~exist('makePlot', 'var')
         makePlot = true;
     end
-    % loads data from file by using an expManager object to read in the data
+
     % base_path is up two levels from this file
     [base_path] = fileparts(mfilename('fullpath'));
     base_path = parent_dir(base_path, 3);
 
     % get path of file to load
     if ~exist('fullpath', 'var')
-        [filename, pathname] = uigetfile('*.out');
+        [filename, pathname] = uigetfile('*.h5');
         if isequal(filename,0) || isequal(pathname,0)
            data = [];
            return
@@ -19,23 +19,61 @@ function data = loadData(makePlot, fullpath)
         [pathname, filename, ext] = fileparts(fullpath);
         filename = [filename ext];
     end
-
-    % create the exp object (use the data file itself as the cfg file)
-    Exp = expManager.homodyneDetection(base_path, fullpath, 'homodyneDetection', 1);
-    % overwrite the filename to the file specified from uigetfile()
-    Exp.DataPath = pathname;
-    Exp.DataFileName = filename;
-
-    % parse
-    Exp.parseExpcfgFile;
-    [data, h1, h2] = Exp.parseDataFile(makePlot);
-    data.loops = Exp.populateLoopStructure(true);
+    
+    rawData = h5read(fullpath, '/idata') + 1i * h5read(fullpath, '/qdata');
+    data.abs_Data = abs(rawData);
+    data.phase_Data = 180.0/pi * atan2(imag(rawData), real(rawData));
+    dimension = h5readatt(fullpath, '/', 'dimension');
+    data.xpoints = h5read(fullpath, '/xpoints');
+    data.xlabel = h5readatt(fullpath, '/xpoints', 'label');
+    if dimension > 1
+        data.ypoints = h5read(fullpath, '/ypoints');
+        data.ylabel = h5readatt(fullpath, '/ypoints', 'label');
+    end
+    if dimension > 2
+        data.zpoints = h5read(fullpath, '/zpoints');
+        data.zlabel = h5readatt(fullpath, '/zpoints', 'label');
+    end
     data.filename = filename;
     data.path = pathname;
-    
-    sanitized_filedname = strrep(filename, '_', '\_');
-    if h1 ~= 0, figure(h1); title(sanitized_filedname); end
-    if h2 ~= 0, figure(h2); title(sanitized_filedname); end
+
+    if (makePlot)
+        sanitized_filedname = strrep(filename, '_', '\_');
+        switch dimension
+            case 1
+                h1 = figure();
+                subplot(2,1,1);
+                amplitude = data.abs_Data(:);
+                phase = data.phase_Data(:);
+                plot(data.xpoints(1:length(amplitude)),amplitude,'linewidth',1.5);
+                xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
+                ylabel('\fontname{Times}\fontsize{14}Amplitude');
+                set(gca,'FontSize',12);
+                subplot(2,1,2);
+                plot(data.xpoints(1:length(phase)),phase,'linewidth',1.5);
+                xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
+                ylabel('\fontname{Times}\fontsize{14}Phase');
+                set(gca,'FontSize',12);
+                subplot(2,1,1);
+                title(sanitized_filedname);
+            case 2
+                h1 = figure();
+                imagesc(data.xpoints(1:size(data.abs_Data,2)),data.ypoints(1:size(data.abs_Data,1)),data.abs_Data)
+                xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
+                ylabel(['\fontname{Times}\fontsize{14}' data.ylabel]);
+                set(gca,'FontSize',12)
+                title(sanitized_filedname);
+                
+                h2 = figure();
+                imagesc(data.xpoints(1:size(data.phase_Data,2)),data.ypoints(1:size(data.phase_Data,1)),data.phase_Data)
+                xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
+                ylabel(['\fontname{Times}\fontsize{14}' data.ylabel]);
+                set(gca,'FontSize',12)
+                title(sanitized_filedname);
+            otherwise
+                error('Cannot plot for dimension = %d', dimension);
+        end
+    end
 
     % helper function to find the nth parent of directory given in 'path'
     function str = parent_dir(path, n)

@@ -47,7 +47,7 @@ classdef  expBase < handle
         cfgFileName
         DataFileName
         inputStructure
-        DataFileHandle
+        DataFileHandler
         %HomeDirectory
         DataPath
         Instr = struct()%This field will hold the Instrument objects used in running the experiment
@@ -78,39 +78,34 @@ classdef  expBase < handle
         end
         %%
         function createDataFileName(obj)
-            obj.DataFileName = sprintf('%03d_%s.out', obj.filenumber, obj.Name);
+            obj.DataFileName = sprintf('%03d_%s.h5', obj.filenumber, obj.Name);
         end
+        
         %%
-        function setPath(obj) %#ok<MANU>
-            %% for now this is all unnecessary, revisit later
-        end
-        %%
-
-        function [errorMsg] = openDataFile(obj)
-            % This function will open the data file with write permission
-            % in the desired directory.
+        function [errorMsg] = openDataFile(obj, dimension, header)
+            % This function opens an HDF5 data file handler
             
             % First we make sure the filename exists
+            errorMsg = '';
             if isempty(obj.DataFileName)
-                errorMsg = 'FileNameNotFound';
+                errorMsg = 'No file name supplied';
                 return
+            end
+            if ~exist('dimension', 'var')
+                dimension = 1;
+            end
+            if ~exist('header', 'var')
+                header = [];
             end
             % construct full path
 			fullname = fullfile(obj.DataPath, obj.DataFileName);
             % open up the file with write/create permission
-            [obj.DataFileHandle errorMsg] = fopen(fullname,'w');
-            % If the file was opened sucessfully then errorMsg will be
-            % empty.
+            obj.DataFileHandler = HDF5DataHandler(fullname, dimension, header);
         end
         %%
         function [errorMsg] = finalizeData(obj)
-            fid = obj.DataFileHandle;
-            fprintf(fid,'\n$$$ End of Data\n');
-            fprintf(fid,'# Data taking finished at %s\n',datestr(now,0));
-            errorFlag = fclose(obj.DataFileHandle);
-            if errorFlag ~= 0
-                errorMsg = sprintf('Error: Failed to close file %s',obj.DataFileName);
-            end
+            obj.DataFileHandler.closeDataFile();
+            errorMsg = '';
         end
         %% methods related to handling instruments
         function openInstruments(obj)
@@ -224,13 +219,12 @@ classdef  expBase < handle
             end
             %Clean up the output file and rename if we didn't finish it
             %properly
-            if ~isempty(obj.DataFileHandle)
-                if ~isempty(fopen(obj.DataFileHandle))
-                    fclose(obj.DataFileHandle);
-                    fullname = fullfile(obj.DataPath, obj.DataFileName);
-                    [path, name, ~] = fileparts(fullname);
-                    movefile(fullname, fullfile(path, [name '.incomplete']));
-                end
+
+            if isa(obj.DataFileHandler, 'HDF5DataHandler') && obj.DataFileHandler.fileOpen == 1
+                obj.DataFileHandler.closeDataFile();
+                fullname = fullfile(obj.DataPath, obj.DataFileName);
+                [path, name, ~] = fileparts(fullname);
+                movefile(fullname, fullfile(path, [name '.incomplete']));
             end
         end
     end

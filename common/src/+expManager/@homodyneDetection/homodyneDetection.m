@@ -37,12 +37,13 @@
 
 classdef homodyneDetection < expManager.expBase
     properties %This is only for properties not defined in the 'experiment' superlcass
+        Loop
     end
     methods (Static)
         %% Class constructor
         function obj = homodyneDetection(data_path, cfgFileName, basename, filenumber)
             if ~exist('data_path','var')
-                data_path = 'C:\Documents and Settings\Administrator\My Documents\DR_Exp\SVN\qlab\'; % default value
+                data_path = ''; % default value
             end
             
             if ~exist('basename', 'var')
@@ -56,6 +57,9 @@ classdef homodyneDetection < expManager.expBase
     methods
         %% Base functions
         function Init(obj)
+            % parse cfg file
+            obj.parseExpcfgFile();
+
             % Check params for errors
             obj.errorCheckExpParams();
             
@@ -64,14 +68,42 @@ classdef homodyneDetection < expManager.expBase
             
             % Prepare all instruments for measurement
             obj.initializeInstruments();
+            
+            % construct loop object and file header
+            [obj.Loop, dimension] = obj.populateLoopStructure();
+            header = obj.inputStructure;
+            switch dimension
+                case 1
+                    header.xpoints = obj.Loop.one.sweep.points;
+                    header.xlabel = obj.Loop.one.sweep.name;
+                case 2
+                    header.xpoints = obj.Loop.one.sweep.points;
+                    header.xlabel = obj.Loop.one.sweep.name;
+                    header.ypoints = obj.Loop.two.sweep.points;
+                    header.ylabel = obj.Loop.two.sweep.name;
+                case 3
+                    header.xpoints = obj.Loop.one.sweep.points;
+                    header.xlabel = obj.Loop.one.sweep.name;
+                    header.ypoints = obj.Loop.two.sweep.points;
+                    header.ylabel = obj.Loop.two.sweep.name;
+                    header.zpoints = obj.Loop.three.sweep.points;
+                    header.zlabel = obj.Loop.three.sweep.name;
+                otherwise
+                    error('Loop dimension is larger than 3')
+            end
+            
+            % open data file
+            obj.openDataFile(dimension, header);
         end
         function Do(obj)
-            fprintf(obj.DataFileHandle,'$$$ Beginning of Data\n');
-			obj.homodyneDetectionDo;
+			obj.homodyneDetectionDo();
         end
         function CleanUp(obj)
-            %Close all instruments
-            obj.closeInstruments;
+            % close all instruments
+            obj.closeInstruments();
+
+            % close data file
+            obj.finalizeData();
         end
         %% Class destructor
         function delete(obj) %#ok<MANU>

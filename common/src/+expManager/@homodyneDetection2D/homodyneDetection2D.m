@@ -37,6 +37,7 @@
 classdef homodyneDetection2D < expManager.expBase
     properties %This is only for properties not defined in the 'experiment' superlcass
         awg = [];
+        Loop
     end
     methods 
         %% Class constructor
@@ -59,7 +60,9 @@ classdef homodyneDetection2D < expManager.expBase
         
         %% Base functions
         function Init(obj)
-            %%% The next function is experiment specific %%%
+            % parse cfg file
+            obj.parseExpcfgFile();
+            
             % Check params for errors
             obj.errorCheckExpParams();
 
@@ -80,14 +83,42 @@ classdef homodyneDetection2D < expManager.expBase
                     obj.awg{numAWGs} = obj.Instr.(InstrName);
                 end
             end
+
+            % construct loop object and file header
+            [obj.Loop, dimension] = obj.populateLoopStructure();
+            header = obj.inputStructure;
+            switch dimension
+                case 1
+                    header.xpoints = obj.Loop.one.sweep.points;
+                    header.xlabel = obj.Loop.one.sweep.name;
+                case 2
+                    header.xpoints = obj.Loop.one.sweep.points;
+                    header.xlabel = obj.Loop.one.sweep.name;
+                    header.ypoints = obj.Loop.two.sweep.points;
+                    header.ylabel = obj.Loop.two.sweep.name;
+                case 3
+                    header.xpoints = obj.Loop.one.sweep.points;
+                    header.xlabel = obj.Loop.one.sweep.name;
+                    header.ypoints = obj.Loop.two.sweep.points;
+                    header.ylabel = obj.Loop.two.sweep.name;
+                    header.zpoints = obj.Loop.three.sweep.points;
+                    header.zlabel = obj.Loop.three.sweep.name;
+                otherwise
+                    error('Loop dimension is larger than 3')
+            end
+            
+            % open data file
+            obj.openDataFile(dimension, header);
         end
         function Do(obj)
-            fprintf(obj.DataFileHandle,'$$$ Beginning of Data\n');
 			obj.homodyneDetection2DDo;
         end
         function CleanUp(obj)
-            %Close all instruments
-            obj.closeInstruments;
+            % close all instruments
+            obj.closeInstruments();
+
+            % close data file
+            obj.finalizeData();
         end
         %% Class destructor
         function delete(obj)

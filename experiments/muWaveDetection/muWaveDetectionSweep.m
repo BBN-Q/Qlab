@@ -269,23 +269,13 @@ set(mainWindow, 'Visible', 'on');
         % create experiment object
 		Exp = expManager.homodyneDetection(expDataPath, cfg_file_name, basename, counter.value);
         
-        
-        % parse cfg file
-		Exp.parseExpcfgFile;
-
-		% Initialize the data file and record the parameters
-		Exp.openDataFile;
-		Exp.writeDataFileHeader;
         % increment counter
         counter.increment();
 
 		% Run the actual experiment
-		Exp.Init;
-		Exp.Do;
-		Exp.CleanUp;
-
-		% Close the data file and end connection to all insturments.
-		Exp.finalizeData;
+		Exp.Init();
+		Exp.Do();
+		Exp.CleanUp();
 
         %Call the stop button call_back to clean-up
         stop_callback()

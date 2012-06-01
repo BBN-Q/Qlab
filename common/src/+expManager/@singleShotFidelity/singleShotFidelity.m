@@ -96,6 +96,32 @@ classdef singleShotFidelity < expManager.expBase
 %             % create a generic 'time' sweep
 %             timeSweep = struct('type', 'sweeps.Time', 'number', 1, 'start', 0, 'step', 1);
 %             obj.inputStructure.SweepParams = struct('time', timeSweep);
+
+            % construct loop object and file header
+            [obj.Loop, dimension] = obj.populateLoopStructure();
+            header = obj.inputStructure;
+            switch dimension
+                case 1
+                    header.xpoints = obj.Loop.one.sweep.points;
+                    header.xlabel = obj.Loop.one.sweep.name;
+                case 2
+                    header.xpoints = obj.Loop.one.sweep.points;
+                    header.xlabel = obj.Loop.one.sweep.name;
+                    header.ypoints = obj.Loop.two.sweep.points;
+                    header.ylabel = obj.Loop.two.sweep.name;
+                case 3
+                    header.xpoints = obj.Loop.one.sweep.points;
+                    header.xlabel = obj.Loop.one.sweep.name;
+                    header.ypoints = obj.Loop.two.sweep.points;
+                    header.ylabel = obj.Loop.two.sweep.name;
+                    header.zpoints = obj.Loop.three.sweep.points;
+                    header.zlabel = obj.Loop.three.sweep.name;
+                otherwise
+                    error('Loop dimension is larger than 3')
+            end
+            
+            % open data file (NOT CURRENTLY USED)
+            % obj.openDataFile(dimension, header);
         end
         
         function Do(obj)

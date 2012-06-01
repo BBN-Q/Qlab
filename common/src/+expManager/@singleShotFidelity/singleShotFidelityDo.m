@@ -16,13 +16,10 @@ for i = 2:length(obj.awg)
     if success_flag_AWG ~= 1, error('AWG %d timed out', i), end
 end
 
-% Setup loops
-Loop = obj.populateLoopStructure();
-
 %%
 
-ampFidelity = zeros(Loop.one.steps,Loop.two.steps);
-phaseFidelity = zeros(Loop.one.steps,Loop.two.steps);
+ampFidelity = zeros(obj.Loop.one.steps,obj.Loop.two.steps);
+phaseFidelity = zeros(obj.Loop.one.steps,obj.Loop.two.steps);
 
 persistent figH;
 persistent figH2D;
@@ -36,15 +33,15 @@ end
 
 
 
-for loopct1 = 1:Loop.one.steps
+for loopct1 = 1:obj.Loop.one.steps
     
-    Loop.one.sweep.step(loopct1);
-    fprintf('Loop 1: Step %d of %d\n', [loopct1, Loop.one.steps]);
+    obj.Loop.one.sweep.step(loopct1);
+    fprintf('Loop 1: Step %d of %d\n', [loopct1, obj.Loop.one.steps]);
     
-    for loopct2 = 1:Loop.two.steps
+    for loopct2 = 1:obj.Loop.two.steps
         
-        Loop.two.sweep.step(loopct2);
-        fprintf('Loop 2: Step %d of %d\n', [loopct2, Loop.two.steps]);
+        obj.Loop.two.sweep.step(loopct2);
+        fprintf('Loop 2: Step %d of %d\n', [loopct2, obj.Loop.two.steps]);
         
         samplesPerAvg = obj.scope.averager.nbrSegments/2;
         nbrSamples = ExpParams.softAvgs*samplesPerAvg;
@@ -172,38 +169,38 @@ for loopct1 = 1:Loop.one.steps
         figure(figH2D)
         subplot(2,1,1)
         cla()
-        if Loop.two.steps == 1
-            plot(Loop.one.plotRange, ampFidelity);
-            xlabel(Loop.one.sweep.name);
+        if obj.Loop.two.steps == 1
+            plot(obj.Loop.one.plotRange, ampFidelity);
+            xlabel(obj.Loop.one.sweep.name);
         else
-            imagesc(Loop.two.plotRange, Loop.one.plotRange, ampFidelity);
-            xlabel(Loop.two.sweep.name);
-            ylabel(Loop.one.sweep.name);
+            imagesc(obj.Loop.two.plotRange, obj.Loop.one.plotRange, ampFidelity);
+            xlabel(obj.Loop.two.sweep.name);
+            ylabel(obj.Loop.one.sweep.name);
             colorbar()
         end
         title('Amplitude Measurement Fidelity');
         subplot(2,1,2)
         cla()
-        if Loop.two.steps == 1
-            plot(Loop.one.plotRange, phaseFidelity);
-            xlabel(Loop.one.sweep.name);
+        if obj.Loop.two.steps == 1
+            plot(obj.Loop.one.plotRange, phaseFidelity);
+            xlabel(obj.Loop.one.sweep.name);
         else
-            imagesc(Loop.two.plotRange, Loop.one.plotRange, phaseFidelity);
-            xlabel(Loop.two.sweep.name);
-            ylabel(Loop.one.sweep.name);
+            imagesc(obj.Loop.two.plotRange, obj.Loop.one.plotRange, phaseFidelity);
+            xlabel(obj.Loop.two.sweep.name);
+            ylabel(obj.Loop.one.sweep.name);
             colorbar()
         end
         title('Phase Measurement Fidelity');
         
 %         subplot(3,1,3)
 %         cla()
-%         if Loop.two.steps == 1
-%             plot(Loop.one.plotRange, RBFidelity);
-%             xlabel(Loop.one.sweep.name);
+%         if obj.Loop.two.steps == 1
+%             plot(obj.Loop.one.plotRange, RBFidelity);
+%             xlabel(obj.Loop.one.sweep.name);
 %         else
-%             imagesc(Loop.two.plotRange, Loop.one.plotRange, RBFidelity);
-%             xlabel(Loop.two.sweep.name);
-%             ylabel(Loop.one.sweep.name);
+%             imagesc(obj.Loop.two.plotRange, obj.Loop.one.plotRange, RBFidelity);
+%             xlabel(obj.Loop.two.sweep.name);
+%             ylabel(obj.Loop.one.sweep.name);
 %             colorbar()
 %         end
 %         title('RB Measurement Fidelity');
