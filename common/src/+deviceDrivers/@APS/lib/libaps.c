@@ -1831,11 +1831,20 @@ waveform_t * APS_GetWaveform(int device, int channel) {
 }
 
 
-EXPORT int APS_SetWaveform(int device, int channel, float * data, int length) {
+EXPORT int APS_SetWaveformFloat(int device, int channel, float * data, int length) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
 	if (!wfArray) return -1;
-	return WF_SetWaveform(wfArray, channel, data, length);
+	dlog(DEBUG_VERBOSE,"APS_SetWaveformFloat\n");
+	return WF_SetWaveform(wfArray, channel, (void *) data, length, WAVEFORM_FLOAT_DATA);
+}
+
+EXPORT int APS_SetWaveformInt(int device, int channel, int * data, int length) {
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	dlog(DEBUG_VERBOSE,"APS_SetWaveformInt\n");
+	return WF_SetWaveform(wfArray, channel, (void *) data, length, WAVEFORM_INT_DATA);
 }
 
 EXPORT int APS_SetWaveformOffset(int device, int channel, float offset) {

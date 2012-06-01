@@ -117,7 +117,8 @@ EXPORT int   APS_RegWriteTest(int device, int addr);
 
 // Waveform related functions
 
-EXPORT int   APS_SetWaveform(int device, int channel, float * data, int length);
+EXPORT int   APS_SetWaveformFloat(int device, int channel, float * data, int length);
+EXPORT int   APS_SetWaveformInt(int device, int channel, int * data, int length);
 EXPORT int   APS_SetWaveformOffset(int device, int channel, float offset);
 EXPORT float APS_GetWaveformOffset(int device, int channel);
 EXPORT int   APS_SetWaveformScale(int device, int channel, float scale);

@@ -766,7 +766,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 
             % store waveform data
             
-            val = calllib(aps.library_name,'APS_SetWaveform', aps.device_id, dac, ...
+            if (waveform.dataMode == waveform.REAL_DATA)
+                functionCall = 'APS_SetWaveformFloat';
+            else
+                functionCall = 'APS_SetWaveformInt';
+            end
+            
+            val = calllib(aps.library_name,functionCall, aps.device_id, dac, ...
                 waveform.data, length(waveform.data));
             if (val < 0), error('APS:storeAPSWaveform:set', 'error in set waveform'),end;
 
@@ -1118,21 +1124,42 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.loadBitFile();
             aps.setDebugLevel(1);
 
-            wf = aps.getNewWaveform();
-            wf.data = 0:1/1000:1;
-            wf.data = wf.data(1:1000);
-            wf.set_scale_factor(1.0);
+            wf1 = aps.getNewWaveform();
+            wf1.data = 0:1/1000:1;
+            wf.data = 0:8:8190;
+            wf1.data = wf1.data(1:1000);
+            wf1.set_scale_factor(1.0);
+            wf1.dataMode = wf1.REAL_DATA;
+            
+            
+            wf2= aps.getNewWaveform();
+            wf2.data = 0:8:8190;
+            wf2.data = wf2.data(1:1000);
+            wf2.set_scale_factor(1.0);
+            wf2.dataMode = wf2.INT_DATA;
             
             fprintf('Setting Sample Rate\n');
             aps.samplingRate = 1200;
             
             fprintf('Storing waveforms\n')
-            for ch = 0
-                chS = sprintf('chan_%i',ch+1);
-                aps.(chS).waveform = wf;
-                aps.(chS).enabled = 1;
-                aps.storeAPSWaveform(wf,ch);
-            end
+            
+            
+            aps.chan_1.waveform = wf1;
+            aps.chan_1.enabled = 1;
+            aps.storeAPSWaveform(wf1,0);
+            
+            aps.chan_2.waveform = wf2;
+            aps.chan_2.enabled = 1;
+            aps.storeAPSWaveform(wf2,1);
+            
+            aps.chan_3.waveform = wf1;
+            aps.chan_3.enabled = 1;
+            aps.storeAPSWaveform(wf1,2);
+            
+            aps.chan_4.waveform = wf2;
+            aps.chan_4.enabled = 1;
+            aps.storeAPSWaveform(wf2,3);
+            
             
             running = 1;
             

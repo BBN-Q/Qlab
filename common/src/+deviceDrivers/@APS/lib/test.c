@@ -77,7 +77,7 @@ typedef int (*pfunc)();
 #define read_version      APS_ReadBitFileVersion
 #define open              APS_Open
 #define close             APS_Close
-#define setWaveform       APS_SetWaveform
+#define setWaveform       APS_SetWaveformFloat
 #define setLinkList       APS_SetLinkList
 #define setWaveformOffset APS_GetWaveformOffset
 #define getWaveformOffset APS_GetWaveformOffset

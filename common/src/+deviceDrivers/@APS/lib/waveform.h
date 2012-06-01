@@ -31,19 +31,25 @@ typedef struct {
   int isLoaded;
 } bank_t;
 
+enum waveformDataType_t {
+	WAVEFORM_INT_DATA = 1,
+	WAVEFORM_FLOAT_DATA = 2
+};
+
 typedef struct {
-  float * pData;
+  void * pData;
   uint16_t * pFormatedData;
   float offset;
   float scale;
   int allocatedLength;
   int isLoaded;
+  enum waveformDataType_t dataType;
   bank_t linkListBanks[MAX_APS_BANKS]; // TODO change from array to link list
 } waveform_t;
 
 waveform_t * WF_Init();
 void   WF_Destroy(waveform_t * wfArray);
-int    WF_SetWaveform(waveform_t * wfArray, int channel, float * data, int length);
+int    WF_SetWaveform(waveform_t * wfArray, int channel, void * data, int length, int dataType);
 int    WF_Free(waveform_t * wfArray, int channel);
 void   WF_SetOffset(waveform_t * wfArray, int channel, float offset);
 float  WF_GetOffset(waveform_t * wfArray, int channel);
