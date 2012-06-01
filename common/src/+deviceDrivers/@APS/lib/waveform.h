@@ -20,7 +20,7 @@
 
 #define NUM_BITS 13
 
-#define MAX_WF_VALUE pow(2,NUM_BITS)-1
+#define MAX_WF_VALUE (pow(2,NUM_BITS)-1)
 
 typedef struct {
   uint16_t *offset;

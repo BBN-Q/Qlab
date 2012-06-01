@@ -174,8 +174,7 @@ pause(1)
 
 
 
-aps.pauseFpga(0);
-aps.pauseFpga(2);
-aps.close()
+aps.stop();
+aps.close();
 
 end

@@ -1835,7 +1835,6 @@ EXPORT int APS_SetWaveform(int device, int channel, float * data, int length) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
 	if (!wfArray) return -1;
-
 	return WF_SetWaveform(wfArray, channel, data, length);
 }
 
@@ -1845,6 +1844,8 @@ EXPORT int APS_SetWaveformOffset(int device, int channel, float offset) {
 	if (!wfArray) return -1;
 
 	// TODO: set DAC offset value
+
+	dlog(DEBUG_VERBOSE,"Setting Offset Channel %i Offset %i\n",channel,  offset);
 
 	WF_SetOffset(wfArray,channel,offset);
 	return 0;
@@ -1861,6 +1862,7 @@ EXPORT int APS_SetWaveformScale(int device, int channel, float scale) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
 	if (!wfArray) return -1;
+	dlog(DEBUG_VERBOSE,"Setting Scale Channel %i Scale %.f \n",channel, scale);
 	WF_SetScale(wfArray,channel,scale);
 	return 0;
 }
@@ -1883,7 +1885,7 @@ EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 	if (!WF_GetIsLoaded(wfArray,channel)) {
 		dataPtr = WF_GetDataPtr(wfArray, channel);
 		length = WF_GetLength(wfArray, channel);
-		APS_LoadWaveform(device, dataPtr, length, 0 ,channel - 1, 0, 0);
+		APS_LoadWaveform(device, dataPtr, length, 0 ,channel , 0, 0);
 		WF_SetIsLoaded(wfArray,  channel,1);
 	}
 	return 0;

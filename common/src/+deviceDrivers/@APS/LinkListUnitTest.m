@@ -156,7 +156,7 @@ for i = 1:10000
     fprintf('Entry %i/%i curBank = %i\n', i, length(banks1), curBank );
     val = curBank;
     while val == curBank
-        val = aps.readLinkListStatus(0);
+        val = aps.readLinkListStatus(0);a
         fprintf('Link List Status = %i nextBank = %i\n',val, altBank(val+1));
         pause(.5)
     end
@@ -174,8 +174,7 @@ pause(1)
 
 
 
-aps.pauseFpga(0);
-aps.pauseFpga(2);
-aps.close()
+aps.stop();
+aps.close();
 
 end

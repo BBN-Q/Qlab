@@ -9,6 +9,7 @@
 // Currently had to get pthreadGC2.dll files from http://sourceforge.net/apps/trac/mingw-w64/wiki/Compile%20pthreads
 
 #include "libaps.h"
+#include "aps.h"
 #include "threads.h"
 #include "apserrors.h"
 #include "common.h"
@@ -54,7 +55,7 @@ void * APS_LinkListThread(void * data) {
 		dlog(DEBUG_INFO,"Dev: %i  Channel: %i Current Bank: Addr: 0x%x\n", threadData->dev, threadData->channel, pollBankID);
 
 		if (pollBankID != currentBankID) {
-			dlog("Dev: %i  Channel: %i Loading Bank: %i\n", threadData->dev, threadData->channel, currentBankID);
+			dlog(DEBUG_INFO,"Dev: %i  Channel: %i Loading Bank: %i\n", threadData->dev, threadData->channel, currentBankID);
 			loadBankData = &(threadData->waveform->linkListBanks[currentBankID]);
 			LoadLinkList_ELL(threadData->dev, loadBankData->offset, loadBankData->count, loadBankData->trigger,
 							 loadBankData->repeat, loadBankData->length, threadData->channel,currentBankID,validate);

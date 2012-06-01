@@ -767,19 +767,18 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % store waveform data
             
             val = calllib(aps.library_name,'APS_SetWaveform', aps.device_id, dac, ...
-                waveform.data, length(waveform));
+                waveform.data, length(waveform.data));
             if (val < 0), error('APS:storeAPSWaveform:set', 'error in set waveform'),end;
-           
-            return
-            
+
             % set offset
             
-            val = aps.librarycall('Setting waveform offet','APS_SetWaveformOffset', dac, wf.offset);
+            val = aps.librarycall('Setting waveform offet','APS_SetWaveformOffset', dac, waveform.offset);
             
             % set scale
             
-            val = aps.librarycall('Setting wavform scale','APS_SetWaveformScale', dac, wf.scale_factor);
-            
+            val = aps.librarycall('Setting wavform scale','APS_SetWaveformScale', dac, waveform.scale_factor);
+       
+            return
             % check for link list data
             if wf.have_link_list
                ell = wf.get_ell_link_list();
@@ -929,17 +928,6 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             if freq < 0
                 fprintf('Warning: APS::getFrequency returned error %i\n', freq);
             end
-        end
-        
-        function val = setOffset(aps, ch, offset)
-            val = aps.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*aps.MAX_WAVEFORM_VALUE);
-            aps.(['chan_' num2str(ch)]).offset = offset;
-        end
-        
-		function val = setTriggerDelay(aps, ch, delay)
-            val = aps.librarycall('Set channel trigger delay','APS_SetTriggerDelay', ch-1, delay);
-            aps.(['chan_' num2str(ch)]).trigDelay = delay;
-
         end
         
         %% low-level setup and debug methods
@@ -1101,7 +1089,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             for ch = 0:3
                 aps.loadWaveform(ch, wf.get_vector(), 0, validate,useSlowWrite);
-                aps.(sprintf('ch_%d', ch+1)).enabled = 1;
+                aps.(sprintf('chan_%d', ch+1)).enabled = 1;
             end
             
             aps.run();
@@ -1128,21 +1116,22 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             aps.open(apsId);
             aps.loadBitFile();
+            aps.setDebugLevel(1);
 
             wf = aps.getNewWaveform();
             wf.data = 0:1/1000:1;
-            wf.data = wf.data(1:1000) * 8192.0;
+            wf.data = wf.data(1:1000);
             wf.set_scale_factor(1.0);
             
             fprintf('Setting Sample Rate\n');
             aps.samplingRate = 1200;
             
             fprintf('Storing waveforms\n')
-            for ch = 0:3
+            for ch = 0
                 chS = sprintf('chan_%i',ch+1);
                 aps.(chS).waveform = wf;
                 aps.(chS).enabled = 1;
-                aps.storeAPSWaveform(ch,wf);
+                aps.storeAPSWaveform(wf,ch);
             end
             
             running = 1;
