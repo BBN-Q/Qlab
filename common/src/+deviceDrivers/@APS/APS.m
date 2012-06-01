@@ -1065,6 +1065,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         LinkListUnitTest(sequence, dc_offset)
         LinkListUnitTest2
+        LinkListUnitTestC
                 
         sequence = LinkListSequences(sequence)
         
