@@ -5,17 +5,21 @@ classdef HDF5DataHandler < handle
         fileOpen
         idx
         rowSize
+        dimension
+        buffer
+        bufferIdx
     end
     methods
         function obj = HDF5DataHandler(dimension, fileName, headerStruct)
-           switch (dimension)
-               case 1
-                   obj.open1dDataFile(fileName, headerStruct);
-               case 2
-                   obj.open2dDataFile(fileName, headerStruct);
-               otherwise
-                   error('HDF5DataHandler does not support dimension = %d', dimension);
-           end
+            obj.dimension = dimension;
+            switch (dimension)
+                case 1
+                    obj.open1dDataFile(fileName, headerStruct);
+                case 2
+                    obj.open2dDataFile(fileName, headerStruct);
+                otherwise
+                    error('HDF5DataHandler does not support dimension = %d', dimension);
+            end
         end
         
         function open1dDataFile(obj, fileName, headerStruct)
@@ -56,6 +60,10 @@ classdef HDF5DataHandler < handle
             h5create(fileName, '/qdata', [Inf obj.rowSize], 'ChunkSize', [10 obj.rowSize]);
 
             obj.idx = 1;
+            
+            %initialize a buffer
+            obj.buffer = nan(1, obj.rowSize);
+            obj.bufferIdx = 1;
         end
         
         function writeHeader(obj, headerStruct, xpoints, xlabel, ypoints, ylabel, zpoints, zlabel)
@@ -81,6 +89,41 @@ classdef HDF5DataHandler < handle
         
         function out = readHeader(obj)
             out = jsonlab.loadjson(obj.readString('/header'));
+        end
+        
+        function write(obj, val)
+            % write data to file or internal buffer, depending on the
+            % dimensions of the data set and the passed value
+            switch obj.dimension
+                case 1
+                    if length(val) == 1
+                        obj.writePoint(val);
+                    else
+                        obj.writeRow(val);
+                    end
+                case 2
+                    % TODO: allow writing an entire 2D data set at once (ie. add a
+                    % write array method)
+                    
+                    % if it is a 2D data set and we are passed a single
+                    % point, add it to the buffer until we have filled an
+                    % entire row, then write the row.
+                    % otherwise, we have an entire row, so write it
+                    if length(val) == 1
+                        obj.buffer(obj.bufferIdx) = val;
+                        obj.bufferIdx = obj.bufferIdx + 1;
+                        % check if we need to flush the buffer
+                        if obj.bufferIdx > obj.rowSize
+                            obj.writeRow(obj.buffer);
+                            obj.bufferIdx = 1;
+                            obj.buffer = nan(1, obj.rowSize);
+                        end
+                    else
+                        obj.writeRow(val);
+                    end
+                otherwise
+                    error('Unallowed dimension %d', obj.dimension);
+            end
         end
 
         function writePoint(obj, val)
@@ -137,7 +180,7 @@ classdef HDF5DataHandler < handle
     end
     methods (Static)
         function out = UnitTest()
-            out = HDF5DataHandler.UnitTest1d(0) && HDF5DataHandler.UnitTest2d(0);
+            out = HDF5DataHandler.UnitTest1d(0) && HDF5DataHandler.UnitTest2d(0) && HDF5DataHandler.UnitTestBufferd2d(0);
         end
         
         function out = UnitTest1d(verbose)
@@ -146,7 +189,7 @@ classdef HDF5DataHandler < handle
             header = struct('xpoints', [5 10 15], 'xlabel', 'Frequency (GHz)');
             dataHandler = HDF5DataHandler(1, 'unit_test.h5', header);
             for ct = 1:3
-                dataHandler.writePoint(data(ct));
+                dataHandler.write(data(ct));
             end
 
             disp(dataHandler.readHeader());
@@ -165,7 +208,28 @@ classdef HDF5DataHandler < handle
                 'ypoints', [1 2 3], 'ylabel', 'Time (us)');
             dataHandler = HDF5DataHandler(2, 'unit_test.h5', header);
             for ct = 1:3
-                dataHandler.writeRow(data(ct,:));
+                dataHandler.write(data(ct,:));
+            end
+            
+            disp(dataHandler.readHeader());
+            
+            readData = h5read('unit_test.h5', '/idata') + 1i * h5read('unit_test.h5', '/qdata');
+            if verbose
+                disp(readData);
+            end
+            
+            out = all(all(data == readData),2);
+        end
+        
+        function out = UnitTestBufferd2d(verbose)
+            data = [1, 0, 2; 0, 1i, 0; 1, 0, 1];
+            header = struct('xpoints', [5 10 15], 'xlabel', 'Frequency (GHz)',...
+                'ypoints', [1 2 3], 'ylabel', 'Time (us)');
+            dataHandler = HDF5DataHandler(2, 'unit_test.h5', header);
+            for rowct = 1:3
+                for columnct = 1:3
+                    dataHandler.write(data(rowct,columnct));
+                end
             end
             
             disp(dataHandler.readHeader());
