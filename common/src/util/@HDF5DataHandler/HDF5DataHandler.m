@@ -31,7 +31,7 @@ classdef HDF5DataHandler < handle
             obj.fileOpen = 1;
 
             %write header info
-            obj.writeHeader(headerStruct, headerStruct.xpoints, headerStruct.xlabel);
+            obj.writeHeader(headerStruct, 1, headerStruct.xpoints, headerStruct.xlabel);
             
             obj.rowSize = length(headerStruct.xpoints);
 
@@ -51,7 +51,7 @@ classdef HDF5DataHandler < handle
             obj.fileOpen = 1;
 
             %write header info
-            obj.writeHeader(headerStruct, ...
+            obj.writeHeader(headerStruct, 2, ...
                 headerStruct.xpoints, headerStruct.xlabel, ...
                 headerStruct.ypoints, headerStruct.ylabel);
             
@@ -68,24 +68,25 @@ classdef HDF5DataHandler < handle
             obj.bufferIdx = 1;
         end
         
-        function writeHeader(obj, headerStruct, xpoints, xlabel, ypoints, ylabel, zpoints, zlabel)
+        function writeHeader(obj, headerStruct, dimension, xpoints, xlabel, ypoints, ylabel, zpoints, zlabel)
             assert(obj.fileOpen == 1, 'File must be open first');
             
+            h5writeatt(obj.fileName, '/', 'dimension', dimension);
             obj.writeString('/header', jsonlab.savejson('', headerStruct));
             if exist('xpoints', 'var') && exist('xlabel', 'var')
                 h5create(obj.fileName, '/xpoints', length(xpoints));
                 h5write(obj.fileName, '/xpoints', xpoints);
-                h5writeatt(obj.fileName, '/xpoints', 'xlabel', xlabel);
+                h5writeatt(obj.fileName, '/xpoints', 'label', xlabel);
             end
             if exist('ypoints', 'var') && exist('ylabel', 'var')
                 h5create(obj.fileName, '/ypoints', length(ypoints));
                 h5write(obj.fileName, '/ypoints', ypoints);
-                h5writeatt(obj.fileName, '/ypoints', 'ylabel', ylabel);
+                h5writeatt(obj.fileName, '/ypoints', 'label', ylabel);
             end
             if exist('zpoints', 'var') && exist('zlabel', 'var')
                 h5create(obj.fileName, '/zpoints', length(zpoints));
                 h5write(obj.fileName, '/zpoints', zpoints);
-                h5writeatt(obj.fileName, '/zpoints', 'zlabel', zlabel);
+                h5writeatt(obj.fileName, '/zpoints', 'label', zlabel);
             end
         end
         

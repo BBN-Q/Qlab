@@ -10,7 +10,7 @@ function [Loop, dimension] = populateLoopStructure(obj, sweepPtsOnly)
     emptySweep = struct('type','sweeps.Nothing');
     Loop = struct('one',emptySweep,'two',emptySweep,'three',emptySweep);
     % error checking
-    dimension = 0;
+    dimension = 1;
     for i_loop = 1:numSweepVariables
         % find all sweeps that have a number
         if isfield(SweepParams.(SweepNames{i_loop}), 'number')

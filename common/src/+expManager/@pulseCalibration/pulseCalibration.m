@@ -78,14 +78,17 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             obj.scopeParams.averager.nbrSegments = nbrSegments;
             obj.scope.averager = obj.scopeParams.averager;
             
+            % make sure dangling file handles are closed
+            fclose('all');
+            obj.finalizeData();
             % create tmp file
-            fclose('all'); % make sure dangling file handles are closed
-            obj.openDataFile();
-            fprintf(obj.DataFileHandle,'$$$ Beginning of Data\n');
+            header = struct('xpoints', 1:nbrSegments, 'xlabel', 'Segment');
+            obj.openDataFile(1, header);
+
             obj.homodyneDetection2DDo();
             % finish and close file
-            fprintf(obj.DataFileHandle,'\n$$$ End of Data\n');
-            fclose(obj.DataFileHandle);
+            obj.finalizeData();
+
             data = obj.parseDataFile(false);
             
             % delete the file

@@ -43,7 +43,7 @@ classdef homodyneDetection < expManager.expBase
         %% Class constructor
         function obj = homodyneDetection(data_path, cfgFileName, basename, filenumber)
             if ~exist('data_path','var')
-                data_path = 'C:\Documents and Settings\Administrator\My Documents\DR_Exp\SVN\qlab\'; % default value
+                data_path = ''; % default value
             end
             
             if ~exist('basename', 'var')
