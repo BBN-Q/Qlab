@@ -82,7 +82,7 @@ mainWindow = figure( ...
 	'MenuBar', 'none', ...
 	'NumberTitle', 'off', ...
 	'Visible', 'off',...
-    'KeyPressFcn', @keyPress, 'HandleVisibility', 'callback');
+    'HandleVisibility', 'callback');
 
 %Add a grid layout for all the controls
 mainGrid = uiextras.Grid('Parent', mainWindow, 'Spacing', 20, 'Padding', 10);
@@ -334,12 +334,6 @@ set(mainWindow, 'Visible', 'on');
         
         %Call the stop button call_back to clean-up
         stop_callback()
-    end
-
-    function keyPress(~, event)
-        if strcmp(event.Modifier{1},'control') && strcmp(event.Key,'r')
-            run_callback()
-        end
     end
 
     function stop_callback(~,~)
