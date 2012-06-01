@@ -32,6 +32,8 @@ classdef HDF5DataHandler < handle
 
             %write header info
             obj.writeHeader(headerStruct, headerStruct.xpoints, headerStruct.xlabel);
+            
+            obj.rowSize = length(headerStruct.xpoints);
 
             %open a data set
             h5create(fileName, '/idata', Inf, 'ChunkSize', 10);

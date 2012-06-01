@@ -31,14 +31,9 @@ if isempty(scopeHandle) && displayScope
     scopeHandle = figure('HandleVisibility', 'callback');
 end
 
-% Loop is a reparsing of the strucutres LoopParams and TaskParams that we
-% will use in this method
-Loop = obj.populateLoopStructure;
-
 %% Main Loop
 
-%% If there's anything thats particular to any device do it here
-
+% If there's anything thats particular to any device do it here
 InstrumentNames = fieldnames(Instr);
 if ~SD_mode
     for Instr_index = 1:numel(InstrumentNames)
@@ -68,31 +63,31 @@ end
 % for each loop we use the function iterateLoop to set the relevent
 % parameters.  For now hard coding in one loop is fine, someday we might
 % want to change this.
-Amp2D = nan(Loop.two.steps, Loop.one.steps);
-Phase2D = nan(Loop.two.steps, Loop.one.steps);
+Amp2D = nan(obj.Loop.two.steps, obj.Loop.one.steps);
+Phase2D = nan(obj.Loop.two.steps, obj.Loop.one.steps);
 % loop "1" contains the step information in the pattern file segments
 % so, we iterate over loop 2
 
-x_range = Loop.one.sweep.points;
+x_range = obj.Loop.one.sweep.points;
 
 axesHandle1DAmp = subplot(2,1,1,'Parent', figureHandle);
 grid(axesHandle1DAmp, 'on')
 axesHandle1DPhase = subplot(2,1,2,'Parent', figureHandle);
 grid(axesHandle1DPhase, 'on')
 
-plotHandle1DAmp = plot(axesHandle1DAmp, x_range, nan(1,Loop.one.steps));
+plotHandle1DAmp = plot(axesHandle1DAmp, x_range, nan(1,obj.Loop.one.steps));
 ylabel(axesHandle1DAmp, 'Amplitude');
-plotHandle1DPhase = plot(axesHandle1DPhase, x_range, nan(1,Loop.one.steps));
+plotHandle1DPhase = plot(axesHandle1DPhase, x_range, nan(1,obj.Loop.one.steps));
 ylabel(axesHandle1DPhase, 'Phase');
 
-if Loop.two.steps > 1
+if obj.Loop.two.steps > 1
     axesHandle2DAmp = subplot(2,1,1,'Parent', figureHandle2D);
     axesHandle2DPhase = subplot(2,1,2,'Parent', figureHandle2D);
     ylabel(axesHandle2DPhase, 'Phase');
-    if isfield(Loop.two, 'plotRange')
-        y_range = Loop.two.plotRange;
+    if isfield(obj.Loop.two, 'plotRange')
+        y_range = obj.Loop.two.plotRange;
     else
-        y_range = 1:Loop.two.sweep.points;
+        y_range = 1:obj.Loop.two.sweep.points;
     end
     plotHandle2DAmp = imagesc(x_range, y_range, Amp2D, 'Parent', axesHandle2DAmp);
     ylabel(axesHandle2DAmp, 'Amplitude');
@@ -101,9 +96,9 @@ if Loop.two.steps > 1
 end
 
 
-for loop2_index = 1:Loop.two.steps
-    Loop.two.sweep.step(loop2_index);
-    fprintf('Loop 1: Step %d of %d\n', [loop2_index, Loop.two.steps]);
+for loop2_index = 1:obj.Loop.two.steps
+    obj.Loop.two.sweep.step(loop2_index);
+    fprintf('Loop 1: Step %d of %d\n', [loop2_index, obj.Loop.two.steps]);
     
     if ~SD_mode
         softAvgs = ExpParams.softAvgs;
@@ -195,22 +190,21 @@ for loop2_index = 1:Loop.two.steps
         end
 
         % write the data to file
-        fprintf(fid,'%g+%gi ',[iavg'; qavg']);
-        fprintf(fid,'\n');
+        obj.DataFileHandler.write(iavg + 1i*qavg);
 
         %Store in the 2D array
         Amp2D(loop2_index,:) = amp;
         Phase2D(loop2_index,:) = phase;
         
         % display 2D data sets if there is a loop
-        if Loop.two.steps > 1
+        if obj.Loop.two.steps > 1
             set(plotHandle2DAmp, 'CData', Amp2D);
             set(plotHandle2DPhase, 'CData', Phase2D);
         end
         
     else
-        percentComplete = 100*(loop2_index-1 + (loop2_index)/Loop.two.steps)/Loop.one.steps;
-        fprintf(fid,'%d\n',percentComplete);
+        percentComplete = 100*(loop2_index-1 + (loop2_index)/obj.Loop.two.steps)/obj.Loop.one.steps;
+        fprintf('%d\n',percentComplete);
     end
 end
 

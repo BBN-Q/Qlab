@@ -1,4 +1,4 @@
-function Loop = populateLoopStructure(obj, sweepPtsOnly)
+function [Loop, dimension] = populateLoopStructure(obj, sweepPtsOnly)
 
     if nargin < 2
         sweepPtsOnly = false;
@@ -10,9 +10,15 @@ function Loop = populateLoopStructure(obj, sweepPtsOnly)
     emptySweep = struct('type','sweeps.Nothing');
     Loop = struct('one',emptySweep,'two',emptySweep,'three',emptySweep);
     % error checking
+    dimension = 0;
     for i_loop = 1:numSweepVariables
         % find all sweeps that have a number
         if isfield(SweepParams.(SweepNames{i_loop}), 'number')
+            % update the dimension of the sweep
+            if isnumeric(SweepParams.(SweepNames{i_loop}).number) && SweepParams.(SweepNames{i_loop}).number > dimension
+                dimension = SweepParams.(SweepNames{i_loop}).number;
+            end
+            % copy the Sweep params to the Loop struct
             switch SweepParams.(SweepNames{i_loop}).number
                 case 1
                     assert(strcmp(Loop.one.type,'sweeps.Nothing'), 'There can only be one structure assigned to loop 1')
