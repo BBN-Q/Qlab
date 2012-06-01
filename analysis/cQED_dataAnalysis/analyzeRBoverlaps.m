@@ -52,6 +52,7 @@ function out = analyzeRBoverlaps
         errorbar(seqlengths, avgFidelity, errors, '.')
         yfit = fitf(beta, 1:seqlengths(end));
         plot(1:seqlengths(end), yfit, 'r')
+        ylim([0 1.02])
         pause(0.1)
     end
     out = processFidelities;

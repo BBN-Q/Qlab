@@ -149,15 +149,13 @@ sa.peakAmplitude();
                 
                 %We have to set the offset in the waveform
                 % scale I waveform
-                wf = obj.awg.(['chan_' num2str(awg_I_channel)]).waveform;
-                wf.offset = vertex.a;
-                obj.awg.loadWaveform(awg_I_channel-1, wf.prep_vector());
-                obj.awg.(['chan_' num2str(awg_I_channel)]).waveform = wf;
-
-                wf = obj.awg.(['chan_' num2str(awg_Q_channel)]).waveform;
-                wf.offset = vertex.b;
-                obj.awg.loadWaveform(awg_Q_channel-1, wf.prep_vector());
-                obj.awg.(['chan_' num2str(awg_Q_channel)]).waveform = wf;
+                iwf = obj.awg.(['chan_' num2str(awg_I_channel)]).waveform;
+                iwf.offset = vertex.a;
+                obj.awg.loadWaveform(awg_I_channel-1, iwf.prep_vector());
+   
+                qwf = obj.awg.(['chan_' num2str(awg_Q_channel)]).waveform;
+                qwf.offset = vertex.b;
+                obj.awg.loadWaveform(awg_Q_channel-1, qwf.prep_vector());
                 
                 obj.awg.setOffset(awg_I_channel, vertex.a);
                 obj.awg.setOffset(awg_Q_channel, vertex.b);

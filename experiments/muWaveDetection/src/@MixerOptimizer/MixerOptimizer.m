@@ -68,8 +68,8 @@ classdef MixerOptimizer < expManager.expBase
             switch obj.optimMode
                 case 'sweep'
                     obj.setup_SSB_AWG(0,0);
-                    [i_offset, q_offset] = obj.optimize_mixer_offsets_bySweep();
-                    T = obj.optimize_mixer_ampPhase_bySweep(i_offset, q_offset);
+                     [i_offset, q_offset] = obj.optimize_mixer_offsets_bySweep();
+                     T = obj.optimize_mixer_ampPhase_bySweep(i_offset, q_offset);
                 case 'search'
                     [i_offset, q_offset] = obj.optimize_mixer_offsets_bySearch();
                     T = obj.optimize_mixer_ampPhase_bySearch(i_offset, q_offset);
@@ -152,6 +152,7 @@ classdef MixerOptimizer < expManager.expBase
                     waveformLength = 1200;
                     timeStep = 1/samplingRate;
                     tpts = timeStep*(0:(waveformLength-1));
+                    
                     % i waveform
                     iwf = obj.awg.(['chan_' num2str(awg_I_channel)]).waveform;
                     iwf.dataMode = iwf.REAL_DATA;
@@ -159,7 +160,7 @@ classdef MixerOptimizer < expManager.expBase
                     iwf.set_offset(i_offset);
                     obj.awg.loadWaveform(awg_I_channel-1, iwf.prep_vector());
                     obj.awg.setOffset(awg_I_channel, i_offset);
-                    obj.awg.(['chan_' num2str(awg_I_channel)]).waveform = iwf;
+
                     % q waveform
                     qwf = obj.awg.(['chan_' num2str(awg_Q_channel)]).waveform;
                     qwf.dataMode = qwf.REAL_DATA;
@@ -167,14 +168,18 @@ classdef MixerOptimizer < expManager.expBase
                     qwf.set_offset(q_offset);
                     obj.awg.loadWaveform(awg_Q_channel-1, qwf.prep_vector());
                     obj.awg.setOffset(awg_Q_channel, q_offset);
-                    obj.awg.(['chan_' num2str(awg_Q_channel)]).waveform = qwf;
                     
                     obj.awg.triggerSource = 'internal';
                     
                     obj.awg.setLinkListMode(awg_I_channel-1, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
                     obj.awg.setLinkListMode(awg_Q_channel-1, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
+
                     obj.awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
                     obj.awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
+                    
+                    unusedChannels = setdiff(1:4, [awg_I_channel, awg_Q_channel]);
+                    obj.awg.(['chan_' num2str(unusedChannels(1))]).enabled = false;
+                    obj.awg.(['chan_' num2str(unusedChannels(2))]).enabled = false;
             end
             
         end

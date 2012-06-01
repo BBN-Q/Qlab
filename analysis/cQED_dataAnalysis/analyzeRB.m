@@ -40,7 +40,7 @@ function gerror = analyzeRB(ypts)
     fitf = inline('p(1) * (1-p(2)).^n + p(3)','p','n');
     [beta, r, j] = nlinfit(seqlengths, avgFidelity, fitf, [0.5 .01 0.5]);
 
-    yfit = beta(1)*(1-beta(2)).^(1:seqlengths(end)) + beta(3);
+    yfit = fitf(beta, 1:seqlengths(end));
     
     % get confidence intervals
     ci = nlparci(beta,r,j);

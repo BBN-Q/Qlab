@@ -12,3 +12,5 @@ data/*
 cfg/
 cfg/*
 *.cfg
+build/
+dist/

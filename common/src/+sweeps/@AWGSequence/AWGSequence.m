@@ -14,9 +14,12 @@
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 classdef AWGSequence < sweeps.Sweep
 	properties
-        sequencePrefix
-        sequencePostfix
-        awgParams
+        sequenceFile
+        AWGName
+        TekAWG
+        TekParams
+        BBNAPS
+        BBNParams
 	end
 	
 	methods
@@ -28,15 +31,25 @@ classdef AWGSequence < sweeps.Sweep
 			obj.name = 'AWG sequence number';
 			
             if ~sweepPtsOnly
-                % look for an instrument with the name 'TekAWG'
-                if isfield(Instr, SweepParams.AWGName) && isfield(params.InstrParams, SweepParams.AWGName)
-                    obj.Instr = Instr.(SweepParams.AWGName);
-                    obj.sequencePrefix = SweepParams.prefix;
-                    obj.sequencePostfix = SweepParams.postfix;
-                    obj.awgParams = params.InstrParams.(SweepParams.AWGName);
-                    obj.awgParams.seqforce = 1;
-                else
-                    error('Could not find instrument with name: TekAWG');
+                %Switch on which AWG we are looping through
+                obj.AWGName = SweepParams.AWGName;
+                obj.sequenceFile = SweepParams.sequenceFile;
+                switch obj.AWGName
+                    case 'TekAWG'
+                        obj.TekAWG = Instr.TekAWG;
+                        obj.TekParams = params.InstrParams.TekAWG;
+                        obj.TekParams.seqforce = 1;
+                    case 'BBNAPS'
+                        obj.BBNAPS = Instr.BBNAPS;
+                        obj.BBNParams = params.InstrParams.BBNAPS;
+                        obj.BBNParams.seqforce = 1;
+                    case 'Both'
+                        obj.TekAWG = Instr.TekAWG;
+                        obj.TekParams = params.InstrParams.TekAWG;
+                        obj.TekParams.seqforce = 1;
+                        obj.BBNAPS = Instr.BBNAPS;
+                        obj.BBNParams = params.InstrParams.BBNAPS;
+                        obj.BBNParams.seqforce = 1;
                 end
             end
 			
@@ -51,19 +64,44 @@ classdef AWGSequence < sweeps.Sweep
 			
 			obj.plotRange.start = start;
 			obj.plotRange.end = stop;
+            
 		end
 		
 		% channel stepper
 		function step(obj, index)
-            sequenceName = [obj.sequencePrefix num2str(obj.points(index)) obj.sequencePostfix];
-            % verify that the file exists
-            if ~exist(sequenceName, 'file')
-                error('AWGSequence ERROR: Could not find file %s\n', sequenceName);
+            
+            %This assumes the TekAWG is the Master and the slave APS needs
+            %to be restarted. 
+            
+            switch obj.AWGName
+                case 'TekAWG'
+                    step_TekAWG()
+                case 'BBNAPS'
+                    step_BBNAPS()
+                case 'Both'
+                    step_TekAWG()
+                    step_BBNAPS()
             end
             
-            obj.Instr.stop();
-            obj.awgParams.seqfile = sequenceName;
-            obj.Instr.setAll(obj.awgParams);
+            function step_TekAWG()
+                obj.TekAWG.stop()
+                TekFile = fullfile('U:\AWG', [obj.sequenceFile, num2str(obj.points(index)), '.awg']);
+                assert(logical(exist(TekFile, 'file')), 'AWGSequence ERROR: Could not find file %s\n', TekFile)
+                obj.TekParams.seqfile = TekFile;
+                obj.TekAWG.setAll(obj.TekParams);
+            end
+            
+            function step_BBNAPS()
+                obj.BBNAPS.stop()
+                APSFile = fullfile('U:\APS', [obj.sequenceFile, num2str(obj.points(index)), '.h5']);
+                assert(logical(exist(APSFile, 'file')), 'AWGSequence ERROR: Could not find file %s\n', APSFile)
+                obj.BBNParams.seqfile = APSFile;
+                obj.BBNAPS.setAll(obj.BBNParams);
+                obj.BBNAPS.run()
+                isRunning = obj.BBNAPS.waitForAWGtoStartRunning();
+                assert(isRunning, 'Oops! Could not get the APS running.') 
+            end
+            
 		end
 	end
 end

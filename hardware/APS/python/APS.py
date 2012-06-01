@@ -73,7 +73,7 @@ class APS:
     
     VALID_FREQUENCIES = [1200,600,300,100,40]
 
-    CHANNELNAMES = ('ch1','ch2','ch3','ch4')
+    CHANNELNAMES = ('chan_1','chan_2','chan_3','chan_4')
     
     lastSeqFile = ''
     
@@ -360,7 +360,7 @@ class APS:
     
     @samplingRate.setter
     def samplingRate(self, freq):
-        if self.samplingRate ~= freq:
+        if self.samplingRate != freq:
             self.setFrequency(0, freq, testLock=0)
             self.setFrequency(2, freq, testLock=0)
             self.resetStatusCtrl(); # in case setFrequency left the oscillator disabled
@@ -429,8 +429,8 @@ class APS:
         print 'getNewWaveform not yet implemented in Python'
         return None
         
-    def test_PLL_sync(self, DACNum=0, numRetries=5):
-        return self.librarycall('Test Pll Sync: DAC: {0}'.format(DACNum),'APS_TestPllSync', DACNum, numRetries)
+    def test_PLL_sync(self, FGPA=1, numRetries=5):
+        return self.librarycall('Test Pll Sync: DAC: {0}'.format(FGPA),'APS_TestPllSync', FGPA, numRetries)
 
     def read_PLL_status(self):
         #Read FPGA1
@@ -443,7 +443,7 @@ class APS:
     def set_offset(self, ch, offset):
         return self.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*self.MAX_WAVEFORM_VALUE)
         
-    def set_offset(self, ch, delay):
+    def set_trigger_delay(self, ch, delay):
        return self.librarycall('Set channel trigger delay','APS_SetTriggerDelay', ch-1, delay)
         
     def load_sequence_file(self, filename, mode, channelNum=None):
@@ -469,7 +469,7 @@ class APS:
                 
                 bankB = fileData.LLData[channelName]['bankB']
                 if bankB['length'] > 0:
-                    self.loadLinkListELL(ct, bankA['offset'], bankA['count'], bankA['trigger'], bankA['repeat'], bankA['length'], self.BANKB)  
+                    self.loadLinkListELL(ct, bankB['offset'], bankB['count'], bankB['trigger'], bankB['repeat'], bankB['length'], self.BANKB)
                     
                 self.setLinkListRepeat(ct, fileData.LLData[channelName]['repeatCount'])
                             
@@ -499,16 +499,16 @@ class APS:
             self.setFrequency(0, 1200, testLock=0)
             self.setFrequency(2, 1200, testLock=0)
 			
-			# reset status/CTRL in case setFrequency screwed it up
-			self.resetStatusCtrl()
+            # reset status/CTRL in case setFrequency screwed it up
+            self.resetStatusCtrl()
             
             # Test PLL sync on each FPGA
-            status = self.test_PLL_sync(0) or self.test_PLL_sync(2)
+            status = self.test_PLL_sync(1) or self.test_PLL_sync(2)
             if status:
                 raise RuntimeError('APS failed to initialize')
         
-			# align DAC data clock boundaries
-			self.setupDACs()
+            # align DAC data clock boundaries
+            self.setupDACs()
 			
             #Set all channel offsets to zero
             for ch in range(1,5):
@@ -596,10 +596,8 @@ class APS:
         print 'Done with load Waveform'
         self.triggerWaveform(0,1)
         print 'Done with Trigger'
-        
-        
-        
-        
+
+
 if __name__ == '__main__':
     aps = APS(libPathDebug)
     aps.unitTestBasic()

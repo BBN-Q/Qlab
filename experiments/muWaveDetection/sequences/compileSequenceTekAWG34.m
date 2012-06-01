@@ -1,4 +1,4 @@
-function compileSequenceTekAWG34(basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot, plotIdx, seqSuffix)
+function compileSequenceTekAWG34(basename, pg, patseq, calseq, numSteps, nbrRepeats, fixedPt, cycleLength, makePlot, plotIdx, seqSuffix)
 
 if ~exist('plotIdx', 'var')
     plotIdx = 20;
@@ -15,39 +15,39 @@ ChParams = params.TekAWG34;
 
 nbrPatterns = length(patseq)*nbrRepeats;
 calPatterns = length(calseq)*nbrRepeats;
-segments = nbrPatterns*numsteps + calPatterns;
-fprintf('Number of sequences: %i\n', segments);
+numSegments = nbrPatterns*numSteps + calPatterns;
+fprintf('Number of sequences: %i\n', numSegments);
 
 % pre-allocate space
-ch1 = zeros(segments, cycleLength);
+ch1 = zeros(numSegments, cycleLength);
 ch2 = ch1; ch3 = ch1; ch4 = ch1;
 ch1m1 = ch1; ch1m2 = ch1; ch2m1 = ch1; ch2m2 = ch1;
 ch3m1 = ch1; ch3m2 = ch1; ch4m1 = ch1; ch4m2 = ch1;
 
 for n = 1:nbrPatterns;
-    for stepct = 1:numsteps
+    for stepct = 1:numSteps
         [patx paty] = pg.getPatternSeq(patseq{floor((n-1)/nbrRepeats)+1}, stepct, ChParams.delay, fixedPt);
 
-        ch3((n-1)*stepct + stepct, :) = patx + ChParams.offset;
-        ch4((n-1)*stepct + stepct, :) = paty + ChParams.offset;
-        ch4m1((n-1)*stepct + stepct, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
+        ch3((n-1)*numSteps + stepct, :) = patx + ChParams.offset;
+        ch4((n-1)*numSteps + stepct, :) = paty + ChParams.offset;
+        ch4m1((n-1)*numSteps + stepct, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
     end
 end
 
 for n = 1:calPatterns;
     [patx paty] = pg.getPatternSeq(calseq{floor((n-1)/nbrRepeats)+1}, 1, ChParams.delay, fixedPt);
 
-    ch3(nbrPatterns*numsteps + n, :) = patx + ChParams.offset;
-    ch4(nbrPatterns*numsteps + n, :) = paty + ChParams.offset;
-    ch4m1(nbrPatterns*numsteps + n, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
+    ch3(nbrPatterns*numSteps + n, :) = patx + ChParams.offset;
+    ch4(nbrPatterns*numSteps + n, :) = paty + ChParams.offset;
+    ch4m1(nbrPatterns*numSteps + n, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
 end
 
 % trigger at beginning of measurement pulse
 % measure from (6000:9000)
 measLength = 8000;
 measSeq = {pg.pulse('M', 'width', measLength)};
-ch1m1 = repmat(pg.makePattern([], fixedPt-500, ones(100,1), cycleLength), 1, segments)';
-ch1m2 = repmat(int32(pg.getPatternSeq(measSeq, 1, params.measDelay, fixedPt+measLength)), 1, segments)';
+ch1m1 = repmat(pg.makePattern([], fixedPt-500, ones(100,1), cycleLength), 1, numSegments)';
+ch1m2 = repmat(int32(pg.getPatternSeq(measSeq, 1, params.measDelay, fixedPt+measLength)), 1, numSegments)';
 
 
 if makePlot

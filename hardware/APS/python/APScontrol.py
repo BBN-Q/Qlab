@@ -7,7 +7,9 @@ from PySide import QtGui, QtCore, QtUiTools
 
 import APS
 
-libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
+#libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
+libPath = './'
+bitFilePath = './'
 
 class ThreadSignals(QtCore.QObject):
     message = QtCore.Signal(str)
@@ -106,7 +108,7 @@ class APScontrol(object):
             tmpLineEdit.validator().setRange(-1,1,4)
             
         #Create an APS class instance for interacting with the instrument
-        self.aps = APS.APS(libPath)
+        self.aps = APS.APS(libPath, bitFilePath)
 
         #Enumerate the number of connected APS devices and fill out the combo box
         (numAPS, deviceSerials) = self.aps.enumerate()
@@ -146,7 +148,7 @@ class APScontrol(object):
             self.printMessage("Error bitfile not found: %s" % self.bitFileName.text() )
             return
         #If it does then create a thread (loading the bit file takes a few seconds)
-        #Have to keep a reference around otherwise it gets deleted to early        
+        #Have to keep a reference around otherwise it gets deleted too early        
         bitFileLoader = LoadBitFileRunner(self._bitFileName, self.aps, self.ui.deviceIDComboBox.currentIndex())
         bitFileLoader.signals.message.connect(self.printFromThread)
         #Disable the run button while we are programming        
@@ -164,7 +166,7 @@ class APScontrol(object):
         self.threadPool.start(PLLTester)
                 
     def waveformDialog(self, textBox):
-        fileName, fileFilter = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'Matlab Files (*.mat);;Waveform files (*.m);;Sequence files (*.seq)')
+        fileName, fileFilter = QtGui.QFileDialog.getOpenFileName(self.ui, 'Open File', '', 'HDF5 Files (*.h5);;Matlab Files (*.mat)')
         textBox.setText(fileName)
         
     def update_channel_enablers(self):

@@ -500,7 +500,7 @@ int main (int argc, char** argv) {
 		if (strcmp(argv[cnt],"-x") == 0) {
 			//startThread(0,0);
 			//startThread(0,1);
-			sleep(10);
+			Sleep(10);
 		}
 		if (strcmp(argv[cnt],"-w") == 0) {
 			// allow bit file to be passed in otherwise use default

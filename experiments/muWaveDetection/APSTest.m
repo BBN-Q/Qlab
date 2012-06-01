@@ -18,7 +18,8 @@ settings.triggerSource = 'external';
 %settings.triggerSource = 'internal';
 %settings.seqfile = 'U:\APS\Rabi\RabiBBNAPS12.mat';
 %settings.seqfile = 'U:\APS\PiCal\PiCalBBNAPS12.mat';
-settings.seqfile = 'U:\APS\Echo\EchoBBNAPS12.mat';
+%settings.seqfile = 'U:\APS\Echo\EchoBBNAPS12.mat';
+settings.seqfile = 'U:\APS\Ramsey\RamseyBBNAPS12.h5';
 settings.seqforce = true;
 
 awg = deviceDrivers.APS();
@@ -30,8 +31,6 @@ awg.stop();
 forceLoadBitFile = 0;
 awg.init(forceLoadBitFile);
 awg.setAll(settings);
-%awg.setLinkListMode(2, awg.LL_ENABLE, awg.LL_ONESHOT);
-%awg.chan_3.enabled = true;
 awg.run();
 
 keyboard

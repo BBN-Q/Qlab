@@ -1909,7 +1909,7 @@ EXPORT int APS_ReadLinkListStatus(int device, int dac) {
 	return status;
 }
 
-EXPORT int APS_IsRunning(int device)
+EXPORT int APS_IsRunning(int device, int fpga)
 /********************************************************************
  *
  * Function Name : APS_IsRunning()
@@ -1917,12 +1917,13 @@ EXPORT int APS_IsRunning(int device)
  * Description : Returns 1 if APS is running 0 otherwise
  *
  * Inputs : device device id
+ *          fpga (1, 2, or 3 = all dacs)
  *
  * APS is running if any of the channels are enabled
  *
  ********************************************************************/
 {
-	int csrReg1, csrReg2;
+	ULONG csrReg1, csrReg2;
 	int dac_sm_enable;
 	int running;
 	// load current cntrl reg
@@ -1937,11 +1938,21 @@ EXPORT int APS_IsRunning(int device)
 	csrReg2 &= dac_sm_enable;
 	
 	// or each channel together to determine if the aps is running
-	running = ~csrReg1 | ~csrReg2;
-	if (running)
-		running = 1;  // return 1 if running otherwise return 0;
+	switch (fpga) {
+		case 1:
+			running = ~csrReg1;
+			break;
+		case 2:
+			running = ~csrReg2;
+			break;
+		case 3:
+			// pass thru
+		default:
+			running = ~csrReg1 | ~csrReg2;
+			break;
+	}
 	
-	return running;
+	return running & 0x1;
 }
 
 EXPORT int APS_SetChannelOffset(int device, int dac, short offset)

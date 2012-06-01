@@ -39,6 +39,9 @@ switch class(awg)
         awg.(['chan_' num2str(ExpParams.Mixer.Q_channel)]).offset = q_offset;
         awg.operationComplete();
         pause(0.1);
+        awg.run();
+        awg.waitForAWGtoStartRunning();
+
     case 'deviceDrivers.APS'
         awg.stop();
         
@@ -57,7 +60,6 @@ switch class(awg)
         awg.setOffset(ExpParams.Mixer.I_channel, i_offset);
         awg.setOffset(ExpParams.Mixer.Q_channel, q_offset);
 
-        awg.run();
 end
 
 sa.center_frequency = obj.specgen.frequency * 1e9 - fssb;
@@ -69,8 +71,6 @@ sa.video_averaging = 0;
 sa.sweep();
 sa.peakAmplitude();
 
-awg.run();
-awg.waitForAWGtoStartRunning();
 
 fprintf('\nStarting sweep search for optimal amp/phase\n');
 
@@ -120,8 +120,6 @@ drawnow()
 %Finally we rescan the amp factor
 measPowers3 = nan(1, length(ampPts));
 tmpLine = plot(axesHAmp, ampPts/awgAmp, measPowers3, 'g*');
-xlabel('Amplitude Factor')
-ylabel('Peak Power (dBm)');
 
 for ct = 1:length(ampPts);
     obj.setInstrument(ampPts(ct), bestSkew);

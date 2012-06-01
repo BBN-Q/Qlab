@@ -18,10 +18,10 @@ ch1 = zeros(segments, cycleLength);
 ch2 = ch1; ch3 = ch1; ch4 = ch1;
 ch1m1 = ch1; ch1m2 = ch1; ch2m1 = ch1; ch2m2 = ch1;
 ch3m1 = ch1; ch3m2 = ch1; ch4m1 = ch1; ch4m2 = ch1;
-delayDiff = params.TekAWG34.delay - ChParams.delay;
+delayDiff = params.TekAWG12.delay - ChParams.delay;
 
 for n = 1:nbrPatterns;
-    IQ_seq{n} = pg.build(patseq{floor((n-1)/nbrRepeats)+1}, numsteps, ChParams.delay, fixedPt);
+    IQ_seq{n} = pg.build(patseq{floor((n-1)/nbrRepeats)+1}, numsteps, ChParams.delay, fixedPt, false);
     
     %for testing, put a trigger in each sequence
     %IQ_seq{n} = pg.addTrigger(IQ_seq{n}, fixedPt - 100, 100);
@@ -34,8 +34,8 @@ for n = 1:nbrPatterns;
         [patx, paty] = pg.linkListToPattern(IQ_seq{n}, stepct);
         
         % remove difference of delays
-        patx = circshift(patx, delayDiff);
-        paty = circshift(paty, delayDiff);
+        patx = circshift(patx, [0, delayDiff]);
+        paty = circshift(paty, [0, delayDiff]);
         ch3m1((n-1)*stepct + stepct, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
     end
 end
@@ -45,8 +45,8 @@ for n = 1:calPatterns;
     [patx, paty] = pg.linkListToPattern(IQ_seq{nbrPatterns + n}, 1);
 
     % remove difference of delays
-    patx = circshift(patx, delayDiff);
-    paty = circshift(paty, delayDiff);
+    patx = circshift(patx, [0, delayDiff]);
+    paty = circshift(paty, [0, delayDiff]);
     ch3m1(nbrPatterns*numsteps + n, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
 end
 
@@ -54,7 +54,7 @@ end
 % measure from (6000:9000)
 % turn off 'passThru' when creating non-APS pulses
 pg.linkList = 0;
-measLength = 3000;
+measLength = 8000;
 measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = repmat(pg.makePattern([], fixedPt-500, ones(100,1), cycleLength), 1, segments)';
 ch1m2 = repmat(int32(pg.getPatternSeq(measSeq, 1, params.measDelay, fixedPt+measLength)), 1, segments)';
@@ -91,14 +91,13 @@ ch4 = ch4 + params.TekAWG34.offset;
 strippedBasename = basename;
 basename = [basename 'BBNAPS12'];
 % make APS file
-%exportAPSConfig(tempdir, basename, ch56seq);
 exportAPSConfig(tempdir, basename, ch56seq, ch56seq);
 disp('Moving APS file to destination');
 if ~exist(['U:\APS\' strippedBasename '\'], 'dir')
     mkdir(['U:\APS\' strippedBasename '\']);
 end
-pathAPS = ['U:\APS\' strippedBasename '\' basename '.mat'];
-movefile([tempdir basename '.mat'], pathAPS);
+pathAPS = ['U:\APS\' strippedBasename '\' basename '.h5'];
+movefile([tempdir basename '.h5'], pathAPS);
 % make TekAWG file
 options = struct('m21_high', 2.0, 'm41_high', 2.0);
 TekPattern.exportTekSequence(tempdir, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
