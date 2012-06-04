@@ -10,8 +10,8 @@ ploneSite = 'echelon.bbn.com:8080/QLab';
 
 %Save the figure handle as a Matlab figure and .png (I'd really like to
 %move to svg).  See also savedatafig
-saveas(figHandle, [dataObj.path strrep(dataObj.filename, '.out', '.fig')]);
-imageFile = [dataObj.path strrep(dataObj.filename, '.out', '.png')];
+saveas(figHandle, [dataObj.path strrep(dataObj.filename, '.h5', '.fig')]);
+imageFile = [dataObj.path strrep(dataObj.filename, '.h5', '.png')];
 saveas(figHandle, imageFile)
 
 %Default to today's date
