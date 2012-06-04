@@ -17,29 +17,61 @@ params.measDelay = -64;
 
 q1Params = params.q1;
 IQkey1 = qubitMap.q1.IQkey;
-q2Params = params.q1;
+q2Params = params.q2;
 IQkey2 = qubitMap.q2.IQkey;
 
 % if using SSB, set the frequency here
 SSBFreq = 0e6;
 pg1 = PatternGen('dPiAmp', q1Params.piAmp, 'dPiOn2Amp', q1Params.pi2Amp, 'dSigma', q1Params.sigma, 'dPulseType', q1Params.pulseType, 'dDelta', q1Params.delta, 'correctionT', params.(IQkey1).T, 'dBuffer', q1Params.buffer, 'dPulseLength', q1Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey1).linkListMode, 'dmodFrequency',SSBFreq);
-
 pg2 = PatternGen('dPiAmp', q2Params.piAmp, 'dPiOn2Amp', q2Params.pi2Amp, 'dSigma', q2Params.sigma, 'dPulseType', q2Params.pulseType, 'dDelta', q2Params.delta, 'correctionT', params.(IQkey2).T, 'dBuffer', q2Params.buffer, 'dPulseLength', q2Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey2).linkListMode, 'dmodFrequency',SSBFreq);
-
 
 %AWG5014 is qubit control pulses
 
 %Tomography gate sets
 
 %4-Pulse Set (QId, Xp, X90p, Y90p)
-gateSet = [1, 3, 2, 5];
+%gateSet = [1, 3, 2, 5];
 
 %6-Pulse Set ('QId', 'Xp', 'X90p', 'Y90p', 'X90m', 'Y90m')
-% gateSet = [1, 3, 2, 5, 4, 7];
+%gateSet = [1, 3, 2, 5, 4, 7];
 
 %12-Pulse Set
 % gateSet = [1, 3, 6, 9, 21, 19, 23, 18, 17, 20, 24, 22];
 
+% Hey antonio, here's the pulse you want use x and y  pi and +- pi/2 gates
+% 
+% identity
+% 1) I
+% 
+% the three pi rotations
+% 2) x_pi
+% 3) y_pi
+% 4) x_pi y_pi
+% 
+% and then all eight combinations of +- pi/2 where you dont do a pi or
+% the idenitiy
+% 
+% 5) x_pi/2 y_pi/2
+% 6) x_pi/2 y_-pi/2
+% 7) x_-pi/2 y_pi/2
+% 8) x_-pi/2 y_-pi/2
+% 9) y_pi/2 x_pi/2
+% 10) y_pi/2 x_-pi/2
+% 11) y_-pi/2 x_pi/2
+% 12) y_-pi/2 x_-pi/2
+
+gateSet{1} = {'QId'};
+gateSet{2} = {'Xp'};
+gateSet{3} = {'Yp'};
+gateSet{4} = {'Xp','Yp'};
+gateSet{5} = {'X90p','Y90p'};
+gateSet{6} = {'X90p','Y90m'};
+gateSet{7} = {'X90m','Y90p'};
+gateSet{8} = {'X90m','Y90m'};
+gateSet{9} = {'Y90p','X90p'};
+gateSet{10} = {'Y90p','X90m'};
+gateSet{11} = {'Y90m','X90p'};
+gateSet{12} = {'Y90m','X90m'};
 
 numGates = length(gateSet);
 
@@ -52,8 +84,16 @@ gateSetQ1 = cell(numGates,1);
 gateSetQ2 = cell(numGates,1);
 
 for ct = 1:numGates
-    gateSetQ1{ct} = CliffPulse(gateSet(ct), pg1);
-    gateSetQ2{ct} = CliffPulse(gateSet(ct), pg2);
+%     gateSetQ1{ct} = CliffPulse(gateSet(ct), pg1);
+%     gateSetQ2{ct} = CliffPulse(gateSet(ct), pg2);
+    switch length(gateSet{ct})
+        case 1
+            gateSetQ1{ct} = {pg1.pulse(gateSet{ct}{1})};
+            gateSetQ2{ct} = {pg2.pulse(gateSet{ct}{1})};
+        case 2
+            gateSetQ1{ct} = {pg1.pulse(gateSet{ct}{1}), pg1.pulse(gateSet{ct}{2})};
+            gateSetQ2{ct} = {pg2.pulse(gateSet{ct}{1}), pg2.pulse(gateSet{ct}{2})};
+    end            
 end
 
 %calibration sequences
@@ -78,8 +118,10 @@ for prepct1 = 1:numGates
     for prepct2 = 1:numGates
         for measct1 = 1:numGates
             for measct2 = 1:numGates
-                patseq1{indexct} = {gateSetQ1{prepct1}, processPulseQ1, gateSetQ1{measct1}};
-                patseq2{indexct} = {gateSetQ2{prepct2}, processPulseQ2, gateSetQ2{measct2}};
+%                 patseq1{indexct} = {gateSetQ1{prepct1}, processPulseQ1, gateSetQ1{measct1}};
+%                 patseq2{indexct} = {gateSetQ2{prepct2}, processPulseQ2, gateSetQ2{measct2}};
+                patseq1{indexct} = [gateSetQ1{prepct1}, {processPulseQ1}, gateSetQ1{measct1}];
+                patseq2{indexct} = [gateSetQ2{prepct2}, {processPulseQ2}, gateSetQ2{measct2}];
                 indexct = indexct+1;
             end
         end
