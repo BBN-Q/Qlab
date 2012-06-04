@@ -2,7 +2,7 @@ function SingleShotSequence(qubit)
 
 basename = 'SingleShot';
 fixedPt = 2000;
-cycleLength = 24000;
+cycleLength = 12000;
 nbrRepeats = 1;
 
 % load config parameters from files

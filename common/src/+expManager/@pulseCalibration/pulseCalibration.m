@@ -74,7 +74,6 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             
             % set digitizer with the appropriate number of segments (why do
             % we have to set it in so many places)?
-            %obj.inputStructure.InstrParams.scope.averager.nbrSegments = nbrSegments;
             obj.scopeParams.averager.nbrSegments = nbrSegments;
             obj.scope.averager = obj.scopeParams.averager;
 

@@ -38,6 +38,7 @@ classdef singleShotFidelity < expManager.expBase
         scope
         awg
         qubit
+        Loop
     end
     
     methods

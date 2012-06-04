@@ -112,7 +112,7 @@ for loop2_index = 1:obj.Loop.two.steps
             masterAWG.operationComplete();
             
             %Poll the digitizer until it has all the data
-            success = scope.wait_for_acquisition(60);
+            success = scope.wait_for_acquisition(120);
             if success ~= 0
                 error('Failed to acquire waveform.')
             end
