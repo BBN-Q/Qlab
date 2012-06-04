@@ -7,15 +7,15 @@ if ~exist('nbrQubits', 'var')
     nbrQubits = 1;
 end
 
-nbrAnalysisPulses = 6;
-nbrPosPulses  = 6;
-nbrRepeats = 2;
+nbrAnalysisPulses = 12;
+nbrPosPulses  = 12;
+nbrRepeats = 1;
 
 % seperate calibration experiments from tomography data, and reshape
 % accordingly
 
-%The data.abs_Data comes a matrix (numExpsperPulseSeq X numPulseSeqs) with
-%the calibration data the last 2^nbrQubits of each column.  We need to go
+%The data.abs_Data comes a matrix (numPulseSeqs X numExpsperPulseSeq) with
+%the calibration data the last 2^nbrQubits of each row.  We need to go
 %through each column and extract the calibration data and record a map of
 %which measurement operator each experiment corresponds to.
 
@@ -24,14 +24,14 @@ numMeas = nbrPosPulses^nbrQubits;
 
 measMap = zeros(numMeas, numPreps, 'uint8');
 measMat = zeros(numMeas, numPreps, 'double');
-numSeqs = size(data,2);
-expPerSeq = round((size(data,1)-2^nbrQubits*nbrRepeats)/nbrRepeats); 
+numSeqs = size(data,1);
+expPerSeq = round((size(data,2)-2^nbrQubits*nbrRepeats)/nbrRepeats); 
 measOps = cell(numSeqs,1);
 
 idx=1;
-for seqct = 1:size(data,2)
-    cals = data(end-2^nbrQubits*nbrRepeats+1:end,seqct);
-    raws = data(1:end-2^nbrQubits*nbrRepeats,seqct);
+for seqct = 1:size(data,1)
+    cals = data(seqct,end-2^nbrQubits*nbrRepeats+1:end);
+    raws = data(seqct,1:end-2^nbrQubits*nbrRepeats);
     measOps{seqct} = diag(mean(reshape(cals, nbrRepeats, 2^nbrQubits),1));
     measMat(idx:idx+expPerSeq-1) = mean(reshape(raws, nbrRepeats, expPerSeq),1);
     measMap(idx:idx+expPerSeq-1) = seqct;

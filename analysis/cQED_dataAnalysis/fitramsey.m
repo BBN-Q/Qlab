@@ -28,13 +28,14 @@ xdata = xdata(:);
 xdata_finer = xdata_finer(:);
 
 %Use KT estimation to get a guess for the fit
-[freqs,Ts,amps] = KT_estimation(ydata, xdata(2)-xdata(1),3);
+[freqs,Ts,amps] = KT_estimation(ydata, xdata(2)-xdata(1),2);
+[~, biggestC] = max(abs(amps));
 
-fprintf('KT Estimation: T2 = %.1fus; Freq. = %.0fkHz\n', Ts(1)/1e3, freqs(1)*1e6) 
+fprintf('KT Estimation: T2 = %.1fus; Freq. = %.0fkHz\n', Ts(biggestC)/1e3, freqs(biggestC)*1e6);
 
 % model A + B Exp(-t/tau) * cos(w t + phi)
 rabif = inline('p(1) + p(2)*exp(-tdata/p(3)).*cos(p(4)*tdata + p(5))','p','tdata');
-p = [mean(y) abs(amps(1)) Ts(1) 2*pi*freqs(1) 0];
+p = [mean(y) abs(amps(biggestC)) Ts(biggestC) 2*pi*freqs(biggestC) 0];
 [beta,r,j] = nlinfit(xdata, y, rabif, p);
 
 
