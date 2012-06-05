@@ -150,7 +150,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             d.bit_file_path = script_path(1:baseIdx);
             
             % init channel structs and waveform objects
-            channelStruct = @()(struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []));
+            channelStruct = @()(struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false));
             for ct = 1:4
                 d.(d.channelStrs{ct}) = channelStruct();
                 d.(d.channelStrs{ct}).waveform = APSWaveform();
@@ -262,13 +262,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             obj.bit_file_programmed = 1;
         end
         
-        function loadWaveform(aps,id,waveform,offset,validate, useSlowWrite)
+        function loadWaveform(aps, id, waveform, offset, validate, storeWaveform)
             % id - channel (0-3)
             % waveform - int16 format waveform data (-8192, 8191)
             % offset - waveform memory offset (think memory location, not
             %   shift of zero), integer multiple of 4
             % validate - bool, reads back waveform data
-            % useSlowWrite - bool, when false uses a faster buffered write
+            % storeWaveform - bool, when true stores the waveform data in the driver
             %
             % Use of this method disables link list mode. If you intend to
             % use sequence mode, use loadConfig() instead.
@@ -294,12 +294,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 validate = 0;
             end
             
-            if ~exist('useSlowWrite','var')
-                useSlowWrite = 0;
+            if ~exist('storeWaveform','var')
+                storeWaveform = 0;
             end
             
             aps.log(sprintf('Loading Waveform length: %i into DAC%i ', length(waveform),id));
-            val = calllib(aps.library_name,'APS_LoadWaveform', aps.device_id,waveform,length(waveform),offset, id, validate, useSlowWrite);
+            val = calllib(aps.library_name,'APS_LoadWaveform', aps.device_id,waveform,length(waveform),offset, id, validate, storeWaveform);
             if (val < 0)
                 errordlg(sprintf('APS_LoadWaveform returned an error code of: %i\n', val), ...
                     'Programming Error');
@@ -331,17 +331,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 if any(ch == channelDataFor)
                     channelStr = aps.channelStrs{ch};
                     
-                    %Load and scale/shift waveform data
-                    wf = aps.(channelStr).waveform;
-                    wf.set_vector(h5read(filename,['/', channelStr, '/waveformLib']));
-                    wf.set_offset(aps.(channelStr).offset);
-                    wf.set_scale_factor(aps.(channelStr).amplitude);
-                    aps.loadWaveform(ch-1, wf.prep_vector());
-               
-                    % set zero register value
-                    offset = aps.(channelStr).offset;
-                    aps.setOffset(ch, offset);
-                    
+                    %Load waveform data
+                    aps.loadWaveform(ch-1, h5read(filename,['/', channelStr, '/waveformLib']));
                 end
             end
             

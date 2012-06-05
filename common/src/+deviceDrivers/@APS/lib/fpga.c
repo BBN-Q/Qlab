@@ -38,6 +38,7 @@
 #include "fpga.h"
 #include "libaps.h"
 #include "common.h"
+#include "waveform.h"
 
 #ifdef LOG_WRITE_FPGA
 FILE * outfile = 0;
@@ -244,7 +245,7 @@ int dac2fpga(int dac)
 
 EXPORT int APS_LoadWaveform(int device, short *Data,
 		                      int nbrSamples, int offset, int dac,
-		                      int validate, int useSlowWrite)
+		                      int validate, int storeWaveform)
 /********************************************************************
  *
  * Function Name : APS_LoadWaveform()
@@ -393,50 +394,36 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	// clear checksums
 	APS_ResetCheckSum(device, fpga);
 
-	// slow write of data one sample at a time
-	UCHAR dummyRead[2];
-	if (useSlowWrite != 0) {
-		dlog(DEBUG_VERBOSE,"Using slow write\n");
+	// faster buffered write
 
-		for(cnt = 0; cnt < nbrSamples; cnt++) {
-			APS_WriteFPGA(device, dac_write + cnt, Data[cnt], fpga);
-			if (cnt % 4 == 0 && cnt != 0) {
-				// dummy read to slow down the cpld
-				APS_ReadReg(device, APS_FPGA_IO, 1, fpga, dummyRead);
-			}
-		}
-	} else {
+	formated_length	 = ADDRDATASIZE * nbrSamples;  // Expanded length = 1 byte command + 2 bytes addr + 2 bytes data per sample
+	formatedData = (BYTE *) malloc(formated_length);
+	if (!formatedData)
+		return -5;
+	formatedDataIdx = formatedData;
 
-		// faster buffered write
+	// Format data as would be expected for FPGA
+	// This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
 
-		formated_length	 = ADDRDATASIZE * nbrSamples;  // Expanded length = 1 byte command + 2 bytes addr + 2 bytes data per sample
-		formatedData = (BYTE *) malloc(formated_length);
-		if (!formatedData)
-			return -5;
-		formatedDataIdx = formatedData;
-
-		// Format data as would be expected for FPGA
-		// This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
-
-		WORD addr;
-		for(cnt = 0; cnt < nbrSamples; cnt++) {
-			APS_FormatForFPGA(formatedDataIdx, dac_write + cnt, Data[cnt], fpga);
-			formatedDataIdx += ADDRDATASIZE;
-			// address checksum is defined as (bits 0-14: addr, 15: 0)
-			// so, set bit 15 to zero
-			addr = dac_write + cnt;
-			addr &= 0x7FFF;
-			gAddrCheckSum[device][fpga-1] += addr;
-			gCheckSum[device][fpga-1] += Data[cnt];
-		}
-		APS_WriteBlock(device, formated_length, formatedData);
-		free(formatedData);
+	WORD addr;
+	for(cnt = 0; cnt < nbrSamples; cnt++) {
+		APS_FormatForFPGA(formatedDataIdx, dac_write + cnt, Data[cnt], fpga);
+		formatedDataIdx += ADDRDATASIZE;
+		// address checksum is defined as (bits 0-14: addr, 15: 0)
+		// so, set bit 15 to zero
+		addr = dac_write + cnt;
+		addr &= 0x7FFF;
+		gAddrCheckSum[device][fpga-1] += addr;
+		gCheckSum[device][fpga-1] += Data[cnt];
 	}
+	APS_WriteBlock(device, formated_length, formatedData);
+	free(formatedData);
 	
 	// verify the checksum
 	data = APS_CompareCheckSum(device, fpga);
 	if (!data) {
 		dlog(DEBUG_INFO, "APS_LoadWaveform ERROR: Checksum does not match\n");
+		return -6;
 	}
 	
 	// this section does a word by word comparison of the written data
@@ -472,8 +459,19 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	// make sure that link list mode is disabled by default
 	APS_SetLinkListMode(device, 0, 0, dac);
 
-	// lock memory
-	//APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_mem_lock);
+	if (storeWaveform) {
+		// undo scaling and offset before storing
+		int channel = dac+1;
+		float offset = APS_GetWaveformOffset(device, channel) * MAX_WF_VALUE;
+		float scale = APS_GetWaveformScale(device, channel) * MAX_WF_VALUE;
+		float *realData = (float *) malloc(sizeof(float) * nbrSamples);
+		for (cnt = 0; cnt < nbrSamples, cnt++) {
+			realData[cnt] = (data[cnt] - offset) / scale;
+		}
+		APS_SetWaveform(device, channel, realData, nbrSamples);
+		free(realData);
+		WF_SetIsLoaded(wfArray, channel, 1);
+	}
 
 	return 0;
 }
@@ -1957,7 +1955,7 @@ EXPORT int APS_IsRunning(int device, int fpga)
 
 EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
 /* APS_SetChannelOffset
- * Write the zero register for the associated channel
+ * Write the zero register for the associated channel and update the channel waveform
  * offset - signed 14-bit value (-8192, 8192) representing the channel offset
  */
 {
@@ -1991,6 +1989,10 @@ EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
 	dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, offset);
 	
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset, fpga);
+	
+	// update channel waveform, if necessary
+	float realOffset = offset / MAX_WF_VALUE;
+	APS_SetWaveformOffset(device, dac+1, realOffset);
 	return 0;
 }
 

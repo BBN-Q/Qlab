@@ -57,7 +57,7 @@ EXPORT int APS_Close(int device);
 EXPORT int APS_OpenBySerialNum(char * serialNum);
 
 EXPORT int APS_LoadWaveform(int device, short *Data, int ByteCount, int offset, int dac,
-                            int validate, int useSlowWrite);
+                            int validate, int storeWaveform);
 
 EXPORT int APS_LoadLinkList(int device, unsigned short *OffsetData, unsigned short *CountData,
 		                                     unsigned short *TriggerData, unsigned short *RepeatData,
