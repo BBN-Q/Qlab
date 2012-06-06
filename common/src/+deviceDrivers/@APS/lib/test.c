@@ -29,6 +29,7 @@
 **********************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <stdint.h>
@@ -55,6 +56,8 @@
 #include "libaps.h"
 #endif
 
+#include "waveform.h"
+
 #ifdef __CYGWIN__
 	#define GetFunction GetProcAddress
 #else
@@ -63,8 +66,8 @@
 
 #define is64Bit (sizeof(size_t) == 8)
 
-static const int false = 0;
-static const int true = 1;
+#define FALSE 0
+#define TRUE 1
 
 typedef int (*pfunc)();
 
@@ -195,7 +198,7 @@ int openDac(HANDLE hdll, int dac) {
 
 	printf("Opening Dac %i: ", dac);
 	fflush(stdout);
-	err = open(dac,true);
+	err = open(dac,TRUE);
 	if (err < 0)  {
 		printf("Error Opened Return %i\n", err);
 		return -1;
@@ -203,9 +206,6 @@ int openDac(HANDLE hdll, int dac) {
 	printf("Done\n");
 	return 0;
 }
-
-enum PULSE_TYPE {FLOAT_TYPE, INT_TYPE};
-
 
 
 // integerVersion
@@ -287,8 +287,8 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 		printf("Storing Waveform\n");
 
 		for( cnt = 0; cnt < 4; cnt++)
-			load(0, pulseMem, pulseLen, 0, cnt, false, true);
-			//setWaveform(0, cnt, pulseMem, waveformLen);
+			load(0, pulseMem, pulseLen, 0, cnt, FALSE, TRUE);
+			//setWaveform(0, cnt, pulseMem, waveformLen, INT_TYPE);
 
 		printf("Loading Waveform\n");
 		//for( cnt = 0; cnt < 4; cnt++)
@@ -350,7 +350,7 @@ void doToggleTest(HANDLE hdll, char * bitFile, int programTest) {
 	for (cnt = 0 ; cnt < 4; cnt++ ) {
 		printf("Loading Waveform: %i ", cnt);
 		fflush(stdout);
-		ret = load(0, pulseMem, waveformLen,0, cnt, false, false);
+		ret = load(0, pulseMem, waveformLen,0, cnt, FALSE, FALSE);
 
 		if (ret < 0)
 			printf("Error: %i\n",ret);

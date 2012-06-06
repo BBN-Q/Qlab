@@ -39,7 +39,7 @@
 
 #include <stdio.h>
 
-extern gRegRead; // external global reg read value from common.c
+extern gRegRead; // external global reg read value from fpga.c
 
 #ifdef WIN32
 #include <windows.h>
@@ -244,7 +244,7 @@ EXPORT int APS_Open(int device, int force)
 		// clear waveform cache
 		APS_ClearAllWaveforms(device);
 		// load cached data
-		APS_LoadWaveformCache(device);
+		APS_LoadWaveformCache(device, "");
 
 	} else {
 #ifdef DEBUG
@@ -498,7 +498,7 @@ EXPORT int APS_Close(int device)
 
 	// save and release waveform cache memory
 	if (waveforms[device]) {
-		APS_SaveWaveformCache(device);
+		APS_SaveWaveformCache(device, "");
 		WF_Destroy(waveforms[device]);
 		waveforms[device] = 0;  // clear pointer to waveform library for device
 	}
@@ -1823,22 +1823,23 @@ EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int ma
 	//dlog(DEBUG_VERBOSE,"HASH %s\n",(char*) hashStr);
 }
 
-// store waveform float data in range (-1.0, 1.0)
-EXPORT int APS_SetWaveform(int device, int channel, float * data, int length) {
+// store waveform data in range (-1.0, 1.0)
+EXPORT int APS_SetWaveform(int device, int channel, void * data, int length, int pulseType) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
 	if (!wfArray) return -1;
 
-	return WF_SetWaveform(wfArray, channel, data, length);
-}
-
-// store waveform int16 data in range (-8191, 8192)
-EXPORT int APS_SetWaveform(int device, int channel, short * data, int length) {
-	waveform_t * wfArray;
-	wfArray = waveforms[device];
-	if (!wfArray) return -1;
-
-	return WF_SetWaveform(wfArray, channel, data, length);
+	switch (pulseType) {
+	case FLOAT_TYPE:
+		return WF_SetWaveform_Float(wfArray, channel, (float *) data, length);
+		break;
+	case INT_TYPE:
+		return WF_SetWaveform(wfArray, channel, (short *) data, length);
+		break;
+	default:
+		dlog(DEBUG_INFO, "APS_SetWaveform ERROR: Unknown pulsetype %d\n", pulseType);
+		return -2;
+	}
 }
 
 // clear stored waveform data
@@ -1941,7 +1942,6 @@ EXPORT int APS_LoadStoredLinkLists(int device, int channel) {
 
 	return 0;
 }
-*/
 
 EXPORT int APS_SetLinkList(int device, int channel,
 		unsigned short *OffsetData, unsigned short *CountData,
@@ -1975,7 +1975,7 @@ EXPORT int APS_SaveWaveformCache(int device, char * filename) {
 
 	if (filename == NULL) {
 		APS_GetSerialNum(device, serialNumber, 100);
-		snprintf(altFilename,strLen,"aps_%i_cache.dat", serialNumber);
+		snprintf(altFilename,strLen,"aps_%s_cache.dat", serialNumber);
 		filename = altFilename;
 	}
 
@@ -1989,10 +1989,11 @@ EXPORT int APS_SaveWaveformCache(int device, char * filename) {
 EXPORT int APS_LoadWaveformCache(int device, char * filename) {
 	const int strLen = 100;
 	char altFilename[strLen];
+	char serialNumber[strLen];
 
 	if (filename == NULL) {
 		APS_GetSerialNum(device, serialNumber, 100);
-		snprintf(altFilename,strLen,"aps_%i_cache.dat", serialNumber);
+		snprintf(altFilename,strLen,"aps_%s_cache.dat", serialNumber);
 		filename = altFilename;
 	}
 

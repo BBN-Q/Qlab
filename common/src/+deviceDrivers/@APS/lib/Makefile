@@ -115,4 +115,6 @@ testLocal64: test.c
 	
 clean:
 	rm -f *.o *.dylib *.dll test *.exe *.a
-	
+
+tidy:
+	rm -f *.o *.exe *.a

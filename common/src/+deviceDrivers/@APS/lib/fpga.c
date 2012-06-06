@@ -33,6 +33,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include "aps.h"
 #include "fpga.h"
@@ -48,6 +49,8 @@ int gBitFileVersion = 0; // set default version to 0 as all valid version number
 int gRegRead =  FPGA_ADDR_REGREAD; // register read address to or
 WORD gCheckSum[MAX_APS_DEVICES][2] = {0}; // checksum for data written to each fpga
 WORD gAddrCheckSum[MAX_APS_DEVICES][2] = {0}; // checksum for addresses written to each fpga
+
+extern waveform_t * waveforms[]; // from libaps.c
 
 int APS_FormatForFPGA(BYTE * buffer, ULONG addr, ULONG data, UCHAR fpga)
 {
@@ -297,11 +300,11 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 		dlog(DEBUG_INFO,"[WARNING] Waveform data needs to be padded");
 	}
 	
-	uint16_t *scaledData;
+	int16_t *scaledData;
+	int channel = dac + 1;
 	if (storeWaveform) {
 		// use APS_SetWaveform() to scale and shift data
-		int channel = dac + 1;
-		APS_SetWaveform(device, channel, Data, nbrSamples);
+		APS_SetWaveform(device, channel, Data, nbrSamples, INT_TYPE);
 		scaledData = WF_GetDataPtr(waveforms[device], channel);
 	} else {
 		scaledData = Data;
@@ -359,7 +362,7 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 
 	// check to make sure that waveform will fit
 	if ((memory_offset + nbrSamples) > max_wf_length) {
-		dlog(DEBUG_INFO, "APS_LoadWaveform ERROR: Waveform has too many samples\n")
+		dlog(DEBUG_INFO, "APS_LoadWaveform ERROR: Waveform has too many samples\n");
 		return -4;
 	}
 
@@ -375,7 +378,8 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 		dlog(DEBUG_VERBOSE,"Initializing %s (%i) Offset and Size\n", dac_type, dac);
 	}
 
-	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_offset, offset, fpga);
+	// write waveform mode parameters (memory offset and length)
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_offset, memory_offset, fpga);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_size, wf_length, fpga);
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
@@ -460,7 +464,7 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	
 	// mark the stored waveform as 'loaded'
 	if (storeWaveform) {
-		WF_SetIsLoaded(wfArray, channel, 1);
+		WF_SetIsLoaded(waveforms[device], channel, 1);
 	}
 
 	return 0;

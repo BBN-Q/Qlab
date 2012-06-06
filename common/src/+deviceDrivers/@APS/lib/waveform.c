@@ -60,12 +60,12 @@ int WF_SetWaveform(waveform_t * wfArray, int channel, short * data, int length) 
 	for (cnt = 0; cnt < length; cnt++) {
 		fData[cnt] = data[cnt] * MAX_WF_VALUE;
 	}
-	out = WF_SetWaveform(wfArray, channel, fData, length);
+	out = WF_SetWaveform_Float(wfArray, channel, fData, length);
 	free(fData);
 }
 
 // float data input
-int WF_SetWaveform(waveform_t * wfArray, int channel, float * data, int length) {
+int WF_SetWaveform_Float(waveform_t * wfArray, int channel, float * data, int length) {
   if (!wfArray) return 0;
 
   dlog(DEBUG_VERBOSE,"SetWaveform channel %i length %i\n", channel, length);
@@ -180,7 +180,7 @@ float WF_GetScale(waveform_t * wfArray, int channel) {
   return wfArray[channel].scale;
 }
 
-uint16_t * WF_GetDataPtr(waveform_t * wfArray, int channel) {
+int16_t * WF_GetDataPtr(waveform_t * wfArray, int channel) {
   if (!wfArray) return 0;
 
   return wfArray[channel].pFormatedData;
@@ -213,7 +213,7 @@ void WF_Prep(waveform_t * wfArray, int channel) {
   float scale = wfArray[channel].scale * MAX_WF_VALUE;
   float offset = wfArray[channel].offset * MAX_WF_VALUE;
 
-  printf("Prep scale = %f offset = %i\n", scale, offset);
+  printf("Prep scale = %f offset = %f\n", scale, offset);
 
   for (cnt = 0; cnt < wfArray[channel].allocatedLength; cnt++) {
     prepValue = wfArray[channel].pData[cnt];
