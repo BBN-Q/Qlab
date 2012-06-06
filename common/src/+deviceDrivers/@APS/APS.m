@@ -184,12 +184,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % struct
             obj.init();
 
-            % read in channel settings so we know how to scale waveform
-            % data
+            % set amplitude and offset before loading waveform data so that we
+ 			% only have to load it once.
+			obj.librarycall('Clearing waveform cache', 'APS_ClearAllWaveforms');
             for ct = 1:4
                 ch = obj.channelStrs{ct};
-                obj.(ch).amplitude = settings.(ch).amplitude;
-                obj.(ch).offset = settings.(ch).offset;
+				obj.setAmplitude(channel, settings.(ch).amplitude);
+				obj.setOffset(channel, settings.(ch).offset);
                 obj.(ch).enabled = settings.(ch).enabled;
             end
             settings = rmfield(settings, obj.channelStrs);
@@ -257,7 +258,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
 				obj.librarycall('Clearing waveform cache', 'APS_ClearAllWaveforms');
                 
                 % set all channel offsets to zero
-                for ch=1:4, obj.setOffset(ch, 0); end
+                %for ch=1:4, obj.setOffset(ch, 0); end
                 
 				% update LED mode to show run state
                 obj.setLEDMode(3, obj.LEDMODE_RUNNING);
@@ -299,7 +300,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             end
             
             if ~exist('storeWaveform','var')
-                storeWaveform = 0;
+                storeWaveform = 1;
             end
             
             aps.log(sprintf('Loading Waveform length: %i into DAC%i ', length(waveform),id));
@@ -508,6 +509,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             val = aps.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*aps.MAX_WAVEFORM_VALUE);
             aps.(['chan_' num2str(ch)]).offset = offset;
         end
+
+		function val = setAmplitude(aps, ch, amplitude)
+			% sets the scale factor of the channel
+			val = aps.librarycall('Set channel scale', 'APS_SetWaveformScale', ch-1, amplitude);
+			aps.(['chan_' num2str(ch)]).amplitude = amplitude;
+		end
 
 		function val = setTriggerDelay(aps, ch, delay)
             % sets delay of channel marker output WRT the analog output in

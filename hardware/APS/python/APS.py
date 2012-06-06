@@ -252,7 +252,7 @@ class APS:
         
         return val
         
-    def loadWaveform(self, ID, waveform, offset = 0, validate = 0, useSlowWrite = 0):
+    def loadWaveform(self, ID, waveform, offset = 0, validate = 0, storeWaveform = 1):
         if not self.is_open and not self.mock_aps:
             print 'APS unit is not open'
             return -1
@@ -264,7 +264,7 @@ class APS:
         waveform_p = waveform.ctypes.data_as(c_int_p) 
         
         val = self.lib.APS_LoadWaveform(self.device_id, waveform_p, len(waveform), 
-                                        offset, ID, validate, useSlowWrite)
+                                        offset, ID, validate, storeWaveform)
         print 'Done'
         if val < 0:
             print 'APS_LoadWaveform returned an error code of:', val
@@ -442,6 +442,9 @@ class APS:
         
     def set_offset(self, ch, offset):
         return self.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*self.MAX_WAVEFORM_VALUE)
+
+    def set_amplitude(self, ch, amplitude):
+        return self.librarycall('Set channel scale', 'APS_SetWaveformScale', ch-1, amplitude)
         
     def set_trigger_delay(self, ch, delay):
        return self.librarycall('Set channel trigger delay','APS_SetTriggerDelay', ch-1, delay)
@@ -461,7 +464,7 @@ class APS:
             
             #Load the WF vectors and LLs into memory
             for ct,channelName in enumerate(self.CHANNELNAMES):
-                tmpWF = fileData.get_vector(scale_factor=self.channelSettings[channelName]['amplitude'], offset=self.channelSettings[channelName]['offset'], channelName=channelName)
+                tmpWF = fileData.get_vector(scale_factor=1.0, offset=0, channelName=channelName)
                 self.loadWaveform(ct, tmpWF)
 
                 bankA = fileData.LLData[channelName]['bankA']
@@ -478,7 +481,7 @@ class APS:
             if filename != '':
                 fileData = APSMatlabFile.APSMatlabFile(mode, filename)
                 channelName = self.CHANNELNAMES[channelNum]
-                tmpWF = fileData.get_vector(scale_factor=self.channelSettings[channelName]['amplitude'], offset=self.channelSettings[channelName]['offset'])
+                tmpWF = fileData.get_vector(scale_factor=1.0, offset=0)
                 self.loadWaveform(channelNum, tmpWF)
         
 
@@ -514,8 +517,8 @@ class APS:
 			self.librarycall('', 'APS_ClearAllWaveforms')
 			
             #Set all channel offsets to zero
-            for ch in range(1,5):
-                self.set_offset(ch, 0)
+            #for ch in range(1,5):
+            #    self.set_offset(ch, 0)
                 
     def setAll(self, settings):
         '''
@@ -525,7 +528,12 @@ class APS:
         for channelName, tmpChan in self.channelSettings.items():
             for channelSetting in tmpChan.keys():
                 self.channelSettings[channelName][channelSetting] = settings[channelName][channelSetting]
-            
+
+        # clear driver waveform cache
+        self.librarycall('Clearing waveform cache', 'APS_ClearAllWaveforms')
+        for ch, channelName in enumerate(self.CHANNELNAMES):
+            self.set_amplitude(ch, self.channelSettings[channelName]['amplitude'])
+            self.set_offset(ch, self.channelSettings[channelName]['offset'])
         
         #Now load the pulse sequence or waveform files
         if settings['fourChannelMode']:
