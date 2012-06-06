@@ -216,7 +216,7 @@ void * buildPulseMemory(int waveformLen , int pulseLen, int pulseType) {
 	float * pulseMemFloat;
 	unsigned short * pulseMemInt;
 	if (pulseType == INT_TYPE) {
-		pulseMemInt = malloc(waveformLen * sizeof(unsigned short));
+		pulseMemInt = malloc(waveformLen * sizeof(short));
 		pulseMem = pulseMemInt;
 	} else {
 		pulseMemFloat = malloc(waveformLen * sizeof(float));
@@ -242,7 +242,7 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 	int waveformLen = 1000;
 	int pulseLen = 500;
 
-	float * pulseMem;
+	short * pulseMem;
 
 	int cnt;
 
@@ -252,6 +252,7 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 	pfunc setWaveformOffset, getWaveformOffset;
 	pfunc setWaveformScale,  getWaveformScale;
 	pfunc loadStored, loadAll;
+	pfunc load;
 	pfunc saveCache, loadCache;
 
 	pfunc trigger;
@@ -264,6 +265,7 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 	getWaveformOffset = (pfunc) GetFunction(hdll, "APS_GetWaveformOffset");
 	setWaveformScale  = (pfunc) GetFunction(hdll, "APS_SetWaveformScale");
 	getWaveformScale  = (pfunc) GetFunction(hdll, "APS_GetWaveformScale");
+	load              = (pfunc) GetFunction(hdll,"APS_LoadWaveform");
 	loadStored        = (pfunc) GetFunction(hdll, "APS_LoadStoredWaveform");
 	loadAll           = (pfunc) GetFunction(hdll, "APS_LoadAllWaveforms");
 	saveCache         = (pfunc) GetFunction(hdll, "APS_SaveWaveformCache");
@@ -274,7 +276,7 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 
 #endif
 
-	pulseMem = (float *) buildPulseMemory(waveformLen , pulseLen, FLOAT_TYPE);
+	pulseMem = (short *) buildPulseMemory(waveformLen, pulseLen, INT_TYPE);
 	if (pulseMem == 0) return;
 
 	if (openDac(hdll,0) < 0) return;
@@ -285,7 +287,8 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 		printf("Storing Waveform\n");
 
 		for( cnt = 0; cnt < 4; cnt++)
-			setWaveform(0, cnt, pulseMem, waveformLen);
+			load(0, pulseMem, pulseLen, 0, cnt, false, true);
+			//setWaveform(0, cnt, pulseMem, waveformLen);
 
 		printf("Loading Waveform\n");
 		//for( cnt = 0; cnt < 4; cnt++)
@@ -336,7 +339,7 @@ void doToggleTest(HANDLE hdll, char * bitFile, int programTest) {
 	close        = (pfunc) GetFunction(hdll,"APS_Close");
 #endif
 
-	pulseMem = (unsigned short *) buildPulseMemory(waveformLen , pulseLen,INT_TYPE);
+	pulseMem = (unsigned short *) buildPulseMemory(waveformLen, pulseLen, INT_TYPE);
 	if (pulseMem == 0) return;
 
 	if (openDac(hdll,0) < 0) return;

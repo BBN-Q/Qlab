@@ -241,12 +241,10 @@ EXPORT int APS_Open(int device, int force)
 			dlog(DEBUG_INFO,"Set Timeouts Failed %i\n", status);
 		}
 
-		// destroy old memory if it exists
-		if (waveforms[device]) {
-			WF_Destroy(waveforms[device]);
-		}
-		// allocate new memory
-		waveforms[device] = WF_Init();
+		// clear waveform cache
+		APS_ClearAllWaveforms(device);
+		// load cached data
+		APS_LoadWaveformCache(device);
 
 	} else {
 #ifdef DEBUG
@@ -498,8 +496,12 @@ EXPORT int APS_Close(int device)
 	DLL_FT_Close(usb_handles[device]);
 	usb_handles[device] = 0;
 
-	WF_Destroy(waveforms[device]);
-	waveforms[device] = 0;  // clear pointer to waveform library for device
+	// save and release waveform cache memory
+	if (waveforms[device]) {
+		APS_SaveWaveformCache(device);
+		WF_Destroy(waveforms[device]);
+		waveforms[device] = 0;  // clear pointer to waveform library for device
+	}
 
 	return 0;
 }
@@ -1821,13 +1823,31 @@ EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int ma
 	//dlog(DEBUG_VERBOSE,"HASH %s\n",(char*) hashStr);
 }
 
-
+// store waveform float data in range (-1.0, 1.0)
 EXPORT int APS_SetWaveform(int device, int channel, float * data, int length) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
 	if (!wfArray) return -1;
 
 	return WF_SetWaveform(wfArray, channel, data, length);
+}
+
+// store waveform int16 data in range (-8191, 8192)
+EXPORT int APS_SetWaveform(int device, int channel, short * data, int length) {
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+
+	return WF_SetWaveform(wfArray, channel, data, length);
+}
+
+// clear stored waveform data
+EXPORT int APS_ClearAllWaveforms(int device) {
+	if (waveforms[device]) {
+		WF_Destroy(waveforms[device]);
+		// allocate new memory
+		waveforms[device] = WF_Init();
+	}
 }
 
 EXPORT int APS_SetWaveformOffset(int device, int channel, float offset) {
@@ -1873,7 +1893,7 @@ EXPORT float APS_GetWaveformScale(int device, int channel){
 	return WF_GetScale(wfArray,channel);
 }
 
-
+// the following three methods are just for DEBUG/TEST
 EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
@@ -1889,7 +1909,7 @@ EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 	}
 	return 0;
 }
-
+// for DEBUG/TEST
 EXPORT int APS_LoadAllWaveforms(int device) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
@@ -1901,7 +1921,7 @@ EXPORT int APS_LoadAllWaveforms(int device) {
 	}
 	return 0;
 }
-
+// for DEBUG/TEST
 EXPORT int APS_LoadStoredLinkLists(int device, int channel) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
@@ -1921,6 +1941,7 @@ EXPORT int APS_LoadStoredLinkLists(int device, int channel) {
 
 	return 0;
 }
+*/
 
 EXPORT int APS_SetLinkList(int device, int channel,
 		unsigned short *OffsetData, unsigned short *CountData,

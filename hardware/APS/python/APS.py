@@ -509,6 +509,9 @@ class APS:
         
             # align DAC data clock boundaries
             self.setupDACs()
+            
+            # clear waveform caches
+			self.librarycall('', 'APS_ClearAllWaveforms')
 			
             #Set all channel offsets to zero
             for ch in range(1,5):

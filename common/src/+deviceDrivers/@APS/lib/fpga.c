@@ -244,7 +244,7 @@ int dac2fpga(int dac)
 }
 
 EXPORT int APS_LoadWaveform(int device, short *Data,
-		                      int nbrSamples, int offset, int dac,
+		                      int nbrSamples, int memory_offset, int dac,
 		                      int validate, int storeWaveform)
 /********************************************************************
  *
@@ -283,12 +283,7 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	BYTE * formatedData;
 	BYTE * formatedDataIdx;
 
-	if(gBitFileVersion < VERSION_ELL) {
-		max_wf_length = K4;
-	} else {
-		max_wf_length = K8;
-	}
-
+	max_wf_length = K8;
 	if(nbrSamples > max_wf_length ) {
 		dlog(DEBUG_INFO,"[WARNING] Waveform length > Maximum. Truncating waveform");
 		nbrSamples = max_wf_length;
@@ -300,6 +295,16 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 
 	if (nbrSamples % WF_MODULUS != 0) {
 		dlog(DEBUG_INFO,"[WARNING] Waveform data needs to be padded");
+	}
+	
+	uint16_t *scaledData;
+	if (storeWaveform) {
+		// use APS_SetWaveform() to scale and shift data
+		int channel = dac + 1;
+		APS_SetWaveform(device, channel, Data, nbrSamples);
+		scaledData = WF_GetDataPtr(waveforms[device], channel);
+	} else {
+		scaledData = Data;
 	}
 
 	fpga = dac2fpga(dac);
@@ -347,12 +352,14 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 
 	dac_read = gRegRead | dac_write;
 
-	if (offset < 0 || offset > max_wf_length) {
+	if (memory_offset < 0 || memory_offset > max_wf_length) {
+		dlog(DEBUG_INFO, "APS_LoadWaveform ERROR: Waveform memory offset out of range\n");
 		return -3;
 	}
 
 	// check to make sure that waveform will fit
-	if ((offset + nbrSamples) > max_wf_length) {
+	if ((memory_offset + nbrSamples) > max_wf_length) {
+		dlog(DEBUG_INFO, "APS_LoadWaveform ERROR: Waveform has too many samples\n")
 		return -4;
 	}
 
@@ -382,12 +389,8 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 
 	int error = 0;
 
-	#ifdef LOG_WAVEFORM
-	logwaveform = fopen("waveform.out", "w");
-	#endif
-
 	// Adjust start of writing by offset
-	dac_write += offset;
+	dac_write += memory_offset;
 
 	#define ADDRDATASIZE 5
 	
@@ -407,14 +410,14 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 
 	WORD addr;
 	for(cnt = 0; cnt < nbrSamples; cnt++) {
-		APS_FormatForFPGA(formatedDataIdx, dac_write + cnt, Data[cnt], fpga);
+		APS_FormatForFPGA(formatedDataIdx, dac_write + cnt, scaledData[cnt], fpga);
 		formatedDataIdx += ADDRDATASIZE;
 		// address checksum is defined as (bits 0-14: addr, 15: 0)
 		// so, set bit 15 to zero
 		addr = dac_write + cnt;
 		addr &= 0x7FFF;
 		gAddrCheckSum[device][fpga-1] += addr;
-		gCheckSum[device][fpga-1] += Data[cnt];
+		gCheckSum[device][fpga-1] += scaledData[cnt];
 	}
 	APS_WriteBlock(device, formated_length, formatedData);
 	free(formatedData);
@@ -434,7 +437,7 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 			data = APS_ReadFPGA(device, dac_read + cnt, fpga);
 			// only lower word is valid
 			data &= 0xFFFF;
-			if (data != (Data[cnt] & 0xFFFF)) {
+			if (data != (scaledData[cnt] & 0xFFFF)) {
 				dlog(DEBUG_INFO,"Error reading back memory: cnt = %i expected 0x%x read 0x%x\n", cnt, Data[cnt] & 0xFFFF, data);
 				error = 1;
 			}
@@ -447,10 +450,6 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
   
 	dlog(DEBUG_VERBOSE,"LoadWaveform Done\n");
 
-	#ifdef LOG_WAVEFORM
-	fclose(logwaveform);
-	#endif
-
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
 	    data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
 	    dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
@@ -458,18 +457,9 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 
 	// make sure that link list mode is disabled by default
 	APS_SetLinkListMode(device, 0, 0, dac);
-
+	
+	// mark the stored waveform as 'loaded'
 	if (storeWaveform) {
-		// undo scaling and offset before storing
-		int channel = dac+1;
-		float offset = APS_GetWaveformOffset(device, channel) * MAX_WF_VALUE;
-		float scale = APS_GetWaveformScale(device, channel) * MAX_WF_VALUE;
-		float *realData = (float *) malloc(sizeof(float) * nbrSamples);
-		for (cnt = 0; cnt < nbrSamples, cnt++) {
-			realData[cnt] = (data[cnt] - offset) / scale;
-		}
-		APS_SetWaveform(device, channel, realData, nbrSamples);
-		free(realData);
 		WF_SetIsLoaded(wfArray, channel, 1);
 	}
 

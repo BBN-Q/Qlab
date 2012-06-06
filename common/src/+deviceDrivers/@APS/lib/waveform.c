@@ -50,6 +50,21 @@ void WF_Destroy(waveform_t * wfArray) {
   return;
 }
 
+// 16-bit int data input
+int WF_SetWaveform(waveform_t * wfArray, int channel, short * data, int length) {
+	float *fData;
+	int cnt;
+	int out;
+	fData = (float *) malloc(length * sizeof(float));
+	
+	for (cnt = 0; cnt < length; cnt++) {
+		fData[cnt] = data[cnt] * MAX_WF_VALUE;
+	}
+	out = WF_SetWaveform(wfArray, channel, fData, length);
+	free(fData);
+}
+
+// float data input
 int WF_SetWaveform(waveform_t * wfArray, int channel, float * data, int length) {
   if (!wfArray) return 0;
 

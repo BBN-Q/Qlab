@@ -252,10 +252,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 
                 % align DAC data clock boundaries
                 obj.setupDACs();
+
+				% clear waveform caches
+				obj.librarycall('Clearing waveform cache', 'APS_ClearAllWaveforms');
                 
                 % set all channel offsets to zero
                 for ch=1:4, obj.setOffset(ch, 0); end
                 
+				% update LED mode to show run state
                 obj.setLEDMode(3, obj.LEDMODE_RUNNING);
             end
             

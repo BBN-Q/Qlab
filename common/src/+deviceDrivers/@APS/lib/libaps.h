@@ -56,7 +56,7 @@ EXPORT int APS_OpenByID(int device);
 EXPORT int APS_Close(int device);
 EXPORT int APS_OpenBySerialNum(char * serialNum);
 
-EXPORT int APS_LoadWaveform(int device, short *Data, int ByteCount, int offset, int dac,
+EXPORT int APS_LoadWaveform(int device, short *Data, int ByteCount, int memory_offset, int dac,
                             int validate, int storeWaveform);
 
 EXPORT int APS_LoadLinkList(int device, unsigned short *OffsetData, unsigned short *CountData,
@@ -119,12 +119,14 @@ EXPORT int APS_RegWriteTest(int device, int addr);
 // Waveform related functions
 
 EXPORT int APS_SetWaveform(int device, int channel, float * data, int length);
+EXPORT int APS_SetWaveform(int device, int channel, short * data, int length);
+EXPORT int APS_ClearAllWaveforms(int device);
 EXPORT int APS_SetWaveformOffset(int device, int channel, float offset);
 EXPORT float APS_GetWaveformOffset(int device, int channel);
 EXPORT int APS_SetWaveformScale(int device, int channel, float scale);
 EXPORT float APS_GetWaveformScale(int device, int channel);
 EXPORT int APS_LoadStoredWaveform(int device, int channel);
-EXPORT int   APS_LoadAllWaveforms(int device);
+EXPORT int APS_LoadAllWaveforms(int device);
 EXPORT int APS_SetLinkList(int device, int channel,
                            unsigned short *OffsetData, unsigned short *CountData,
                            unsigned short *TriggerData, unsigned short *RepeatData,
