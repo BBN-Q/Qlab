@@ -33,11 +33,13 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include "aps.h"
 #include "fpga.h"
 #include "libaps.h"
 #include "common.h"
+#include "waveform.h"
 
 #ifdef LOG_WRITE_FPGA
 FILE * outfile = 0;
@@ -47,6 +49,8 @@ int gBitFileVersion = 0; // set default version to 0 as all valid version number
 int gRegRead =  FPGA_ADDR_REGREAD; // register read address to or
 WORD gCheckSum[MAX_APS_DEVICES][2] = {0}; // checksum for data written to each fpga
 WORD gAddrCheckSum[MAX_APS_DEVICES][2] = {0}; // checksum for addresses written to each fpga
+
+extern waveform_t * waveforms[]; // from libaps.c
 
 int APS_FormatForFPGA(BYTE * buffer, ULONG addr, ULONG data, UCHAR fpga)
 {
@@ -115,7 +119,7 @@ EXPORT int APS_WriteFPGA(int device, ULONG addr, ULONG data, UCHAR fpga)
 
 	dlog(DEBUG_VERBOSE2,"Writing Addr 0x%x Data 0x%x\n", addr, data);
 
-	APS_WriteReg(device, APS_FPGA_IO, 2, fpga, outdata);
+	return APS_WriteReg(device, APS_FPGA_IO, 2, fpga, outdata);
 }
 
 EXPORT int APS_CompareCheckSum(int device, int fpga) {
@@ -141,6 +145,7 @@ EXPORT UINT APS_ResetCheckSum(int device, int fpga) {
 	APS_WriteFPGA(device, FPGA_OFF_ADDR_CHECKSUM, 0, fpga);
 	gCheckSum[device][fpga-1] = 0;
 	gAddrCheckSum[device][fpga-1] = 0;
+	return 0;
 }
 
 EXPORT UINT APS_ResetAllCheckSum() {
@@ -243,8 +248,8 @@ int dac2fpga(int dac)
 }
 
 EXPORT int APS_LoadWaveform(int device, short *Data,
-		                      int nbrSamples, int offset, int dac,
-		                      int validate, int useSlowWrite)
+		                      int nbrSamples, int memory_offset, int dac,
+		                      int validate, int storeWaveform)
 /********************************************************************
  *
  * Function Name : APS_LoadWaveform()
@@ -282,12 +287,7 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	BYTE * formatedData;
 	BYTE * formatedDataIdx;
 
-	if(gBitFileVersion < VERSION_ELL) {
-		max_wf_length = K4;
-	} else {
-		max_wf_length = K8;
-	}
-
+	max_wf_length = K8;
 	if(nbrSamples > max_wf_length ) {
 		dlog(DEBUG_INFO,"[WARNING] Waveform length > Maximum. Truncating waveform");
 		nbrSamples = max_wf_length;
@@ -299,6 +299,16 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 
 	if (nbrSamples % WF_MODULUS != 0) {
 		dlog(DEBUG_INFO,"[WARNING] Waveform data needs to be padded");
+	}
+	
+	int16_t *scaledData;
+	if (storeWaveform) {
+		// use APS_SetWaveform() to scale and shift data
+		dlog(DEBUG_VERBOSE, "Storing waveform\n");
+		APS_SetWaveform(device, dac, Data, nbrSamples, INT_TYPE);
+		scaledData = WF_GetDataPtr(waveforms[device], dac);
+	} else {
+		scaledData = Data;
 	}
 
 	fpga = dac2fpga(dac);
@@ -346,12 +356,14 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 
 	dac_read = gRegRead | dac_write;
 
-	if (offset < 0 || offset > max_wf_length) {
+	if (memory_offset < 0 || memory_offset > max_wf_length) {
+		dlog(DEBUG_INFO, "APS_LoadWaveform ERROR: Waveform memory offset out of range\n");
 		return -3;
 	}
 
 	// check to make sure that waveform will fit
-	if ((offset + nbrSamples) > max_wf_length) {
+	if ((memory_offset + nbrSamples) > max_wf_length) {
+		dlog(DEBUG_INFO, "APS_LoadWaveform ERROR: Waveform has too many samples\n");
 		return -4;
 	}
 
@@ -367,7 +379,8 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 		dlog(DEBUG_VERBOSE,"Initializing %s (%i) Offset and Size\n", dac_type, dac);
 	}
 
-	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_offset, offset, fpga);
+	// write waveform mode parameters (memory offset and length)
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_offset, memory_offset, fpga);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_size, wf_length, fpga);
 
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
@@ -381,62 +394,44 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 
 	int error = 0;
 
-	#ifdef LOG_WAVEFORM
-	logwaveform = fopen("waveform.out", "w");
-	#endif
-
 	// Adjust start of writing by offset
-	dac_write += offset;
+	dac_write += memory_offset;
 
 	#define ADDRDATASIZE 5
 	
 	// clear checksums
 	APS_ResetCheckSum(device, fpga);
 
-	// slow write of data one sample at a time
-	UCHAR dummyRead[2];
-	if (useSlowWrite != 0) {
-		dlog(DEBUG_VERBOSE,"Using slow write\n");
+	// faster buffered write
 
-		for(cnt = 0; cnt < nbrSamples; cnt++) {
-			APS_WriteFPGA(device, dac_write + cnt, Data[cnt], fpga);
-			if (cnt % 4 == 0 && cnt != 0) {
-				// dummy read to slow down the cpld
-				APS_ReadReg(device, APS_FPGA_IO, 1, fpga, dummyRead);
-			}
-		}
-	} else {
+	formated_length	 = ADDRDATASIZE * nbrSamples;  // Expanded length = 1 byte command + 2 bytes addr + 2 bytes data per sample
+	formatedData = (BYTE *) malloc(formated_length);
+	if (!formatedData)
+		return -5;
+	formatedDataIdx = formatedData;
 
-		// faster buffered write
+	// Format data as would be expected for FPGA
+	// This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
 
-		formated_length	 = ADDRDATASIZE * nbrSamples;  // Expanded length = 1 byte command + 2 bytes addr + 2 bytes data per sample
-		formatedData = (BYTE *) malloc(formated_length);
-		if (!formatedData)
-			return -5;
-		formatedDataIdx = formatedData;
-
-		// Format data as would be expected for FPGA
-		// This mimics the calls to APS_WriteFPGA followed by APS_WriteReg
-
-		WORD addr;
-		for(cnt = 0; cnt < nbrSamples; cnt++) {
-			APS_FormatForFPGA(formatedDataIdx, dac_write + cnt, Data[cnt], fpga);
-			formatedDataIdx += ADDRDATASIZE;
-			// address checksum is defined as (bits 0-14: addr, 15: 0)
-			// so, set bit 15 to zero
-			addr = dac_write + cnt;
-			addr &= 0x7FFF;
-			gAddrCheckSum[device][fpga-1] += addr;
-			gCheckSum[device][fpga-1] += Data[cnt];
-		}
-		APS_WriteBlock(device, formated_length, formatedData);
-		free(formatedData);
+	WORD addr;
+	for(cnt = 0; cnt < nbrSamples; cnt++) {
+		APS_FormatForFPGA(formatedDataIdx, dac_write + cnt, scaledData[cnt], fpga);
+		formatedDataIdx += ADDRDATASIZE;
+		// address checksum is defined as (bits 0-14: addr, 15: 0)
+		// so, set bit 15 to zero
+		addr = dac_write + cnt;
+		addr &= 0x7FFF;
+		gAddrCheckSum[device][fpga-1] += addr;
+		gCheckSum[device][fpga-1] += scaledData[cnt];
 	}
+	APS_WriteBlock(device, formated_length, formatedData);
+	free(formatedData);
 	
 	// verify the checksum
 	data = APS_CompareCheckSum(device, fpga);
 	if (!data) {
 		dlog(DEBUG_INFO, "APS_LoadWaveform ERROR: Checksum does not match\n");
+		return -6;
 	}
 	
 	// this section does a word by word comparison of the written data
@@ -447,7 +442,7 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 			data = APS_ReadFPGA(device, dac_read + cnt, fpga);
 			// only lower word is valid
 			data &= 0xFFFF;
-			if (data != (Data[cnt] & 0xFFFF)) {
+			if (data != (scaledData[cnt] & 0xFFFF)) {
 				dlog(DEBUG_INFO,"Error reading back memory: cnt = %i expected 0x%x read 0x%x\n", cnt, Data[cnt] & 0xFFFF, data);
 				error = 1;
 			}
@@ -460,10 +455,6 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
   
 	dlog(DEBUG_VERBOSE,"LoadWaveform Done\n");
 
-	#ifdef LOG_WAVEFORM
-	fclose(logwaveform);
-	#endif
-
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
 	    data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
 	    dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
@@ -471,9 +462,13 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 
 	// make sure that link list mode is disabled by default
 	APS_SetLinkListMode(device, 0, 0, dac);
-
-	// lock memory
-	//APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_mem_lock);
+	
+	// mark the stored waveform as 'loaded'
+	if (storeWaveform) {
+		WF_SetIsLoaded(waveforms[device], dac, 1);
+	}
+	// mark the channel as enabled
+	APS_SetWaveformEnabled(device, dac, 1);
 
 	return 0;
 }
@@ -585,6 +580,54 @@ int APS_ClearBit(int device, int fpga, int addr, int mask)
 
 	return 0;
 }
+
+EXPORT int APS_Run(int device, int trigger_type)
+/***********************************************
+ *
+ * Function name: APS_Run()
+ *
+ * Description: Triggers all enabled channels
+ *
+ * Inputs: device ID
+ *         trigger_type - 1 software, 2 hardware
+ *
+ * Returns: 0
+ *
+ ***********************************************/
+ {
+	int enabledChannels[MAX_APS_CHANNELS];
+	int triggeredFPGA[2] = {0, 0};
+	int allEnabled = 1;
+	int ch;
+	
+	for (ch = 0; ch < MAX_APS_CHANNELS; ch++) {
+		enabledChannels[ch] = WF_GetEnabled(waveforms[device], ch);
+		allEnabled = allEnabled && enabledChannels[ch];
+	}
+	
+	if (allEnabled) {
+		APS_TriggerFpga(device, -1, trigger_type);
+	} else {
+		// trigger paired channels if possible
+		if (enabledChannels[0] && enabledChannels[1]) {
+			triggeredFPGA[0] = 1;
+			APS_TriggerFpga(device, 0, trigger_type);
+		}
+		if (enabledChannels[2] && enabledChannels[3]) {
+			triggeredFPGA[1] = 1;
+			APS_TriggerFpga(device, 2, trigger_type);
+		}
+
+		// otherwise, trigger individuals channels
+		for (ch = 0; ch < MAX_APS_CHANNELS; ch++) {
+			if (!triggeredFPGA[ch/2] && enabledChannels[ch]) {
+				APS_TriggerDac(device, ch, trigger_type);
+			}
+		}
+	}
+	
+	return 0;
+ }
 
 
 EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
@@ -1955,13 +1998,14 @@ EXPORT int APS_IsRunning(int device, int fpga)
 	return running & 0x1;
 }
 
-EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
+EXPORT int APS_SetChannelOffset(int device, int dac, float offset)
 /* APS_SetChannelOffset
- * Write the zero register for the associated channel
- * offset - signed 14-bit value (-8192, 8192) representing the channel offset
+ * Write the zero register for the associated channel and update the channel waveform
+ * offset - offset in normalized full range (-1, 1)
  */
 {
 	int fpga, zero_register_addr;
+	int16_t sOffset;
 	
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -1984,17 +2028,21 @@ EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
 	}
 	
 	// clip the offset value to the allowed range
-	if (offset > 8191)
-		offset = 8191;
-	if (offset < -8191)
-		offset = -8191;
-	dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, offset);
+	if (offset > 1)
+		offset = 1;
+	if (offset < -1)
+		offset = -1;
+	sOffset = (int16_t) (offset * (float) MAX_WF_VALUE);
+	dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, sOffset);
 	
-	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset, fpga);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, sOffset, fpga);
+	
+	// update channel waveform, if necessary
+	APS_SetWaveformOffset(device, dac, offset);
 	return 0;
 }
 
-EXPORT short APS_ReadChannelOffset(int device, int dac)
+EXPORT float APS_ReadChannelOffset(int device, int dac)
 /* APS_SetChannelOffset
  * Read the zero register for the associated channel
  */
@@ -2021,7 +2069,7 @@ EXPORT short APS_ReadChannelOffset(int device, int dac)
 			return -2;
 	}
 	
-	return APS_ReadFPGA(device, gRegRead | zero_register_addr, fpga);
+	return (float) APS_ReadFPGA(device, gRegRead | zero_register_addr, fpga) / MAX_WF_VALUE;
 }
 
 EXPORT int APS_SetTriggerDelay(int device, int dac, unsigned short delay)

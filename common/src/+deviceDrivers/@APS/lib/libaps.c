@@ -39,7 +39,7 @@
 
 #include <stdio.h>
 
-extern gRegRead; // external global reg read value from common.c
+extern gRegRead; // external global reg read value from fpga.c
 
 #ifdef WIN32
 #include <windows.h>
@@ -228,6 +228,10 @@ EXPORT int APS_Open(int device, int force)
 	}
 
 	usb_handles[device] = 0;
+
+	// grab serial number
+	DLL_FT_ListDevices(device, deviceSerials[device],FT_LIST_BY_INDEX|FT_OPEN_BY_SERIAL_NUMBER);
+	// open device
 	status = DLL_FT_Open(device, &(usb_handles[device]));
 
 	if (status == FT_OK) {
@@ -241,12 +245,10 @@ EXPORT int APS_Open(int device, int force)
 			dlog(DEBUG_INFO,"Set Timeouts Failed %i\n", status);
 		}
 
-		// destroy old memory if it exists
-		if (waveforms[device]) {
-			WF_Destroy(waveforms[device]);
-		}
-		// allocate new memory
-		waveforms[device] = WF_Init();
+		// clear waveform cache
+		APS_ClearAllWaveforms(device);
+		// load cached data
+		APS_LoadWaveformCache(device, 0);
 
 	} else {
 #ifdef DEBUG
@@ -354,8 +356,6 @@ EXPORT int APS_OpenBySerialNum(char * serialNum)
 
 	int cnt, numdevices, found;
 
-	char testSerial[64];
-
 	// If the ftd2xx dll has not been loaded, loadit.
 	if (!hdll) {
 		if (APS_Init() != 0) {
@@ -367,8 +367,8 @@ EXPORT int APS_OpenBySerialNum(char * serialNum)
 
 	found = 0;
 	for (cnt = 0; cnt < numdevices; cnt++) {
-		DLL_FT_ListDevices(cnt, testSerial,FT_LIST_BY_INDEX|FT_OPEN_BY_SERIAL_NUMBER);
-		if (strncmp(testSerial, serialNum, strlen(serialNum)) == 0) {
+		DLL_FT_ListDevices(cnt, deviceSerials[cnt],FT_LIST_BY_INDEX|FT_OPEN_BY_SERIAL_NUMBER);
+		if (strncmp(deviceSerials[cnt], serialNum, strlen(serialNum)) == 0) {
 			found = 1;
 			break;
 		}
@@ -498,8 +498,12 @@ EXPORT int APS_Close(int device)
 	DLL_FT_Close(usb_handles[device]);
 	usb_handles[device] = 0;
 
-	WF_Destroy(waveforms[device]);
-	waveforms[device] = 0;  // clear pointer to waveform library for device
+	// save and release waveform cache memory
+	if (waveforms[device]) {
+		APS_SaveWaveformCache(device, 0);
+		WF_Destroy(waveforms[device]);
+		waveforms[device] = 0;  // clear pointer to waveform library for device
+	}
 
 	return 0;
 }
@@ -1821,13 +1825,33 @@ EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int ma
 	//dlog(DEBUG_VERBOSE,"HASH %s\n",(char*) hashStr);
 }
 
-
-EXPORT int APS_SetWaveform(int device, int channel, float * data, int length) {
+// store waveform data in range (-1.0, 1.0)
+EXPORT int APS_SetWaveform(int device, int channel, void * data, int length, int pulseType) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
 	if (!wfArray) return -1;
 
-	return WF_SetWaveform(wfArray, channel, data, length);
+	switch (pulseType) {
+	case FLOAT_TYPE:
+		return WF_SetWaveform_Float(wfArray, channel, (float *) data, length);
+		break;
+	case INT_TYPE:
+		return WF_SetWaveform(wfArray, channel, (short *) data, length);
+		break;
+	default:
+		dlog(DEBUG_INFO, "APS_SetWaveform ERROR: Unknown pulsetype %d\n", pulseType);
+		return -2;
+	}
+}
+
+// clear stored waveform data
+EXPORT int APS_ClearAllWaveforms(int device) {
+	if (waveforms[device]) {
+		WF_Destroy(waveforms[device]);
+	}
+	// allocate new memory
+	waveforms[device] = WF_Init();
+	return (!waveforms[device]);
 }
 
 EXPORT int APS_SetWaveformOffset(int device, int channel, float offset) {
@@ -1835,9 +1859,13 @@ EXPORT int APS_SetWaveformOffset(int device, int channel, float offset) {
 	wfArray = waveforms[device];
 	if (!wfArray) return -1;
 
-	// TODO: set DAC offset value
-
 	WF_SetOffset(wfArray,channel,offset);
+	
+	// if the waveform is currently loaded, update it
+	if (WF_GetIsLoaded(wfArray, channel)) {
+		WF_SetIsLoaded(wfArray, channel, 0);
+		APS_LoadStoredWaveform(device, channel);
+	}
 	return 0;
 }
 
@@ -1853,6 +1881,12 @@ EXPORT int APS_SetWaveformScale(int device, int channel, float scale) {
 	wfArray = waveforms[device];
 	if (!wfArray) return -1;
 	WF_SetScale(wfArray,channel,scale);
+	
+	// if the waveform is currently loaded, update it
+	if (WF_GetIsLoaded(wfArray, channel)) {
+		WF_SetIsLoaded(wfArray, channel, 0);
+		APS_LoadStoredWaveform(device, channel);
+	}
 	return 0;
 }
 
@@ -1863,23 +1897,38 @@ EXPORT float APS_GetWaveformScale(int device, int channel){
 	return WF_GetScale(wfArray,channel);
 }
 
+EXPORT int APS_SetWaveformEnabled(int device, int channel, int enabled) {
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	WF_SetEnabled(wfArray, channel, enabled);
+	return 0;
+}
 
+EXPORT int APS_GetWaveformEnabled(int device, int channel) {
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	return WF_GetEnabled(wfArray, channel);
+}
+
+// the following three methods are just for DEBUG/TEST
 EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
 	if (!wfArray) return -1;
-	uint16_t *dataPtr;
+	int16_t *dataPtr;
 	uint16_t length;
 
 	if (!WF_GetIsLoaded(wfArray,channel)) {
 		dataPtr = WF_GetDataPtr(wfArray, channel);
 		length = WF_GetLength(wfArray, channel);
 		APS_LoadWaveform(device, dataPtr, length, 0 ,channel - 1, 0, 0);
-		WF_SetIsLoaded(wfArray,  channel,1);
+		WF_SetIsLoaded(wfArray, channel, 1);
 	}
 	return 0;
 }
-
+// for DEBUG/TEST
 EXPORT int APS_LoadAllWaveforms(int device) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
@@ -1891,7 +1940,7 @@ EXPORT int APS_LoadAllWaveforms(int device) {
 	}
 	return 0;
 }
-
+// for DEBUG/TEST
 EXPORT int APS_LoadStoredLinkLists(int device, int channel) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
@@ -1938,13 +1987,9 @@ EXPORT int APS_SaveWaveformCache(int device, char * filename) {
 
 	const int strLen = 100;
 	char altFilename[strLen];
-	char serialNumber[strLen];
-
-	memset(serialNumber, 0, strLen);
 
 	if (filename == NULL) {
-		APS_GetSerialNum(device, serialNumber, 100);
-		snprintf(altFilename,strLen,"aps_%i_cache.dat", serialNumber);
+		snprintf(altFilename,strLen,"aps_%s_cache.dat", deviceSerials[device]);
 		filename = altFilename;
 	}
 
@@ -1956,10 +2001,11 @@ EXPORT int APS_SaveWaveformCache(int device, char * filename) {
 }
 
 EXPORT int APS_LoadWaveformCache(int device, char * filename) {
-	char altFilename[100];
+	const int strLen = 100;
+	char altFilename[strLen];
 
 	if (filename == NULL) {
-		sprintf(altFilename,"aps_%i_cache.dat", device);
+		snprintf(altFilename,strLen,"aps_%s_cache.dat", deviceSerials[device]);
 		filename = altFilename;
 	}
 
