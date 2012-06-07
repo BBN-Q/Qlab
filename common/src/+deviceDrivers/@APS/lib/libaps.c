@@ -228,6 +228,10 @@ EXPORT int APS_Open(int device, int force)
 	}
 
 	usb_handles[device] = 0;
+
+	// grab serial number
+	DLL_FT_ListDevices(device, deviceSerials[device],FT_LIST_BY_INDEX|FT_OPEN_BY_SERIAL_NUMBER);
+	// open device
 	status = DLL_FT_Open(device, &(usb_handles[device]));
 
 	if (status == FT_OK) {
@@ -244,7 +248,7 @@ EXPORT int APS_Open(int device, int force)
 		// clear waveform cache
 		APS_ClearAllWaveforms(device);
 		// load cached data
-		APS_LoadWaveformCache(device, "");
+		APS_LoadWaveformCache(device, 0);
 
 	} else {
 #ifdef DEBUG
@@ -352,8 +356,6 @@ EXPORT int APS_OpenBySerialNum(char * serialNum)
 
 	int cnt, numdevices, found;
 
-	char testSerial[64];
-
 	// If the ftd2xx dll has not been loaded, loadit.
 	if (!hdll) {
 		if (APS_Init() != 0) {
@@ -365,8 +367,8 @@ EXPORT int APS_OpenBySerialNum(char * serialNum)
 
 	found = 0;
 	for (cnt = 0; cnt < numdevices; cnt++) {
-		DLL_FT_ListDevices(cnt, testSerial,FT_LIST_BY_INDEX|FT_OPEN_BY_SERIAL_NUMBER);
-		if (strncmp(testSerial, serialNum, strlen(serialNum)) == 0) {
+		DLL_FT_ListDevices(cnt, deviceSerials[cnt],FT_LIST_BY_INDEX|FT_OPEN_BY_SERIAL_NUMBER);
+		if (strncmp(deviceSerials[cnt], serialNum, strlen(serialNum)) == 0) {
 			found = 1;
 			break;
 		}
@@ -498,7 +500,7 @@ EXPORT int APS_Close(int device)
 
 	// save and release waveform cache memory
 	if (waveforms[device]) {
-		APS_SaveWaveformCache(device, "");
+		APS_SaveWaveformCache(device, 0);
 		WF_Destroy(waveforms[device]);
 		waveforms[device] = 0;  // clear pointer to waveform library for device
 	}
@@ -1846,9 +1848,10 @@ EXPORT int APS_SetWaveform(int device, int channel, void * data, int length, int
 EXPORT int APS_ClearAllWaveforms(int device) {
 	if (waveforms[device]) {
 		WF_Destroy(waveforms[device]);
-		// allocate new memory
-		waveforms[device] = WF_Init();
 	}
+	// allocate new memory
+	waveforms[device] = WF_Init();
+	return (!waveforms[device]);
 }
 
 EXPORT int APS_SetWaveformOffset(int device, int channel, float offset) {
@@ -1969,13 +1972,9 @@ EXPORT int APS_SaveWaveformCache(int device, char * filename) {
 
 	const int strLen = 100;
 	char altFilename[strLen];
-	char serialNumber[strLen];
-
-	memset(serialNumber, 0, strLen);
 
 	if (filename == NULL) {
-		APS_GetSerialNum(device, serialNumber, 100);
-		snprintf(altFilename,strLen,"aps_%s_cache.dat", serialNumber);
+		snprintf(altFilename,strLen,"aps_%s_cache.dat", deviceSerials[device]);
 		filename = altFilename;
 	}
 
@@ -1989,11 +1988,9 @@ EXPORT int APS_SaveWaveformCache(int device, char * filename) {
 EXPORT int APS_LoadWaveformCache(int device, char * filename) {
 	const int strLen = 100;
 	char altFilename[strLen];
-	char serialNumber[strLen];
 
 	if (filename == NULL) {
-		APS_GetSerialNum(device, serialNumber, 100);
-		snprintf(altFilename,strLen,"aps_%s_cache.dat", serialNumber);
+		snprintf(altFilename,strLen,"aps_%s_cache.dat", deviceSerials[device]);
 		filename = altFilename;
 	}
 

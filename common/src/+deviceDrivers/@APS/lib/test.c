@@ -284,16 +284,13 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 	if (doSetup) {
 		programFPGA(hdll,0, bitFile,0);
 
-		printf("Storing Waveform\n");
+		printf("Loading and storing waveforms\n");
 
 		for( cnt = 0; cnt < 4; cnt++)
-			load(0, pulseMem, pulseLen, 0, cnt, FALSE, TRUE);
-			//setWaveform(0, cnt, pulseMem, waveformLen, INT_TYPE);
+			load(0, pulseMem, waveformLen, 0, cnt, FALSE, TRUE);
 
-		printf("Loading Waveform\n");
-		//for( cnt = 0; cnt < 4; cnt++)
-		//	loadStored(0, cnt);
-		loadAll(0);
+		//printf("Loading Waveform\n");
+		//loadAll(0);
 
 		printf("Saving Cache\n");
 		saveCache(0,0);

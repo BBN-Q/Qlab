@@ -55,7 +55,7 @@ float  WF_GetScale(waveform_t * wfArray, int channel);
 void   WF_Prep(waveform_t * wfArray, int channel);
 
 int16_t * WF_GetDataPtr(waveform_t * wfArray, int channel);
-int16_t WF_Getlength(waveform_t * wfArray, int channel);
+uint16_t WF_GetLength(waveform_t * wfArray, int channel);
 
 int WF_SetLinkList(waveform_t * wfArray, int channel,
     uint16_t *OffsetData, uint16_t *CountData,

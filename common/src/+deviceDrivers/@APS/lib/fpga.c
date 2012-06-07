@@ -301,11 +301,13 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	}
 	
 	int16_t *scaledData;
-	int channel = dac + 1;
 	if (storeWaveform) {
 		// use APS_SetWaveform() to scale and shift data
-		APS_SetWaveform(device, channel, Data, nbrSamples, INT_TYPE);
-		scaledData = WF_GetDataPtr(waveforms[device], channel);
+		dlog(DEBUG_INFO, "Storing waveform\n");
+		APS_SetWaveform(device, dac, Data, nbrSamples, INT_TYPE);
+		dlog(DEBUG_INFO, "Getting data length: %d\n", WF_GetLength(waveforms[device], dac));
+		dlog(DEBUG_INFO, "Getting data pointer\n");
+		scaledData = WF_GetDataPtr(waveforms[device], dac);
 	} else {
 		scaledData = Data;
 	}
@@ -464,7 +466,7 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	
 	// mark the stored waveform as 'loaded'
 	if (storeWaveform) {
-		WF_SetIsLoaded(waveforms[device], channel, 1);
+		WF_SetIsLoaded(waveforms[device], dac, 1);
 	}
 
 	return 0;

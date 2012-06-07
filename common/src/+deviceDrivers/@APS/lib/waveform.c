@@ -58,10 +58,11 @@ int WF_SetWaveform(waveform_t * wfArray, int channel, short * data, int length) 
 	fData = (float *) malloc(length * sizeof(float));
 	
 	for (cnt = 0; cnt < length; cnt++) {
-		fData[cnt] = data[cnt] * MAX_WF_VALUE;
+		fData[cnt] = (float) data[cnt] / MAX_WF_VALUE;
 	}
 	out = WF_SetWaveform_Float(wfArray, channel, fData, length);
 	free(fData);
+	return out;
 }
 
 // float data input
@@ -213,7 +214,7 @@ void WF_Prep(waveform_t * wfArray, int channel) {
   float scale = wfArray[channel].scale * MAX_WF_VALUE;
   float offset = wfArray[channel].offset * MAX_WF_VALUE;
 
-  printf("Prep scale = %f offset = %f\n", scale, offset);
+  printf("Prep scale = %f offset = %f\n", wfArray[channel].scale, offset);
 
   for (cnt = 0; cnt < wfArray[channel].allocatedLength; cnt++) {
     prepValue = wfArray[channel].pData[cnt];
@@ -321,6 +322,10 @@ int WF_LoadCache(waveform_t * wfArray, char * filename) {
 
 
 	fid = fopen(filename,"rb");
+	if (!fid) {
+		dlog(DEBUG_INFO, "Waveform cache not found\n");
+		return -1;
+	}
 
 	for(channel = 0; channel < MAX_APS_CHANNELS; channel++) {
 		fread(&(tempWaveform), sizeof(waveform_t),1, fid);
