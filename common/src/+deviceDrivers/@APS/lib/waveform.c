@@ -15,7 +15,7 @@
 waveform_t * WF_Init() {
   waveform_t * wfArray;
 
-  dlog(DEBUG_INFO,"WF_Init\n");
+  dlog(DEBUG_VERBOSE2,"WF_Init\n");
 
   wfArray = (waveform_t *) malloc (MAX_APS_CHANNELS * sizeof(waveform_t));
 
