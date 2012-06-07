@@ -82,12 +82,14 @@ typedef int (*pfunc)();
 #define close             APS_Close
 #define setWaveform       APS_SetWaveform
 #define setLinkList       APS_SetLinkList
-#define setWaveformOffset APS_GetWaveformOffset
-#define getWaveformOffset APS_GetWaveformOffset
+#define setWaveformOffset APS_SetChannelOffset
+#define getWaveformOffset APS_GetChannelOffset
 #define setWaveformScale  APS_SetWaveformScale
 #define getWaveformScale  APS_GetWaveformScale
+#define setEnabled        APS_SetWaveformEnabled
 #define loadStored        APS_LoadStoredWaveform
 #define loadAll       	  APS_LoadAllWaveforms
+#define run               APS_Run
 #define trigger           APS_TriggerFpga
 #define disable           APS_DisableFpga
 #define load              APS_LoadWaveform
@@ -156,7 +158,7 @@ void programFPGA(HANDLE hdll, int dac, char * bitFile, int progamTest) {
 	maxProg = 1;
 	for (progCnt = 0; progCnt < maxProg; progCnt++) {
 		printf("Programming FPGAS %i: ", progCnt);
-		fflush(stdout);
+		//fflush(stdout);
 		int numBytesProg;
 		numBytesProg = prog(0, bitFileData, bitFileSize, 3, 0x10);
 		printf("Done \n");
@@ -251,27 +253,29 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 	pfunc setWaveform, setLinkList;
 	pfunc setWaveformOffset, getWaveformOffset;
 	pfunc setWaveformScale,  getWaveformScale;
+	pfunc setEnabled;
 	pfunc loadStored, loadAll;
 	pfunc load;
 	pfunc saveCache, loadCache;
 
-	pfunc trigger;
-	pfunc disable;
+	pfunc trigger, run, disable;
 
 	close             = (pfunc) GetFunction(hdll, "APS_Close");
 	setWaveform       = (pfunc) GetFunction(hdll, "APS_SetWaveform");
 	setLinkList       = (pfunc) GetFunction(hdll, "APS_SetLinkList");
-	setWaveformOffset = (pfunc) GetFunction(hdll, "APS_GetWaveformOffset");
-	getWaveformOffset = (pfunc) GetFunction(hdll, "APS_GetWaveformOffset");
+	setWaveformOffset = (pfunc) GetFunction(hdll, "APS_SetChannelOffset");
+	getWaveformOffset = (pfunc) GetFunction(hdll, "APS_GetChannelOffset");
 	setWaveformScale  = (pfunc) GetFunction(hdll, "APS_SetWaveformScale");
 	getWaveformScale  = (pfunc) GetFunction(hdll, "APS_GetWaveformScale");
-	load              = (pfunc) GetFunction(hdll,"APS_LoadWaveform");
+	setEnabled        = (pfunc) GetFunction(hdll, "APS_SetWaveformEnabled");
+	load              = (pfunc) GetFunction(hdll, "APS_LoadWaveform");
 	loadStored        = (pfunc) GetFunction(hdll, "APS_LoadStoredWaveform");
 	loadAll           = (pfunc) GetFunction(hdll, "APS_LoadAllWaveforms");
 	saveCache         = (pfunc) GetFunction(hdll, "APS_SaveWaveformCache");
 	loadCache         = (pfunc) GetFunction(hdll, "APS_LoadWaveformCache");
 
 	trigger      = (pfunc) GetFunction(hdll,"APS_TriggerFpga");
+	run          = (pfunc) GetFunction(hdll,"APS_Run");
 	disable      = (pfunc) GetFunction(hdll,"APS_DisableFpga");
 
 #endif
@@ -286,11 +290,10 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 
 		printf("Loading and storing waveforms\n");
 
-		for( cnt = 0; cnt < 4; cnt++)
+		for( cnt = 0; cnt < 4; cnt++) {
 			load(0, pulseMem, waveformLen, 0, cnt, FALSE, TRUE);
-
-		//printf("Loading Waveform\n");
-		//loadAll(0);
+			setWaveformOffset(0, cnt, 0.0);
+		}
 
 		printf("Saving Cache\n");
 		saveCache(0,0);
@@ -301,10 +304,10 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 
 	printf("Triggering:\n");
 
-	trigger(0, 0, 1);
-	trigger(0, 2, 1);
+	run(0, 1);
 
 	printf("Press key:\n");
+	//fflush(stdout);
 	getchar();
 
 	disable(0,0);

@@ -205,6 +205,18 @@ void WF_SetIsLoaded(waveform_t * wfArray,  int channel, int loaded) {
   wfArray[channel].isLoaded = loaded;
 }
 
+void WF_SetEnabled(waveform_t * wfArray, int channel, int enabled) {
+	if (!wfArray) return;
+	
+	wfArray[channel].isEnabled = enabled;
+}
+
+int WF_GetEnabled(waveform_t * wfArray, int channel) {
+	if (!wfArray) return 0;
+
+	return wfArray[channel].isEnabled;
+}
+
 void WF_Prep(waveform_t * wfArray, int channel) {
   if (!wfArray) return;
 

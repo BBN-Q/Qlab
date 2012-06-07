@@ -119,7 +119,7 @@ EXPORT int APS_WriteFPGA(int device, ULONG addr, ULONG data, UCHAR fpga)
 
 	dlog(DEBUG_VERBOSE2,"Writing Addr 0x%x Data 0x%x\n", addr, data);
 
-	APS_WriteReg(device, APS_FPGA_IO, 2, fpga, outdata);
+	return APS_WriteReg(device, APS_FPGA_IO, 2, fpga, outdata);
 }
 
 EXPORT int APS_CompareCheckSum(int device, int fpga) {
@@ -145,6 +145,7 @@ EXPORT UINT APS_ResetCheckSum(int device, int fpga) {
 	APS_WriteFPGA(device, FPGA_OFF_ADDR_CHECKSUM, 0, fpga);
 	gCheckSum[device][fpga-1] = 0;
 	gAddrCheckSum[device][fpga-1] = 0;
+	return 0;
 }
 
 EXPORT UINT APS_ResetAllCheckSum() {
@@ -466,6 +467,8 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	if (storeWaveform) {
 		WF_SetIsLoaded(waveforms[device], dac, 1);
 	}
+	// mark the channel as enabled
+	APS_SetWaveformEnabled(device, dac, 1);
 
 	return 0;
 }
@@ -577,6 +580,54 @@ int APS_ClearBit(int device, int fpga, int addr, int mask)
 
 	return 0;
 }
+
+EXPORT int APS_Run(int device, int trigger_type)
+/***********************************************
+ *
+ * Function name: APS_Run()
+ *
+ * Description: Triggers all enabled channels
+ *
+ * Inputs: device ID
+ *         trigger_type - 1 software, 2 hardware
+ *
+ * Returns: 0
+ *
+ ***********************************************/
+ {
+	int enabledChannels[MAX_APS_CHANNELS];
+	int triggeredFPGA[2] = {0, 0};
+	int allEnabled = 1;
+	int ch;
+	
+	for (ch = 0; ch < MAX_APS_CHANNELS; ch++) {
+		enabledChannels[ch] = WF_GetEnabled(waveforms[device], ch);
+		allEnabled = allEnabled && enabledChannels[ch];
+	}
+	
+	if (allEnabled) {
+		APS_TriggerFpga(device, -1, trigger_type);
+	} else {
+		// trigger paired channels if possible
+		if (enabledChannels[0] && enabledChannels[1]) {
+			triggeredFPGA[0] = 1;
+			APS_TriggerFpga(device, 0, trigger_type);
+		}
+		if (enabledChannels[2] && enabledChannels[3]) {
+			triggeredFPGA[1] = 1;
+			APS_TriggerFpga(device, 2, trigger_type);
+		}
+
+		// otherwise, trigger individuals channels
+		for (ch = 0; ch < MAX_APS_CHANNELS; ch++) {
+			if (!triggeredFPGA[ch/2] && enabledChannels[ch]) {
+				APS_TriggerDac(device, ch, trigger_type);
+			}
+		}
+	}
+	
+	return 0;
+ }
 
 
 EXPORT int APS_TriggerDac(int device, int dac, int trigger_type)
@@ -1981,7 +2032,7 @@ EXPORT int APS_SetChannelOffset(int device, int dac, float offset)
 		offset = 1;
 	if (offset < -1)
 		offset = -1;
-	sOffset = offset * MAX_WF_VALUE;
+	sOffset = (int16_t) (offset * (float) MAX_WF_VALUE);
 	dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, sOffset);
 	
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, sOffset, fpga);
@@ -1991,7 +2042,7 @@ EXPORT int APS_SetChannelOffset(int device, int dac, float offset)
 	return 0;
 }
 
-EXPORT short APS_ReadChannelOffset(int device, int dac)
+EXPORT float APS_ReadChannelOffset(int device, int dac)
 /* APS_SetChannelOffset
  * Read the zero register for the associated channel
  */
@@ -2018,7 +2069,7 @@ EXPORT short APS_ReadChannelOffset(int device, int dac)
 			return -2;
 	}
 	
-	return APS_ReadFPGA(device, gRegRead | zero_register_addr, fpga);
+	return (float) APS_ReadFPGA(device, gRegRead | zero_register_addr, fpga) / MAX_WF_VALUE;
 }
 
 EXPORT int APS_SetTriggerDelay(int device, int dac, unsigned short delay)

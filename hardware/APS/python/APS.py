@@ -445,6 +445,9 @@ class APS:
 
     def set_amplitude(self, ch, amplitude):
         return self.librarycall('Set channel scale', 'APS_SetWaveformScale', ch-1, amplitude)
+	
+	def set_enabled(self, ch, enabled):
+		return self.librarycall('Set channel enabled', 'APS_SetWaveformEnabled', ch-1, enabled)
         
     def set_trigger_delay(self, ch, delay):
        return self.librarycall('Set channel trigger delay','APS_SetTriggerDelay', ch-1, delay)
@@ -534,6 +537,7 @@ class APS:
         for ch, channelName in enumerate(self.CHANNELNAMES):
             self.set_amplitude(ch, self.channelSettings[channelName]['amplitude'])
             self.set_offset(ch, self.channelSettings[channelName]['offset'])
+			self.set_enabled(ch, self.channelSettings[channelName]['enabled'])
         
         #Now load the pulse sequence or waveform files
         if settings['fourChannelMode']:
@@ -557,28 +561,7 @@ class APS:
         '''
         Set the trigger and start things going.
         '''
-
-        #Sort out what we need to trigger
-        triggerArray = np.zeros(4, dtype=np.bool)
-        for ct, channelName in enumerate(self.CHANNELNAMES):
-            triggerArray[ct] = self.channelSettings[channelName]['enabled']
-        triggeredFPGA = [False,False]
-                
-        if np.all(triggerArray):
-            triggeredFPGA[0] = True
-            triggeredFPGA[1] = True
-            self.triggerFpga(self.ALL_DACS,self.triggerSource)
-        elif triggerArray[0] and triggerArray[1]:
-            triggeredFPGA[0] = True
-            self.triggerFpga(self.FPGA0,self.triggerSource)
-        elif triggerArray[2] and triggerArray[3]:
-            triggeredFPGA[1] = True
-            self.triggerFpga(self.FPGA1,self.triggerSource)
-    
-        #Look at individual channels.  Matlab file claims: % NOTE: Poorly defined syncronization between channels in this case
-        for chan in range(0,4):
-            if not triggeredFPGA[chan // 2] and triggerArray[chan]:
-                self.triggerWaveform(chan,self.triggerSource)
+		self.librarycall('Running', 'APS_Run', self.triggerSource)
 
     def stop(self):
         ''' Stop everything '''

@@ -20,7 +20,7 @@
 
 #define NUM_BITS 13
 
-#define MAX_WF_VALUE pow(2,NUM_BITS)-1
+#define MAX_WF_VALUE (pow(2,NUM_BITS)-1)
 
 typedef struct {
   uint16_t *offset;
@@ -38,6 +38,7 @@ typedef struct {
   float scale;
   int allocatedLength;
   int isLoaded;
+  int isEnabled;
   bank_t linkListBanks[MAX_APS_BANKS];
 } waveform_t;
 
@@ -52,6 +53,8 @@ void   WF_SetOffset(waveform_t * wfArray, int channel, float offset);
 float  WF_GetOffset(waveform_t * wfArray, int channel);
 void   WF_SetScale(waveform_t * wfArray, int channel, float scale);
 float  WF_GetScale(waveform_t * wfArray, int channel);
+void   WF_SetEnabled(waveform_t * wfArray, int channel, int enabled);
+int    WF_GetEnabled(waveform_t * wfArray, int channel);
 void   WF_Prep(waveform_t * wfArray, int channel);
 
 int16_t * WF_GetDataPtr(waveform_t * wfArray, int channel);

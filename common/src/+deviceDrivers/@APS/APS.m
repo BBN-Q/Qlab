@@ -189,9 +189,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
 			obj.librarycall('Clearing waveform cache', 'APS_ClearAllWaveforms');
             for ct = 1:4
                 ch = obj.channelStrs{ct};
-				obj.setAmplitude(channel, settings.(ch).amplitude);
-				obj.setOffset(channel, settings.(ch).offset);
-                obj.(ch).enabled = settings.(ch).enabled;
+				obj.setAmplitude(ct, settings.(ch).amplitude);
+				obj.setOffset(ct, settings.(ch).offset);
+                obj.setEnabled(ct, settings.(ch).enabled);
             end
             settings = rmfield(settings, obj.channelStrs);
             
@@ -399,43 +399,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function run(aps)
             % global run method
             
-            if aps.use_c_waveforms
-                % tell C layer to load waveforms
-                aps.loadAPSWaveforms();
-            end
-            
             trigger_type = aps.TRIGGER_SOFTWARE;
             if strcmp(aps.triggerSource, 'external')
                 trigger_type = aps.TRIGGER_HARDWARE;
             end
             
-            % based upon enabled channels, trigger both FPGAs, a single
-            % FPGA, or individuals DACs
-            trigger = [false false false false];
-            for ct = 1:4
-                trigger(ct) = aps.(aps.channelStrs{ct}).enabled;
-            end
-            
-            triggeredFPGA = [false false];
-            if trigger % all channels enabled
-                aps.triggerFpga(aps.ALL_DACS, trigger_type);
-                triggeredFPGA = [true true];
-            elseif trigger(1:2) %FPGA0
-                triggeredFPGA(1) = true;
-                aps.triggerFpga(aps.FPGA0, trigger_type)
-            elseif trigger(3:4) %FPGA1
-                triggeredFPGA(2) = true;
-                aps.triggerFpga(aps.FPGA1, trigger_type)
-            end
-            
-            % look at individual channels
-            % NOTE: Poorly defined syncronization between channels in this
-            % case.
-            for channel = 1:4
-                if ~triggeredFPGA(ceil(channel / 2)) && trigger(channel)
-                    aps.triggerWaveform(channel-1,trigger_type)
-                end
-            end
+            aps.librarycall('Running', 'APS_Run', trigger_type);
         end
         
         function stop(aps)
@@ -514,7 +483,13 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
 			% sets the scale factor of the channel
 			val = aps.librarycall('Set channel scale', 'APS_SetWaveformScale', ch-1, amplitude);
 			aps.(['chan_' num2str(ch)]).amplitude = amplitude;
-		end
+        end
+        
+        function val = setEnabled(aps, ch, enabled)
+            % enables or disables a channel
+            val = aps.librarycall('Set channel enabled', 'APS_SetWaveformEnabled', ch-1, enabled);
+            aps.(['chan_' num2str(ch)]).enabled = enabled;
+        end
 
 		function val = setTriggerDelay(aps, ch, delay)
             % sets delay of channel marker output WRT the analog output in

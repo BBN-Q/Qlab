@@ -1897,6 +1897,21 @@ EXPORT float APS_GetWaveformScale(int device, int channel){
 	return WF_GetScale(wfArray,channel);
 }
 
+EXPORT int APS_SetWaveformEnabled(int device, int channel, int enabled) {
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	WF_SetEnabled(wfArray, channel, enabled);
+	return 0;
+}
+
+EXPORT int APS_GetWaveformEnabled(int device, int channel) {
+	waveform_t * wfArray;
+	wfArray = waveforms[device];
+	if (!wfArray) return -1;
+	return WF_GetEnabled(wfArray, channel);
+}
+
 // the following three methods are just for DEBUG/TEST
 EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 	waveform_t * wfArray;

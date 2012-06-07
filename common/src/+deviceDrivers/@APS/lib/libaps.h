@@ -75,6 +75,8 @@ EXPORT int APS_SetupDACs(int device);
 
 EXPORT int APS_IsRunning(int device, int fpga);
 
+EXPORT int APS_Run(int device, int trigger_type);
+
 EXPORT int APS_TriggerDac(int device, int dac, int trigger_type);
 EXPORT int APS_PauseDac(int device, int dac);
 EXPORT int APS_DisableDac(int device, int dac);
@@ -96,8 +98,8 @@ EXPORT int APS_ReadAllRegisters(int device, int fpga);
 EXPORT void APS_HashPulse(unsigned short *pulse, int len, void * hashStr, int maxlen );
 EXPORT int APS_ClearLinkListELL(int device,int dac, int bank);
 
-EXPORT int APS_SetChannelOffset(int device, int dac, short offset);
-EXPORT short APS_ReadChannelOffset(int device, int dac);
+EXPORT int APS_SetChannelOffset(int device, int dac, float offset);
+EXPORT float APS_ReadChannelOffset(int device, int dac);
 
 EXPORT int APS_SetTriggerDelay(int device, int dac, unsigned short delay);
 EXPORT unsigned short APS_ReadTriggerDelay(int device, int dac);
@@ -124,6 +126,8 @@ EXPORT int APS_SetWaveformOffset(int device, int channel, float offset);
 EXPORT float APS_GetWaveformOffset(int device, int channel);
 EXPORT int APS_SetWaveformScale(int device, int channel, float scale);
 EXPORT float APS_GetWaveformScale(int device, int channel);
+EXPORT int APS_SetWaveformEnabled(int device, int channel, int enabled);
+EXPORT int APS_GetWaveformEnabled(int device, int channel);
 EXPORT int APS_LoadStoredWaveform(int device, int channel);
 EXPORT int APS_LoadAllWaveforms(int device);
 EXPORT int APS_SetLinkList(int device, int channel,
