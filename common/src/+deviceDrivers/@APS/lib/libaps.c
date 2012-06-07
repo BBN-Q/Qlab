@@ -1902,7 +1902,7 @@ EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
 	if (!wfArray) return -1;
-	uint16_t *dataPtr;
+	int16_t *dataPtr;
 	uint16_t length;
 
 	if (!WF_GetIsLoaded(wfArray,channel)) {

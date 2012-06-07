@@ -1947,13 +1947,14 @@ EXPORT int APS_IsRunning(int device, int fpga)
 	return running & 0x1;
 }
 
-EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
+EXPORT int APS_SetChannelOffset(int device, int dac, float offset)
 /* APS_SetChannelOffset
  * Write the zero register for the associated channel and update the channel waveform
- * offset - signed 14-bit value (-8192, 8192) representing the channel offset
+ * offset - offset in normalized full range (-1, 1)
  */
 {
 	int fpga, zero_register_addr;
+	int16_t sOffset;
 	
 	fpga = dac2fpga(dac);
 	if (fpga < 0) {
@@ -1976,17 +1977,17 @@ EXPORT int APS_SetChannelOffset(int device, int dac, short offset)
 	}
 	
 	// clip the offset value to the allowed range
-	if (offset > 8191)
-		offset = 8191;
-	if (offset < -8191)
-		offset = -8191;
-	dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, offset);
+	if (offset > 1)
+		offset = 1;
+	if (offset < -1)
+		offset = -1;
+	sOffset = offset * MAX_WF_VALUE;
+	dlog(DEBUG_INFO, "Setting DAC%i zero register to %i\n", dac, sOffset);
 	
-	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, offset, fpga);
+	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | zero_register_addr, sOffset, fpga);
 	
 	// update channel waveform, if necessary
-	float realOffset = offset / MAX_WF_VALUE;
-	APS_SetWaveformOffset(device, dac+1, realOffset);
+	APS_SetWaveformOffset(device, dac, offset);
 	return 0;
 }
 

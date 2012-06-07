@@ -506,7 +506,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function val = setOffset(aps, ch, offset)
             % sets offset voltage of channel for time/amplitude zero
             % entries
-            val = aps.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*aps.MAX_WAVEFORM_VALUE);
+            val = aps.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset);
             aps.(['chan_' num2str(ch)]).offset = offset;
         end
 

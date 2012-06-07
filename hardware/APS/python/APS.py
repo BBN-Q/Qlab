@@ -441,7 +441,7 @@ class APS:
         return val1 and val2
         
     def set_offset(self, ch, offset):
-        return self.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*self.MAX_WAVEFORM_VALUE)
+        return self.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset)
 
     def set_amplitude(self, ch, amplitude):
         return self.librarycall('Set channel scale', 'APS_SetWaveformScale', ch-1, amplitude)
