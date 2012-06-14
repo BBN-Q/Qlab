@@ -226,7 +226,7 @@ void WF_Prep(waveform_t * wfArray, int channel) {
   float scale = wfArray[channel].scale * MAX_WF_VALUE;
   float offset = wfArray[channel].offset * MAX_WF_VALUE;
 
-  printf("Prep scale = %f offset = %f\n", wfArray[channel].scale, offset);
+  dlog(DEBUG_VERBOSE, "Prep scale = %f offset = %f\n", wfArray[channel].scale, offset);
 
   for (cnt = 0; cnt < wfArray[channel].allocatedLength; cnt++) {
     prepValue = wfArray[channel].pData[cnt];
