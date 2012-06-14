@@ -424,8 +424,13 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 		gAddrCheckSum[device][fpga-1] += addr;
 		gCheckSum[device][fpga-1] += scaledData[cnt];
 	}
+
+	//struct timeval t0, t1;
+	//gettimeofday(&t0, NULL);
 	APS_WriteBlock(device, formated_length, formatedData);
+	//gettimeofday(&t1, NULL);
 	free(formatedData);
+	//printf("Time to write: %f\n", (1/1e6)*(t1.tv_sec*1e6 + t1.tv_usec - t0.tv_sec*1e6 - t0.tv_usec));
 	
 	// verify the checksum
 	data = APS_CompareCheckSum(device, fpga);
@@ -459,9 +464,6 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	    data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
 	    dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
 	}
-
-	// make sure that link list mode is disabled by default
-	APS_SetLinkListMode(device, 0, 0, dac);
 	
 	// mark the stored waveform as 'loaded'
 	if (storeWaveform) {
@@ -969,11 +971,6 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 		return -3;
 	}
 
-	// load current cntrl reg
-	ctrl_reg = APS_ReadFPGA(device, gRegRead | dac_ctrl_reg, fpga);
-
-	dlog(DEBUG_VERBOSE,"ELL: Current Link List Control Reg: 0x%x\n", ctrl_reg);
-
 	// set link list size
 	ctrl_reg = (length-1) & 0x3FFF;
 
@@ -987,51 +984,20 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	// write control reg
 	APS_WriteFPGA(device, dac_ctrl_reg, ctrl_reg, fpga);
 
-	// load current ctrl reg
-	ctrl_reg_read = APS_ReadFPGA(device, gRegRead | dac_ctrl_reg, fpga);
+	if (getDebugLevel() >= DEBUG_VERBOSE) {
+		// load current ctrl reg
+		ctrl_reg_read = APS_ReadFPGA(device, gRegRead | dac_ctrl_reg, fpga);
 
-	dlog(DEBUG_VERBOSE,"Loaded Link List %s DAC%i... Ctrl Reg = 0x%x\n", dac_type, dac, ctrl_reg_read);
+		dlog(DEBUG_VERBOSE,"Loaded Link List %s DAC%i... Ctrl Reg = 0x%x\n", dac_type, dac, ctrl_reg_read);
 
-	if (ctrl_reg_read != ctrl_reg) {
-		dlog(DEBUG_VERBOSE, "WARNING: LinkList Control Reg Did Not Write Correctly\n");
+		if (ctrl_reg_read != ctrl_reg) {
+			dlog(DEBUG_VERBOSE, "WARNING: LinkList Control Reg Did Not Write Correctly\n");
+		}
 	}
 	
 	// clear checksums
 	APS_ResetCheckSum(device, fpga);
 
-#if 0
-	// legacy code for unbuffered loading of link list data
-  for(cnt = 0; cnt < length; cnt++) {
-    dlog(DEBUG_VERBOSE,"Writing LL Entry: %3i => Addr: 0x%X Count: %i: Repeat %i\n",
-        cnt,dac_write + 4*cnt,  CountData[cnt], RepeatData[cnt]);
-    dlog(DEBUG_VERBOSE,"                          TriggerMode: %i TriggerCount %i\n",
-        TriggerData[cnt] >> 14,
-        TriggerData[cnt] & 0x3FFF);
-
-    dlog(DEBUG_VERBOSE,"                          Offset: 0x%x Address: 0x%x TA: %i Z: %i T:% i LS: %i LE: %i\n",
-        OffsetData[cnt],
-        OffsetData[cnt] & 0x7FF,
-        (OffsetData[cnt] & 0x8000) == 0x8000,
-        (OffsetData[cnt] & 0x4000) == 0x4000,
-        (OffsetData[cnt] & 0x2000) == 0x2000,
-        (OffsetData[cnt] & 0x1000) == 0x1000,
-        (OffsetData[cnt] & 0x800) == 0x800);
-
-    APS_WriteFPGA(device, dac_write + 4*cnt  , OffsetData[cnt], fpga);
-    dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Offset  Value 0x%X\n",dac_write + 4*cnt, OffsetData[cnt]);
-
-    APS_WriteFPGA(device, dac_write + 4*cnt+1, CountData[cnt], fpga);
-    dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Count   Value 0x%X\n",dac_write + 4*cnt+1, CountData[cnt]);
-
-    APS_WriteFPGA(device, dac_write + 4*cnt+2, TriggerData[cnt], fpga);
-    dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Trigger Value 0x%X\n",dac_write + 4*cnt+2, TriggerData[cnt]);
-
-    APS_WriteFPGA(device, dac_write + 4*cnt+3, RepeatData[cnt], fpga);
-    dlog(DEBUG_VERBOSE,"LL Addr: 0x%X Repeat  Value 0x%X\n",dac_write + 4*cnt+3, RepeatData[cnt]);
-
-  }
-
-#else
 // ADDRDATASIZE_ELL 4 cmd 8 addr 2 offset 2 count 2 trigger 2 repeat
 #define ADDRDATASIZE_ELL 20
 	formated_length  = ADDRDATASIZE_ELL * length;  // link list write buffer length in bytes
@@ -1062,7 +1028,6 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	}
 	APS_WriteBlock(device,formated_length, formatedData);
 	free(formatedData);
-#endif
 
 	// verify the checksum
 	ULONG data = APS_CompareCheckSum(device, fpga);
@@ -1091,7 +1056,7 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
     }
 
 	// zero repeat register
-	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_rpt_reg, 0, fpga);
+	//APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_rpt_reg, 0, fpga);
 
 	dlog(DEBUG_VERBOSE,"Done\n");
 	return 0;
@@ -1378,28 +1343,30 @@ int SetLinkListMode_ELL(int device, int enable, int mode, int dac)
     return -4;
   }
 
-  dlog(DEBUG_INFO, "Setting Link List Enable ==> FPGA: %i DAC: %i Enable: %i\n", fpga, dac, enable);
+  dlog(DEBUG_VERBOSE, "Setting Link List Enable ==> FPGA: %i DAC: %i Enable: %i\n", fpga, dac, enable);
 
-  // load current cntrl reg
+  // load current CSR register
   ctrl_reg = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
 
   dlog(DEBUG_VERBOSE,"Current CSR: 0x%x\n", ctrl_reg);
 
 
+  // set link list enable bit
   if (enable) {
-    // set bit to turn on link list mode
-    APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_enable_mask);
+	  ctrl_reg |= dac_enable_mask;
   } else {
-    APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_enable_mask);
+	  ctrl_reg &= ~dac_enable_mask;
   }
 
-  dlog(DEBUG_INFO, "Setting Link List Mode ==> FPGA: %i DAC: %i Mode: %i\n", fpga, dac, mode);
+  dlog(DEBUG_VERBOSE, "Setting Link List Mode ==> FPGA: %i DAC: %i Mode: %i\n", fpga, dac, mode);
 
+  // set link list mode bit
   if (mode) {
-    APS_SetBit(device, fpga, FPGA_OFF_CSR, dac_mode_mask);
+	  ctrl_reg |= dac_mode_mask;
   } else {
-    APS_ClearBit(device, fpga, FPGA_OFF_CSR, dac_mode_mask);
+	  ctrl_reg &= ~dac_mode_mask;
   }
+  APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | FPGA_OFF_CSR, ctrl_reg, fpga);
 
   return 0;
 }

@@ -79,13 +79,13 @@ common.o: common.c common.h
 test: test.c ${LIBNAME}
 	${CC} ${CFLAGS} ${LFLAGS} -ggdb -o test test.c
 	
-testLocal: test.c 
+testLocal: test.c ${OBJECTS}
 	${CC} ${CFLAGS_STATIC} ${LFLAGS} -ggdb -o testLocal *.c 
 	
 
 ######################## 64-Bit ########################################
 
-all64: ${LIBNAME64} test64 testLocal64
+all64: ${LIBNAME64} test64 testLocal64 
 
 ${LIBNAME64}: ${OBJECTS64}
 	${CC64}  ${CFLAGS} -shared  -o ${LIBNAME64} ${OBJECTS64} ${EXFLAGS} 
@@ -108,7 +108,7 @@ common64.o: common.c common.h
 test64: test.c ${LIBNAME64}
 	${CC64} ${CFLAGS} ${LFLAGS} -ggdb -o test64 test.c
 	
-testLocal64: test.c 
+testLocal64: test.c ${OBJECTS64}
 	${CC64} ${CFLAGS_STATIC} ${LFLAGS} -ggdb -o testLocal64 *.c 
 	
 ######################## Misc ########################################
