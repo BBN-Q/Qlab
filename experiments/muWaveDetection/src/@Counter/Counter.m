@@ -18,9 +18,9 @@ classdef Counter < handle
             newval = 0;
             if ~strcmp(data_path, '')
                 %Get the list of current output files
-                file_list = dir([data_path filesep '*.out']);
+                file_list = dir([data_path filesep '*.h5']);
                 % pull out the number from ###_device_experiment.out
-                tokens = regexp({file_list.name}, '(\d+)_.*\.out', 'tokens', 'once');
+                tokens = regexp({file_list.name}, '(\d+)_.*\.h5', 'tokens', 'once');
                 if ~isempty(tokens)
                     expNums = cellfun(@str2double, tokens);
                     newval = max(expNums);
