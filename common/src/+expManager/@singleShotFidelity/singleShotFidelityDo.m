@@ -39,7 +39,7 @@ for loopct1 = 1:obj.Loop.one.steps
     fprintf('Loop 1: Step %d of %d\n', [loopct1, obj.Loop.one.steps]);
     
     for loopct2 = 1:obj.Loop.two.steps
-        
+
         obj.Loop.two.sweep.step(loopct2);
         fprintf('Loop 2: Step %d of %d\n', [loopct2, obj.Loop.two.steps]);
         
@@ -55,7 +55,7 @@ for loopct1 = 1:obj.Loop.one.steps
             
             % set the Tek to run
             masterAWG.run();
-            pause(0.5);
+            masterAWG.operationComplete();
             
             %Poll the digitizer until it has all the data
             success = obj.scope.wait_for_acquisition(60);
@@ -79,6 +79,8 @@ for loopct1 = 1:obj.Loop.one.steps
             
             
             masterAWG.stop();
+            masterAWG.operationComplete();
+
             % restart the slave AWGs so we can resync
             for i = 2:length(obj.awg)
                 awg = obj.awg{i};
@@ -102,13 +104,17 @@ for loopct1 = 1:obj.Loop.one.steps
         egProb = (1/varGround)*exp(-(1/2/varGround)*(abs(excitedData-meanGround).^2));
         eeProb = (1/varExcited)*exp(-(1/2/varExcited)*(abs(excitedData-meanExcited).^2));
         %Average probability of getting it right
+        %Normalize and average probabilities 
+        P00 = length(find(ggProb>geProb))/length(groundData);
+        P01 = 1- P00;
+        P11 = length(find(eeProb>egProb))/length(groundData);
+        P10 = 1-P11;
+        fprintf('Confusion matrix: gg = %.3f; ge = %.3f; eg = %.3f; ee = %.3f\n',P00, P01, P10, P11);
         meanProb = 0.5*(length(find(ggProb>geProb))/length(groundData) + length(find(eeProb>egProb))/length(groundData));
         %Fidelity 
         RBFidelity = 2*meanProb-1;
         fprintf('Max fidelity with radial basis functions: %.1f\n',100*RBFidelity)
 
-        
-        
         
         %Phase to rotate by to get two blobs on either side of I axis
         phaseRot = 0.5*( angle(mean(groundData)) +  angle(mean(excitedData)));
