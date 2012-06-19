@@ -336,8 +336,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 if any(ch == channelDataFor)
                     channelStr = aps.channelStrs{ch};
                     
-                    %Load waveform data
-                    aps.loadWaveform(ch-1, h5read(filename,['/', channelStr, '/waveformLib']));
+                    %Load and scale/shift waveform data if there is any
+                    wfInfo = h5info(filename, ['/', channelStr, '/waveformLib']);
+                    if wfInfo.Dataspace.Size > 0
+                        aps.loadWaveform(ch-1, h5read(filename,['/', channelStr, '/waveformLib']));
+                    end
+                    
                 end
             end
             
