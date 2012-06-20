@@ -1003,8 +1003,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             aps.init()
 
+            offset = 0;
             validate = 0;
-            useSlowWrite = 0;
+            storeWaveform = 0;
 
             wf = aps.getNewWaveform();
             wf.data = [zeros([1,2000]) ones([1,2000])];
@@ -1012,8 +1013,8 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             wf.dataMode = wf.REAL_DATA;
             
             for ch = 0:3
-                aps.loadWaveform(ch, wf.get_vector(), 0, validate,useSlowWrite);
-                aps.(sprintf('ch_%d', ch+1)).enabled = 1;
+                aps.loadWaveform(ch, wf.get_vector(), offset, validate,storeWaveform);
+                aps.(sprintf('chan_%d', ch+1)).enabled = 1;
             end
             
             aps.run();
@@ -1040,6 +1041,10 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             
             aps.open(apsId);
             aps.loadBitFile();
+            
+            offset = 0;
+            validate = 0;
+            storeWaveform = 0;
 
             wf = aps.getNewWaveform();
             wf.data = 0:1/1000:1;
@@ -1054,7 +1059,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 chS = sprintf('chan_%i',ch+1);
                 aps.(chS).waveform = wf;
                 aps.(chS).enabled = 1;
-                aps.storeAPSWaveform(ch,wf);
+                aps.loadWaveform(ch, wf.get_vector(), offset, validate,storeWaveform);
             end
             
             running = 1;
