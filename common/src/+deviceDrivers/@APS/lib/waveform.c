@@ -221,7 +221,7 @@ void WF_Prep(waveform_t * wfArray, int channel) {
   if (!wfArray) return;
 
   int cnt;
-  int prepValue;
+  float prepValue;
 
   float scale = wfArray[channel].scale * MAX_WF_VALUE;
   float offset = wfArray[channel].offset * MAX_WF_VALUE;
