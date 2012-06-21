@@ -69,10 +69,31 @@ int APS_FormatForFPGA_ELL(BYTE * buffer, ULONG addr,
 		                    ULONG offset, ULONG count,
 		                    ULONG trigger, ULONG repeat, UCHAR fpga)
 {
-	APS_FormatForFPGA(buffer, addr, offset, fpga);
-	APS_FormatForFPGA(buffer+5, addr+1, count, fpga);
-	APS_FormatForFPGA(buffer+10, addr+2, trigger, fpga);
-	APS_FormatForFPGA(buffer+15, addr+3, repeat, fpga);
+	BYTE cmd;
+	cmd = APS_FPGA_IO | (fpga<<2) | 2;
+	// cmd
+	buffer[0] = cmd;
+	// offset
+	buffer[1] = (addr >> 8) & LSB_MASK;
+	buffer[2]  = addr & LSB_MASK;
+	buffer[3]  = (offset >> 8) & LSB_MASK;
+	buffer[4]  = offset & LSB_MASK;
+	// count
+	buffer[5] = ((addr+1) >> 8) & LSB_MASK;
+	buffer[6]  = (addr+1) & LSB_MASK;
+	buffer[7]  = (count >> 8) & LSB_MASK;
+	buffer[8]  = count & LSB_MASK;
+	// trigger
+	buffer[9] = ((addr+2) >> 8) & LSB_MASK;
+	buffer[10]  = (addr+2) & LSB_MASK;
+	buffer[11]  = (trigger >> 8) & LSB_MASK;
+	buffer[12]  = trigger & LSB_MASK;
+	// repeat
+	buffer[13] = ((addr+3) >> 8) & LSB_MASK;
+	buffer[14]  = (addr+3) & LSB_MASK;
+	buffer[15]  = (repeat >> 8) & LSB_MASK;
+	buffer[16]  = repeat & LSB_MASK;
+	
 	return 0;
 }
 
@@ -998,8 +1019,8 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	// clear checksums
 	APS_ResetCheckSum(device, fpga);
 
-// ADDRDATASIZE_ELL 4 cmd 8 addr 2 offset 2 count 2 trigger 2 repeat
-#define ADDRDATASIZE_ELL 20
+// ADDRDATASIZE_ELL 1 cmd 8 addr 2 offset 2 count 2 trigger 2 repeat
+#define ADDRDATASIZE_ELL 17
 	formated_length  = ADDRDATASIZE_ELL * length;  // link list write buffer length in bytes
 	formatedData = (BYTE *) malloc(formated_length);
 	if (!formatedData)
