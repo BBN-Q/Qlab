@@ -93,7 +93,14 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             delete(fullfile(obj.DataPath, obj.DataFileName));
             
             % return the amplitude data
-            out = data.abs_Data;
+            switch obj.ExpParams.dataType
+                case 'amp'
+                    out = data.abs_Data;
+                case 'phase'
+                    out = mod(data.phase_Data,360);
+                otherwise
+                    error('Unknown dataType can only be "amp" or "phase"');
+            end
         end
 
         function [cost, J] = Xpi2ObjectiveFnc(obj, x0)

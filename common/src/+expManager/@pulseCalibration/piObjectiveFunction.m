@@ -1,6 +1,6 @@
 function [cost, J] = piObjectiveFunction(obj, x, qubit, direction)
-    piAmp = x(1);
-    offset = x(2);
+    piAmp = real(x(1));
+    offset = real(x(2));
     fprintf('piAmp: %.1f, offset: %.4f\n', piAmp, offset);
     % create sequence
     obj.pulseParams.piAmp = piAmp;

@@ -29,6 +29,7 @@ ExpParams.offset2amp = 8192/2; % divisor should be the max output voltage of the
 ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;
 ExpParams.filter = commonSettings.ExpParams.filter;
 ExpParams.softAvgs = 3;
+ExpParams.dataType = 'amp'; %or 'phase';
 
 % force AWGs to use a simple sequence file
 if isfield(commonSettings.InstrParams, 'TekAWG')
