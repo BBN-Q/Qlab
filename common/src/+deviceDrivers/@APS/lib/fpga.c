@@ -70,7 +70,8 @@ int APS_FormatForFPGA_ELL(BYTE * buffer, ULONG addr,
 		                    ULONG trigger, ULONG repeat, UCHAR fpga)
 {
 	BYTE cmd;
-	cmd = APS_FPGA_IO | (fpga<<2) | 2;
+	// setup cmd for 8 byte transfers (max length)
+	cmd = APS_FPGA_IO | (fpga<<2) | 3;
 	// cmd
 	buffer[0] = cmd;
 	// offset
@@ -83,16 +84,18 @@ int APS_FormatForFPGA_ELL(BYTE * buffer, ULONG addr,
 	buffer[6]  = (addr+1) & LSB_MASK;
 	buffer[7]  = (count >> 8) & LSB_MASK;
 	buffer[8]  = count & LSB_MASK;
+	// cmd
+	buffer[9] = cmd;
 	// trigger
-	buffer[9] = ((addr+2) >> 8) & LSB_MASK;
-	buffer[10]  = (addr+2) & LSB_MASK;
-	buffer[11]  = (trigger >> 8) & LSB_MASK;
-	buffer[12]  = trigger & LSB_MASK;
+	buffer[10] = ((addr+2) >> 8) & LSB_MASK;
+	buffer[11]  = (addr+2) & LSB_MASK;
+	buffer[12]  = (trigger >> 8) & LSB_MASK;
+	buffer[13]  = trigger & LSB_MASK;
 	// repeat
-	buffer[13] = ((addr+3) >> 8) & LSB_MASK;
-	buffer[14]  = (addr+3) & LSB_MASK;
-	buffer[15]  = (repeat >> 8) & LSB_MASK;
-	buffer[16]  = repeat & LSB_MASK;
+	buffer[14] = ((addr+3) >> 8) & LSB_MASK;
+	buffer[15]  = (addr+3) & LSB_MASK;
+	buffer[16]  = (repeat >> 8) & LSB_MASK;
+	buffer[17]  = repeat & LSB_MASK;
 	
 	return 0;
 }
@@ -936,7 +939,7 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	int ctrl_reg, ctrl_reg_read;
 	int readVal;
 
-	ULONG formated_length;
+	ULONG formatted_length;
 	BYTE * formatedData;
 	BYTE * formatedDataIdx;
 
@@ -1019,10 +1022,10 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 	// clear checksums
 	APS_ResetCheckSum(device, fpga);
 
-// ADDRDATASIZE_ELL 1 cmd 8 addr 2 offset 2 count 2 trigger 2 repeat
-#define ADDRDATASIZE_ELL 17
-	formated_length  = ADDRDATASIZE_ELL * length;  // link list write buffer length in bytes
-	formatedData = (BYTE *) malloc(formated_length);
+// ADDRDATASIZE_ELL 2 cmd 8 addr 2 offset 2 count 2 trigger 2 repeat
+#define ADDRDATASIZE_ELL 18
+	formatted_length  = ADDRDATASIZE_ELL * length;  // link list write buffer length in bytes
+	formatedData = (BYTE *) malloc(formatted_length);
 	if (!formatedData)
 		return -5;
 	formatedDataIdx = formatedData;
@@ -1047,7 +1050,7 @@ int LoadLinkList_ELL(int device, unsigned short *OffsetData, unsigned short *Cou
 		gCheckSum[device][fpga-1] += TriggerData[cnt];
 		gCheckSum[device][fpga-1] += RepeatData[cnt];
 	}
-	APS_WriteBlock(device,formated_length, formatedData);
+	APS_WriteBlock(device, formatted_length, formatedData);
 	free(formatedData);
 
 	// verify the checksum

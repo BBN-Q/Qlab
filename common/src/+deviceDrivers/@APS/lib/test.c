@@ -418,6 +418,7 @@ dealloc:
 
 void doLinkListTest(HANDLE hdll, char* bitFile, int doSetup) {
 	const int llLen = 512;
+	const int numCalls = 20;
 	unsigned short offset[llLen], count[llLen], repeat[llLen], trigger[llLen];
 
 	int cnt;
@@ -429,7 +430,6 @@ void doLinkListTest(HANDLE hdll, char* bitFile, int doSetup) {
 
 	close             = (pfunc) GetFunction(hdll, "APS_Close");
 	loadLinkList       = (pfunc) GetFunction(hdll, "APS_LoadLinkList");
-
 #endif
 
 	if (openDac(hdll,0) < 0) return;
@@ -441,11 +441,12 @@ void doLinkListTest(HANDLE hdll, char* bitFile, int doSetup) {
 	printf("Loading link lists\n");
 
 	gettimeofday(&t0, NULL);
-	for( cnt = 0; cnt < 100; cnt++) {
+	for( cnt = 0; cnt < numCalls; cnt++) {
 		loadLinkList(0, offset, count, trigger, repeat, llLen, cnt % 4, 0, FALSE);
 	}
 	gettimeofday(&t1, NULL);
-	printf("Total run time: %f\n", (1/1e6)*(t1.tv_sec*1e6 + t1.tv_usec - t0.tv_sec*1e6 - t0.tv_usec));
+	float runTime = (1/1e6)*(t1.tv_sec*1e6 + t1.tv_usec - t0.tv_sec*1e6 - t0.tv_usec);
+	printf("Total run time: %f s (%f s per call)\n", runTime, runTime/numCalls);
 
 	close(0);
 }
