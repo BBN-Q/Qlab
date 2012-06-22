@@ -19,7 +19,7 @@ end
 ExpParams = struct();
 ExpParams.Qubit = qubit;
 ExpParams.DoMixerCal = 0;
-ExpParams.DoRabiAmp = 0;
+ExpParams.DoRabiAmp = 1;
 ExpParams.DoRamsey = 0;
 ExpParams.DoPi2Cal = 1;
 ExpParams.DoPiCal = 1;
@@ -30,6 +30,7 @@ ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;
 ExpParams.filter = commonSettings.ExpParams.filter;
 ExpParams.softAvgs = 3;
 ExpParams.dataType = 'amp'; %or 'phase';
+ExpParams.SSBFreq = -100e6;
 
 % force AWGs to use a simple sequence file
 if isfield(commonSettings.InstrParams, 'TekAWG')

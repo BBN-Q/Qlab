@@ -180,6 +180,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                 channelParams = obj.inputStructure.InstrParams.(IQchannels.instr);
                 obj.pulseParams.i_offset = channelParams.(['chan_' num2str(IQchannels.i)]).offset;
                 obj.pulseParams.q_offset = channelParams.(['chan_' num2str(IQchannels.q)]).offset;
+                obj.pulseParams.SSBFreq = obj.ExpParams.SSBFreq;
             else
                 obj.pulseParams = struct('piAmp', 6560, 'pi2Amp', 3280, 'delta', -0.5, 'T', eye(2,2),...
                     'pulseType', 'drag', 'i_offset', 0.119, 'q_offset', 0.130);
