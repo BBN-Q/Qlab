@@ -32,6 +32,7 @@ using std::map;
 #include "APS.h"
 #include "logger.h"
 #include "APSRack.h"
+#include "FTDI.h"
 
 //CONSTANTS
 
@@ -52,22 +53,10 @@ using std::map;
 
 //FTDI
 #ifdef WIN32
-#include <windows.h>
-#include "ftd2xx.h"
-#define LIBFILE "ftd2xx.dll"
-
-#define GetFunction GetProcAddress
-
+#include "ftd2xx_win.h"
 #else
-#include <dlfcn.h>
-#include "WinTypes.h"
 #include "ftd2xx.h"
-#define LIBFILE "libftd2xx.so"
-#define GetFunction dlsym
-
 #endif
-
-
 
 
 #endif /* HEADINGS_H_ */
