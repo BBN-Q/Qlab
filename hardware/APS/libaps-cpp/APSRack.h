@@ -10,6 +10,8 @@
 
 #include "headings.h"
 
+class APS;
+
 class APSRack {
 public:
 	APSRack();
@@ -19,14 +21,13 @@ public:
 	int connect(int);
 	int connect(string);
 
-	int GetNumDevices();
-	vector<string> GetDeviceSerials();
+	int get_num_devices();
+	void enumerate_devices();
 
 private:
 	vector<APS> _devices;
 	int _numDevices;
-	APSLogger _logger;
-
+	map<string, unsigned short> _serial2dev;
 };
 
 #endif /* APSRACK_H_ */

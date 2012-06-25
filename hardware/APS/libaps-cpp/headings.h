@@ -14,17 +14,24 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
+#include <stdio.h>
+#include <map>
 using std::vector;
 using std::string;
+using std::cout;
+using std::endl;
+using std::map;
 
 #include <dlfcn.h>
 
 
-#include "Channel.h"
-#include "APS.h"
 #include "Waveform.h"
 #include "LinkList.h"
-
+#include "Channel.h"
+#include "APS.h"
+#include "logger.h"
+#include "APSRack.h"
 
 //CONSTANTS
 
@@ -39,42 +46,25 @@ using std::string;
 
 #define MAX_WF_VALUE (pow(2,NUM_BITS)-1)
 
+#define MAX_APS_DEVICES 10
 
 
 
 //FTDI
-#include "ftd2xx.h"
 #ifdef WIN32
 #include <windows.h>
+#include "ftd2xx.h"
 #define LIBFILE "ftd2xx.dll"
 
-
-// Function Pointer Types
-typedef FT_STATUS WINAPI (*pFT_Open)(int,FT_HANDLE *);
-typedef FT_STATUS WINAPI (*pFT_Close)(FT_HANDLE);
-typedef FT_STATUS WINAPI (*pFT_Write)(FT_HANDLE, LPVOID, DWORD, LPDWORD);
-typedef FT_STATUS WINAPI (*pFT_Read)(FT_HANDLE, LPVOID,DWORD, LPDWORD);
-typedef FT_STATUS WINAPI (*pFT_ListDevices)();
-typedef FT_STATUS WINAPI (*pFT_SetBaudRate)(FT_HANDLE, DWORD);
-typedef FT_STATUS WINAPI (*pFT_SetTimeouts)(FT_HANDLE, DWORD,DWORD);
-HANDLE hdll = 0;
-
 #define GetFunction GetProcAddress
+
 #else
 #include <dlfcn.h>
-#define LIBFILE "libftd2xx.so"
 #include "WinTypes.h"
-
-typedef int (*pFT_Open)(int,FT_HANDLE *);
-typedef int (*pFT_Close)(FT_HANDLE);
-typedef int (*pFT_Write)(FT_HANDLE, LPVOID, DWORD, LPDWORD);
-typedef int (*pFT_Read)(FT_HANDLE, LPVOID,DWORD, LPDWORD);
-typedef int (*pFT_ListDevices)();
-typedef int (*pFT_SetBaudRate)(FT_HANDLE, DWORD);
-typedef int (*pFT_SetTimeouts)(FT_HANDLE, DWORD,DWORD);
-void *hdll;
-
+#include "ftd2xx.h"
+#define LIBFILE "libftd2xx.so"
 #define GetFunction dlsym
+
 #endif
 
 

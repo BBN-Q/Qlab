@@ -10,7 +10,7 @@ CC=g++
 else
 ####### Linux ####### 
 ifeq (${OS},Linux)
-CFLAGS=
+CFLAGS=-Wall -fPIC
 LIBEXT=so
 EXFLAGS=-Wl
 LFLAGS=-ldl
@@ -36,16 +36,23 @@ endif
 endif
 
 
-OBJECTS=aps.o
+OBJECTS=APSRack.o APS.o
 
-
-all: libaps.$(LIBEXT) 
+all: libaps.$(LIBEXT) test
 
 libaps.$(LIBEXT): $(OBJECTS)
-	$(CC) $(CFLAGS) 
+	$(CC) $(CFLAGS) -shared -o libaps.$(LIBEXT) $(OBJECTS)
 
-aps.o: aps.cpp
-	$(CC) $(CFLAGS) -c aps.cpp -o aps.o
+APS.o: APS.cpp
+	$(CC) $(CFLAGS) -c APS.cpp -o APS.o
 	
+APSRack.o: APSRack.cpp
+	$(CC) $(CFLAGS) -c APSRack.cpp -o APSRack.o
+	
+test: test.cpp
+	$(CC) $(CFLAGS) $(OBJECTS) $(LFLAGS) -lftd2xx -Wl,-rpath /usr/local/lib -o test test.cpp 
+	
+clean:
+	rm -rf *.o
 
 
