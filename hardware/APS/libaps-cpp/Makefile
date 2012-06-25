@@ -50,9 +50,10 @@ APSRack.o: APSRack.cpp
 	$(CC) $(CFLAGS) -c APSRack.cpp -o APSRack.o
 	
 test: test.cpp
-	$(CC) $(CFLAGS) $(OBJECTS) $(LFLAGS) -lftd2xx -Wl,-rpath /usr/local/lib -o test test.cpp 
+	$(CC) $(CFLAGS) $(OBJECTS) $(LFLAGS) -lftd2xx -o test test.cpp 
 	
 clean:
 	rm -rf *.o
+	rm test
 
 
