@@ -13,7 +13,7 @@
 class Channel {
 public:
 	Channel();
-	virtual ~Channel();
+	~Channel();
 
 private:
 	Waveform waveform;

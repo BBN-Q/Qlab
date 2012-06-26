@@ -23,31 +23,25 @@ OBJFLAGS=/c /Fo
 OBJEXT=obj
 LIBEXT=dll
 LIBNAME64=libaps64.dll
-EXFLAGS=-Wl,--out-implib,libaps.a
-LIBFLAGS=ftd2xx.lib
+LIBS=ftd2xx.lib
+LIBFLAGS=/LD
 CC=cl
 endif
 endif
 
 
-OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT)
+OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT) Channel.$(OBJEXT) Waveform.$(OBJEXT) LinkList.$(OBJEXT)
 
-all: $(OBJECTS) test
+all: $(OBJECTS) test libaps
 
-#libaps: $(OBJECTS)
-#	$(CC) $(CFLAGS) $(LIBFLAGS) $(OBJECTS) libaps.cpp
+libaps: $(OBJECTS)
+	$(CC) $(CFLAGS) $(LIBFLAGS) libaps.cpp $(OBJECTS) $(LIBS) 
 
-APS.$(OBJEXT): APS.cpp
-	$(CC) $(CFLAGS) $(OBJFLAGS) APS.cpp 
-	
-APSRack.$(OBJEXT): APSRack.cpp
-	$(CC) $(CFLAGS) $(OBJFLAGS) APSRack.cpp 
-
-FTDI.$(OBJEXT): FTDI.cpp
-	$(CC) $(CFLAGS) $(OBJFLAGS) FTDI.cpp  
+%.$(OBJEXT):%.cpp
+	$(CC) $(CFLAGS) $(OBJFLAGS) $<
 
 test: test.cpp $((OBJECTS)
-	$(CC) $(CFLAGS) test.cpp $(OBJECTS) $(LIBFLAGS)  	
+	$(CC) $(CFLAGS) test.cpp $(OBJECTS) $(LIBS)  	
 
 clean:
 	rm -rf *.$(OBJEXT)

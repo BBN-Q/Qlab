@@ -11,7 +11,7 @@
 class LinkList {
 public:
 	LinkList();
-	virtual ~LinkList();
+	~LinkList();
 };
 
 #endif /* LINKLIST_H_ */

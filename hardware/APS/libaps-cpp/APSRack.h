@@ -15,7 +15,7 @@ class APS;
 class APSRack {
 public:
 	APSRack();
-	virtual ~APSRack();
+	~APSRack();
 
 	int Init();
 	int connect(const int &);

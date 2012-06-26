@@ -10,10 +10,12 @@
 
 #include "headings.h"
 
+class Channel;
+
 class APS {
 public:
 	APS();
-	virtual ~APS();
+	~APS();
 
 private:
 	int deviceID;

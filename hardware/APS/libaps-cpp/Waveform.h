@@ -11,7 +11,7 @@
 class Waveform {
 public:
 	Waveform();
-	virtual ~Waveform();
+	~Waveform();
 };
 
 #endif /* WAVEFORM_H_ */

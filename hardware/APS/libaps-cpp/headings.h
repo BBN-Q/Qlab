@@ -24,12 +24,14 @@ using std::endl;
 using std::map;
 
 //FTDI
-//#ifdef WIN32
+#ifdef _WIN32
 #include "windows.h"
 #include "ftd2xx_win.h"
-//#else
-//#include "ftd2xx.h"
-//#endif
+#define EXPORT __declspec(dllexport)
+#else
+#include "ftd2xx.h"
+#define EXPORT
+#endif
 
 
 #include "Waveform.h"
