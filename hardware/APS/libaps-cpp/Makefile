@@ -13,47 +13,44 @@ ifeq (${OS},Linux)
 CFLAGS=-Wall -fPIC
 LIBEXT=so
 EXFLAGS=-Wl
-LFLAGS=-ldl
+LIBFLAGS=-shared
+LFLAGS=
 CC=g++
 else
 ####### Windows #######
-CFLAGS=-mno-cygwin -D__CYGWIN__ -DBUILD_DLL -I./include -Wunused-variable
-CFLAGS_STATIC=-mno-cygwin -D__CYGWIN__ -I./include -Wunused-variable
+CFLAGS=/EHsc
+OBJFLAGS=/c /Fo
+OBJEXT=obj
 LIBEXT=dll
 LIBNAME64=libaps64.dll
 EXFLAGS=-Wl,--out-implib,libaps.a
-LFLAGS=
-####### 64-bit #######
-ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
-CC=i686-w64-mingw32-gcc
-CC64=x86_64-w64-mingw32-gcc
-GLOBAL_ALL=all64
-else
-####### 32-bit #######
-CC=gcc
-endif
+LIBFLAGS=ftd2xx.lib
+CC=cl
 endif
 endif
 
 
-OBJECTS=APSRack.o APS.o
+OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT)
 
-all: libaps.$(LIBEXT) test
+all: $(OBJECTS) test
 
-libaps.$(LIBEXT): $(OBJECTS)
-	$(CC) $(CFLAGS) -shared -o libaps.$(LIBEXT) $(OBJECTS)
+#libaps: $(OBJECTS)
+#	$(CC) $(CFLAGS) $(LIBFLAGS) $(OBJECTS) libaps.cpp
 
-APS.o: APS.cpp
-	$(CC) $(CFLAGS) -c APS.cpp -o APS.o
+APS.$(OBJEXT): APS.cpp
+	$(CC) $(CFLAGS) $(OBJFLAGS) APS.cpp 
 	
-APSRack.o: APSRack.cpp
-	$(CC) $(CFLAGS) -c APSRack.cpp -o APSRack.o
-	
-test: test.cpp
-	$(CC) $(CFLAGS) $(OBJECTS) $(LFLAGS) -lftd2xx -o test test.cpp 
-	
+APSRack.$(OBJEXT): APSRack.cpp
+	$(CC) $(CFLAGS) $(OBJFLAGS) APSRack.cpp 
+
+FTDI.$(OBJEXT): FTDI.cpp
+	$(CC) $(CFLAGS) $(OBJFLAGS) FTDI.cpp  
+
+test: test.cpp $((OBJECTS)
+	$(CC) $(CFLAGS) test.cpp $(OBJECTS) $(LIBFLAGS)  	
+
 clean:
-	rm -rf *.o
-	rm test
+	rm -rf *.$(OBJEXT)
+	rm test.exe
 
 

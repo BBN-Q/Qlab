@@ -13,10 +13,6 @@ APSRack::APSRack() {
 }
 
 APSRack::~APSRack() {
-	//Close the FTDI library
-	dlclose(hdll);
-	cout << "Caught destructor" << endl;
-	FILE_LOG(logDEBUG) << "Closed FTDI library";
 }
 
 //Initialize the rack by polling for devices and serial numbers
@@ -43,7 +39,7 @@ int APSRack::get_num_devices() {
 
 void APSRack::enumerate_devices() {
 
-	_deviceSerials = FTDI::get_device_serials();
+	FTDI::get_device_serials(_deviceSerials);
 	_numDevices = _deviceSerials.size();
 
 	//Now setup the map between device serials and number
@@ -53,7 +49,6 @@ void APSRack::enumerate_devices() {
 		FILE_LOG(logDEBUG) << "Device" << devicect << " has serial number: " << tmpSerial;
 		devicect++;
 	}
-
 }
 
 int APSRack::connect(const int & deviceID){

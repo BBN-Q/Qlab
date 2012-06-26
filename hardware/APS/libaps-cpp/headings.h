@@ -23,7 +23,13 @@ using std::cout;
 using std::endl;
 using std::map;
 
-#include <dlfcn.h>
+//FTDI
+//#ifdef WIN32
+#include "windows.h"
+#include "ftd2xx_win.h"
+//#else
+//#include "ftd2xx.h"
+//#endif
 
 
 #include "Waveform.h"
@@ -51,12 +57,6 @@ using std::map;
 
 
 
-//FTDI
-#ifdef WIN32
-#include "ftd2xx_win.h"
-#else
-#include "ftd2xx.h"
-#endif
 
 
 #endif /* HEADINGS_H_ */

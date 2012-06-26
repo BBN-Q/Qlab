@@ -7,9 +7,9 @@
 
 #include "headings.h"
 
-vector<string> FTDI::get_device_serials() {
+void FTDI::get_device_serials(vector<string> & deviceSerials) {
 
-	vector<string> deviceSerials(0);
+	deviceSerials.clear();
 
 	//Use the FTDI driver to get serial numbers (from "Simple" example)
 	char * pBufSerials[MAX_APS_DEVICES+1];
@@ -30,7 +30,11 @@ vector<string> FTDI::get_device_serials() {
 
 	FILE_LOG(logDEBUG) << "Found " << numDevices << " devices attached";
 
-	return deviceSerials;
+	//Copy over the char buffers to the vector of strings
+	for(int devicect=0; (devicect<numDevices) && (devicect<MAX_APS_DEVICES); devicect++){
+		deviceSerials.push_back(string(bufSerials[devicect]));
+	}
+
 }
 
 int FTDI::connect(const int & deviceID, FT_HANDLE & deviceHandle) {
