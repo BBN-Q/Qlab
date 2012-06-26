@@ -17,6 +17,10 @@ public:
 	APS();
 	~APS();
 
+	int read_Reg(ULONG, ULONG, ULONG, UCHAR *);
+	int write_Reg();
+	int program_FPGA(const string &);
+
 private:
 	int deviceID;
 	string deviceSerial;

@@ -16,3 +16,7 @@ APS::~APS() {
 	// TODO Auto-generated destructor stub
 }
 
+int APS::program_FPGA(const string & bitFile){
+
+	return 0;
+}
