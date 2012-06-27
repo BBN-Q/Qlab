@@ -19,12 +19,14 @@ public:
 
 	int read_Reg(ULONG, ULONG, ULONG, UCHAR *);
 	int write_Reg();
-	int program_FPGA(const string &);
+	int program_FPGA(const string &, const UCHAR &);
+	int read_bitfile_version(const UCHAR &);
 
 private:
-	int deviceID;
-	string deviceSerial;
-	vector<Channel> channels;
+	int _deviceID;
+	string _deviceSerial;
+	vector<Channel> _channels;
+	FT_HANDLE _handle;
 
 
 

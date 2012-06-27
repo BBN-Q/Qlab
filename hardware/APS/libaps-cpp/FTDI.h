@@ -1,6 +1,8 @@
 /*
  * FTDI.h
+ *
  * Hide most of the FTDI interaction here
+ *
  *  Created on: Jun 25, 2012
  *      Author: cryan
  */
