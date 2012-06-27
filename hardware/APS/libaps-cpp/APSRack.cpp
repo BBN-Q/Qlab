@@ -46,7 +46,7 @@ void APSRack::enumerate_devices() {
 	size_t devicect = 0;
 	for (string tmpSerial : _deviceSerials) {
 		_serial2dev[tmpSerial] = devicect;
-		FILE_LOG(logDEBUG) << "Device" << devicect << " has serial number: " << tmpSerial;
+		FILE_LOG(logDEBUG) << "Device " << devicect << " has serial number " << tmpSerial;
 		devicect++;
 	}
 }

@@ -28,17 +28,29 @@ using std::endl;
 using std::map;
 using std::runtime_error;
 
-//Needed for usleep on gcc 4.7
-#include <unistd.h>
 
 
-//FTDI
+//Deal with some Windows/Linux difference
 #ifdef _WIN32
 #include "windows.h"
 #include "ftd2xx_win.h"
 #define EXPORT __declspec(dllexport)
+
+//Windows doesn't have a usleep function so define one
+inline void usleep(int waitTime) {
+    long int time1 = 0, time2 = 0, freq = 0;
+
+    QueryPerformanceCounter((LARGE_INTEGER *) &time1);
+    QueryPerformanceFrequency((LARGE_INTEGER *)&freq);
+
+    do {
+        QueryPerformanceCounter((LARGE_INTEGER *) &time2);
+    } while((time2-time1) < waitTime);
+}
 #else
 #include "ftd2xx.h"
+//Needed for usleep on gcc 4.7
+#include <unistd.h>
 #define EXPORT
 #endif
 
