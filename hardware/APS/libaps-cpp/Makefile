@@ -1,21 +1,30 @@
+##############################################
+# Module Name : libaps Makefile
+#
+# Author/Date : Colm Ryan / June 2012
+#
+# Description : Makefile for building libaps with gcc or cl
+#
+# Copyright (C) BBN Technologies Corp. 2012
+########################################################
+
 OS=$(shell uname)
 
 ####### Mac OS X #######
 ifeq (${OS},Darwin)
-CFLAGS=-dynamiclib 
-LIBEXT=dylib
-EXFLAGS=-Wl
-LFLAGS=
-CC=g++
+#Not handled yet
 else
 ####### Linux ####### 
 ifeq (${OS},Linux)
-CFLAGS=-Wall -fPIC
+CFLAGS=-Wall -fPIC -std=c++11
+OBJFLAGS=-c
+OBJEXT=o
 LIBEXT=so
 EXFLAGS=-Wl
 LIBFLAGS=-shared
+LIBS=-lftd2xx
 LFLAGS=
-CC=g++
+CC=g++-4.7
 else
 ####### Windows #######
 CFLAGS=/EHsc
@@ -30,7 +39,7 @@ endif
 endif
 
 
-OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT) Channel.$(OBJEXT) Waveform.$(OBJEXT) LinkList.$(OBJEXT)
+OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT) Channel.$(OBJEXT) Waveform.$(OBJEXT) LinkList.$(OBJEXT) FPGA.$(OBJEXT)
 
 all: $(OBJECTS) test libaps
 

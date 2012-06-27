@@ -29,7 +29,7 @@ static const UCHAR BitReverse[256] =
 };
 
 
-int FPGA::program_FPGA(FT_HANDLE deviceHandle, const vector<UCHAR> & bitFileData,  const int & chipSelect) {
+int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const int & chipSelect, const int & expectedVersion) {
 
 	// To configure the FPGAs, you initialize them, send the byte stream, and
 	// then wait for the DONE flag to be asserted.
@@ -107,7 +107,7 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, const vector<UCHAR> & bitFileData
 		usleep(1000);
 
 		// Read the Status to see that INITN is deasserted in response to PROGRAMN deassertion
-		if(FGPA::read_register(deviceHandle, APS_CONF_STAT, 1, 0, &readByte) != 1) return(-6);
+		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, 0, &readByte) != 1) return(-6);
 		FILE_LOG(logDEBUG2) << "Read 3: " << std::hex << readByte;
 
 		// verify Init Mask is high
@@ -118,7 +118,7 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, const vector<UCHAR> & bitFileData
 	// Step 5
 
 	// Bit reverse the data
-	for(char & tmpVal : bitFileData)
+	for(UCHAR & tmpVal : bitFileData)
 		tmpVal = BitReverse[tmpVal];
 
 	#define BLOCKSIZE 61
@@ -130,7 +130,7 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, const vector<UCHAR> & bitFileData
 	for(auto dataIter=bitFileData.begin(); dataIter < bitFileData.end(); dataIter += BLOCKSIZE) {
 		// Write a full buffer if not at the end of the input data
 		if(dataIter + BLOCKSIZE < bitFileData.end()) {
-			if(FPGA::write_register(deviceHandle, APS_CONF_DATA, 0, chipSelect, &bitFileData[dataIter-bitFileData.begin()]) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
+			if(FPGA::write_register(deviceHandle, APS_CONF_DATA, 0, chipSelect, static_cast<UCHAR*>(&bitFileData[dataIter-bitFileData.begin()])) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
 				return(-8);
 		}
 		else {
@@ -154,8 +154,7 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, const vector<UCHAR> & bitFileData
 		usleep(1000); // if done has not set wait a bit
 	}
 
-	if (!ok)
-		FILE_LOG(logWARNING) << "FPGAs did not set DONE bits after programming, attempting to continue.";
+	if (!ok) {FILE_LOG(logWARNING) << "FPGAs did not set DONE bits after programming, attempting to continue.";}
 
 
 	FILE_LOG(logDEBUG) << "Done programming FPGA";
@@ -166,7 +165,7 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, const vector<UCHAR> & bitFileData
 	// Read Bit File Version
 	int version;
 	for (int ct = 0, ok = 0; ct < maxAttemptCnt && !ok; ct++) {
-		version = (chipSelect == 3) ? FPGA::read_bitFile_version(deviceHandle) : FPGA::read_bitFile_version(deviceHandle, chipSelect);
+		version =  FPGA::read_bitFile_version(deviceHandle, chipSelect);
 		if (version == expectedVersion) ok = 1;
 		usleep(1000); // if doesn't match, wait a bit and try again
 	}
@@ -212,7 +211,7 @@ int FPGA::read_register(
 	for (int repeats = 0; repeats < max_repeats; repeats++) {
 
 		//Write the commmand
-		if (repeats > 0) FILE_LOG(logDEBUG2) << "Retry USB Write " << repeats;
+		if (repeats > 0) {FILE_LOG(logDEBUG2) << "Retry USB Write " << repeats;}
 		ftStatus = FT_Write(deviceHandle, &commandPacket, 1, &bytesWritten);
 
 		if (!FT_SUCCESS(ftStatus) || bytesWritten != 1) {
@@ -224,9 +223,10 @@ int FPGA::read_register(
 
 		//Read the result
 		ftStatus = FT_Read(deviceHandle, Data, packetLength, &bytesRead);
-		if (repeats > 0) FILE_LOG(logDEBUG2) << "Retry USB Read " << repeats;
-				if (!FT_SUCCESS(ftStatus) || bytesRead != 1)
+		if (repeats > 0) {FILE_LOG(logDEBUG2) << "Retry USB Read " << repeats;}
+		if (!FT_SUCCESS(ftStatus) || bytesRead != 1){
 			FILE_LOG(logDEBUG2) << "FPGA::read_register: Error reading to USB with status = " << ftStatus << "; bytes read = " << bytesRead << "; repeat count = " << repeats;
+		}
 		else
 			break;
 	}
@@ -281,13 +281,14 @@ int FPGA::write_register(
 	std::copy(Data, Data+packetLength, dataPacket.begin()+1);
 
 	for (repeats = 0; repeats < max_repeats; repeats++) {
-		if (repeats > 0) FILE_LOG(logDEBUG2) << "Repeat Write " << repeats;
+		if (repeats > 0) {FILE_LOG(logDEBUG2) << "Repeat Write " << repeats;}
 		ftStatus = FT_Write(deviceHandle,static_cast<void*>(&dataPacket[0]), packetLength+1, &bytesWritten);
 		if (FT_SUCCESS(ftStatus)) break;
 	}
 
-	if (!FT_SUCCESS(ftStatus) || bytesWritten != packetLength+1)
+	if (!FT_SUCCESS(ftStatus) || bytesWritten != packetLength+1){
 		FILE_LOG(logERROR) << "FPGA::write_register: Error writing to USB status with status = " << ftStatus << "; bytes written = " << bytesWritten;
+	}
 
 	// Adjust for command byte when returning bytes written
 	return(bytesWritten - 1);
@@ -297,7 +298,7 @@ int FPGA::read_bitFile_version(FT_HANDLE deviceHandle, const UCHAR & chipSelect)
 
 // Reads version information from register 0x8006
 
-int version;
+int version, version2;
 
 //For single FPGA we return that version, for both we return both if the same otherwise error.
 switch (chipSelect) {
@@ -306,10 +307,10 @@ case 2:
 	version = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_ELL_REGREAD | FPGA_OFF_VERSION, chipSelect);
 	version &= 0x1FF; // First 9 bits hold version
 	break;
-case 2:
+case 3:
 	version = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_ELL_REGREAD | FPGA_OFF_VERSION, 1);
 	version &= 0x1FF; // First 9 bits hold version
-	int version2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_ELL_REGREAD | FPGA_OFF_VERSION, 2);
+	version2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_ELL_REGREAD | FPGA_OFF_VERSION, 2);
 	version2 &= 0x1FF; // First 9 bits hold version
 	if (version != version2) {
 		FILE_LOG(logERROR) << "Bitfile versions are not the same on the two FPGAs: " << version << " and " << version2;
@@ -325,7 +326,7 @@ return version;
 
 
 
-ULONG FPGA::read_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, const UCHAR & chipSelect)
+ULONG FPGA::read_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, UCHAR chipSelect)
 /*
  * Specialized form of read_register for FPGA info.
  */

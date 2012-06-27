@@ -19,7 +19,7 @@ public:
 
 	int read_Reg(ULONG, ULONG, ULONG, UCHAR *);
 	int write_Reg();
-	int program_FPGA(const string &, const UCHAR &);
+	int program_FPGA(const string &, const UCHAR &, const int &);
 	int read_bitfile_version(const UCHAR &);
 
 private:

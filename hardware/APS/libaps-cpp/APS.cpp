@@ -15,7 +15,7 @@ APS::~APS() {
 	// TODO Auto-generated destructor stub
 }
 
-int APS::program_FPGA(const string & bitFile, const UCHAR & chipSelect) {
+int APS::program_FPGA(const string & bitFile, const UCHAR & chipSelect, const int & expectedVersion) {
 
 	//Open the bitfile
 	FILE_LOG(logDEBUG2) << "Opening bitfile: " << bitFile;
@@ -28,12 +28,12 @@ int APS::program_FPGA(const string & bitFile, const UCHAR & chipSelect) {
 
 	//Copy over the file data to the data vector
 	//The default istreambuf_iterator constructor returns the "end-of-stream" iterator.
-	vector<UCHAR> fileData(std::istreambuf_iterator<UCHAR>(FID), std::istreambuf_iterator<UCHAR>());
+	vector<UCHAR> fileData((std::istreambuf_iterator<char>(FID)), std::istreambuf_iterator<char>());
 	ULONG numBytes = fileData.size();
 	FILE_LOG(logDEBUG) << "Read " << numBytes << " from bitfile";
 
 	//Pass of the data to a lower-level function to actually push it to the FPGA
-	FPGA::program_FPGA(_handle, fileData, chipSelect);
+	FPGA::program_FPGA(_handle, fileData, chipSelect, expectedVersion);
 
 	return 0;
 }
@@ -41,5 +41,5 @@ int APS::program_FPGA(const string & bitFile, const UCHAR & chipSelect) {
 int APS::read_bitfile_version(const UCHAR & chipSelect){
 
 	//Pass through to FPGA code
-	return FGPA::read_bitFile_version(_handle, chipSelect);
+	return FPGA::read_bitFile_version(_handle, chipSelect);
 }

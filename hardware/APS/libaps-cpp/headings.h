@@ -28,6 +28,10 @@ using std::endl;
 using std::map;
 using std::runtime_error;
 
+//Needed for usleep on gcc 4.7
+#include <unistd.h>
+
+
 //FTDI
 #ifdef _WIN32
 #include "windows.h"
