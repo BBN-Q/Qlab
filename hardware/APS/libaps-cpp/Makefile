@@ -21,7 +21,7 @@ OBJFLAGS=-c
 OBJEXT=o
 LIBEXT=so
 EXFLAGS=-Wl
-LIBFLAGS=-shared
+LIBFLAGS=-shared -o libaps.so
 LIBS=-lftd2xx
 LFLAGS=
 CC=g++-4.7
@@ -49,7 +49,7 @@ libaps: $(OBJECTS)
 %.$(OBJEXT):%.cpp
 	$(CC) $(CFLAGS) $(OBJFLAGS) $<
 
-test: test.cpp $((OBJECTS)
+test: $((OBJECTS)
 	$(CC) $(CFLAGS) test.cpp $(OBJECTS) $(LIBS)  	
 
 clean:
