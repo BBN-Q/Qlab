@@ -7,8 +7,8 @@ if ~exist('nbrQubits', 'var')
     nbrQubits = 1;
 end
 
-nbrAnalysisPulses = 12;
-nbrPosPulses  = 12;
+nbrAnalysisPulses = 6;
+nbrPosPulses  = 6;
 nbrRepeats = 1;
 
 % seperate calibration experiments from tomography data, and reshape
@@ -66,7 +66,7 @@ processFidelity = real(trace(chitheory*chicorrected))
 gateFidelity = (2^nbrQubits*processFidelity+1)/(2^nbrQubits+1)
 
 [evecs,~] = eig(choi_mle);
-phase_fidelity = real(evecs(:,1)'*choi_ideal*evecs(:,1))
+phase_fidelity = real(evecs(:,end)'*choi_ideal*evecs(:,end))
 
 
 % create red-blue colorscale

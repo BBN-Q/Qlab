@@ -19,7 +19,9 @@ si = speye(2);
 % construct Uideal
 switch Gate
     case 'CNOT12'
-        Uideal =  expm(-1i*kron(sz,si)*pi/4)*expm(-1i*pi*kron(si,sx)/4)*expm(+1i*pi*kron(sz,sx)/4);
+        Uideal =  [1,0,0,0;0,1,0,0;0,0,0,1;0,0,1,0];
+    case 'InvCNOT12'
+        Uideal =  [0,1,0,0;1,0,0,0;0,0,1,0;0,0,0,1];
     case '1QId'
         Uideal = speye(2);
     case '1QX90p'
