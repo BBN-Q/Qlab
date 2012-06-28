@@ -268,7 +268,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         end
         
         function loadWaveform(aps, id, waveform, offset, validate, storeWaveform)
-            % id - channel (0-3)
+            % id - channel (1-4)
             % waveform - int16 format waveform data (-8192, 8191)
             % offset - waveform memory offset (think memory location, not
             %   shift of zero), integer multiple of 4
@@ -303,13 +303,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 storeWaveform = 1;
             end
             
-            aps.log(sprintf('Loading Waveform length: %i into DAC%i ', length(waveform),id));
-            val = calllib(aps.library_name,'APS_LoadWaveform', aps.device_id,waveform,length(waveform),offset, id, validate, storeWaveform);
+            aps.log(sprintf('Loading Waveform length: %i into DAC%i ', length(waveform),id-1));
+            val = calllib(aps.library_name,'APS_LoadWaveform', aps.device_id,waveform,length(waveform),offset, id-1, validate, storeWaveform);
             if (val < 0)
                 errordlg(sprintf('APS_LoadWaveform returned an error code of: %i\n', val), ...
                     'Programming Error');
             end
             aps.log('Done');
+            aps.setEnabled(id, 1);
         end
         
         function loadConfig(aps, filename)
@@ -339,7 +340,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                     %Load and scale/shift waveform data if there is any
                     wfInfo = h5info(filename, ['/', channelStr, '/waveformLib']);
                     if wfInfo.Dataspace.Size > 0
-                        aps.loadWaveform(ch-1, h5read(filename,['/', channelStr, '/waveformLib']));
+                        aps.loadWaveform(ch, h5read(filename,['/', channelStr, '/waveformLib']));
                     end
                     
                 end
@@ -388,9 +389,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                                     bankB.trigger, bankB.repeat, bankB.length, 1);
                             end
                             
-                            %aps.setLinkListRepeat(ch-1,ell.repeatCount);
-                            aps.setLinkListRepeat(ch-1,0);
-                            aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
+                            %aps.setLinkListRepeat(ch,ell.repeatCount);
+                            aps.setLinkListRepeat(ch,0);
+                            aps.setLinkListMode(ch, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                         end
                         % update channel waveform object
                         aps.(channelStr).waveform = wf;
@@ -832,15 +833,15 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         %% Private mode methods
         
         function val = setLinkListMode(aps, ch, enable, mode)
-            % id : DAC channel (0-3)
+            % id : DAC channel (1-4)
             % enable : 1 = on, 0 = off
             % mode : 1 = one shot, 0 = continuous
-            val = aps.librarycall(sprintf('Dac: %i Link List Enable: %i Mode: %i', ch, enable, mode), ...
+            val = aps.librarycall(sprintf('Dac: %i Link List Enable: %i Mode: %i', ch-1, enable, mode), ...
                 'APS_SetLinkListMode',enable,mode,ch);
         end
         
         function val = setLinkListRepeat(aps,ch, repeat)
-            val = aps.librarycall(sprintf('Dac: %i Link List Repeat: %i', ch, repeat), ...
+            val = aps.librarycall(sprintf('Dac: %i Link List Repeat: %i', ch-1, repeat), ...
                 'APS_SetLinkListRepeat',repeat,ch);
         end
         

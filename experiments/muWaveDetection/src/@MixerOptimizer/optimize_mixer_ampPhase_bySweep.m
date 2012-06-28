@@ -33,34 +33,8 @@ awgAmp = InstrParams.AWG.(['chan_' num2str(ExpParams.Mixer.I_channel)]).amplitud
 sa = obj.sa;
 awg = obj.awg;
 
-switch class(awg)
-    case 'deviceDrivers.Tek5014'
-        awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).offset = i_offset;
-        awg.(['chan_' num2str(ExpParams.Mixer.Q_channel)]).offset = q_offset;
-        awg.operationComplete();
-        pause(0.1);
-        awg.run();
-        awg.waitForAWGtoStartRunning();
-
-    case 'deviceDrivers.APS'
-        awg.stop();
-        
-        %We have to set the offset in the waveform
-        % scale I waveform
-        wf = awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).waveform;
-        wf.offset = i_offset;
-        awg.loadWaveform(ExpParams.Mixer.I_channel-1, wf.prep_vector());
-        awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).waveform = wf;
-
-        wf = awg.(['chan_' num2str(ExpParams.Mixer.Q_channel)]).waveform;
-        wf.offset = q_offset;
-        awg.loadWaveform(ExpParams.Mixer.Q_channel-1, wf.prep_vector());
-        awg.(['chan_' num2str(ExpParams.Mixer.Q_channel)]).waveform = wf;
-
-        awg.setOffset(ExpParams.Mixer.I_channel, i_offset);
-        awg.setOffset(ExpParams.Mixer.Q_channel, q_offset);
-
-end
+awg.run();
+awg.waitForAWGtoStartRunning();
 
 sa.center_frequency = obj.specgen.frequency * 1e9 - fssb;
 sa.span = spec_analyzer_span;

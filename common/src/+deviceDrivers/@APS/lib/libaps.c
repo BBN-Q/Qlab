@@ -1912,7 +1912,6 @@ EXPORT int APS_GetWaveformEnabled(int device, int channel) {
 	return WF_GetEnabled(wfArray, channel);
 }
 
-// the following three methods are just for DEBUG/TEST
 EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];
@@ -1921,14 +1920,15 @@ EXPORT int APS_LoadStoredWaveform(int device, int channel) {
 	uint16_t length;
 
 	if (!WF_GetIsLoaded(wfArray,channel)) {
+		WF_Prep(wfArray, channel);
 		dataPtr = WF_GetDataPtr(wfArray, channel);
 		length = WF_GetLength(wfArray, channel);
-		APS_LoadWaveform(device, dataPtr, length, 0 ,channel - 1, 0, 0);
+		APS_LoadWaveform(device, dataPtr, length, 0, channel, 0, 0);
 		WF_SetIsLoaded(wfArray, channel, 1);
 	}
 	return 0;
 }
-// for DEBUG/TEST
+// the following two methods are just for DEBUG/TEST
 EXPORT int APS_LoadAllWaveforms(int device) {
 	waveform_t * wfArray;
 	wfArray = waveforms[device];

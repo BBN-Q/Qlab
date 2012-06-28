@@ -31,14 +31,12 @@ function setInstrument(obj, amp, phase)
             obj.awg.stop();
             
             % scale I waveform
-            iwf = obj.awg.(['chan_' num2str(I_channel)]).waveform;
-            iwf.set_scale_factor(amp);
-            obj.awg.loadWaveform(I_channel-1, iwf.prep_vector());
+            obj.awg.setAmplitude(I_channel, amp);
             
             % generate new Q waveform with phase shift
-            qwf = obj.awg.(['chan_' num2str(Q_channel)]).waveform;
-            qwf.data = -0.5 * sin(fssb.*tpts + phase);
-            obj.awg.loadWaveform(Q_channel-1, qwf.prep_vector());
+            qwf = -0.5 * sin(fssb.*tpts + phase);
+            % TODO update when APS can take normalized waveform data
+            obj.awg.loadWaveform(Q_channel, round(8191*qwf));
 
             obj.awg.run();
             pause(0.2);

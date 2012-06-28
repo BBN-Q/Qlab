@@ -250,15 +250,7 @@ function [i_offset, q_offset] = optimize_mixer_offsets_bySearch(obj)
                     awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
                 case 'deviceDrivers.APS'
                     awg.stop();
-                    % update I waveform
-                    zeroWaveform.set_offset(vertex.a);
-                    awg.loadWaveform(awg_I_channel-1, zeroWaveform.prep_vector());
-                    % update I zero register
                     awg.setOffset(awg_I_channel, vertex.a);
-                    % update Q waveform
-                    zeroWaveform.set_offset(vertex.b);
-                    awg.loadWaveform(awg_Q_channel-1, zeroWaveform.prep_vector());
-                    % update Q zero register
                     awg.setOffset(awg_Q_channel, vertex.b);
                     awg.run();
             end

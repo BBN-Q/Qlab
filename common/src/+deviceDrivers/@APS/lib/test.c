@@ -34,7 +34,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <limits.h>
-#include <time.h>
+#include <sys/time.h>
 
 // BUILD_DLL define
 // Use to switch between a statically linked test and a dynamically linked test

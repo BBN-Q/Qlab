@@ -391,7 +391,7 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 		return -4;
 	}
 
-	dlog(DEBUG_VERBOSE,"Initialize Control and Status Register to initial state\n");
+	/*dlog(DEBUG_VERBOSE,"Initialize Control and Status Register to initial state\n");
 	// State machines should be reset and DDRs enabled
 	int csr_init = CSRMSK_ENVSMRST_ELL | CSRMSK_ENVDDR_ELL | CSRMSK_PHSSMRST_ELL | CSRMSK_PHSDDR_ELL;
 
@@ -400,10 +400,10 @@ EXPORT int APS_LoadWaveform(int device, short *Data,
 	if (getDebugLevel() >= DEBUG_VERBOSE) {
 		data = APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga);
 		dlog(DEBUG_VERBOSE,"CSR set to: 0x%x\n", data);
-		dlog(DEBUG_VERBOSE,"Initializing %s (%i) Offset and Size\n", dac_type, dac);
-	}
+	}*/
 
 	// write waveform mode parameters (memory offset and length)
+	dlog(DEBUG_VERBOSE,"Initializing %s (%i) Offset and Size\n", dac_type, dac);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_offset, memory_offset, fpga);
 	APS_WriteFPGA(device, FPGA_ADDR_REGWRITE | dac_size, wf_length, fpga);
 
