@@ -6,7 +6,7 @@ end
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
 params.measDelay = -64;
-ChParams = params.BBNAPS12;
+ChParams = params.BBNAPS34;
 
 nbrPatterns = length(patseq)*nbrRepeats;
 calPatterns = length(calseq)*nbrRepeats;
@@ -36,18 +36,18 @@ for n = 1:nbrPatterns;
         % remove difference of delays
         patx = circshift(patx, [0, delayDiff]);
         paty = circshift(paty, [0, delayDiff]);
-        ch3m1((n-1)*stepct + stepct, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
+        ch4m1((n-1)*stepct + stepct, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
     end
 end
 
 for n = 1:calPatterns;
-    IQ_seq{nbrPatterns + n} = pg.build(calseq{floor((n-1)/nbrRepeats)+1}, 1, ChParams.delay, fixedPt);
+    IQ_seq{nbrPatterns + n} = pg.build(calseq{floor((n-1)/nbrRepeats)+1}, 1, ChParams.delay, fixedPt, false);
     [patx, paty] = pg.linkListToPattern(IQ_seq{nbrPatterns + n}, 1);
 
     % remove difference of delays
     patx = circshift(patx, [0, delayDiff]);
     paty = circshift(paty, [0, delayDiff]);
-    ch3m1(nbrPatterns*numsteps + n, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
+    ch4m1(nbrPatterns*numsteps + n, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
 end
 
 % trigger at beginning of measurement pulse
@@ -75,7 +75,7 @@ if makePlot
     plot(ch5)
     hold on
     plot(ch6, 'r')
-    plot(2000*ch3m1(plotIdx,:), 'k')
+    plot(2000*ch4m1(plotIdx,:), 'k')
     plot(2000*ch1m1(plotIdx,:),'.')
     plot(2000*ch1m2(plotIdx,:), 'g')
     grid on

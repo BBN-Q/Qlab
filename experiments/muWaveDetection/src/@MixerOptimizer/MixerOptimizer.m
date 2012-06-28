@@ -90,6 +90,10 @@ classdef MixerOptimizer < expManager.expBase
 
             % save transformation and offsets to file
             save([obj.cfg_path '/mixercal.mat'], 'i_offset', 'q_offset', 'T', '-v7.3');
+            
+            %Print out a summary for the notebook
+            fprintf('\nSummary:\n');
+            fprintf('i_offset = %.4f; q_offset = %.4f; ampFactor = %.4f; phaseSkew = %.1f\n', i_offset, q_offset, T(1,1), atand(T(1,2)/T(1,1)))
         end
         function CleanUp(obj)
             %Close all instruments

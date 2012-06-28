@@ -16,10 +16,8 @@ settings.chan_4.offset = 0;
 settings.samplingRate = 1200;
 settings.triggerSource = 'external';
 %settings.triggerSource = 'internal';
-%settings.seqfile = 'U:\APS\Rabi\RabiBBNAPS12.mat';
-%settings.seqfile = 'U:\APS\PiCal\PiCalBBNAPS12.mat';
-%settings.seqfile = 'U:\APS\Echo\EchoBBNAPS12.mat';
-settings.seqfile = 'U:\APS\Ramsey\RamseyBBNAPS12.h5';
+settings.seqfile = 'U:\AWG\Ramsey\Ramsey-BBNAPS1.h5';
+% settings.seqfile = 'U:\APS\Ramsey\RamseyBBNAPS34.h5';
 settings.seqforce = true;
 
 awg = deviceDrivers.APS();

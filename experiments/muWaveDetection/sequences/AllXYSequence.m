@@ -14,8 +14,8 @@ elseif length(varargin) > 2
 end
 
 basename = 'AllXY';
-fixedPt = 6000;
-cycleLength = 23000;
+fixedPt = 2000;
+cycleLength = 4000;
 nbrRepeats = 2;
 
 % load config parameters from file

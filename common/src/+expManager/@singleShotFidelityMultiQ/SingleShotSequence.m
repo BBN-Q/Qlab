@@ -3,7 +3,7 @@ function SingleShotSequence(qubit1, qubit2)
 pathAWG = 'U:\AWG\SingleShot\';
 basename = 'SingleShot';
 fixedPt = 2000;
-cycleLength = 12000;
+cycleLength = 4000;
 
 % load config parameters from files
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
@@ -14,9 +14,9 @@ IQkey1 = qubitMap.(qubit1).IQkey;
 IQkey2 = qubitMap.(qubit2).IQkey;
 
 % if using SSB, set the frequency here
-SSBFreq = 0e6;
-
+SSBFreq = -100e6;
 pg1 = PatternGen('dPiAmp', q1Params.piAmp, 'dPiOn2Amp', q1Params.pi2Amp, 'dSigma', q1Params.sigma, 'dPulseType', q1Params.pulseType, 'dDelta', q1Params.delta, 'correctionT', params.(IQkey1).T, 'dBuffer', q1Params.buffer, 'dPulseLength', q1Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey1).linkListMode, 'dmodFrequency',SSBFreq);
+SSBFreq = 0e6;
 pg2 = PatternGen('dPiAmp', q2Params.piAmp, 'dPiOn2Amp', q2Params.pi2Amp, 'dSigma', q2Params.sigma, 'dPulseType', q2Params.pulseType, 'dDelta', q1Params.delta, 'correctionT', params.(IQkey2).T, 'dBuffer', q2Params.buffer, 'dPulseLength', q1Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey2).linkListMode, 'dmodFrequency',SSBFreq);
 
 patseq1 = {{pg1.pulse('QId')}, {pg1.pulse('QId')}, {pg1.pulse('Xp')}, {pg1.pulse('Xp')}};
@@ -42,7 +42,7 @@ for n = 1:length(patseq1);
 end
 
 % trigger at beginning of measurement pulse
-measLength = 8000;
+measLength = 2000;
 params.measDelay = -64;
 measSeq = {pg1.pulse('M', 'width', measLength)};
 for n = 1:4;

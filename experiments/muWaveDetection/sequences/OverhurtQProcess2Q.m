@@ -86,14 +86,16 @@ gateSetQ2 = cell(numGates,1);
 for ct = 1:numGates
 %     gateSetQ1{ct} = CliffPulse(gateSet(ct), pg1);
 %     gateSetQ2{ct} = CliffPulse(gateSet(ct), pg2);
-    switch length(gateSet{ct})
-        case 1
-            gateSetQ1{ct} = {pg1.pulse(gateSet{ct}{1})};
-            gateSetQ2{ct} = {pg2.pulse(gateSet{ct}{1})};
-        case 2
-            gateSetQ1{ct} = {pg1.pulse(gateSet{ct}{1}), pg1.pulse(gateSet{ct}{2})};
-            gateSetQ2{ct} = {pg2.pulse(gateSet{ct}{1}), pg2.pulse(gateSet{ct}{2})};
-    end            
+    gateSetQ1{ct} = cellfun(@(p) pg1.pulse(p), gateSet{ct}, 'UniformOutput', false);
+    gateSetQ2{ct} = cellfun(@(p) pg2.pulse(p), gateSet{ct}, 'UniformOutput', false);
+%     switch length(gateSet{ct})
+%         case 1
+%             gateSetQ1{ct} = {pg1.pulse(gateSet{ct}{1})};
+%             gateSetQ2{ct} = {pg2.pulse(gateSet{ct}{1})};
+%         case 2
+%             gateSetQ1{ct} = {pg1.pulse(gateSet{ct}{1}), pg1.pulse(gateSet{ct}{2})};
+%             gateSetQ2{ct} = {pg2.pulse(gateSet{ct}{1}), pg2.pulse(gateSet{ct}{2})};
+%     end
 end
 
 %calibration sequences

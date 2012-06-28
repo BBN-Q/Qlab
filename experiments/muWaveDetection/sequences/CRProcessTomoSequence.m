@@ -8,8 +8,8 @@ pathAWG = 'U:\AWG\CrossRes\';
 pathAPS = 'U:\APS\CrossRes\';
 basename = 'CrossRes';
 
-fixedPt = 2000;
-cycleLength = 4000;
+fixedPt = 1000;
+cycleLength = 3000;
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
@@ -23,9 +23,28 @@ IQkey2 = qubitMap.q1.IQkey;
 CRParams = params.CR;
 IQkeyCR = qubitMap.CR.IQkey;
 
-% CRWidths = 96:8:320;
-% expct = 1;
-% for CRWidth = CRWidths
+% CRAmps = 4200:5:4600;
+expct = 1;
+% for CRAmp = CRAmps
+
+%4 Pulse version
+% PosPulsesQ1{1} = pg1.pulse('QId', 'duration', clockCycle);
+% PosPulsesQ1{2} = pg1.pulse('Xp', 'duration', clockCycle);
+% PosPulsesQ1{3} = pg1.pulse('X90p', 'duration', clockCycle);
+% PosPulsesQ1{4} = pg1.pulse('Y90p', 'duration', clockCycle);
+% 
+% PosPulsesQ2{1} = pg2.pulse('QId', 'duration', clockCycle);
+% PosPulsesQ2{2} = pg2.pulse('Xp', 'duration', clockCycle);
+% PosPulsesQ2{3} = pg2.pulse('X90p', 'duration', clockCycle);
+% PosPulsesQ2{4} = pg2.pulse('Y90p', 'duration', clockCycle);
+
+%6-Pulse Set ('QId', 'Xp', 'X90p', 'Y90p', 'X90m', 'Y90m')
+numPulses = 6;
+pulseSet = {'QId', 'Xp', 'X90p', 'Y90p', 'X90m', 'Y90m'};
+
+for prepct1 = 1:numPulses
+    for prepct2 = 1:numPulses
+
 
 % if using SSB, set the frequency here
 SSBFreq = -100e6;
@@ -38,66 +57,58 @@ SSBFreq = 0e6;
 CRParams.buffer = 0;
 pgCR = PatternGen('dPiAmp', CRParams.piAmp, 'dPiOn2Amp', CRParams.pi2Amp, 'dSigma', CRParams.sigma, 'dPulseType', CRParams.pulseType, 'dDelta', CRParams.delta, 'correctionT', params.(IQkeyCR).T, 'dBuffer', CRParams.buffer, 'dPulseLength', CRParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyCR).linkListMode, 'dmodFrequency',SSBFreq);
 
+
 %AWG5014 is qubit control pulses
 %APS CHs (3,4) is CR drive at Q2's frequency
 clockCycle = max(q1Params.pulseLength+q1Params.buffer, q2Params.pulseLength+q2Params.buffer);
 
-PosPulsesQ1{1} = pg1.pulse('QId', 'duration', clockCycle);
-PosPulsesQ1{2} = pg1.pulse('Xp', 'duration', clockCycle);
-PosPulsesQ1{3} = pg1.pulse('X90p', 'duration', clockCycle);
-PosPulsesQ1{4} = pg1.pulse('Y90p', 'duration', clockCycle);
 
-PosPulsesQ2{1} = pg2.pulse('QId', 'duration', clockCycle);
-PosPulsesQ2{2} = pg2.pulse('Xp', 'duration', clockCycle);
-PosPulsesQ2{3} = pg2.pulse('X90p', 'duration', clockCycle);
-PosPulsesQ2{4} = pg2.pulse('Y90p', 'duration', clockCycle);
+PosPulsesQ1 = cell(numPulses,1); PosPulsesQ2 = cell(numPulses,1);
+for ct = 1:numPulses
+    PosPulsesQ1{ct} = pg1.pulse(pulseSet{ct}, 'duration',clockCycle);
+    PosPulsesQ2{ct} = pg2.pulse(pulseSet{ct}, 'duration',clockCycle);
+end    
 
-nbrPosPulses = length(PosPulsesQ1);
-
-prepPulseQ1 = pg1.pulse('Y90p', 'duration', clockCycle);
-prepPulseQ2 = pg2.pulse('QId', 'duration', clockCycle); 
-
-patseq1 = cell(20,1);
-patseq2 = cell(20,1);
-patseqCR = cell(20,1);
 
 CRWidth = 16;
-CRAmp = 0;
-processPulseQ1 = pg1.pulse('QId', 'width', CRWidth+16);
-processPulseQ2 = pg2.pulse('QId', 'width', CRWidth+16);
+CRAmp = 8000;
+processPulseQ1 = pg1.pulse('Y90p', 'width', CRWidth+32);
+processPulseQ2 = pg2.pulse('QId', 'width', CRWidth+32);
 processPulsesCR = {pgCR.pulse('QId','width', CRWidth)};
-% processPulsesCR = [{pgCR.pulse('Xtheta', 'pType', 'dragGaussOn', 'width', 2.5*CRParams.sigma, 'amp', CRAmp)},...
-%         {pgCR.pulse('Xtheta', 'width', CRWidth-5*CRParams.sigma, 'pType', 'square', 'amp', CRAmp)},...
-%         {pgCR.pulse('Xtheta', 'pType', 'dragGaussOff', 'width', 2.5*CRParams.sigma, 'amp', CRAmp)},...
-%         {pgCR.pulse('QId', 'duration', clockCycle + 8 )}...
+% processPulsesCR = [{pgCR.pulse('Xtheta', 'pType', 'dragGaussOn', 'width', 3*CRParams.sigma, 'amp', CRAmp)},...
+%         {pgCR.pulse('Xtheta', 'width', CRWidth-6*CRParams.sigma, 'pType', 'square', 'amp', CRAmp)},...
+%         {pgCR.pulse('Xtheta', 'pType', 'dragGaussOff', 'width', 3*CRParams.sigma, 'amp', CRAmp)},...
+%         {pgCR.pulse('QId', 'duration', clockCycle + 16 )}...
 %         ];
 
+    patseq1 = cell(4+numPulses^2,1);
+    patseq2 = cell(4+numPulses^2,1);
+    patseqCR = cell(4+numPulses^2,1);
+    indexct = 1;
+        for measct1 = 1:numPulses
+            for measct2 = 1:numPulses
+                patseq1{indexct}={PosPulsesQ1{prepct1},processPulseQ1, PosPulsesQ1{measct1}};
+                patseq2{indexct}= {PosPulsesQ2{prepct2},processPulseQ2,PosPulsesQ2{measct2}};
+                patseqCR{indexct} = processPulsesCR;
+                indexct = indexct+1;
+            end
+        end
+
 %ADD IN CALIBRATIONS
+patseq1{end-3}={pg1.pulse('QId')};
+patseq1{end-2}={pg1.pulse('QId')};
+patseq1{end-1}={pg1.pulse('Xp')};
+patseq1{end}={pg1.pulse('Xp')};
 
-patseq1{1}={pg1.pulse('QId')};
-patseq1{2}={pg1.pulse('Xp')};
-patseq1{3}={pg1.pulse('QId')};
-patseq1{4}={pg1.pulse('Xp')};
+patseq2{end-3}= {pg2.pulse('QId')};
+patseq2{end-2}={pg2.pulse('Xp')};
+patseq2{end-1}= {pg2.pulse('QId')};
+patseq2{end}={pg2.pulse('Xp')};
 
-patseq2{1}= {pg2.pulse('QId')};
-patseq2{2}={pg2.pulse('QId')};
-patseq2{3}= {pg2.pulse('Xp')};
-patseq2{4}={pg2.pulse('Xp')};
-
-patseqCR{1} = {pgCR.pulse('QId')};
-patseqCR{2} = {pgCR.pulse('QId')};
-patseqCR{3} = {pgCR.pulse('QId')};
-patseqCR{4} = {pgCR.pulse('QId')};
-
-indexct = 1;
-for ct1 = 1:nbrPosPulses
-    for ct2 = 1:nbrPosPulses
-        patseq1{4+indexct}={prepPulseQ1,processPulseQ1, PosPulsesQ1{ct1}};
-        patseq2{4+indexct}= {prepPulseQ2,processPulseQ2,PosPulsesQ2{ct2}};
-        patseqCR{4+indexct} = processPulsesCR;
-        indexct = indexct+1;
-    end
-end
+patseqCR{end-3} = {pgCR.pulse('QId')};
+patseqCR{end-2} = {pgCR.pulse('QId')};
+patseqCR{end-1} = {pgCR.pulse('QId')};
+patseqCR{end} = {pgCR.pulse('QId')};
 
 ch1 = zeros(length(patseq1), cycleLength);
 ch2 = ch1;
@@ -179,8 +190,8 @@ disp('Moving APS file to destination');
 if ~exist(['U:\APS\' strippedBasename '\'], 'dir')
     mkdir(['U:\APS\' strippedBasename '\']);
 end
-% pathAPS = ['U:\APS\' strippedBasename '\' basename sprintf('_%d.h5', expct)];
-pathAPS = ['U:\APS\' strippedBasename '\' basename '.h5'];
+pathAPS = ['U:\APS\' strippedBasename '\' basename sprintf('_%d.h5', expct)];
+% pathAPS = ['U:\APS\' strippedBasename '\' basename '.h5'];
 disp('Moving APS file to destination');
 movefile([tempdir basename '.h5'], pathAPS);
 
@@ -190,11 +201,12 @@ basename = strippedBasename;
 options = struct('m21_high', 2.0, 'm41_high', 2.0);
 TekPattern.exportTekSequence(tempdir, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
 disp('Moving AWG file to destination');
-% movefile([tempdir basename '.awg'], [pathAWG basename sprintf('_%d.awg', expct)]);
-movefile([tempdir basename '.awg'], [pathAWG basename '.awg']);
+movefile([tempdir basename '.awg'], [pathAWG basename sprintf('_%d.awg', expct)]);
+% movefile([tempdir basename '.awg'], [pathAWG basename '.awg']);
 
-% expct = expct + 1;
-% end
+expct = expct + 1;
+    end
+end
 
 
 end

@@ -1,6 +1,6 @@
 function single_shot_measurement_runner(qubit1, qubit2)
 
-if ~exist('qubit', 'var')
+if ~exist('qubit1', 'var')
     qubit1 = 'q1';
 end
 
@@ -32,8 +32,8 @@ ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;
 ExpParams.filter = commonSettings.ExpParams.filter;
 
 Sweeps = struct();
-% Sweeps.frequency = struct('type','sweeps.Frequency', 'start', 8.3265, 'stop', 8.3295, 'step', 100e-6, 'genID', 'RFgen', 'number', 1);
-% Sweeps.power = struct('type','sweeps.Power', 'start', -10, 'stop', 7, 'step', 1, 'units', 'dBm', 'genID', 'RFgen', 'number', 2);
+% Sweeps.frequency = struct('type','sweeps.Frequency', 'start', 8.184, 'stop', 8.187, 'step', 50e-6, 'genID', 'RFgen', 'number', 1);
+% Sweeps.power = struct('type','sweeps.Power', 'start', -10, 'stop', 6, 'step', 0.5, 'units', 'dBm', 'genID', 'RFgen', 'number', 2);
 
 cfg = struct('ExpParams', ExpParams, ...
     'SoftwareDevelopmentMode', 0, ...
