@@ -837,12 +837,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % enable : 1 = on, 0 = off
             % mode : 1 = one shot, 0 = continuous
             val = aps.librarycall(sprintf('Dac: %i Link List Enable: %i Mode: %i', ch-1, enable, mode), ...
-                'APS_SetLinkListMode',enable,mode,ch);
+                'APS_SetLinkListMode',enable,mode,ch-1);
         end
         
         function val = setLinkListRepeat(aps,ch, repeat)
             val = aps.librarycall(sprintf('Dac: %i Link List Repeat: %i', ch-1, repeat), ...
-                'APS_SetLinkListRepeat',repeat,ch);
+                'APS_SetLinkListRepeat',repeat,ch-1);
         end
         
         function val = setLEDMode(aps, fpga, mode)
