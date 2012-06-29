@@ -130,7 +130,7 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 	for(auto dataIter=bitFileData.begin(); dataIter < bitFileData.end(); dataIter += BLOCKSIZE) {
 		// Write a full buffer if not at the end of the input data
 		if(dataIter + BLOCKSIZE < bitFileData.end()) {
-			if(FPGA::write_register(deviceHandle, APS_CONF_DATA, 0, chipSelect, static_cast<UCHAR*>(&bitFileData[dataIter-bitFileData.begin()])) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
+			if(FPGA::write_register(deviceHandle, APS_CONF_DATA, 0, chipSelect, &*dataIter) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
 				return(-8);
 		}
 		else {
@@ -324,8 +324,6 @@ default:
 return version;
 }
 
-
-
 ULONG FPGA::read_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, UCHAR chipSelect)
 /*
  * Specialized form of read_register for FPGA info.
@@ -353,6 +351,145 @@ ULONG FPGA::read_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, UCHAR chipSele
 	return data;
 }
 
+int FPGA::write_SPI
+(
+		FT_HANDLE deviceHandle,
+		ULONG Command,   // APS_DAC_SPI, APS_PLL_SPI, or APS_VCXO_SPI
+		const ULONG & Address,   // SPI register address.  Ignored for VCXO since address embedded in the data
+		UCHAR *Data      // Data bytes to be written.  1 for DAC, 1 for PLL, or 4 for VCXO.  LS Byte first.
+)
+/********************************************************************
+ *
+ * Function Name : APS_WriteSPI()
+ * Description :
+ *      Write data to the selected chip via SPI.  The length of the data depends on the chip.
+ *      The DAC requires 2 bytes, the PLL requires 3 bytes, and the VCXO requires 4 bytes.
+ *      The format of the data bytes can be found in the data sheets for the chips.
+ *      Note that the "data" defines an SPI command with R/W bit, a register address, and any write data.
+ *      The values for the Command parameter are in aps.h
+ *      Returns the number of bytes written
+ *
+ *      DAC Data Format for first byte: R/W N1 N0 A4 A3 A2 A1 A0
+ *      RW = 0 for write, N = 00 for 1 byte transfer.  A = 5-bit register address
+ *      Note that DAC channel specified by Address<6:5>, since only Address<4:0> select DAC registers.
+ *
+ *      PLL Data format for first two bytes: R/W W1 W0 A12 A11 A10 A9 A8 A7 A6 A5 A4 A3 A2 A1 A0
+ *      RW = 0 for write, W = 00 for 1 byte transfer.  A = 13-bit register address
+ *
+ *      VCXO data format: 32-bit value, with the address embedded in D<1:0>.  Bytes stored MS byte first.
+ *      Note that this is not the order of the bytes in a 32 bit integer on little-endian CPUs
+ *
+ * Inputs :
+ *                Command -  APS_DAC_SPI, APS_PLL_SPI, or APS_VCXO_SPI
+ *               Address    -  SPI register address.  Ignored for VCXO since address embedded in the data
+ *                *Data      -  Data bytes to be written.  1 for DAC, 1 for PLL, or 4 for VCXO.  LS Byte first.
+ *
+ * Returns : 0 on success <0 on failure
+ *
+ ********************************************************************/
+{
+	FT_STATUS ftStatus;
+	vector<UCHAR> dataPacket(0);
+	DWORD bytesWritten;
+	vector<UCHAR> byteBuffer(0);
+
+	switch(Command & APS_CMD)
+	{
+	case APS_DAC_SPI:
+		byteBuffer.push_back(Address & 0x1F);  // R/W = 0 for write, N = 00 for 1 Byte, A<4:0> = Address
+		byteBuffer.push_back(Data[0]);
+		Command |= ((Address & 0x60)>>3);  // Take bits above register address as DAC channel select
+		break;
+	case APS_PLL_SPI:
+		byteBuffer.push_back((Address>>8) & 0x1F); // R/W = 0 for write, W = 00 for 1 Byte, A<12:8>
+		byteBuffer.push_back(Address & 0xFF);  // A<7:0>
+		byteBuffer.push_back(Data[0]);
+		break;
+	case APS_VCXO_SPI:
+		// Copy out data bytes to be in MS Byte first order
+		byteBuffer.assign(Data, Data+4);
+		break;
+	default:
+		// Ignore unsupported commands
+		return(0);
+	}
+
+	// Start all packets with a APS Command Byte with the R/W= 0 for write
+	// Note that command byte from DAC has the SEL bits for the desired DAC set
+	dataPacket.push_back(Command);
+
+	// Serialize the data into bit 0 of the packet bytes
+	for(size_t ct = 0; ct < 8*byteBuffer.size(); ct++)
+		dataPacket.push_back( (byteBuffer[ct/8]>>(7-(ct%8))) & 1 );
+
+	ftStatus = FT_Write(deviceHandle, &dataPacket[0], dataPacket.size(), &bytesWritten);
+	if (!FT_SUCCESS(ftStatus)) {FILE_LOG(logERROR) << "Write SPI command failed";}
+
+	return bytesWritten;
+}
+
+
+int APS_ReadSPI
+(
+		FT_HANDLE deviceHandle,
+		ULONG Command,   // APS_DAC_SPI, APS_PLL_SPI, or APS_VCXO_SPI
+		const ULONG & Address,   // SPI register address.  Ignored for VCXO since address embedded in the data
+		UCHAR *Data      // Destination for the returned data byte.  Only single byte reads supported.
+)
+
+{
+	FT_STATUS ftStatus;
+	vector<UCHAR> dataPacket(0);
+	DWORD bytesWritten, bytesRead;
+	vector<UCHAR> byteBuffer(0);
+
+
+	// Create a 1 byte read command at the specified address of the specified device
+	// Note that the VCXO is not readable
+	switch(Command & APS_CMD)
+	{
+	case APS_DAC_SPI:
+		byteBuffer.push_back(Address & 0x1F);  // R/W = 0 for write, N = 00 for 1 Byte, A<4:0> = Address
+		byteBuffer.push_back(Data[0]);
+		Command |= ((Address & 0x60)>>3);  // Take bits above register address as DAC channel select
+		break;
+	case APS_PLL_SPI:
+		byteBuffer.push_back(0x80 | ((Address>>8) & 0x1F)); // R/W = 0 for write, W = 00 for 1 Byte, A<12:8>
+		byteBuffer.push_back(Address & 0xFF);  // A<7:0>
+		byteBuffer.push_back(Data[0]);
+		break;
+	default:
+		// Ignore unsupported commands
+		return(0);
+	}
+
+	// Start all packets with a APS Command Byte with the R/W= 0 for write
+	// Note that command byte from DAC has the SEL bits for the desired DAC set
+	dataPacket.push_back(Command);
+
+	// Serialize the data into bit 0 of the packet bytes
+	for(size_t ct = 0; ct < 8*byteBuffer.size(); ct++)
+		dataPacket.push_back( (byteBuffer[ct/8]>>(7-(ct%8))) & 1 );
+
+
+	// Write the SPI command.  This stores the last 8 SPI read bits in the I/O FPGA SerData register
+	ftStatus = FT_Write(deviceHandle, &dataPacket[0], dataPacket.size(), &bytesWritten);
+	if (!FT_SUCCESS(ftStatus)) {FILE_LOG(logERROR) << "Write SPI command failed";}
+
+	dataPacket[0] |= 0x80;  // Convert the SPI write Command Byte into an SPI read Command Byte
+
+	// Queue a read for the SerData from the previous SPI read command
+	ftStatus = FT_Write(deviceHandle, &dataPacket[0], 1, &bytesWritten);
+	if (!FT_SUCCESS(ftStatus)) {FILE_LOG(logERROR) << "Write SPI command failed";}
+
+
+	// Read the one byte of serial data from the SerData register
+	ftStatus = FT_Read(deviceHandle, Data, 1, &bytesRead);
+	if (!FT_SUCCESS(ftStatus)) {FILE_LOG(logERROR) << "Read SPI command failed";}
+
+	return(bytesRead);
+
+}
 
 
 

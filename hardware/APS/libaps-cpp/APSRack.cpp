@@ -25,6 +25,8 @@ int APSRack::Init() {
 	//Enumerate the serial numbers of the devices attached
 	enumerate_devices();
 
+	_deviceHandles.resize(_numDevices);
+
 	return 0;
 
 }
@@ -53,13 +55,20 @@ void APSRack::enumerate_devices() {
 
 int APSRack::connect(const int & deviceID){
 	//Connect to a instrument specified by deviceID
-	FTDI::connect(deviceID, _deviceHandles[deviceID]);
-
-	return 0;
+	int success = 0;
+	success = FTDI::connect(deviceID, _deviceHandles[deviceID]);
+	if (success == 0) {
+		FILE_LOG(logDEBUG) << "Opened connection to device " << deviceID;
+	}
+	return success;
 }
 
 int APSRack::disconnect(const int & deviceID){
 	//Disconnect
-
-	return 0;
+	int success = 0;
+	success = FTDI::disconnect(_deviceHandles[deviceID]);
+	if (success == 0) {
+		FILE_LOG(logDEBUG) << "Closed connection to device " << deviceID;
+	}
+	return success;
 }

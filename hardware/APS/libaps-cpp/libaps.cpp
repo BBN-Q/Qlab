@@ -22,6 +22,12 @@ EXPORT int Init() {
 	return 0;
 }
 
+EXPORT int open_by_ID(int deviceID){
+	//Connect to a device specified by ID
+	return _APSRack.connect(deviceID);
+
+}
+
 #ifdef __cplusplus
 }
 #endif

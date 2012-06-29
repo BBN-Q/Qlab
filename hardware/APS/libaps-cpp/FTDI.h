@@ -17,6 +17,7 @@ namespace FTDI {
 	void get_device_serials(vector<string> &);
 
 	int connect(const int &, FT_HANDLE &);
+	int disconnect(FT_HANDLE &);
 
 }
 

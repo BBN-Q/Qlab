@@ -21,6 +21,8 @@ int read_register(FT_HANDLE, const ULONG &, const ULONG &, const ULONG &, UCHAR 
 
 int write_register(FT_HANDLE, const ULONG &, const ULONG &, const ULONG &, UCHAR *);
 
+int write_SPI(FT_HANDLE, ULONG, const ULONG &, UCHAR *);
+
 int read_bitFile_version(FT_HANDLE, const UCHAR &);
 
 ULONG read_FPGA(FT_HANDLE, const ULONG &, UCHAR);

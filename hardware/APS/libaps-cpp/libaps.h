@@ -8,7 +8,7 @@
 #ifndef LIBAPS_H_
 #define LIBAPS_H_
 
-int Init();
+EXPORT int Init();
 
 
 

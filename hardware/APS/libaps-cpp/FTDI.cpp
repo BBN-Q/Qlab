@@ -42,11 +42,31 @@ int FTDI::connect(const int & deviceID, FT_HANDLE & deviceHandle) {
 	FT_STATUS ftStatus;
 	ftStatus = FT_Open(deviceID, &deviceHandle);
 	if(!FT_SUCCESS(ftStatus)) {
-		FILE_LOG(logERROR) << "Unable to load device " << deviceID;
+		FILE_LOG(logERROR) << "Unable to open connection to device " << deviceID;
 		return -1;
 	}
+	else{
+		FILE_LOG(logDEBUG2) << "Opened connection to " << deviceID;
+		ftStatus = FT_SetTimeouts(deviceHandle, APS_READTIMEOUT,APS_WRITETIMEOUT);
+		if(!FT_SUCCESS(ftStatus)) {
+			FILE_LOG(logERROR) << "Unable to set USB timeouts for device " << deviceID;
+			return -1;
+		}
+		else{
+			FILE_LOG(logDEBUG2) << "Set timeouts OK for " << deviceID;
+		}
+	}
 
+	return 0;
+}
 
+int FTDI::disconnect(FT_HANDLE & deviceHandle) {
 
+	FT_STATUS ftStatus;
+	ftStatus = FT_Close(deviceHandle);
+	if(!FT_SUCCESS(ftStatus)) {
+		FILE_LOG(logERROR) << "Unable to close device " << deviceHandle;
+		return -1;
+	}
 	return 0;
 }
