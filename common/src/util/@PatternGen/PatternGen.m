@@ -346,8 +346,8 @@ classdef PatternGen < handle
             xpat = xpat(1:len);
             ypat = ypat(1:len);
             
-            xpat = obj.makePattern(xpat, fixedPoint + delay, [], obj.cycleLength);
-            ypat = obj.makePattern(ypat, fixedPoint + delay, [], obj.cycleLength);
+            xpat = int16(obj.makePattern(xpat, fixedPoint + delay, [], obj.cycleLength));
+            ypat = int16(obj.makePattern(ypat, fixedPoint + delay, [], obj.cycleLength));
         end
         
         function retVal = pulse(obj, p, varargin)
@@ -429,7 +429,7 @@ classdef PatternGen < handle
             end
             
             % measurement pulses
-            if strcmp(p, 'M')
+            if ismember(p, measurementPulses)
                 params.amp = 1;
                 params.modFrequency = 0;
             end
