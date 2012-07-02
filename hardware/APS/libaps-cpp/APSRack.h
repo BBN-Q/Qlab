@@ -27,11 +27,10 @@ public:
 	void enumerate_devices();
 
 private:
-	vector<APS> _devices;
+	vector<APS> _APSs;
 	int _numDevices;
 	map<string, unsigned short> _serial2dev;
 	vector<string> _deviceSerials;
-	vector<FT_HANDLE> _deviceHandles;
 };
 
 #endif /* APSRACK_H_ */
