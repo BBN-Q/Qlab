@@ -22,13 +22,18 @@
 % the I) and digitally mixes into two single points, a digital I and Q,
 % based on the total size of the dataset
 
-function [DI DQ] =  digitalHomodyne(signal, IFfreq, sampInterval, integrationStart, integrationPts)
-    % first define a variable that takes the total length of the signal
-    if nargin < 5
-        L = size(signal,1);
-		integrationStart = 1;
+function [DI DQ DIQ] =  digitalHomodyne(varargin)
+% has two calling formats:
+% digitalHomodyne(signal, IFfreq, sampInterval, integrationStart, integrationPts)
+% or
+% digitalHomodyne(ch1Signal, ch2Signal, nbrSequences, IFfreq, sampInterval, integrationStart, integrationPts)
+
+    if nargin == 5
+        [ch1Signal, IFfreq, sampInterval, integrationStart, integrationPts] = varargin{:};
+    elseif nargin == 7
+        [ch1Signal, ch2Signal, nbrSequences, IFfreq, sampInterval, integrationStart, integrationPts] = varargin{:};
     else
-        L = integrationPts;
+        error('Undefined number of inputs');
     end
     
     %Setup the butterworth low-pass
@@ -41,16 +46,31 @@ function [DI DQ] =  digitalHomodyne(signal, IFfreq, sampInterval, integrationSta
     %The signal is a 2D array with acquisition along a column
     
     %Create the weighted reference signal
-    refSignal = (1/integrationPts)*exp(1i*2*pi*IFfreq*sampInterval*(1:1:size(signal,1)))';
+    refSignal = (1/integrationPts)*exp(1i*2*pi*IFfreq*sampInterval*(1:1:size(ch1Signal,1)))';
     
     %Demodulate and filter
-    demodSignal = filter(b,a, signal.*repmat(refSignal,[1,size(signal,2)]));
-    
-    %Return the summed real and imaginary parts (as column vectors for no
-    %good reason).
-    tmpSum = sum(demodSignal(integrationStart:integrationStart+L-1,:))';
-    DI = real(tmpSum);
-    DQ = imag(tmpSum);
+    if nargin == 5
+        demodSignal = filter(b,a, ch1Signal.*repmat(refSignal,[1,size(ch1Signal,2)]));
+
+        %Return the summed real and imaginary parts (as column vectors for no
+        %good reason).
+        tmpSum = sum(demodSignal(integrationStart:integrationStart+integrationPts-1,:))';
+        DI = real(tmpSum);
+        DQ = imag(tmpSum);
+    else
+        demodSignal1 = filter(b,a, ch1Signal.*repmat(refSignal,[1,size(ch1Signal,2)]));
+        demodSignal2 = filter(b,a, ch2Signal.*repmat(refSignal,[1,size(ch2Signal,2)]));
+        
+        DI = sum(demodSignal1(integrationStart:integrationStart+integrationPts-1,:));
+        DQ = sum(demodSignal2(integrationStart:integrationStart+integrationPts-1,:));
+        DIQ = DI.*DQ;
+        
+        % restack signals into seqeunces * nbrRoundRobings
+        % and take the mean along the sequence dimension
+        DI = mean(reshape(DI, nbrSequences, []), 2);
+        DQ = mean(reshape(DQ, nbrSequences, []), 2);
+        DIQ = mean(reshape(DIQ, nbrSequences, []), 2);
+    end
  
     function [b,a] = my_butter(normIFFreq)
         %Steal variable-order butter-worth filter design from scipy in a table

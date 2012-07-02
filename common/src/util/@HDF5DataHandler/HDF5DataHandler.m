@@ -6,11 +6,16 @@ classdef HDF5DataHandler < handle
         idx
         rowSize
         dimension
+        nbrDataSets
         buffer
         bufferIdx
     end
     methods
-        function obj = HDF5DataHandler(fileName, dimension, headerStruct)
+        function obj = HDF5DataHandler(fileName, dimension, headerStruct, nbrDataSets)
+            if ~exist('nbrDataSets', 'var')
+                nbrDataSets = 1;
+            end
+            obj.nbrDataSets = nbrDataSets;
             obj.dimension = dimension;
             switch (dimension)
                 case 1
@@ -35,9 +40,11 @@ classdef HDF5DataHandler < handle
             
             obj.rowSize = length(headerStruct.xpoints);
 
-            %open a data set
-            h5create(fileName, '/idata', Inf, 'ChunkSize', 10);
-            h5create(fileName, '/qdata', Inf, 'ChunkSize', 10);
+            %open data set(s)
+            for ii = 1:obj.nbrDataSets
+                h5create(fileName, ['/DataSet' num2str(ii) '/real'], Inf, 'ChunkSize', 10);
+                h5create(fileName, ['/DataSet' num2str(ii) '/imag'], Inf, 'ChunkSize', 10);
+            end
 
             obj.idx = 1;
         end
@@ -57,14 +64,17 @@ classdef HDF5DataHandler < handle
             
             obj.rowSize = length(headerStruct.xpoints);
 
-            %open a data set
-            h5create(fileName, '/idata', [Inf obj.rowSize], 'ChunkSize', [10 obj.rowSize]);
-            h5create(fileName, '/qdata', [Inf obj.rowSize], 'ChunkSize', [10 obj.rowSize]);
+            %open data set(s)
+            for ii = 1:obj.nbrDataSets
+                h5create(fileName, ['/DataSet' num2str(ii) '/real'], [Inf obj.rowSize], 'ChunkSize', [10 obj.rowSize]);
+                h5create(fileName, ['/DataSet' num2str(ii) '/imag'], [Inf obj.rowSize], 'ChunkSize', [10 obj.rowSize]);
+            end
 
             obj.idx = 1;
             
-            %initialize a buffer
-            obj.buffer = nan(1, obj.rowSize);
+            %initialize buffer(s)
+            obj.buffer = cell(obj.nbrDataSets, 1);
+            obj.buffer(:) = {nan(1,obj.rowSize)};
             obj.bufferIdx = 1;
         end
         
@@ -88,6 +98,7 @@ classdef HDF5DataHandler < handle
                 h5write(obj.fileName, '/zpoints', zpoints);
                 h5writeatt(obj.fileName, '/zpoints', 'label', zlabel);
             end
+            h5writeatt(obj.fileName, '/', 'nbrDataSets', uint16(obj.nbrDataSets));
         end
         
         function out = readHeader(obj)
@@ -99,7 +110,7 @@ classdef HDF5DataHandler < handle
             % dimensions of the data set and the passed value
             switch obj.dimension
                 case 1
-                    if length(val) == 1
+                    if length(val{1}) == 1
                         obj.writePoint(val);
                     else
                         obj.writeRow(val);
@@ -112,14 +123,16 @@ classdef HDF5DataHandler < handle
                     % point, add it to the buffer until we have filled an
                     % entire row, then write the row.
                     % otherwise, we have an entire row, so write it
-                    if length(val) == 1
-                        obj.buffer(obj.bufferIdx) = val;
+                    if length(val{1}) == 1
+                        for ii=1:obj.nbrDataSets
+                            obj.buffer{ii}(obj.bufferIdx) = val{ii};
+                        end
                         obj.bufferIdx = obj.bufferIdx + 1;
                         % check if we need to flush the buffer
                         if obj.bufferIdx > obj.rowSize
                             obj.writeRow(obj.buffer);
                             obj.bufferIdx = 1;
-                            obj.buffer = nan(1, obj.rowSize);
+                            obj.buffer(:) = {nan(1,obj.rowSize)};
                         end
                     else
                         obj.writeRow(val);
@@ -131,23 +144,28 @@ classdef HDF5DataHandler < handle
 
         function writePoint(obj, val)
             assert(obj.fileOpen == 1, 'writePoint ERROR: file is not open\n');
-            h5write(obj.fileName, '/idata', real(val), obj.idx, 1);
-            h5write(obj.fileName, '/qdata', imag(val), obj.idx, 1);
+            
+            for ii=1:obj.nbrDataSets
+                h5write(obj.fileName, ['/DataSet' num2str(ii) '/real'], real(val{ii}), obj.idx, 1);
+                h5write(obj.fileName, ['/DataSet' num2str(ii) '/imag'], imag(val{ii}), obj.idx, 1);
+            end
             obj.idx = obj.idx + 1;
         end
         
         function writeRow(obj, row)
             assert(obj.fileOpen == 1, 'writeRow ERROR: file is not open\n');
-            row = reshape(row, 1, obj.rowSize);
-            switch obj.dimension
-                case 1
-                    h5write(obj.fileName, '/idata', real(row), 1, length(row));
-                    h5write(obj.fileName, '/qdata', imag(row), 1, length(row));
-                case 2
-                    h5write(obj.fileName, '/idata', real(row), [obj.idx 1], [1 obj.rowSize]);
-                    h5write(obj.fileName, '/qdata', imag(row), [obj.idx 1], [1 obj.rowSize]);
-                case 3
-                    error('Unallowed dimension %d\n', obj.dimension);
+            for ii = 1:obj.nbrDataSets
+                row = reshape(row{ii}, 1, obj.rowSize);
+                switch obj.dimension
+                    case 1
+                        h5write(obj.fileName, ['/DataSet' num2str(ii) '/real'], real(row), 1, length(row));
+                        h5write(obj.fileName, ['/DataSet' num2str(ii) '/imag'], imag(row), 1, length(row));
+                    case 2
+                        h5write(obj.fileName, ['/DataSet' num2str(ii) '/real'], real(row), [obj.idx 1], [1 obj.rowSize]);
+                        h5write(obj.fileName, ['/DataSet' num2str(ii) '/imag'], imag(row), [obj.idx 1], [1 obj.rowSize]);
+                    case 3
+                        error('Unallowed dimension %d\n', obj.dimension);
+                end
             end
             obj.idx = obj.idx + 1;
         end
@@ -202,12 +220,12 @@ classdef HDF5DataHandler < handle
             header = struct('xpoints', [5 10 15], 'xlabel', 'Frequency (GHz)');
             dataHandler = HDF5DataHandler('unit_test.h5', 1, header);
             for ct = 1:3
-                dataHandler.write(data(ct));
+                dataHandler.write({data(ct)});
             end
 
             disp(dataHandler.readHeader());
             
-            readData = h5read('unit_test.h5', '/idata') + 1i * h5read('unit_test.h5', '/qdata');
+            readData = h5read('unit_test.h5', '/DataSet1/real') + 1i * h5read('unit_test.h5', '/DataSet1/imag');
             if verbose
                 disp(readData);
             end
@@ -221,12 +239,12 @@ classdef HDF5DataHandler < handle
                 'ypoints', [1 2 3], 'ylabel', 'Time (us)');
             dataHandler = HDF5DataHandler('unit_test.h5', 2, header);
             for ct = 1:3
-                dataHandler.write(data(ct,:));
+                dataHandler.write({data(ct,:)});
             end
             
             disp(dataHandler.readHeader());
             
-            readData = h5read('unit_test.h5', '/idata') + 1i * h5read('unit_test.h5', '/qdata');
+            readData = h5read('unit_test.h5', '/DataSet1/real') + 1i * h5read('unit_test.h5', '/DataSet1/imag');
             if verbose
                 disp(readData);
             end
@@ -241,13 +259,13 @@ classdef HDF5DataHandler < handle
             dataHandler = HDF5DataHandler('unit_test.h5', 2, header);
             for rowct = 1:3
                 for columnct = 1:3
-                    dataHandler.write(data(rowct,columnct));
+                    dataHandler.write({data(rowct,columnct)});
                 end
             end
             
             disp(dataHandler.readHeader());
             
-            readData = h5read('unit_test.h5', '/idata') + 1i * h5read('unit_test.h5', '/qdata');
+            readData = h5read('unit_test.h5', '/DataSet1/real') + 1i * h5read('unit_test.h5', '/DataSet1/imag');
             if verbose
                 disp(readData);
             end

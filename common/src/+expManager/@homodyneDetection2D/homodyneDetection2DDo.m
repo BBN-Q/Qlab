@@ -30,22 +30,6 @@ if isempty(scopeHandle) && displayScope
     scopeHandle = figure('HandleVisibility', 'callback');
 end
 
-%% Main Loop
-
-% If there's anything thats particular to any device do it here
-InstrumentNames = fieldnames(Instr);
-if ~SD_mode
-    for Instr_index = 1:numel(InstrumentNames)
-        InstrName = InstrumentNames{Instr_index};
-        switch class(Instr.(InstrName))
-            case 'deviceDrivers.AgilentAP240'
-                scope = Instr.(InstrName); % we're going to need this later
-            otherwise
-                % unknown instrument type, for now do nothing
-        end
-    end
-end
-
 % stop the master and make sure it stopped
 masterAWG = obj.awg{1};
 masterAWG.stop();
@@ -58,7 +42,6 @@ for i = 2:length(obj.awg)
     if success_flag_AWG ~= 1, error('AWG %d timed out', i), end
 end
 
-%%
 % for each loop we use the function iterateLoop to set the relevent
 % parameters.  For now hard coding in one loop is fine, someday we might
 % want to change this.
@@ -69,15 +52,54 @@ Phase2D = nan(obj.Loop.two.steps, obj.Loop.one.steps);
 
 x_range = obj.Loop.one.sweep.points;
 
-axesHandle1DAmp = subplot(2,1,1,'Parent', figureHandle);
-grid(axesHandle1DAmp, 'on')
-axesHandle1DPhase = subplot(2,1,2,'Parent', figureHandle);
-grid(axesHandle1DPhase, 'on')
+multiChMode = strcmpi(ExpParams.digitalHomodyne.channel, 'Both');
 
-plotHandle1DAmp = plot(axesHandle1DAmp, x_range, nan(1,obj.Loop.one.steps));
-ylabel(axesHandle1DAmp, 'Amplitude');
-plotHandle1DPhase = plot(axesHandle1DPhase, x_range, nan(1,obj.Loop.one.steps));
-ylabel(axesHandle1DPhase, 'Phase');
+if ~multiChMode
+    axesHandle1DAmp = subplot(2,1,1,'Parent', figureHandle);
+    grid(axesHandle1DAmp, 'on')
+    axesHandle1DPhase = subplot(2,1,2,'Parent', figureHandle);
+    grid(axesHandle1DPhase, 'on')
+    
+    plotHandle1DAmp = plot(axesHandle1DAmp, x_range, nan(1,obj.Loop.one.steps));
+    ylabel(axesHandle1DAmp, 'Amplitude');
+    plotHandle1DPhase = plot(axesHandle1DPhase, x_range, nan(1,obj.Loop.one.steps));
+    ylabel(axesHandle1DPhase, 'Phase');
+else
+    % fix Loop one size
+    x_range = x_range(1:obj.nbrSequences);
+    tmpAxes = subplot(2,3,1,'Parent', figureHandle);
+    grid(tmpAxes, 'on')
+    plotHandle1DAmp1 = plot(tmpAxes, x_range, nan(1,obj.nbrSequences));
+    ylabel(tmpAxes, 'Amplitude');
+    title(tmpAxes, 'Channel 1')
+    
+    tmpAxes = subplot(2,3,4,'Parent', figureHandle);
+    grid(tmpAxes, 'on')
+    plotHandle1DPhase1 = plot(tmpAxes, x_range, nan(1,obj.nbrSequences));
+    ylabel(tmpAxes, 'Phase');
+    
+    tmpAxes = subplot(2,3,2,'Parent', figureHandle);
+    grid(tmpAxes, 'on')
+    plotHandle1DAmp2 = plot(tmpAxes, x_range, nan(1,obj.nbrSequences));
+    ylabel(tmpAxes, 'Amplitude');
+    title(tmpAxes, 'Channel 2')
+    
+    tmpAxes = subplot(2,3,5,'Parent', figureHandle);
+    grid(tmpAxes, 'on')
+    plotHandle1DPhase2 = plot(tmpAxes, x_range, nan(1,obj.nbrSequences));
+    ylabel(tmpAxes, 'Phase');
+    
+    tmpAxes = subplot(2,3,3,'Parent', figureHandle);
+    grid(tmpAxes, 'on')
+    plotHandle1DAmp3 = plot(tmpAxes, x_range, nan(1,obj.nbrSequences));
+    ylabel(tmpAxes, 'Amplitude');
+    title(tmpAxes, 'Correlation Ch')
+    
+    tmpAxes = subplot(2,3,6,'Parent', figureHandle);
+    grid(tmpAxes, 'on')
+    plotHandle1DPhase3 = plot(tmpAxes, x_range, nan(1,obj.nbrSequences));
+    ylabel(tmpAxes, 'Phase');
+end
 
 if obj.Loop.two.steps > 1
     axesHandle2DAmp = subplot(2,1,1,'Parent', figureHandle2D);
@@ -94,7 +116,6 @@ if obj.Loop.two.steps > 1
     ylabel(axesHandle2DPhase, 'Phase');
 end
 
-
 for loop2_index = 1:obj.Loop.two.steps
     obj.Loop.two.sweep.step(loop2_index);
     fprintf('Loop 1: Step %d of %d\n', [loop2_index, obj.Loop.two.steps]);
@@ -105,78 +126,90 @@ for loop2_index = 1:obj.Loop.two.steps
             fprintf('Soft average %d\n', avg_index);
 
             % set the card to acquire
-            scope.acquire();
+            obj.scope.acquire();
 
             % set the Tek to run and wait and wait and wait for it to go
             masterAWG.run();
             masterAWG.operationComplete();
             
             %Poll the digitizer until it has all the data
-            success = scope.wait_for_acquisition(120);
+            success = obj.scope.wait_for_acquisition(120);
             if success ~= 0
                 error('Failed to acquire waveform.')
             end
 
-            % Then we retrive our data
-            Amp_I = scope.transfer_waveform(1);
-            Amp_Q = scope.transfer_waveform(2);
+            % Then we retrieve our data
+            Amp_I = obj.scope.transfer_waveform(1);
+            Amp_Q = obj.scope.transfer_waveform(2);
             if numel(Amp_I) ~= numel(Amp_Q)
                 error('I and Q outputs have different lengths.')
             end
-            
-            %For the first soft average initialize, otherwise sum
-            if avg_index == 1
-                isoftAvg = Amp_I;
-                qsoftAvg = Amp_Q;
-            else
-                isoftAvg = (isoftAvg .* (avg_index - 1) + Amp_I)./(avg_index);
-                qsoftAvg = (qsoftAvg .* (avg_index - 1) + Amp_Q)./(avg_index);
-            end
 
+            % signal processing and analysis
+            if multiChMode
+                [iavg, qavg, iqavg] = obj.processSignal(Amp_I, Amp_Q);
+                
+                 % update the averages
+                if avg_index == 1
+                    isoftAvg = iavg;
+                    qsoftAvg = qavg;
+                    iqsoftAvg = iqavg;
+                else
+                    isoftAvg = (isoftAvg .* (avg_index - 1) + iavg)./(avg_index);
+                    qsoftAvg = (qsoftAvg .* (avg_index - 1) + qavg)./(avg_index);
+                    iqsoftAvg = (iqsoftAvg .* (avg_index - 1) + iqavg)./(avg_index);
+                end
+                
+                amp1 = abs(isoftAvg);
+                amp2 = abs(qsoftAvg);
+                amp12 = abs(iqsoftAvg);
+                phase1 = 180/pi*angle(isoftAvg);
+                phase2 = 180/pi*angle(qsoftAvg);
+                phase12 = 180/pi*angle(iqsoftAvg);
+                
+                %update plots
+                set(plotHandle1DAmp1, 'YData', amp1)
+                set(plotHandle1DPhase1, 'YData', phase1)
+                set(plotHandle1DAmp2, 'YData', amp2)
+                set(plotHandle1DPhase2, 'YData', phase2)
+                set(plotHandle1DAmp3, 'YData', amp12)
+                set(plotHandle1DPhase3, 'YData', phase12)
+            else
+                %For the first soft average initialize, otherwise sum
+                if avg_index == 1
+                    isoftAvg = Amp_I;
+                    qsoftAvg = Amp_Q;
+                else
+                    isoftAvg = (isoftAvg .* (avg_index - 1) + Amp_I)./(avg_index);
+                    qsoftAvg = (qsoftAvg .* (avg_index - 1) + Amp_Q)./(avg_index);
+                end
+            
+                [iavg, qavg] = obj.processSignal(isoftAvg, qsoftAvg);
+                
+                % convert I/Q to Amp/Phase
+                amp = sqrt(iavg.^2 + qavg.^2);
+                phase = (180.0/pi) * atan2(qavg, iavg);
+                
+                % Update the plots
+                set(plotHandle1DAmp, 'YData', amp)
+                set(plotHandle1DPhase, 'YData', phase)
+            end
+            
             if displayScope
-                %scope_y = 1:size(Amp_I,2);
                 figure(scopeHandle);
                 foo = subplot(2,1,1);
-                %imagesc(timesI,scope_y,Amp_I');
                 imagesc(isoftAvg');
                 xlabel('Time');
                 ylabel('Segment');
                 set(foo, 'YDir', 'normal');
                 title('Ch 1 (I)');
                 foo = subplot(2,1,2);
-                %imagesc(timesQ,scope_y,Amp_Q');
                 imagesc(qsoftAvg');
                 xlabel('Time');
                 ylabel('Segment');
                 set(foo, 'YDir', 'normal');
                 title('Ch 2 (Q)');
             end
-
-            % signal processing and analysis
-            range = ExpParams.filter.start:ExpParams.filter.start+ExpParams.filter.length - 1;
-            switch (ExpParams.digitalHomodyne.DHmode)
-                case 'OFF'
-                    % calcuate average amplitude and phase
-                    iavg = mean(isoftAvg(range,:))';
-                    qavg = mean(qsoftAvg(range,:))';
-                case 'DH1'
-                    % TODO: update digital homodyne to do point by
-                    % point conversion
-                    [iavg qavg] = obj.digitalHomodyne(isoftAvg, ...
-                        ExpParams.digitalHomodyne.IFfreq*1e6, ...
-                        scope.horizontal.sampleInterval, ExpParams.filter.start, ExpParams.filter.length);
-                case 'DIQ'
-                    [iavg qavg] = obj.digitalHomodyneIQ(isoftAvg(range,:), qsoftAvg(range,:), ...
-                        ExpParams.digitalHomodyne.IFfreq*1e6, ...
-                        scope.horizontal.sampleInterval);
-            end
-            % convert I/Q to Amp/Phase
-            amp = sqrt(iavg.^2 + qavg.^2);
-            phase = (180.0/pi) * atan2(qavg, iavg);
-
-            % Update the plots
-            set(plotHandle1DAmp, 'YData', amp)
-            set(plotHandle1DPhase, 'YData', phase)
 
             masterAWG.stop();
             % restart the slave AWGs so we can resync
@@ -204,30 +237,6 @@ for loop2_index = 1:obj.Loop.two.steps
     else
         percentComplete = 100*(loop2_index-1 + (loop2_index)/obj.Loop.two.steps)/obj.Loop.one.steps;
         fprintf('%d\n',percentComplete);
-    end
-end
-
-%% If there's anything thats particular to any device do it here
-
-if ~SD_mode
-    InstrumentNames = fieldnames(Instr);
-    for Instr_index = 1:numel(InstrumentNames)
-        InstrName = InstrumentNames{Instr_index};
-        switch class(Instr.(InstrName))
-            case 'deviceDrivers.Tek5014'
-            case 'deviceDrivers.Agilent33220A'
-            case 'deviceDrivers.AgilentE8363C'
-                Instr.(InstrName).output = 'off';
-            case 'deviceDrivers.HP8673B'
-                Instr.(InstrName).output = 'off';
-            case 'deviceDrivers.HP8340B'
-                Instr.(InstrName).output = 'off';
-            case 'deviceDrivers.TekTDS784A'
-			case 'deviceDrivers.AgilentAP120'
-			case 'deviceDrivers.DCBias'
-            otherwise
-                % unknown instrument type, for now do nothing
-        end
     end
 end
 

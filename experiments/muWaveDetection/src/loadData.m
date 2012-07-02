@@ -20,9 +20,22 @@ function data = loadData(makePlot, fullpath)
         filename = [filename ext];
     end
     
-    rawData = h5read(fullpath, '/idata') + 1i * h5read(fullpath, '/qdata');
-    data.abs_Data = abs(rawData);
-    data.phase_Data = 180.0/pi * atan2(imag(rawData), real(rawData));
+    info = h5info(filename, '/');
+    attributeNames = {info.Attributes.Name};
+    if any(strcmp(attributeNames, 'nbrDataSets'))
+        data.nbrDataSets = h5readatt(fullpath, '/', 'nbrDataSets');
+        for ii = 1:data.nbrDataSets
+            rawData = h5read(fullpath, ['/DataSet' num2str(ii) '/real']) + 1i * h5read(fullpath, ['/DataSet' num2str(ii) '/imag']);
+            data.abs_Data{ii} = abs(rawData);
+            data.phase_Data{ii} = 180.0/pi * angle(rawData);
+        end
+    else
+        rawData = h5read(fullpath, '/idata') + 1i * h5read(fullpath, '/qdata');
+        data.abs_Data = {abs(rawData)};
+        data.phase_Data = 180.0/pi * angle(rawData);
+        data.nbrDataSets = 1;
+    end
+    
     dimension = h5readatt(fullpath, '/', 'dimension');
     data.xpoints = h5read(fullpath, '/xpoints');
     data.xlabel = h5readatt(fullpath, '/xpoints', 'label');
