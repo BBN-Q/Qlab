@@ -51,13 +51,13 @@ seqParams = struct(...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
-    'measLength', 1000);
+    'measLength', 2000);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
-measChannels = {'M1'};
+measChannels = {'M2'};
 awgs = {'TekAWG', 'BBNAPS'};
 
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, false);
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
 
 end

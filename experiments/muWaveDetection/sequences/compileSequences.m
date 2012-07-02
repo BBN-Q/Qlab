@@ -105,11 +105,8 @@ for IQkey = channelNames
         if strcmpi(IQkey(1:3), 'tek')
             chBuffer = zeros(numSegments, seqParams.cycleLength, 'uint8');
             gated = false;
-            % **kludge**
-            delayDiff = params.TekAWG_12.delay - ChParams.delay;
         else
             gated = false; % turn me back on when I work!
-            delayDiff = params.TekAWG_12.delay - ChParams.delay; % won't be needed when above line = true
         end
         for n = 1:nbrPatterns;
             IQ_seq{n} = pg.build(patseq{floor((n-1)/seqParams.nbrRepeats)+1}, seqParams.numSteps, ChParams.delay, seqParams.fixedPt, gated);
@@ -119,8 +116,8 @@ for IQkey = channelNames
                     [patx, paty] = pg.linkListToPattern(IQ_seq{n}, stepct);
 
                     % remove difference of delays
-                    patx = circshift(patx, [0, delayDiff]);
-                    paty = circshift(paty, [0, delayDiff]);
+                    patx = circshift(patx, [0, ChParams.delayDiff]);
+                    paty = circshift(paty, [0, ChParams.delayDiff]);
                     chBuffer((n-1)*stepct + stepct, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
                 end
             end
@@ -132,8 +129,8 @@ for IQkey = channelNames
             
             if ~gated
                 % remove difference of delays
-                patx = circshift(patx, [0, delayDiff]);
-                paty = circshift(paty, [0, delayDiff]);
+                patx = circshift(patx, [0, ChParams.delayDiff]);
+                paty = circshift(paty, [0, ChParams.delayDiff]);
                 chBuffer(nbrPatterns*seqParams.numSteps + n, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
             end
         end
@@ -166,6 +163,16 @@ for awgChannel = keys(awgChannels)
     end
 end
 
+% plotting variables
+plotColors = {'r', 'b', 'g', 'c', 'k', 'y'};
+colorIdx = 0;
+markerPlotColors = {'r-', 'b-', 'g-', 'c-', 'k-', 'y-'};
+markerColorIdx = 0;
+if makePlot
+    figure();
+    hold on
+end
+
 for awg = awgs
     awg = awg{1};
     basename = [seqParams.basename '-' awg seqParams.suffix];
@@ -192,6 +199,22 @@ for awg = awgs
         disp(['Moving AWG ' awg ' file to destination']);
         pathAWG = ['U:\AWG\' seqParams.basename '\' basename '.awg'];
         movefile([tempdir basename '.awg'], pathAWG);
+        
+        if makePlot
+            plot(ch12{1}(plotIdx,:), plotColors{ 1+mod(colorIdx, length(plotColors)) });
+            plot(ch12{2}(plotIdx,:), plotColors{ 1+mod(colorIdx+1, length(plotColors)) });
+            plot(ch34{1}(plotIdx,:), plotColors{ 1+mod(colorIdx+2, length(plotColors)) });
+            plot(ch34{2}(plotIdx,:), plotColors{ 1+mod(colorIdx+3, length(plotColors)) });
+            colorIdx = colorIdx + 4;
+            plot(5000*ch1m1(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx, length(markerPlotColors)) });
+            plot(5000*ch1m2(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+1, length(markerPlotColors)) });
+            plot(5000*ch2m1(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+2, length(markerPlotColors)) });
+            plot(5000*ch2m2(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+3, length(markerPlotColors)) });
+            plot(5000*ch3m1(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+4, length(markerPlotColors)) });
+            plot(5000*ch3m2(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+5, length(markerPlotColors)) });
+            plot(5000*ch4m1(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+6, length(markerPlotColors)) });
+            plot(5000*ch4m2(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+7, length(markerPlotColors)) });
+        end
     else
         % export APS
         % concatenate link lists
@@ -203,7 +226,7 @@ for awg = awgs
             end
         end
         
-        ch34seqs = awgChannels([awg '_12']);
+        ch34seqs = awgChannels([awg '_34']);
         ch34seq = ch34seqs{1};
         for n = 2:length(ch34seqs)
             for m = 1:length(ch34seqs{n}.linkLists)
@@ -216,34 +239,16 @@ for awg = awgs
         disp(['Moving APS ' awg ' file to destination']);
         pathAPS = ['U:\AWG\' seqParams.basename '\' basename '.h5'];
         movefile([tempdir basename '.h5'], pathAPS);
-    end
-end
-
-
-% plotting
-plotColors = {'r', 'b', 'g', 'c', 'k', 'y'};
-colorIdx = 1;
-markerPlotColors = {'r-', 'b-', 'g-', 'c-', 'k-', 'y-'};
-markerColorIdx = 1;
-if makePlot
-    figure();
-    hold on
-    for awgChannel = keys(awgChannels)
-        awgChannel = awgChannel{1};
-        if (awgChannel(end-1) == 'm')
-            data = awgChannels(awgChannel);
-            plot(data(plotIdx), markerPlotColors( mod(markerColorIdx, length(markerPlotColors)) ));
-            markerColorIdx = markerColorIdx + 1;
-        elseif strcmpi(awgChannel(1:3), 'tek')
-            data = awgChannels(awgChannel);
-            plot(data{1}(plotIdx), plotColors( mod(colorIdx, length(plotColors)) ));
-            plot(data{2}(plotIdx), plotColors( mod(colorIdx+1, length(plotColors)) ));
-            colorIdx = colorIdx + 2;
-        else
-            pg = patternDict(awgChannel).pg;
-            [patx, paty] = pg.linkListToPattern(awgChannels(awgChannel), plotIdx);
-            plot(patx, plotColors( mod(colorIdx, length(plotColors)) ));
-            plot(paty, plotColors( mod(colorIdx+1, length(plotColors)) ));
+        
+        if makePlot
+            pg = patternDict([awg '_12']).pg;
+            [patx, paty] = pg.linkListToPattern(ch12seq, 1+mod(plotIdx-1, length(ch12seq.linkLists)));
+            plot(patx, plotColors{ 1+mod(colorIdx, length(plotColors)) });
+            plot(paty, plotColors{ 1+mod(colorIdx+1, length(plotColors)) });
+            [patx, paty] = pg.linkListToPattern(ch34seq, 1+mod(plotIdx-1, length(ch34seq.linkLists)));
+            plot(patx, plotColors{ 1+mod(colorIdx+2, length(plotColors)) });
+            plot(paty, plotColors{ 1+mod(colorIdx+3, length(plotColors)) });
+            colorIdx = colorIdx + 4;
         end
     end
 end
