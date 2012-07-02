@@ -1,76 +1,27 @@
-classdef (Sealed) HP8673B < deviceDrivers.lib.GPIB
+classdef (Sealed) HP8673B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
     %HP8673B
     %
     %
     % Author(s): tohki
     % Generated on: Fri Jan 22 15:23:54 2010
-    
-    % Class-specific constant properties
-    properties (Constant = true)
-        
-    end % end constant properties
-    
-    
-    % Class-specific private properties
-    properties (Access = private)
-        
-    end % end private properties
-    
-    
-    % Class-specific public properties
-    properties (Access = public)
-        
-    end % end public properties
-    
+    % Modified by Blake Johnson July 2, 2012
     
     % Device properties correspond to instrument parameters
     properties (Access = public)
         output
         frequency
         power
+        phase
+        mod
+        alc
         pulse
+        pulseSource
     end % end device properties
     
-    
-    
-    % Class-specific private methods
-    methods (Access = private)
-        
-    end % end private methods
-    
-    methods (Access = public)
+    methods
         function obj = HP8673B()
-            %             obj = obj@dev.DAObject.GPIB.GPIBWrapper();
         end
-        
-        %         % Instrument-specific methods
-        %         function outputon(obj)
-        %         %OUTPUT ON
-        %             gpib_string = 'OUTPUT ON';
-        %             obj.Write(gpib_string);
-        %         end
-        %
-        %         function outputoff(obj)
-        %         %OUTPUT OFF
-        %             gpib_string = 'OUTPUT OFF';
-        %             obj.Write(gpib_string);
-        %         end
-	end
-    
-    methods % Class-specific public methods
-		% instrument meta-setter
-		function setAll(obj, settings)
-			fields = fieldnames(settings);
-			for j = 1:length(fields);
-				name = fields{j};
-				if ismember(name, methods(obj))
-					feval(['obj.' name], settings.(name));
-				elseif ismember(name, properties(obj))
-					obj.(name) = settings.(name);
-				end
-			end
-		end
-		
+
 		% Instrument parameter accessors
         function val = get.frequency(obj)
             gpib_string = 'FR';

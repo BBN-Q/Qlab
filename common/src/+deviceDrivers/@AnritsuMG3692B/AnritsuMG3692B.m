@@ -1,4 +1,4 @@
-classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.GPIB
+classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
     % Anritsu MG3692B signal generator
     %
     %
@@ -43,19 +43,6 @@ classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.GPIB
     methods
         function obj = AnritsuMG3692B()
         end
-
-		% instrument meta-setter
-		function setAll(obj, settings)
-			fields = fieldnames(settings);
-			for j = 1:length(fields);
-				name = fields{j};
-				if ismember(name, methods(obj))
-					feval(['obj.' name], settings.(name));
-				elseif ismember(name, properties(obj))
-					obj.(name) = settings.(name);
-				end
-			end
-		end
 		
 		% Instrument parameter accessors
         % getters
