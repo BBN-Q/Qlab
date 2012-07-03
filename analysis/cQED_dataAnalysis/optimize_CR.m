@@ -64,8 +64,9 @@ set(gca, 'XTickLabel', paulistrings);
 
 set(gca, 'YTick', 1:4^2);
 set(gca, 'YTickLabel', paulistrings);
-xlabel('Input Pauli Operator');
-ylabel('Output Pauli Operator');
+xlabel('Input Pauli Operator', 'FontSize', 12);
+ylabel('Output Pauli Operator', 'FontSize', 12);
+title('Pauli Map Constrained Process Tomography','FontSize',14);
 
 
 

@@ -10,10 +10,28 @@ function [beta, paulis, C] = analyzeTomo(data, nbrRepeats)
     figure;
     bar(paulis)
     PauliLabel();
+    title('Raw Inversion Pauli Decomposition');
     
     rhoRaw = getRho(paulis);
     rhoWizard = WizardTomo_(rhoRaw, 2);
     rhoPlot(rhoWizard);
+    
+    
+    pauliStruct = PauliOperators_(2);
+    pauliLabels = {'II', 'XI', 'YI', 'ZI', 'IX', 'IY', 'IZ', 'XY', 'XZ', 'YX', 'YZ', 'ZX', 'ZY', 'XX', 'YY', 'ZZ'};
+    pauliOps = pauliStruct.opt;
+
+    paulisWiz = zeros(16,1);
+    for ct = 1:length(pauliOps)
+        pauliNum = find(strcmp(pauliLabels{ct}, pauliStruct.string));
+        paulisWiz(ct) = real(trace(rhoWizard*pauliOps{pauliNum}));
+    end
+    figure;
+    bar(paulisWiz)
+    PauliLabel()
+    title('Constrained Tomography Pauli Decomposition','FontSize',14);
+    xlabel('Pauli Operator','FontSize',12);
+    ylabel('Overlap','FontSize',12);
     
     C = Concurrence_(rhoWizard);
 end
