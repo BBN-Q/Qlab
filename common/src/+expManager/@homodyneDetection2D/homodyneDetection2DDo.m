@@ -222,16 +222,22 @@ for loop2_index = 1:obj.Loop.two.steps
         end
 
         % write the data to file
-        obj.DataFileHandler.write(iavg + 1i*qavg);
-
-        %Store in the 2D array
-        Amp2D(loop2_index,:) = amp;
-        Phase2D(loop2_index,:) = phase;
-        
-        % display 2D data sets if there is a loop
-        if obj.Loop.two.steps > 1
-            set(plotHandle2DAmp, 'CData', Amp2D);
-            set(plotHandle2DPhase, 'CData', Phase2D);
+        % in multiChMode, the data is in isoftAvg, otherwise it is in iavg,
+        % etc...
+        if ~multiChMode
+            obj.DataFileHandler.write({iavg + 1i*qavg});
+            
+            %Store in the 2D array
+            Amp2D(loop2_index,:) = amp;
+            Phase2D(loop2_index,:) = phase;
+            
+            % display 2D data sets if there is a loop
+            if obj.Loop.two.steps > 1
+                set(plotHandle2DAmp, 'CData', Amp2D);
+                set(plotHandle2DPhase, 'CData', Phase2D);
+            end
+        else
+            obj.DataFileHandler.write({isoftAvg, qsoftAvg, iqsoftAvg});
         end
         
     else

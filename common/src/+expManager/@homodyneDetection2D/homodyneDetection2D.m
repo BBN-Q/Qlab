@@ -136,7 +136,7 @@ classdef homodyneDetection2D < expManager.expBase
             end
             
             % open data file
-            obj.openDataFile(dimension, header);
+            obj.openDataFile(dimension, header, obj.nbrSequences);
         end
         function Do(obj)
 			obj.homodyneDetection2DDo;

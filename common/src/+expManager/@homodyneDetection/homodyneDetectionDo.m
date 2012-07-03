@@ -119,7 +119,7 @@ for loop3_index = 1:obj.Loop.three.steps
                 phase(loop1_index) = (180.0/pi) * atan2(qavg, iavg);
                 
                 % Next we write the data to file
-                obj.DataFileHandler.write(iavg + 1i*qavg);
+                obj.DataFileHandler.write({iavg + 1i*qavg});
 
                 % And then update the plots for the user
                 set(plotHandle1DAmp, 'YData', amp)

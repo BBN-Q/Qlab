@@ -97,7 +97,8 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                 case 'amp'
                     out = data.abs_Data;
                 case 'phase'
-                    out = mod(data.phase_Data,360);
+                    % unwrap assume phase data in radians
+                    out = 180/pi * unwrap(pi/180 * data.phaseData);
                 otherwise
                     error('Unknown dataType can only be "amp" or "phase"');
             end
