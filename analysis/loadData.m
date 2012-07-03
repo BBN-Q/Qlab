@@ -20,7 +20,11 @@ function data = loadData(makePlot, fullpath)
         filename = [filename ext];
     end
     
-    info = h5info(filename, '/');
+    % for backwards compatibility, we assume that files that do not have a
+    % 'nbrDataSets' attribute store data at the root level under the names
+    % 'idata' and 'qdata'. If it does have this attribute, then we look for
+    % data at '/DataSetN/real' and '/DataSetN/imag'.
+    info = h5info(fullpath, '/');
     attributeNames = {info.Attributes.Name};
     if any(strcmp(attributeNames, 'nbrDataSets'))
         data.nbrDataSets = h5readatt(fullpath, '/', 'nbrDataSets');
@@ -32,7 +36,7 @@ function data = loadData(makePlot, fullpath)
     else
         rawData = h5read(fullpath, '/idata') + 1i * h5read(fullpath, '/qdata');
         data.abs_Data = {abs(rawData)};
-        data.phase_Data = 180.0/pi * angle(rawData);
+        data.phase_Data = {180.0/pi * angle(rawData)};
         data.nbrDataSets = 1;
     end
     
@@ -52,40 +56,49 @@ function data = loadData(makePlot, fullpath)
 
     if (makePlot)
         sanitized_filedname = strrep(filename, '_', '\_');
-        switch dimension
-            case 1
-                h1 = figure();
-                subplot(2,1,1);
-                amplitude = data.abs_Data(:);
-                phase = data.phase_Data(:);
-                plot(data.xpoints(1:length(amplitude)),amplitude,'linewidth',1.5);
-                xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
-                ylabel('\fontname{Times}\fontsize{14}Amplitude');
-                set(gca,'FontSize',12);
-                subplot(2,1,2);
-                plot(data.xpoints(1:length(phase)),phase,'linewidth',1.5);
-                xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
-                ylabel('\fontname{Times}\fontsize{14}Phase');
-                set(gca,'FontSize',12);
-                subplot(2,1,1);
-                title(sanitized_filedname);
-            case 2
-                h1 = figure();
-                imagesc(data.xpoints(1:size(data.abs_Data,2)),data.ypoints(1:size(data.abs_Data,1)),data.abs_Data)
-                xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
-                ylabel(['\fontname{Times}\fontsize{14}' data.ylabel]);
-                set(gca,'FontSize',12)
-                title(sanitized_filedname);
-                
-                h2 = figure();
-                imagesc(data.xpoints(1:size(data.phase_Data,2)),data.ypoints(1:size(data.phase_Data,1)),data.phase_Data)
-                xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
-                ylabel(['\fontname{Times}\fontsize{14}' data.ylabel]);
-                set(gca,'FontSize',12)
-                title(sanitized_filedname);
-            otherwise
-                error('Cannot plot for dimension = %d', dimension);
+        for ii = 1:data.nbrDataSets
+            switch dimension
+                case 1
+                    h1 = figure();
+                    subplot(2,1,1);
+                    amplitude = data.abs_Data{ii}(:);
+                    phase = data.phase_Data{ii}(:);
+                    plot(data.xpoints(1:length(amplitude)),amplitude,'linewidth',1.5);
+                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
+                    ylabel('\fontname{Times}\fontsize{14}Amplitude');
+                    set(gca,'FontSize',12);
+                    subplot(2,1,2);
+                    plot(data.xpoints(1:length(phase)),phase,'linewidth',1.5);
+                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
+                    ylabel('\fontname{Times}\fontsize{14}Phase');
+                    set(gca,'FontSize',12);
+                    subplot(2,1,1);
+                    title(sanitized_filedname);
+                case 2
+                    h1 = figure();
+                    imagesc(data.xpoints(1:size(data.abs_Data{ii},2)),data.ypoints(1:size(data.abs_Data{ii},1)),data.abs_Data{ii})
+                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
+                    ylabel(['\fontname{Times}\fontsize{14}' data.ylabel]);
+                    set(gca,'FontSize',12)
+                    title(sanitized_filedname);
+
+                    h2 = figure();
+                    imagesc(data.xpoints(1:size(data.phase_Data{ii},2)),data.ypoints(1:size(data.phase_Data{ii},1)),data.phase_Data{ii})
+                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
+                    ylabel(['\fontname{Times}\fontsize{14}' data.ylabel]);
+                    set(gca,'FontSize',12)
+                    title(sanitized_filedname);
+                otherwise
+                    error('Cannot plot for dimension = %d', dimension);
+            end
         end
+    end
+    
+    % if nbrDataSets = 1, then pull abs_Data and phase_Data out of the cell
+    % wrappers
+    if data.nbrDataSets == 1
+        data.abs_Data = data.abs_Data{1};
+        data.phase_Data = data.phase_Data{1};
     end
 
     % helper function to find the nth parent of directory given in 'path'
