@@ -18,26 +18,28 @@ namespace FPGA {
 int program_FPGA(FT_HANDLE, vector<UCHAR>, const int &, const int &);
 
 int read_register(FT_HANDLE, const ULONG &, const ULONG &, const ULONG &, UCHAR *);
-
 int write_register(FT_HANDLE, const ULONG &, const ULONG &, const ULONG &, UCHAR *);
 
+int read_SPI(FT_HANDLE, ULONG, const ULONG &, UCHAR *);
 int write_SPI(FT_HANDLE, ULONG, const ULONG &, UCHAR *);
 
-int read_SPI(FT_HANDLE, ULONG, const ULONG &, UCHAR *);
-
 int clear_bit(FT_HANDLE, const int &, const int &, const int &);
-
 int set_bit(FT_HANDLE, const int &, const int &, const int &);
 
 ULONG read_FPGA(FT_HANDLE, const ULONG &, UCHAR);
-
 int write_FPGA(FT_HANDLE, const ULONG &, const ULONG &, const UCHAR &);
 
 
 int read_bitFile_version(FT_HANDLE, const UCHAR &);
 
-
 int set_PLL_freq(FT_HANDLE, const int &, const int &, const bool &);
+int test_PLL_sync(FT_HANDLE, const int &, const int &);
+int read_PLL_status(FT_HANDLE deviceHandle, const int & fpga, const int & regAddr = FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, const vector<int> & pllLockBits = vector<int>{PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT} );
+
+
+int reset_status_ctrl(FT_HANDLE);
+int clear_status_ctrl(FT_HANDLE);
+
 
 } //end namespace FPGA
 
@@ -64,6 +66,8 @@ inline int dac2fpga(int dac)
 			return -1;
 	}
 }
+
+
 
 
 #endif /* FGPA_H_ */

@@ -29,6 +29,20 @@ static const UCHAR BitReverse[256] =
 };
 
 
+// sets Status/CTRL register to default state when running (OSCEN enabled)
+int FPGA::reset_status_ctrl(FT_HANDLE deviceHandle)
+{
+	UCHAR WriteByte = APS_OSCEN_BIT;
+	return FPGA::write_register(deviceHandle, APS_STATUS_CTRL, 0, 0, &WriteByte);
+}
+
+// clears Status/CTRL register. This is the required state to program the VCXO and PLL
+int FPGA::clear_status_ctrl(FT_HANDLE deviceHandle)
+{
+	UCHAR WriteByte = APS_OSCEN_BIT;
+	return FPGA::write_register(deviceHandle, APS_STATUS_CTRL, 0, 0, &WriteByte);
+}
+
 int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const int & chipSelect, const int & expectedVersion) {
 
 	// To configure the FPGAs, you initialize them, send the byte stream, and
@@ -532,6 +546,89 @@ int FPGA::read_SPI
 
 }
 
+
+int FPGA::clear_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, const int & mask)
+/*
+ * Description : Clears Bit in FPGA register
+ * Returns : 0
+ *
+ ********************************************************************/
+{
+	//Read the current state so we know how set the uncleared bits.
+	int currentState, currentState2;
+	//Use a lambda because we'll need the same call below
+	auto check_cur_state = [&] () {
+		currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 1);
+		if (fpga == 3) { // read the two FPGAs serially
+			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 2);
+			if (currentState != currentState2) {
+				// note the mismatch in the log file but continue on using FPGA1's data
+				FILE_LOG(logERROR) << "FPGA::clear_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
+			}
+		}
+	};
+
+	check_cur_state();
+	FILE_LOG(logDEBUG2) << "Addr: " << std::hex << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
+
+	//TODO: take out if possible
+	usleep(100);
+
+	FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | addr, currentState & ~mask, fpga);
+
+	if (FILELog::ReportingLevel() >= logDEBUG2) {
+		// verify write
+		//TODO: take out if possible
+		usleep(100);
+		check_cur_state();
+	}
+
+	return 0;
+}
+
+
+int FPGA::set_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, const int & mask)
+/*
+ * Description : Sets Bit in FPGA register
+ * Returns : 0
+ *
+ ********************************************************************/
+{
+
+	//Read the current state so we know how set the uncleared bits.
+	int currentState, currentState2;
+	//Use a lambda because we'll need the same call below
+	auto check_cur_state = [&] () {
+		currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 1);
+		if (fpga == 3) { // read the two FPGAs serially
+			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 2);
+			if (currentState != currentState2) {
+				// note the mismatch in the log file but continue on using FPGA1's data
+				FILE_LOG(logERROR) << "FPGA::set_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
+			}
+		}
+	};
+
+	check_cur_state();
+	FILE_LOG(logDEBUG2) << "Addr: " << std::hex << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
+
+	usleep(100);
+
+	FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | addr, currentState | mask, fpga);
+
+	if (FILELog::ReportingLevel() >= logDEBUG2) {
+		// verify write
+		usleep(100);
+		check_cur_state();
+		if ((currentState & mask) == 0) {
+			FILE_LOG(logERROR) << "ERROR: FPGA::set_bit checked data does not match set value";
+		}
+	}
+
+	return 0;
+
+}
+
 int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & dac, const int & freq, const bool & testLock)
 {
 
@@ -609,8 +706,7 @@ int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & dac, const int & freq
 	FPGA::clear_bit(deviceHandle, fpga, FPGA_OFF_CSR, ddr_mask);
 
 	// Disable oscillator by clearing APS_STATUS_CTRL register
-	UCHAR WriteByte = APS_OSCEN_BIT;
-	if (FPGA::write_register(deviceHandle, APS_STATUS_CTRL, 0, 0, &WriteByte) != 1) return -4;
+	if (FPGA::clear_status_ctrl(deviceHandle) != 1) return -4;
 
 	//Setup of a vector of address-data pairs for all the writes we need for the PLL routine
 	vector<std::pair<ULONG, UCHAR > > PLLroutine;
@@ -630,9 +726,7 @@ int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & dac, const int & freq
 
 	// Enable Oscillator
 	//TODO: figure out why this the same as above disabling
-	WriteByte = APS_OSCEN_BIT;
-	if (FPGA::write_register(deviceHandle, APS_STATUS_CTRL, 0, 0, &WriteByte) != 1) return -4;
-
+	if (FPGA::reset_status_ctrl(deviceHandle) != 1) return -4;
 
 	// Enable DDRs
 	FPGA::set_bit(deviceHandle, fpga, FPGA_OFF_CSR, ddr_mask);
@@ -644,96 +738,302 @@ int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & dac, const int & freq
 		// test only works for channels running at 1.2 GHz
 		numSyncChannels = (fpgaFrequencies[0] == 1200 && fpgaFrequencies[1] == 1200) ? 4 : 2;
 		if (numSyncChannels == 4) {
-			APS_TestPllSync(device, 1, 5);
-			syncStatus = APS_TestPllSync(device, 2, 5);
+			FPGA::test_PLL_sync(deviceHandle, 1, 5);
+			syncStatus = FPGA::test_PLL_sync(deviceHandle, 2, 5);
 		}
 		else if (fpgaFrequencies[fpga] == 1200)
-			syncStatus = APS_TestPllSync(device, fpga, 5);
+			syncStatus = FPGA::test_PLL_sync(deviceHandle, fpga, 5);
 	}
 
 	return syncStatus;
 }
 
-int FPGA::clear_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, const int & mask)
-/*
- * Description : Clears Bit in FPGA register
- * Returns : 0
- *
- ********************************************************************/
-{
-	//Read the current state so we know how set the uncleared bits.
-	int currentState, currentState2;
-	//Use a lambda because we'll need the same call below
-	auto check_cur_state = [&] () {
-		currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 1);
-		if (fpga == 3) { // read the two FPGAs serially
-			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 2);
-			if (currentState != currentState2) {
-				// note the mismatch in the log file but continue on using FPGA1's data
-				FILE_LOG(logERROR) << "FPGA::clear_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
-			}
-		}
-	};
 
-	check_cur_state();
-	FILE_LOG(logDEBUG2) << "Addr: " << std::hex << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
 
-	usleep(100);
+int FPGA::test_PLL_sync(FT_HANDLE deviceHandle, const int & fpga, const int & numRetries) {
+	/*
+		APS_TestPllSync synchronized the phases of the DAC clocks with the following procedure:
+		1) Make sure all PLLs have locked.
+		2) Test for sync of 600 MHz clocks from DACs. They must be in sync with each other
+	    and in sync with the 300 MHz reference. If they are out of sync with each other,
+		  the 300 MHz DDR PLLs in the FPGA will come up 90 or 270 degrees out of phase.
+		  This has a test signature of the global XOR bit set roughly half the time. If they
+	    are in sync but out of phase with the reference, then both DDR PLLs will be 90/270
+	    degrees out of phase with the reference (it is sufficient to test only one DDR PLL)
+			- If either of these conditions exist, disable and re-enable the PLL output to one
+	    of the DACs connected to the FPGA. Reset the FPGA PLLs, wait for lock, then loop.
+		3) Test channel 0/2 PLL against reference PLL. Reset until in phase.
+		4) Test channel 1/3 PLL against reference PLL. Reset until in phase.
+		5) Verify that sync worked by testing 0/2 XOR 1/3 (global phase).
+	 *
+	 * Inputs: device
+	 *         fpga (1 or 2)
+	 *         numRetries - number of times to restart the test if the global sync test fails (step 5)
+	 */
 
-	FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | addr, currentState & ~mask, fpga);
+	// Test for DAC clock phase match
+	bool inSync, globalSync;
+	vector<int> xorFlagCnts(3);
+	int dac02Reset, dac13Reset;
 
-	if (FILELog::ReportingLevel() >= logDEBUG2) {
-		// verify write
-		usleep(100);
-		check_cur_state();
+	int pllBit;
+	UINT pllRegValue;
+	UINT pllResetBit, pllEnableAddr, pllEnableAddr2;
+	UCHAR writeByte;
+
+	const vector<int> PLL_XOR_TEST = {PLL_02_XOR_BIT, PLL_13_XOR_BIT,PLL_GLOBAL_XOR_BIT};
+	const vector<int> PLL_LOCK_TEST = {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT};
+	const vector<int> PLL_RESET = {CSRMSK_CHA_PLLRST, CSRMSK_CHB_PLLRST, 0};
+
+
+	pllResetBit  = CSRMSK_CHA_PLLRST | CSRMSK_CHB_PLLRST;
+
+	FILE_LOG(logINFO) << "Running channel sync on FPGA " << fpga;
+
+	switch(fpga) {
+	case 1:
+		pllEnableAddr = DAC0_ENABLE_ADDR;
+		pllEnableAddr2 = DAC1_ENABLE_ADDR;
+		break;
+	case 2:
+		pllEnableAddr = DAC2_ENABLE_ADDR;
+		pllEnableAddr2 = DAC3_ENABLE_ADDR;
+		break;
+	default:
+		return -1;
 	}
 
+	// Disable DDRs
+	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
+	FPGA::clear_bit(deviceHandle, fpga, FPGA_OFF_CSR, ddr_mask);
+
+	//A little helper function to wait for the PLL's to lock and reset if necessary
+	auto wait_PLL_relock = [&deviceHandle, &fpga, &pllResetBit](bool resetPLL, const int & regAddress, const vector<int> & pllBits) -> bool {
+		bool inSync = false;
+		int testct = 0;
+		while (!inSync && (testct < 20)){
+			inSync = (FPGA::read_PLL_status(deviceHandle, fpga, regAddress, pllBits) == 0) ? true : false;
+			//If we aren't locked then reset for the next try by clearing the PLL reset bits
+			if (resetPLL) {
+			UINT pllRegValue = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_PLL_RESET_ADDR, fpga);
+			FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | FPGA_PLL_RESET_ADDR, pllRegValue & ~pllResetBit, fpga);
+			}
+			//Otherwise just wait
+			else{
+				usleep(1000);
+			}
+			testct++;
+		}
+		return inSync;
+	};
+
+	// Step 1: test for the PLL's being locked to the reference
+	inSync = wait_PLL_relock(true, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, PLL_LOCK_TEST);
+	if (!inSync) {
+		FILE_LOG(logERROR) << "Reference PLL failed to lock";
+		return -5;
+	}
+
+	inSync = false; globalSync = false;
+
+
+	//Step 2:
+	// start by testing for a global or channel XOR count near 50%, which indicates
+	// that DAC 600 MHz clocks have come up out of phase.
+
+	//First a little helper function to update the PLL registers
+	auto update_PLL_register = [&deviceHandle] (){
+		ULONG address = 0x232;
+		UCHAR data = 0x1;
+		FPGA::write_SPI(deviceHandle, APS_PLL_SPI, address, &data);
+	};
+
+	FILE_LOG(logINFO) << "Testing for DAC clock phase sync";
+	//Loop over number of tries
+	static const int xorCounts = 20, lowCutoff = 5, highCutoff = 15;
+	for (int ct = 0; ct < MAX_PHASE_TEST_CNT; ct++) {
+		//Reset the counts
+		xorFlagCnts.assign(3,0);
+		dac02Reset = 0;
+		dac13Reset = 0;
+
+		//Take twenty counts of the the xor data
+		for(int xorct = 0; xorct < xorCounts; xorct++) {
+			//TODO: fix up the hardcoded ugly stuff and maybe integrate with read_PLL_status
+			pllBit = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
+			if ((pllBit & 0x1ff) != 2*FIRMWARE_VERSION) {
+				FILE_LOG(logERROR) << "Reg 0xF006 bitfile version does not match. Read " << std::hex << (pllBit & 0x1ff);
+				return -6;
+			}
+			xorFlagCnts[0] += (pllBit >> PLL_GLOBAL_XOR_BIT) & 0x1;
+			xorFlagCnts[1] += (pllBit >> PLL_02_XOR_BIT) & 0x1;
+			xorFlagCnts[2] += (pllBit >> PLL_13_XOR_BIT) & 0x1;
+		}
+
+		// due to clock skews, need to accept a range of counts as "0" and "1"
+		if ( (xorFlagCnts[0] < lowCutoff || xorFlagCnts[0] > highCutoff) &&
+				(xorFlagCnts[1] < lowCutoff || xorFlagCnts[1] > highCutoff) &&
+				(xorFlagCnts[2] < lowCutoff || xorFlagCnts[2] > highCutoff) ) {
+			// 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase, so 600 MHz clocks
+			// from DAC must be in phase. Move on.
+			FILE_LOG(logDEBUG2) << "DAC clocks in phase with reference, XOR counts : " << xorFlagCnts[0] << ", " << xorFlagCnts[1] << ", " << xorFlagCnts[2];
+			//Get out of MAX_PHAST_TEST ct loop
+			break;
+		}
+		else {
+			// 600 MHz clocks out of phase, reset DAC clocks that are 90/270 degrees out of phase with reference
+			FILE_LOG(logDEBUG2) << "DAC clocks out of phase; resetting, XOR counts: " << xorFlagCnts[0] << ", " << xorFlagCnts[1] << ", " << xorFlagCnts[2];
+			writeByte = 0x2; //disable clock outputs
+			//If the 02 XOR Bit is coming up at half-count then reset it
+			if (xorFlagCnts[1] >= lowCutoff || xorFlagCnts[1] <= highCutoff) {
+				dac02Reset = 1;
+				FPGA::write_SPI(deviceHandle, APS_PLL_SPI, pllEnableAddr, &writeByte);
+			}
+			//If the 02 XOR Bit is coming up at half-count then reset it
+			if (xorFlagCnts[2] >= lowCutoff || xorFlagCnts[2] <= highCutoff) {
+				dac13Reset = 1;
+				FPGA::write_SPI(deviceHandle, APS_PLL_SPI, pllEnableAddr2, &writeByte);
+			}
+			//Actually update things
+			update_PLL_register();
+			writeByte = 0x0; // enable clock outputs
+			if (dac02Reset)
+				FPGA::write_SPI(deviceHandle, APS_PLL_SPI, pllEnableAddr, &writeByte);
+			if (dac13Reset)
+				FPGA::write_SPI(deviceHandle, APS_PLL_SPI, pllEnableAddr2, &writeByte);
+			update_PLL_register();
+
+			// reset FPGA PLLs
+			pllRegValue = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_PLL_RESET_ADDR, fpga);
+			// Write PLL with bits set
+			FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | FPGA_PLL_RESET_ADDR, pllRegValue | pllResetBit, fpga);
+			// Clear reset bits
+			FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | FPGA_PLL_RESET_ADDR, pllRegValue & ~pllResetBit, fpga);
+
+			// wait for the PLL to relock
+			inSync = wait_PLL_relock(false, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, PLL_LOCK_TEST);
+			if (!inSync) {
+				FILE_LOG(logERROR) << "PLLs did not re-sync after reset";
+				return -7;
+			}
+		}
+	}
+
+	//Steps 3,4,5
+	vector<string> pllStrs = {"02", "13", "Global"};
+	for (int pll = 0; pll < 3; pll++) {
+
+		FILE_LOG(logDEBUG) << "Testing channel " << pllStrs[pll];
+		for (int ct = 0; ct < MAX_PHASE_TEST_CNT; ct++) {
+
+			int xorFlagCnt = 0;
+
+			for(int xorct = 0; xorct < xorCounts; xorct++) {
+				pllBit = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
+				if ((pllBit & 0x1ff) != 2*FIRMWARE_VERSION) {
+					FILE_LOG(logERROR) << "Reg 0xF006 bitfile version does not match. Read " << std::hex << (pllBit & 0x1ff);
+					return -8;
+				}
+				xorFlagCnt += (pllBit >> PLL_XOR_TEST[pll]) & 0x1;
+			}
+
+			// here we are just looking for in-phase or 180 degrees out of phase, so we accept a large
+			// range around "0"
+			if (xorFlagCnt < lowCutoff) {
+				globalSync = true;
+				break; // passed, move on to next channel
+			}
+			else {
+				// PLLs out of sync, reset
+				FILE_LOG(logDEBUG2) << "Channel " << pllStrs[pll] << " PLL not in sync.. resetting (XOR Count " << xorFlagCnt << " )";
+				globalSync = false;
+
+				if (pll == 2) { // global pll compare did not sync
+					if (numRetries > 0) {
+						FILE_LOG(logDEBUG2) << "Global sync failed; retrying.";
+						// restart both DAC clocks and try again
+						writeByte = 0x2;
+						FPGA::write_SPI(deviceHandle, APS_PLL_SPI, pllEnableAddr, &writeByte);
+						FPGA::write_SPI(deviceHandle, APS_PLL_SPI, pllEnableAddr2, &writeByte);
+						update_PLL_register();
+						writeByte = 0x0;
+						FPGA::write_SPI(deviceHandle, APS_PLL_SPI, pllEnableAddr, &writeByte);
+						FPGA::write_SPI(deviceHandle, APS_PLL_SPI, pllEnableAddr2, &writeByte);
+						update_PLL_register();
+
+						//Try again by recursively calling the same function
+						return FPGA::test_PLL_sync(deviceHandle, fpga, numRetries - 1);
+					}
+					FILE_LOG(logERROR) << "Error could not sync PLLs";
+					return -9;
+				}
+
+				// Read PLL register
+				pllRegValue = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | FPGA_PLL_RESET_ADDR, fpga);
+				// Write PLL with bit set
+				FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | FPGA_PLL_RESET_ADDR, pllRegValue | PLL_RESET[pll], fpga);
+				// Write original value (making sure to clear the PLL reset bit)
+				FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | FPGA_PLL_RESET_ADDR, pllRegValue & ~PLL_RESET[pll], fpga);
+
+				// wait for lock
+				inSync = wait_PLL_relock(false, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, vector<int>(PLL_LOCK_TEST[pll]));
+				if (!inSync) {
+					FILE_LOG(logERROR) << "PLL " << pllStrs[pll] << " did not re-sync after reset";
+					return -10;
+				}
+			}
+		}
+	}
+
+	// Enable DDRs
+	FPGA::set_bit(deviceHandle, fpga, FPGA_OFF_CSR, ddr_mask);
+
+	if (!globalSync) {
+		FILE_LOG(logWARNING) << "PLLs are not in sync";
+		return -11;
+	}
+	FILE_LOG(logINFO) << "Sync test complete";
 	return 0;
 }
 
 
-int FPGA::set_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, const int & mask)
+int FPGA::read_PLL_status(FT_HANDLE deviceHandle, const int & fpga, const int & regAddr /*check header for default*/, const vector<int> & pllLockBits  /*check header for default*/ ){
 /*
- * Description : Sets Bit in FPGA register
- * Returns : 0
- *
- ********************************************************************/
-{
+ * Helper function to read the status of some PLL bit and whether the main PLL is locked.
+ */
+	int pllStatus = 0;
 
-	//Read the current state so we know how set the uncleared bits.
-	int currentState, currentState2;
-	//Use a lambda because we'll need the same call below
-	auto check_cur_state = [&] () {
-		currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 1);
-		if (fpga == 3) { // read the two FPGAs serially
-			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 2);
-			if (currentState != currentState2) {
-				// note the mismatch in the log file but continue on using FPGA1's data
-				FILE_LOG(logERROR) << "FPGA::set_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
-			}
-		}
-	};
-
-	check_cur_state();
-	FILE_LOG(logDEBUG2) << "Addr: " << std::hex << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
-
-	usleep(100);
-
-	FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | addr, currentState | mask, fpga);
-
-	if (FILELog::ReportingLevel() >= logDEBUG2) {
-		// verify write
-		usleep(100);
-		check_cur_state();
-		if ((currentState & mask) == 0) {
-			FILE_LOG(logERROR) << "ERROR: FPGA::set_bit checked data does not match set value";
-		}
+	//We can latch based of either the USB or PLL clock.  USB seems to flicker so default to PLL for now but
+	//we should double check the FIRMWARE_VERSION
+	ULONG FIRMWARECHECK;
+	if (regAddr == (FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION)) {
+		FIRMWARECHECK = 0x020;
+	}
+	else if (regAddr == (FPGA_ADDR_REGREAD | FPGA_OFF_VERSION)){
+		FIRMWARECHECK = FIRMWARE_VERSION;
+	}
+	else{
+		FILE_LOG(logERROR) << "Undefined register address for PLL sync status reading.";
+		return -1;
 	}
 
-	return 0;
+//	pll_bit = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga); // latched to USB clock (has version 0x020)
+//	pll_bit = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, fpga); // latched to 200 MHz PLL (has version 0x010)
 
+	ULONG pllRegister = FPGA::read_FPGA(deviceHandle, regAddr, fpga);
+
+	if ((pllRegister & 0x1ff) != FIRMWARECHECK) {
+		FILE_LOG(logERROR) << "Reg 0x8006 bitfile version does not match. Read: " << std::hex << (pllRegister & 0x1ff);
+		return -1;
+	}
+
+	//Check each of the clocks in series
+	for(int tmpBit : pllLockBits){
+		pllStatus |= ((pllRegister >> tmpBit) & 0x1);
+		FILE_LOG(logDEBUG2) << "FPGA " << fpga << " PLL status: " << ((pllRegister >> tmpBit) & 0x1);
+	}
+	return pllStatus;
 }
-
 
 
 
