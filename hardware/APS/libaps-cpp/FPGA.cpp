@@ -304,13 +304,13 @@ int version, version2;
 switch (chipSelect) {
 case 1:
 case 2:
-	version = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_ELL_REGREAD | FPGA_OFF_VERSION, chipSelect);
+	version = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, chipSelect);
 	version &= 0x1FF; // First 9 bits hold version
 	break;
 case 3:
-	version = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_ELL_REGREAD | FPGA_OFF_VERSION, 1);
+	version = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, 1);
 	version &= 0x1FF; // First 9 bits hold version
-	version2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_ELL_REGREAD | FPGA_OFF_VERSION, 2);
+	version2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, 2);
 	version2 &= 0x1FF; // First 9 bits hold version
 	if (version != version2) {
 		FILE_LOG(logERROR) << "Bitfile versions are not the same on the two FPGAs: " << version << " and " << version2;
@@ -350,6 +350,47 @@ ULONG FPGA::read_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, UCHAR chipSele
 
 	return data;
 }
+
+int FPGA::write_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, const ULONG & data, const UCHAR & fpga)
+/********************************************************************
+ *
+ * Function Name : APS_WriteFPGA()
+ *
+ * Description :  Writes data to FPGA. 16 bit numbers are unpacked to 2 bytes
+ *
+ * Inputs :
+ *              addr  - Address to write to
+ *              data   - Data to write
+ *              fpga - FPGA selection bit (1 or 2, 3 = both)
+ ********************************************************************/
+{
+	UCHAR outData[4];
+
+	outData[0] = (addr >> 8) & LSB_MASK;
+	outData[1] = addr & LSB_MASK;
+	outData[2] = (data >> 8) & LSB_MASK;
+	outData[3] = data & LSB_MASK;
+
+	//TODO: sort out where to keep this checksum  info
+	// address checksum is defined as (bits 0-14: addr, 15: 0)
+	// so, set bit 15 to zero
+//	if (fpga == 3) {
+//		gAddrCheckSum[device][0] += addr & 0x7FFF;
+//		gCheckSum[device][0] += data;
+//		gAddrCheckSum[device][1] += addr & 0x7FFF;
+//		gCheckSum[device][1] += data;
+//	} else {
+//		gAddrCheckSum[device][fpga - 1] += addr & 0x7FFF;
+//		gCheckSum[device][fpga - 1] += data;
+//	}
+
+	FILE_LOG(logDEBUG2) << "Writing Addr: " << std::hex << addr << " Data: " << data;
+
+	FPGA::write_register(deviceHandle, APS_FPGA_IO, 2, fpga, outData);
+
+	return 0;
+}
+
 
 int FPGA::write_SPI
 (
@@ -429,7 +470,7 @@ int FPGA::write_SPI
 }
 
 
-int APS_ReadSPI
+int FPGA::read_SPI
 (
 		FT_HANDLE deviceHandle,
 		ULONG Command,   // APS_DAC_SPI, APS_PLL_SPI, or APS_VCXO_SPI
@@ -490,6 +531,210 @@ int APS_ReadSPI
 	return(bytesRead);
 
 }
+
+int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & dac, const int & freq, const bool & testLock)
+{
+
+	static int fpgaFrequencies[2] = {1200,1200};
+
+	ULONG pllCyclesAddr, pllBypassAddr;
+	UCHAR pllCyclesVal, pllBypassVal;
+
+	int fpga;
+	int syncStatus;
+	int numSyncChannels;
+
+	FILE_LOG(logDEBUG) << "Setting PLL DAC: " << dac << " Freq: " << freq;
+
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+
+	switch(dac) {
+	case 0:
+		// fall through
+	case 1:
+		pllCyclesAddr = FPGA1_PLL_CYCLES_ADDR;
+		pllBypassAddr = FPGA1_PLL_BYPASS_ADDR;
+		break;
+	case 2:
+		// fall through
+	case 3:
+		pllCyclesAddr = FPGA2_PLL_CYCLES_ADDR;
+		pllBypassAddr = FPGA2_PLL_BYPASS_ADDR;
+		break;
+	default:
+		return -1;
+	}
+
+	switch(freq) {
+	case 40:
+		pllCyclesVal = 0xEE; // 15 high / 15 low (divide by 30)
+		break;
+	case 50:
+		pllCyclesVal = 0xBB; // 12 high / 12 low (divide by 24)
+		break;
+	case 100:
+		pllCyclesVal = 0x55; // 6 high / 6 low (divide by 12)
+		break;
+	case 200:
+		pllCyclesVal = 0x22; // 3 high / 3 low (divide by 6)
+		break;
+	case 300:
+		pllCyclesVal = 0x11; // 2 high /2 low (divide by 4)
+		break;
+	case 600:
+		pllCyclesVal = 0x00; // 1 high / 1 low (divide by 2)
+		break;
+	case 1200:
+		pllCyclesVal = 0x00; // value ignored, set bypass below
+		break;
+	default:
+		return -2;
+	}
+
+	// bypass divider if freq == 1200
+	pllBypassVal = (freq==1200) ?  0x80 : 0x00;
+
+	FILE_LOG(logDEBUG2) << "Setting PLL cycles addr: " << std::hex << pllCyclesAddr << " val: " << pllCyclesVal;
+	FILE_LOG(logDEBUG2) << "Setting PLL bypass addr: " << std::hex << pllBypassAddr << " val: " << pllBypassVal;
+
+	// fpga = 1 or 2 save frequency for later comparison to decide to use
+	// 4 channel sync or 2 channel sync
+	fpgaFrequencies[fpga - 1] = freq;
+
+	// Disable DDRs
+	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
+	FPGA::clear_bit(deviceHandle, fpga, FPGA_OFF_CSR, ddr_mask);
+
+	// Disable oscillator by clearing APS_STATUS_CTRL register
+	UCHAR WriteByte = APS_OSCEN_BIT;
+	if (FPGA::write_register(deviceHandle, APS_STATUS_CTRL, 0, 0, &WriteByte) != 1) return -4;
+
+	//Setup of a vector of address-data pairs for all the writes we need for the PLL routine
+	vector<std::pair<ULONG, UCHAR > > PLLroutine;
+
+	PLLroutine.push_back(std::make_pair(pllCyclesAddr, pllCyclesVal));
+	PLLroutine.push_back(std::make_pair(pllBypassAddr, pllBypassVal));
+
+	PLLroutine.push_back(std::make_pair(0x18, 0x71)); // Initiate Calibration.  Must be followed by Update Registers Command
+	PLLroutine.push_back(std::make_pair(0x232, 0x1)); // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+	PLLroutine.push_back(std::make_pair(0x18, 0x70)); // Clear calibration flag so that next set generates 0 to 1.
+	PLLroutine.push_back(std::make_pair(0x232, 0x1)); // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+
+	// Go through the routine
+	for (auto tmpPair : PLLroutine){
+		FPGA::write_SPI(deviceHandle, APS_PLL_SPI, tmpPair.first, &tmpPair.second);
+	}
+
+	// Enable Oscillator
+	//TODO: figure out why this the same as above disabling
+	WriteByte = APS_OSCEN_BIT;
+	if (FPGA::write_register(deviceHandle, APS_STATUS_CTRL, 0, 0, &WriteByte) != 1) return -4;
+
+
+	// Enable DDRs
+	FPGA::set_bit(deviceHandle, fpga, FPGA_OFF_CSR, ddr_mask);
+
+	syncStatus = 0;
+
+	if (testLock) {
+		// We have reset the global oscillator, so should sync both FPGAs, but the current
+		// test only works for channels running at 1.2 GHz
+		numSyncChannels = (fpgaFrequencies[0] == 1200 && fpgaFrequencies[1] == 1200) ? 4 : 2;
+		if (numSyncChannels == 4) {
+			APS_TestPllSync(device, 1, 5);
+			syncStatus = APS_TestPllSync(device, 2, 5);
+		}
+		else if (fpgaFrequencies[fpga] == 1200)
+			syncStatus = APS_TestPllSync(device, fpga, 5);
+	}
+
+	return syncStatus;
+}
+
+int FPGA::clear_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, const int & mask)
+/*
+ * Description : Clears Bit in FPGA register
+ * Returns : 0
+ *
+ ********************************************************************/
+{
+	//Read the current state so we know how set the uncleared bits.
+	int currentState, currentState2;
+	//Use a lambda because we'll need the same call below
+	auto check_cur_state = [&] () {
+		currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 1);
+		if (fpga == 3) { // read the two FPGAs serially
+			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 2);
+			if (currentState != currentState2) {
+				// note the mismatch in the log file but continue on using FPGA1's data
+				FILE_LOG(logERROR) << "FPGA::clear_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
+			}
+		}
+	};
+
+	check_cur_state();
+	FILE_LOG(logDEBUG2) << "Addr: " << std::hex << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
+
+	usleep(100);
+
+	FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | addr, currentState & ~mask, fpga);
+
+	if (FILELog::ReportingLevel() >= logDEBUG2) {
+		// verify write
+		usleep(100);
+		check_cur_state();
+	}
+
+	return 0;
+}
+
+
+int FPGA::set_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, const int & mask)
+/*
+ * Description : Sets Bit in FPGA register
+ * Returns : 0
+ *
+ ********************************************************************/
+{
+
+	//Read the current state so we know how set the uncleared bits.
+	int currentState, currentState2;
+	//Use a lambda because we'll need the same call below
+	auto check_cur_state = [&] () {
+		currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 1);
+		if (fpga == 3) { // read the two FPGAs serially
+			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 2);
+			if (currentState != currentState2) {
+				// note the mismatch in the log file but continue on using FPGA1's data
+				FILE_LOG(logERROR) << "FPGA::set_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
+			}
+		}
+	};
+
+	check_cur_state();
+	FILE_LOG(logDEBUG2) << "Addr: " << std::hex << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
+
+	usleep(100);
+
+	FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | addr, currentState | mask, fpga);
+
+	if (FILELog::ReportingLevel() >= logDEBUG2) {
+		// verify write
+		usleep(100);
+		check_cur_state();
+		if ((currentState & mask) == 0) {
+			FILE_LOG(logERROR) << "ERROR: FPGA::set_bit checked data does not match set value";
+		}
+	}
+
+	return 0;
+
+}
+
+
 
 
 

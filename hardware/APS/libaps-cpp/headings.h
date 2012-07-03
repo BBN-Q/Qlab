@@ -112,28 +112,66 @@ static const int  APS_CMD = (0x7<<4);
 
 static const int  LSB_MASK = 0xFF;
 
+static const int FPGA1_PLL_CYCLES_ADDR =  0x190;
+static const int FPGA1_PLL_BYPASS_ADDR = 0x191;
+static const int DAC0_ENABLE_ADDR = 0xF0;
+static const int DAC1_ENABLE_ADDR = 0xF1;
+static const int FPGA1_PLL_ADDR = 0xF2;
+
+static const int FPGA2_PLL_CYCLES_ADDR = 0x196;
+static const int FPGA2_PLL_BYPASS_ADDR = 0x197;
+static const int DAC2_ENABLE_ADDR = 0xF5;
+static const int DAC3_ENABLE_ADDR = 0xF4;
+static const int FPGA2_PLL_ADDR = 0xF3;
+
+
+static const int APS_OSCEN_BIT = 0x10;
+
 
 // Register Locations
+static const int FPGA_ADDR_REGWRITE = 0x0000;
+
 static const int  FPGA_OFF_CSR 	  =   0x0;
 static const int  FPGA_OFF_TRIGLED  =   0x1;
-static const int  FPGA_OFF_ENVOFF   =   0x2;
-static const int  FPGA_OFF_ENVSIZE  =   0x3;
-static const int  FPGA_OFF_PHSOFF   =   0x4;
-static const int  FPGA_OFF_PHSSIZE  =   0x5;
+static const int  FPGA_OFF_CHA_OFF   =   0x2;
+static const int  FPGA_OFF_CHA_SIZE  =   0x3;
+static const int  FPGA_OFF_CHB_OFF   =   0x4;
+static const int  FPGA_OFF_CHB_SIZE  =   0x5;
 static const int  FPGA_OFF_VERSION  =   0x6;
 static const int  FPGA_OFF_LLCTRL	=     0x7;
 
-// Version 0x10 ELL Memory Map Additions
-static const int  FPGA_ADDR_ELL_REGREAD =   0x8000;
+static const int  FPGA_ADDR_REGREAD =   0x8000;
 static const int  FPGA_ADDR_SYNC_REGREAD =  0XF000;
 
-static const int  FPGA_ADDR_ELL_ENVWRITE =  0x1000;
-static const int  FPGA_ADDR_ELL_PHSWRITE =  0x4000;
+static const int  FPGA_ADDR_CHA_WRITE =  0x1000;
+static const int  FPGA_ADDR_CHB_WRITE =  0x4000;
 
-static const int  FPGA_ADDR_ELL_ENVLL_A_WRITE = 0x3000;
-static const int  FPGA_ADDR_ELL_ENVLL_B_WRITE = 0x3800;
+static const int  FPGA_ADDR_CHA_LL_A_WRITE = 0x3000;
+static const int  FPGA_ADDR_CHA_LL_B_WRITE = 0x3800;
 
-static const int  FPGA_ADDR_ELL_PHSLL_A_WRITE = 0x6000;
-static const int  FPGA_ADDR_ELL_PHSLL_B_WRITE = 0x6800;
+static const int  FPGA_ADDR_CHB_LL_A_WRITE = 0x6000;
+static const int  FPGA_ADDR_CHB_LL_B_WRITE = 0x6800;
+
+
+//Each FPGA has a CHA/B associated with it
+static const int CSRMSK_CHA_SMRST = 0x1; // state machine reset
+static const int CSRMSK_CHA_PLLRST = 0x2; // pll reset
+static const int CSRMSK_CHA_DDR = 0x4; // DDR enable
+static const int CSRMSK_CHA_MEMLCK = 0x8; // waveform memory lock (1 = locked, 0 = unlocked)
+static const int CSRMSK_CHA_TRIGSRC = 0x10; // trigger source (1 = external, 0 = internal)
+static const int CSRMSK_CHA_OUTMODE = 0x20; // output mode (1 = link list, 0 = waveform)
+static const int CSRMSK_CHA_LLMODE = 0x40; // LL repeat mode (1 = one-shot, 0 = continuous)
+static const int CSRMSK_CHA_LLSTATUS = 0x80; // LL status (1 = LL A active, 0 = LL B active)
+
+static const int CSRMSK_CHB_SMRST = 0x100; // state machine reset
+static const int CSRMSK_CHB_PLLRST = 0x200; // pll reset
+static const int CSRMSK_CHB_DDR = 0x400; // DDR enable
+static const int CSRMSK_CHB_MEMLCK = 0x800;
+static const int CSRMSK_CHB_TRIGSRC = 0x1000;
+static const int CSRMSK_CHB_OUTMODE = 0x2000;
+static const int CSRMSK_CHB_LLMODE = 0x4000;
+static const int CSRMSK_CHB_LLSTATUS = 0x8000;
+
+
 
 #endif /* HEADINGS_H_ */
