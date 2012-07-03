@@ -26,10 +26,15 @@ public:
 	int get_num_devices();
 	void enumerate_devices();
 
+	int curDeviceID;
+
+	int program_FPGA(const string &, const int &, const int &);
+
 private:
-	vector<APS> _APSs;
 	int _numDevices;
-	map<string, unsigned short> _serial2dev;
+	vector<APS> _APSs;
+	APS * _curAPS;
+	map<string, int> _serial2dev;
 	vector<string> _deviceSerials;
 };
 

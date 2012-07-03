@@ -7,12 +7,10 @@
 
 #include "headings.h"
 
-APSRack::APSRack() {
-	// TODO Auto-generated constructor stub
-
+APSRack::APSRack() : curDeviceID(-1), _numDevices(0), _curAPS(NULL) {
 }
 
-APSRack::~APSRack() {
+APSRack::~APSRack()  {
 }
 
 //Initialize the rack by polling for devices and serial numbers
@@ -59,6 +57,8 @@ int APSRack::connect(const int & deviceID){
 	success = FTDI::connect(deviceID, _APSs[deviceID]._handle);
 	if (success == 0) {
 		FILE_LOG(logDEBUG) << "Opened connection to device " << deviceID;
+		_curAPS = &_APSs[deviceID];
+		curDeviceID = deviceID;
 	}
 	return success;
 }
@@ -70,5 +70,21 @@ int APSRack::disconnect(const int & deviceID){
 	if (success == 0) {
 		FILE_LOG(logDEBUG) << "Closed connection to device " << deviceID;
 	}
+	_curAPS = NULL;
+	curDeviceID = -1;
 	return success;
+}
+
+int APSRack::connect(const string & deviceSerial){
+	//Look up the associated ID and call the next connect
+	return APSRack::connect(_serial2dev[deviceSerial]);
+}
+
+int APSRack::disconnect(const string & deviceSerial){
+	//Look up the associated ID and call the next connect
+	return APSRack::disconnect(_serial2dev[deviceSerial]);
+}
+
+int APSRack::program_FPGA(const string &bitFile, const int & chipSelect, const int & expectedVersion){
+	return _curAPS->program_FPGA(bitFile, chipSelect, expectedVersion);
 }

@@ -22,10 +22,25 @@ EXPORT int Init() {
 	return 0;
 }
 
-EXPORT int open_by_ID(int deviceID){
-	//Connect to a device specified by ID
+//Connect to a device specified by ID
+EXPORT int connect_by_ID(int deviceID){
 	return _APSRack.connect(deviceID);
+}
 
+//Connect to a device specified by serial number string
+//Assumes null-terminated deviceSerial
+EXPORT int connect_by_Serial(char * deviceSerial){
+	return _APSRack.connect(string(deviceSerial));
+}
+
+EXPORT int disconnect(){
+	return _APSRack.disconnect(_APSRack.curDeviceID);
+}
+
+//Program the current FPGA
+//Assumes null-terminated bitFile
+EXPORT int program_FPGA(char * bitFile, int chipSelect, int expectedVersion){
+	return _APSRack.program_FPGA(string(bitFile), chipSelect, expectedVersion);
 }
 
 #ifdef __cplusplus

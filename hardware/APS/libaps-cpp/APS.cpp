@@ -7,7 +7,7 @@
 
 #include "APS.h"
 
-APS::APS() {
+APS::APS() : _deviceID(-1), _handle(NULL) {
 	// TODO Auto-generated constructor stub
 }
 
