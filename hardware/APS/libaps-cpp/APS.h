@@ -15,12 +15,20 @@ class Channel;
 class APS {
 public:
 	APS();
+	APS(int, string);
 	~APS();
 
-	int read_Reg(ULONG, ULONG, ULONG, UCHAR *);
-	int write_Reg();
+	int connect();
+	int disconnect();
+
+	int init(const string &, const bool &);
+
+	int setup_VCXO();
+	int setup_PLL();
 	int program_FPGA(const string &, const UCHAR &, const int &);
 	int read_bitfile_version(const UCHAR &);
+
+
 
 	int set_sampleRate(const int &, const int &, const bool &);
 	int get_sampleRate(const int & fpga);

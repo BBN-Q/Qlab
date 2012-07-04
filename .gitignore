@@ -16,3 +16,4 @@ dist/
 *.obj
 .cproject
 .project
+/experiments/muWaveDetection/sequences/*.txt

@@ -11,8 +11,53 @@ APS::APS() : _deviceID(-1), _handle(NULL) {
 	// TODO Auto-generated constructor stub
 }
 
+APS::APS(int deviceID, string deviceSerial) : _deviceID(deviceID), _deviceSerial(deviceSerial) {};
+
 APS::~APS() {
 	// TODO Auto-generated destructor stub
+}
+
+int APS::connect(){
+	int success = 0;
+	success = FTDI::connect(_deviceID, _handle);
+	if (success == 0) {
+		FILE_LOG(logDEBUG) << "Opened connection to device " << _deviceID << " (Serial: " << _deviceSerial << ")";
+	}
+	return success;
+}
+
+int APS::disconnect(){
+	int success = 0;
+	success = FTDI::disconnect(_handle);
+	if (success == 0) {
+		FILE_LOG(logDEBUG) << "Closed connection to device " << _deviceID << " (Serial: " << _deviceSerial << ")";
+	}
+	return success;
+}
+
+int APS::init(const string & bitFile, const bool & forceReload){
+
+	if (forceReload) {
+		//Setup the oscillators
+		setup_VCXO();
+		setup_PLL();
+
+		//Program the bitfile to both FPGA's
+		program_FPGA(bitFile, 3, 0x10);
+
+	}
+
+
+
+	return 0;
+}
+
+int APS::setup_VCXO(){
+	return FPGA::setup_VCXO(_handle);
+}
+
+int APS::setup_PLL(){
+	return FPGA::setup_PLL(_handle);
 }
 
 int APS::program_FPGA(const string & bitFile, const UCHAR & chipSelect, const int & expectedVersion) {
@@ -50,3 +95,5 @@ int APS::get_sampleRate(const int & fpga){
 	//Pass through to FPGA code
 	return FPGA::get_PLL_freq(_handle, fpga);
 }
+
+

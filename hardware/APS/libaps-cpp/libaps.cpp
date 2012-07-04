@@ -47,6 +47,12 @@ int serial2ID(char * deviceSerial){
 	return _APSRack.serial2dev[string(deviceSerial)];
 }
 
+//Initialize an APS unit
+//Assumes null-terminated bitFile
+int initAPS(int deviceID, char * bitFile, int forceReload){
+	return _APSRack.initAPS(deviceID, string(bitFile), forceReload);
+}
+
 //Program the current FPGA
 //Assumes null-terminated bitFile
 int program_FPGA(int deviceID, char * bitFile, int chipSelect, int expectedVersion){

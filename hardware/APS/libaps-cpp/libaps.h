@@ -32,6 +32,8 @@ EXPORT int disconnect_by_serial(char *);
 
 EXPORT int serial2ID(char *);
 
+EXPORT int initAPS(int, char*, int);
+
 EXPORT int program_FPGA(int, char *, int, int);
 
 EXPORT int set_sampleRate(int, int, int, int);

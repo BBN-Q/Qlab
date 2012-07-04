@@ -23,10 +23,12 @@ int APSRack::init() {
 	//Enumerate the serial numbers of the devices attached
 	enumerate_devices();
 
-	_APSs.resize(_numDevices);
-
 	return 0;
+}
 
+//Initialize a specific APS unit
+int APSRack::initAPS(const int & deviceID, const string & bitFile, const bool & forceReload){
+	return _APSs[deviceID].init(bitFile, forceReload);
 }
 
 int APSRack::get_num_devices() {
@@ -37,15 +39,20 @@ int APSRack::get_num_devices() {
 
 }
 
+//This will reset the APS vector so it really should only be called during initialization
 void APSRack::enumerate_devices() {
 
 	FTDI::get_device_serials(_deviceSerials);
 	_numDevices = _deviceSerials.size();
 
-	//Now setup the map between device serials and number
+	_APSs.clear();
+	_APSs.reserve(_numDevices);
+
+	//Now setup the map between device serials and number and assign the APS units appropriately
 	size_t devicect = 0;
 	for (string tmpSerial : _deviceSerials) {
 		serial2dev[tmpSerial] = devicect;
+		_APSs.push_back(APS(devicect, tmpSerial));
 		FILE_LOG(logDEBUG) << "Device " << devicect << " has serial number " << tmpSerial;
 		devicect++;
 	}
@@ -53,32 +60,21 @@ void APSRack::enumerate_devices() {
 
 int APSRack::connect(const int & deviceID){
 	//Connect to a instrument specified by deviceID
-	int success = 0;
-	success = FTDI::connect(deviceID, _APSs[deviceID]._handle);
-	if (success == 0) {
-		FILE_LOG(logDEBUG) << "Opened connection to device " << deviceID << " (Serial: " << _deviceSerials[deviceID] << ")";
-	}
-	return success;
+	return _APSs[deviceID].connect();
 }
 
 int APSRack::disconnect(const int & deviceID){
-	//Disconnect
-	int success = 0;
-	success = FTDI::disconnect(_APSs[deviceID]._handle);
-	if (success == 0) {
-		FILE_LOG(logDEBUG) << "Closed connection to device " << deviceID << " (Serial: " << _deviceSerials[deviceID] << ")";
-	}
-	return success;
+	return _APSs[deviceID].disconnect();
 }
 
 int APSRack::connect(const string & deviceSerial){
 	//Look up the associated ID and call the next connect
-	return APSRack::connect(serial2dev[deviceSerial]);
+	return _APSs[serial2dev[deviceSerial]].connect();
 }
 
 int APSRack::disconnect(const string & deviceSerial){
 	//Look up the associated ID and call the next connect
-	return APSRack::disconnect(serial2dev[deviceSerial]);
+	return _APSs[serial2dev[deviceSerial]].disconnect();
 }
 
 int APSRack::program_FPGA(const int & deviceID, const string &bitFile, const int & chipSelect, const int & expectedVersion){

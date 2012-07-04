@@ -7,7 +7,6 @@
 
 #include "headings.h"
 
-
 static const UCHAR BitReverse[256] =
 {
 		0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0, 0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0,
@@ -324,13 +323,16 @@ case 1:
 case 2:
 	version = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, chipSelect);
 	version &= 0x1FF; // First 9 bits hold version
+	FILE_LOG(logDEBUG2) << "Bitfile version for FPGA " << chipSelect << " is "  << hex << setiosflags(std::ios_base::showbase) << version;
 	break;
 case 3:
 	version = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, 1);
 	version &= 0x1FF; // First 9 bits hold version
+	FILE_LOG(logDEBUG2) << "Bitfile version for FPGA 1 is "  << hex << setiosflags(std::ios_base::showbase) << version;
 	version2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, 2);
 	version2 &= 0x1FF; // First 9 bits hold version
-	if (version != version2) {
+	FILE_LOG(logDEBUG2) << "Bitfile version for FPGA 2 is "  << hex << setiosflags(std::ios_base::showbase) << version2;
+		if (version != version2) {
 		FILE_LOG(logERROR) << "Bitfile versions are not the same on the two FPGAs: " << version << " and " << version2;
 		return -1;
 	}
@@ -339,6 +341,7 @@ default:
 	FILE_LOG(logERROR) << "Unknown chipSelect value in APS::read_bitfile_version: " << chipSelect;
 	return -1;
 }
+
 return version;
 }
 
@@ -402,7 +405,7 @@ int FPGA::write_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, const ULONG & d
 //		gCheckSum[device][fpga - 1] += data;
 //	}
 
-	FILE_LOG(logDEBUG2) << "Writing Addr: " << std::hex << addr << " Data: " << data;
+	FILE_LOG(logDEBUG2) << "Writing Addr: " << hex << setiosflags(std::ios_base::showbase) << addr << " Data: " << data;
 
 	FPGA::write_register(deviceHandle, APS_FPGA_IO, 2, fpga, outData);
 
@@ -573,7 +576,7 @@ int FPGA::clear_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, 
 	};
 
 	check_cur_state();
-	FILE_LOG(logDEBUG2) << "Addr: " << std::hex << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
+	FILE_LOG(logDEBUG2) << "Addr: " << hex << setiosflags(std::ios_base::showbase) << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
 
 	//TODO: take out if possible
 	usleep(100);
@@ -614,7 +617,7 @@ int FPGA::set_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, co
 	};
 
 	check_cur_state();
-	FILE_LOG(logDEBUG2) << "Addr: " << std::hex << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
+	FILE_LOG(logDEBUG2) << "Addr: " <<  hex << setiosflags(std::ios_base::showbase) << addr << " Current State: " << currentState << " Mask: " << mask << " Writing: " << (currentState | mask);
 
 	usleep(100);
 
@@ -632,6 +635,68 @@ int FPGA::set_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, co
 	return 0;
 
 }
+
+
+// Write the PLL setup
+int FPGA::setup_PLL(FT_HANDLE deviceHandle)
+{
+	FILE_LOG(logINFO) << "Setting up PLL";
+
+	// Disable DDRs
+	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
+	FPGA::clear_bit(deviceHandle, 3, FPGA_OFF_CSR, ddr_mask);
+
+	// Setup modified for 300 MHz FPGA clock rate
+	//Setup of a vector of address-data pairs for all the writes we need for the PLL routine
+	//TODO: this could be an initializer list when cl supports it
+	vector<std::pair<ULONG, UCHAR > > PLL_Routine;
+	PLL_Routine.reserve(27);
+
+	PLL_Routine.push_back(std::make_pair(0x0,  0x99));  // Use SDO, Long instruction mode
+	PLL_Routine.push_back(std::make_pair(0x10, 0x7C));  // Enable PLL , set charge pump to 4.8ma
+	PLL_Routine.push_back(std::make_pair(0x11, 0x5));   // Set reference divider R to 5 to divide 125 MHz reference to 25 MHz
+	PLL_Routine.push_back(std::make_pair(0x14, 0x06));  // Set B counter to 6
+	PLL_Routine.push_back(std::make_pair(0x16, 0x5));   // Set P prescaler to 16 and enable B counter (N = P*B = 96 to divide 2400 MHz to 25 MHz)
+	PLL_Routine.push_back(std::make_pair(0x17, 0x4));   // Selects readback of N divider on STATUS bit in Status/Control register
+	PLL_Routine.push_back(std::make_pair(0x18, 0x60));  // Calibrate VCO with 2 divider, set lock detect count to 255, set high range
+	PLL_Routine.push_back(std::make_pair(0x1A, 0x2D));  // Selects readback of PLL Lock status on LOCK bit in Status/Control register
+	PLL_Routine.push_back(std::make_pair(0x1C, 0x7));   // Enable differential reference, enable REF1/REF2 power, disable reference switching
+	PLL_Routine.push_back(std::make_pair(0xF0, 0x00));  // Enable un-inverted 400mv clock on OUT0
+	PLL_Routine.push_back(std::make_pair(0xF1, 0x00));  // Enable un-inverted 400mv clock on OUT1
+	PLL_Routine.push_back(std::make_pair(0xF2, 0x00));  // Enable un-inverted 400mv clock on OUT2
+	PLL_Routine.push_back(std::make_pair(0xF3, 0x00));  // Enable un-inverted 400mv clock on OUT3
+	PLL_Routine.push_back(std::make_pair(0xF4, 0x00));  // Enable un-inverted 400mv clock on OUT4
+	PLL_Routine.push_back(std::make_pair(0xF5, 0x00));  // Enable un-inverted 400mv clock on OUT5
+	PLL_Routine.push_back(std::make_pair(0x190, 0x00)); //	No division on channel 0
+	PLL_Routine.push_back(std::make_pair(0x191, 0x80)); //	Bypass 0 divider
+	PLL_Routine.push_back(std::make_pair(0x193, 0x11)); //	(2 high, 2 low = 1.2 GHz / 4 = 300 MHz = Reference 300 MHz)
+	PLL_Routine.push_back(std::make_pair(0x196, 0x00)); //	No division on channel 2
+	PLL_Routine.push_back(std::make_pair(0x197, 0x80)); //   Bypass 2 divider
+	PLL_Routine.push_back(std::make_pair(0x1E0, 0x0));  // Set VCO post divide to 2
+	PLL_Routine.push_back(std::make_pair(0x1E1, 0x2));  // Select VCO as clock source for VCO divider
+	PLL_Routine.push_back(std::make_pair(0x232, 0x1));  // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+	PLL_Routine.push_back(std::make_pair(0x18, 0x71));  // Initiate Calibration.  Must be followed by Update Registers Command
+	PLL_Routine.push_back(std::make_pair(0x232, 0x1));  // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+	PLL_Routine.push_back(std::make_pair(0x18, 0x70));  // Clear calibration flag so that next set generates 0 to 1.
+	PLL_Routine.push_back(std::make_pair(0x232, 0x1));   // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+
+	// Go through the routine
+	for (auto tmpPair : PLL_Routine){
+		FPGA::write_SPI(deviceHandle, APS_PLL_SPI, tmpPair.first, &tmpPair.second);
+	}
+
+	// enable the oscillator
+	if (FPGA::reset_status_ctrl(deviceHandle) != 1)
+		return -1;
+
+	// Enable DDRs
+	FPGA::set_bit(deviceHandle, 3, FPGA_OFF_CSR, ddr_mask);
+
+	return 0;
+}
+
+
+
 
 int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & fpga, const int & freq, const bool & testLock)
 {
@@ -673,9 +738,8 @@ int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & fpga, const int & fre
 
 	// bypass divider if freq == 1200
 	pllBypassVal = (freq==1200) ?  0x80 : 0x00;
-
-	FILE_LOG(logDEBUG2) << "Setting PLL cycles addr: " << std::hex << pllCyclesAddr << " val: " << pllCyclesVal;
-	FILE_LOG(logDEBUG2) << "Setting PLL bypass addr: " << std::hex << pllBypassAddr << " val: " << pllBypassVal;
+	FILE_LOG(logDEBUG2) << "Setting PLL cycles addr: " << hex << setiosflags(std::ios_base::showbase) << pllCyclesAddr << " val: " << int(pllCyclesVal);
+	FILE_LOG(logDEBUG2) << "Setting PLL bypass addr: " << hex << setiosflags(std::ios_base::showbase) << pllBypassAddr << " val: " << int(pllBypassVal);
 
 	// fpga = 1 or 2 save frequency for later comparison to decide to use
 	// 4 channel sync or 2 channel sync
@@ -689,18 +753,19 @@ int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & fpga, const int & fre
 	if (FPGA::clear_status_ctrl(deviceHandle) != 1) return -4;
 
 	//Setup of a vector of address-data pairs for all the writes we need for the PLL routine
-	vector<std::pair<ULONG, UCHAR > > PLLroutine;
+	vector<std::pair<ULONG, UCHAR > > PLL_Routine;
+	PLL_Routine.reserve(6);
 
-	PLLroutine.push_back(std::make_pair(pllCyclesAddr, pllCyclesVal));
-	PLLroutine.push_back(std::make_pair(pllBypassAddr, pllBypassVal));
+	PLL_Routine.push_back(std::make_pair(pllCyclesAddr, pllCyclesVal));
+	PLL_Routine.push_back(std::make_pair(pllBypassAddr, pllBypassVal));
 
-	PLLroutine.push_back(std::make_pair(0x18, 0x71)); // Initiate Calibration.  Must be followed by Update Registers Command
-	PLLroutine.push_back(std::make_pair(0x232, 0x1)); // Set bit 0 to 1 to simultaneously update all registers with pending writes.
-	PLLroutine.push_back(std::make_pair(0x18, 0x70)); // Clear calibration flag so that next set generates 0 to 1.
-	PLLroutine.push_back(std::make_pair(0x232, 0x1)); // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+	PLL_Routine.push_back(std::make_pair(0x18, 0x71)); // Initiate Calibration.  Must be followed by Update Registers Command
+	PLL_Routine.push_back(std::make_pair(0x232, 0x1)); // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+	PLL_Routine.push_back(std::make_pair(0x18, 0x70)); // Clear calibration flag so that next set generates 0 to 1.
+	PLL_Routine.push_back(std::make_pair(0x232, 0x1)); // Set bit 0 to 1 to simultaneously update all registers with pending writes.
 
 	// Go through the routine
-	for (auto tmpPair : PLLroutine){
+	for (auto tmpPair : PLL_Routine){
 		FPGA::write_SPI(deviceHandle, APS_PLL_SPI, tmpPair.first, &tmpPair.second);
 	}
 
@@ -1075,6 +1140,28 @@ int FPGA::get_PLL_freq(FT_HANDLE deviceHandle, const int & fpga) {
 	return freq;
 }
 
+
+// Write the standard VCXO setup
+int FPGA::setup_VCXO(FT_HANDLE deviceHandle)
+{
+
+	FILE_LOG(logINFO) << "Setting up VCX0";
+
+	// Register 00 VCXO value, MS Byte First
+	UCHAR Reg00Bytes[4] = {0x8, 0x60, 0x0, 0x4};
+
+	// Register 01 VCXO value, MS Byte First
+	UCHAR Reg01Bytes[4] = {0x64, 0x91, 0x0, 0x61};
+
+	// ensure the oscillator is disabled before programming
+	if (FPGA::clear_status_ctrl(deviceHandle) != 1)
+		return -1;
+
+	FPGA::write_SPI(deviceHandle, APS_VCXO_SPI, 0, Reg00Bytes);
+	FPGA::write_SPI(deviceHandle, APS_VCXO_SPI, 0, Reg01Bytes);
+
+	return 0;
+}
 
 
 

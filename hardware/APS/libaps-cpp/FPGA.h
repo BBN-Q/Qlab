@@ -32,10 +32,13 @@ int write_FPGA(FT_HANDLE, const ULONG &, const ULONG &, const UCHAR &);
 
 int read_bitFile_version(FT_HANDLE, const UCHAR &);
 
+int setup_PLL(FT_HANDLE);
 int set_PLL_freq(FT_HANDLE, const int &, const int &, const bool &);
 int test_PLL_sync(FT_HANDLE, const int &, const int &);
 int read_PLL_status(FT_HANDLE deviceHandle, const int & fpga, const int & regAddr = FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, vector<int> pllLockBits = vector<int>(0));
 int get_PLL_freq(FT_HANDLE, const int &);
+
+int setup_VCXO(FT_HANDLE);
 
 int reset_status_ctrl(FT_HANDLE);
 int clear_status_ctrl(FT_HANDLE);

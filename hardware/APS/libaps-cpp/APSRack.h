@@ -20,6 +20,7 @@ public:
 	map<string, int> serial2dev;
 
 	int init();
+	int initAPS(const int &, const string &, const bool &);
 	int connect(const int &);
 	int connect(const string &);
 	int disconnect(const int &);
