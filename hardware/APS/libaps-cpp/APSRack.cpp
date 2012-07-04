@@ -7,14 +7,14 @@
 
 #include "headings.h"
 
-APSRack::APSRack() : curDeviceID(-1), _numDevices(0), _curAPS(NULL) {
+APSRack::APSRack() : _numDevices(0) {
 }
 
 APSRack::~APSRack()  {
 }
 
 //Initialize the rack by polling for devices and serial numbers
-int APSRack::Init() {
+int APSRack::init() {
 
 	//Create the logger
 	FILE* pFile = fopen("libaps.log", "a");
@@ -45,7 +45,7 @@ void APSRack::enumerate_devices() {
 	//Now setup the map between device serials and number
 	size_t devicect = 0;
 	for (string tmpSerial : _deviceSerials) {
-		_serial2dev[tmpSerial] = devicect;
+		serial2dev[tmpSerial] = devicect;
 		FILE_LOG(logDEBUG) << "Device " << devicect << " has serial number " << tmpSerial;
 		devicect++;
 	}
@@ -57,8 +57,6 @@ int APSRack::connect(const int & deviceID){
 	success = FTDI::connect(deviceID, _APSs[deviceID]._handle);
 	if (success == 0) {
 		FILE_LOG(logDEBUG) << "Opened connection to device " << deviceID << " (Serial: " << _deviceSerials[deviceID] << ")";
-		_curAPS = &_APSs[deviceID];
-		curDeviceID = deviceID;
 	}
 	return success;
 }
@@ -70,21 +68,28 @@ int APSRack::disconnect(const int & deviceID){
 	if (success == 0) {
 		FILE_LOG(logDEBUG) << "Closed connection to device " << deviceID << " (Serial: " << _deviceSerials[deviceID] << ")";
 	}
-	_curAPS = NULL;
-	curDeviceID = -1;
 	return success;
 }
 
 int APSRack::connect(const string & deviceSerial){
 	//Look up the associated ID and call the next connect
-	return APSRack::connect(_serial2dev[deviceSerial]);
+	return APSRack::connect(serial2dev[deviceSerial]);
 }
 
 int APSRack::disconnect(const string & deviceSerial){
 	//Look up the associated ID and call the next connect
-	return APSRack::disconnect(_serial2dev[deviceSerial]);
+	return APSRack::disconnect(serial2dev[deviceSerial]);
 }
 
-int APSRack::program_FPGA(const string &bitFile, const int & chipSelect, const int & expectedVersion){
-	return _curAPS->program_FPGA(bitFile, chipSelect, expectedVersion);
+int APSRack::program_FPGA(const int & deviceID, const string &bitFile, const int & chipSelect, const int & expectedVersion){
+	return _APSs[deviceID].program_FPGA(bitFile, chipSelect, expectedVersion);
 }
+
+int APSRack::set_sampleRate(const int & deviceID, const int & fpga, const int & freq, const bool & testLock) {
+	return _APSs[deviceID].set_sampleRate(fpga, freq, testLock);
+}
+
+int APSRack::get_sampleRate(const int & deviceID, const int & fpga){
+	return _APSs[deviceID].get_sampleRate(fpga);
+}
+

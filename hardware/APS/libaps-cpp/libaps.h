@@ -12,21 +12,32 @@
 #define EXPORT __declspec(dllexport)
 #else
 #define EXPORT
+#include <stdbool.h>
 #endif
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-EXPORT int Init();
+EXPORT int init();
 
 EXPORT int connect_by_ID(int);
 
-EXPORT int connect_by_Serial(char *);
+EXPORT int connect_by_serial(char *);
 
-EXPORT int disconnect();
+EXPORT int disconnect_by_ID(int);
 
-EXPORT int program_FPGA(char *, int, int);
+EXPORT int disconnect_by_serial(char *);
+
+EXPORT int serial2ID(char *);
+
+EXPORT int program_FPGA(int, char *, int, int);
+
+EXPORT int set_sampleRate(int, int, int, int);
+
+EXPORT int get_sampleRate(int, int);
+
 
 #ifdef __cplusplus
 }

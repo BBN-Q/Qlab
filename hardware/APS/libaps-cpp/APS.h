@@ -22,6 +22,9 @@ public:
 	int program_FPGA(const string &, const UCHAR &, const int &);
 	int read_bitfile_version(const UCHAR &);
 
+	int set_sampleRate(const int &, const int &, const bool &);
+	int get_sampleRate(const int & fpga);
+
 	//The owning APSRack needs access to some private members
 	friend class APSRack;
 

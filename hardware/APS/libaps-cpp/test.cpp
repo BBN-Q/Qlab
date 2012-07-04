@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 
 	APSRack	silly;
 
-	silly.Init();
+	silly.init();
 	silly.connect(0);
 	silly.disconnect(0);
 

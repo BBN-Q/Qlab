@@ -17,7 +17,9 @@ public:
 	APSRack();
 	~APSRack();
 
-	int Init();
+	map<string, int> serial2dev;
+
+	int init();
 	int connect(const int &);
 	int connect(const string &);
 	int disconnect(const int &);
@@ -26,15 +28,14 @@ public:
 	int get_num_devices();
 	void enumerate_devices();
 
-	int curDeviceID;
+	int program_FPGA(const int &, const string &, const int &, const int &);
 
-	int program_FPGA(const string &, const int &, const int &);
+	int get_sampleRate(const int &, const int &);
+	int set_sampleRate(const int &, const int &, const int &, const bool &);
 
 private:
 	int _numDevices;
 	vector<APS> _APSs;
-	APS * _curAPS;
-	map<string, int> _serial2dev;
 	vector<string> _deviceSerials;
 };
 

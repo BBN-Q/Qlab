@@ -37,7 +37,16 @@ int APS::program_FPGA(const string & bitFile, const UCHAR & chipSelect, const in
 }
 
 int APS::read_bitfile_version(const UCHAR & chipSelect){
-
 	//Pass through to FPGA code
 	return FPGA::read_bitFile_version(_handle, chipSelect);
+}
+
+int APS::set_sampleRate(const int & fpga, const int & freq, const bool & testLock){
+	//Pass through to the FPGA code
+	return FPGA::set_PLL_freq(_handle, fpga, freq, testLock);
+}
+
+int APS::get_sampleRate(const int & fpga){
+	//Pass through to FPGA code
+	return FPGA::get_PLL_freq(_handle, fpga);
 }

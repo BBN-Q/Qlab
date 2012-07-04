@@ -633,7 +633,7 @@ int FPGA::set_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, co
 
 }
 
-int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & dac, const int & freq, const bool & testLock)
+int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & fpga, const int & freq, const bool & testLock)
 {
 
 	static int fpgaFrequencies[2] = {1200,1200};
@@ -641,58 +641,34 @@ int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & dac, const int & freq
 	ULONG pllCyclesAddr, pllBypassAddr;
 	UCHAR pllCyclesVal, pllBypassVal;
 
-	int fpga;
 	int syncStatus;
 	int numSyncChannels;
 
-	FILE_LOG(logDEBUG) << "Setting PLL DAC: " << dac << " Freq: " << freq;
+	FILE_LOG(logDEBUG) << "Setting PLL FPGA: " << fpga << " Freq.: " << freq;
 
-	fpga = dac2fpga(dac);
-	if (fpga < 0) {
-		return -1;
-	}
-
-	switch(dac) {
-	case 0:
-		// fall through
-	case 1:
-		pllCyclesAddr = FPGA1_PLL_CYCLES_ADDR;
-		pllBypassAddr = FPGA1_PLL_BYPASS_ADDR;
-		break;
-	case 2:
-		// fall through
-	case 3:
-		pllCyclesAddr = FPGA2_PLL_CYCLES_ADDR;
-		pllBypassAddr = FPGA2_PLL_BYPASS_ADDR;
-		break;
-	default:
-		return -1;
+	switch(fpga) {
+		case 1:
+			pllCyclesAddr = FPGA1_PLL_CYCLES_ADDR;
+			pllBypassAddr = FPGA1_PLL_BYPASS_ADDR;
+			break;
+		case 2:
+			pllCyclesAddr = FPGA2_PLL_CYCLES_ADDR;
+			pllBypassAddr = FPGA2_PLL_BYPASS_ADDR;
+			break;
+		default:
+			return -1;
 	}
 
 	switch(freq) {
-	case 40:
-		pllCyclesVal = 0xEE; // 15 high / 15 low (divide by 30)
-		break;
-	case 50:
-		pllCyclesVal = 0xBB; // 12 high / 12 low (divide by 24)
-		break;
-	case 100:
-		pllCyclesVal = 0x55; // 6 high / 6 low (divide by 12)
-		break;
-	case 200:
-		pllCyclesVal = 0x22; // 3 high / 3 low (divide by 6)
-		break;
-	case 300:
-		pllCyclesVal = 0x11; // 2 high /2 low (divide by 4)
-		break;
-	case 600:
-		pllCyclesVal = 0x00; // 1 high / 1 low (divide by 2)
-		break;
-	case 1200:
-		pllCyclesVal = 0x00; // value ignored, set bypass below
-		break;
-	default:
-		return -2;
+		case 40: pllCyclesVal = 0xEE; break; // 15 high / 15 low (divide by 30)
+		case 50: pllCyclesVal = 0xBB; break;// 12 high / 12 low (divide by 24)
+		case 100: pllCyclesVal = 0x55; break; // 6 high / 6 low (divide by 12)
+		case 200: pllCyclesVal = 0x22; break; // 3 high / 3 low (divide by 6)
+		case 300: pllCyclesVal = 0x11; break; // 2 high /2 low (divide by 4)
+		case 600: pllCyclesVal = 0x00; break; // 1 high / 1 low (divide by 2)
+		case 1200: pllCyclesVal = 0x00; break; // value ignored, set bypass below
+		default:
+			return -2;
 	}
 
 	// bypass divider if freq == 1200
@@ -1020,11 +996,11 @@ int FPGA::read_PLL_status(FT_HANDLE deviceHandle, const int & fpga, const int & 
 
 	int pllStatus = 0;
 
-	//We can latch based of either the USB or PLL clock.  USB seems to flicker so default to PLL for now but
+	//We can latch based off either the USB or PLL clock.  USB seems to flicker so default to PLL for now but
 	//we should double check the FIRMWARE_VERSION
 	ULONG FIRMWARECHECK;
 	if (regAddr == (FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION)) {
-		FIRMWARECHECK = 0x020;
+		FIRMWARECHECK = 2*FIRMWARE_VERSION;
 	}
 	else if (regAddr == (FPGA_ADDR_REGREAD | FPGA_OFF_VERSION)){
 		FIRMWARECHECK = FIRMWARE_VERSION;
@@ -1052,6 +1028,52 @@ int FPGA::read_PLL_status(FT_HANDLE deviceHandle, const int & fpga, const int & 
 	return pllStatus;
 }
 
+int FPGA::get_PLL_freq(FT_HANDLE deviceHandle, const int & fpga) {
+	// Poll APS PLL chip to determine current frequency
+
+	ULONG pll_cycles_addr, pll_bypass_addr;
+	UCHAR pll_cycles_val, pll_bypass_val;
+
+	int freq;
+
+	FILE_LOG(logDEBUG2) << "Getting PLL frequency for FGPA " << fpga;
+
+	switch(fpga) {
+	case 1:
+		pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
+		pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
+		break;
+	case 2:
+		pll_cycles_addr = FPGA2_PLL_CYCLES_ADDR;
+		pll_bypass_addr = FPGA2_PLL_BYPASS_ADDR;
+		break;
+	default:
+		return -1;
+	}
+
+	FPGA::read_SPI(deviceHandle, APS_PLL_SPI, pll_cycles_addr, &pll_cycles_val);
+	FPGA::read_SPI(deviceHandle, APS_PLL_SPI, pll_bypass_addr, &pll_bypass_val);
+
+	// select frequency based on pll cycles setting
+	// the values here should match the reverse lookup in FGPA::set_PLL_freq
+
+	if (pll_bypass_val == 0x80 && pll_cycles_val == 0x00)
+		return 1200;
+	switch(pll_cycles_val) {
+		case 0xEE: freq = 40;  break;
+		case 0xBB: freq = 50;  break;
+		case 0x55: freq = 100; break;
+		case 0x22: freq = 200; break;
+		case 0x11: freq = 300; break;
+		case 0x00: freq = 600; break;
+		default:
+			return -2;
+	}
+
+	FILE_LOG(logDEBUG2) << "PLL frequency for FPGA: " << fpga << " Freq: " << freq;
+
+	return freq;
+}
 
 
 
