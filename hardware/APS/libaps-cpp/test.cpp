@@ -15,10 +15,15 @@ int main(int argc, char** argv) {
 	APSRack	silly;
 
 	silly.Init();
+	silly.connect(0);
+	silly.disconnect(0);
 
 	cout << "Made it through!" << endl;
 
-
+	UCHAR readByte;
+	readByte = 0x10;
+	cout << std::hex << setiosflags(std::ios_base::showbase) << int(readByte) << endl;
+	cout << "hello " << 73 << endl;;
 	return 0;
 
 }

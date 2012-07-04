@@ -56,7 +56,7 @@ int APSRack::connect(const int & deviceID){
 	int success = 0;
 	success = FTDI::connect(deviceID, _APSs[deviceID]._handle);
 	if (success == 0) {
-		FILE_LOG(logDEBUG) << "Opened connection to device " << deviceID;
+		FILE_LOG(logDEBUG) << "Opened connection to device " << deviceID << " (Serial: " << _deviceSerials[deviceID] << ")";
 		_curAPS = &_APSs[deviceID];
 		curDeviceID = deviceID;
 	}
@@ -68,7 +68,7 @@ int APSRack::disconnect(const int & deviceID){
 	int success = 0;
 	success = FTDI::disconnect(_APSs[deviceID]._handle);
 	if (success == 0) {
-		FILE_LOG(logDEBUG) << "Closed connection to device " << deviceID;
+		FILE_LOG(logDEBUG) << "Closed connection to device " << deviceID << " (Serial: " << _deviceSerials[deviceID] << ")";
 	}
 	_curAPS = NULL;
 	curDeviceID = -1;

@@ -30,12 +30,10 @@ int APS::program_FPGA(const string & bitFile, const UCHAR & chipSelect, const in
 	//The default istreambuf_iterator constructor returns the "end-of-stream" iterator.
 	vector<UCHAR> fileData((std::istreambuf_iterator<char>(FID)), std::istreambuf_iterator<char>());
 	ULONG numBytes = fileData.size();
-	FILE_LOG(logDEBUG) << "Read " << numBytes << " from bitfile";
+	FILE_LOG(logDEBUG) << "Read " << numBytes << " bytes from bitfile";
 
 	//Pass of the data to a lower-level function to actually push it to the FPGA
-	FPGA::program_FPGA(_handle, fileData, chipSelect, expectedVersion);
-
-	return 0;
+	return FPGA::program_FPGA(_handle, fileData, chipSelect, expectedVersion);
 }
 
 int APS::read_bitfile_version(const UCHAR & chipSelect){

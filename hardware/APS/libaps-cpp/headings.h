@@ -17,6 +17,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 #include <stdio.h>
 #include <map>
 #include <math.h>
@@ -28,15 +29,14 @@ using std::cout;
 using std::endl;
 using std::map;
 using std::runtime_error;
-
+using std::hex;
+using std::setiosflags;
 
 
 //Deal with some Windows/Linux difference
 #ifdef _WIN32
 #include "windows.h"
 #include "ftd2xx_win.h"
-#define EXPORT __declspec(dllexport)
-
 //Windows doesn't have a usleep function so define one
 inline void usleep(int waitTime) {
     long int time1 = 0, time2 = 0, freq = 0;
@@ -60,6 +60,7 @@ inline void usleep(int waitTime) {
 
 
 #include "Waveform.h"
+#include "Waveform.h"
 #include "LinkList.h"
 #include "Channel.h"
 #include "APS.h"
@@ -67,9 +68,6 @@ inline void usleep(int waitTime) {
 #include "APSRack.h"
 #include "FTDI.h"
 #include "FPGA.h"
-
-
-
 
 
 #endif /* HEADINGS_H_ */

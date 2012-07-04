@@ -83,37 +83,38 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 	 */
 
 	int maxAttemptCnt = 3;
-	int ok = 0; // flag to indicate test worked
+	bool ok = false; // flag to indicate test worked
 	UCHAR readByte, writeByte;
 
 	//Steps 1 and 2
-	for(int ct = 0, ok = 0; ct < maxAttemptCnt && ok == 0; ct++) {
-		FILE_LOG(logDEBUG2) << "Attempt: " << ct+1;
+	for(int ct = 0; ct < maxAttemptCnt && !ok; ct++) {
+		FILE_LOG(logDEBUG2) << "Attempt: "  << ct+1;
 		// Read the Status to get state of RESETN for unused channel
+		//TODO: is this necessary or used at all?
 		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, 0, &readByte) != 1) return(-1);
-		FILE_LOG(logDEBUG2) << "Read 1: " << std::hex << readByte;
+		FILE_LOG(logDEBUG2) << "Read 1: " << hex << setiosflags(std::ios_base::showbase) << int(readByte);
 
 		// Clear Program and Reset Masks
 		writeByte = ~PgmMask & ~RstMask & 0xF;
-		FILE_LOG(logDEBUG2) << "Write 1: " << std::hex << writeByte;
+		FILE_LOG(logDEBUG2) << "Write 1: "  << hex << setiosflags(std::ios_base::showbase) << int(writeByte);
 		if(FPGA::write_register(deviceHandle,  APS_CONF_STAT, 1, 0, &writeByte) != 1) return(-2);
 
 		// Read the Status to see that INITN is asserted in response to PROGRAMN
 		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, 0, &readByte) != 1) return(-3);
-		FILE_LOG(logDEBUG2) << "Read 2: " << std::hex << readByte;
+		FILE_LOG(logDEBUG2) << "Read 2: " <<  hex << setiosflags(std::ios_base::showbase) << int(readByte);
 
 		// verify Init bits are cleared
-		if((readByte & InitMask) == 0) ok = 1;
+		if((readByte & InitMask) == 0) ok = true;
 	}
 	if (!ok) return -4;
 
 	//Steps 3 and 4
 	for(int ct = 0, ok = 0; ct < maxAttemptCnt && ok == 0; ct++) {
-		FILE_LOG(logDEBUG2) << "Attempt: " << ct+1;
+		FILE_LOG(logDEBUG2) << "Attempt: "  << ct+1;
 
 		// Set Program and Reset Bits
 		writeByte = (PgmMask | RstMask) & 0xF;
-		FILE_LOG(logDEBUG2) << "Write 2: " << std::hex << writeByte;
+		FILE_LOG(logDEBUG2) << "Write 2: " << hex << setiosflags(std::ios_base::showbase) << int(writeByte);
 		if(FPGA::write_register(deviceHandle, APS_CONF_STAT, 1, 0, &writeByte) != 1)return(-5);
 
 		// sleep to allow init to take place
@@ -122,7 +123,7 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 
 		// Read the Status to see that INITN is deasserted in response to PROGRAMN deassertion
 		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, 0, &readByte) != 1) return(-6);
-		FILE_LOG(logDEBUG2) << "Read 3: " << std::hex << readByte;
+		FILE_LOG(logDEBUG2) << "Read 3: "  << hex << setiosflags(std::ios_base::showbase) << int(readByte);
 
 		// verify Init Mask is high
 		if((readByte & InitMask) == InitMask) ok = 1;
@@ -161,10 +162,11 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 	int numBytesProgrammed = bitFileData.size();
 
 	// check done bits
-	for(int ct = 0, ok = 0; ct < maxAttemptCnt && !ok; ct++) {
+	ok = false;
+	for(int ct = 0; ct < maxAttemptCnt && !ok; ct++) {
 		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, 0, &readByte) != 1) return(-3);
-		FILE_LOG(logDEBUG2) << "Read 4: " << std::hex << readByte << " (looking for " << DoneMask << " HIGH)";
-		if ((readByte & DoneMask) == DoneMask) ok = 1;
+		FILE_LOG(logDEBUG2) << "Read 4: " << hex << setiosflags(std::ios_base::showbase) << int(readByte) << " (looking for " << int(DoneMask) << " HIGH)";
+		if ((readByte & DoneMask) == DoneMask) ok = true;
 		usleep(1000); // if done has not set wait a bit
 	}
 
@@ -178,9 +180,10 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 
 	// Read Bit File Version
 	int version;
-	for (int ct = 0, ok = 0; ct < maxAttemptCnt && !ok; ct++) {
+	ok = false;
+	for (int ct = 0; ct < maxAttemptCnt && !ok; ct++) {
 		version =  FPGA::read_bitFile_version(deviceHandle, chipSelect);
-		if (version == expectedVersion) ok = 1;
+		if (version == expectedVersion) ok = true;
 		usleep(1000); // if doesn't match, wait a bit and try again
 	}
 	if (!ok) return -11;
@@ -228,23 +231,24 @@ int FPGA::read_register(
 		if (repeats > 0) {FILE_LOG(logDEBUG2) << "Retry USB Write " << repeats;}
 		ftStatus = FT_Write(deviceHandle, &commandPacket, 1, &bytesWritten);
 
-		if (!FT_SUCCESS(ftStatus) || bytesWritten != 1) {
+		if (!FT_SUCCESS(ftStatus) || bytesWritten != 1){
 			FILE_LOG(logDEBUG2) << "FPGA::read_register: Error writing to USB with status = " << ftStatus << "; bytes written = " << bytesWritten << "; repeat count = " << repeats;
 			continue;
 		}
 
-		usleep(10);
+		usleep(100);
 
 		//Read the result
 		ftStatus = FT_Read(deviceHandle, Data, packetLength, &bytesRead);
 		if (repeats > 0) {FILE_LOG(logDEBUG2) << "Retry USB Read " << repeats;}
-		if (!FT_SUCCESS(ftStatus) || bytesRead != 1){
-			FILE_LOG(logDEBUG2) << "FPGA::read_register: Error reading to USB with status = " << ftStatus << "; bytes read = " << bytesRead << "; repeat count = " << repeats;
+		if (!FT_SUCCESS(ftStatus) || bytesRead != packetLength){
+			FILE_LOG(logDEBUG2) << "FPGA::read_register: Error reading from USB with status = " << ftStatus << "; bytes read = " << bytesRead << "; repeat count = " << repeats;
 		}
-		else
+		else{
 			break;
+		}
 	}
-	if (!FT_SUCCESS(ftStatus) || bytesRead != 1){
+	if (!FT_SUCCESS(ftStatus) || bytesRead != packetLength){
 		FILE_LOG(logERROR) << "FPGA::read_register: Error reading to USB with status = " << ftStatus << "; bytes read = " << bytesRead;
 		return -1;
 	}
@@ -296,7 +300,7 @@ int FPGA::write_register(
 
 	for (repeats = 0; repeats < max_repeats; repeats++) {
 		if (repeats > 0) {FILE_LOG(logDEBUG2) << "Repeat Write " << repeats;}
-		ftStatus = FT_Write(deviceHandle,static_cast<void*>(&dataPacket[0]), packetLength+1, &bytesWritten);
+		ftStatus = FT_Write(deviceHandle, &dataPacket[0], packetLength+1, &bytesWritten);
 		if (FT_SUCCESS(ftStatus)) break;
 	}
 
@@ -360,7 +364,7 @@ ULONG FPGA::read_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, UCHAR chipSele
 
 	data = (read[0] << 8) | read[1];
 
-	FILE_LOG(logDEBUG2) << "Reading address " << std::hex << addr << " with data " << data;
+	FILE_LOG(logDEBUG2) << "Reading address " << hex << setiosflags(std::ios_base::showbase) << addr << " with data " << data;
 
 	return data;
 }
@@ -781,10 +785,13 @@ int FPGA::test_PLL_sync(FT_HANDLE deviceHandle, const int & fpga, const int & nu
 	UINT pllResetBit, pllEnableAddr, pllEnableAddr2;
 	UCHAR writeByte;
 
-	const vector<int> PLL_XOR_TEST = {PLL_02_XOR_BIT, PLL_13_XOR_BIT,PLL_GLOBAL_XOR_BIT};
-	const vector<int> PLL_LOCK_TEST = {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT};
-	const vector<int> PLL_RESET = {CSRMSK_CHA_PLLRST, CSRMSK_CHB_PLLRST, 0};
-
+	//TODO: convert back to initializer lists once Microsoft gets its act together
+	int tmpPLL_XOR_TEST[] = {PLL_02_XOR_BIT, PLL_13_XOR_BIT,PLL_GLOBAL_XOR_BIT};
+	int tmpPLL_LOCK_TEST[] = {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT};
+	int tmpPLL_RESET[] = {CSRMSK_CHA_PLLRST, CSRMSK_CHB_PLLRST, 0};
+	vector<int> PLL_XOR_TEST(tmpPLL_XOR_TEST, tmpPLL_XOR_TEST+3);
+	vector<int> PLL_LOCK_TEST(tmpPLL_LOCK_TEST, tmpPLL_LOCK_TEST+3);
+	vector<int> PLL_RESET(tmpPLL_RESET, tmpPLL_RESET+3);
 
 	pllResetBit  = CSRMSK_CHA_PLLRST | CSRMSK_CHB_PLLRST;
 
@@ -920,7 +927,9 @@ int FPGA::test_PLL_sync(FT_HANDLE deviceHandle, const int & fpga, const int & nu
 	}
 
 	//Steps 3,4,5
-	vector<string> pllStrs = {"02", "13", "Global"};
+	//TODO: fix when MSVC is better
+	const char * tmpStrs[] = {"02", "13", "Global"};
+	vector<string> pllStrs(tmpStrs, tmpStrs+3);
 	for (int pll = 0; pll < 3; pll++) {
 
 		FILE_LOG(logDEBUG) << "Testing channel " << pllStrs[pll];
@@ -997,10 +1006,18 @@ int FPGA::test_PLL_sync(FT_HANDLE deviceHandle, const int & fpga, const int & nu
 }
 
 
-int FPGA::read_PLL_status(FT_HANDLE deviceHandle, const int & fpga, const int & regAddr /*check header for default*/, const vector<int> & pllLockBits  /*check header for default*/ ){
-/*
- * Helper function to read the status of some PLL bit and whether the main PLL is locked.
- */
+int FPGA::read_PLL_status(FT_HANDLE deviceHandle, const int & fpga, const int & regAddr /*check header for default*/, vector<int> pllLockBits  /*check header for default*/ ){
+	/*
+	 * Helper function to read the status of some PLL bit and whether the main PLL is locked.
+	 */
+
+	//TODO: fix this when MVSC is better
+	//Hack around MSVC not supporting initializer lists
+	//Should have in the default parameter in the header as {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT}
+	if (pllLockBits.size() == 0) {
+		pllLockBits.push_back(PLL_02_LOCK_BIT); pllLockBits.push_back(PLL_13_LOCK_BIT); pllLockBits.push_back(REFERENCE_PLL_LOCK_BIT);
+	}
+
 	int pllStatus = 0;
 
 	//We can latch based of either the USB or PLL clock.  USB seems to flicker so default to PLL for now but

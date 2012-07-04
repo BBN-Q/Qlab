@@ -27,7 +27,7 @@ LFLAGS=
 CC=g++-4.7
 else
 ####### Windows #######
-CFLAGS=/EHsc
+CFLAGS=/EHsc /nologo
 OBJFLAGS=/c /Fo
 OBJEXT=obj
 LIBEXT=dll
@@ -43,13 +43,13 @@ OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT) Channel.$(OBJEXT) Wavefor
 
 all: $(OBJECTS) test libaps
 
-libaps: $(OBJECTS)
+libaps: $(OBJECTS) libaps.cpp
 	$(CC) $(CFLAGS) $(LIBFLAGS) libaps.cpp $(OBJECTS) $(LIBS) 
 
 %.$(OBJEXT):%.cpp
 	$(CC) $(CFLAGS) $(OBJFLAGS) $<
 
-test: $((OBJECTS)
+test: $((OBJECTS) test.cpp
 	$(CC) $(CFLAGS) test.cpp $(OBJECTS) $(LIBS)  	
 
 clean:
