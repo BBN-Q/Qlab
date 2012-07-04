@@ -1,4 +1,3 @@
-.svn
 *.asv
 *.m~
 *.o
@@ -14,3 +13,6 @@ cfg/*
 *.cfg
 build/
 dist/
+*.obj
+.cproject
+.project
