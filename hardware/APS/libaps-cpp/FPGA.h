@@ -43,6 +43,21 @@ int setup_VCXO(FT_HANDLE);
 int reset_status_ctrl(FT_HANDLE);
 int clear_status_ctrl(FT_HANDLE);
 
+int reset_checksums(FT_HANDLE, const int &);
+bool verify_checksums(FT_HANDLE, const int &);
+
+int write_waveform(FT_HANDLE, const int &, const vector<short> &);
+vector<UCHAR> pack_waveform(FT_HANDLE, const int &, const ULONG &, const vector<short> &);
+
+int set_LL_mode(FT_HANDLE, const int &, const bool &, const bool &);
+
+
+//Address and data checksum storage
+//TODO: think about this; it is obviously kind of ugly
+// We could make fpga a class and self-contained but then the trouble is
+// how to deal with writing to both simultaneously.
+map<FT_HANDLE, vector<ushort>> checksumAddr(MAX_APS_DEVICES);
+map<FT_HANDLE, vector<ushort>> checksumData(MAX_APS_DEVICES);
 
 } //end namespace FPGA
 

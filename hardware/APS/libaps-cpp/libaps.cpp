@@ -67,6 +67,16 @@ int get_sampleRate(int deviceID, int fpga){
 	return _APSRack.get_sampleRate(deviceID, fpga);
 }
 
+//Load the waveform library as floats
+int set_waveform_float(int deviceID, int channelNum, float* data, int numPts){
+	return _APSRack.set_waveform(deviceID, channelNum, vector<float>(data, data+numPts));
+}
+
+//Load the waveform library as int16
+int set_waveform_int(int deviceID, int channelNum, short* data, int numPts){
+	return _APSRack.set_waveform(deviceID, channelNum, vector<short>(data, data+numPts));
+}
+
 
 #ifdef __cplusplus
 }

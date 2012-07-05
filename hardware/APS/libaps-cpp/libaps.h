@@ -40,6 +40,14 @@ EXPORT int set_sampleRate(int, int, int, int);
 
 EXPORT int get_sampleRate(int, int);
 
+EXPORT int set_waveform_float(int, int, float*, int);
+
+EXPORT int set_waveform_int(int, int, short*, int);
+
+EXPORT int load_LL_bank(int, int, int, int, USHORT*, USHORT*, USHORT*, USHORT*);
+
+EXPORT int load_sequence_file(int, char*);
+
 
 #ifdef __cplusplus
 }

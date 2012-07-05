@@ -7,11 +7,13 @@
 
 #include "APS.h"
 
-APS::APS() : _deviceID(-1), _handle(NULL) {
-	// TODO Auto-generated constructor stub
-}
+APS::APS() : _deviceID(-1), _handle(NULL), _channels(4) {}
 
-APS::APS(int deviceID, string deviceSerial) : _deviceID(deviceID), _deviceSerial(deviceSerial) {};
+APS::APS(int deviceID, string deviceSerial) : _deviceID(deviceID), _deviceSerial(deviceSerial), _handle(NULL){
+		for(int ct=0; ct<4; ct++){
+			_channels.push_back(Channel(ct, _handle));
+		}
+};
 
 APS::~APS() {
 	// TODO Auto-generated destructor stub
@@ -95,5 +97,6 @@ int APS::get_sampleRate(const int & fpga){
 	//Pass through to FPGA code
 	return FPGA::get_PLL_freq(_handle, fpga);
 }
+
 
 

@@ -49,11 +49,14 @@ void APSRack::enumerate_devices() {
 	_APSs.reserve(_numDevices);
 
 	//Now setup the map between device serials and number and assign the APS units appropriately
+	//Also setup the FPGA checksums
 	size_t devicect = 0;
 	for (string tmpSerial : _deviceSerials) {
 		serial2dev[tmpSerial] = devicect;
 		_APSs.push_back(APS(devicect, tmpSerial));
 		FILE_LOG(logDEBUG) << "Device " << devicect << " has serial number " << tmpSerial;
+		FPGA::checksumAddr[_APSs[devicect]._handle] = vector<ushort>(2,0);
+		FPGA::checksumData[_APSs[devicect]._handle] = vector<ushort>(2,0);
 		devicect++;
 	}
 }
@@ -88,4 +91,5 @@ int APSRack::set_sampleRate(const int & deviceID, const int & fpga, const int & 
 int APSRack::get_sampleRate(const int & deviceID, const int & fpga){
 	return _APSs[deviceID].get_sampleRate(fpga);
 }
+
 

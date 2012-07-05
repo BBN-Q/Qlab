@@ -29,8 +29,6 @@ using std::cout;
 using std::endl;
 using std::map;
 using std::runtime_error;
-using std::hex;
-using std::setiosflags;
 
 
 //Deal with some Windows/Linux difference
@@ -58,9 +56,6 @@ inline void usleep(int waitTime) {
 //Load all the constants
 #include "constants.h"
 
-
-#include "Waveform.h"
-#include "Waveform.h"
 #include "LinkList.h"
 #include "Channel.h"
 #include "APS.h"
@@ -70,4 +65,16 @@ inline void usleep(int waitTime) {
 #include "FPGA.h"
 
 
+//Helper function for hex formating with the 0x out front
+inline std::ios_base&
+myhex(std::ios_base& __base)
+{
+  __base.setf(std::ios_base::hex, std::ios_base::basefield);
+  __base.setf(std::ios::showbase);
+  return __base;
+}
+
+
 #endif /* HEADINGS_H_ */
+
+

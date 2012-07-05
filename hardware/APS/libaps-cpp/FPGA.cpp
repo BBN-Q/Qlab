@@ -91,16 +91,16 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 		// Read the Status to get state of RESETN for unused channel
 		//TODO: is this necessary or used at all?
 		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, 0, &readByte) != 1) return(-1);
-		FILE_LOG(logDEBUG2) << "Read 1: " << hex << setiosflags(std::ios_base::showbase) << int(readByte);
+		FILE_LOG(logDEBUG2) << "Read 1: " << myhex << int(readByte);
 
 		// Clear Program and Reset Masks
 		writeByte = ~PgmMask & ~RstMask & 0xF;
-		FILE_LOG(logDEBUG2) << "Write 1: "  << hex << setiosflags(std::ios_base::showbase) << int(writeByte);
+		FILE_LOG(logDEBUG2) << "Write 1: "  << myhex << int(writeByte);
 		if(FPGA::write_register(deviceHandle,  APS_CONF_STAT, 1, 0, &writeByte) != 1) return(-2);
 
 		// Read the Status to see that INITN is asserted in response to PROGRAMN
 		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, 0, &readByte) != 1) return(-3);
-		FILE_LOG(logDEBUG2) << "Read 2: " <<  hex << setiosflags(std::ios_base::showbase) << int(readByte);
+		FILE_LOG(logDEBUG2) << "Read 2: " <<  myhex << int(readByte);
 
 		// verify Init bits are cleared
 		if((readByte & InitMask) == 0) ok = true;
@@ -113,7 +113,7 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 
 		// Set Program and Reset Bits
 		writeByte = (PgmMask | RstMask) & 0xF;
-		FILE_LOG(logDEBUG2) << "Write 2: " << hex << setiosflags(std::ios_base::showbase) << int(writeByte);
+		FILE_LOG(logDEBUG2) << "Write 2: " << myhex << int(writeByte);
 		if(FPGA::write_register(deviceHandle, APS_CONF_STAT, 1, 0, &writeByte) != 1)return(-5);
 
 		// sleep to allow init to take place
@@ -122,7 +122,7 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 
 		// Read the Status to see that INITN is deasserted in response to PROGRAMN deassertion
 		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, 0, &readByte) != 1) return(-6);
-		FILE_LOG(logDEBUG2) << "Read 3: "  << hex << setiosflags(std::ios_base::showbase) << int(readByte);
+		FILE_LOG(logDEBUG2) << "Read 3: "  << myhex << int(readByte);
 
 		// verify Init Mask is high
 		if((readByte & InitMask) == InitMask) ok = 1;
@@ -135,7 +135,7 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 	for(UCHAR & tmpVal : bitFileData)
 		tmpVal = BitReverse[tmpVal];
 
-	#define BLOCKSIZE 61
+	static const int BLOCKSIZE = 61;
 
 	// At this point, the selected FPGA is ready to receive configuration bytes.
 	// Write out all of the bytes in groups of 61 bytes, since that is the most that
@@ -164,7 +164,7 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 	ok = false;
 	for(int ct = 0; ct < maxAttemptCnt && !ok; ct++) {
 		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, 0, &readByte) != 1) return(-3);
-		FILE_LOG(logDEBUG2) << "Read 4: " << hex << setiosflags(std::ios_base::showbase) << int(readByte) << " (looking for " << int(DoneMask) << " HIGH)";
+		FILE_LOG(logDEBUG2) << "Read 4: " << myhex << int(readByte) << " (looking for " << int(DoneMask) << " HIGH)";
 		if ((readByte & DoneMask) == DoneMask) ok = true;
 		usleep(1000); // if done has not set wait a bit
 	}
@@ -323,15 +323,15 @@ case 1:
 case 2:
 	version = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, chipSelect);
 	version &= 0x1FF; // First 9 bits hold version
-	FILE_LOG(logDEBUG2) << "Bitfile version for FPGA " << chipSelect << " is "  << hex << setiosflags(std::ios_base::showbase) << version;
+	FILE_LOG(logDEBUG2) << "Bitfile version for FPGA " << chipSelect << " is "  << myhex << version;
 	break;
 case 3:
 	version = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, 1);
 	version &= 0x1FF; // First 9 bits hold version
-	FILE_LOG(logDEBUG2) << "Bitfile version for FPGA 1 is "  << hex << setiosflags(std::ios_base::showbase) << version;
+	FILE_LOG(logDEBUG2) << "Bitfile version for FPGA 1 is "  << myhex << version;
 	version2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, 2);
 	version2 &= 0x1FF; // First 9 bits hold version
-	FILE_LOG(logDEBUG2) << "Bitfile version for FPGA 2 is "  << hex << setiosflags(std::ios_base::showbase) << version2;
+	FILE_LOG(logDEBUG2) << "Bitfile version for FPGA 2 is "  << myhex << version2;
 		if (version != version2) {
 		FILE_LOG(logERROR) << "Bitfile versions are not the same on the two FPGAs: " << version << " and " << version2;
 		return -1;
@@ -367,7 +367,7 @@ ULONG FPGA::read_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, UCHAR chipSele
 
 	data = (read[0] << 8) | read[1];
 
-	FILE_LOG(logDEBUG2) << "Reading address " << hex << setiosflags(std::ios_base::showbase) << addr << " with data " << data;
+	FILE_LOG(logDEBUG2) << "Reading address " << myhex << addr << " with data " << data;
 
 	return data;
 }
@@ -392,20 +392,18 @@ int FPGA::write_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, const ULONG & d
 	outData[2] = (data >> 8) & LSB_MASK;
 	outData[3] = data & LSB_MASK;
 
-	//TODO: sort out where to keep this checksum  info
 	// address checksum is defined as (bits 0-14: addr, 15: 0)
 	// so, set bit 15 to zero
-//	if (fpga == 3) {
-//		gAddrCheckSum[device][0] += addr & 0x7FFF;
-//		gCheckSum[device][0] += data;
-//		gAddrCheckSum[device][1] += addr & 0x7FFF;
-//		gCheckSum[device][1] += data;
-//	} else {
-//		gAddrCheckSum[device][fpga - 1] += addr & 0x7FFF;
-//		gCheckSum[device][fpga - 1] += data;
-//	}
+	if ((fpga==1) || (fpga == 3)) {
+		FPGA::checksumAddr[deviceHandle][0] += addr & 0x7FFF;
+		FPGA::checksumData[deviceHandle][0] += data;
+	}
+	if((fpga==1) || (fpga == 3)) {
+		FPGA::checksumAddr[deviceHandle][1] += addr & 0x7FFF;
+		FPGA::checksumData[deviceHandle][1] += data;
+	}
 
-	FILE_LOG(logDEBUG2) << "Writing Addr: " << hex << setiosflags(std::ios_base::showbase) << addr << " Data: " << data;
+	FILE_LOG(logDEBUG2) << "Writing Addr: " << myhex << addr << " Data: " << data;
 
 	FPGA::write_register(deviceHandle, APS_FPGA_IO, 2, fpga, outData);
 
@@ -576,7 +574,7 @@ int FPGA::clear_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, 
 	};
 
 	check_cur_state();
-	FILE_LOG(logDEBUG2) << "Addr: " << hex << setiosflags(std::ios_base::showbase) << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
+	FILE_LOG(logDEBUG2) << "Addr: " << myhex << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
 
 	//TODO: take out if possible
 	usleep(100);
@@ -617,7 +615,7 @@ int FPGA::set_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, co
 	};
 
 	check_cur_state();
-	FILE_LOG(logDEBUG2) << "Addr: " <<  hex << setiosflags(std::ios_base::showbase) << addr << " Current State: " << currentState << " Mask: " << mask << " Writing: " << (currentState | mask);
+	FILE_LOG(logDEBUG2) << "Addr: " <<  myhex << addr << " Current State: " << currentState << " Mask: " << mask << " Writing: " << (currentState | mask);
 
 	usleep(100);
 
@@ -738,8 +736,8 @@ int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & fpga, const int & fre
 
 	// bypass divider if freq == 1200
 	pllBypassVal = (freq==1200) ?  0x80 : 0x00;
-	FILE_LOG(logDEBUG2) << "Setting PLL cycles addr: " << hex << setiosflags(std::ios_base::showbase) << pllCyclesAddr << " val: " << int(pllCyclesVal);
-	FILE_LOG(logDEBUG2) << "Setting PLL bypass addr: " << hex << setiosflags(std::ios_base::showbase) << pllBypassAddr << " val: " << int(pllBypassVal);
+	FILE_LOG(logDEBUG2) << "Setting PLL cycles addr: " << myhex << pllCyclesAddr << " val: " << int(pllCyclesVal);
+	FILE_LOG(logDEBUG2) << "Setting PLL bypass addr: " << myhex << pllBypassAddr << " val: " << int(pllBypassVal);
 
 	// fpga = 1 or 2 save frequency for later comparison to decide to use
 	// 4 channel sync or 2 channel sync
@@ -1163,5 +1161,203 @@ int FPGA::setup_VCXO(FT_HANDLE deviceHandle)
 	return 0;
 }
 
+int FPGA::reset_checksums(FT_HANDLE deviceHandle, const int & fpga){
+	// write to registers to clear them
+	FPGA::write_FPGA(deviceHandle, FPGA_OFF_DATA_CHECKSUM, 0, fpga);
+	FPGA::write_FPGA(deviceHandle, FPGA_OFF_ADDR_CHECKSUM, 0, fpga);
+	//Reset the software side too
+	FPGA::checksumAddr[deviceHandle].assign(2,0);
+	FPGA::checksumData[deviceHandle].assign(2,0);
 
+	return 0;
+}
+
+bool FPGA::verify_checksums(FT_HANDLE deviceHandle, const int & fpga) {
+	//Checks that software and hardware checksums agree
+
+	ULONG checksumData, checksumAddr;
+	if (fpga < 0 || fpga == 3) {
+		FILE_LOG(logERROR) << "Can only check the checksum of one fpga at a time.";
+		return false;
+	}
+
+	checksumAddr = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_ADDR_CHECKSUM, fpga);
+	checksumData = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_DATA_CHECKSUM, fpga);
+
+	FILE_LOG(logINFO) << "Checksum Address (hardware =? software): " << myhex << checksumAddr << " =? "
+			<< FPGA::checksumAddr[deviceHandle][fpga-1] << " Data: " << checksumData << " =? "
+			<< FPGA::checksumData[deviceHandle][fpga-1];
+
+	return ((checksumAddr == FPGA::checksumAddr[deviceHandle][fpga-1]) &&
+		(checksumData == FPGA::checksumData[deviceHandle][fpga-1]));
+}
+
+//Write waveform data FPGA memory
+int FPGA::write_waveform(FT_HANDLE deviceHandle, const int & dac, const vector<short> & wfData) {
+
+	int dacOffset, dacSize, dacWrite, dacRead, dacMemLock;
+	int fpga;
+	ULONG tmpData, wfLength;
+	//We assume the Channel object has properly formated the waveform
+	// setup register addressing based on DAC
+	switch(dac) {
+		case 0:
+		case 2:
+			dacOffset = FPGA_OFF_CHA_OFF;
+			dacSize   = FPGA_OFF_CHA_SIZE;
+			dacMemLock = CSRMSK_CHA_MEMLCK;
+			dacWrite =  FPGA_ADDR_CHA_WRITE;
+			break;
+		case 1:
+		case 3:
+			dacOffset = FPGA_OFF_CHB_OFF;
+			dacSize   = FPGA_OFF_CHB_SIZE;
+			dacMemLock = CSRMSK_CHB_MEMLCK;
+			dacWrite =  FPGA_ADDR_CHB_WRITE;
+			break;
+		default:
+			return -2;
+	}
+
+	dacRead = FPGA_ADDR_REGREAD | dacWrite;
+
+	//Waveform length used by FPGA must be an integer multiple of WF_MODULUS and is 0 counted
+	wfLength = wfData.size() / WF_MODULUS - 1;
+
+	fpga = dac2fpga(dac);
+	if (fpga < 0) {
+		return -1;
+	}
+
+	FILE_LOG(logDEBUG) << "Loading Waveform length " << wfData.size() << " (FPGA count = " << wfLength << " ) into FPGA  " << fpga << " DAC " << dac;
+
+	//Write the waveform parameters
+	//TODO: handle arbitrary offsets
+	FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | dacOffset, 0, fpga);
+	FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | dacSize, wfLength, fpga);
+
+	if (FILELog::ReportingLevel() >= logDEBUG2) {
+		//Double check it took
+		tmpData = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | dacOffset, fpga);
+		FILE_LOG(logDEBUG2) << "Offset set to: " << myhex << tmpData;
+		tmpData = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | dacSize, fpga);
+		FILE_LOG(logDEBUG2) << "Size set to: " << tmpData;
+		FILE_LOG(logDEBUG2) << "Loading waveform at " << myhex << dacWrite;
+	}
+
+	//Reset the checksums
+	FPGA::reset_checksums(deviceHandle, fpga);
+
+	//Pack the waveform data and write it
+	DWORD bytesWritten = 0;
+	vector<UCHAR> tmpVec = FPGA::pack_waveform(deviceHandle, fpga, dacOffset, wfData);
+	FT_Write(deviceHandle, &tmpVec[0], tmpVec.size(), &bytesWritten);
+
+	//Verify the checksums
+	if (!FPGA::verify_checksums(deviceHandle, fpga)){
+		FILE_LOG(logERROR) << "Checksums didn't match after writing waveform data";
+		return -2;
+	}
+
+	return 0;
+}
+
+
+
+vector<UCHAR> pack_waveform(FT_HANDLE deviceHandle, const int & fpga, const ULONG & startAddr, const vector<short> & data){
+	/*
+	 * Helper function to pack waveform data into command packages.
+	 * Given a starting address and a vector of values it packs into into a byte vector of repeated
+	 *  Command - 2 byte address - 2 byte data
+	 */
+
+
+	//Reserve space for the output vector.  As per above we need 5 bytes per data entry
+	vector<UCHAR> vecOut;
+	vecOut.reserve(5*data.size());
+
+	const int LSB_MASK = 0xFF;
+
+	//Loop
+	ULONG curAddr = startAddr;
+	for (short tmpData : data){
+		//First the Command byte (we're sending 4 bytes so transferSize selector is 2)
+		vecOut.push_back(APS_FPGA_IO | (fpga<<2) | 2);
+		//Now the two address bytes
+		vecOut.push_back((curAddr >> 8) & LSB_MASK);
+		vecOut.push_back(curAddr & LSB_MASK);
+		//Now the two data bytes
+		vecOut.push_back((tmpData >> 8) & LSB_MASK);
+		vecOut.push_back(tmpData & LSB_MASK);
+
+		//Update the checksums
+		//Address checksum is defined as (bits 0-14: addr, 15: 0)
+		// so, set bit 15 to zero
+		FPGA::checksumAddr[deviceHandle][fpga-1] += curAddr & 0x7FFF;
+		curAddr++;
+		FPGA::checksumData[deviceHandle][fpga-1] += tmpData;
+	}
+
+	return vecOut;
+}
+
+
+int FPGA::set_LL_mode(FT_HANDLE deviceHandle, const int & dac, const bool & enable, const bool & mode)
+/********************************************************************
+ * Description : Loads LinkList to FPGA
+ *
+ * Inputs :
+*              enable -  enable link list 1 = enabled 0 = disabled
+*              mode - 1 = DC mode 0 = waveform mode
+*
+* Returns : 0 on success < 0 on failure
+*
+********************************************************************/
+{
+  int fpga;
+  int dacEnableMask, dacModeMask, ctrlReg;
+
+  fpga = dac2fpga(dac);
+  if (fpga < 0) {
+    return -1;
+  }
+
+  // setup register addressing based on DAC
+  switch(dac) {
+    case 0:
+    case 2:
+      dacEnableMask = CSRMSK_CHA_OUTMODE;
+      dacModeMask   = CSRMSK_CHA_LLMODE;
+      break;
+    case 1:
+    case 3:
+      dacEnableMask = CSRMSK_CHB_OUTMODE;
+      dacModeMask   = CSRMSK_CHB_LLMODE;
+      break;
+    default:
+      return -2;
+  }
+
+  //Load the current CSR register
+  ctrlReg = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_CSR, fpga);
+  FILE_LOG(logDEBUG2) << "Current CSR: " << myhex << ctrlReg;
+
+  //Set or clear the enable bit
+  FILE_LOG(logINFO) << "Setting Link List Enable ==> FPGA: " << fpga << " DAC: " << dac << " Enable: " << enable;
+  if (enable) {
+    FPGA::set_bit(deviceHandle, fpga, FPGA_OFF_CSR, dacEnableMask);
+  } else {
+    FPGA::clear_bit(deviceHandle, fpga, FPGA_OFF_CSR, dacEnableMask);
+  }
+
+  //Set or clear the mode bit
+  FILE_LOG(logINFO) << "Setting Link List Mode ==> FPGA: " << fpga << " DAC: " << dac << " Mode: " << mode;
+  if (mode) {
+	  FPGA::set_bit(deviceHandle, fpga, FPGA_OFF_CSR, dacModeMask);
+  } else {
+	  FPGA::clear_bit(deviceHandle, fpga, FPGA_OFF_CSR, dacModeMask);
+  }
+
+  return 0;
+}
 
