@@ -58,13 +58,13 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 	// Create bit masks matching Config Status Register bits for the active FPGAs ...
 	// Create masks
 	UCHAR PgmMask=0, InitMask=0, DoneMask=0, RstMask=0;
-	if(chipSelect & 1){
+	if(chipSelect == 0){
 		PgmMask |= APS_PGM01_BIT;
 		InitMask |= APS_INIT01_BIT;
 		DoneMask |= APS_DONE01_BIT;
 		RstMask |= APS_FRST01_BIT;
 	}
-	if(chipSelect & 2) {
+	if(chipSelect == 1) {
 		PgmMask |= APS_PGM23_BIT;
 		InitMask |= APS_INIT23_BIT;
 		DoneMask |= APS_DONE23_BIT;
@@ -224,7 +224,7 @@ int FPGA::read_register(
 		return(-1);
 	}
 	// Start all packets with a APS Command Byte with the R/W = 1 for read
-	commandPacket = 0x80 | Command | (chipSelect<<2) | transferSize;
+	commandPacket = 0x80 | Command | ((chipSelect+1)<<2) | transferSize;
 
 	// Send the read command with the number of bytes specified in the Command Byte
 	for (int repeats = 0; repeats < max_repeats; repeats++) {
@@ -295,7 +295,7 @@ int FPGA::write_register(
 	dataPacket.reserve(packetLength+1);
 
 	// Start all packets with a APS Command Byte with the R/W = 0 for write
-	dataPacket[0] = Command | (chipSelect<<2) | transferSize;
+	dataPacket[0] = Command | ((chipSelect+1)<<2) | transferSize;
 
 	// Copy data bytes to output packet
 	std::copy(Data, Data+packetLength, dataPacket.begin()+1);
@@ -322,13 +322,13 @@ int version, version2;
 
 //For single FPGA we return that version, for both we return both if the same otherwise error.
 switch (chipSelect) {
+case 0:
 case 1:
-case 2:
 	version = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, chipSelect);
 	version &= 0x1FF; // First 9 bits hold version
 	FILE_LOG(logDEBUG2) << "Bitfile version for FPGA " << chipSelect << " is "  << myhex << version;
 	break;
-case 3:
+case 2:
 	version = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, 1);
 	version &= 0x1FF; // First 9 bits hold version
 	FILE_LOG(logDEBUG2) << "Bitfile version for FPGA 1 is "  << myhex << version;
@@ -356,7 +356,7 @@ ULONG FPGA::read_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, UCHAR chipSele
 	ULONG data;
 	UCHAR read[2];
 
-	if (chipSelect == 3) chipSelect = 1; // can only read from one FPGA at a time, assume we want data from FPGA 1
+	if (chipSelect == 2) chipSelect = 0; // can only read from one FPGA at a time, assume we want data from FPGA 1
 
 	read[0] = (addr >> 8) & LSB_MASK;
 	read[1] = addr & LSB_MASK;
@@ -385,7 +385,7 @@ int FPGA::write_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, const ULONG & d
  * Inputs :
  *              addr  - Address to write to
  *              data   - Data to write
- *              fpga - FPGA selection bit (1 or 2, 3 = both)
+ *              fpga - FPGA selection bit (0 or 1, 2 = both)
  ********************************************************************/
 {
 	UCHAR outData[4];
@@ -397,11 +397,11 @@ int FPGA::write_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, const ULONG & d
 
 	// address checksum is defined as (bits 0-14: addr, 15: 0)
 	// so, set bit 15 to zero
-	if ((fpga==1) || (fpga == 3)) {
+	if ((fpga==0) || (fpga == 2)) {
 		FPGA::checksumAddr[&deviceHandle][0] += addr & 0x7FFF;
 		FPGA::checksumData[&deviceHandle][0] += data;
 	}
-	if((fpga==1) || (fpga == 3)) {
+	if((fpga==0) || (fpga == 2)) {
 		FPGA::checksumAddr[&deviceHandle][1] += addr & 0x7FFF;
 		FPGA::checksumData[&deviceHandle][1] += data;
 	}
@@ -566,9 +566,9 @@ int FPGA::clear_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, 
 	int currentState, currentState2;
 	//Use a lambda because we'll need the same call below
 	auto check_cur_state = [&] () {
-		currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 1);
-		if (fpga == 3) { // read the two FPGAs serially
-			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 2);
+		currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 0);
+		if (fpga == 2) { // read the two FPGAs serially
+			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 1);
 			if (currentState != currentState2) {
 				// note the mismatch in the log file but continue on using FPGA1's data
 				FILE_LOG(logERROR) << "FPGA::clear_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
@@ -607,9 +607,9 @@ int FPGA::set_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, co
 	int currentState, currentState2;
 	//Use a lambda because we'll need the same call below
 	auto check_cur_state = [&] () {
-		currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 1);
-		if (fpga == 3) { // read the two FPGAs serially
-			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 2);
+		currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 0);
+		if (fpga == 2) { // read the two FPGAs serially
+			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 1);
 			if (currentState != currentState2) {
 				// note the mismatch in the log file but continue on using FPGA1's data
 				FILE_LOG(logERROR) << "FPGA::set_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
@@ -713,11 +713,11 @@ int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & fpga, const int & fre
 	FILE_LOG(logDEBUG) << "Setting PLL FPGA: " << fpga << " Freq.: " << freq;
 
 	switch(fpga) {
-		case 1:
+		case 0:
 			pllCyclesAddr = FPGA1_PLL_CYCLES_ADDR;
 			pllBypassAddr = FPGA1_PLL_BYPASS_ADDR;
 			break;
-		case 2:
+		case 1:
 			pllCyclesAddr = FPGA2_PLL_CYCLES_ADDR;
 			pllBypassAddr = FPGA2_PLL_BYPASS_ADDR;
 			break;
@@ -742,9 +742,9 @@ int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & fpga, const int & fre
 	FILE_LOG(logDEBUG2) << "Setting PLL cycles addr: " << myhex << pllCyclesAddr << " val: " << int(pllCyclesVal);
 	FILE_LOG(logDEBUG2) << "Setting PLL bypass addr: " << myhex << pllBypassAddr << " val: " << int(pllBypassVal);
 
-	// fpga = 1 or 2 save frequency for later comparison to decide to use
+	// fpga = 0 or 1 save frequency for later comparison to decide to use
 	// 4 channel sync or 2 channel sync
-	fpgaFrequencies[fpga - 1] = freq;
+	fpgaFrequencies[fpga] = freq;
 
 	// Disable DDRs
 	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
@@ -840,11 +840,11 @@ int FPGA::test_PLL_sync(FT_HANDLE deviceHandle, const int & fpga, const int & nu
 	FILE_LOG(logINFO) << "Running channel sync on FPGA " << fpga;
 
 	switch(fpga) {
-	case 1:
+	case 0:
 		pllEnableAddr = DAC0_ENABLE_ADDR;
 		pllEnableAddr2 = DAC1_ENABLE_ADDR;
 		break;
-	case 2:
+	case 1:
 		pllEnableAddr = DAC2_ENABLE_ADDR;
 		pllEnableAddr2 = DAC3_ENABLE_ADDR;
 		break;
@@ -1179,7 +1179,7 @@ bool FPGA::verify_checksums(FT_HANDLE deviceHandle, const int & fpga) {
 	//Checks that software and hardware checksums agree
 
 	ULONG checksumData, checksumAddr;
-	if (fpga < 0 || fpga == 3) {
+	if (fpga < 0 || fpga == 2) {
 		FILE_LOG(logERROR) << "Can only check the checksum of one fpga at a time.";
 		return false;
 	}
@@ -1188,11 +1188,11 @@ bool FPGA::verify_checksums(FT_HANDLE deviceHandle, const int & fpga) {
 	checksumData = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_DATA_CHECKSUM, fpga);
 
 	FILE_LOG(logINFO) << "Checksum Address (hardware =? software): " << myhex << checksumAddr << " =? "
-			<< FPGA::checksumAddr[&deviceHandle][fpga-1] << " Data: " << checksumData << " =? "
-			<< FPGA::checksumData[&deviceHandle][fpga-1];
+			<< FPGA::checksumAddr[&deviceHandle][fpga] << " Data: " << checksumData << " =? "
+			<< FPGA::checksumData[&deviceHandle][fpga];
 
-	return ((checksumAddr == FPGA::checksumAddr[&deviceHandle][fpga-1]) &&
-		(checksumData == FPGA::checksumData[&deviceHandle][fpga-1]));
+	return ((checksumAddr == FPGA::checksumAddr[&deviceHandle][fpga]) &&
+		(checksumData == FPGA::checksumData[&deviceHandle][fpga]));
 }
 
 //Write waveform data FPGA memory
@@ -1281,7 +1281,7 @@ vector<UCHAR> FPGA::pack_waveform(FT_HANDLE deviceHandle, const int & fpga, cons
 	ULONG curAddr = startAddr;
 	for (short tmpData : data){
 		//First the Command byte (we're sending 4 bytes so transferSize selector is 2)
-		vecOut.push_back(APS_FPGA_IO | (fpga<<2) | 2);
+		vecOut.push_back(APS_FPGA_IO | ((fpga+1)<<2) | 2);
 		//Now the two address bytes
 		vecOut.push_back((curAddr >> 8) & LSB_MASK);
 		vecOut.push_back(curAddr & LSB_MASK);
@@ -1292,9 +1292,9 @@ vector<UCHAR> FPGA::pack_waveform(FT_HANDLE deviceHandle, const int & fpga, cons
 		//Update the checksums
 		//Address checksum is defined as (bits 0-14: addr, 15: 0)
 		// so, set bit 15 to zero
-		FPGA::checksumAddr[&deviceHandle][fpga-1] += curAddr & 0x7FFF;
+		FPGA::checksumAddr[&deviceHandle][fpga] += curAddr & 0x7FFF;
 		curAddr++;
-		FPGA::checksumData[&deviceHandle][fpga-1] += tmpData;
+		FPGA::checksumData[&deviceHandle][fpga] += tmpData;
 	}
 
 	return vecOut;

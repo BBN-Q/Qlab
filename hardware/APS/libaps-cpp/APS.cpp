@@ -45,7 +45,7 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		setup_PLL();
 
 		//Program the bitfile to both FPGA's
-		program_FPGA(bitFile, 3, 0x10);
+		program_FPGA(bitFile, 2, 0x10);
 
 	}
 
