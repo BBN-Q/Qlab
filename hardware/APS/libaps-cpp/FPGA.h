@@ -59,8 +59,8 @@ int set_LL_mode(FT_HANDLE, const int &, const bool &, const bool &);
  * We could make fpga a class and self-contained but then the trouble is
  * how to deal with writing to both simultaneously.
  */
-extern map<FT_HANDLE*, vector<ushort>> checksumAddr;
-extern map<FT_HANDLE*, vector<ushort>> checksumData;
+extern map<FT_HANDLE*, vector<USHORT>> checksumAddr;
+extern map<FT_HANDLE*, vector<USHORT>> checksumData;
 
 } //end namespace FPGA
 

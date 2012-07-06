@@ -7,8 +7,8 @@
 
 #include "FPGA.h"
 
-map<FT_HANDLE*, vector<ushort>> FPGA::checksumAddr;
-map<FT_HANDLE*, vector<ushort>> FPGA::checksumData;
+map<FT_HANDLE*, vector<USHORT>> FPGA::checksumAddr;
+map<FT_HANDLE*, vector<USHORT>> FPGA::checksumData;
 
 static const UCHAR BitReverse[256] =
 {
