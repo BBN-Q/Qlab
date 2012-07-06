@@ -39,9 +39,9 @@ endif
 endif
 
 
-OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT) Channel.$(OBJEXT) Waveform.$(OBJEXT) LinkList.$(OBJEXT) FPGA.$(OBJEXT)
+OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT) Channel.$(OBJEXT) LinkList.$(OBJEXT) FPGA.$(OBJEXT)
 
-all: $(OBJECTS) test libaps
+all: $(OBJECTS) libaps test
 
 libaps: $(OBJECTS) libaps.cpp
 	$(CC) $(CFLAGS) $(LIBFLAGS) libaps.cpp $(OBJECTS) $(LIBS) 
@@ -53,7 +53,10 @@ test: $((OBJECTS) test.cpp
 	$(CC) $(CFLAGS) test.cpp $(OBJECTS) $(LIBS)  	
 
 clean:
-	rm -rf *.$(OBJEXT)
-	rm test.exe
+	rm -f *.$(OBJEXT)
+	rm -f test.exe
+	rm -f a.out
+	rm -f libaps.$(LIBEXT)
 
-
+tidy:
+	rm -f *.$(OBJEXT)

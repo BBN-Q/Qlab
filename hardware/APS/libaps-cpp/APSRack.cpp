@@ -5,7 +5,7 @@
  *      Author: cryan
  */
 
-#include "headings.h"
+#include "APSRack.h"
 
 APSRack::APSRack() : _numDevices(0) {
 }
@@ -55,8 +55,8 @@ void APSRack::enumerate_devices() {
 		serial2dev[tmpSerial] = devicect;
 		_APSs.push_back(APS(devicect, tmpSerial));
 		FILE_LOG(logDEBUG) << "Device " << devicect << " has serial number " << tmpSerial;
-		FPGA::checksumAddr[_APSs[devicect]._handle] = vector<ushort>(2,0);
-		FPGA::checksumData[_APSs[devicect]._handle] = vector<ushort>(2,0);
+		FPGA::checksumAddr.insert(std::pair<FT_HANDLE*, vector<ushort> >(&_APSs[devicect]._handle, vector<ushort>(2,0)));
+		FPGA::checksumData.insert(std::pair<FT_HANDLE*, vector<ushort> >(&_APSs[devicect]._handle, vector<ushort>(2,0)));
 		devicect++;
 	}
 }
@@ -90,6 +90,11 @@ int APSRack::set_sampleRate(const int & deviceID, const int & fpga, const int & 
 
 int APSRack::get_sampleRate(const int & deviceID, const int & fpga){
 	return _APSs[deviceID].get_sampleRate(fpga);
+}
+
+int APSRack::set_LL_mode(const int & deviceID, const int & dac, const bool & enable, const bool & mode){
+	//Pass through to APS method
+	return _APSs[deviceID].set_LL_mode(dac, enable, mode);
 }
 
 

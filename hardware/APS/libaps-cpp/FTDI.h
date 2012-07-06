@@ -7,10 +7,11 @@
  *      Author: cryan
  */
 
+#include "headings.h"
+
 #ifndef FTDI_H_
 #define FTDI_H_
 
-#include "headings.h"
 
 namespace FTDI {
 

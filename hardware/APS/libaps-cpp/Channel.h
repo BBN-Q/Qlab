@@ -5,15 +5,15 @@
  *      Author: cryan
  */
 
+#include "headings.h"
+
 #ifndef CHANNEL_H_
 #define CHANNEL_H_
-
-#include "headings.h"
 
 class Channel {
 public:
 	Channel();
-	Channel(int, FT_HANDLE);
+	Channel(int);
 	~Channel();
 	int number;
 
@@ -31,8 +31,6 @@ private:
 	LinkList _linkList;
 	float _offset;
 	float _scale;
-	FT_HANDLE _handleAPS;
-
 };
 
 #endif /* CHANNEL_H_ */

@@ -8,6 +8,7 @@
 
 #include "headings.h"
 #include "libaps.h"
+#include "APSRack.h"
 
 APSRack _APSRack;
 

@@ -5,12 +5,11 @@
  *      Author: cryan
  */
 
+#include "headings.h"
+
 #ifndef APSRACK_H_
 #define APSRACK_H_
 
-#include "headings.h"
-
-class APS;
 
 class APSRack {
 public:
@@ -34,21 +33,19 @@ public:
 	int get_sampleRate(const int &, const int &);
 	int set_sampleRate(const int &, const int &, const int &, const bool &);
 
+	//Pass through both short and float waveforms
 	template <typename T>
-	int set_waveform(const int & deviceID, const int & channelNum, const vector<T> & data){
-		return _APSs[deviceID]._channels[channelNum].set_waveform(data);
+	int set_waveform(const int & deviceID, const int & dac, const vector<T> & data){
+		return _APSs[deviceID].set_waveform(dac, data);
 	}
 
-	inline int set_LL_mode(const int & deviceID, const int & dac, const bool & enable, const bool & mode){
-		//Pass through to APS method
-		return _APSs[deviceID].set_LL_mode(dac, enable, mode);
-	}
-
+	int set_LL_mode(const int & deviceID, const int & dac, const bool & enable, const bool & mode);
 
 private:
 	int _numDevices;
 	vector<APS> _APSs;
 	vector<string> _deviceSerials;
 };
+
 
 #endif /* APSRACK_H_ */

@@ -11,7 +11,7 @@ APS::APS() : _deviceID(-1), _handle(NULL), _channels(4) {}
 
 APS::APS(int deviceID, string deviceSerial) : _deviceID(deviceID), _deviceSerial(deviceSerial), _handle(NULL){
 		for(int ct=0; ct<4; ct++){
-			_channels.push_back(Channel(ct, _handle));
+			_channels.push_back(Channel(ct));
 		}
 };
 
@@ -49,8 +49,6 @@ int APS::init(const string & bitFile, const bool & forceReload){
 
 	}
 
-
-
 	return 0;
 }
 
@@ -83,20 +81,24 @@ int APS::program_FPGA(const string & bitFile, const UCHAR & chipSelect, const in
 	return FPGA::program_FPGA(_handle, fileData, chipSelect, expectedVersion);
 }
 
+
 int APS::read_bitfile_version(const UCHAR & chipSelect){
-	//Pass through to FPGA code
-	return FPGA::read_bitFile_version(_handle, chipSelect);
-}
+		//Pass through to FPGA code
+		return FPGA::read_bitFile_version(_handle, chipSelect);
+	}
 
 int APS::set_sampleRate(const int & fpga, const int & freq, const bool & testLock){
-	//Pass through to the FPGA code
-	return FPGA::set_PLL_freq(_handle, fpga, freq, testLock);
+		//Pass through to the FPGA code
+		return FPGA::set_PLL_freq(_handle, fpga, freq, testLock);
 }
 
 int APS::get_sampleRate(const int & fpga){
-	//Pass through to FPGA code
-	return FPGA::get_PLL_freq(_handle, fpga);
+		//Pass through to FPGA code
+		return FPGA::get_PLL_freq(_handle, fpga);
 }
 
-
+int APS::set_LL_mode(const int & dac , const bool & enable, const bool & mode){
+		//Pass through to FPGA code
+		return FPGA::set_LL_mode(_handle, dac, enable, mode);
+}
 

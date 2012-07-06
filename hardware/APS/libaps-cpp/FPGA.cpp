@@ -5,7 +5,10 @@
  *      Author: cryan
  */
 
-#include "headings.h"
+#include "FPGA.h"
+
+map<FT_HANDLE*, vector<ushort>> FPGA::checksumAddr;
+map<FT_HANDLE*, vector<ushort>> FPGA::checksumData;
 
 static const UCHAR BitReverse[256] =
 {
@@ -395,12 +398,12 @@ int FPGA::write_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, const ULONG & d
 	// address checksum is defined as (bits 0-14: addr, 15: 0)
 	// so, set bit 15 to zero
 	if ((fpga==1) || (fpga == 3)) {
-		FPGA::checksumAddr[deviceHandle][0] += addr & 0x7FFF;
-		FPGA::checksumData[deviceHandle][0] += data;
+		FPGA::checksumAddr[&deviceHandle][0] += addr & 0x7FFF;
+		FPGA::checksumData[&deviceHandle][0] += data;
 	}
 	if((fpga==1) || (fpga == 3)) {
-		FPGA::checksumAddr[deviceHandle][1] += addr & 0x7FFF;
-		FPGA::checksumData[deviceHandle][1] += data;
+		FPGA::checksumAddr[&deviceHandle][1] += addr & 0x7FFF;
+		FPGA::checksumData[&deviceHandle][1] += data;
 	}
 
 	FILE_LOG(logDEBUG2) << "Writing Addr: " << myhex << addr << " Data: " << data;
@@ -1166,8 +1169,8 @@ int FPGA::reset_checksums(FT_HANDLE deviceHandle, const int & fpga){
 	FPGA::write_FPGA(deviceHandle, FPGA_OFF_DATA_CHECKSUM, 0, fpga);
 	FPGA::write_FPGA(deviceHandle, FPGA_OFF_ADDR_CHECKSUM, 0, fpga);
 	//Reset the software side too
-	FPGA::checksumAddr[deviceHandle].assign(2,0);
-	FPGA::checksumData[deviceHandle].assign(2,0);
+	FPGA::checksumAddr[&deviceHandle].assign(2,0);
+	FPGA::checksumData[&deviceHandle].assign(2,0);
 
 	return 0;
 }
@@ -1185,17 +1188,17 @@ bool FPGA::verify_checksums(FT_HANDLE deviceHandle, const int & fpga) {
 	checksumData = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_DATA_CHECKSUM, fpga);
 
 	FILE_LOG(logINFO) << "Checksum Address (hardware =? software): " << myhex << checksumAddr << " =? "
-			<< FPGA::checksumAddr[deviceHandle][fpga-1] << " Data: " << checksumData << " =? "
-			<< FPGA::checksumData[deviceHandle][fpga-1];
+			<< FPGA::checksumAddr[&deviceHandle][fpga-1] << " Data: " << checksumData << " =? "
+			<< FPGA::checksumData[&deviceHandle][fpga-1];
 
-	return ((checksumAddr == FPGA::checksumAddr[deviceHandle][fpga-1]) &&
-		(checksumData == FPGA::checksumData[deviceHandle][fpga-1]));
+	return ((checksumAddr == FPGA::checksumAddr[&deviceHandle][fpga-1]) &&
+		(checksumData == FPGA::checksumData[&deviceHandle][fpga-1]));
 }
 
 //Write waveform data FPGA memory
 int FPGA::write_waveform(FT_HANDLE deviceHandle, const int & dac, const vector<short> & wfData) {
 
-	int dacOffset, dacSize, dacWrite, dacRead, dacMemLock;
+	int dacOffset, dacSize, dacWrite;
 	int fpga;
 	ULONG tmpData, wfLength;
 	//We assume the Channel object has properly formated the waveform
@@ -1205,21 +1208,17 @@ int FPGA::write_waveform(FT_HANDLE deviceHandle, const int & dac, const vector<s
 		case 2:
 			dacOffset = FPGA_OFF_CHA_OFF;
 			dacSize   = FPGA_OFF_CHA_SIZE;
-			dacMemLock = CSRMSK_CHA_MEMLCK;
 			dacWrite =  FPGA_ADDR_CHA_WRITE;
 			break;
 		case 1:
 		case 3:
 			dacOffset = FPGA_OFF_CHB_OFF;
 			dacSize   = FPGA_OFF_CHB_SIZE;
-			dacMemLock = CSRMSK_CHB_MEMLCK;
 			dacWrite =  FPGA_ADDR_CHB_WRITE;
 			break;
 		default:
 			return -2;
 	}
-
-	dacRead = FPGA_ADDR_REGREAD | dacWrite;
 
 	//Waveform length used by FPGA must be an integer multiple of WF_MODULUS and is 0 counted
 	wfLength = wfData.size() / WF_MODULUS - 1;
@@ -1264,7 +1263,7 @@ int FPGA::write_waveform(FT_HANDLE deviceHandle, const int & dac, const vector<s
 
 
 
-vector<UCHAR> pack_waveform(FT_HANDLE deviceHandle, const int & fpga, const ULONG & startAddr, const vector<short> & data){
+vector<UCHAR> FPGA::pack_waveform(FT_HANDLE deviceHandle, const int & fpga, const ULONG & startAddr, const vector<short> & data){
 	/*
 	 * Helper function to pack waveform data into command packages.
 	 * Given a starting address and a vector of values it packs into into a byte vector of repeated
@@ -1293,9 +1292,9 @@ vector<UCHAR> pack_waveform(FT_HANDLE deviceHandle, const int & fpga, const ULON
 		//Update the checksums
 		//Address checksum is defined as (bits 0-14: addr, 15: 0)
 		// so, set bit 15 to zero
-		FPGA::checksumAddr[deviceHandle][fpga-1] += curAddr & 0x7FFF;
+		FPGA::checksumAddr[&deviceHandle][fpga-1] += curAddr & 0x7FFF;
 		curAddr++;
-		FPGA::checksumData[deviceHandle][fpga-1] += tmpData;
+		FPGA::checksumData[&deviceHandle][fpga-1] += tmpData;
 	}
 
 	return vecOut;

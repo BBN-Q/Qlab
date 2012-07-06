@@ -56,14 +56,16 @@ inline void usleep(int waitTime) {
 //Load all the constants
 #include "constants.h"
 
-#include "LinkList.h"
-#include "Channel.h"
-#include "APS.h"
-#include "logger.h"
-#include "APSRack.h"
 #include "FTDI.h"
 #include "FPGA.h"
 
+#include "LinkList.h"
+#include "Channel.h"
+#include "APS.h"
+#include "APSRack.h"
+
+
+#include "logger.h"
 
 //Helper function for hex formating with the 0x out front
 inline std::ios_base&
