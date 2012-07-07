@@ -55,8 +55,6 @@ void APSRack::enumerate_devices() {
 		serial2dev[tmpSerial] = devicect;
 		_APSs.push_back(APS(devicect, tmpSerial));
 		FILE_LOG(logDEBUG) << "Device " << devicect << " has serial number " << tmpSerial;
-		FPGA::checksumAddr.insert(std::pair<FT_HANDLE*, vector<USHORT> >(&_APSs[devicect]._handle, vector<USHORT>(2,0)));
-		FPGA::checksumData.insert(std::pair<FT_HANDLE*, vector<USHORT> >(&_APSs[devicect]._handle, vector<USHORT>(2,0)));
 		devicect++;
 	}
 }

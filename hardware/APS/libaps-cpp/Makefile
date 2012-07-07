@@ -16,7 +16,7 @@ ifeq (${OS},Darwin)
 else
 ####### Linux ####### 
 ifeq (${OS},Linux)
-CFLAGS=-Wall -fPIC -std=c++11
+CFLAGS=-Wall -fPIC -std=c++11 
 OBJFLAGS=-c
 OBJEXT=o
 LIBEXT=so
@@ -27,7 +27,7 @@ LFLAGS=
 CC=g++-4.7
 else
 ####### Windows #######
-CFLAGS=/EHsc /nologo
+CFLAGS=/EHsc /nologo 
 OBJFLAGS=/c /Fo
 OBJEXT=obj
 LIBEXT=dll
@@ -41,7 +41,7 @@ endif
 
 OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT) Channel.$(OBJEXT) LinkList.$(OBJEXT) FPGA.$(OBJEXT)
 
-all: $(OBJECTS) libaps test
+all: $(OBJECTS) test libaps
 
 libaps: $(OBJECTS) libaps.cpp
 	$(CC) $(CFLAGS) $(LIBFLAGS) libaps.cpp $(OBJECTS) $(LIBS) 
@@ -49,7 +49,7 @@ libaps: $(OBJECTS) libaps.cpp
 %.$(OBJEXT):%.cpp
 	$(CC) $(CFLAGS) $(OBJFLAGS) $<
 
-test: $((OBJECTS) test.cpp
+test: $(OBJECTS) test.cpp
 	$(CC) $(CFLAGS) test.cpp $(OBJECTS) $(LIBS)  	
 
 clean:

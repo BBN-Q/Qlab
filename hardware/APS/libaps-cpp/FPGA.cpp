@@ -7,9 +7,6 @@
 
 #include "FPGA.h"
 
-map<FT_HANDLE*, vector<USHORT>> FPGA::checksumAddr;
-map<FT_HANDLE*, vector<USHORT>> FPGA::checksumData;
-
 static const UCHAR BitReverse[256] =
 {
 		0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0, 0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0,
@@ -58,13 +55,13 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 	// Create bit masks matching Config Status Register bits for the active FPGAs ...
 	// Create masks
 	UCHAR PgmMask=0, InitMask=0, DoneMask=0, RstMask=0;
-	if(chipSelect == 0){
+	if((chipSelect == 0) || (chipSelect==2)){
 		PgmMask |= APS_PGM01_BIT;
 		InitMask |= APS_INIT01_BIT;
 		DoneMask |= APS_DONE01_BIT;
 		RstMask |= APS_FRST01_BIT;
 	}
-	if(chipSelect == 1) {
+	if((chipSelect == 1) || (chipSelect==2)) {
 		PgmMask |= APS_PGM23_BIT;
 		InitMask |= APS_INIT23_BIT;
 		DoneMask |= APS_DONE23_BIT;
@@ -363,6 +360,7 @@ ULONG FPGA::read_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, UCHAR chipSele
 
 	FPGA::write_register(deviceHandle, APS_FPGA_IO, 1, chipSelect, read);
 
+	//TODO: what are these doing?
 	read[0] = 0xBA;
 	read[1] = 0xD0;
 
@@ -395,15 +393,44 @@ int FPGA::write_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, const ULONG & d
 	outData[2] = (data >> 8) & LSB_MASK;
 	outData[3] = data & LSB_MASK;
 
+	FILE_LOG(logDEBUG2) << "Writing Addr: " << myhex << addr << " Data: " << data;
+
+	FPGA::write_register(deviceHandle, APS_FPGA_IO, 2, fpga, outData);
+
+	return 0;
+}
+
+int FPGA::write_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, const ULONG & data, const UCHAR & fpga, vector<CheckSum> & checksums)
+/********************************************************************
+ *
+ * Function Name : APS_WriteFPGA()
+ *
+ * Description :  Writes data to FPGA. 16 bit numbers are unpacked to 2 bytes
+ *
+ * Inputs :
+ *              addr  - Address to write to
+ *              data   - Data to write
+ *              fpga - FPGA selection bit (0 or 1, 2 = both)
+ *              checksumAddr - vector of FPGA checksums passed by reference
+ *              checksumData - vector of FPGA checksums passed by reference
+ ********************************************************************/
+{
+	UCHAR outData[4];
+
+	outData[0] = (addr >> 8) & LSB_MASK;
+	outData[1] = addr & LSB_MASK;
+	outData[2] = (data >> 8) & LSB_MASK;
+	outData[3] = data & LSB_MASK;
+
 	// address checksum is defined as (bits 0-14: addr, 15: 0)
 	// so, set bit 15 to zero
 	if ((fpga==0) || (fpga == 2)) {
-		FPGA::checksumAddr[&deviceHandle][0] += addr & 0x7FFF;
-		FPGA::checksumData[&deviceHandle][0] += data;
+		checksums[0].address += addr & 0x7FFF;
+		checksums[0].data += data;
 	}
-	if((fpga==0) || (fpga == 2)) {
-		FPGA::checksumAddr[&deviceHandle][1] += addr & 0x7FFF;
-		FPGA::checksumData[&deviceHandle][1] += data;
+	if((fpga==1) || (fpga == 2)) {
+		checksums[1].address += addr & 0x7FFF;
+		checksums[1].data += data;
 	}
 
 	FILE_LOG(logDEBUG2) << "Writing Addr: " << myhex << addr << " Data: " << data;
@@ -412,6 +439,7 @@ int FPGA::write_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, const ULONG & d
 
 	return 0;
 }
+
 
 
 int FPGA::write_SPI
@@ -555,20 +583,23 @@ int FPGA::read_SPI
 }
 
 
-int FPGA::clear_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, const int & mask)
+int FPGA::clear_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, const int & mask, const int & readAddr /*See header for default */)
 /*
  * Description : Clears Bit in FPGA register
  * Returns : 0
  *
  ********************************************************************/
 {
+	FILE_LOG(logDEBUG2) << "In clear_bit read addr: " << myhex << addr;
+
 	//Read the current state so we know how set the uncleared bits.
 	int currentState, currentState2;
 	//Use a lambda because we'll need the same call below
 	auto check_cur_state = [&] () {
-		currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 0);
+		currentState = FPGA::read_FPGA(deviceHandle, readAddr | addr, fpga);
 		if (fpga == 2) { // read the two FPGAs serially
-			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 1);
+			int otherFPGA = (fpga==0) ? 1 : 0;
+			currentState2 = FPGA::read_FPGA(deviceHandle, readAddr | addr, otherFPGA);
 			if (currentState != currentState2) {
 				// note the mismatch in the log file but continue on using FPGA1's data
 				FILE_LOG(logERROR) << "FPGA::clear_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
@@ -595,7 +626,7 @@ int FPGA::clear_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, 
 }
 
 
-int FPGA::set_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, const int & mask)
+int FPGA::set_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, const int & mask, const int & readAddr /*see header for default*/)
 /*
  * Description : Sets Bit in FPGA register
  * Returns : 0
@@ -607,9 +638,10 @@ int FPGA::set_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, co
 	int currentState, currentState2;
 	//Use a lambda because we'll need the same call below
 	auto check_cur_state = [&] () {
-		currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 0);
+		currentState = FPGA::read_FPGA(deviceHandle, readAddr | addr, fpga);
 		if (fpga == 2) { // read the two FPGAs serially
-			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, 1);
+			int otherFPGA = (fpga==0) ? 1 : 0;
+			currentState2 = FPGA::read_FPGA(deviceHandle, readAddr | addr, otherFPGA);
 			if (currentState != currentState2) {
 				// note the mismatch in the log file but continue on using FPGA1's data
 				FILE_LOG(logERROR) << "FPGA::set_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
@@ -644,13 +676,13 @@ int FPGA::setup_PLL(FT_HANDLE deviceHandle)
 	FILE_LOG(logINFO) << "Setting up PLL";
 
 	// Disable DDRs
-	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
-	FPGA::clear_bit(deviceHandle, 3, FPGA_OFF_CSR, ddr_mask);
+	int ddrMask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
+	FPGA::clear_bit(deviceHandle, 2, FPGA_OFF_CSR, ddrMask, FPGA_ADDR_REGREAD_PREPROG);
 
 	// Setup modified for 300 MHz FPGA clock rate
 	//Setup of a vector of address-data pairs for all the writes we need for the PLL routine
-	//TODO: this could be an initializer list when cl supports it
-	vector<std::pair<ULONG, UCHAR > > PLL_Routine;
+	//TODO: this could be an initializer list when MSVC supports it
+	vector<PLLAddrData> PLL_Routine;
 	PLL_Routine.reserve(27);
 
 	PLL_Routine.push_back(std::make_pair(0x0,  0x99));  // Use SDO, Long instruction mode
@@ -691,12 +723,10 @@ int FPGA::setup_PLL(FT_HANDLE deviceHandle)
 		return -1;
 
 	// Enable DDRs
-	FPGA::set_bit(deviceHandle, 3, FPGA_OFF_CSR, ddr_mask);
+	FPGA::set_bit(deviceHandle, 2, FPGA_OFF_CSR, ddrMask, FPGA_ADDR_REGREAD_PREPROG);
 
 	return 0;
 }
-
-
 
 
 int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & fpga, const int & freq, const bool & testLock)
@@ -754,7 +784,7 @@ int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & fpga, const int & fre
 	if (FPGA::clear_status_ctrl(deviceHandle) != 1) return -4;
 
 	//Setup of a vector of address-data pairs for all the writes we need for the PLL routine
-	vector<std::pair<ULONG, UCHAR > > PLL_Routine;
+	vector<PLLAddrData> PLL_Routine;
 	PLL_Routine.reserve(6);
 
 	PLL_Routine.push_back(std::make_pair(pllCyclesAddr, pllCyclesVal));
@@ -1105,11 +1135,11 @@ int FPGA::get_PLL_freq(FT_HANDLE deviceHandle, const int & fpga) {
 	FILE_LOG(logDEBUG2) << "Getting PLL frequency for FGPA " << fpga;
 
 	switch(fpga) {
-	case 1:
+	case 0:
 		pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
 		pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
 		break;
-	case 2:
+	case 1:
 		pll_cycles_addr = FPGA2_PLL_CYCLES_ADDR;
 		pll_bypass_addr = FPGA2_PLL_BYPASS_ADDR;
 		break;
@@ -1164,39 +1194,39 @@ int FPGA::setup_VCXO(FT_HANDLE deviceHandle)
 	return 0;
 }
 
-int FPGA::reset_checksums(FT_HANDLE deviceHandle, const int & fpga){
+int FPGA::reset_checksums(FT_HANDLE deviceHandle, const int & fpga, vector<CheckSum> & checksums){
 	// write to registers to clear them
 	FPGA::write_FPGA(deviceHandle, FPGA_OFF_DATA_CHECKSUM, 0, fpga);
 	FPGA::write_FPGA(deviceHandle, FPGA_OFF_ADDR_CHECKSUM, 0, fpga);
 	//Reset the software side too
-	FPGA::checksumAddr[&deviceHandle].assign(2,0);
-	FPGA::checksumData[&deviceHandle].assign(2,0);
-
+	checksums[fpga].address = 0;
+	checksums[fpga].data = 0;
 	return 0;
 }
 
-bool FPGA::verify_checksums(FT_HANDLE deviceHandle, const int & fpga) {
+bool FPGA::verify_checksums(FT_HANDLE deviceHandle, const int & fpga, vector<CheckSum> & checksums){
 	//Checks that software and hardware checksums agree
 
-	ULONG checksumData, checksumAddr;
+	ULONG checksumDataFPGA, checksumAddrFPGA;
 	if (fpga < 0 || fpga == 2) {
 		FILE_LOG(logERROR) << "Can only check the checksum of one fpga at a time.";
 		return false;
 	}
 
-	checksumAddr = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_ADDR_CHECKSUM, fpga);
-	checksumData = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_DATA_CHECKSUM, fpga);
+	checksumAddrFPGA = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_ADDR_CHECKSUM, fpga);
+	checksumDataFPGA = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | FPGA_OFF_DATA_CHECKSUM, fpga);
 
-	FILE_LOG(logINFO) << "Checksum Address (hardware =? software): " << myhex << checksumAddr << " =? "
-			<< FPGA::checksumAddr[&deviceHandle][fpga] << " Data: " << checksumData << " =? "
-			<< FPGA::checksumData[&deviceHandle][fpga];
+	FILE_LOG(logINFO) << "Checksum Address (hardware =? software): " << myhex << checksumAddrFPGA << " =? "
+			<< checksums[fpga].address << " Data: " << checksumDataFPGA << " =? "
+			<< checksums[fpga].data;
 
-	return ((checksumAddr == FPGA::checksumAddr[&deviceHandle][fpga]) &&
-		(checksumData == FPGA::checksumData[&deviceHandle][fpga]));
+	return ((checksumAddrFPGA == checksums[fpga].address) && (checksumDataFPGA == checksums[fpga].data));
+
+	return true;
 }
 
 //Write waveform data FPGA memory
-int FPGA::write_waveform(FT_HANDLE deviceHandle, const int & dac, const vector<short> & wfData) {
+int FPGA::write_waveform(FT_HANDLE deviceHandle, const int & dac, const vector<short> & wfData, vector<CheckSum> & checksums) {
 
 	int dacOffset, dacSize, dacWrite;
 	int fpga;
@@ -1245,15 +1275,15 @@ int FPGA::write_waveform(FT_HANDLE deviceHandle, const int & dac, const vector<s
 	}
 
 	//Reset the checksums
-	FPGA::reset_checksums(deviceHandle, fpga);
+	FPGA::reset_checksums(deviceHandle, fpga, checksums);
 
 	//Pack the waveform data and write it
 	DWORD bytesWritten = 0;
-	vector<UCHAR> tmpVec = FPGA::pack_waveform(deviceHandle, fpga, dacOffset, wfData);
+	vector<UCHAR> tmpVec = FPGA::pack_waveform(deviceHandle, fpga, dacWrite, wfData, checksums);
 	FT_Write(deviceHandle, &tmpVec[0], tmpVec.size(), &bytesWritten);
 
 	//Verify the checksums
-	if (!FPGA::verify_checksums(deviceHandle, fpga)){
+	if (!FPGA::verify_checksums(deviceHandle, fpga, checksums)){
 		FILE_LOG(logERROR) << "Checksums didn't match after writing waveform data";
 		return -2;
 	}
@@ -1263,7 +1293,7 @@ int FPGA::write_waveform(FT_HANDLE deviceHandle, const int & dac, const vector<s
 
 
 
-vector<UCHAR> FPGA::pack_waveform(FT_HANDLE deviceHandle, const int & fpga, const ULONG & startAddr, const vector<short> & data){
+vector<UCHAR> FPGA::pack_waveform(FT_HANDLE deviceHandle, const int & fpga, const ULONG & startAddr, const vector<short> & data, vector<CheckSum> & checksums){
 	/*
 	 * Helper function to pack waveform data into command packages.
 	 * Given a starting address and a vector of values it packs into into a byte vector of repeated
@@ -1289,12 +1319,14 @@ vector<UCHAR> FPGA::pack_waveform(FT_HANDLE deviceHandle, const int & fpga, cons
 		vecOut.push_back((tmpData >> 8) & LSB_MASK);
 		vecOut.push_back(tmpData & LSB_MASK);
 
-		//Update the checksums
+		//Update the software checksums
 		//Address checksum is defined as (bits 0-14: addr, 15: 0)
 		// so, set bit 15 to zero
-		FPGA::checksumAddr[&deviceHandle][fpga] += curAddr & 0x7FFF;
+		checksums[fpga].address += curAddr & 0x7FFF;
+		FILE_LOG(logDEBUG3) << "After adding address " << (curAddr & 0x7FFF) << " to checksum it equals " << checksums[fpga].address;
 		curAddr++;
-		FPGA::checksumData[&deviceHandle][fpga] += tmpData;
+		checksums[fpga].data += tmpData;
+		FILE_LOG(logDEBUG3) << "After adding data " << tmpData << " to checksum it equals " << checksums[fpga].data;
 	}
 
 	return vecOut;
@@ -1313,10 +1345,9 @@ int FPGA::set_LL_mode(FT_HANDLE deviceHandle, const int & dac, const bool & enab
 *
 ********************************************************************/
 {
-  int fpga;
   int dacEnableMask, dacModeMask, ctrlReg;
 
-  fpga = dac2fpga(dac);
+  int fpga = dac2fpga(dac);
   if (fpga < 0) {
     return -1;
   }

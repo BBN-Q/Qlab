@@ -7,9 +7,10 @@
 
 #include "APS.h"
 
-APS::APS() : _deviceID(-1), _handle(NULL), _channels(4) {}
+APS::APS() :  _deviceID(-1), _handle(NULL), _channels(4), _checksums(2) {}
 
-APS::APS(int deviceID, string deviceSerial) : _deviceID(deviceID), _deviceSerial(deviceSerial), _handle(NULL){
+APS::APS(int deviceID, string deviceSerial) :  _deviceID(deviceID), _deviceSerial(deviceSerial),
+		_handle(NULL), _checksums(2){
 		for(int ct=0; ct<4; ct++){
 			_channels.push_back(Channel(ct));
 		}
@@ -45,7 +46,7 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		setup_PLL();
 
 		//Program the bitfile to both FPGA's
-		program_FPGA(bitFile, 2, 0x10);
+		return program_FPGA(bitFile, 2, 0x10);
 
 	}
 

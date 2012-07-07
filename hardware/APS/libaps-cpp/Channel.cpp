@@ -7,9 +7,9 @@
 
 #include "Channel.h"
 
-Channel::Channel() : number(-1), _offset(0), _scale(0) {}
+Channel::Channel() : number(-1), _offset(0.0), _scale(1.0) {}
 
-Channel::Channel( int number) : number(number), _offset(0), _scale(0){}
+Channel::Channel( int number) : number(number), _offset(0.0), _scale(0.0){}
 
 Channel::~Channel() {
 	// TODO Auto-generated destructor stub
@@ -31,6 +31,7 @@ int Channel::set_waveform(const vector<float> & data) {
 }
 
 int Channel::set_waveform(const vector<short> & data) {
+	FILE_LOG(logDEBUG2) << "End of data vector: " << *(data.end()-1);
 	//Check whether we need to resize the waveform vector
 	if (data.size() > size_t(MAX_WFLENGTH)){
 		FILE_LOG(logERROR) << "Tried to update waveform to longer than max allowed: " << data.size();

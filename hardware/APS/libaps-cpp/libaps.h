@@ -12,7 +12,6 @@
 #define EXPORT __declspec(dllexport)
 #else
 #define EXPORT
-#include <stdbool.h>
 #endif
 
 
@@ -44,7 +43,7 @@ EXPORT int set_waveform_float(int, int, float*, int);
 
 EXPORT int set_waveform_int(int, int, short*, int);
 
-EXPORT int load_LL_bank(int, int, int, int, USHORT*, USHORT*, USHORT*, USHORT*);
+EXPORT int load_LL_bank(int, int, int, int, unsigned short*, unsigned short*, unsigned short*, unsigned short*);
 
 EXPORT int load_sequence_file(int, char*);
 

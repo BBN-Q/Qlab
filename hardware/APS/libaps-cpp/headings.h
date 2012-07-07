@@ -53,6 +53,16 @@ inline void usleep(int waitTime) {
 #define EXPORT
 #endif
 
+//Simple structure for pairs of address/data checksums
+struct CheckSum {
+	WORD address;
+	WORD data;
+};
+
+//PLL routines go through sets of address/data pairs
+typedef std::pair<ULONG, UCHAR> PLLAddrData;
+
+
 //Load all the constants
 #include "constants.h"
 
@@ -75,7 +85,6 @@ myhex(std::ios_base& __base)
   __base.setf(std::ios::showbase);
   return __base;
 }
-
 
 #endif /* HEADINGS_H_ */
 

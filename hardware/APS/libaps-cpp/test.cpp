@@ -13,11 +13,13 @@ int main(int argc, char** argv) {
 	//Load an APS Rack
 	cout << "Got here!" << endl;
 
-//	APSRack	myRack;
-//
-//	myRack.init();
-//	myRack.connect(0);
-//	myRack.disconnect(0);
+	APSRack	myRack;
+
+	myRack.init();
+	myRack.connect(0);
+	myRack.set_sampleRate(0, 0, 1200, false);
+	cout << myRack.get_sampleRate(0,0) << endl;
+	myRack.disconnect(0);
 
 	cout << "Made it through!" << endl;
 

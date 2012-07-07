@@ -98,7 +98,9 @@ static const int FPGA_OFF_DAC13_TRIG_DELAY = 0x13; // DAC1/3 trigger delay
 
 
 
-
+//Register for reading before bitfile programming
+static const int  FPGA_ADDR_REGREAD_PREPROG =   0x1000;
+//Register for reading after bitfile programming
 static const int  FPGA_ADDR_REGREAD =   0x8000;
 static const int  FPGA_ADDR_SYNC_REGREAD =  0XF000;
 
