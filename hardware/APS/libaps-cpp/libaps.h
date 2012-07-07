@@ -49,6 +49,10 @@ EXPORT int load_LL_bank(int, int, int, int, unsigned short*, unsigned short*, un
 
 EXPORT int load_sequence_file(int, char*);
 
+EXPORT int trigger_FPGA(int, int, int);
+
+EXPORT int disable_FPGA(int, int);
+
 
 #ifdef __cplusplus
 }

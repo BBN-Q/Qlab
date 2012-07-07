@@ -596,10 +596,11 @@ int FPGA::clear_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, 
 	int currentState, currentState2;
 	//Use a lambda because we'll need the same call below
 	auto check_cur_state = [&] () {
-		currentState = FPGA::read_FPGA(deviceHandle, readAddr | addr, fpga);
-		if (fpga == 2) { // read the two FPGAs serially
-			int otherFPGA = (fpga==0) ? 1 : 0;
-			currentState2 = FPGA::read_FPGA(deviceHandle, readAddr | addr, otherFPGA);
+		if (fpga<2) {
+			currentState = FPGA::read_FPGA(deviceHandle, readAddr | addr, fpga);
+		} else{ // read the two FPGAs serially
+			currentState = FPGA::read_FPGA(deviceHandle, readAddr | addr, 0);
+			currentState2 = FPGA::read_FPGA(deviceHandle, readAddr | addr, 1);
 			if (currentState != currentState2) {
 				// note the mismatch in the log file but continue on using FPGA1's data
 				FILE_LOG(logERROR) << "FPGA::clear_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
@@ -638,10 +639,11 @@ int FPGA::set_bit(FT_HANDLE deviceHandle, const int & fpga, const int & addr, co
 	int currentState, currentState2;
 	//Use a lambda because we'll need the same call below
 	auto check_cur_state = [&] () {
-		currentState = FPGA::read_FPGA(deviceHandle, readAddr | addr, fpga);
-		if (fpga == 2) { // read the two FPGAs serially
-			int otherFPGA = (fpga==0) ? 1 : 0;
-			currentState2 = FPGA::read_FPGA(deviceHandle, readAddr | addr, otherFPGA);
+		if (fpga<2) {
+			currentState = FPGA::read_FPGA(deviceHandle, readAddr | addr, fpga);
+		} else{ // read the two FPGAs serially
+			currentState = FPGA::read_FPGA(deviceHandle, readAddr | addr, 0);
+			currentState2 = FPGA::read_FPGA(deviceHandle, readAddr | addr, 1);
 			if (currentState != currentState2) {
 				// note the mismatch in the log file but continue on using FPGA1's data
 				FILE_LOG(logERROR) << "FPGA::set_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
@@ -1291,6 +1293,98 @@ int FPGA::setup_DAC(FT_HANDLE deviceHandle, const int & dac)
 	*/
 	return 0;
 }
+
+
+int FPGA::trigger(FT_HANDLE deviceHandle, const int & fpga, const int & trigger_type)
+/********************************************************************
+ * Description : Triggers Both DACs on FPGA at the same time.
+ *
+ * Inputs : fpga - fpga id
+ *          trigger_type  - 1 software 2 hardware
+ *
+ * Returns : 0
+ ********************************************************************/
+{
+	int dacSwTrig   = TRIGLEDMSK_CHA_SWTRIG | TRIGLEDMSK_CHB_SWTRIG;
+	int dacTrigSrc  = CSRMSK_CHA_TRIGSRC | CSRMSK_CHB_TRIGSRC;
+	int dacSMReset  = CSRMSK_CHA_SMRST | CSRMSK_CHB_SMRST;
+
+
+//	dlog(DEBUG_VERBOSE,"FPGA%d Current CSR: 0x%x TRIGLED: 0x%x\n",
+//	     fpga,
+//	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
+//	     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
+//
+//
+//	if (fpga == 3) {
+//		dlog(DEBUG_VERBOSE,"FPGA1 Current CSR: 0x%x TRIGLED: 0x%x\n",
+//		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 1),
+//		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, 1)
+//		);
+//		dlog(DEBUG_VERBOSE,"FPGA2 Current CSR: 0x%x TRIGLED: 0x%x\n",
+//		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, 2),
+//		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, 2)
+//		);
+//	} else {
+//		dlog(DEBUG_VERBOSE,"FPGA%d Current CSR: 0x%x TRIGLED: 0x%x\n",
+//		     fpga,
+//		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
+//		     APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
+//		);
+//	}
+
+	if (trigger_type == SOFTWARE_TRIGGER) {
+		FILE_LOG(logDEBUG2) << "Setting software trigger...";
+		FPGA::clear_bit(deviceHandle, fpga, FPGA_OFF_CSR, dacTrigSrc);
+		FPGA::set_bit(deviceHandle, fpga, FPGA_OFF_TRIGLED, dacSwTrig);
+
+	} else if (trigger_type == HARDWARE_TRIGGER) {
+		FILE_LOG(logDEBUG2) << "Setting hardware trigger...";
+		FPGA::clear_bit(deviceHandle, fpga, FPGA_OFF_TRIGLED, dacSwTrig);
+		FPGA::set_bit(deviceHandle, fpga, FPGA_OFF_CSR, dacTrigSrc);
+	} else {
+		FILE_LOG(logERROR) << "Invalid trigger type";
+		return -1;
+	}
+
+//	if (getDebugLevel() >= DEBUG_VERBOSE) {
+//		dlog(DEBUG_VERBOSE,"New CSR: 0x%x TRIGLED 0x%x\n",
+//		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_CSR, fpga),
+//		 APS_ReadFPGA(device, gRegRead | FPGA_OFF_TRIGLED, fpga)
+//	    );
+//	}
+
+	// do this last operation simultaneously, if necessary
+	FPGA::clear_bit(deviceHandle, fpga, FPGA_OFF_CSR, dacSMReset);
+
+	return 0;
+}
+
+int FPGA::disable(FT_HANDLE deviceHandle, const int & fpga)
+/********************************************************************
+ * Description : Disables both DACs on an FPGA
+ *
+ * Returns : 0  on success
+ ********************************************************************/
+{
+
+	FILE_LOG(logINFO) << "Disable FPGA: " << fpga;
+
+	int dacSwTrig = TRIGLEDMSK_CHA_SWTRIG | TRIGLEDMSK_CHB_SWTRIG;
+	int dacSMReset = CSRMSK_CHA_SMRST | CSRMSK_CHA_SMRST;
+
+
+	FPGA::clear_bit(deviceHandle, fpga, FPGA_OFF_TRIGLED, dacSwTrig);
+
+	FILE_LOG(logDEBUG2) << "Reset state machine for FPGA " << fpga;
+
+	FPGA::set_bit(deviceHandle, fpga, FPGA_OFF_CSR, dacSMReset);
+
+	return 0;
+}
+
+
+
 
 int FPGA::reset_checksums(FT_HANDLE deviceHandle, const int & fpga, vector<CheckSum> & checksums){
 	// write to registers to clear them

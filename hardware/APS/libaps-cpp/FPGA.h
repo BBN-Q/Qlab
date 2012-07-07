@@ -31,6 +31,9 @@ int write_FPGA(FT_HANDLE, const ULONG &, const ULONG &, const UCHAR &);
 int write_FPGA(FT_HANDLE, const ULONG &, const ULONG &, const UCHAR &, vector<CheckSum> &);
 
 
+int trigger(FT_HANDLE, const int &, const int &);
+int disable(FT_HANDLE, const int &);
+
 int read_bitFile_version(FT_HANDLE, const UCHAR &);
 
 int setup_PLL(FT_HANDLE);

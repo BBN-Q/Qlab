@@ -145,6 +145,18 @@ static const int CSRMSK_CHB_OUTMODE = 0x2000;
 static const int CSRMSK_CHB_LLMODE = 0x4000;
 static const int CSRMSK_CHB_LLSTATUS = 0x8000;
 
+static const int TRIGLEDMSK_CHA_SWTRIG = 0x1; // Channel 0/2 internal trigger (1 = enabled, 0 = disabled)
+static const int TRIGLEDMSK_CHB_SWTRIG = 0x2; // Channel 1/3 internal trigger (1 = enabled, 0 = disabled)
+static const int TRIGLEDMSK_WFMTRIG02 = 0x4; // Waveform trigger output channel 0/2 (1 = enabled, 0 = disabled)
+static const int TRIGLEDMSK_WFMTRIG13 = 0x8; // Waveform trigger output channel 1/3 (1 = enabled, 0 = disabled)
+static const int TRIGLEDMSK_MODE = 0x10; // LED mode (0 = PLL sync, 1 = statement machine enabled)
+static const int TRIGLEDMSK_SWLED0 = 0x20; // internal LED 0
+static const int TRIGLEDMSK_SWLED1 = 0x40; // internal LED 1
+
+enum {
+	SOFTWARE_TRIGGER=1,
+	HARDWARE_TRIGGER
+};
 
 static const int MAX_WFLENGTH = 8192;
 static const int MAX_WFAMP = 8191;

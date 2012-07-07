@@ -39,6 +39,9 @@ public:
 
 	int set_LL_mode(const int &, const bool &, const bool &);
 
+	int trigger_FPGA(const int &, const int &);
+	int disable_FPGA(const int &);
+
 	//The owning APSRack needs access to some private members
 	friend class APSRack;
 
