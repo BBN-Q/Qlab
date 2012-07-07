@@ -60,6 +60,10 @@ int program_FPGA(int deviceID, char * bitFile, int chipSelect, int expectedVersi
 	return _APSRack.program_FPGA(deviceID, string(bitFile), chipSelect, expectedVersion);
 }
 
+int setup_DACs(int deviceID){
+	return _APSRack.setup_DACs(deviceID);
+}
+
 int set_sampleRate(int deviceID, int fpga, int freq, int testLock){
 	return _APSRack.set_sampleRate(deviceID, fpga, freq, testLock);
 }

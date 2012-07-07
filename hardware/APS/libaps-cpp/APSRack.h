@@ -30,6 +30,8 @@ public:
 
 	int program_FPGA(const int &, const string &, const int &, const int &);
 
+	int setup_DACs(const int &);
+
 	int get_sampleRate(const int &, const int &);
 	int set_sampleRate(const int &, const int &, const int &, const bool &);
 

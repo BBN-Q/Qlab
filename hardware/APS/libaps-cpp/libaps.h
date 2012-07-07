@@ -35,6 +35,8 @@ EXPORT int initAPS(int, char*, int);
 
 EXPORT int program_FPGA(int, char *, int, int);
 
+EXPORT int setup_DACs(int);
+
 EXPORT int set_sampleRate(int, int, int, int);
 
 EXPORT int get_sampleRate(int, int);

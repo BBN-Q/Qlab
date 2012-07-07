@@ -41,6 +41,8 @@ int get_PLL_freq(FT_HANDLE, const int &);
 
 int setup_VCXO(FT_HANDLE);
 
+int setup_DAC(FT_HANDLE, const int &);
+
 int reset_status_ctrl(FT_HANDLE);
 int clear_status_ctrl(FT_HANDLE);
 

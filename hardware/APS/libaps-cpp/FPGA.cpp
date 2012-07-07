@@ -1194,6 +1194,104 @@ int FPGA::setup_VCXO(FT_HANDLE deviceHandle)
 	return 0;
 }
 
+int FPGA::setup_DAC(FT_HANDLE deviceHandle, const int & dac)
+/*
+ * Description: Enables the data-skew monitoring and auto-calibration
+ * inputs: dac = 0, 1, 2, or 3
+ */
+{
+	BYTE data;
+	BYTE SD, MSD, MHD;
+	BYTE edgeMSD, edgeMHD;
+	ULONG interruptAddr, controllerAddr, sdAddr, msdMhdAddr;
+
+	// For DAC SPI writes, we put DAC select in bits 6:5 of address
+	interruptAddr = 0x1 | (dac << 5);
+	controllerAddr = 0x6 | (dac << 5);
+	sdAddr = 0x5 | (dac << 5);
+	msdMhdAddr = 0x4 | (dac << 5);
+
+	if (dac < 0 || dac > 3) {
+		FILE_LOG(logERROR) << "FPGA::setup_DAC: unknown DAC, " << dac;
+		return -1;
+	}
+	FILE_LOG(logINFO) << "Setting up DAC " << dac;
+
+	// Step 1: calibrate and set the LVDS controller.
+	// Ensure that surveilance and auto modes are off
+	// get initial states of registers
+	FPGA::read_SPI(deviceHandle, APS_DAC_SPI, interruptAddr, &data);
+	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(interruptAddr & 0x1F) << " Val: " << int(data & 0xFF);
+	FPGA::read_SPI(deviceHandle, APS_DAC_SPI, msdMhdAddr, &data);
+	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(msdMhdAddr & 0x1F) << " Val: " << int(data & 0xFF);
+	FPGA::read_SPI(deviceHandle, APS_DAC_SPI, sdAddr, &data);
+	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(sdAddr & 0x1F) << " Val: " << int(data & 0xFF);
+	FPGA::read_SPI(deviceHandle, APS_DAC_SPI, controllerAddr, &data);
+	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(controllerAddr & 0x1F) << " Val: " << int(data & 0xFF);
+	data = 0;
+	FPGA::write_SPI(deviceHandle,  APS_DAC_SPI, controllerAddr, &data);
+
+	// Slide the data valid window left (with MSD) and check for the interrupt
+	SD = 0;  //(sample delay nibble, stored in Reg. 5, bits 7:4)
+	MSD = 0; //(setup delay nibble, stored in Reg. 4, bits 7:4)
+	MHD = 0; //(hold delay nibble,  stored in Reg. 4, bits 3:0)
+	data = SD << 4;
+	FPGA::write_SPI(deviceHandle,  APS_DAC_SPI, sdAddr, &data);
+
+	for (MSD = 0; MSD < 16; MSD++) {
+		FILE_LOG(logDEBUG2) <<  "Setting MSD: " << MSD;
+		data = (MSD << 4) | MHD;
+		FPGA::write_SPI(deviceHandle,  APS_DAC_SPI, msdMhdAddr, &data);
+		FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(msdMhdAddr & 0x1F) << " Val: " << int(data & 0xFF);
+		//FPGA::read_SPI(deviceHandle, APS_DAC_SPI, msd_mhd_addr, &data);
+		//dlog(DEBUG_VERBOSE2, "Read reg 0x%x, value 0x%x\n", msd_mhd_addr & 0x1F, data & 0xFF);
+		FPGA::read_SPI(deviceHandle, APS_DAC_SPI, sdAddr, &data);
+		FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(sdAddr & 0x1F) << " Val: " << int(data & 0xFF);
+		bool check = data & 1;
+		FILE_LOG(logDEBUG2) << "Check: " << check;
+		if (!check)
+			break;
+	}
+	edgeMSD = MSD;
+	FILE_LOG(logDEBUG) << "Found MSD: " << edgeMSD;
+
+	// Clear the MSD, then slide right (with MHD)
+	MSD = 0;
+	for (MHD = 0; MHD < 16; MHD++) {
+		FILE_LOG(logDEBUG2) <<  "Setting MHD: " << MHD;
+		data = (MSD << 4) | MHD;
+		FPGA::write_SPI(deviceHandle,  APS_DAC_SPI, msdMhdAddr, &data);
+		FPGA::read_SPI(deviceHandle, APS_DAC_SPI, sdAddr, &data);
+		FILE_LOG(logDEBUG2) << "Read: " << myhex << int(data & 0xFF);
+		bool check = data & 1;
+		FILE_LOG(logDEBUG2) << "Check: " << check;
+		if (!check)
+			break;
+	}
+	edgeMHD = MHD;
+	FILE_LOG(logINFO) << "Found MHD = " << edgeMHD;
+	SD = (edgeMHD - edgeMSD) / 2;
+	FILE_LOG(logINFO) << "Setting SD = " << SD;
+
+	// Clear MSD and MHD
+	MHD = 0;
+	data = (MSD << 4) | MHD;
+	FPGA::write_SPI(deviceHandle, APS_DAC_SPI, msdMhdAddr, &data);
+	// Set the optimal sample delay (SD)
+	data = SD << 4;
+	FPGA::write_SPI(deviceHandle, APS_DAC_SPI, sdAddr, &data);
+
+	// AD9376 data sheet advises us to enable surveilance and auto modes, but this
+	// has introduced output glitches in limited testing
+	// set the filter length, threshold, and enable surveilance mode and auto mode
+	/*int filter_length = 12;
+	int threshold = 1;
+	data = (1 << 7) | (1 << 6) | (filter_length << 2) | (threshold & 0x3);
+	FPGA::write_SPI(deviceHandle, APS_DAC_SPI, controller_addr, &data);
+	*/
+	return 0;
+}
+
 int FPGA::reset_checksums(FT_HANDLE deviceHandle, const int & fpga, vector<CheckSum> & checksums){
 	// write to registers to clear them
 	FPGA::write_FPGA(deviceHandle, FPGA_OFF_DATA_CHECKSUM, 0, fpga);

@@ -82,6 +82,10 @@ int APSRack::program_FPGA(const int & deviceID, const string &bitFile, const int
 	return _APSs[deviceID].program_FPGA(bitFile, chipSelect, expectedVersion);
 }
 
+int APSRack::setup_DACs(const int & deviceID){
+	return _APSs[deviceID].setup_DACs();
+}
+
 int APSRack::set_sampleRate(const int & deviceID, const int & fpga, const int & freq, const bool & testLock) {
 	return _APSs[deviceID].set_sampleRate(fpga, freq, testLock);
 }

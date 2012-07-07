@@ -23,6 +23,8 @@ public:
 
 	int setup_VCXO();
 	int setup_PLL();
+	int setup_DACs();
+
 	int program_FPGA(const string &, const UCHAR &, const int &);
 	int read_bitfile_version(const UCHAR &);
 

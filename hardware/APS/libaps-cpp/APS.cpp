@@ -46,8 +46,15 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		setup_PLL();
 
 		//Program the bitfile to both FPGA's
-		return program_FPGA(bitFile, 2, 0x10);
+		int bytesProgramed = program_FPGA(bitFile, 2, 0x10);
 
+		//Default to max sample rate
+		set_sampleRate(0, 1200, 0);
+		set_sampleRate(1, 1200, 0);
+
+		setup_DACs();
+
+		return bytesProgramed;
 	}
 
 	return 0;
@@ -61,6 +68,13 @@ int APS::setup_PLL(){
 	return FPGA::setup_PLL(_handle);
 }
 
+int APS::setup_DACs(){
+	//Call the setup function for each DAC
+	for(int dac=0; dac<4; dac++){
+		FPGA::setup_DAC(_handle, dac);
+	}
+	return 0;
+}
 int APS::program_FPGA(const string & bitFile, const UCHAR & chipSelect, const int & expectedVersion) {
 
 	//Open the bitfile
