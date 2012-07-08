@@ -82,7 +82,7 @@ int APSRack::program_FPGA(const int & deviceID, const string &bitFile, const int
 	return _APSs[deviceID].program_FPGA(bitFile, chipSelect, expectedVersion);
 }
 
-int APSRack::setup_DACs(const int & deviceID){
+int APSRack::setup_DACs(const int & deviceID) const{
 	return _APSs[deviceID].setup_DACs();
 }
 
@@ -90,7 +90,7 @@ int APSRack::set_sampleRate(const int & deviceID, const int & fpga, const int & 
 	return _APSs[deviceID].set_sampleRate(fpga, freq, testLock);
 }
 
-int APSRack::get_sampleRate(const int & deviceID, const int & fpga){
+int APSRack::get_sampleRate(const int & deviceID, const int & fpga) const{
 	return _APSs[deviceID].get_sampleRate(fpga);
 }
 
@@ -99,11 +99,11 @@ int APSRack::set_LL_mode(const int & deviceID, const int & dac, const bool & ena
 	return _APSs[deviceID].set_LL_mode(dac, enable, mode);
 }
 
-int APSRack::trigger_FPGA(const int & deviceID, const int & fpga, const int & triggerType){
+int APSRack::trigger_FPGA(const int & deviceID, const int & fpga, const int & triggerType) const{
 	return _APSs[deviceID].trigger_FPGA(fpga, triggerType);
 }
 
-int APSRack::disable_FPGA(const int & deviceID, const int & fpga){
+int APSRack::disable_FPGA(const int & deviceID, const int & fpga) const{
 	return _APSs[deviceID].disable_FPGA(fpga);
 }
 

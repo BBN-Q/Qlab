@@ -47,7 +47,7 @@ int Channel::set_waveform(const vector<short> & data) {
 	return 0;
 }
 
-vector<short> Channel::prep_waveform(){
+vector<short> Channel::prep_waveform() const{
 	//Apply the scale,offset and covert to integer format
 	vector<short> prepVec(_waveform.size());
 	for(size_t ct=0; ct<prepVec.size(); ct++){

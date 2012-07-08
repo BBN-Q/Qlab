@@ -60,7 +60,7 @@ int set_LL_mode(FT_HANDLE, const int &, const bool &, const bool &);
 
 } //end namespace FPGA
 
-inline int dac2fpga(int dac)
+inline int dac2fpga(const int & dac)
 {
 	/* select FPGA based on DAC id number
 	    DAC0 & DAC1 -> FPGA 0

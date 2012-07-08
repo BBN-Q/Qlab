@@ -22,7 +22,7 @@ public:
 	int set_offset(const float &);
 	int set_scale(const float &);
 
-	vector<short> prep_waveform();
+	vector<short> prep_waveform() const;
 
 	friend class APS;
 

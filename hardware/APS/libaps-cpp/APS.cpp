@@ -60,22 +60,22 @@ int APS::init(const string & bitFile, const bool & forceReload){
 	return 0;
 }
 
-int APS::setup_VCXO(){
+int APS::setup_VCXO() const{
 	return FPGA::setup_VCXO(_handle);
 }
 
-int APS::setup_PLL(){
+int APS::setup_PLL() const{
 	return FPGA::setup_PLL(_handle);
 }
 
-int APS::setup_DACs(){
+int APS::setup_DACs() const{
 	//Call the setup function for each DAC
 	for(int dac=0; dac<4; dac++){
 		FPGA::setup_DAC(_handle, dac);
 	}
 	return 0;
 }
-int APS::program_FPGA(const string & bitFile, const UCHAR & chipSelect, const int & expectedVersion) {
+int APS::program_FPGA(const string & bitFile, const UCHAR & chipSelect, const int & expectedVersion) const {
 
 	//Open the bitfile
 	FILE_LOG(logDEBUG2) << "Opening bitfile: " << bitFile;
@@ -97,7 +97,7 @@ int APS::program_FPGA(const string & bitFile, const UCHAR & chipSelect, const in
 }
 
 
-int APS::read_bitfile_version(const UCHAR & chipSelect){
+int APS::read_bitfile_version(const UCHAR & chipSelect) const{
 	//Pass through to FPGA code
 	return FPGA::read_bitFile_version(_handle, chipSelect);
 }
@@ -107,7 +107,7 @@ int APS::set_sampleRate(const int & fpga, const int & freq, const bool & testLoc
 	return FPGA::set_PLL_freq(_handle, fpga, freq, testLock);
 }
 
-int APS::get_sampleRate(const int & fpga){
+int APS::get_sampleRate(const int & fpga) const{
 	//Pass through to FPGA code
 	return FPGA::get_PLL_freq(_handle, fpga);
 }
@@ -117,10 +117,10 @@ int APS::set_LL_mode(const int & dac , const bool & enable, const bool & mode){
 	return FPGA::set_LL_mode(_handle, dac, enable, mode);
 }
 
-int APS::trigger_FPGA(const int & fpga, const int & triggerType){
+int APS::trigger_FPGA(const int & fpga, const int & triggerType) const{
 	return FPGA::trigger(_handle, fpga, triggerType);
 }
 
-int APS::disable_FPGA(const int & fpga){
+int APS::disable_FPGA(const int & fpga) const{
 	return FPGA::disable(_handle, fpga);
 }

@@ -30,12 +30,12 @@ public:
 
 	int program_FPGA(const int &, const string &, const int &, const int &);
 
-	int setup_DACs(const int &);
+	int setup_DACs(const int &) const;
 
-	int trigger_FPGA(const int &, const int &, const int &);
-	int disable_FPGA(const int &, const int &);
+	int trigger_FPGA(const int &, const int &, const int &) const;
+	int disable_FPGA(const int &, const int &) const;
 
-	int get_sampleRate(const int &, const int &);
+	int get_sampleRate(const int &, const int &) const;
 	int set_sampleRate(const int &, const int &, const int &, const bool &);
 
 	//Pass through both short and float waveforms
