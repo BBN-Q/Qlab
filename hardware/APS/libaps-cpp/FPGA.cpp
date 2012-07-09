@@ -683,37 +683,38 @@ int FPGA::setup_PLL(FT_HANDLE deviceHandle)
 
 	// Setup modified for 300 MHz FPGA clock rate
 	//Setup of a vector of address-data pairs for all the writes we need for the PLL routine
-	//TODO: this could be an initializer list when MSVC supports it
-	vector<PLLAddrData> PLL_Routine;
-	PLL_Routine.reserve(27);
+	const vector<PLLAddrData> PLL_Routine = {
+		{0x0,  0x99},  // Use SDO, Long instruction mode
+		{0x10, 0x7C},  // Enable PLL , set charge pump to 4.8ma
+		{0x11, 0x5},  // Set reference divider R to 5 to divide 125 MHz reference to 25 MHz
+		{0x14, 0x06},  // Set B counter to 6
+		{0x16, 0x5},   // Set P prescaler to 16 and enable B counter (N = P*B = 96 to divide 2400 MHz to 25 MHz)
+		{0x17, 0x4},   // Selects readback of N divider on STATUS bit in Status/Control register
+		{0x18, 0x60},  // Calibrate VCO with 2 divider, set lock detect count to 255, set high range
+		{0x1A, 0x2D},  // Selects readback of PLL Lock status on LOCK bit in Status/Control register
+		{0x1C, 0x7},   // Enable differential reference, enable REF1/REF2 power, disable reference switching
+		{0xF0, 0x00},  // Enable un-inverted 400mv clock on OUT0
+		{0xF1, 0x00},  // Enable un-inverted 400mv clock on OUT1
+		{0xF2, 0x00},  // Enable un-inverted 400mv clock on OUT2
+		{0xF3, 0x00},  // Enable un-inverted 400mv clock on OUT3
+		{0xF4, 0x00},  // Enable un-inverted 400mv clock on OUT4
+		{0xF5, 0x00},  // Enable un-inverted 400mv clock on OUT5
+		{0x190, 0x00}, //	No division on channel 0
+		{0x191, 0x80}, //	Bypass 0 divider
+		{0x193, 0x11}, //	(2 high, 2 low = 1.2 GHz / 4 = 300 MHz = Reference 300 MHz)
+		{0x196, 0x00}, //	No division on channel 2
+		{0x197, 0x80}, //   Bypass 2 divider
+		{0x1E0, 0x0}, // Set VCO post divide to 2
+		{0x1E1, 0x2},  // Select VCO as clock source for VCO divider
+		{0x232, 0x1},  // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+		{0x18, 0x71},  // Initiate Calibration.  Must be followed by Update Registers Command
+		{0x232, 0x1},  // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+		{0x18, 0x70},  // Clear calibration flag so that next set generates 0 to 1.
+		{0x232, 0x1},   // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+	};
 
-	PLL_Routine.push_back(std::make_pair(0x0,  0x99));  // Use SDO, Long instruction mode
-	PLL_Routine.push_back(std::make_pair(0x10, 0x7C));  // Enable PLL , set charge pump to 4.8ma
-	PLL_Routine.push_back(std::make_pair(0x11, 0x5));   // Set reference divider R to 5 to divide 125 MHz reference to 25 MHz
-	PLL_Routine.push_back(std::make_pair(0x14, 0x06));  // Set B counter to 6
-	PLL_Routine.push_back(std::make_pair(0x16, 0x5));   // Set P prescaler to 16 and enable B counter (N = P*B = 96 to divide 2400 MHz to 25 MHz)
-	PLL_Routine.push_back(std::make_pair(0x17, 0x4));   // Selects readback of N divider on STATUS bit in Status/Control register
-	PLL_Routine.push_back(std::make_pair(0x18, 0x60));  // Calibrate VCO with 2 divider, set lock detect count to 255, set high range
-	PLL_Routine.push_back(std::make_pair(0x1A, 0x2D));  // Selects readback of PLL Lock status on LOCK bit in Status/Control register
-	PLL_Routine.push_back(std::make_pair(0x1C, 0x7));   // Enable differential reference, enable REF1/REF2 power, disable reference switching
-	PLL_Routine.push_back(std::make_pair(0xF0, 0x00));  // Enable un-inverted 400mv clock on OUT0
-	PLL_Routine.push_back(std::make_pair(0xF1, 0x00));  // Enable un-inverted 400mv clock on OUT1
-	PLL_Routine.push_back(std::make_pair(0xF2, 0x00));  // Enable un-inverted 400mv clock on OUT2
-	PLL_Routine.push_back(std::make_pair(0xF3, 0x00));  // Enable un-inverted 400mv clock on OUT3
-	PLL_Routine.push_back(std::make_pair(0xF4, 0x00));  // Enable un-inverted 400mv clock on OUT4
-	PLL_Routine.push_back(std::make_pair(0xF5, 0x00));  // Enable un-inverted 400mv clock on OUT5
-	PLL_Routine.push_back(std::make_pair(0x190, 0x00)); //	No division on channel 0
-	PLL_Routine.push_back(std::make_pair(0x191, 0x80)); //	Bypass 0 divider
-	PLL_Routine.push_back(std::make_pair(0x193, 0x11)); //	(2 high, 2 low = 1.2 GHz / 4 = 300 MHz = Reference 300 MHz)
-	PLL_Routine.push_back(std::make_pair(0x196, 0x00)); //	No division on channel 2
-	PLL_Routine.push_back(std::make_pair(0x197, 0x80)); //   Bypass 2 divider
-	PLL_Routine.push_back(std::make_pair(0x1E0, 0x0));  // Set VCO post divide to 2
-	PLL_Routine.push_back(std::make_pair(0x1E1, 0x2));  // Select VCO as clock source for VCO divider
-	PLL_Routine.push_back(std::make_pair(0x232, 0x1));  // Set bit 0 to 1 to simultaneously update all registers with pending writes.
-	PLL_Routine.push_back(std::make_pair(0x18, 0x71));  // Initiate Calibration.  Must be followed by Update Registers Command
-	PLL_Routine.push_back(std::make_pair(0x232, 0x1));  // Set bit 0 to 1 to simultaneously update all registers with pending writes.
-	PLL_Routine.push_back(std::make_pair(0x18, 0x70));  // Clear calibration flag so that next set generates 0 to 1.
-	PLL_Routine.push_back(std::make_pair(0x232, 0x1));   // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+//	PLL_Routine.reserve(27);
+
 
 	// Go through the routine
 	for (auto tmpPair : PLL_Routine){
@@ -786,17 +787,14 @@ int FPGA::set_PLL_freq(FT_HANDLE deviceHandle, const int & fpga, const int & fre
 	if (FPGA::clear_status_ctrl(deviceHandle) != 1) return -4;
 
 	//Setup of a vector of address-data pairs for all the writes we need for the PLL routine
-	vector<PLLAddrData> PLL_Routine;
-	PLL_Routine.reserve(6);
-
-	PLL_Routine.push_back(std::make_pair(pllCyclesAddr, pllCyclesVal));
-	PLL_Routine.push_back(std::make_pair(pllBypassAddr, pllBypassVal));
-
-	PLL_Routine.push_back(std::make_pair(0x18, 0x71)); // Initiate Calibration.  Must be followed by Update Registers Command
-	PLL_Routine.push_back(std::make_pair(0x232, 0x1)); // Set bit 0 to 1 to simultaneously update all registers with pending writes.
-	PLL_Routine.push_back(std::make_pair(0x18, 0x70)); // Clear calibration flag so that next set generates 0 to 1.
-	PLL_Routine.push_back(std::make_pair(0x232, 0x1)); // Set bit 0 to 1 to simultaneously update all registers with pending writes.
-
+	const vector<PLLAddrData> PLL_Routine = {
+		{pllCyclesAddr, pllCyclesVal},
+		{pllBypassAddr, pllBypassVal},
+		{0x18, 0x71}, // Initiate Calibration.  Must be followed by Update Registers Command
+		{0x232, 0x1}, // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+		{0x18, 0x70}, // Clear calibration flag so that next set generates 0 to 1.
+		{0x232, 0x1} // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+	};
 	// Go through the routine
 	for (auto tmpPair : PLL_Routine){
 		FPGA::write_SPI(deviceHandle, APS_PLL_SPI, tmpPair.first, &tmpPair.second);
@@ -859,13 +857,9 @@ int FPGA::test_PLL_sync(FT_HANDLE deviceHandle, const int & fpga, const int & nu
 	UINT pllResetBit, pllEnableAddr, pllEnableAddr2;
 	UCHAR writeByte;
 
-	//TODO: convert back to initializer lists once Microsoft gets its act together
-	int tmpPLL_XOR_TEST[] = {PLL_02_XOR_BIT, PLL_13_XOR_BIT,PLL_GLOBAL_XOR_BIT};
-	int tmpPLL_LOCK_TEST[] = {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT};
-	int tmpPLL_RESET[] = {CSRMSK_CHA_PLLRST, CSRMSK_CHB_PLLRST, 0};
-	vector<int> PLL_XOR_TEST(tmpPLL_XOR_TEST, tmpPLL_XOR_TEST+3);
-	vector<int> PLL_LOCK_TEST(tmpPLL_LOCK_TEST, tmpPLL_LOCK_TEST+3);
-	vector<int> PLL_RESET(tmpPLL_RESET, tmpPLL_RESET+3);
+	const vector<int> PLL_XOR_TEST = {PLL_02_XOR_BIT, PLL_13_XOR_BIT,PLL_GLOBAL_XOR_BIT};
+	const vector<int> PLL_LOCK_TEST = {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT};
+	const vector<int> PLL_RESET = {CSRMSK_CHA_PLLRST, CSRMSK_CHB_PLLRST, 0};
 
 	pllResetBit  = CSRMSK_CHA_PLLRST | CSRMSK_CHB_PLLRST;
 
@@ -1001,9 +995,7 @@ int FPGA::test_PLL_sync(FT_HANDLE deviceHandle, const int & fpga, const int & nu
 	}
 
 	//Steps 3,4,5
-	//TODO: fix when MSVC is better
-	const char * tmpStrs[] = {"02", "13", "Global"};
-	vector<string> pllStrs(tmpStrs, tmpStrs+3);
+	const vector<string> pllStrs = {"02", "13", "Global"};
 	for (int pll = 0; pll < 3; pll++) {
 
 		FILE_LOG(logDEBUG) << "Testing channel " << pllStrs[pll];
@@ -1080,17 +1072,10 @@ int FPGA::test_PLL_sync(FT_HANDLE deviceHandle, const int & fpga, const int & nu
 }
 
 
-int FPGA::read_PLL_status(FT_HANDLE deviceHandle, const int & fpga, const int & regAddr /*check header for default*/, vector<int> pllLockBits  /*check header for default*/ ){
+int FPGA::read_PLL_status(FT_HANDLE deviceHandle, const int & fpga, const int & regAddr /*check header for default*/, const vector<int> & pllLockBits  /*check header for default*/ ){
 	/*
 	 * Helper function to read the status of some PLL bit and whether the main PLL is locked.
 	 */
-
-	//TODO: fix this when MVSC is better
-	//Hack around MSVC not supporting initializer lists
-	//Should have in the default parameter in the header as {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT}
-	if (pllLockBits.size() == 0) {
-		pllLockBits.push_back(PLL_02_LOCK_BIT); pllLockBits.push_back(PLL_13_LOCK_BIT); pllLockBits.push_back(REFERENCE_PLL_LOCK_BIT);
-	}
 
 	int pllStatus = 0;
 

@@ -23,18 +23,27 @@ LIBEXT=so
 EXFLAGS=-Wl
 LIBFLAGS=-shared -o libaps.so
 LIBS=-lftd2xx
-LFLAGS=
 CC=g++-4.7
 else
 ####### Windows #######
-CFLAGS=/EHsc /nologo 
-OBJFLAGS=/c /Fo
-OBJEXT=obj
-LIBEXT=dll
-LIBNAME64=libaps64.dll
+#CFLAGS=/EHsc /nologo 
+#OBJFLAGS=/c /Fo
+#OBJEXT=obj
+#LIBEXT=dll
+#LIBNAME64=libaps64.dll
+#LIBS=ftd2xx.lib
+#LIBFLAGS=/LD
+#CC=cl
+
+CFLAGS=-Wall -std=c++11 
+OBJFLAGS=-c
+OBJEXT=o
+LIBEXT=so
+EXFLAGS=-Wl
+LIBFLAGS=-shared -o libaps.dll
 LIBS=ftd2xx.lib
-LIBFLAGS=/LD
-CC=cl
+LFLAGS=
+CC=g++
 endif
 endif
 
