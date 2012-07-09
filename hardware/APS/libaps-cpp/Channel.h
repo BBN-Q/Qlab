@@ -17,20 +17,23 @@ public:
 	~Channel();
 	int number;
 
+	int set_offset(const float &);
+	float get_offset() const;
+	int set_scale(const float &);
+	float get_scale() const;
+
 	int set_waveform(const vector<float> &);
 	int set_waveform(const vector<short> &);
-	int set_offset(const float &);
-	int set_scale(const float &);
-
 	vector<short> prep_waveform() const;
 
 	friend class APS;
 
 private:
-	vector<float> _waveform;
-	LinkList _linkList;
-	float _offset;
-	float _scale;
+	vector<float> waveform_;
+	LinkList linkList_;
+	float offset_;
+	float scale_;
+	bool enable_;
 };
 
 #endif /* CHANNEL_H_ */

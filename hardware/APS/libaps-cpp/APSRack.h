@@ -38,18 +38,28 @@ public:
 	int get_sampleRate(const int &, const int &) const;
 	int set_sampleRate(const int &, const int &, const int &, const bool &);
 
+	int set_channel_offset(const int &, const int &, const float &);
+	float get_chanel_offset(const int &, const int &) const;
+	int set_channel_scale(const int &, const int &, const float &);
+	float get_channel_scale(const int &, const int &) const;
+	int set_channel_enable(const int &, const int &, const bool &);
+	bool get_channel_enable(const int &, const int &);
+
+
 	//Pass through both short and float waveforms
 	template <typename T>
 	int set_waveform(const int & deviceID, const int & dac, const vector<T> & data){
-		return _APSs[deviceID].set_waveform(dac, data);
+		return APSs_[deviceID].set_waveform(dac, data);
 	}
 
 	int set_LL_mode(const int & deviceID, const int & dac, const bool & enable, const bool & mode);
+	int add_LL_bank(const int &, const int &, const int &, const vector<USHORT> &, const vector<USHORT>, const vector<USHORT>, const vector<USHORT>);
+
 
 private:
-	int _numDevices;
-	vector<APS> _APSs;
-	vector<string> _deviceSerials;
+	int numDevices_;
+	vector<APS> APSs_;
+	vector<string> deviceSerials_;
 };
 
 

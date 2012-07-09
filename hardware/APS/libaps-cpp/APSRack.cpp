@@ -7,7 +7,7 @@
 
 #include "APSRack.h"
 
-APSRack::APSRack() : _numDevices(0) {
+APSRack::APSRack() : numDevices_{0} {
 }
 
 APSRack::~APSRack()  {
@@ -28,7 +28,7 @@ int APSRack::init() {
 
 //Initialize a specific APS unit
 int APSRack::initAPS(const int & deviceID, const string & bitFile, const bool & forceReload){
-	return _APSs[deviceID].init(bitFile, forceReload);
+	return APSs_[deviceID].init(bitFile, forceReload);
 }
 
 int APSRack::get_num_devices() {
@@ -42,18 +42,18 @@ int APSRack::get_num_devices() {
 //This will reset the APS vector so it really should only be called during initialization
 void APSRack::enumerate_devices() {
 
-	FTDI::get_device_serials(_deviceSerials);
-	_numDevices = _deviceSerials.size();
+	FTDI::get_device_serials(deviceSerials_);
+	numDevices_ = deviceSerials_.size();
 
-	_APSs.clear();
-	_APSs.reserve(_numDevices);
+	APSs_.clear();
+	APSs_.reserve(numDevices_);
 
 	//Now setup the map between device serials and number and assign the APS units appropriately
 	//Also setup the FPGA checksums
 	size_t devicect = 0;
-	for (string tmpSerial : _deviceSerials) {
+	for (string tmpSerial : deviceSerials_) {
 		serial2dev[tmpSerial] = devicect;
-		_APSs.push_back(APS(devicect, tmpSerial));
+		APSs_.push_back(APS(devicect, tmpSerial));
 		FILE_LOG(logDEBUG) << "Device " << devicect << " has serial number " << tmpSerial;
 		devicect++;
 	}
@@ -61,49 +61,49 @@ void APSRack::enumerate_devices() {
 
 int APSRack::connect(const int & deviceID){
 	//Connect to a instrument specified by deviceID
-	return _APSs[deviceID].connect();
+	return APSs_[deviceID].connect();
 }
 
 int APSRack::disconnect(const int & deviceID){
-	return _APSs[deviceID].disconnect();
+	return APSs_[deviceID].disconnect();
 }
 
 int APSRack::connect(const string & deviceSerial){
 	//Look up the associated ID and call the next connect
-	return _APSs[serial2dev[deviceSerial]].connect();
+	return APSs_[serial2dev[deviceSerial]].connect();
 }
 
 int APSRack::disconnect(const string & deviceSerial){
 	//Look up the associated ID and call the next connect
-	return _APSs[serial2dev[deviceSerial]].disconnect();
+	return APSs_[serial2dev[deviceSerial]].disconnect();
 }
 
 int APSRack::program_FPGA(const int & deviceID, const string &bitFile, const int & chipSelect, const int & expectedVersion){
-	return _APSs[deviceID].program_FPGA(bitFile, chipSelect, expectedVersion);
+	return APSs_[deviceID].program_FPGA(bitFile, chipSelect, expectedVersion);
 }
 
 int APSRack::setup_DACs(const int & deviceID) const{
-	return _APSs[deviceID].setup_DACs();
+	return APSs_[deviceID].setup_DACs();
 }
 
 int APSRack::set_sampleRate(const int & deviceID, const int & fpga, const int & freq, const bool & testLock) {
-	return _APSs[deviceID].set_sampleRate(fpga, freq, testLock);
+	return APSs_[deviceID].set_sampleRate(fpga, freq, testLock);
 }
 
 int APSRack::get_sampleRate(const int & deviceID, const int & fpga) const{
-	return _APSs[deviceID].get_sampleRate(fpga);
+	return APSs_[deviceID].get_sampleRate(fpga);
 }
 
 int APSRack::set_LL_mode(const int & deviceID, const int & dac, const bool & enable, const bool & mode){
 	//Pass through to APS method
-	return _APSs[deviceID].set_LL_mode(dac, enable, mode);
+	return APSs_[deviceID].set_LL_mode(dac, enable, mode);
 }
 
 int APSRack::trigger_FPGA(const int & deviceID, const int & fpga, const int & triggerType) const{
-	return _APSs[deviceID].trigger_FPGA(fpga, triggerType);
+	return APSs_[deviceID].trigger_FPGA(fpga, triggerType);
 }
 
 int APSRack::disable_FPGA(const int & deviceID, const int & fpga) const{
-	return _APSs[deviceID].disable_FPGA(fpga);
+	return APSs_[deviceID].disable_FPGA(fpga);
 }
 

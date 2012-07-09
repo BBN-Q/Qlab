@@ -7,12 +7,12 @@
 
 #include "APS.h"
 
-APS::APS() :  _deviceID(-1), _handle(NULL), _channels(4), _checksums(2) {}
+APS::APS() :  deviceID_{-1}, handle_{NULL}, channels_(4), checksums_(2) {}
 
-APS::APS(int deviceID, string deviceSerial) :  _deviceID(deviceID), _deviceSerial(deviceSerial),
-		_handle(NULL), _checksums(2){
+APS::APS(int deviceID, string deviceSerial) :  deviceID_{deviceID}, deviceSerial_{deviceSerial},
+		handle_{NULL}, checksums_(2){
 		for(int ct=0; ct<4; ct++){
-			_channels.push_back(Channel(ct));
+			channels_.push_back(Channel(ct));
 		}
 };
 
@@ -22,18 +22,18 @@ APS::~APS() {
 
 int APS::connect(){
 	int success = 0;
-	success = FTDI::connect(_deviceID, _handle);
+	success = FTDI::connect(deviceID_, handle_);
 	if (success == 0) {
-		FILE_LOG(logDEBUG) << "Opened connection to device " << _deviceID << " (Serial: " << _deviceSerial << ")";
+		FILE_LOG(logDEBUG) << "Opened connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
 	}
 	return success;
 }
 
 int APS::disconnect(){
 	int success = 0;
-	success = FTDI::disconnect(_handle);
+	success = FTDI::disconnect(handle_);
 	if (success == 0) {
-		FILE_LOG(logDEBUG) << "Closed connection to device " << _deviceID << " (Serial: " << _deviceSerial << ")";
+		FILE_LOG(logDEBUG) << "Closed connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
 	}
 	return success;
 }
@@ -61,17 +61,17 @@ int APS::init(const string & bitFile, const bool & forceReload){
 }
 
 int APS::setup_VCXO() const{
-	return FPGA::setup_VCXO(_handle);
+	return FPGA::setup_VCXO(handle_);
 }
 
 int APS::setup_PLL() const{
-	return FPGA::setup_PLL(_handle);
+	return FPGA::setup_PLL(handle_);
 }
 
 int APS::setup_DACs() const{
 	//Call the setup function for each DAC
 	for(int dac=0; dac<4; dac++){
-		FPGA::setup_DAC(_handle, dac);
+		FPGA::setup_DAC(handle_, dac);
 	}
 	return 0;
 }
@@ -93,34 +93,34 @@ int APS::program_FPGA(const string & bitFile, const UCHAR & chipSelect, const in
 	FILE_LOG(logDEBUG) << "Read " << numBytes << " bytes from bitfile";
 
 	//Pass of the data to a lower-level function to actually push it to the FPGA
-	return FPGA::program_FPGA(_handle, fileData, chipSelect, expectedVersion);
+	return FPGA::program_FPGA(handle_, fileData, chipSelect, expectedVersion);
 }
 
 
 int APS::read_bitfile_version(const UCHAR & chipSelect) const{
 	//Pass through to FPGA code
-	return FPGA::read_bitFile_version(_handle, chipSelect);
+	return FPGA::read_bitFile_version(handle_, chipSelect);
 }
 
 int APS::set_sampleRate(const int & fpga, const int & freq, const bool & testLock){
 	//Pass through to the FPGA code
-	return FPGA::set_PLL_freq(_handle, fpga, freq, testLock);
+	return FPGA::set_PLL_freq(handle_, fpga, freq, testLock);
 }
 
 int APS::get_sampleRate(const int & fpga) const{
 	//Pass through to FPGA code
-	return FPGA::get_PLL_freq(_handle, fpga);
+	return FPGA::get_PLL_freq(handle_, fpga);
 }
 
 int APS::set_LL_mode(const int & dac , const bool & enable, const bool & mode){
 	//Pass through to FPGA code
-	return FPGA::set_LL_mode(_handle, dac, enable, mode);
+	return FPGA::set_LL_mode(handle_, dac, enable, mode);
 }
 
 int APS::trigger_FPGA(const int & fpga, const int & triggerType) const{
-	return FPGA::trigger(_handle, fpga, triggerType);
+	return FPGA::trigger(handle_, fpga, triggerType);
 }
 
 int APS::disable_FPGA(const int & fpga) const{
-	return FPGA::disable(_handle, fpga);
+	return FPGA::disable(handle_, fpga);
 }

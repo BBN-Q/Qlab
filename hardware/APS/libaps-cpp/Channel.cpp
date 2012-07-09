@@ -7,9 +7,9 @@
 
 #include "Channel.h"
 
-Channel::Channel() : number(-1), _offset(0.0), _scale(1.0) {}
+Channel::Channel() : number{-1}, offset_{0.0}, scale_{1.0}, enable_{false} {}
 
-Channel::Channel( int number) : number(number), _offset(0.0), _scale(0.0){}
+Channel::Channel( int number) : number{number}, offset_{0.0}, scale_{0.0}, enable_{false}{}
 
 Channel::~Channel() {
 	// TODO Auto-generated destructor stub
@@ -24,8 +24,8 @@ int Channel::set_waveform(const vector<float> & data) {
 
 	//Copy over the waveform data
 	//Waveform length must be a integer multiple of WF_MODULUS so resize to that
-	_waveform.resize(size_t(WF_MODULUS*ceil(data.size()/WF_MODULUS)), 0);
-	std::copy(data.begin(), data.end(), _waveform.begin());
+	waveform_.resize(size_t(WF_MODULUS*ceil(data.size()/WF_MODULUS)), 0);
+	std::copy(data.begin(), data.end(), waveform_.begin());
 
 	return 0;
 }
@@ -40,18 +40,18 @@ int Channel::set_waveform(const vector<short> & data) {
 
 	//Copy over the waveform data and convert to scaled floats
 	//Waveform length must be a integer multiple of WF_MODULUS so resize to that
-	_waveform.resize(size_t(WF_MODULUS*ceil(data.size()/WF_MODULUS)), 0);
+	waveform_.resize(size_t(WF_MODULUS*ceil(data.size()/WF_MODULUS)), 0);
 	for(size_t ct=0; ct<data.size(); ct++){
-		_waveform[ct] = float(data[ct]/MAX_WFAMP);
+		waveform_[ct] = float(data[ct]/MAX_WFAMP);
 	}
 	return 0;
 }
 
 vector<short> Channel::prep_waveform() const{
 	//Apply the scale,offset and covert to integer format
-	vector<short> prepVec(_waveform.size());
+	vector<short> prepVec(waveform_.size());
 	for(size_t ct=0; ct<prepVec.size(); ct++){
-		prepVec[ct] = short(MAX_WFAMP*(_scale*_waveform[ct]+_offset));
+		prepVec[ct] = short(MAX_WFAMP*(scale_*waveform_[ct]+offset_));
 	}
 
 	//Clip to the max and min values allowed

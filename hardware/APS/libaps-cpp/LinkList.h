@@ -18,7 +18,7 @@ public:
 	~LLBank();
 
 private:
-	size_t _length;
+	size_t length_;
 
 };
 
@@ -29,8 +29,8 @@ public:
 	~LinkList();
 
 private:
-	size_t _numBanks;
-	vector<LLBank> _banks;
+	size_t numBanks_;
+	vector<LLBank> banks_;
 };
 
 #endif /* LINKLIST_H_ */

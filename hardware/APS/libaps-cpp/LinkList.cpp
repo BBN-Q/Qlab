@@ -7,7 +7,7 @@
 
 #include "LinkList.h"
 
-LinkList::LinkList() : _numBanks(0) {
+LinkList::LinkList() : numBanks_(0) {
 	// TODO Auto-generated constructor stub
 
 }
@@ -16,7 +16,7 @@ LinkList::~LinkList() {
 	// TODO Auto-generated destructor stub
 }
 
-LLBank::LLBank() {
+LLBank::LLBank() : length_{0} {
 	// TODO Auto-generated constructor stub
 
 }

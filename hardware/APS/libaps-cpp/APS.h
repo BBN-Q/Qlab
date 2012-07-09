@@ -33,8 +33,8 @@ public:
 
 	template <typename T>
 	int set_waveform(const int & dac, const vector<T> & data){
-		_channels[dac].set_waveform(data);
-		return FPGA::write_waveform(_handle, dac, _channels[dac].prep_waveform(), _checksums);
+		channels_[dac].set_waveform(data);
+		return FPGA::write_waveform(handle_, dac, channels_[dac].prep_waveform(), checksums_);
 	}
 
 	int set_LL_mode(const int &, const bool &, const bool &);
@@ -46,11 +46,11 @@ public:
 	friend class APSRack;
 
 private:
-	int _deviceID;
-	string _deviceSerial;
-	FT_HANDLE _handle;
-	vector<Channel> _channels;
-	vector<CheckSum> _checksums;
+	int deviceID_;
+	string deviceSerial_;
+	FT_HANDLE handle_;
+	vector<Channel> channels_;
+	vector<CheckSum> checksums_;
 
 
 
