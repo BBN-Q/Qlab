@@ -82,8 +82,8 @@ int set_waveform_int(int deviceID, int channelNum, short* data, int numPts){
 	return _APSRack.set_waveform(deviceID, channelNum, vector<short>(data, data+numPts));
 }
 
-int trigger_FPGA(int deviceID, int fpga, int triggerType){
-	return _APSRack.trigger_FPGA(deviceID, fpga, triggerType);
+int trigger_FPGA(int deviceID, int fpga){
+	return _APSRack.trigger_FPGA(deviceID, fpga);
 }
 
 int disable_FPGA(int deviceID, int fpga){

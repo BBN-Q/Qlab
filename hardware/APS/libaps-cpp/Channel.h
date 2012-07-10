@@ -33,7 +33,7 @@ private:
 	LinkList linkList_;
 	float offset_;
 	float scale_;
-	bool enable_;
+	bool enabled_;
 };
 
 #endif /* CHANNEL_H_ */

@@ -39,8 +39,13 @@ public:
 
 	int set_LL_mode(const int &, const bool &, const bool &);
 
-	int trigger_FPGA(const int &, const int &) const;
+	int load_sequence_file(const string &);
+
+	int trigger_FPGA(const int &) const;
 	int disable_FPGA(const int &) const;
+
+	int run() const;
+	int stop() const;
 
 	//The owning APSRack needs access to some private members
 	friend class APSRack;
@@ -51,6 +56,7 @@ private:
 	FT_HANDLE handle_;
 	vector<Channel> channels_;
 	vector<CheckSum> checksums_;
+	int triggerSource_;
 
 
 

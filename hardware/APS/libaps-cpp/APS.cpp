@@ -7,10 +7,10 @@
 
 #include "APS.h"
 
-APS::APS() :  deviceID_{-1}, handle_{NULL}, channels_(4), checksums_(2) {}
+APS::APS() :  deviceID_{-1}, handle_{NULL}, channels_(4), checksums_(2), triggerSource_{SOFTWARE_TRIGGER} {}
 
 APS::APS(int deviceID, string deviceSerial) :  deviceID_{deviceID}, deviceSerial_{deviceSerial},
-		handle_{NULL}, checksums_(2){
+		handle_{NULL}, checksums_(2), triggerSource_{SOFTWARE_TRIGGER}{
 		for(int ct=0; ct<4; ct++){
 			channels_.push_back(Channel(ct));
 		}
@@ -117,10 +117,44 @@ int APS::set_LL_mode(const int & dac , const bool & enable, const bool & mode){
 	return FPGA::set_LL_mode(handle_, dac, enable, mode);
 }
 
-int APS::trigger_FPGA(const int & fpga, const int & triggerType) const{
-	return FPGA::trigger(handle_, fpga, triggerType);
+int APS::load_sequence_file(const string & seqFile){
+	/*
+	 * Load a sequence file from a H5 file
+	 */
+
+
+	return 0;
+
+}
+
+int APS::trigger_FPGA(const int & fpga) const{
+	return FPGA::trigger(handle_, fpga, triggerSource_);
 }
 
 int APS::disable_FPGA(const int & fpga) const{
 	return FPGA::disable(handle_, fpga);
+}
+
+int APS::run() const{
+
+	//Depending on how the channels are enabled, trigger the appropriate FPGA's
+	vector<bool> channelsEnabled;
+	bool allChannels = false;
+	for (const auto tmpChannel : channels_){
+		channelsEnabled.push_back(tmpChannel.enabled_);
+		allChannels &= tmpChannel.enabled_;
+	}
+
+	//If all channels are enabled then trigger together
+	if (allChannels) {
+		trigger_FPGA(2);
+	}
+	else if (channelsEnabled[0] || channelsEnabled[1]) {
+		trigger_FPGA(0);
+	}
+	else if (channelsEnabled[2] || channelsEnabled[3]) {
+		trigger_FPGA(1);
+	}
+
+	return 0;
 }

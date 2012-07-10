@@ -32,7 +32,7 @@ public:
 
 	int setup_DACs(const int &) const;
 
-	int trigger_FPGA(const int &, const int &, const int &) const;
+	int trigger_FPGA(const int &, const int &) const;
 	int disable_FPGA(const int &, const int &) const;
 
 	int get_sampleRate(const int &, const int &) const;

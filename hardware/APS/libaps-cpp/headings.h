@@ -23,13 +23,14 @@
 #include <math.h>
 #include <stdexcept>
 #include <algorithm>
+#include <thread>
 using std::vector;
 using std::string;
 using std::cout;
 using std::endl;
 using std::map;
 using std::runtime_error;
-
+using std::thread;
 
 //Deal with some Windows/Linux difference
 #ifdef _WIN32

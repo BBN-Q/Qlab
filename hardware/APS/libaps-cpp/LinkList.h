@@ -19,6 +19,12 @@ public:
 
 private:
 	size_t length_;
+	vector<unsigned short> offset_;
+	vector<unsigned short> trigger_;
+	vector<unsigned short> repeat_;
+	vector<unsigned short> count_;
+
+
 
 };
 
