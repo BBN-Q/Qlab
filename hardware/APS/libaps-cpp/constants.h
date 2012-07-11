@@ -44,7 +44,7 @@ static const int  APS_INIT_BITS = (APS_INIT01_BIT | APS_INIT23_BIT);
 
 static const int  APS_FPGA_IO = 0;
 static const int  APS_FPGA_ADDR = (1<<4);
-static const int  APS_DAC_SPI = (2<<4);
+static const unsigned int  APS_DAC_SPI = (2<<4);
 static const int  APS_PLL_SPI = (3<<4);
 static const int  APS_VCXO_SPI = (4<<4);
 static const int  APS_CONF_DATA = (5<<4);
@@ -158,7 +158,7 @@ enum {
 	HARDWARE_TRIGGER
 };
 
-typedef enum {INVALID_FPGA=-1, FPGA1, FPGA2, ALL_FPGAS} FPGASELECT;
+typedef enum {INVALID_FPGA=0, FPGA1, FPGA2, ALL_FPGAS} FPGASELECT;
 
 static const int MAX_WFLENGTH = 8192;
 static const int MAX_WFAMP = 8191;

@@ -33,14 +33,19 @@ using std::runtime_error;
 using std::thread;
 
 //HDF5 library
-#include "H5Cpp.h"
+//#include "H5Cpp.h"
+
+//Needed for usleep on gcc 4.7
+#include <unistd.h>
+
 
 //Deal with some Windows/Linux difference
 #ifdef _WIN32
 #include "windows.h"
 #include "ftd2xx_win.h"
-//Windows doesn't have a usleep function so define one
-inline void usleep(int waitTime) {
+//Visual C++ doesn't have a usleep function so define one
+/*
+ inline void usleep(int waitTime) {
     long int time1 = 0, time2 = 0, freq = 0;
 
     QueryPerformanceCounter((LARGE_INTEGER *) &time1);
@@ -50,10 +55,9 @@ inline void usleep(int waitTime) {
         QueryPerformanceCounter((LARGE_INTEGER *) &time2);
     } while((time2-time1) < waitTime);
 }
+*/
 #else
 #include "ftd2xx.h"
-//Needed for usleep on gcc 4.7
-#include <unistd.h>
 #define EXPORT
 #endif
 
@@ -90,6 +94,7 @@ myhex(std::ios_base& __base)
   return __base;
 }
 
+/*
 //Helper function for loading 1D dataset from H5 files
 template <typename T>
 vector<T> h5array2vector(const H5::H5File * h5File, const string & dataPath, const H5::DataType & dt = H5::PredType::NATIVE_DOUBLE)
@@ -108,7 +113,7 @@ vector<T> h5array2vector(const H5::H5File * h5File, const string & dataPath, con
 
    return vecOut;
  };
-
+*/
 #endif /* HEADINGS_H_ */
 
 

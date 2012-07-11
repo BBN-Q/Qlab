@@ -51,8 +51,8 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		int bytesProgramed = program_FPGA(bitFile, ALL_FPGAS, 0x10);
 
 		//Default to max sample rate
-		set_sampleRate(FPGA1, 1200, 0);
-		set_sampleRate(FPGA2, 1200, 0);
+		set_sampleRate(FPGA1, 1200, false);
+		set_sampleRate(FPGA2, 1200, false);
 
 		setup_DACs();
 
@@ -90,15 +90,17 @@ int APS::program_FPGA(const string & bitFile, const FPGASELECT & chipSelect, con
 	//Pass of the data to a lower-level function to actually push it to the FPGA
 	int bytesProgrammed = FPGA::program_FPGA(handle_, fileData, chipSelect);
 
-	// Read Bit File Version
-	int version;
-	bool ok = false;
-	for (int ct = 0; ct < 20 && !ok; ct++) {
-		version =  APS::read_bitFile_version(chipSelect);
-		if (version == expectedVersion) ok = true;
-		usleep(1000); // if doesn't match, wait a bit and try again
+	if (bytesProgrammed > 0) {
+		// Read Bit File Version
+		int version;
+		bool ok = false;
+		for (int ct = 0; ct < 20 && !ok; ct++) {
+			version =  APS::read_bitFile_version(chipSelect);
+			if (version == expectedVersion) ok = true;
+			usleep(1000); // if doesn't match, wait a bit and try again
+		}
+		if (!ok) return -11;
 	}
-	if (!ok) return -11;
 
 	return bytesProgrammed;
 }
@@ -153,17 +155,17 @@ int APS::load_sequence_file(const string & seqFile){
 	 */
 
 	//First open the file
-	H5::H5File file(seqFile, H5F_ACC_RDONLY);
-
-	const vector<string> chanStrs = {"chan_1", "chan_2", "chan_3", "chan_4"};
-	//For now assume 4 channel data
-	//TODO: check the channelDataFor attribute
-	for(string tmpChanStr : chanStrs){
-		//Load the waveform library first
-		string tmpStr = tmpChanStr;
-		vector<short> tmpVec = h5array2vector<short>(&file, tmpStr.append("/waveformLib"), H5::PredType::NATIVE_UINT16);
-
-	}
+//	H5::H5File file(seqFile, H5F_ACC_RDONLY);
+//
+//	const vector<string> chanStrs = {"chan_1", "chan_2", "chan_3", "chan_4"};
+//	//For now assume 4 channel data
+//	//TODO: check the channelDataFor attribute
+//	for(string tmpChanStr : chanStrs){
+//		//Load the waveform library first
+//		string tmpStr = tmpChanStr;
+//		vector<short> tmpVec = h5array2vector<short>(&file, tmpStr.append("/waveformLib"), H5::PredType::NATIVE_UINT16);
+//
+//	}
 	return 0;
 
 }
@@ -816,7 +818,7 @@ int APS::setup_DAC(const int & dac) const
 	FPGA::write_SPI(handle_,  APS_DAC_SPI, sdAddr, &data);
 
 	for (MSD = 0; MSD < 16; MSD++) {
-		FILE_LOG(logDEBUG2) <<  "Setting MSD: " << MSD;
+		FILE_LOG(logDEBUG2) <<  "Setting MSD: " << int(MSD);
 		data = (MSD << 4) | MHD;
 		FPGA::write_SPI(handle_,  APS_DAC_SPI, msdMhdAddr, &data);
 		FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(msdMhdAddr & 0x1F) << " Val: " << int(data & 0xFF);
@@ -830,12 +832,12 @@ int APS::setup_DAC(const int & dac) const
 			break;
 	}
 	edgeMSD = MSD;
-	FILE_LOG(logDEBUG) << "Found MSD: " << edgeMSD;
+	FILE_LOG(logDEBUG) << "Found MSD: " << int(edgeMSD);
 
 	// Clear the MSD, then slide right (with MHD)
 	MSD = 0;
 	for (MHD = 0; MHD < 16; MHD++) {
-		FILE_LOG(logDEBUG2) <<  "Setting MHD: " << MHD;
+		FILE_LOG(logDEBUG2) <<  "Setting MHD: " << int(MHD);
 		data = (MSD << 4) | MHD;
 		FPGA::write_SPI(handle_,  APS_DAC_SPI, msdMhdAddr, &data);
 		FPGA::read_SPI(handle_, APS_DAC_SPI, sdAddr, &data);
@@ -846,9 +848,9 @@ int APS::setup_DAC(const int & dac) const
 			break;
 	}
 	edgeMHD = MHD;
-	FILE_LOG(logINFO) << "Found MHD = " << edgeMHD;
+	FILE_LOG(logINFO) << "Found MHD = " << int(edgeMHD);
 	SD = (edgeMHD - edgeMSD) / 2;
-	FILE_LOG(logINFO) << "Setting SD = " << SD;
+	FILE_LOG(logINFO) << "Setting SD = " << int(SD);
 
 	// Clear MSD and MHD
 	MHD = 0;

@@ -79,16 +79,16 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 		FILE_LOG(logDEBUG2) << "Attempt: "  << ct+1;
 		// Read the Status to get state of RESETN for unused channel
 		//TODO: is this necessary or used at all?
-		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, INVALID_FPGA, &readByte) != 1) return(-1);
+		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 0, INVALID_FPGA, &readByte) != 1) return(-1);
 		FILE_LOG(logDEBUG2) << "Read 1: " << myhex << int(readByte);
 
 		// Clear Program and Reset Masks
 		writeByte = ~PgmMask & ~RstMask & 0xF;
 		FILE_LOG(logDEBUG2) << "Write 1: "  << myhex << int(writeByte);
-		if(FPGA::write_register(deviceHandle,  APS_CONF_STAT, 1, INVALID_FPGA, &writeByte) != 1) return(-2);
+		if(FPGA::write_register(deviceHandle,  APS_CONF_STAT, 0, INVALID_FPGA, &writeByte) != 1) return(-2);
 
 		// Read the Status to see that INITN is asserted in response to PROGRAMN
-		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, INVALID_FPGA, &readByte) != 1) return(-3);
+		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 0, INVALID_FPGA, &readByte) != 1) return(-3);
 		FILE_LOG(logDEBUG2) << "Read 2: " <<  myhex << int(readByte);
 
 		// verify Init bits are cleared
@@ -103,14 +103,14 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 		// Set Program and Reset Bits
 		writeByte = (PgmMask | RstMask) & 0xF;
 		FILE_LOG(logDEBUG2) << "Write 2: " << myhex << int(writeByte);
-		if(FPGA::write_register(deviceHandle, APS_CONF_STAT, 1, INVALID_FPGA, &writeByte) != 1)return(-5);
+		if(FPGA::write_register(deviceHandle, APS_CONF_STAT, 0, INVALID_FPGA, &writeByte) != 1)return(-5);
 
 		// sleep to allow init to take place
 		// if the sleep is left out the next test might fail
 		usleep(1000);
 
 		// Read the Status to see that INITN is deasserted in response to PROGRAMN deassertion
-		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, INVALID_FPGA, &readByte) != 1) return(-6);
+		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 0, INVALID_FPGA, &readByte) != 1) return(-6);
 		FILE_LOG(logDEBUG2) << "Read 3: "  << myhex << int(readByte);
 
 		// verify Init Mask is high
@@ -557,7 +557,7 @@ int FPGA::clear_bit(FT_HANDLE deviceHandle, const FPGASELECT & fpga, const int &
  *
  ********************************************************************/
 {
-	FILE_LOG(logDEBUG2) << "In clear_bit read addr: " << myhex << addr;
+	FILE_LOG(logDEBUG2) << "Clearing bit at address: " << myhex << addr;
 
 	//Read the current state so we know how set the uncleared bits.
 	int currentState, currentState2;

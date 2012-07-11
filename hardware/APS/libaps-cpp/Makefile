@@ -35,13 +35,13 @@ else
 #LIBFLAGS=/LD
 #CC=cl
 
-CFLAGS=-Wall -std=c++11 
+CFLAGS=-Wall -std=c++11 -g
 OBJFLAGS=-c
 OBJEXT=o
-LIBEXT=so
+LIBEXT=dll
 EXFLAGS=-Wl
 LIBFLAGS=-shared -o libaps.dll
-LIBS=ftd2xx.lib -lhdf5 -lhdf5_cpp
+LIBS=ftd2xx.lib 
 LFLAGS=
 CC=g++
 endif
@@ -50,7 +50,7 @@ endif
 
 OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT) Channel.$(OBJEXT) LLBank.$(OBJEXT) FPGA.$(OBJEXT)
 
-all: $(OBJECTS) test libaps
+all: $(OBJECTS) libaps test
 
 libaps: $(OBJECTS) libaps.cpp
 	$(CC) $(CFLAGS) $(LIBFLAGS) libaps.cpp $(OBJECTS) $(LIBS) 
@@ -59,7 +59,7 @@ libaps: $(OBJECTS) libaps.cpp
 	$(CC) $(CFLAGS) $(OBJFLAGS) $<
 
 test: $(OBJECTS) test.cpp
-	$(CC) $(CFLAGS) test.cpp $(OBJECTS) $(LIBS)  	
+	$(CC) $(CFLAGS) -o test test.cpp $(OBJECTS) $(LIBS) -L. -laps	
 
 clean:
 	rm -f *.$(OBJEXT)
