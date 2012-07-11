@@ -32,6 +32,9 @@ using std::map;
 using std::runtime_error;
 using std::thread;
 
+//HDF5 library
+#include "H5Cpp.h"
+
 //Deal with some Windows/Linux difference
 #ifdef _WIN32
 #include "windows.h"
@@ -70,7 +73,7 @@ typedef std::pair<ULONG, UCHAR> PLLAddrData;
 #include "FTDI.h"
 #include "FPGA.h"
 
-#include "LinkList.h"
+#include "LLBank.h"
 #include "Channel.h"
 #include "APS.h"
 #include "APSRack.h"
@@ -86,6 +89,25 @@ myhex(std::ios_base& __base)
   __base.setf(std::ios::showbase);
   return __base;
 }
+
+//Helper function for loading 1D dataset from H5 files
+template <typename T>
+vector<T> h5array2vector(const H5::H5File * h5File, const string & dataPath, const H5::DataType & dt = H5::PredType::NATIVE_DOUBLE)
+ {
+   // Initialize to dataspace, to find the indices we are looping over
+   H5::DataSet h5Array = h5File->openDataSet(dataPath);
+   H5::DataSpace arraySpace = h5Array.getSpace();
+
+   // Initialize vector and allocate enough space
+   vector<T> vecOut(arraySpace.getSimpleExtentNpoints());
+
+  // Read in data from file to memory
+   h5Array.read(&vecOut.front(), dt);
+
+   h5Array.close();
+
+   return vecOut;
+ };
 
 #endif /* HEADINGS_H_ */
 

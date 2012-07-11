@@ -26,11 +26,13 @@ public:
 	int set_waveform(const vector<short> &);
 	vector<short> prep_waveform() const;
 
+	int reset_LL_banks();
+	int add_LL_bank(const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &);
 	friend class APS;
 
 private:
 	vector<float> waveform_;
-	LinkList linkList_;
+	vector<LLBank> banks_;
 	float offset_;
 	float scale_;
 	bool enabled_;

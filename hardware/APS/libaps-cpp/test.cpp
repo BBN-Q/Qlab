@@ -10,16 +10,27 @@
 
 int main(int argc, char** argv) {
 
-	//Load an APS Rack
+	//Initialize the APSRack from the DLL
+	init();
+
+	//Connect to device
+	connect_by_ID(0);
+
+	initAPS(0);
+
+
 	cout << "Got here!" << endl;
 
-	APSRack	myRack;
+//	APSRack	myRack;
+//
+//	myRack.init();
+//	myRack.connect(0);
+//	myRack.set_sampleRate(0, 0, 1200, false);
+//	cout << myRack.get_sampleRate(0,0) << endl;
+//	myRack.disconnect(0);
 
-	myRack.init();
-	myRack.connect(0);
-	myRack.set_sampleRate(0, 0, 1200, false);
-	cout << myRack.get_sampleRate(0,0) << endl;
-	myRack.disconnect(0);
+	APS tmpAPS;
+	tmpAPS.load_sequence_file("RamseyBBNAPS34.h5");
 
 	cout << "Made it through!" << endl;
 

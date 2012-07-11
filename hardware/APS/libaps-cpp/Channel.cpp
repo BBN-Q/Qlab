@@ -7,9 +7,9 @@
 
 #include "Channel.h"
 
-Channel::Channel() : number{-1}, offset_{0.0}, scale_{1.0}, enabled_{false} {}
+Channel::Channel() : number{-1}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0) {}
 
-Channel::Channel( int number) : number{number}, offset_{0.0}, scale_{0.0}, enabled_{false}{}
+Channel::Channel( int number) : number{number}, offset_{0.0}, scale_{0.0}, enabled_{false}, waveform_(0), banks_(0){}
 
 Channel::~Channel() {
 	// TODO Auto-generated destructor stub
@@ -68,4 +68,21 @@ vector<short> Channel::prep_waveform() const{
 		}
 	}
 	return prepVec;
+}
+
+int Channel::reset_LL_banks(){
+	banks_.clear();
+	return 0;
+}
+
+int Channel::add_LL_bank(const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger){
+
+	if( (offset.size() != count.size()) || (offset.size() != repeat.size()) || (offset.size() != trigger.size())){
+		FILE_LOG(logERROR) << "All LL bank vectors must have same size.";
+		return -1;
+	}
+
+	banks_.push_back(LLBank(offset, count, repeat, trigger));
+
+	return 0;
 }

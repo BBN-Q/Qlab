@@ -16,13 +16,13 @@ ifeq (${OS},Darwin)
 else
 ####### Linux ####### 
 ifeq (${OS},Linux)
-CFLAGS=-Wall -fPIC -std=c++11 
+CFLAGS=-Wall -fPIC -std=c++11 -g
 OBJFLAGS=-c
 OBJEXT=o
 LIBEXT=so
 EXFLAGS=-Wl
 LIBFLAGS=-shared -o libaps.so
-LIBS=-lftd2xx
+LIBS=-lftd2xx -lhdf5 -lhdf5_cpp
 CC=g++-4.7
 else
 ####### Windows #######
@@ -41,14 +41,14 @@ OBJEXT=o
 LIBEXT=so
 EXFLAGS=-Wl
 LIBFLAGS=-shared -o libaps.dll
-LIBS=ftd2xx.lib
+LIBS=ftd2xx.lib -lhdf5 -lhdf5_cpp
 LFLAGS=
 CC=g++
 endif
 endif
 
 
-OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT) Channel.$(OBJEXT) LinkList.$(OBJEXT) FPGA.$(OBJEXT)
+OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT) Channel.$(OBJEXT) LLBank.$(OBJEXT) FPGA.$(OBJEXT)
 
 all: $(OBJECTS) test libaps
 

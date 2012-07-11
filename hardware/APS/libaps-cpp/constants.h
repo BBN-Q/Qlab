@@ -158,9 +158,12 @@ enum {
 	HARDWARE_TRIGGER
 };
 
+typedef enum {INVALID_FPGA=-1, FPGA1, FPGA2, ALL_FPGAS} FPGASELECT;
+
 static const int MAX_WFLENGTH = 8192;
 static const int MAX_WFAMP = 8191;
 static const int WF_MODULUS = 4;
+static const int MAX_LL_LENGTH = 512;
 
 
 

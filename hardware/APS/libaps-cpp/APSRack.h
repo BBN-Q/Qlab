@@ -28,15 +28,15 @@ public:
 	int get_num_devices();
 	void enumerate_devices();
 
-	int program_FPGA(const int &, const string &, const int &, const int &);
+	int program_FPGA(const int &, const string &, const FPGASELECT &, const int &);
 
 	int setup_DACs(const int &) const;
 
-	int trigger_FPGA(const int &, const int &) const;
-	int disable_FPGA(const int &, const int &) const;
+	int trigger_FPGA_debug(const int &, const FPGASELECT &);
+	int disable_FPGA_debug(const int &, const FPGASELECT &);
 
-	int get_sampleRate(const int &, const int &) const;
-	int set_sampleRate(const int &, const int &, const int &, const bool &);
+	int get_sampleRate(const int &, const FPGASELECT &) const;
+	int set_sampleRate(const int &, const FPGASELECT &, const int &, const bool &);
 
 	int set_channel_offset(const int &, const int &, const float &);
 	float get_chanel_offset(const int &, const int &) const;
@@ -54,7 +54,9 @@ public:
 
 	int set_LL_mode(const int & deviceID, const int & dac, const bool & enable, const bool & mode);
 	int add_LL_bank(const int &, const int &, const int &, const vector<USHORT> &, const vector<USHORT>, const vector<USHORT>, const vector<USHORT>);
+	int reset_LL_banks(const int &, const int &);
 
+	int load_sequence_file(const int &, const string &);
 
 private:
 	int numDevices_;

@@ -78,7 +78,7 @@ int APSRack::disconnect(const string & deviceSerial){
 	return APSs_[serial2dev[deviceSerial]].disconnect();
 }
 
-int APSRack::program_FPGA(const int & deviceID, const string &bitFile, const int & chipSelect, const int & expectedVersion){
+int APSRack::program_FPGA(const int & deviceID, const string &bitFile, const FPGASELECT & chipSelect, const int & expectedVersion){
 	return APSs_[deviceID].program_FPGA(bitFile, chipSelect, expectedVersion);
 }
 
@@ -86,11 +86,11 @@ int APSRack::setup_DACs(const int & deviceID) const{
 	return APSs_[deviceID].setup_DACs();
 }
 
-int APSRack::set_sampleRate(const int & deviceID, const int & fpga, const int & freq, const bool & testLock) {
+int APSRack::set_sampleRate(const int & deviceID, const FPGASELECT & fpga, const int & freq, const bool & testLock) {
 	return APSs_[deviceID].set_sampleRate(fpga, freq, testLock);
 }
 
-int APSRack::get_sampleRate(const int & deviceID, const int & fpga) const{
+int APSRack::get_sampleRate(const int & deviceID, const FPGASELECT & fpga) const{
 	return APSs_[deviceID].get_sampleRate(fpga);
 }
 
@@ -99,11 +99,18 @@ int APSRack::set_LL_mode(const int & deviceID, const int & dac, const bool & ena
 	return APSs_[deviceID].set_LL_mode(dac, enable, mode);
 }
 
-int APSRack::trigger_FPGA(const int & deviceID, const int & fpga) const{
-	return APSs_[deviceID].trigger_FPGA(fpga);
+int APSRack::trigger_FPGA_debug(const int & deviceID, const FPGASELECT & fpga){
+	return APSs_[deviceID].trigger(fpga);
 }
 
-int APSRack::disable_FPGA(const int & deviceID, const int & fpga) const{
-	return APSs_[deviceID].disable_FPGA(fpga);
+int APSRack::disable_FPGA_debug(const int & deviceID, const FPGASELECT & fpga){
+	return APSs_[deviceID].disable(fpga);
 }
 
+int APSRack::load_sequence_file(const int & deviceID, const string & seqFile){
+	return APSs_[deviceID].load_sequence_file(seqFile);
+}
+
+int APSRack::reset_LL_banks(const int & deviceID, const int & channelNum){
+	return APSs_[deviceID].channels_[channelNum].reset_LL_banks();
+}

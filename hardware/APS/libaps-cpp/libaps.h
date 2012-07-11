@@ -50,18 +50,17 @@ EXPORT int get_channel_enable(int, int);
 EXPORT int set_APS_triggerSource(int, int, int);
 EXPORT int get_APS_triggerSource(int, int);
 
-
-
 EXPORT int set_waveform_float(int, int, float*, int);
 EXPORT int set_waveform_int(int, int, short*, int);
 
-EXPORT int load_LL_bank(int, int, int, int, unsigned short*, unsigned short*, unsigned short*, unsigned short*);
+EXPORT int add_LL_bank(int, int, int, int, unsigned short*, unsigned short*, unsigned short*, unsigned short*);
+EXPORT int reset_LL_banks(int, int);
 
 EXPORT int load_sequence_file(int, char*);
 
-EXPORT int trigger_FPGA(int, int);
+EXPORT int trigger_FPGA_debug(int, int);
 
-EXPORT int disable_FPGA(int, int);
+EXPORT int disable_FPGA_debug(int, int);
 
 
 #ifdef __cplusplus

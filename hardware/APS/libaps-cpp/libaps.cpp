@@ -56,8 +56,8 @@ int initAPS(int deviceID, char * bitFile, int forceReload){
 
 //Program the current FPGA
 //Assumes null-terminated bitFile
-int program_FPGA(int deviceID, char * bitFile, int chipSelect, int expectedVersion){
-	return _APSRack.program_FPGA(deviceID, string(bitFile), chipSelect, expectedVersion);
+int program_FPGA(int deviceID, char * bitFile, int fpga, int expectedVersion){
+	return _APSRack.program_FPGA(deviceID, string(bitFile), FPGASELECT(fpga), expectedVersion);
 }
 
 int setup_DACs(int deviceID){
@@ -65,11 +65,11 @@ int setup_DACs(int deviceID){
 }
 
 int set_sampleRate(int deviceID, int fpga, int freq, int testLock){
-	return _APSRack.set_sampleRate(deviceID, fpga, freq, testLock);
+	return _APSRack.set_sampleRate(deviceID, FPGASELECT(fpga), freq, testLock);
 }
 
 int get_sampleRate(int deviceID, int fpga){
-	return _APSRack.get_sampleRate(deviceID, fpga);
+	return _APSRack.get_sampleRate(deviceID, FPGASELECT(fpga));
 }
 
 //Load the waveform library as floats
@@ -82,12 +82,16 @@ int set_waveform_int(int deviceID, int channelNum, short* data, int numPts){
 	return _APSRack.set_waveform(deviceID, channelNum, vector<short>(data, data+numPts));
 }
 
-int trigger_FPGA(int deviceID, int fpga){
-	return _APSRack.trigger_FPGA(deviceID, fpga);
+int trigger_FPGA_debug(int deviceID, int fpga){
+	return _APSRack.trigger_FPGA_debug(deviceID, FPGASELECT(fpga));
 }
 
-int disable_FPGA(int deviceID, int fpga){
-	return _APSRack.disable_FPGA(deviceID, fpga);
+int disable_FPGA_debug(int deviceID, int fpga){
+	return _APSRack.disable_FPGA_debug(deviceID, FPGASELECT(fpga));
+}
+
+int reset_LL_banks(int deviceID, int channelNum){
+	return _APSRack.reset_LL_banks(deviceID, channelNum);
 }
 
 #ifdef __cplusplus
