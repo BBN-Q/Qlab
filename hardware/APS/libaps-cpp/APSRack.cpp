@@ -124,3 +124,6 @@ int APSRack::set_log(FILE * pFile) {
 	}
 }
 
+int APSRack::set_trigger_source(const int & deviceID, const int & triggerSource) {
+	return APSs_[deviceID].triggerSource_ = triggerSource;
+}

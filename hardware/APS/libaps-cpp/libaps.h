@@ -47,8 +47,8 @@ EXPORT float get_channel_scale(int, int);
 EXPORT int set_channel_enable(int, int, int);
 EXPORT int get_channel_enable(int, int);
 
-EXPORT int set_APS_triggerSource(int, int, int);
-EXPORT int get_APS_triggerSource(int, int);
+EXPORT int set_APS_triggerSource(int, int);
+EXPORT int get_APS_triggerSource(int);
 
 EXPORT int set_waveform_float(int, int, float*, int);
 EXPORT int set_waveform_int(int, int, short*, int);

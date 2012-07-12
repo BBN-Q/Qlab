@@ -34,6 +34,7 @@ public:
 
 	int trigger_FPGA_debug(const int &, const FPGASELECT &);
 	int disable_FPGA_debug(const int &, const FPGASELECT &);
+	int set_trigger_source(const int &, const int &);
 
 	int get_sampleRate(const int &, const FPGASELECT &) const;
 	int set_sampleRate(const int &, const FPGASELECT &, const int &, const bool &);

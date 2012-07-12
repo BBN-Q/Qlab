@@ -98,6 +98,10 @@ int set_log(FILE * pFile) {
 	return _APSRack.set_log(pFile);
 }
 
+int set_APS_triggerSource(int deviceID, int triggerSource) {
+	return _APSRack.set_trigger_source(deviceID,triggerSource);
+}
+
 #ifdef __cplusplus
 }
 #endif
