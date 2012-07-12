@@ -114,3 +114,13 @@ int APSRack::load_sequence_file(const int & deviceID, const string & seqFile){
 int APSRack::reset_LL_banks(const int & deviceID, const int & channelNum){
 	return APSs_[deviceID].channels_[channelNum].reset_LL_banks();
 }
+
+int APSRack::set_log(FILE * pFile) {
+	if (pFile) {
+		Output2FILE::Stream() = pFile;
+		return 1;
+	} else {
+		return 0;
+	}
+}
+

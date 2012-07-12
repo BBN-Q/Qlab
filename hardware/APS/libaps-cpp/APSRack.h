@@ -45,6 +45,7 @@ public:
 	int set_channel_enable(const int &, const int &, const bool &);
 	bool get_channel_enable(const int &, const int &);
 
+	int set_log(FILE *);
 
 	//Pass through both short and float waveforms
 	template <typename T>

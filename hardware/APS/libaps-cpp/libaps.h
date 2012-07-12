@@ -62,6 +62,8 @@ EXPORT int trigger_FPGA_debug(int, int);
 
 EXPORT int disable_FPGA_debug(int, int);
 
+EXPORT int set_log(FILE *);
+
 
 #ifdef __cplusplus
 }

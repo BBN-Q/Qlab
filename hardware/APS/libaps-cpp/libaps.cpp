@@ -94,6 +94,10 @@ int reset_LL_banks(int deviceID, int channelNum){
 	return _APSRack.reset_LL_banks(deviceID, channelNum);
 }
 
+int set_log(FILE * pFile) {
+	return _APSRack.set_log(pFile);
+}
+
 #ifdef __cplusplus
 }
 #endif
