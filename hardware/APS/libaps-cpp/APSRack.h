@@ -35,6 +35,7 @@ public:
 	int trigger_FPGA_debug(const int &, const FPGASELECT &);
 	int disable_FPGA_debug(const int &, const FPGASELECT &);
 	int set_trigger_source(const int &, const int &);
+	int get_trigger_source(const int &) const;
 
 	int get_sampleRate(const int &, const FPGASELECT &) const;
 	int set_sampleRate(const int &, const FPGASELECT &, const int &, const bool &);
@@ -55,7 +56,7 @@ public:
 	}
 
 	int set_LL_mode(const int & deviceID, const int & dac, const bool & enable, const bool & mode);
-	int add_LL_bank(const int &, const int &, const int &, const vector<USHORT> &, const vector<USHORT>, const vector<USHORT>, const vector<USHORT>);
+	int add_LL_bank(const int &, const int &, const vector<USHORT> &, const vector<USHORT> &, const vector<USHORT> &, const vector<USHORT> &);
 	int reset_LL_banks(const int &, const int &);
 
 	int load_sequence_file(const int &, const string &);

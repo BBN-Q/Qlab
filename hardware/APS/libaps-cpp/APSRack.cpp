@@ -111,6 +111,10 @@ int APSRack::load_sequence_file(const int & deviceID, const string & seqFile){
 	return APSs_[deviceID].load_sequence_file(seqFile);
 }
 
+int APSRack::add_LL_bank(const int & deviceID, const int & channelNum, const vector<USHORT> & offset, const vector<USHORT> & count, const vector<USHORT> & repeat, const vector<USHORT> & trigger){
+	return APSs_[deviceID].add_LL_bank(channelNum, offset, count, repeat, trigger);
+}
+
 int APSRack::reset_LL_banks(const int & deviceID, const int & channelNum){
 	return APSs_[deviceID].channels_[channelNum].reset_LL_banks();
 }
@@ -126,6 +130,10 @@ int APSRack::set_log(FILE * pFile) {
 
 int APSRack::set_trigger_source(const int & deviceID, const int & triggerSource) {
 	return APSs_[deviceID].triggerSource_ = triggerSource;
+}
+
+int APSRack::get_trigger_source(const int & deviceID) const{
+	return APSs_[deviceID].triggerSource_;
 }
 
 int APSRack::set_channel_enabled(const int & deviceID, const int & channelNum, const bool & enable){

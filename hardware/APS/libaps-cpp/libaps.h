@@ -47,13 +47,13 @@ EXPORT float get_channel_scale(int, int);
 EXPORT int set_channel_enabled(int, int, int);
 EXPORT int get_channel_enabled(int, int);
 
-EXPORT int set_APS_triggerSource(int, int);
-EXPORT int get_APS_triggerSource(int);
+EXPORT int set_trigger_source(int, int);
+EXPORT int get_trigger_source(int);
 
 EXPORT int set_waveform_float(int, int, float*, int);
 EXPORT int set_waveform_int(int, int, short*, int);
 
-EXPORT int add_LL_bank(int, int, int, int, unsigned short*, unsigned short*, unsigned short*, unsigned short*);
+EXPORT int add_LL_bank(int, int, int, unsigned short*, unsigned short*, unsigned short*, unsigned short*);
 EXPORT int reset_LL_banks(int, int);
 
 EXPORT int load_sequence_file(int, char*);
@@ -62,7 +62,7 @@ EXPORT int trigger_FPGA_debug(int, int);
 
 EXPORT int disable_FPGA_debug(int, int);
 
-EXPORT int set_log(FILE *);
+EXPORT int set_log(char *);
 
 
 #ifdef __cplusplus

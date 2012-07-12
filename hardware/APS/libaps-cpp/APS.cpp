@@ -254,6 +254,21 @@ int APS::stop(){
 
 }
 
+int APS::add_LL_bank(const int & dac, const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger){
+
+	//Update the driver storage
+	channels_[dac].add_LL_bank(offset, count, repeat, trigger);
+
+	//If it is one of the first two banks then write to device
+	size_t curBank = channels_[dac].banks_.size()-1;
+	if ( curBank < 2){
+		write_LL_data(dac, curBank, curBank);
+	}
+
+	return 0;
+}
+
+
 /*
  *
  * Private Functions
@@ -1232,15 +1247,15 @@ if ( int(bankLength) > MAX_LL_LENGTH)  {
 FILE_LOG(logINFO) << "Loading LinkList length " << bankLength << " into FPGA " << fpga << " bank " << bankNum << " targetBank " << targetBank;
 
 //Set the link list size
-int endAddr = (bankLength-1) + startAddr;
+int lastElementOffset = (targetBank==0) ? (bankLength-1) : (bankLength-1) + MAX_LL_LENGTH ;
 
-FILE_LOG(logDEBUG2) << "Writing Link List Control Reg: " << myhex << sizeReg << " = " << endAddr;
+FILE_LOG(logDEBUG2) << "Writing Link List Control Reg: " << myhex << sizeReg << " = " << lastElementOffset;
 
 // clear checksums
 reset_checksums(fpga);
 
 // write control reg
-write(fpga, sizeReg, endAddr, true);
+write(fpga, sizeReg, lastElementOffset, true);
 
 //Write the LL data and flush to device
 write(fpga, startAddr, channels_[dac].banks_[bankNum].get_packed_data(), true);

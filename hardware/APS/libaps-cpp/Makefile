@@ -50,7 +50,7 @@ endif
 
 OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT) Channel.$(OBJEXT) LLBank.$(OBJEXT) FPGA.$(OBJEXT)
 
-all: $(OBJECTS) libaps test
+all: $(OBJECTS) libaps 
 
 libaps: $(OBJECTS) libaps.cpp
 	$(CC) $(CFLAGS) $(LIBFLAGS) libaps.cpp $(OBJECTS) $(LIBS) 

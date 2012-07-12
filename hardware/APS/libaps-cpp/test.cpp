@@ -67,7 +67,7 @@ void test::doToggleTest() {
 			printf("Done\n");
 	}
 
-	set_APS_triggerSource(0,SOFTWARE_TRIGGER);
+	set_trigger_source(0,SOFTWARE_TRIGGER);
 
 	ask = 1;
 	cout << "Cmd: [t]rigger [d]isable e[x]it: ";

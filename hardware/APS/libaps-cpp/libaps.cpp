@@ -8,7 +8,6 @@
 
 #include "headings.h"
 #include "libaps.h"
-#include "APSRack.h"
 
 APSRack _APSRack;
 
@@ -94,11 +93,22 @@ int reset_LL_banks(int deviceID, int channelNum){
 	return _APSRack.reset_LL_banks(deviceID, channelNum);
 }
 
-int set_log(FILE * pFile) {
-	return _APSRack.set_log(pFile);
+//Expects a null-terminated character array
+int set_log(char * fileNameArr) {
+	string fileName(fileNameArr);
+	if (fileName.compare("stdout") == 0){
+		return _APSRack.set_log(stdout);
+	}
+	else if (fileName.compare("stderr") == 0){
+		return _APSRack.set_log(stderr);
+	}
+	else{
+		FILE* pFile = fopen(fileName.c_str(), "a");
+		return _APSRack.set_log(pFile);
+	}
 }
 
-int set_APS_triggerSource(int deviceID, int triggerSource) {
+int set_trigger_source(int deviceID, int triggerSource) {
 	return _APSRack.set_trigger_source(deviceID,triggerSource);
 }
 
@@ -121,6 +131,12 @@ float get_channel_scale(int deviceID, int channelNum){
 int get_channel_enabled(int deviceID, int channelNum){
 	return _APSRack.get_channel_enabled(deviceID, channelNum);
 }
+
+int add_LL_bank(int deviceID, int channelNum, int length, unsigned short* offset, unsigned short* count, unsigned short* repeat, unsigned short* trigger){
+	//Convert data pointers to vectors and passed through
+	return _APSRack.add_LL_bank(deviceID, channelNum, vector<USHORT>(offset, offset+length), vector<USHORT>(count, count+length), vector<USHORT>(repeat, repeat+length), vector<USHORT>(trigger, trigger+length));
+}
+
 
 #ifdef __cplusplus
 }

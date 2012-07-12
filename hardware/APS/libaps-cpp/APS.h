@@ -46,6 +46,8 @@ public:
 	}
 
 	int set_LL_mode(const int &, const bool &, const bool &);
+	int add_LL_bank(const int & dac, const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger);
+
 
 	int load_sequence_file(const string &);
 
