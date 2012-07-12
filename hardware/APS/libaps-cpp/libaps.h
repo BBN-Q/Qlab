@@ -44,8 +44,8 @@ EXPORT int set_channel_offset(int, int, float);
 EXPORT float get_channel_offset(int, int);
 EXPORT int set_channel_scale(int, int, float);
 EXPORT float get_channel_scale(int, int);
-EXPORT int set_channel_enable(int, int, int);
-EXPORT int get_channel_enable(int, int);
+EXPORT int set_channel_enabled(int, int, int);
+EXPORT int get_channel_enabled(int, int);
 
 EXPORT int set_APS_triggerSource(int, int);
 EXPORT int get_APS_triggerSource(int);

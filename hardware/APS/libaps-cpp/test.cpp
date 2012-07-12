@@ -203,8 +203,18 @@ int main(int argc, char** argv) {
 	//Connect to device
 	connect_by_ID(0);
 
-	initAPS(0, const_cast<char*>(bitFile.c_str()), true);
+	//Bit file location
+	string bitFile = "C:\\Users\\qlab\\Qlab Software\\common\\src\\+deviceDrivers\\@APS\\mqco_aps_latest.bit";
 
+	initAPS(0, const_cast<char*>(bitFile.c_str()), false);
+
+	vector<float> waveform(0);
+
+	for(int ct=0; ct<1000;ct++){
+		waveform.push_back(float(ct)/1000);
+	}
+
+	set_waveform_float(0, 0, &waveform.front(), waveform.size());
 
 	// select test to run
 
@@ -219,18 +229,9 @@ int main(int argc, char** argv) {
 
 	disconnect_by_ID(0);
 
-	//	APSRack	myRack;
-	//
-	//	myRack.init();
-	//	myRack.connect(0);
-	//	myRack.set_sampleRate(0, 0, 1200, false);
-	//	cout << myRack.get_sampleRate(0,0) << endl;
-	//	myRack.disconnect(0);
-
-
-	APS tmpAPS;
-	cout << "tmpAPS" << endl;
-	tmpAPS.load_sequence_file("RamseyBBNAPS34.h5");
+//	APS tmpAPS;
+//	cout << "tmpAPS" << endl;
+//	tmpAPS.load_sequence_file("RamseyBBNAPS34.h5");
 
 	cout << "Made it through!" << endl;
 

@@ -127,3 +127,28 @@ int APSRack::set_log(FILE * pFile) {
 int APSRack::set_trigger_source(const int & deviceID, const int & triggerSource) {
 	return APSs_[deviceID].triggerSource_ = triggerSource;
 }
+
+int APSRack::set_channel_enabled(const int & deviceID, const int & channelNum, const bool & enable){
+	return APSs_[deviceID].set_channel_enabled(channelNum, enable);
+}
+
+bool APSRack::get_channel_enabled(const int & deviceID, const int & channelNum) const{
+	return APSs_[deviceID].get_channel_enabled(channelNum);
+}
+
+int APSRack::set_channel_offset(const int & deviceID, const int & channelNum, const float & offset){
+	return APSs_[deviceID].set_channel_offset(channelNum, offset);
+}
+
+float APSRack::get_channel_offset(const int & deviceID, const int & channelNum) const{
+	return APSs_[deviceID].get_channel_offset(channelNum);
+}
+
+int APSRack::set_channel_scale(const int & deviceID, const int & channelNum, const float & scale){
+	return APSs_[deviceID].set_channel_scale(channelNum, scale);
+}
+
+float APSRack::get_channel_scale(const int & deviceID, const int & channelNum) const{
+	return APSs_[deviceID].get_channel_scale(channelNum);
+}
+

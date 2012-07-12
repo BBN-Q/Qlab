@@ -9,10 +9,38 @@
 
 Channel::Channel() : number{-1}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0) {}
 
-Channel::Channel( int number) : number{number}, offset_{0.0}, scale_{0.0}, enabled_{false}, waveform_(0), banks_(0){}
+Channel::Channel( int number) : number{number}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0){}
 
 Channel::~Channel() {
 	// TODO Auto-generated destructor stub
+}
+
+int Channel::set_enabled(const bool & enable){
+	enabled_ = enable;
+	return 0;
+}
+
+bool Channel::get_enabled() const{
+	return enabled_;
+}
+
+int Channel::set_offset(const float & offset){
+	offset_ = (offset>1.0) ? 1.0 : offset;
+	offset_ = (offset<-1.0) ? -1.0 : offset;
+	return 0;
+}
+
+float Channel::get_offset() const{
+	return offset_;
+}
+
+int Channel::set_scale(const float & scale){
+	scale_ = scale;
+	return 0;
+}
+
+float Channel::get_scale() const{
+	return scale_;
 }
 
 int Channel::set_waveform(const vector<float> & data) {
@@ -42,7 +70,7 @@ int Channel::set_waveform(const vector<short> & data) {
 	//Waveform length must be a integer multiple of WF_MODULUS so resize to that
 	waveform_.resize(size_t(WF_MODULUS*ceil(data.size()/WF_MODULUS)), 0);
 	for(size_t ct=0; ct<data.size(); ct++){
-		waveform_[ct] = float(data[ct]/MAX_WFAMP);
+		waveform_[ct] = float(data[ct])/MAX_WFAMP;
 	}
 	return 0;
 }

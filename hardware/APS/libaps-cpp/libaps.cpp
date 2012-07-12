@@ -102,6 +102,26 @@ int set_APS_triggerSource(int deviceID, int triggerSource) {
 	return _APSRack.set_trigger_source(deviceID,triggerSource);
 }
 
+int set_channel_offset(int deviceID, int channelNum, float offset){
+	return _APSRack.set_channel_offset(deviceID, channelNum, offset);
+}
+int set_channel_scale(int deviceID, int channelNum, float scale){
+	return _APSRack.set_channel_scale(deviceID, channelNum, scale);
+}
+int set_channel_enabled(int deviceID, int channelNum, int enable){
+	return _APSRack.set_channel_enabled(deviceID, channelNum, enable);
+}
+
+float get_channel_offset(int deviceID, int channelNum){
+	return _APSRack.get_channel_offset(deviceID, channelNum);
+}
+float get_channel_scale(int deviceID, int channelNum){
+	return _APSRack.get_channel_scale(deviceID, channelNum);
+}
+int get_channel_enabled(int deviceID, int channelNum){
+	return _APSRack.get_channel_enabled(deviceID, channelNum);
+}
+
 #ifdef __cplusplus
 }
 #endif

@@ -170,6 +170,45 @@ int APS::load_sequence_file(const string & seqFile){
 
 }
 
+int APS::set_channel_enabled(const int & dac, const bool & enable){
+	return channels_[dac].set_enabled(enable);
+}
+
+bool APS::get_channel_enabled(const int & dac) const{
+	return channels_[dac].get_enabled();
+}
+
+int APS::set_channel_offset(const int & dac, const float & offset){
+	//Update the waveform in driver
+	channels_[dac].set_offset(offset);
+	//Write to device if necessary
+	if (!channels_[dac].waveform_.empty()){
+		write_waveform(dac, channels_[dac].prep_waveform());
+	}
+
+	//Update TAZ register
+	set_offset_register(dac, channels_[dac].get_offset());
+
+	return 0;
+}
+
+float APS::get_channel_offset(const int & dac) const{
+	return channels_[dac].get_offset();
+}
+
+int APS::set_channel_scale(const int & dac, const float & scale){
+	channels_[dac].set_scale(scale);
+	if (!channels_[dac].waveform_.empty()){
+		write_waveform(dac, channels_[dac].prep_waveform());
+	}
+	return 0;
+}
+
+float APS::get_channel_scale(const int & dac) const{
+	return channels_[dac].get_scale();
+}
+
+
 int APS::run() {
 
 	//Depending on how the channels are enabled, trigger the appropriate FPGA's
@@ -987,16 +1026,49 @@ bool APS::verify_checksums(const FPGASELECT & fpga){
 			<< checksums_[fpga].data;
 
 	return ((checksumAddrFPGA == checksums_[fpga].address) && (checksumDataFPGA == checksums_[fpga].data));
-
-	return true;
 }
 
+int APS::set_offset_register(const int & dac, const float & offset) {
+/* APS_SetChannelOffset
+ * Write the zero register for the associated channel
+ * offset - offset in normalized full range (-1, 1)
+ */
+
+ULONG zeroRegisterAddr;
+WORD scaledOffset;
+
+FPGASELECT fpga = dac2fpga(dac);
+if (fpga == INVALID_FPGA) {
+	return -1;
+}
+
+switch (dac) {
+	case 0:
+	case 2:
+		zeroRegisterAddr = FPGA_OFF_DAC02_ZERO;
+		break;
+	case 1:
+		// fall through
+	case 3:
+		zeroRegisterAddr = FPGA_OFF_DAC13_ZERO;
+		break;
+	default:
+		return -2;
+}
+
+scaledOffset = WORD(offset * MAX_WF_VALUE);
+FILE_LOG(logINFO) << "Setting DAC " << dac << "  zero register to " << scaledOffset;
+
+FPGA::write_FPGA(handle_, FPGA_ADDR_REGWRITE | zeroRegisterAddr, scaledOffset, fpga);
+
+return 0;
+}
 
 //Write waveform data FPGA memory
 int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 
-	int offsetReg, sizeReg, startAddr;
 	ULONG tmpData, wfLength;
+	int offsetReg, sizeReg, startAddr;
 	//We assume the Channel object has properly formated the waveform
 	// setup register addressing based on DAC
 	switch(dac) {

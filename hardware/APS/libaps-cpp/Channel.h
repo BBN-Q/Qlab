@@ -21,6 +21,8 @@ public:
 	float get_offset() const;
 	int set_scale(const float &);
 	float get_scale() const;
+	int set_enabled(const bool &);
+	bool get_enabled() const;
 
 	int set_waveform(const vector<float> &);
 	int set_waveform(const vector<short> &);

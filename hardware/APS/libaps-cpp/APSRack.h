@@ -40,11 +40,11 @@ public:
 	int set_sampleRate(const int &, const FPGASELECT &, const int &, const bool &);
 
 	int set_channel_offset(const int &, const int &, const float &);
-	float get_chanel_offset(const int &, const int &) const;
+	float get_channel_offset(const int &, const int &) const;
 	int set_channel_scale(const int &, const int &, const float &);
 	float get_channel_scale(const int &, const int &) const;
-	int set_channel_enable(const int &, const int &, const bool &);
-	bool get_channel_enable(const int &, const int &);
+	int set_channel_enabled(const int &, const int &, const bool &);
+	bool get_channel_enabled(const int &, const int &) const;
 
 	int set_log(FILE *);
 

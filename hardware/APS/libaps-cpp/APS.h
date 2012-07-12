@@ -31,6 +31,14 @@ public:
 	int set_sampleRate(const FPGASELECT &, const int &, const bool &);
 	int get_sampleRate(const FPGASELECT & fpga) const;
 
+	int set_channel_enabled(const int &, const bool &);
+	bool get_channel_enabled(const int &) const;
+	int set_channel_offset(const int &, const float &);
+	float get_channel_offset(const int &) const;
+	int set_channel_scale(const int &, const float &);
+	float get_channel_scale(const int &) const;
+	int set_offset_register(const int &, const float &);
+
 	template <typename T>
 	int set_waveform(const int & dac, const vector<T> & data){
 		channels_[dac].set_waveform(data);
