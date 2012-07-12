@@ -203,9 +203,6 @@ int main(int argc, char** argv) {
 	//Connect to device
 	connect_by_ID(0);
 
-	//Bit file location
-	string bitFile = "C:\\Users\\qlab\\Qlab Software\\common\\src\\+deviceDrivers\\@APS\\mqco_aps_latest.bit";
-
 	initAPS(0, const_cast<char*>(bitFile.c_str()), false);
 
 	vector<float> waveform(0);
