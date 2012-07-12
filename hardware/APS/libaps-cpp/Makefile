@@ -12,7 +12,14 @@ OS=$(shell uname)
 
 ####### Mac OS X #######
 ifeq (${OS},Darwin)
-#Not handled yet
+CFLAGS=-Wall -std=c++11 -stdlib=libc++ -g
+OBJFLAGS=-c
+OBJEXT=o
+LIBEXT=dylib
+EXFLAGS=-Wl
+LIBFLAGS=-dynamiclib -o libaps.dylib
+LIBS=-lftd2xx -lhdf5 -lhdf5_cpp
+CC=clang
 else
 ####### Linux ####### 
 ifeq (${OS},Linux)
