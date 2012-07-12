@@ -90,8 +90,10 @@ classdef homodyneDetection2D < expManager.expBase
                 obj.inputStructure.InstrParams.scope.averager.nbrRoundRobins = 1;
                 obj.inputStructure.InstrParams.scope.averager.nbrSegments = newSegments;
                 obj.inputStructure.ExpParams.softAvgs = newSoftAvgs;
+                nbrDataSets = 3;
             else
                 obj.nbrSequences = obj.inputStructure.InstrParams.scope.averager.nbrSegments;
+                nbrDataSets = 1;
             end
 
             % Prepare all instruments for measurement
@@ -136,7 +138,7 @@ classdef homodyneDetection2D < expManager.expBase
             end
             
             % open data file
-            obj.openDataFile(dimension, header, obj.nbrSequences);
+            obj.openDataFile(dimension, header, nbrDataSets);
         end
         function Do(obj)
 			obj.homodyneDetection2DDo;

@@ -82,7 +82,10 @@ classdef  expBase < handle
         end
         
         %%
-        function [errorMsg] = openDataFile(obj, dimension, header)
+        function [errorMsg] = openDataFile(obj, dimension, header, nbrDataSets)
+            if ~exist('nbrDataSets', 'var')
+                nbrDataSets = 1;
+            end
             % This function opens an HDF5 data file handler
             
             % First we make sure the filename exists
@@ -100,7 +103,7 @@ classdef  expBase < handle
             % construct full path
 			fullname = fullfile(obj.DataPath, obj.DataFileName);
             % open up the file with write/create permission
-            obj.DataFileHandler = HDF5DataHandler(fullname, dimension, header);
+            obj.DataFileHandler = HDF5DataHandler(fullname, dimension, header, nbrDataSets);
         end
         %%
         function [errorMsg] = finalizeData(obj)
