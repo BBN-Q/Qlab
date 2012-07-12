@@ -821,11 +821,11 @@ int APS::setup_DAC(const int & dac) const
 		FILE_LOG(logDEBUG2) <<  "Setting MSD: " << int(MSD);
 		data = (MSD << 4) | MHD;
 		FPGA::write_SPI(handle_,  APS_DAC_SPI, msdMhdAddr, &data);
-		FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(msdMhdAddr & 0x1F) << " Val: " << int(data & 0xFF);
+		FILE_LOG(logDEBUG2) <<  "Write Reg: " << myhex << int(msdMhdAddr & 0x1F) << " Val: " << int(data & 0xFF);
 		//FPGA::read_SPI(handle_, APS_DAC_SPI, msd_mhd_addr, &data);
 		//dlog(DEBUG_VERBOSE2, "Read reg 0x%x, value 0x%x\n", msd_mhd_addr & 0x1F, data & 0xFF);
 		FPGA::read_SPI(handle_, APS_DAC_SPI, sdAddr, &data);
-		FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(sdAddr & 0x1F) << " Val: " << int(data & 0xFF);
+		FILE_LOG(logDEBUG2) <<  "Read Reg: " << myhex << int(sdAddr & 0x1F) << " Val: " << int(data & 0xFF);
 		bool check = data & 1;
 		FILE_LOG(logDEBUG2) << "Check: " << check;
 		if (!check)

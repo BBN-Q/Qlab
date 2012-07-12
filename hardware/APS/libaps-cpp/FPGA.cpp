@@ -507,12 +507,12 @@ int FPGA::read_SPI
 	switch(Command & APS_CMD)
 	{
 	case APS_DAC_SPI:
-		byteBuffer.push_back(Address & 0x1F);  // R/W = 0 for write, N = 00 for 1 Byte, A<4:0> = Address
+		byteBuffer.push_back(0x80 | (Address & 0x1F));  // R/W = 1 for read, N = 00 for 1 Byte, A<4:0> = Address
 		byteBuffer.push_back(Data[0]);
 		Command |= ((Address & 0x60)>>3);  // Take bits above register address as DAC channel select
 		break;
 	case APS_PLL_SPI:
-		byteBuffer.push_back(0x80 | ((Address>>8) & 0x1F)); // R/W = 0 for write, W = 00 for 1 Byte, A<12:8>
+		byteBuffer.push_back(0x80 | ((Address>>8) & 0x1F)); // R/W = 1 for read, W = 00 for 1 Byte, A<12:8>
 		byteBuffer.push_back(Address & 0xFF);  // A<7:0>
 		byteBuffer.push_back(Data[0]);
 		break;
@@ -534,9 +534,9 @@ int FPGA::read_SPI
 	ftStatus = FT_Write(deviceHandle, &dataPacket[0], dataPacket.size(), &bytesWritten);
 	if (!FT_SUCCESS(ftStatus)) {FILE_LOG(logERROR) << "Write SPI command failed";}
 
-	dataPacket[0] |= 0x80;  // Convert the SPI write Command Byte into an SPI read Command Byte
+	dataPacket[0] |= 0x80;  // Convert the Command Byte into a read
 
-	// Queue a read for the SerData from the previous SPI read command
+	// Clock out data from SPI device with a dummy write to the same device
 	ftStatus = FT_Write(deviceHandle, &dataPacket[0], 1, &bytesWritten);
 	if (!FT_SUCCESS(ftStatus)) {FILE_LOG(logERROR) << "Write SPI command failed";}
 
