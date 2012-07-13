@@ -99,6 +99,13 @@ int APSRack::set_LL_mode(const int & deviceID, const int & dac, const bool & ena
 	return APSs_[deviceID].set_LL_mode(dac, enable, mode);
 }
 
+int APSRack::run(const int & deviceID) {
+	return APSs_[deviceID].run();
+}
+int APSRack::stop(const int & deviceID) {
+	return APSs_[deviceID].stop();
+}
+
 int APSRack::trigger_FPGA_debug(const int & deviceID, const FPGASELECT & fpga){
 	return APSs_[deviceID].trigger(fpga);
 }

@@ -81,6 +81,13 @@ int set_waveform_int(int deviceID, int channelNum, short* data, int numPts){
 	return _APSRack.set_waveform(deviceID, channelNum, vector<short>(data, data+numPts));
 }
 
+int run(int deviceID) {
+	return _APSRack.run(deviceID);
+}
+int stop(int deviceID) {
+	return _APSRack.stop(deviceID);
+}
+
 int trigger_FPGA_debug(int deviceID, int fpga){
 	return _APSRack.trigger_FPGA_debug(deviceID, FPGASELECT(fpga));
 }

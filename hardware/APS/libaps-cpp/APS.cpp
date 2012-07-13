@@ -1370,7 +1370,7 @@ int APS::stream_LL_data(){
 				FILE_LOG(logWARNING) << "Bank swapped during load of link list";
 			}
 		}
-		usleep(10000);
+		std::this_thread::sleep_for( std::chrono::milliseconds(10) );
 	}
 
 	return 0;

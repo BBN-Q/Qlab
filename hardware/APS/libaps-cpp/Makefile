@@ -48,7 +48,8 @@ OBJEXT=o
 LIBEXT=dll
 EXFLAGS=-Wl
 LIBFLAGS=-shared -o libaps.dll
-LIBS=ftd2xx.lib 
+#LIBS=ftd2xx.lib -LC:/cygwin/home/qlab/lib -lhdf5 -lhdf5_cpp
+LIBS=ftd2xx.lib
 LFLAGS=
 CC=g++
 endif

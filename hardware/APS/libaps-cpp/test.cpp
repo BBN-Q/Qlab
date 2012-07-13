@@ -138,15 +138,13 @@ void test::doStoreLoadTest() {
 
 	printf("Triggering:\n");
 
-	set_APS_triggerSource(0,SOFTWARE_TRIGGER);
-	trigger_FPGA_debug(0, 0);
-	trigger_FPGA_debug(0, 2);
+	set_trigger_source(0,SOFTWARE_TRIGGER);
+	run(0);
 
 	printf("Press key:\n");
 	getchar();
 
-	disable_FPGA_debug(0,0);
-	disable_FPGA_debug(0,2);
+	stop(0);
 
 }
 
@@ -197,7 +195,8 @@ int main(int argc, char** argv) {
 	init();
 
 	if (cmdOptionExists(argv, argv + argc, "-0")) {
-		set_log(stdout);
+		char s[] = "stdout";
+		set_log(s);
 	}
 
 	//Connect to device

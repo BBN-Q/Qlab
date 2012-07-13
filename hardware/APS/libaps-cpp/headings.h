@@ -24,6 +24,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <thread>
+#include <chrono>
 using std::vector;
 using std::string;
 using std::cout;
@@ -94,7 +95,7 @@ myhex(std::ios_base& __base)
   return __base;
 }
 
-
+/*
 //Helper function for loading 1D dataset from H5 files
 template <typename T>
 vector<T> h5array2vector(const H5::H5File * h5File, const string & dataPath, const H5::DataType & dt = H5::PredType::NATIVE_DOUBLE)
@@ -113,7 +114,7 @@ vector<T> h5array2vector(const H5::H5File * h5File, const string & dataPath, con
 
    return vecOut;
  };
-
+*/
 #endif /* HEADINGS_H_ */
 
 

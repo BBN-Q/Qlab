@@ -32,6 +32,8 @@ public:
 
 	int setup_DACs(const int &) const;
 
+	int run(const int &);
+	int stop(const int &);
 	int trigger_FPGA_debug(const int &, const FPGASELECT &);
 	int disable_FPGA_debug(const int &, const FPGASELECT &);
 	int set_trigger_source(const int &, const int &);

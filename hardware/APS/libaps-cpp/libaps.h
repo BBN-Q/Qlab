@@ -58,8 +58,9 @@ EXPORT int reset_LL_banks(int, int);
 
 EXPORT int load_sequence_file(int, char*);
 
+EXPORT int run(int);
+EXPORT int stop(int);
 EXPORT int trigger_FPGA_debug(int, int);
-
 EXPORT int disable_FPGA_debug(int, int);
 
 EXPORT int set_log(char *);
