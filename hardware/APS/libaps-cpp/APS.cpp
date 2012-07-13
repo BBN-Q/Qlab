@@ -153,19 +153,53 @@ int APS::load_sequence_file(const string & seqFile){
 	/*
 	 * Load a sequence file from a H5 file
 	 */
-
 	//First open the file
-//	H5::H5File file(seqFile, H5F_ACC_RDONLY);
-//
-//	const vector<string> chanStrs = {"chan_1", "chan_2", "chan_3", "chan_4"};
-//	//For now assume 4 channel data
-//	//TODO: check the channelDataFor attribute
-//	for(string tmpChanStr : chanStrs){
-//		//Load the waveform library first
-//		string tmpStr = tmpChanStr;
-//		vector<short> tmpVec = h5array2vector<short>(&file, tmpStr.append("/waveformLib"), H5::PredType::NATIVE_UINT16);
-//
-//	}
+	H5::H5File H5SeqFile(seqFile, H5F_ACC_RDONLY);
+
+	const vector<string> chanStrs = {"chan_1", "chan_2", "chan_3", "chan_4"};
+	//For now assume 4 channel data
+	//TODO: check the channelDataFor attribute
+	for(int chanct=0; chanct<4; chanct++){
+		//Reset the LL banks
+		channels_[chanct].reset_LL_banks();
+
+		//Load the waveform library first
+		string chanStr = chanStrs[chanct];
+		vector<short> tmpVec = h5array2vector<short>(&H5SeqFile, chanStr + "/waveformLib", H5::PredType::NATIVE_INT16);
+		APS::set_waveform(chanct, tmpVec);
+
+		//Load the linklist data
+		//First figure our how many banks there are from the attribute
+		H5::Group tmpGroup = H5SeqFile.openGroup(chanStr + "/linkListData");
+		H5::Attribute tmpAttribute = tmpGroup.openAttribute("numBanks");
+		USHORT numBanks;
+		tmpAttribute.read(H5::PredType::NATIVE_UINT16, &numBanks);
+		tmpAttribute.close();
+		tmpGroup.close();
+
+		//Now loop over the number of banks found and add the bank
+		for (USHORT bankct=0; bankct<numBanks; bankct++){
+			std::ostringstream tmpStream;
+			tmpStream.str("");
+			tmpStream << chanStr << "/linkListData/bank" << bankct+1 << "/offset";
+			vector<USHORT> offset = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
+			tmpStream.str("");
+			tmpStream << chanStr << "/linkListData/bank" << bankct+1 << "/count";
+			vector<USHORT> count = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
+			tmpStream.str("");
+			tmpStream << chanStr << "/linkListData/bank" << bankct+1 << "/repeat";
+			vector<USHORT> repeat = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
+			tmpStream.str("");
+			tmpStream << chanStr << "/linkListData/bank" << bankct+1 << "/trigger";
+			vector<USHORT> trigger = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
+
+			//Push back the new bank
+			add_LL_bank(chanct, offset, count, repeat, trigger);
+		}
+	}
+	//Close the file
+	H5SeqFile.close();
+
 	return 0;
 
 }

@@ -33,7 +33,7 @@ using std::runtime_error;
 using std::thread;
 
 //HDF5 library
-//#include "H5Cpp.h"
+#include "H5Cpp.h"
 
 //Needed for usleep on gcc 4.7
 #include <unistd.h>
@@ -94,7 +94,7 @@ myhex(std::ios_base& __base)
   return __base;
 }
 
-/*
+
 //Helper function for loading 1D dataset from H5 files
 template <typename T>
 vector<T> h5array2vector(const H5::H5File * h5File, const string & dataPath, const H5::DataType & dt = H5::PredType::NATIVE_DOUBLE)
@@ -113,7 +113,7 @@ vector<T> h5array2vector(const H5::H5File * h5File, const string & dataPath, con
 
    return vecOut;
  };
-*/
+
 #endif /* HEADINGS_H_ */
 
 
