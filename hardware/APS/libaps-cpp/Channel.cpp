@@ -7,7 +7,7 @@
 
 #include "Channel.h"
 
-Channel::Channel() : number{-1}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0) {}
+Channel::Channel() : number{-1}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0){}
 
 Channel::Channel( int number) : number{number}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0){}
 

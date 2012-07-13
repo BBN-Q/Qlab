@@ -25,9 +25,9 @@ public:
 
 private:
 	vector<unsigned short> offset_;
-	vector<unsigned short> trigger_;
-	vector<unsigned short> repeat_;
 	vector<unsigned short> count_;
+	vector<unsigned short> repeat_;
+	vector<unsigned short> trigger_;
 	vector<UCHAR> packedBank_;
 };
 

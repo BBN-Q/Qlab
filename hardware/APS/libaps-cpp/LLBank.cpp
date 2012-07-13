@@ -8,13 +8,13 @@
 #include "LLBank.h"
 
 
-LLBank::LLBank() : length{0}, offset_(0), trigger_(0), repeat_(0), count_(0) {
+LLBank::LLBank() : length{0}, offset_(0), count_(0), repeat_(0),trigger_(0) {
 	// TODO Auto-generated constructor stub
 
 }
 
 LLBank::LLBank(const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger) :
-		offset_(offset), count_(count), repeat_(repeat), trigger_(trigger), length(offset.size()){};
+		length(offset.size()), offset_(offset), count_(count), repeat_(repeat), trigger_(trigger){};
 
 LLBank::~LLBank() {
 	// TODO Auto-generated destructor stub

@@ -33,11 +33,11 @@ public:
 	friend class APS;
 
 private:
-	vector<float> waveform_;
-	vector<LLBank> banks_;
 	float offset_;
 	float scale_;
 	bool enabled_;
+	vector<float> waveform_;
+	vector<LLBank> banks_;
 };
 
 #endif /* CHANNEL_H_ */
