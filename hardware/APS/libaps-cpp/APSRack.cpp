@@ -86,17 +86,21 @@ int APSRack::setup_DACs(const int & deviceID) const{
 	return APSs_[deviceID].setup_DACs();
 }
 
-int APSRack::set_sampleRate(const int & deviceID, const FPGASELECT & fpga, const int & freq, const bool & testLock) {
-	return APSs_[deviceID].set_sampleRate(fpga, freq, testLock);
+int APSRack::set_sampleRate(const int & deviceID, const int & freq) {
+	return APSs_[deviceID].set_sampleRate(freq);
 }
 
-int APSRack::get_sampleRate(const int & deviceID, const FPGASELECT & fpga) const{
-	return APSs_[deviceID].get_sampleRate(fpga);
+int APSRack::get_sampleRate(const int & deviceID) const{
+	return APSs_[deviceID].get_sampleRate();
 }
 
-int APSRack::set_LL_mode(const int & deviceID, const int & dac, const bool & enable, const bool & mode){
+int APSRack::set_run_mode(const int & deviceID, const int & dac, const bool & mode){
 	//Pass through to APS method
-	return APSs_[deviceID].set_LL_mode(dac, enable, mode);
+	return APSs_[deviceID].set_run_mode(dac, mode);
+}
+
+int APSRack::clear_channel_data(const int & deviceID) {
+	return APSs_[deviceID].clear_channel_data(deviceID);
 }
 
 int APSRack::run(const int & deviceID) {
@@ -124,6 +128,10 @@ int APSRack::add_LL_bank(const int & deviceID, const int & channelNum, const vec
 
 int APSRack::reset_LL_banks(const int & deviceID, const int & channelNum){
 	return APSs_[deviceID].channels_[channelNum].reset_LL_banks();
+}
+
+int APSRack::get_running(const int & deviceID){
+	return APSs_[deviceID].running_;
 }
 
 int APSRack::set_log(FILE * pFile) {
@@ -166,4 +174,12 @@ int APSRack::set_channel_scale(const int & deviceID, const int & channelNum, con
 float APSRack::get_channel_scale(const int & deviceID, const int & channelNum) const{
 	return APSs_[deviceID].get_channel_scale(channelNum);
 }
+
+int set_channel_trigDelay(const int & deviceID, const int & channelNum, const USHORT & delay){
+	return APSs_[deviceID].set_channel_trigDelay(channelNum, delay);
+}
+unsigned short get_channel_trigDelay(const int & deviceID, const int & dac){
+	return APSs_[deviceID].get_channel_trigDelay(dac);
+}
+
 

@@ -37,8 +37,8 @@ EXPORT int program_FPGA(int, char *, int, int);
 
 EXPORT int setup_DACs(int);
 
-EXPORT int set_sampleRate(int, int, int, int);
-EXPORT int get_sampleRate(int, int);
+EXPORT int set_sampleRate(int, int);
+EXPORT int get_sampleRate(int);
 
 EXPORT int set_channel_offset(int, int, float);
 EXPORT float get_channel_offset(int, int);
@@ -50,18 +50,27 @@ EXPORT int get_channel_enabled(int, int);
 EXPORT int set_trigger_source(int, int);
 EXPORT int get_trigger_source(int);
 
+EXPORT int set_channel_trigDelay(int, int, USHORT);
+EXPORT unsigned short get_channel_trigDelay(int, int);
+
+
 EXPORT int set_waveform_float(int, int, float*, int);
 EXPORT int set_waveform_int(int, int, short*, int);
 
 EXPORT int add_LL_bank(int, int, int, unsigned short*, unsigned short*, unsigned short*, unsigned short*);
 EXPORT int reset_LL_banks(int, int);
 
+EXPORT int set_run_mode(int, int, int);
 EXPORT int load_sequence_file(int, char*);
+
+EXPORT int clear_channel_data(int);
 
 EXPORT int run(int);
 EXPORT int stop(int);
 EXPORT int trigger_FPGA_debug(int, int);
 EXPORT int disable_FPGA_debug(int, int);
+
+EXPORT int get_running(int);
 
 EXPORT int set_log(char *);
 

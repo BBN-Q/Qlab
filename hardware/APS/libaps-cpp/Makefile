@@ -43,15 +43,18 @@ else
 #CC=cl
 
 CFLAGS=-Wall -std=c++11 -g
+#CFLAGS=-Wall -std=c++0x -g -I'c:/cygwin/home/qlab/include/'
+#CFLAGS=-Wall -std=c++11 -g -Ic:/cygwin/home/qlab/hdf5/include/ -Ic:/cygwin/usr/local/include
 OBJFLAGS=-c
 OBJEXT=o
 LIBEXT=dll
 EXFLAGS=-Wl
 LIBFLAGS=-shared -o libaps.dll
-#LIBS=ftd2xx.lib -LC:/cygwin/home/qlab/lib -lhdf5 -lhdf5_cpp
+#LIBS=ftd2xx.lib -Lc:/cygwin/usr/local/lib -lboost_thread
 LIBS=ftd2xx.lib
 LFLAGS=
 CC=g++
+#CC=x86_64-w64-mingw32-gcc
 endif
 endif
 

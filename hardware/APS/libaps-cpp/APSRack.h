@@ -32,6 +32,8 @@ public:
 
 	int setup_DACs(const int &) const;
 
+	int clear_channel_data(const int &);
+
 	int run(const int &);
 	int stop(const int &);
 	int trigger_FPGA_debug(const int &, const FPGASELECT &);
@@ -39,8 +41,8 @@ public:
 	int set_trigger_source(const int &, const int &);
 	int get_trigger_source(const int &) const;
 
-	int get_sampleRate(const int &, const FPGASELECT &) const;
-	int set_sampleRate(const int &, const FPGASELECT &, const int &, const bool &);
+	int get_sampleRate(const int &) const;
+	int set_sampleRate(const int &, const int &);
 
 	int set_channel_offset(const int &, const int &, const float &);
 	float get_channel_offset(const int &, const int &) const;
@@ -49,6 +51,10 @@ public:
 	int set_channel_enabled(const int &, const int &, const bool &);
 	bool get_channel_enabled(const int &, const int &) const;
 
+	int set_channel_trigDelay(const int &, const int &, const USHORT &);
+	unsigned short get_channel_trigDelay(const int &, const int &);
+
+	int get_running(const int &);
 	int set_log(FILE *);
 
 	//Pass through both short and float waveforms
@@ -57,7 +63,7 @@ public:
 		return APSs_[deviceID].set_waveform(dac, data);
 	}
 
-	int set_LL_mode(const int & deviceID, const int & dac, const bool & enable, const bool & mode);
+	int set_run_mode(const int & deviceID, const int & dac, const bool & mode);
 	int add_LL_bank(const int &, const int &, const vector<USHORT> &, const vector<USHORT> &, const vector<USHORT> &, const vector<USHORT> &);
 	int reset_LL_banks(const int &, const int &);
 

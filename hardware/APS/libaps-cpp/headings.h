@@ -23,18 +23,28 @@
 #include <math.h>
 #include <stdexcept>
 #include <algorithm>
-#include <thread>
-#include <chrono>
 using std::vector;
 using std::string;
 using std::cout;
 using std::endl;
 using std::map;
 using std::runtime_error;
+
+
+//std::thread
+#include <thread>
 using std::thread;
+#include <chrono>
+
+
+/*boost thread
+#include <boost/thread.hpp>
+#include <boost/chrono.hpp>
+using boost::thread;
+*/
 
 //HDF5 library
-#include "H5Cpp.h"
+//#include "H5Cpp.h"
 
 //Needed for usleep on gcc 4.7
 #include <unistd.h>
@@ -95,9 +105,9 @@ myhex(std::ios_base& __base)
   return __base;
 }
 
-/*
+
 //Helper function for loading 1D dataset from H5 files
-template <typename T>
+/*template <typename T>
 vector<T> h5array2vector(const H5::H5File * h5File, const string & dataPath, const H5::DataType & dt = H5::PredType::NATIVE_DOUBLE)
  {
    // Initialize to dataspace, to find the indices we are looping over

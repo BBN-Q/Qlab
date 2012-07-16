@@ -7,10 +7,10 @@
 
 #include "APS.h"
 
-APS::APS() :  deviceID_{-1}, handle_{NULL}, channels_(4), triggerSource_{SOFTWARE_TRIGGER} {}
+APS::APS() :  deviceID_{-1}, handle_{NULL}, channels_(4), triggerSource_{SOFTWARE_TRIGGER}, samplingRate_{-1}, running_{false} {}
 
 APS::APS(int deviceID, string deviceSerial) :  deviceID_{deviceID}, deviceSerial_{deviceSerial},
-		handle_{NULL}, triggerSource_{SOFTWARE_TRIGGER}{
+		handle_{NULL}, triggerSource_{SOFTWARE_TRIGGER}, samplingRate_{-1}, running_{false} {
 		for(int ct=0; ct<4; ct++){
 			channels_.push_back(Channel(ct));
 		}
@@ -42,7 +42,7 @@ int APS::disconnect(){
 
 int APS::init(const string & bitFile, const bool & forceReload){
 
-	if (forceReload) {
+	if (forceReload || read_bitFile_version(ALL_FPGAS) != FIRMWARE_VERSION || !read_PLL_status(ALL_FPGAS)) {
 		//Setup the oscillators
 		setup_VCXO();
 		setup_PLL();
@@ -54,7 +54,25 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		set_sampleRate(FPGA1, 1200, false);
 		set_sampleRate(FPGA2, 1200, false);
 
+		// seems to be necessary on DAC2 devices
+		// probably worth further investigation to remove if possible
+		reset_status_ctrl();
+
+		// test PLL sync on each FPGA
+		const int numRetries = 5;
+		int status = test_PLL_sync(FPGA1, numRetries) || test_PLL_sync(FPGA2, numRetries);
+		if (status) {
+			FILE_LOG(logERROR) << "DAC PLLs failed to sync";
+		}
+
+		// align DAC data clock boundaries
 		setup_DACs();
+
+		// clear channel data
+		clear_channel_data();
+
+		// update LED mode
+		set_LED_mode(ALL_FPGAS, LED_RUNNING);
 
 		return bytesProgramed;
 	}
@@ -139,14 +157,38 @@ default:
 return version;
 }
 
-int APS::set_sampleRate(const FPGASELECT & fpga, const int & freq, const bool & testLock){
-	//Pass through to the FPGA code
-	return APS::set_PLL_freq(fpga, freq, testLock);
+int APS::set_sampleRate(const int & freq){
+	if (samplingRate_ != freq){
+		//Set PLL frequency for each fpga
+		APS::set_PLL_freq(FPGA1, freq);
+		APS::set_PLL_freq(FPGA2, freq);
+
+		samplingRate_ = freq;
+
+		//Test the sync
+		return APS::test_PLL_sync(FPGA1) || APS::test_PLL_sync(FPGA2);
+	}
+	else{
+		return 0;
+	}
 }
 
-int APS::get_sampleRate(const FPGASELECT & fpga) const{
+int APS::get_sampleRate() const{
 	//Pass through to FPGA code
-	return APS::get_PLL_freq(fpga);
+	int freq1 = APS::get_PLL_freq(FPGA1);
+	int freq2 = APS::get_PLL_freq(FPGA2);
+	if (freq1 != freq2){
+		FILE_LOG(logERROR) << "FGPA's did not have same PLL frequency.";
+		return -1;
+	}
+	return freq1;
+}
+
+int APS::clear_channel_data() {
+	for (auto ch : channels_) {
+		ch.clear_data();
+	}
+	return 0;
 }
 
 int APS::load_sequence_file(const string & seqFile){
@@ -154,6 +196,7 @@ int APS::load_sequence_file(const string & seqFile){
 	 * Load a sequence file from a H5 file
 	 */
 	//First open the file
+	/*
 	H5::H5File H5SeqFile(seqFile, H5F_ACC_RDONLY);
 
 	const vector<string> chanStrs = {"chan_1", "chan_2", "chan_3", "chan_4"};
@@ -199,6 +242,7 @@ int APS::load_sequence_file(const string & seqFile){
 	}
 	//Close the file
 	H5SeqFile.close();
+	*/
 
 	return 0;
 
@@ -241,6 +285,69 @@ int APS::set_channel_scale(const int & dac, const float & scale){
 float APS::get_channel_scale(const int & dac) const{
 	return channels_[dac].get_scale();
 }
+
+int APS::set_channel_trigDelay(const int & dac, const USHORT & delay){
+/* set_trigDelay
+* Write the trigger delay register for the associated channel
+* delay - unsigned 16-bit value (0, 65535) representing the trigger delay in units of FPGA clock cycles
+*         ie., delay of 1 is 3.333 ns at full sampling rate.
+*/
+ULONG trigDelayRegisterAddr;
+
+FPGASELECT fpga = dac2fpga(dac);
+if (fpga == INVALID_FPGA) {
+	return -1;
+}
+
+switch (dac) {
+	case 0:
+	case 2:
+		trigDelayRegisterAddr = FPGA_OFF_CHA_TRIG_DELAY;
+		break;
+	case 1:
+	case 3:
+		trigDelayRegisterAddr = FPGA_OFF_CHB_TRIG_DELAY;
+		break;
+	default:
+		return -2;
+}
+
+FILE_LOG(logINFO) << "Setting trigger delay for channel " << dac << " to " << delay;
+
+FPGA::write_FPGA(handle_, FPGA_ADDR_REGWRITE | trigDelayRegisterAddr, delay, fpga);
+channels_[dac].trigDelay_ = delay;
+return 0;
+}
+
+unsigned short APS::get_channel_trigDelay(const int & dac){
+/* APS_ReadTriggerDelay
+ * Read the trigger delay register for the associated channel
+ */
+	ULONG trigDelayRegisterAddr;
+
+	FPGASELECT fpga = dac2fpga(dac);
+	if (fpga == INVALID_FPGA) {
+		return -1;
+	}
+
+	switch (dac) {
+		case 0:
+			// fall through
+		case 2:
+			trigDelayRegisterAddr = FPGA_OFF_CHA_TRIG_DELAY;
+			break;
+		case 1:
+			// fall through
+		case 3:
+			trigDelayRegisterAddr = FPGA_OFF_CHB_TRIG_DELAY;
+			break;
+		default:
+			return -2;
+	}
+
+	return FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD| trigDelayRegisterAddr, fpga);
+}
+
 
 
 int APS::run() {
@@ -414,18 +521,19 @@ int APS::setup_PLL()
 	// Enable DDRs
 	FPGA::set_bit(handle_, ALL_FPGAS, FPGA_OFF_CSR, ddrMask);
 
+	//Record that sampling rate has been set to 1200
+	samplingRate_ = 1200;
+
 	return 0;
 }
 
 
 
-int APS::set_PLL_freq(const FPGASELECT & fpga, const int & freq, const bool & testLock)
+int APS::set_PLL_freq(const FPGASELECT & fpga, const int & freq)
 {
 
 	ULONG pllCyclesAddr, pllBypassAddr;
 	UCHAR pllCyclesVal, pllBypassVal;
-
-	int syncStatus;
 
 	FILE_LOG(logDEBUG) << "Setting PLL FPGA: " << fpga << " Freq.: " << freq;
 
@@ -487,26 +595,12 @@ int APS::set_PLL_freq(const FPGASELECT & fpga, const int & freq, const bool & te
 	// Enable DDRs
 	FPGA::set_bit(handle_, fpga, FPGA_OFF_CSR, ddr_mask);
 
-	syncStatus = 0;
-
-	if ((testLock) && (freq==1200)) {
-		// We have reset the global oscillator, so should sync both FPGAs, but the current
-		// test only works for channels running at 1.2 GHz
-		if (fpga == ALL_FPGAS){
-			syncStatus = APS::test_PLL_sync(FPGA1, 5);
-			syncStatus &= APS::test_PLL_sync(FPGA2, 5);
-		}
-		else{
-			syncStatus = APS::test_PLL_sync(fpga, 5);
-		}
-	}
-
-	return syncStatus;
+	return 0;
 }
 
 
 
-int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries) {
+int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see header for default */) {
 	/*
 		APS_TestPllSync synchronized the phases of the DAC clocks with the following procedure:
 		1) Make sure all PLLs have locked.
@@ -959,6 +1053,39 @@ int APS::setup_DAC(const int & dac) const
 	return 0;
 }
 
+int APS::set_LED_mode(const FPGASELECT & fpga, const LED_MODE & mode) {
+/********************************************************************
+ *
+ * Function Name : set_LED_mode()
+ *
+ * Description : Controls whether the front panel LEDs show the PLL sync
+ *		status or the channel output status.
+ *
+ * Inputs : fpga - 1, 2, or 3
+ *          mode  - 1 PLL sync, 2 channel output
+ *
+ * Returns : 0
+ *
+ ********************************************************************/
+	if (fpga == INVALID_FPGA) {
+		FILE_LOG(logERROR) << "set_LED_mode ERROR: invalid FPGA";
+	}
+
+	switch (mode) {
+	case LED_PLL_SYNC:
+		FPGA::clear_bit(handle_, fpga, FPGA_OFF_TRIGLED, TRIGLEDMSK_MODE);
+		break;
+	case LED_RUNNING:
+		FPGA::set_bit(handle_, fpga, FPGA_OFF_TRIGLED, TRIGLEDMSK_MODE);
+		break;
+	default:
+		FILE_LOG(logERROR) << "set_LED_mode ERROR: unknown mode " << mode;
+		return -2;
+	}
+
+	return 0;
+}
+
 
 int APS::trigger(const FPGASELECT & fpga)
 /********************************************************************
@@ -1094,12 +1221,12 @@ if (fpga == INVALID_FPGA) {
 switch (dac) {
 	case 0:
 	case 2:
-		zeroRegisterAddr = FPGA_OFF_DAC02_ZERO;
+		zeroRegisterAddr = FPGA_OFF_CHA_ZERO;
 		break;
 	case 1:
 		// fall through
 	case 3:
-		zeroRegisterAddr = FPGA_OFF_DAC13_ZERO;
+		zeroRegisterAddr = FPGA_OFF_CHB_ZERO;
 		break;
 	default:
 		return -2;
@@ -1178,19 +1305,18 @@ int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 }
 
 
-int APS::set_LL_mode(const int & dac, const bool & enable, const bool & mode)
+int APS::set_run_mode(const int & dac, const bool & mode)
 /********************************************************************
- * Description : Loads LinkList to FPGA
+ * Description : Sets run mode
  *
  * Inputs :
-*              enable -  enable link list 1 = enabled 0 = disabled
-*              mode - 1 = DC mode 0 = waveform mode
+*              mode -  enable link list 1 = LL mode 0 = waveform mode
 *
 * Returns : 0 on success < 0 on failure
 *
 ********************************************************************/
 {
-  int dacEnableMask, dacModeMask, ctrlReg;
+  int dacModeMask;
 
   auto fpga = dac2fpga(dac);
   if (fpga == INVALID_FPGA) {
@@ -1201,39 +1327,63 @@ int APS::set_LL_mode(const int & dac, const bool & enable, const bool & mode)
   switch(dac) {
     case 0:
     case 2:
-      dacEnableMask = CSRMSK_CHA_OUTMODE;
-      dacModeMask   = CSRMSK_CHA_LLMODE;
+      dacModeMask = CSRMSK_CHA_OUTMODE;
       break;
     case 1:
     case 3:
-      dacEnableMask = CSRMSK_CHB_OUTMODE;
-      dacModeMask   = CSRMSK_CHB_LLMODE;
+      dacModeMask = CSRMSK_CHB_OUTMODE;
       break;
     default:
       return -2;
   }
 
-  //Load the current CSR register
-  ctrlReg = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_OFF_CSR, fpga);
-  FILE_LOG(logDEBUG2) << "Current CSR: " << myhex << ctrlReg;
-
-  //Set or clear the enable bit
-  FILE_LOG(logINFO) << "Setting Link List Enable ==> FPGA: " << fpga << " DAC: " << dac << " Enable: " << enable;
-  if (enable) {
-    FPGA::set_bit(handle_, fpga, FPGA_OFF_CSR, dacEnableMask);
-  } else {
-    FPGA::clear_bit(handle_, fpga, FPGA_OFF_CSR, dacEnableMask);
-  }
-
-  //Set or clear the mode bit
-  FILE_LOG(logINFO) << "Setting Link List Mode ==> FPGA: " << fpga << " DAC: " << dac << " Mode: " << mode;
+  //Set the run mode bit
+  FILE_LOG(logINFO) << "Setting Run Mode ==> DAC: " << dac << " Mode: " << mode;
   if (mode) {
-	  FPGA::set_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
+    FPGA::set_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
   } else {
-	  FPGA::clear_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
+    FPGA::clear_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
   }
 
   return 0;
+}
+
+int APS::set_repeat_mode(const int & dac, const bool & mode) {
+/*
+ * set_repeat_mode
+ * dac - channel (0-3)
+ * mode - 1 = one-shot 0 = continuous
+ */
+int dacModeMask;
+
+auto fpga = dac2fpga(dac);
+if (fpga == INVALID_FPGA) {
+  return -1;
+}
+
+// setup register addressing based on DAC
+switch(dac) {
+  case 0:
+  case 2:
+    dacModeMask   = CSRMSK_CHA_LLMODE;
+    break;
+  case 1:
+  case 3:
+    dacModeMask   = CSRMSK_CHB_LLMODE;
+    break;
+  default:
+    return -2;
+}
+
+//Set or clear the mode bit
+FILE_LOG(logINFO) << "Setting repeat mode ==> DAC: " << dac << " Mode: " << mode;
+if (mode) {
+	  FPGA::set_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
+} else {
+	  FPGA::clear_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
+}
+
+return 0;
 }
 
 int APS::write_LL_data(const int & dac, const int & bankNum, const int & targetBank){

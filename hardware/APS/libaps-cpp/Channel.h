@@ -30,6 +30,10 @@ public:
 
 	int reset_LL_banks();
 	int add_LL_bank(const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &);
+
+	int clear_data();
+
+
 	friend class APS;
 
 private:
@@ -38,6 +42,7 @@ private:
 	bool enabled_;
 	vector<float> waveform_;
 	vector<LLBank> banks_;
+	int trigDelay_;
 };
 
 #endif /* CHANNEL_H_ */

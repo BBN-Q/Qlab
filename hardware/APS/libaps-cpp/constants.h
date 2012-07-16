@@ -91,16 +91,13 @@ static const int FPGA_OFF_CHB_LL_B_CTRL = 0xB;  // B Control Register
 static const int FPGA_OFF_CHB_LL_REPEAT = 0xC;  // Repeat Count
 static const int FPGA_OFF_DATA_CHECKSUM = 0xD;  // Data Checksum Register
 static const int FPGA_OFF_ADDR_CHECKSUM = 0xE;  // Address Checksum Register
-static const int FPGA_OFF_DAC02_ZERO = 0x10; // DAC0/2 zero offset register
-static const int FPGA_OFF_DAC13_ZERO = 0x11; // DAC1/3 zero offset register
-static const int FPGA_OFF_DAC02_TRIG_DELAY = 0x12; // DAC0/2 trigger delay
-static const int FPGA_OFF_DAC13_TRIG_DELAY = 0x13; // DAC1/3 trigger delay
+static const int FPGA_OFF_CHA_ZERO = 0x10; // DAC0/2 zero offset register
+static const int FPGA_OFF_CHB_ZERO = 0x11; // DAC1/3 zero offset register
+static const int FPGA_OFF_CHA_TRIG_DELAY = 0x12; // DAC0/2 trigger delay
+static const int FPGA_OFF_CHB_TRIG_DELAY = 0x13; // DAC1/3 trigger delay
 
 
 
-//Register for reading before bitfile programming
-static const int  FPGA_ADDR_REGREAD_PREPROG =   0x1000;
-//Register for reading after bitfile programming
 static const int  FPGA_ADDR_REGREAD =   0x8000;
 static const int  FPGA_ADDR_SYNC_REGREAD =  0XF000;
 
@@ -159,6 +156,8 @@ enum {
 };
 
 typedef enum {INVALID_FPGA=0, FPGA1, FPGA2, ALL_FPGAS} FPGASELECT;
+
+typedef enum {LED_PLL_SYNC=1, LED_RUNNING} LED_MODE;
 
 static const int MAX_WFLENGTH = 8192;
 static const int MAX_WFAMP = 8191;

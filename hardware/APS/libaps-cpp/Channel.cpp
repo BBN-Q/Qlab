@@ -7,9 +7,9 @@
 
 #include "Channel.h"
 
-Channel::Channel() : number{-1}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0){}
+Channel::Channel() : number{-1}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0), trigDelay_{0}{}
 
-Channel::Channel( int number) : number{number}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0){}
+Channel::Channel( int number) : number{number}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0), trigDelay_{0}{}
 
 Channel::~Channel() {
 	// TODO Auto-generated destructor stub
@@ -42,6 +42,9 @@ int Channel::set_scale(const float & scale){
 float Channel::get_scale() const{
 	return scale_;
 }
+
+
+
 
 int Channel::set_waveform(const vector<float> & data) {
 	//Check whether we need to resize the waveform vector
@@ -113,4 +116,9 @@ int Channel::add_LL_bank(const vector<unsigned short> & offset, const vector<uns
 	banks_.push_back(LLBank(offset, count, repeat, trigger));
 
 	return 0;
+}
+
+int Channel::clear_data() {
+	reset_LL_banks();
+	waveform_.clear();
 }

@@ -63,12 +63,12 @@ int setup_DACs(int deviceID){
 	return _APSRack.setup_DACs(deviceID);
 }
 
-int set_sampleRate(int deviceID, int fpga, int freq, int testLock){
-	return _APSRack.set_sampleRate(deviceID, FPGASELECT(fpga), freq, testLock);
+int set_sampleRate(int deviceID, int freq){
+	return _APSRack.set_sampleRate(deviceID, freq);
 }
 
-int get_sampleRate(int deviceID, int fpga){
-	return _APSRack.get_sampleRate(deviceID, FPGASELECT(fpga));
+int get_sampleRate(int deviceID){
+	return _APSRack.get_sampleRate(deviceID);
 }
 
 //Load the waveform library as floats
@@ -79,6 +79,10 @@ int set_waveform_float(int deviceID, int channelNum, float* data, int numPts){
 //Load the waveform library as int16
 int set_waveform_int(int deviceID, int channelNum, short* data, int numPts){
 	return _APSRack.set_waveform(deviceID, channelNum, vector<short>(data, data+numPts));
+}
+
+int clear_channel_data(int deviceID) {
+	return _APSRack.clear_channel_data(deviceID);
 }
 
 int run(int deviceID) {
@@ -98,6 +102,10 @@ int disable_FPGA_debug(int deviceID, int fpga){
 
 int reset_LL_banks(int deviceID, int channelNum){
 	return _APSRack.reset_LL_banks(deviceID, channelNum);
+}
+
+int get_running(int deviceID){
+	return _APSRack.get_running(deviceID);
 }
 
 //Expects a null-terminated character array
@@ -139,9 +147,20 @@ int get_channel_enabled(int deviceID, int channelNum){
 	return _APSRack.get_channel_enabled(deviceID, channelNum);
 }
 
+int set_channel_trigDelay(int deviceID, int channelNum, USHORT delay){
+	return _APSRack.set_channel_trigDelay(deviceID, channelNum, delay);
+}
+unsigned short get_channel_trigDelay(int deviceID, int dac){
+	return _APSRack.get_channel_trigDelay(deviceID, dac);
+}
+
 int add_LL_bank(int deviceID, int channelNum, int length, unsigned short* offset, unsigned short* count, unsigned short* repeat, unsigned short* trigger){
 	//Convert data pointers to vectors and passed through
 	return _APSRack.add_LL_bank(deviceID, channelNum, vector<USHORT>(offset, offset+length), vector<USHORT>(count, count+length), vector<USHORT>(repeat, repeat+length), vector<USHORT>(trigger, trigger+length));
+}
+
+int set_run_mode(int deviceID, int channelNum, int mode) {
+	return _APSRack.set_run_mode(deviceID, channelNum, mode);
 }
 
 

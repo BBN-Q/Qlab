@@ -28,8 +28,8 @@ public:
 	int program_FPGA(const string &, const FPGASELECT &, const int &) const;
 	int read_bitFile_version(const FPGASELECT &) const;
 
-	int set_sampleRate(const FPGASELECT &, const int &, const bool &);
-	int get_sampleRate(const FPGASELECT & fpga) const;
+	int set_sampleRate(const int &);
+	int get_sampleRate() const;
 
 	int set_channel_enabled(const int &, const bool &);
 	bool get_channel_enabled(const int &) const;
@@ -39,15 +39,20 @@ public:
 	float get_channel_scale(const int &) const;
 	int set_offset_register(const int &, const float &);
 
+	int set_channel_trigDelay(const int &, const USHORT &);
+	unsigned short get_channel_trigDelay(const int &);
+
 	template <typename T>
 	int set_waveform(const int & dac, const vector<T> & data){
 		channels_[dac].set_waveform(data);
 		return write_waveform(dac, channels_[dac].prep_waveform());
 	}
 
-	int set_LL_mode(const int &, const bool &, const bool &);
+	int set_run_mode(const int &, const bool &);
+	int set_repeat_mode(const int &, const bool &);
 	int add_LL_bank(const int & dac, const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger);
 
+	int clear_channel_data();
 
 	int load_sequence_file(const string &);
 
@@ -64,9 +69,10 @@ private:
 	vector<Channel> channels_;
 	map<FPGASELECT, CheckSum> checksums_;
 	int triggerSource_;
+	int samplingRate_;
 	vector<UCHAR> writeQueue_;
 	thread * bankBouncerThread_;
-	bool running_ = false;
+	bool running_;
 
 
 	int write(const FPGASELECT &, const ULONG &, const ULONG &, const bool & queue = false);
@@ -84,14 +90,16 @@ private:
 	int clear_status_ctrl();
 
 	int setup_PLL();
-	int set_PLL_freq(const FPGASELECT &, const int &, const bool &);
-	int test_PLL_sync(const FPGASELECT &, const int &);
-	int read_PLL_status(const FPGASELECT & fpga, const int & regAddr = FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, const vector<int> & pllLockBits = {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT});
+	int set_PLL_freq(const FPGASELECT &, const int &);
+	int test_PLL_sync(const FPGASELECT & fpga, const int & numRetries = 5);
+	int read_PLL_status(const FPGASELECT & fpga, const int & regAddr = FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, const vector<int> & pllLockBits = std::initializer_list<int>({PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT}));
 	int get_PLL_freq(const FPGASELECT &) const;
 
 	int setup_VCXO();
 
 	int setup_DAC(const int &) const;
+
+	int set_LED_mode(const FPGASELECT &, const LED_MODE &);
 
 	int trigger(const FPGASELECT &);
 	int disable(const FPGASELECT &);
