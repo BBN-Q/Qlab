@@ -50,7 +50,7 @@ EXPORT int get_channel_enabled(int, int);
 EXPORT int set_trigger_source(int, int);
 EXPORT int get_trigger_source(int);
 
-EXPORT int set_channel_trigDelay(int, int, USHORT);
+EXPORT int set_channel_trigDelay(int, int, unsigned short);
 EXPORT unsigned short get_channel_trigDelay(int, int);
 
 

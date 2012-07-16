@@ -121,4 +121,5 @@ int Channel::add_LL_bank(const vector<unsigned short> & offset, const vector<uns
 int Channel::clear_data() {
 	reset_LL_banks();
 	waveform_.clear();
+	return 0;
 }

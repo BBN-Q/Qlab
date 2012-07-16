@@ -33,9 +33,9 @@
 % Copyright (C) BBN Technologies Corp. 2008-2011
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-classdef APS < hggetset
+classdef APS < hgsetget
     properties
-        library_path = '../../../../hardware/APS/libaps-cpp/';
+        library_path;
         library_name = 'libaps';
         device_id = 0;
 
@@ -89,23 +89,25 @@ classdef APS < hggetset
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Public Methods
         
-        function d = APS()
+        function obj = APS()
             % APS constructor
             
             % load DLL
-            d.load_library();
+            curPath = fileparts(mfilename('fullpath'));
+            obj.library_path = [curPath filesep '..\..\..\..\hardware\APS\libaps-cpp\'];
+            obj.load_library();
             
             % build path for bitfiles
             script_path = mfilename('fullpath');
             extended_path = '\APS';
             baseIdx = strfind(script_path,extended_path);
             
-            d.bit_file_path = script_path(1:baseIdx);
+            obj.bit_file_path = script_path(1:baseIdx);
             
             % init channel structs and waveform objects
             channelStruct = @()(struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'trigDelay', 0, 'waveform', [], 'banks', []));
             for ct = 1:4
-                d.(d.channelStrs{ct}) = channelStruct();
+                obj.(obj.channelStrs{ct}) = channelStruct();
             end
         end
         
@@ -365,11 +367,11 @@ classdef APS < hggetset
         % These methods are subject to change and should not be used by
         % external code.
         
-        function load_library(d)
+        function load_library(obj)
             
             if strcmp(computer,'PCWIN64')
                 libfname = 'libaps64.dll';
-                d.library_name = 'libaps64';
+                obj.library_name = 'libaps64';
             elseif (ispc())
                 libfname = 'libaps.dll';
             elseif (ismac())
@@ -379,8 +381,8 @@ classdef APS < hggetset
             end
             
             % build library path
-            if ~libisloaded(d.library_name)
-                loadlibrary([d.library_path libfname], [d.library_path 'libaps.h']);
+            if ~libisloaded(obj.library_name)
+                loadlibrary([obj.library_path libfname], [obj.library_path 'libaps.h']);
             end
         end
         

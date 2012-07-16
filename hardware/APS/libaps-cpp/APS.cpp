@@ -51,16 +51,14 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		int bytesProgramed = program_FPGA(bitFile, ALL_FPGAS, 0x10);
 
 		//Default to max sample rate
-		set_sampleRate(FPGA1, 1200, false);
-		set_sampleRate(FPGA2, 1200, false);
+		set_sampleRate(1200);
 
 		// seems to be necessary on DAC2 devices
 		// probably worth further investigation to remove if possible
 		reset_status_ctrl();
 
 		// test PLL sync on each FPGA
-		const int numRetries = 5;
-		int status = test_PLL_sync(FPGA1, numRetries) || test_PLL_sync(FPGA2, numRetries);
+		int status = test_PLL_sync(FPGA1) || test_PLL_sync(FPGA2);
 		if (status) {
 			FILE_LOG(logERROR) << "DAC PLLs failed to sync";
 		}

@@ -100,7 +100,7 @@ int APSRack::set_run_mode(const int & deviceID, const int & dac, const bool & mo
 }
 
 int APSRack::clear_channel_data(const int & deviceID) {
-	return APSs_[deviceID].clear_channel_data(deviceID);
+	return APSs_[deviceID].clear_channel_data();
 }
 
 int APSRack::run(const int & deviceID) {
@@ -175,10 +175,10 @@ float APSRack::get_channel_scale(const int & deviceID, const int & channelNum) c
 	return APSs_[deviceID].get_channel_scale(channelNum);
 }
 
-int set_channel_trigDelay(const int & deviceID, const int & channelNum, const USHORT & delay){
+int APSRack::set_channel_trigDelay(const int & deviceID, const int & channelNum, const USHORT & delay){
 	return APSs_[deviceID].set_channel_trigDelay(channelNum, delay);
 }
-unsigned short get_channel_trigDelay(const int & deviceID, const int & dac){
+unsigned short APSRack::get_channel_trigDelay(const int & deviceID, const int & dac){
 	return APSs_[deviceID].get_channel_trigDelay(dac);
 }
 
