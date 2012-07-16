@@ -23,14 +23,16 @@ function [DI DQ] =  digitalHomodyneIQ(obj, isignal, qsignal, IFfreq, sampInterva
     else
         L = integrationWindow;
     end
+    range = integrationStart:integrationStart+integrationWindow - 1;
+    isignal = isignal(range,:);
+    qsignal = qsignal(range,:);
     
     % loop through the segments
     DI = zeros(size(isignal,2), 1);
     DQ = DI;
     for i = 1:size(isignal,2)
-        % truncate the I and Q signals to the integration window
-        thisI = isignal(integrationStart:integrationStart+L-1, i);
-        thisQ = qsignal(integrationStart:integrationStart+L-1, i);
+        thisI = isignal(:, i);
+        thisQ = qsignal(:, i);
 
         % transform I and Q to a frame rotating at IFfreq
         Iframe = zeros(1,L);

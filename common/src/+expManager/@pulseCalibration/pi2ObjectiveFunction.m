@@ -1,6 +1,6 @@
 function [cost, J] = pi2ObjectiveFunction(obj, x, qubit, direction)
-    pi2Amp = x(1);
-    offset = x(2);
+    pi2Amp = real(x(1));
+    offset = real(x(2));
     fprintf('pi2Amp: %.1f, offset: %.4f\n', pi2Amp, offset);
     % create sequence
     obj.pulseParams.pi2Amp = pi2Amp;
@@ -33,10 +33,11 @@ function [cost, J] = pi2ObjectiveFunction(obj, x, qubit, direction)
     
     % evaluate cost
     [cost, J] = obj.RepPulseCostFunction(data, pi/2);
-    % scale J rows by amplitude and offset->amplitude conversion factor
+    % scale J rows by amplitude and offset->amplitude conversion factor and
+    % turn on/off offset shifting if we are using SSB
     J(:,1) = J(:,1)/pi2Amp;
     offset2amp = obj.ExpParams.offset2amp;
-    J(:,2) = obj.ExpParams.OffsetNorm*J(:,2)*offset2amp/pi2Amp; % offset can have a different integral norm
+    J(:,2) = (obj.ExpParams.SSBFreq == 0)*obj.ExpParams.OffsetNorm*J(:,2)*offset2amp/pi2Amp; % offset can have a different integral norm
     fprintf('Cost: %.4f (%.4f) \n', sum(cost.^2), sum(cost.^2/length(cost)));
 end
 

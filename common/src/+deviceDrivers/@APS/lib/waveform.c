@@ -17,7 +17,7 @@
 waveform_t * WF_Init() {
   waveform_t * wfArray;
 
-  dlog(DEBUG_INFO,"WF_Init\n");
+  dlog(DEBUG_VERBOSE2,"WF_Init\n");
 
   wfArray = (waveform_t *) malloc (MAX_APS_CHANNELS * sizeof(waveform_t));
 
@@ -52,36 +52,33 @@ void WF_Destroy(waveform_t * wfArray) {
   return;
 }
 
-int WF_SetWaveform(waveform_t * wfArray, int channel, void * data, int length, int dataType) {
+// 16-bit int data input
+int WF_SetWaveform(waveform_t * wfArray, int channel, short * data, int length) {
+	float *fData;
+	int cnt;
+	int out;
+	fData = (float *) malloc(length * sizeof(float));
+	
+	for (cnt = 0; cnt < length; cnt++) {
+		fData[cnt] = (float) data[cnt] / MAX_WF_VALUE;
+	}
+	out = WF_SetWaveform_Float(wfArray, channel, fData, length);
+	free(fData);
+	return out;
+}
+
+// float data input
+int WF_SetWaveform_Float(waveform_t * wfArray, int channel, float * data, int length) {
   if (!wfArray) return 0;
 
-  size_t dataSize;     // incoming data type size
-  int allocatedLength; // length of allocated memory arrays
+  dlog(DEBUG_VERBOSE,"SetWaveform channel %i length %i\n", channel, length);
 
-  dlog(DEBUG_VERBOSE,"SetWaveform channel %i length %i datatype %i\n",
-  		channel, length, dataType);
-
-  if (dataType != WAVEFORM_INT_DATA &&  dataType != WAVEFORM_FLOAT_DATA) {
-	  return APSERR_INVALID_WF_DATATYPE;
-  }
-
-  // TODO enable a integer data format
-
-  switch ( dataType ) {
-  case WAVEFORM_INT_DATA:
-	  dataSize = sizeof (int);
-	  break;
-  case WAVEFORM_FLOAT_DATA:
-	  dataSize = sizeof (float);
-	  break;
-  default: // should not reach due to error checking above
-	  return APSERR_INVALID_WF_DATATYPE;
-  }
-
-  // free any waveform memory associated with channel if it exists
+  // free any memory associated with channel if it exists
   WF_Free(wfArray,channel);
 
   // allocate memory
+
+  int allocatedLength;
 
   // trim length to maximum allowed
   if (length > MAX_WAVEFORM_LENGTH) {
@@ -91,7 +88,7 @@ int WF_SetWaveform(waveform_t * wfArray, int channel, void * data, int length, i
 
   allocatedLength = length + (length % APS_WAVEFORM_UNIT_LENGTH);
 
-  wfArray[channel].pData = (void *) malloc(allocatedLength * dataSize);
+  wfArray[channel].pData = (float *) malloc(allocatedLength * sizeof(float));
   if (!wfArray[channel].pData) {
     dlog(DEBUG_VERBOSE,"Error allocating data pointer for channel: %i", channel);
     return -1;
@@ -103,14 +100,13 @@ int WF_SetWaveform(waveform_t * wfArray, int channel, void * data, int length, i
     return -1;
   }
 
-  memset(wfArray[channel].pData,         0,  allocatedLength * dataSize);
+  memset(wfArray[channel].pData,         0,  allocatedLength * sizeof(float));
   memset(wfArray[channel].pFormatedData, 0,  allocatedLength * sizeof(int16_t));
 
-  memcpy(wfArray[channel].pData, data, length * dataSize);
+  memcpy(wfArray[channel].pData, data, length * sizeof(float));
 
   wfArray[channel].allocatedLength = allocatedLength;
   wfArray[channel].isLoaded = 0;
-  wfArray[channel].dataType = dataType;
   WF_Prep(wfArray,channel);
   return 0;
 }
@@ -167,33 +163,27 @@ bank_t * WF_GetLinkListBank(waveform_t * wfArray, int channel, unsigned int bank
 	return ret;
 }
 
-void  WF_SetOffset(waveform_t * wfArray,int channel, float offset) {
+void WF_SetOffset(waveform_t * wfArray,int channel, float offset) {
   if (!wfArray) return;
-  if (wfArray[channel].offset != offset) {
-	  wfArray[channel].offset = offset;
-	  WF_Prep(wfArray,channel);
-  }
+  wfArray[channel].offset = offset;
 }
 
-float    WF_GetOffset(waveform_t * wfArray, int channel) {
+float WF_GetOffset(waveform_t * wfArray, int channel) {
   if (!wfArray) return 0;
   return wfArray[channel].offset;
 }
 
-void    WF_SetScale(waveform_t * wfArray, int channel, float scale) {
+void WF_SetScale(waveform_t * wfArray, int channel, float scale) {
   if (!wfArray) return;
-  if (wfArray[channel].scale != scale) {
-	  wfArray[channel].scale = scale;
-	  WF_Prep(wfArray,channel);
-  }
+  wfArray[channel].scale = scale;
 }
 
-float  WF_GetScale(waveform_t * wfArray, int channel) {
+float WF_GetScale(waveform_t * wfArray, int channel) {
   if (!wfArray) return 0;
   return wfArray[channel].scale;
 }
 
-uint16_t * WF_GetDataPtr(waveform_t * wfArray, int channel) {
+int16_t * WF_GetDataPtr(waveform_t * wfArray, int channel) {
   if (!wfArray) return 0;
 
   return wfArray[channel].pFormatedData;
@@ -217,48 +207,41 @@ void WF_SetIsLoaded(waveform_t * wfArray,  int channel, int loaded) {
   wfArray[channel].isLoaded = loaded;
 }
 
-void   WF_Prep(waveform_t * wfArray, int channel) {
+void WF_SetEnabled(waveform_t * wfArray, int channel, int enabled) {
+	if (!wfArray) return;
+	
+	wfArray[channel].isEnabled = enabled;
+}
+
+int WF_GetEnabled(waveform_t * wfArray, int channel) {
+	if (!wfArray) return 0;
+
+	return wfArray[channel].isEnabled;
+}
+
+void WF_Prep(waveform_t * wfArray, int channel) {
   if (!wfArray) return;
 
-  int * intData;
-  float * floatData;
-
   int cnt;
-  int16_t prepValue;
+  float prepValue;
 
-  int real_mode;
+  float scale = wfArray[channel].scale * MAX_WF_VALUE;
+  float offset = wfArray[channel].offset * MAX_WF_VALUE;
 
-  float scale;
-  float offset;
-
-  intData   = (int *) wfArray[channel].pData;
-  floatData = (float *) wfArray[channel].pData;
-
-  real_mode = (wfArray[channel].dataType == WAVEFORM_FLOAT_DATA);
-
-  dlog(DEBUG_VERBOSE2,"WF_Prep Real Mode = %i\n", real_mode);
-
-  scale = wfArray[channel].scale;
-  offset = wfArray[channel].offset * MAX_WF_VALUE;
-
-  if (real_mode) {
-  	scale = scale * MAX_WF_VALUE;
-  }
+  dlog(DEBUG_VERBOSE, "Prep scale = %f offset = %f\n", wfArray[channel].scale, offset);
 
   for (cnt = 0; cnt < wfArray[channel].allocatedLength; cnt++) {
-  	if (real_mode) {
-  		prepValue = round(floatData[cnt] * scale + offset);
-  		dlog(DEBUG_VERBOSE2,"FLOAT_MODE Input %f Output %i\n",floatData[cnt],prepValue);
-  	} else {
-  		prepValue = round(intData[cnt] * scale + offset);
-  		dlog(DEBUG_VERBOSE2,"INT_MODE Input %i Output %i\n",intData[cnt],prepValue);
-  	}
+    prepValue = wfArray[channel].pData[cnt];
+
+    // multiply by scale and add dc offset
+    prepValue = round(prepValue * scale + offset);
 
     // clip to min max value
     if (prepValue > MAX_WF_VALUE) prepValue = MAX_WF_VALUE;
     if (prepValue < -MAX_WF_VALUE) prepValue = -MAX_WF_VALUE;
+
     // convert to int16
-    wfArray[channel].pFormatedData[cnt] = prepValue;
+    wfArray[channel].pFormatedData[cnt] = (int16_t) prepValue;
   }
 
 }
@@ -353,6 +336,10 @@ int WF_LoadCache(waveform_t * wfArray, char * filename) {
 
 
 	fid = fopen(filename,"rb");
+	if (!fid) {
+		dlog(DEBUG_INFO, "Waveform cache not found\n");
+		return -1;
+	}
 
 	for(channel = 0; channel < MAX_APS_CHANNELS; channel++) {
 		fread(&(tempWaveform), sizeof(waveform_t),1, fid);
@@ -396,3 +383,4 @@ int WF_LoadCache(waveform_t * wfArray, char * filename) {
 
 	return 0;
 }
+

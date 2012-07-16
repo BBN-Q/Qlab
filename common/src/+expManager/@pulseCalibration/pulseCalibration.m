@@ -74,26 +74,34 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             
             % set digitizer with the appropriate number of segments (why do
             % we have to set it in so many places)?
-            obj.inputStructure.InstrParams.scope.averager.nbrSegments = nbrSegments;
             obj.scopeParams.averager.nbrSegments = nbrSegments;
             obj.scope.averager = obj.scopeParams.averager;
-            
+
             % create tmp file
-            fclose('all'); % make sure dangling file handles are closed
-            obj.openDataFile();
-            fprintf(obj.DataFileHandle,'$$$ Beginning of Data\n');
+            header = struct('xpoints', 1:nbrSegments, 'xlabel', 'Segment');
+            obj.openDataFile(1, header);
+
+            obj.Loop.one.sweep.points = 1:nbrSegments;
+            obj.Loop.one.steps = nbrSegments;
             obj.homodyneDetection2DDo();
             % finish and close file
-            fprintf(obj.DataFileHandle,'\n$$$ End of Data\n');
-            fclose(obj.DataFileHandle);
-            data = obj.parseDataFile(false);
+            obj.finalizeData();
+
+            data = loadData(false, fullfile(obj.DataPath, obj.DataFileName));
             
             % delete the file
-            filename = [obj.DataPath '\' obj.DataFileName];
-            delete(filename);
+            delete(fullfile(obj.DataPath, obj.DataFileName));
             
             % return the amplitude data
-            out = data.abs_Data;
+            switch obj.ExpParams.dataType
+                case 'amp'
+                    out = data.abs_Data;
+                case 'phase'
+                    % unwrap assume phase data in radians
+                    out = 180/pi * unwrap(pi/180 * data.phaseData);
+                otherwise
+                    error('Unknown dataType can only be "amp" or "phase"');
+            end
         end
 
         function [cost, J] = Xpi2ObjectiveFnc(obj, x0)
@@ -135,6 +143,10 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             if isfield(obj.inputStructure, 'SoftwareDevelopmentMode') && obj.inputStructure.SoftwareDevelopmentMode
                 obj.testMode = true;
             end
+            % create a generic 'time' sweep
+            timeSweep = struct('type', 'sweeps.Time', 'number', 1, 'start', 0, 'step', 1);
+            obj.inputStructure.SweepParams = struct('time', timeSweep);
+            
             Init@expManager.homodyneDetection2D(obj);
             
             IQchannels = obj.channelMap.(obj.ExpParams.Qubit);
@@ -169,14 +181,11 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                 channelParams = obj.inputStructure.InstrParams.(IQchannels.instr);
                 obj.pulseParams.i_offset = channelParams.(['chan_' num2str(IQchannels.i)]).offset;
                 obj.pulseParams.q_offset = channelParams.(['chan_' num2str(IQchannels.q)]).offset;
+                obj.pulseParams.SSBFreq = obj.ExpParams.SSBFreq;
             else
                 obj.pulseParams = struct('piAmp', 6560, 'pi2Amp', 3280, 'delta', -0.5, 'T', eye(2,2),...
                     'pulseType', 'drag', 'i_offset', 0.119, 'q_offset', 0.130);
             end
-            
-            % create a generic 'time' sweep
-            timeSweep = struct('type', 'sweeps.Time', 'number', 1, 'start', 0, 'step', 1);
-            obj.inputStructure.SweepParams = struct('time', timeSweep);
         end
         
         function Do(obj)

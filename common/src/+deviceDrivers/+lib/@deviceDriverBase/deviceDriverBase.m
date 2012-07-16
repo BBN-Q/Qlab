@@ -26,7 +26,7 @@
  % Using a handle class does not create copies when passed 
  % between modules. 
  %
- classdef deviceDriverBase < handle
+ classdef deviceDriverBase < hgsetget
     properties (Constant = true)
          NoError  = {0, 'No Error'};
          NoFile   = {-1,'File error.'};

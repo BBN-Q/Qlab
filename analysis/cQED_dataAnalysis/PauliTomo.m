@@ -1,6 +1,6 @@
-function [betas Pauli] = PauliTomo(stomodat)
+function [betas Pauli] = PauliTomo(calData, tomoData)
 
-b = BetaExtract(stomodat);
+b = BetaExtract(calData);
 % b0 II +b1 ZI + b2 IZ + b3 ZZ
 b0 = b(1);
 b1 = b(2);
@@ -27,11 +27,6 @@ M = [b0   0  0   b1  0   0   b2  0   0   0   0   0   0   0   0   b3; %Id Id
      ];
  
 
-fullmeas = stomodat(17:80);
-
-%Take the mean of every 4 points
-measvec = mean(reshape(fullmeas,4,16));
-
-Pauli = M\measvec';
+Pauli = M\tomoData';
  
       

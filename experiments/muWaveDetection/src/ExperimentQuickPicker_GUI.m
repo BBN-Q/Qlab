@@ -82,17 +82,18 @@ loadJSON();
                 tmpSettings_fcn = GUIsetters('TekAWG');
                 tmpSettings_fcn(TekSettings)
                 
-                APSSettings.seqfile = fullfile(expParams.networkDrive, 'APS', 'Trigger', 'Trigger.mat');
+                APSSettings.seqfile = fullfile(expParams.networkDrive, 'APS', 'Trigger', 'Trigger.h5');
                 tmpSettings_fcn = GUIsetters('BBNAPS');
                 tmpSettings_fcn(APSSettings)
                 
             case {'BBNAPS12','BBNAPS34'}
                 %Update the sequence files 
-                TekSettings.seqfile = fullfile(expParams.networkDrive, 'AWG', 'Trigger', 'Trigger.awg');
+%                 TekSettings.seqfile = fullfile(expParams.networkDrive, 'AWG', 'Trigger', 'Trigger.awg');
+                TekSettings.seqfile = fullfile(expParams.networkDrive, 'AWG', expParams.(expName).baseName, [expParams.(expName).baseName channelName '.awg']);
                 tmpSettings_fcn = GUIsetters('TekAWG');
                 tmpSettings_fcn(TekSettings)
                 
-                APSSettings.seqfile = fullfile(expParams.networkDrive, 'APS', expParams.(expName).baseName, [expParams.(expName).baseName channelName '.mat']);
+                APSSettings.seqfile = fullfile(expParams.networkDrive, 'APS', expParams.(expName).baseName, [expParams.(expName).baseName channelName '.h5']);
                 tmpSettings_fcn = GUIsetters('BBNAPS');
                 tmpSettings_fcn(APSSettings)
         end

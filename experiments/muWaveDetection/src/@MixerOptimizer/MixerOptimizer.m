@@ -69,6 +69,7 @@ classdef MixerOptimizer < expManager.expBase
                 case 'sweep'
                     obj.setup_SSB_AWG(0,0);
                      [i_offset, q_offset] = obj.optimize_mixer_offsets_bySweep();
+                     obj.setup_SSB_AWG(i_offset,q_offset);
                      T = obj.optimize_mixer_ampPhase_bySweep(i_offset, q_offset);
                 case 'search'
                     [i_offset, q_offset] = obj.optimize_mixer_offsets_bySearch();
@@ -90,6 +91,10 @@ classdef MixerOptimizer < expManager.expBase
 
             % save transformation and offsets to file
             save([obj.cfg_path '/mixercal.mat'], 'i_offset', 'q_offset', 'T', '-v7.3');
+            
+            %Print out a summary for the notebook
+            fprintf('\nSummary:\n');
+            fprintf('i_offset = %.4f; q_offset = %.4f; ampFactor = %.4f; phaseSkew = %.1f\n', i_offset, q_offset, T(1,1), atand(T(1,2)/T(1,1)))
         end
         function CleanUp(obj)
             %Close all instruments
@@ -154,32 +159,26 @@ classdef MixerOptimizer < expManager.expBase
                     tpts = timeStep*(0:(waveformLength-1));
                     
                     % i waveform
-                    iwf = obj.awg.(['chan_' num2str(awg_I_channel)]).waveform;
-                    iwf.dataMode = iwf.REAL_DATA;
-                    iwf.data = 0.5 * cos(2*pi*fssb.*tpts);
-                    iwf.set_offset(i_offset);
-                    obj.awg.loadWaveform(awg_I_channel-1, iwf.prep_vector());
+                    iwf = 0.5 * cos(2*pi*fssb.*tpts);
                     obj.awg.setOffset(awg_I_channel, i_offset);
-
+                    % TODO: update APS driver to accept normalized
+                    % waveforms in the range (-1, 1)
+                    obj.awg.loadWaveform(awg_I_channel, round(iwf*8191));
+ 
                     % q waveform
-                    qwf = obj.awg.(['chan_' num2str(awg_Q_channel)]).waveform;
-                    qwf.dataMode = qwf.REAL_DATA;
-                    qwf.data = -0.5 * sin(2*pi*fssb.*tpts);
-                    qwf.set_offset(q_offset);
-                    obj.awg.loadWaveform(awg_Q_channel-1, qwf.prep_vector());
+                    qwf = -0.5 * sin(2*pi*fssb.*tpts);
                     obj.awg.setOffset(awg_Q_channel, q_offset);
+                    % same TODO item here as above
+                    obj.awg.loadWaveform(awg_Q_channel, round(qwf*8191));
                     
                     obj.awg.triggerSource = 'internal';
                     
-                    obj.awg.setLinkListMode(awg_I_channel-1, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
-                    obj.awg.setLinkListMode(awg_Q_channel-1, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
-
-                    obj.awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
-                    obj.awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
+                    obj.awg.setLinkListMode(awg_I_channel, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
+                    obj.awg.setLinkListMode(awg_Q_channel, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
                     
                     unusedChannels = setdiff(1:4, [awg_I_channel, awg_Q_channel]);
-                    obj.awg.(['chan_' num2str(unusedChannels(1))]).enabled = false;
-                    obj.awg.(['chan_' num2str(unusedChannels(2))]).enabled = false;
+                    obj.awg.setEnabled(unusedChannels(1), 0);
+                    obj.awg.setEnabled(unusedChannels(2), 0);
             end
             
         end

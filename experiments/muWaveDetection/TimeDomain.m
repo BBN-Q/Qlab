@@ -82,7 +82,7 @@ mainWindow = figure( ...
 	'MenuBar', 'none', ...
 	'NumberTitle', 'off', ...
 	'Visible', 'off',...
-    'KeyPressFcn', @keyPress, 'HandleVisibility', 'callback');
+    'HandleVisibility', 'callback');
 
 %Add a grid layout for all the controls
 mainGrid = uiextras.Grid('Parent', mainWindow, 'Spacing', 20, 'Padding', 10);
@@ -306,27 +306,18 @@ set(mainWindow, 'Visible', 'on');
 		% These methods are inherited from the superclass 'experiment'.  They are
 		% generic for all Experiments
 		Exp = expManager.homodyneDetection2D(expDataPath, cfg_file_name, basename, counter.value);
-		Exp.parseExpcfgFile;
+        
+        % increment counter
+        counter.increment();
 
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 		%%%%%%%%%%%%%%%%%%%%%     RUN THE EXPERIMENT      %%%%%%%%%%%%%%%%%%%%%%%%%
 		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-		% Initialize the data file and record the parameters
-		Exp.openDataFile;
-		Exp.writeDataFileHeader;
-        % increment counter
-        counter.increment();
+		Exp.Init();
+		Exp.Do();
+		Exp.CleanUp();
 
-		% Run the actual experiment
-		Exp.Init;
-		Exp.Do;
-		Exp.CleanUp;
-
-		% Close the data file and end connection to all insturments.  This is 
-		% another method inherited from 'experiment'
-		Exp.finalizeData;
-        
         %After a succesful run uncheck the force reload buttons
         for tmpAWGPanel = AWGTabPanel.Children
             set(findobj(tmpAWGPanel, 'Tag', 'seqForceBox'), 'Value', false); 
@@ -334,12 +325,6 @@ set(mainWindow, 'Visible', 'on');
         
         %Call the stop button call_back to clean-up
         stop_callback()
-    end
-
-    function keyPress(~, event)
-        if strcmp(event.Modifier{1},'control') && strcmp(event.Key,'r')
-            run_callback()
-        end
     end
 
     function stop_callback(~,~)

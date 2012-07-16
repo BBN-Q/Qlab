@@ -15,7 +15,7 @@ end
 
 basename = 'RabiWidth';
 fixedPt = 6000;
-cycleLength = 19000;
+cycleLength = 10000;
 nbrRepeats = 1;
 
 % load config parameters from files
@@ -25,15 +25,15 @@ qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 
 % if using SSB, set the frequency here
-SSBFreq = 0e6;
+SSBFreq = -150e6;
 
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
-numsteps = 200;
-minWidth = 12;
+numsteps = 101;
+minWidth = 24;
 stepsize = 6; % 12
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
-
+%pulseLength = minWidth*ones([numsteps,1]);
 patseq = {{pg.pulse('Xtheta', 'amp', 2000, 'width', pulseLength, 'pType', 'square')}};
 
 calseq = {};

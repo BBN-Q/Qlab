@@ -35,8 +35,8 @@ def clifford_multiply(C1, C2):
 
 
 #Number of gates that we want
-gateLengths = 2**np.arange(2,7)
-
+#gateLengths = [2, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96]
+gateLengths = [4, 8, 12, 16, 24, 32, 64, 128, 192]
 #Number of randomizations
 numRandomizations = 32
 
@@ -90,7 +90,7 @@ generatorSeqs = [x for x in product(generatorPulses,repeat=1)] + \
 
 #Find the effective unitary for each generator sequence
 reducedSeqs = np.array([ reduce(clifford_multiply,x) for x in generatorSeqs ])
-iter
+
 #Pick first generator sequence (and thus shortest) that gives each Clifford and all those that have the same length
 allCliffordSeqs = [np.nonzero(reducedSeqs==x)[0] for x in range(24)]
 seqLengths = [len(generatorSeqs[tmpSeqs[0]]) for tmpSeqs in allCliffordSeqs]
@@ -102,6 +102,10 @@ print('Mean number of generators per Clifford is {0}'.format(meanNumGens))
 
 #Generate random sequences
 randomSeqs = [np.random.randint(0,24, (gateLength-1)).tolist() for gateLength in gateLengths for ct in range(numRandomizations) ] 
+
+#Interleave a gate
+#interleaveGate = 10 #X90
+#randomSeqs = [np.vstack((randomSeq, interleaveGate*np.ones(len(randomSeq), dtype=np.int))).flatten(order='F').tolist() for randomSeq in randomSeqs]
 
 #For each sequence calculate inverse and the X sequence and append the final Clifford
 randomISeqs = []
@@ -120,11 +124,11 @@ XpulseSeqs = [[generatorString(tmpGenCliff) for tmpCliff in tmpSeq for tmpGenCli
 
 #Write out the files now
 with open('RB_ISeqs.txt','wt') as ISeqFID:
-    writer = csv.writer(ISeqFID)
+    writer = csv.writer(ISeqFID, delimiter='\t')
     writer.writerows(IpulseSeqs)
 
 with open('RB_XSeqs.txt','wt') as XSeqFID:
-    writer = csv.writer(XSeqFID)
+    writer = csv.writer(XSeqFID, delimiter='\t')
     writer.writerows(XpulseSeqs)
 
 

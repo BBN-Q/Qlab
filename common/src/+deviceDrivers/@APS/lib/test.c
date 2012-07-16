@@ -29,10 +29,12 @@
 **********************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <stdint.h>
 #include <limits.h>
+#include <sys/time.h>
 
 // BUILD_DLL define
 // Use to switch between a statically linked test and a dynamically linked test
@@ -55,6 +57,8 @@
 #include "libaps.h"
 #endif
 
+#include "waveform.h"
+
 #ifdef __CYGWIN__
 	#define GetFunction GetProcAddress
 #else
@@ -63,8 +67,8 @@
 
 #define is64Bit (sizeof(size_t) == 8)
 
-static const int false = 0;
-static const int true = 1;
+#define FALSE 0
+#define TRUE 1
 
 typedef int (*pfunc)();
 
@@ -79,12 +83,14 @@ typedef int (*pfunc)();
 #define close             APS_Close
 #define setWaveform       APS_SetWaveformFloat
 #define setLinkList       APS_SetLinkList
-#define setWaveformOffset APS_GetWaveformOffset
-#define getWaveformOffset APS_GetWaveformOffset
+#define setWaveformOffset APS_SetChannelOffset
+#define getWaveformOffset APS_GetChannelOffset
 #define setWaveformScale  APS_SetWaveformScale
 #define getWaveformScale  APS_GetWaveformScale
+#define setEnabled        APS_SetWaveformEnabled
 #define loadStored        APS_LoadStoredWaveform
 #define loadAll       	  APS_LoadAllWaveforms
+#define run               APS_Run
 #define trigger           APS_TriggerFpga
 #define disable           APS_DisableFpga
 #define load              APS_LoadWaveform
@@ -95,6 +101,7 @@ typedef int (*pfunc)();
 #define saveCache         APS_SaveWaveformCache
 #define loadCache         APS_LoadWaveformCache
 #define startThread       APS_StartLinkListThread
+#define loadLinkList      APS_LoadLinkList
 #endif
 
 void programFPGA(HANDLE hdll, int dac, char * bitFile, int progamTest) {
@@ -153,7 +160,7 @@ void programFPGA(HANDLE hdll, int dac, char * bitFile, int progamTest) {
 	maxProg = 1;
 	for (progCnt = 0; progCnt < maxProg; progCnt++) {
 		printf("Programming FPGAS %i: ", progCnt);
-		fflush(stdout);
+		//fflush(stdout);
 		int numBytesProg;
 		numBytesProg = prog(0, bitFileData, bitFileSize, 3, 0x10);
 		printf("Done \n");
@@ -195,7 +202,7 @@ int openDac(HANDLE hdll, int dac) {
 
 	printf("Opening Dac %i: ", dac);
 	fflush(stdout);
-	err = open(dac,true);
+	err = open(dac,TRUE);
 	if (err < 0)  {
 		printf("Error Opened Return %i\n", err);
 		return -1;
@@ -203,9 +210,6 @@ int openDac(HANDLE hdll, int dac) {
 	printf("Done\n");
 	return 0;
 }
-
-enum PULSE_TYPE {FLOAT_TYPE, INT_TYPE};
-
 
 
 // integerVersion
@@ -216,7 +220,7 @@ void * buildPulseMemory(int waveformLen , int pulseLen, int pulseType) {
 	float * pulseMemFloat;
 	unsigned short * pulseMemInt;
 	if (pulseType == INT_TYPE) {
-		pulseMemInt = malloc(waveformLen * sizeof(unsigned short));
+		pulseMemInt = malloc(waveformLen * sizeof(short));
 		pulseMem = pulseMemInt;
 	} else {
 		pulseMemFloat = malloc(waveformLen * sizeof(float));
@@ -239,42 +243,46 @@ void * buildPulseMemory(int waveformLen , int pulseLen, int pulseType) {
 }
 
 void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
-	int waveformLen = 1000;
-	int pulseLen = 500;
+	int waveformLen = 8000;
+	int pulseLen = 2000;
 
-	float * pulseMem;
+	short * pulseMem;
 
 	int cnt;
+	time_t t0, t1;
 
 #ifdef BUILD_DLL
 	pfunc close;
 	pfunc setWaveform, setLinkList;
 	pfunc setWaveformOffset, getWaveformOffset;
 	pfunc setWaveformScale,  getWaveformScale;
+	pfunc setEnabled;
 	pfunc loadStored, loadAll;
+	pfunc load;
 	pfunc saveCache, loadCache;
-
-	pfunc trigger;
-	pfunc disable;
+	pfunc trigger, run, disable;
 
 	close             = (pfunc) GetFunction(hdll, "APS_Close");
 	setWaveform       = (pfunc) GetFunction(hdll, "APS_SetWaveform");
 	setLinkList       = (pfunc) GetFunction(hdll, "APS_SetLinkList");
-	setWaveformOffset = (pfunc) GetFunction(hdll, "APS_GetWaveformOffset");
-	getWaveformOffset = (pfunc) GetFunction(hdll, "APS_GetWaveformOffset");
+	setWaveformOffset = (pfunc) GetFunction(hdll, "APS_SetChannelOffset");
+	getWaveformOffset = (pfunc) GetFunction(hdll, "APS_GetChannelOffset");
 	setWaveformScale  = (pfunc) GetFunction(hdll, "APS_SetWaveformScale");
 	getWaveformScale  = (pfunc) GetFunction(hdll, "APS_GetWaveformScale");
+	setEnabled        = (pfunc) GetFunction(hdll, "APS_SetWaveformEnabled");
+	load              = (pfunc) GetFunction(hdll, "APS_LoadWaveform");
 	loadStored        = (pfunc) GetFunction(hdll, "APS_LoadStoredWaveform");
 	loadAll           = (pfunc) GetFunction(hdll, "APS_LoadAllWaveforms");
 	saveCache         = (pfunc) GetFunction(hdll, "APS_SaveWaveformCache");
 	loadCache         = (pfunc) GetFunction(hdll, "APS_LoadWaveformCache");
 
 	trigger      = (pfunc) GetFunction(hdll,"APS_TriggerFpga");
+	run          = (pfunc) GetFunction(hdll,"APS_Run");
 	disable      = (pfunc) GetFunction(hdll,"APS_DisableFpga");
 
 #endif
 
-	pulseMem = (float *) buildPulseMemory(waveformLen , pulseLen, FLOAT_TYPE);
+	pulseMem = (short *) buildPulseMemory(waveformLen, pulseLen, INT_TYPE);
 	if (pulseMem == 0) return;
 
 	if (openDac(hdll,0) < 0) return;
@@ -282,15 +290,14 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 	if (doSetup) {
 		programFPGA(hdll,0, bitFile,0);
 
-		printf("Storing Waveform\n");
+		printf("Loading and storing waveforms\n");
+		t0 = time(NULL);
 
-		for( cnt = 0; cnt < 4; cnt++)
-			setWaveform(0, cnt, pulseMem, waveformLen);
-
-		printf("Loading Waveform\n");
-		//for( cnt = 0; cnt < 4; cnt++)
-		//	loadStored(0, cnt);
-		loadAll(0);
+		for( cnt = 0; cnt < 100; cnt++) {
+			load(0, pulseMem, waveformLen, 0, cnt % 4, FALSE, TRUE);
+			//setWaveformOffset(0, cnt, 0.0);
+		}
+		t1 = time(NULL);
 
 		printf("Saving Cache\n");
 		saveCache(0,0);
@@ -301,16 +308,19 @@ void doStoreLoadTest(HANDLE hdll, char * bitFile, int doSetup) {
 
 	printf("Triggering:\n");
 
-	trigger(0, 0, 1);
-	trigger(0, 2, 1);
+	run(0, 1);
 
 	printf("Press key:\n");
+	fflush(stdout);
 	getchar();
 
 	disable(0,0);
 	disable(0,2);
 
 	close(0);
+
+	printf("Elapsed wall clock time: %ld\n", (long) (t1 - t0));
+	printf("Time per call to loadWaveform: %f\n", (float) (t1 - t0) / 100.0);
 }
 
 void doToggleTest(HANDLE hdll, char * bitFile, int programTest) {
@@ -336,7 +346,7 @@ void doToggleTest(HANDLE hdll, char * bitFile, int programTest) {
 	close        = (pfunc) GetFunction(hdll,"APS_Close");
 #endif
 
-	pulseMem = (unsigned short *) buildPulseMemory(waveformLen , pulseLen,INT_TYPE);
+	pulseMem = (unsigned short *) buildPulseMemory(waveformLen, pulseLen, INT_TYPE);
 	if (pulseMem == 0) return;
 
 	if (openDac(hdll,0) < 0) return;
@@ -347,7 +357,7 @@ void doToggleTest(HANDLE hdll, char * bitFile, int programTest) {
 	for (cnt = 0 ; cnt < 4; cnt++ ) {
 		printf("Loading Waveform: %i ", cnt);
 		fflush(stdout);
-		ret = load(0, pulseMem, waveformLen,0, cnt, false, false);
+		ret = load(0, pulseMem, waveformLen,0, cnt, FALSE, FALSE);
 
 		if (ret < 0)
 			printf("Error: %i\n",ret);
@@ -406,6 +416,41 @@ dealloc:
 
 }
 
+void doLinkListTest(HANDLE hdll, char* bitFile, int doSetup) {
+	const int llLen = 512;
+	const int numCalls = 20;
+	unsigned short offset[llLen], count[llLen], repeat[llLen], trigger[llLen];
+
+	int cnt;
+	struct timeval t0, t1;
+
+#ifdef BUILD_DLL
+	pfunc close;
+	pfunc loadLinkList;
+
+	close             = (pfunc) GetFunction(hdll, "APS_Close");
+	loadLinkList       = (pfunc) GetFunction(hdll, "APS_LoadLinkList");
+#endif
+
+	if (openDac(hdll,0) < 0) return;
+
+	if (doSetup) {
+		programFPGA(hdll,0, bitFile,0);
+	}
+
+	printf("Loading link lists\n");
+
+	gettimeofday(&t0, NULL);
+	for( cnt = 0; cnt < numCalls; cnt++) {
+		loadLinkList(0, offset, count, trigger, repeat, llLen, cnt % 4, 0, FALSE);
+	}
+	gettimeofday(&t1, NULL);
+	float runTime = (1/1e6)*(t1.tv_sec*1e6 + t1.tv_usec - t0.tv_sec*1e6 - t0.tv_usec);
+	printf("Total run time: %f s (%f s per call)\n", runTime, runTime/numCalls);
+
+	close(0);
+}
+
 void printHelp(){
 	int bitdepth = sizeof(size_t) == 8 ? 64 : 32;
 	printf("BBN APS C Test Bench $Rev$ %i-Bit\n", bitdepth);
@@ -414,6 +459,7 @@ void printHelp(){
 	printf("   -s List Available APS Serial Numbers\n");
 	printf("   -ks List Known APS Serial Numbers\n");
 	printf("   -w  Run Waveform StoreLoad Tests\n");
+	printf("   -l  Run Link List Load Tests\n");
 	printf("   -x  Test Threading\n");
 	printf("   -h  Print This Help Message\n");
 }
@@ -508,6 +554,12 @@ int main (int argc, char** argv) {
 			int doSetup;
 			doSetup = (argc > (cnt+2)) ? atoi(argv[cnt+2]) : 1;
 			doStoreLoadTest(hdll,bitFile,doSetup);
+		}
+		if (strcmp(argv[cnt],"-l") == 0) {
+			// allow choice of whether to program the FPGA
+			int doSetup;
+			doSetup = (argc > (cnt+1)) ? atoi(argv[cnt+1]) : 1;
+			doLinkListTest(hdll, bitFile, doSetup);
 		}
 	}
 

@@ -1,27 +1,9 @@
-classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource
-    % Agilent E8267D vector signal generator
+classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
+    % Agilent N5183A microwave signal generator
     %
     %
     % Author(s): Blake Johnson/Regina Hain
     % Generated on: Tues Nov 1 2010
-    
-    % Class-specific constant properties
-    properties (Constant = true)
-        
-    end % end constant properties
-    
-    
-    % Class-specific private properties
-    properties (Access = private)
-        
-    end % end private properties
-    
-    
-    % Class-specific public properties
-    properties (Access = public)
-        
-    end % end public properties
-    
     
     % Device properties correspond to instrument parameters
     properties (Access = public)
@@ -47,20 +29,8 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource
     
     methods
         function obj = AgilentN5183A()
+            %obj = obj@deviceDrivers.lib.uWSource();
         end
-
-		% instrument meta-setter
-		function setAll(obj, settings)
-			fields = fieldnames(settings);
-			for j = 1:length(fields);
-				name = fields{j};
-				if ismember(name, methods(obj))
-					feval(['obj.' name], settings.(name));
-				elseif ismember(name, properties(obj))
-					obj.(name) = settings.(name);
-				end
-			end
-		end
 		
 		% Instrument parameter accessors
         % getters

@@ -16,7 +16,7 @@
 % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 % See the License for the specific language governing permissions and
 % limitations under the License.
-classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
+classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
     % Class-specific constant properties
     properties (Constant = true)
         MAX_DEVICES = 64;
@@ -46,20 +46,10 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
         alc
         pulse
         pulseSource = 'ext';
-        IQ
-        IQ_Adjust
-        IQ_IOffset
-        IQ_QOffset
-        IQ_Skew
         
         % device specific
         freq_reference
     end % end device properties
-    
-    % Class-specific private methods
-    methods (Access = private)
-        
-    end % end private methods
     
     methods
         %Constructor
@@ -78,19 +68,6 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             if ~isempty(obj.devID)
                 obj.disconnect();
             end
-        end
-        
-		% instrument meta-setter
-		function setAll(obj, settings)
-			fields = fieldnames(settings);
-			for j = 1:length(fields);
-				name = fields{j};
-				if ismember(name, methods(obj))
-					feval(['obj.' name], settings.(name));
-				elseif ismember(name, properties(obj))
-					obj.(name) = settings.(name);
-				end
-			end
         end
         
         % open the connection to the Labbrick with the given serial number
@@ -184,10 +161,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             attenuation = calllib('vnx_fmsynth', 'fnLMS_GetPowerLevel', obj.devID) / 4;
             val = obj.max_power - attenuation;
         end
-        function val = get.phase(obj)
-            % not supported by the hardware
-            val = 0;
-        end
+
         function val = get.output(obj)
             val = calllib('vnx_fmsynth', 'fnLMS_GetRF_On', obj.devID);
         end
@@ -195,10 +169,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             % not supported by the hardare
             val = 0;
         end
-        function val = get.alc(obj)
-            % not supported by the hardware
-            val = 0;
-        end
+
         function val = get.pulse(obj)
             % warning, driver only returns information about whether internal
             % pulse mode is active
@@ -213,23 +184,6 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             %if val == false, val = 'int'; end
             %if val == true, val = 'ext'; end
             val = obj.pulseSource;
-        end
-        
-        % IQ options not supported by the hardware
-        function val = get.IQ(obj)
-            val = 0;
-        end
-        function val = get.IQ_Adjust(obj)
-            val = 0;
-        end
-        function val = get.IQ_IOffset(obj)
-            val = 0;
-        end
-        function val = get.IQ_QOffset(obj)
-            val = 0;
-        end
-        function val = get.IQ_Skew(obj)
-            val = 0;
         end
         
         function val = get.freq_reference(obj)
@@ -288,14 +242,8 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             calllib('vnx_fmsynth', 'fnLMS_SetRFOn', obj.devID, checkMapObj(value));
             pause(0.1);
         end
-        % set phase in degrees
-        function obj = set.phase(obj, value)
-            % not supported by hardware
-        end
+
         function obj = set.mod(obj, value)
-            %not supported by hardware
-        end
-        function obj = set.alc(obj, value)
             %not supported by hardware
         end
         
@@ -340,20 +288,6 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.deviceDriverBase
             if obj.pulseModeEnabled
                 obj.pulse = 1; % set the pulse parameter to update the device
             end
-        end
-        function obj = set.IQ(obj, value)
-        end
-        
-        function obj = set.IQ_Adjust(obj, value)
-        end
-        
-        function obj = set.IQ_IOffset(obj, value)
-        end
-        
-        function obj = set.IQ_QOffset(obj, value)
-        end
-        
-        function obj = set.IQ_Skew(obj, value)
         end
         
         function obj = set.freq_reference(obj, value)

@@ -33,7 +33,7 @@ def clifford_multiply(C1, C2):
 
 
 #Number of gates that we want
-gateLengths = np.array([2, 4, 8, 16, 32, 64, 96, 128, 192, 256, 320])
+gateLengths = np.array([2, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96])
 
 #Number of randomizations
 numRandomizations = 32

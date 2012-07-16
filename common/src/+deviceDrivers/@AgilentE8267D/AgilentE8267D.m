@@ -1,27 +1,9 @@
-classdef (Sealed) AgilentE8267D < deviceDrivers.lib.GPIB
+classdef (Sealed) AgilentE8267D < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
     % Agilent E8267D vector signal generator
     %
     %
     % Author(s): Blake Johnson
     % Generated on: Tues Oct 19 2010
-    
-    % Class-specific constant properties
-    properties (Constant = true)
-        
-    end % end constant properties
-    
-    
-    % Class-specific private properties
-    properties (Access = private)
-        
-    end % end private properties
-    
-    
-    % Class-specific public properties
-    properties (Access = public)
-        
-    end % end public properties
-    
     
     % Device properties correspond to instrument parameters
     properties (Access = public)
@@ -40,27 +22,9 @@ classdef (Sealed) AgilentE8267D < deviceDrivers.lib.GPIB
         WBIQ_Skew
     end % end device properties
     
-    % Class-specific private methods
-    methods (Access = private)
-        
-    end % end private methods
-    
     methods
         function obj = AgilentE8267D()
         end
-
-		% instrument meta-setter
-		function setAll(obj, settings)
-			fields = fieldnames(settings);
-			for j = 1:length(fields);
-				name = fields{j};
-				if ismember(name, methods(obj))
-					feval(['obj.' name], settings.(name));
-				elseif ismember(name, properties(obj))
-					obj.(name) = settings.(name);
-				end
-			end
-		end
 		
 		% Instrument parameter accessors
         % getters

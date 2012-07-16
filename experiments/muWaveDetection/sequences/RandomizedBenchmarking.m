@@ -14,8 +14,8 @@ elseif length(varargin) > 2
 end
 
 basename = 'RB';
-fixedPt = 13000; %15000
-cycleLength = 22000; %19000
+fixedPt = 20000; %15000
+cycleLength = 23000; %19000
 nbrRepeats = 1;
 introduceError = 0;
 errorAmp = 0.2;
@@ -27,7 +27,7 @@ qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 
 % if using SSB, set the frequency here
-SSBFreq = 0e6;
+SSBFreq = -100e6;
 
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
@@ -68,10 +68,33 @@ calseq = {{pg.pulse('QId')},{pg.pulse('QId')},{pg.pulse('Xp')},{pg.pulse('Xp')}}
 
 
 compiler = ['compileSequence' IQkey];
+
+%Split into the number of randomizations and shuffle to try and fit into
+%two banks
+% strippedBasename = basename;
+% basename = [basename IQkey];
+% for seqct = 1:32
+%     tmpSeqs = circshift(patseq(seqct:32:end), [0, 1]);
+%     compileArgs = {strippedBasename, pg, tmpSeqs, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot,5};
+%     if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
+%         feval(compiler, compileArgs{:});
+%     end
+%     pathAWG = ['U:\AWG\' strippedBasename '\' basename '.awg'];
+%     pathAWGbis = ['U:\AWG\' strippedBasename '\' basename '_' num2str(seqct) '.awg'];
+%     movefile(pathAWG, pathAWGbis);
+%     pathAPS = ['U:\APS\' strippedBasename '\' basename '.h5'];
+%     pathAPSbis = ['U:\APS\' strippedBasename '\' basename '_' num2str(seqct) '.h5'];
+%     movefile(pathAPS, pathAPSbis);
+% 
+% 
+% end
+
+
 compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot};
 if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
     feval(compiler, compileArgs{:});
 end
+
 
 
 end

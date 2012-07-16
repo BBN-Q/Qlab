@@ -150,7 +150,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             d.bit_file_path = script_path(1:baseIdx);
             
             % init channel structs and waveform objects
-            channelStruct = @()(struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false, 'waveform', []));
+            channelStruct = @()(struct('amplitude', 1.0, 'offset', 0.0, 'enabled', false));
             for ct = 1:4
                 d.(d.channelStrs{ct}) = channelStruct();
                 d.(d.channelStrs{ct}).waveform = APSWaveform();
@@ -184,13 +184,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             % struct
             obj.init();
 
-            % read in channel settings so we know how to scale waveform
-            % data
+            % set amplitude and offset before loading waveform data so that we
+ 			% only have to load it once.
+			obj.librarycall('Clearing waveform cache', 'APS_ClearAllWaveforms');
             for ct = 1:4
                 ch = obj.channelStrs{ct};
-                obj.(ch).amplitude = settings.(ch).amplitude;
-                obj.(ch).offset = settings.(ch).offset;
-                obj.(ch).enabled = settings.(ch).enabled;
+				obj.setAmplitude(ct, settings.(ch).amplitude);
+				obj.setOffset(ct, settings.(ch).offset);
+                obj.setEnabled(ct, settings.(ch).enabled);
             end
             settings = rmfield(settings, obj.channelStrs);
             
@@ -252,23 +253,27 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 
                 % align DAC data clock boundaries
                 obj.setupDACs();
+
+				% clear waveform caches
+				obj.librarycall('Clearing waveform cache', 'APS_ClearAllWaveforms');
                 
                 % set all channel offsets to zero
-                for ch=1:4, obj.setOffset(ch, 0); end
+                %for ch=1:4, obj.setOffset(ch, 0); end
                 
+				% update LED mode to show run state
                 obj.setLEDMode(3, obj.LEDMODE_RUNNING);
             end
             
             obj.bit_file_programmed = 1;
         end
         
-        function loadWaveform(aps,id,waveform,offset,validate, useSlowWrite)
-            % id - channel (0-3)
+        function loadWaveform(aps, id, waveform, offset, validate, storeWaveform)
+            % id - channel (1-4)
             % waveform - int16 format waveform data (-8192, 8191)
             % offset - waveform memory offset (think memory location, not
             %   shift of zero), integer multiple of 4
             % validate - bool, reads back waveform data
-            % useSlowWrite - bool, when false uses a faster buffered write
+            % storeWaveform - bool, when true stores the waveform data in the driver
             %
             % Use of this method disables link list mode. If you intend to
             % use sequence mode, use loadConfig() instead.
@@ -294,17 +299,18 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 validate = 0;
             end
             
-            if ~exist('useSlowWrite','var')
-                useSlowWrite = 0;
+            if ~exist('storeWaveform','var')
+                storeWaveform = 1;
             end
             
-            aps.log(sprintf('Loading Waveform length: %i into DAC%i ', length(waveform),id));
-            val = calllib(aps.library_name,'APS_LoadWaveform', aps.device_id,waveform,length(waveform),offset, id, validate, useSlowWrite);
+            aps.log(sprintf('Loading Waveform length: %i into DAC%i ', length(waveform),id-1));
+            val = calllib(aps.library_name,'APS_LoadWaveform', aps.device_id,waveform,length(waveform),offset, id-1, validate, storeWaveform);
             if (val < 0)
                 errordlg(sprintf('APS_LoadWaveform returned an error code of: %i\n', val), ...
                     'Programming Error');
             end
             aps.log('Done');
+            aps.setEnabled(id, 1);
         end
         
         function loadConfig(aps, filename)
@@ -331,16 +337,11 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                 if any(ch == channelDataFor)
                     channelStr = aps.channelStrs{ch};
                     
-                    %Load and scale/shift waveform data
-                    wf = aps.(channelStr).waveform;
-                    wf.set_vector(h5read(filename,['/', channelStr, '/waveformLib']));
-                    wf.set_offset(aps.(channelStr).offset);
-                    wf.set_scale_factor(aps.(channelStr).amplitude);
-                    aps.loadWaveform(ch-1, wf.prep_vector());
-               
-                    % set zero register value
-                    offset = aps.(channelStr).offset;
-                    aps.setOffset(ch, offset);
+                    %Load and scale/shift waveform data if there is any
+                    wfInfo = h5info(filename, ['/', channelStr, '/waveformLib']);
+                    if wfInfo.Dataspace.Size > 0
+                        aps.loadWaveform(ch, h5read(filename,['/', channelStr, '/waveformLib']));
+                    end
                     
                 end
             end
@@ -388,9 +389,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
                                     bankB.trigger, bankB.repeat, bankB.length, 1);
                             end
                             
-                            %aps.setLinkListRepeat(ch-1,ell.repeatCount);
-                            aps.setLinkListRepeat(ch-1,0);
-                            aps.setLinkListMode(ch-1, aps.LL_ENABLE, aps.LL_CONTINUOUS);
+                            %aps.setLinkListRepeat(ch,ell.repeatCount);
+                            aps.setLinkListRepeat(ch,0);
+                            aps.setLinkListMode(ch, aps.LL_ENABLE, aps.LL_CONTINUOUS);
                         end
                         % update channel waveform object
                         aps.(channelStr).waveform = wf;
@@ -403,43 +404,12 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function run(aps)
             % global run method
             
-            if aps.use_c_waveforms
-                % tell C layer to load waveforms
-                aps.loadAPSWaveforms();
-            end
-            
             trigger_type = aps.TRIGGER_SOFTWARE;
             if strcmp(aps.triggerSource, 'external')
                 trigger_type = aps.TRIGGER_HARDWARE;
             end
             
-            % based upon enabled channels, trigger both FPGAs, a single
-            % FPGA, or individuals DACs
-            trigger = [false false false false];
-            for ct = 1:4
-                trigger(ct) = aps.(aps.channelStrs{ct}).enabled;
-            end
-            
-            triggeredFPGA = [false false];
-            if trigger % all channels enabled
-                aps.triggerFpga(aps.ALL_DACS, trigger_type);
-                triggeredFPGA = [true true];
-            elseif trigger(1:2) %FPGA0
-                triggeredFPGA(1) = true;
-                aps.triggerFpga(aps.FPGA0, trigger_type)
-            elseif trigger(3:4) %FPGA1
-                triggeredFPGA(2) = true;
-                aps.triggerFpga(aps.FPGA1, trigger_type)
-            end
-            
-            % look at individual channels
-            % NOTE: Poorly defined syncronization between channels in this
-            % case.
-            for channel = 1:4
-                if ~triggeredFPGA(ceil(channel / 2)) && trigger(channel)
-                    aps.triggerWaveform(channel-1,trigger_type)
-                end
-            end
+            aps.librarycall('Running', 'APS_Run', trigger_type);
         end
         
         function stop(aps)
@@ -450,7 +420,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function isr = isRunning(aps)
             isr = false;
             if aps.is_open
-                val = aps.librarycall('Checking if running', 'APS_IsRunning', fpga);
+
+                
+                val = aps.librarycall('Checking if running', 'APS_IsRunning', 3);
                 if val > 0
                     isr = true;
                 end
@@ -508,8 +480,20 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         function val = setOffset(aps, ch, offset)
             % sets offset voltage of channel for time/amplitude zero
             % entries
-            val = aps.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset*aps.MAX_WAVEFORM_VALUE);
+            val = aps.librarycall('Set channel offset','APS_SetChannelOffset', ch-1, offset);
             aps.(['chan_' num2str(ch)]).offset = offset;
+        end
+
+		function val = setAmplitude(aps, ch, amplitude)
+			% sets the scale factor of the channel
+			val = aps.librarycall('Set channel scale', 'APS_SetWaveformScale', ch-1, amplitude);
+			aps.(['chan_' num2str(ch)]).amplitude = amplitude;
+        end
+        
+        function val = setEnabled(aps, ch, enabled)
+            % enables or disables a channel
+            val = aps.librarycall('Set channel enabled', 'APS_SetWaveformEnabled', ch-1, enabled);
+            aps.(['chan_' num2str(ch)]).enabled = enabled;
         end
 
 		function val = setTriggerDelay(aps, ch, delay)
@@ -877,16 +861,16 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         %% Private mode methods
         
         function val = setLinkListMode(aps, ch, enable, mode)
-            % id : DAC channel (0-3)
+            % id : DAC channel (1-4)
             % enable : 1 = on, 0 = off
             % mode : 1 = one shot, 0 = continuous
-            val = aps.librarycall(sprintf('Dac: %i Link List Enable: %i Mode: %i', ch, enable, mode), ...
-                'APS_SetLinkListMode',enable,mode,ch);
+            val = aps.librarycall(sprintf('Dac: %i Link List Enable: %i Mode: %i', ch-1, enable, mode), ...
+                'APS_SetLinkListMode',enable,mode,ch-1);
         end
         
         function val = setLinkListRepeat(aps,ch, repeat)
-            val = aps.librarycall(sprintf('Dac: %i Link List Repeat: %i', ch, repeat), ...
-                'APS_SetLinkListRepeat',repeat,ch);
+            val = aps.librarycall(sprintf('Dac: %i Link List Repeat: %i', ch-1, repeat), ...
+                'APS_SetLinkListRepeat',repeat,ch-1);
         end
         
         function val = setLEDMode(aps, fpga, mode)
@@ -1085,8 +1069,9 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
 
             aps.init()
             
+            offset = 0;
             validate = 0;
-            useSlowWrite = 0;
+            storeWaveform = 1;
 
             wf = aps.getNewWaveform();
             wf.data = [zeros([1,2000]) ones([1,2000])];
@@ -1094,7 +1079,7 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             wf.dataMode = wf.REAL_DATA;
             
             for ch = 0:3
-                aps.loadWaveform(ch, wf.get_vector(), 0, validate,useSlowWrite);
+                aps.loadWaveform(ch, wf.get_vector(), offset, validate,storeWaveform);
                 aps.(sprintf('chan_%d', ch+1)).enabled = 1;
             end
             
@@ -1123,42 +1108,26 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
             aps.open(apsId);
             aps.loadBitFile();
             aps.setDebugLevel(1);
+            
+            offset = 0;
+            validate = 0;
+            storeWaveform = 1;
 
-            wf1 = aps.getNewWaveform();
-            wf1.data = 0:1/1000:1;
-            wf.data = 0:8:8190;
-            wf1.data = wf1.data(1:1000);
-            wf1.set_scale_factor(1.0);
-            wf1.dataMode = wf1.REAL_DATA;
-            
-            
-            wf2= aps.getNewWaveform();
-            wf2.data = 0:8:8190;
-            wf2.data = wf2.data(1:1000);
-            wf2.set_scale_factor(1.0);
-            wf2.dataMode = wf2.INT_DATA;
-            
+            wf = aps.getNewWaveform();
+            wf.data = 0:1/1000:1;
+            wf.data = wf.data(1:1000) * 8192.0;
+            wf.set_scale_factor(1.0);
+
             fprintf('Setting Sample Rate\n');
             aps.samplingRate = 1200;
             
             fprintf('Storing waveforms\n')
-            
-            
-            aps.chan_1.waveform = wf1;
-            aps.chan_1.enabled = 1;
-            aps.storeAPSWaveform(wf1,0);
-            
-            aps.chan_2.waveform = wf2;
-            aps.chan_2.enabled = 1;
-            aps.storeAPSWaveform(wf2,1);
-            
-            aps.chan_3.waveform = wf1;
-            aps.chan_3.enabled = 1;
-            aps.storeAPSWaveform(wf1,2);
-            
-            aps.chan_4.waveform = wf2;
-            aps.chan_4.enabled = 1;
-            aps.storeAPSWaveform(wf2,3);
+            for ch = 0:3
+                chS = sprintf('chan_%i',ch+1);
+                aps.(chS).waveform = wf;
+                aps.(chS).enabled = 1;
+                aps.storeAPSWaveform(ch,wf);
+            end
             
             
             running = 1;

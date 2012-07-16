@@ -1,7 +1,7 @@
 function PulsedSpec(varargin)
 
 %varargin assumes qubit and then makePlot
-qubit = 'q1';
+qubit = 'q2';
 makePlot = true;
 
 if length(varargin) == 1
@@ -16,7 +16,7 @@ end
 basename = 'PulsedSpec';
 
 fixedPt = 10000;
-cycleLength = 16000;
+cycleLength = 18000;
 numsteps = 1;
 nbrRepeats = 1;
 specLength = 9600;

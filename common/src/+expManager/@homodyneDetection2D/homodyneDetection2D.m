@@ -37,6 +37,9 @@
 classdef homodyneDetection2D < expManager.expBase
     properties %This is only for properties not defined in the 'experiment' superlcass
         awg = [];
+        scope
+        nbrSequences
+        Loop
     end
     methods 
         %% Class constructor
@@ -59,35 +62,105 @@ classdef homodyneDetection2D < expManager.expBase
         
         %% Base functions
         function Init(obj)
-            %%% The next function is experiment specific %%%
+            % parse cfg file
+            obj.parseExpcfgFile();
+            
             % Check params for errors
             obj.errorCheckExpParams();
 
             % Open all instruments
             obj.openInstruments();
+            
+            % if taking multi-cavity measurements, calculate appropriate
+            % digitizer and softAvg settings to maximize the number of shots
+            % collected in one go, while roughly preserving the total number of
+            % averages
+            DHchannels = obj.inputStructure.ExpParams.digitalHomodyne.channel;
+            if isa(DHchannels, 'char') && strcmpi(DHchannels, 'Both')
+                obj.nbrSequences = obj.inputStructure.InstrParams.scope.averager.nbrSegments;
+                softAvgs = obj.inputStructure.ExpParams.softAvgs;
+                roundRobins = obj.inputStructure.InstrParams.scope.averager.nbrRoundRobins;
+                nbrAverages = roundRobins * softAvgs;
+                % find the largest number of segments that will fit on the card
+                % that is less than the hardware max of 8191
+                multiplier = floor(8191/obj.nbrSequences);
+                newSegments = multiplier*obj.nbrSequences;
+                newSoftAvgs = ceil(nbrAverages/multiplier);
+                % update parameters
+                obj.inputStructure.InstrParams.scope.averager.nbrRoundRobins = 1;
+                obj.inputStructure.InstrParams.scope.averager.nbrSegments = newSegments;
+                obj.inputStructure.ExpParams.softAvgs = newSoftAvgs;
+            else
+                obj.nbrSequences = obj.inputStructure.InstrParams.scope.averager.nbrSegments;
+            end
 
             % Prepare all instruments for measurement
             obj.initializeInstruments();
             
-            % find AWG instrument(s)
+            % find AWG instrument(s) and digitizer
             numAWGs = 0;
             InstrumentNames = fieldnames(obj.Instr);
             for Instr_index = 1:numel(InstrumentNames)
                 InstrName = InstrumentNames{Instr_index};
                 DriverName = class(obj.Instr.(InstrName));
-                if strcmp(DriverName, 'deviceDrivers.Tek5014') || strcmp(DriverName, 'deviceDrivers.APS')
-                    numAWGs = numAWGs + 1;
-                    obj.awg{numAWGs} = obj.Instr.(InstrName);
+                switch DriverName
+                    case {'deviceDrivers.Tek5014', 'deviceDrivers.APS'}
+                        numAWGs = numAWGs + 1;
+                        obj.awg{numAWGs} = obj.Instr.(InstrName);
+                    case {'deviceDrivers.AgilentAP240', 'deviceDrivers.AlazarATS9870'}
+                        obj.scope = obj.Instr.(InstrName);
                 end
             end
+
+            % construct loop object and file header
+            [obj.Loop, dimension] = obj.populateLoopStructure();
+            header = obj.inputStructure;
+            switch dimension
+                case 1
+                    header.xpoints = obj.Loop.one.sweep.points;
+                    header.xlabel = obj.Loop.one.sweep.name;
+                case 2
+                    header.xpoints = obj.Loop.one.sweep.points;
+                    header.xlabel = obj.Loop.one.sweep.name;
+                    header.ypoints = obj.Loop.two.sweep.points;
+                    header.ylabel = obj.Loop.two.sweep.name;
+                case 3
+                    header.xpoints = obj.Loop.one.sweep.points;
+                    header.xlabel = obj.Loop.one.sweep.name;
+                    header.ypoints = obj.Loop.two.sweep.points;
+                    header.ylabel = obj.Loop.two.sweep.name;
+                    header.zpoints = obj.Loop.three.sweep.points;
+                    header.zlabel = obj.Loop.three.sweep.name;
+                otherwise
+                    error('Loop dimension is larger than 3')
+            end
+            
+            % open data file
+            obj.openDataFile(dimension, header, obj.nbrSequences);
         end
         function Do(obj)
-            fprintf(obj.DataFileHandle,'$$$ Beginning of Data\n');
 			obj.homodyneDetection2DDo;
         end
         function CleanUp(obj)
-            %Close all instruments
-            obj.closeInstruments;
+            % turn off all microwave sources and stop all AWGs
+            InstrumentNames = fieldnames(obj.Instr);
+            for Instr_index = 1:numel(InstrumentNames)
+                InstrName = InstrumentNames{Instr_index};
+                DriverName = class(obj.Instr.(InstrName));
+                if isa(obj.Instr.(InstrName), 'deviceDrivers.lib.uWSource')
+                    obj.Instr.(InstrName).output = 0;
+                end
+                
+                if strcmp(DriverName, 'deviceDrivers.Tek5014') || strcmp(DriverName, 'deviceDrivers.APS')
+                    obj.Instr.(InstrName).stop();
+                end
+            end
+
+            % close all instruments
+            obj.closeInstruments();
+
+            % close data file
+            obj.finalizeData();
         end
         %% Class destructor
         function delete(obj)
@@ -108,14 +181,43 @@ classdef homodyneDetection2D < expManager.expBase
                 assert(logical(exist(obj.inputStructure.InstrParams.BBNAPS.seqfile,'file')), 'Oops! The AWG file for the BBNAWG does not exist.')
             end
             
-            
+        end
+        
+        function [DI, DQ, DIQ] = processSignal(obj, isignal, qsignal)
+            ExpParams = obj.inputStructure.ExpParams;
+            switch ExpParams.digitalHomodyne.DHmode
+                case 'OFF'
+                    % calcuate average amplitude and phase
+                    range = ExpParams.filter.start:ExpParams.filter.start+ExpParams.filter.length - 1;
+                    DI = mean(isignal(range,:))';
+                    DQ = mean(qsignal(range,:))';
+                case 'DH1'
+                    switch ExpParams.digitalHomodyne.channel
+                        case 1
+                            [DI DQ] = obj.digitalHomodyne(isignal, ...
+                                ExpParams.digitalHomodyne.IFfreq*1e6, ...
+                                obj.scope.horizontal.sampleInterval, ExpParams.filter.start, ExpParams.filter.length);
+                        case 2
+                            [DI DQ] = obj.digitalHomodyne(qsignal, ...
+                                ExpParams.digitalHomodyne.IFfreq*1e6, ...
+                                obj.scope.horizontal.sampleInterval, ExpParams.filter.start, ExpParams.filter.length);
+                        case 'Both'
+                            [DI DQ DIQ] = obj.digitalHomodyne(isignal, qsignal, obj.nbrSequences,...
+                                ExpParams.digitalHomodyne.IFfreq*1e6, ...
+                                obj.scope.horizontal.sampleInterval, ExpParams.filter.start, ExpParams.filter.length);
+                    end
+                case 'DIQ'
+                    [DI DQ] = obj.digitalHomodyneIQ(isignal, qsignal, ...
+                        ExpParams.digitalHomodyne.IFfreq*1e6, ...
+                        obj.scope.horizontal.sampleInterval, ExpParams.filter.start, ExpParams.filter.length);
+            end
         end
     end
     
     methods (Static)
         % Forward reference the digitalHomodyne function defined in
         % separate file
-        [DI DQ] =  digitalHomodyne(signal, IFfreq, sampInterval, integrationStart, integrationWindow)
+        [DI DQ DIQ] =  digitalHomodyne(varargin)
         
     end
 

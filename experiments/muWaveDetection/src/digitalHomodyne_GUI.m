@@ -49,12 +49,14 @@ settings_fcn = @get_settings;
         uicontrol(textParams{:}, 'String', 'Mode');
         uicontrol(textParams{:}, 'String', 'IF Freq (MHz)');
         uicontrol(textParams{:}, 'String', 'Phase');
+        uicontrol(textParams{:}, 'String', 'Channel');
         
         tmpHBox2 = uiextras.HButtonBox('Parent', tmpVBox, 'Spacing', 5, 'VerticalAlignment', 'top');
         editParams = {'Parent', tmpHBox2, 'Style', 'edit', 'BackgroundColor', [1, 1, 1], 'FontSize', 10};
         handles.DHmode = uicontrol('Parent', tmpHBox2, 'Style', 'popupmenu', 'BackgroundColor', [1,1,1], 'FontSize', 10, 'String',  {'OFF', 'DH1', 'DIQ'});
         handles.IFfreq = uicontrol(editParams{:}, 'String', 10);
         handles.phase = uicontrol(editParams{:}, 'String', 0.001);
+        handles.channel = uicontrol('Parent', tmpHBox2, 'Style', 'popupmenu', 'BackgroundColor', [1,1,1], 'FontSize', 10, 'String',  {'1', '2', 'Both'});
         
         %Try and patch up the sizing
         tmpVBox.Sizes = [-1, -1];
@@ -84,6 +86,7 @@ settings_fcn = @get_settings;
 		settings.DHmode = get_selected(handles.DHmode);
 		settings.IFfreq = get_numeric(handles.IFfreq);
 		settings.phase = get_numeric(handles.phase);
+        settings.channel = get_selected(handles.channel);
     end
 
     function set_defaults(settings)
@@ -92,6 +95,7 @@ settings_fcn = @get_settings;
 		defaults.DHmode = 'DH1';
         defaults.IFfreq = 1;
         defaults.phase = 0;
+        defaults.channel = '1';
 
 		if ~isempty(fieldnames(settings))
 			fields = fieldnames(settings);
@@ -104,6 +108,7 @@ settings_fcn = @get_settings;
 		set_selected(handles.DHmode, defaults.DHmode);
 		set(handles.IFfreq, 'String', num2str(defaults.IFfreq));
         set(handles.phase, 'String', num2str(defaults.phase));
+        set_selected(handles.channel, defaults.channel);
 
 	end
 

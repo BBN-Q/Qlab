@@ -82,13 +82,13 @@ threads.o: threads.c threads.h
 test: test.c ${LIBNAME}
 	${CC} ${CFLAGS} ${LFLAGS} -ggdb -o test test.c
 	
-testLocal: test.c 
+testLocal: test.c ${OBJECTS}
 	${CC} ${CFLAGS_STATIC} ${LFLAGS} -ggdb -o testLocal *.c -lpthread
 	
 
 ######################## 64-Bit ########################################
 
-all64: ${LIBNAME64} test64 testLocal64
+all64: ${LIBNAME64} test64 testLocal64 
 
 ${LIBNAME64}: ${OBJECTS64}
 	${CC64}  ${CFLAGS} -shared  -o ${LIBNAME64} ${OBJECTS64} ${EXFLAGS} -lpthread
@@ -114,11 +114,13 @@ threads64.o: threads.c threads.h
 test64: test.c ${LIBNAME64}
 	${CC64} ${CFLAGS} ${LFLAGS} -ggdb -o test64 test.c
 	
-testLocal64: test.c 
+testLocal64: test.c ${OBJECTS64}
 	${CC64} ${CFLAGS_STATIC} ${LFLAGS} -ggdb -o testLocal64 *.c -lpthread
 	
 ######################## Misc ########################################
 	
 clean:
 	rm -f *.o *.dylib *.dll test *.exe *.a
-	
+
+tidy:
+	rm -f *.o *.exe *.a

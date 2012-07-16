@@ -19,15 +19,26 @@ end
 ExpParams = struct();
 ExpParams.Qubit = qubit;
 ExpParams.DoMixerCal = 0;
-ExpParams.DoRabiAmp = 0;
+ExpParams.DoRabiAmp = 1;
 ExpParams.DoRamsey = 0;
 ExpParams.DoPi2Cal = 1;
 ExpParams.DoPiCal = 1;
 ExpParams.DoDRAGCal = 0;
-ExpParams.OffsetNorm = 4;
+ExpParams.OffsetNorm = 6;
+ExpParams.offset2amp = 8192/2; % divisor should be the max output voltage of the AWG
 ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;
 ExpParams.filter = commonSettings.ExpParams.filter;
 ExpParams.softAvgs = 3;
+ExpParams.dataType = 'phase'; %or 'phase';
+ExpParams.SSBFreq = 0e6;
+
+% force AWGs to use a simple sequence file
+if isfield(commonSettings.InstrParams, 'TekAWG')
+    commonSettings.InstrParams.TekAWG.seqfile = 'U:\AWG\Trigger\Trigger.awg';
+end
+if isfield(commonSettings.InstrParams, 'BBNAPS')
+    commonSettings.InstrParams.BBNAPS.seqfile = 'U:\APS\Trigger\Trigger.h5';
+end
 
 cfg = struct('ExpParams', ExpParams, ...
     'SoftwareDevelopmentMode', 0, ...

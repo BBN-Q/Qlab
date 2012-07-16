@@ -5,8 +5,8 @@ end
 
 function [ipat, qpat] = ssbWaveform(amp, phase)
     % generate SSB modulation signals
-    waveform_length = 1000;
-    fssb = 10e6; % SSB modulation frequency
+    waveform_length = 10000;
+    fssb = 100e6; % SSB modulation frequency
     assb = 8000;
     t = 0:(waveform_length-1);
     t = t*1e-9;

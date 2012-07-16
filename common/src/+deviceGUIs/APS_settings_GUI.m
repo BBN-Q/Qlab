@@ -184,7 +184,7 @@ set_settings_fcn = @set_GUI_fields;
             defaults.(channel).offset = 0;
             defaults.(channel).enabled = 1;
         end
-        defaults.seqfile = 'U:\APS\Trigger\Trigger.mat';
+        defaults.seqfile = 'U:\APS\Trigger\Trigger.h5';
         defaults.seqforce = 0;
         defaults.triggerSource = 'Ext';
         defaults.samplingRate = 1200;

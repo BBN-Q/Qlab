@@ -16,13 +16,10 @@ for i = 2:length(obj.awg)
     if success_flag_AWG ~= 1, error('AWG %d timed out', i), end
 end
 
-% Setup loops
-Loop = obj.populateLoopStructure();
-
 %%
 
-ampFidelity = zeros(Loop.one.steps,Loop.two.steps);
-phaseFidelity = zeros(Loop.one.steps,Loop.two.steps);
+ampFidelity = zeros(obj.Loop.one.steps,obj.Loop.two.steps);
+phaseFidelity = zeros(obj.Loop.one.steps,obj.Loop.two.steps);
 
 persistent figH;
 persistent figH2D;
@@ -36,15 +33,15 @@ end
 
 
 
-for loopct1 = 1:Loop.one.steps
+for loopct1 = 1:obj.Loop.one.steps
     
-    Loop.one.sweep.step(loopct1);
-    fprintf('Loop 1: Step %d of %d\n', [loopct1, Loop.one.steps]);
+    obj.Loop.one.sweep.step(loopct1);
+    fprintf('Loop 1: Step %d of %d\n', [loopct1, obj.Loop.one.steps]);
     
-    for loopct2 = 1:Loop.two.steps
-        
-        Loop.two.sweep.step(loopct2);
-        fprintf('Loop 2: Step %d of %d\n', [loopct2, Loop.two.steps]);
+    for loopct2 = 1:obj.Loop.two.steps
+
+        obj.Loop.two.sweep.step(loopct2);
+        fprintf('Loop 2: Step %d of %d\n', [loopct2, obj.Loop.two.steps]);
         
         samplesPerAvg = obj.scope.averager.nbrSegments/2;
         nbrSamples = ExpParams.softAvgs*samplesPerAvg;
@@ -58,7 +55,7 @@ for loopct1 = 1:Loop.one.steps
             
             % set the Tek to run
             masterAWG.run();
-            pause(0.5);
+            masterAWG.operationComplete();
             
             %Poll the digitizer until it has all the data
             success = obj.scope.wait_for_acquisition(60);
@@ -82,6 +79,8 @@ for loopct1 = 1:Loop.one.steps
             
             
             masterAWG.stop();
+            masterAWG.operationComplete();
+
             % restart the slave AWGs so we can resync
             for i = 2:length(obj.awg)
                 awg = obj.awg{i};
@@ -105,13 +104,17 @@ for loopct1 = 1:Loop.one.steps
         egProb = (1/varGround)*exp(-(1/2/varGround)*(abs(excitedData-meanGround).^2));
         eeProb = (1/varExcited)*exp(-(1/2/varExcited)*(abs(excitedData-meanExcited).^2));
         %Average probability of getting it right
+        %Normalize and average probabilities 
+        P00 = length(find(ggProb>geProb))/length(groundData);
+        P01 = 1- P00;
+        P11 = length(find(eeProb>egProb))/length(groundData);
+        P10 = 1-P11;
+        fprintf('Confusion matrix: gg = %.3f; ge = %.3f; eg = %.3f; ee = %.3f\n',P00, P01, P10, P11);
         meanProb = 0.5*(length(find(ggProb>geProb))/length(groundData) + length(find(eeProb>egProb))/length(groundData));
         %Fidelity 
         RBFidelity = 2*meanProb-1;
         fprintf('Max fidelity with radial basis functions: %.1f\n',100*RBFidelity)
 
-        
-        
         
         %Phase to rotate by to get two blobs on either side of I axis
         phaseRot = 0.5*( angle(mean(groundData)) +  angle(mean(excitedData)));
@@ -172,38 +175,38 @@ for loopct1 = 1:Loop.one.steps
         figure(figH2D)
         subplot(2,1,1)
         cla()
-        if Loop.two.steps == 1
-            plot(Loop.one.plotRange, ampFidelity);
-            xlabel(Loop.one.sweep.name);
+        if obj.Loop.two.steps == 1
+            plot(obj.Loop.one.plotRange, ampFidelity);
+            xlabel(obj.Loop.one.sweep.name);
         else
-            imagesc(Loop.two.plotRange, Loop.one.plotRange, ampFidelity);
-            xlabel(Loop.two.sweep.name);
-            ylabel(Loop.one.sweep.name);
+            imagesc(obj.Loop.two.plotRange, obj.Loop.one.plotRange, ampFidelity);
+            xlabel(obj.Loop.two.sweep.name);
+            ylabel(obj.Loop.one.sweep.name);
             colorbar()
         end
         title('Amplitude Measurement Fidelity');
         subplot(2,1,2)
         cla()
-        if Loop.two.steps == 1
-            plot(Loop.one.plotRange, phaseFidelity);
-            xlabel(Loop.one.sweep.name);
+        if obj.Loop.two.steps == 1
+            plot(obj.Loop.one.plotRange, phaseFidelity);
+            xlabel(obj.Loop.one.sweep.name);
         else
-            imagesc(Loop.two.plotRange, Loop.one.plotRange, phaseFidelity);
-            xlabel(Loop.two.sweep.name);
-            ylabel(Loop.one.sweep.name);
+            imagesc(obj.Loop.two.plotRange, obj.Loop.one.plotRange, phaseFidelity);
+            xlabel(obj.Loop.two.sweep.name);
+            ylabel(obj.Loop.one.sweep.name);
             colorbar()
         end
         title('Phase Measurement Fidelity');
         
 %         subplot(3,1,3)
 %         cla()
-%         if Loop.two.steps == 1
-%             plot(Loop.one.plotRange, RBFidelity);
-%             xlabel(Loop.one.sweep.name);
+%         if obj.Loop.two.steps == 1
+%             plot(obj.Loop.one.plotRange, RBFidelity);
+%             xlabel(obj.Loop.one.sweep.name);
 %         else
-%             imagesc(Loop.two.plotRange, Loop.one.plotRange, RBFidelity);
-%             xlabel(Loop.two.sweep.name);
-%             ylabel(Loop.one.sweep.name);
+%             imagesc(obj.Loop.two.plotRange, obj.Loop.one.plotRange, RBFidelity);
+%             xlabel(obj.Loop.two.sweep.name);
+%             ylabel(obj.Loop.one.sweep.name);
 %             colorbar()
 %         end
 %         title('RB Measurement Fidelity');
