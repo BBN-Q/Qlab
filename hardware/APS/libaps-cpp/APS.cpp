@@ -403,6 +403,8 @@ int APS::add_LL_bank(const int & dac, const vector<unsigned short> & offset, con
 	if ( curBank < 2){
 		write_LL_data(dac, curBank, curBank);
 	}
+	//Otherwise print a message so we know something has happened
+	FILE_LOG(logINFO) << "Loaded LL bank into driver at bank position: " << curBank;
 
 	return 0;
 }
@@ -1507,6 +1509,7 @@ int APS::stream_LL_data(){
 
 		//If it isn't what we used to have then the device must have switched
 		if (pollBankID != currentBankID) {
+			FILE_LOG(logDEBUG) << "Bank switch detected for Device ID: " << deviceID_ << "; currentBankID = " << currentBankID << " polledBankID = " << pollBankID;
 			for(int chanct=0; chanct<4; chanct++){
 				write_LL_data(chanct, curBankNum%channels_[chanct].banks_.size(), currentBankID);
 			}

@@ -53,7 +53,6 @@ EXPORT int get_trigger_source(int);
 EXPORT int set_channel_trigDelay(int, int, unsigned short);
 EXPORT unsigned short get_channel_trigDelay(int, int);
 
-
 EXPORT int set_waveform_float(int, int, float*, int);
 EXPORT int set_waveform_int(int, int, short*, int);
 
@@ -73,7 +72,7 @@ EXPORT int disable_FPGA_debug(int, int);
 EXPORT int get_running(int);
 
 EXPORT int set_log(char *);
-
+EXPORT int set_logging_level(int);
 
 #ifdef __cplusplus
 }

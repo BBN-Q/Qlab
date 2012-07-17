@@ -33,6 +33,8 @@ LIBS=-lftd2xx -lhdf5 -lhdf5_cpp
 CC=g++-4.7
 else
 ####### Windows #######
+
+##MSVC
 #CFLAGS=/EHsc /nologo 
 #OBJFLAGS=/c /Fo
 #OBJEXT=obj
@@ -42,19 +44,16 @@ else
 #LIBFLAGS=/LD
 #CC=cl
 
+##mingw
 CFLAGS=-Wall -std=c++11 -g -I'C:\MinGW\msys\1.0\home\qlab\hdf5\include\cpp' -I'C:\MinGW\msys\1.0\home\qlab\hdf5\include\'
-#CFLAGS=-Wall -std=c++0x -g -I'c:/cygwin/home/qlab/include/'
-#CFLAGS=-Wall -std=c++11 -g -Ic:/cygwin/home/qlab/hdf5/include/ -Ic:/cygwin/usr/local/include
 OBJFLAGS=-c
 OBJEXT=o
 LIBEXT=dll
 EXFLAGS=-Wl
-LIBFLAGS=-shared -o libaps.dll
-#LIBS=ftd2xx.lib -Lc:/cygwin/usr/local/lib -lboost_thread
+LIBFLAGS=-shared -o libaps.dll 
 LIBS=ftd2xx.lib -L'C:\MinGW\msys\1.0\home\qlab\hdf5\lib' -lhdf5 -lhdf5_cpp
 LFLAGS=
 CC=g++
-#CC=x86_64-w64-mingw32-gcc
 endif
 endif
 

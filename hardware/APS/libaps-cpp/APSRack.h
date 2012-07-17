@@ -56,6 +56,7 @@ public:
 
 	int get_running(const int &);
 	int set_log(FILE *);
+	int set_logging_level(const int &);
 
 	//Pass through both short and float waveforms
 	template <typename T>

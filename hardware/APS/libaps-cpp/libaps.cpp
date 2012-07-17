@@ -123,6 +123,10 @@ int set_log(char * fileNameArr) {
 	}
 }
 
+int set_logging_level(int logLevel){
+	return _APSRack.set_logging_level(logLevel);
+}
+
 int set_trigger_source(int deviceID, int triggerSource) {
 	return _APSRack.set_trigger_source(deviceID,triggerSource);
 }
