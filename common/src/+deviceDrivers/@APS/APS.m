@@ -268,7 +268,7 @@ classdef APS < hgsetget
                         repeatCount = h5readatt(filename, ['/', channelStr, '/linkListData'], 'repeatCount');
                         
                         aps.setLinkListRepeat(ch, repeatCount);
-                        aps.set_run_mode(ch, aps.LL_ENABLE);
+                        aps.setRunMode(ch, aps.RUN_SEQUENCE);
                     end
                 end
             end
@@ -617,13 +617,16 @@ classdef APS < hgsetget
                 aps.loadWaveform(ch, wf);
                 aps.setRunMode(ch, aps.RUN_WAVEFORM);
             end
-
-%             for ch = 1:4
-%                 aps.setEnabled(ch, 1);
-%             end
-%             aps.loadConfig([aps.library_path filesep 'UnitTest.h5']);
+            
             aps.triggerSource = 'external';
-            aps.setDebugLevel(5);
+            %aps.setDebugLevel(5);
+            aps.run();
+            keyboard
+            aps.stop();
+
+            aps.loadConfig([aps.library_path filesep 'UnitTest.h5']);
+            aps.triggerSource = 'external';
+            %aps.setDebugLevel(5);
             aps.run();
             keyboard
             aps.stop();

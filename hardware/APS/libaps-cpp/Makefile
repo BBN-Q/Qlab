@@ -45,7 +45,7 @@ else
 #CC=cl
 
 ##mingw
-CFLAGS=-Wall -std=c++11 -g -I'C:\MinGW\msys\1.0\home\qlab\hdf5\include\cpp' -I'C:\MinGW\msys\1.0\home\qlab\hdf5\include\'
+CFLAGS=-Wall -Os -std=c++11 -I'C:\MinGW\msys\1.0\home\qlab\hdf5\include\cpp' -I'C:\MinGW\msys\1.0\home\qlab\hdf5\include\'
 OBJFLAGS=-c
 OBJEXT=o
 LIBEXT=dll

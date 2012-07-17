@@ -61,7 +61,7 @@ Log<T>::~Log()
 template <typename T>
 TLogLevel& Log<T>::ReportingLevel()
 {
-    static TLogLevel reportingLevel = logDEBUG4;
+    static TLogLevel reportingLevel = logINFO;
     return reportingLevel;
 }
 

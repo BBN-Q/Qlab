@@ -42,7 +42,9 @@ int APS::disconnect(){
 
 int APS::init(const string & bitFile, const bool & forceReload){
 
-	if (forceReload || read_bitFile_version(ALL_FPGAS) != FIRMWARE_VERSION || !read_PLL_status(ALL_FPGAS)) {
+	if (forceReload || read_bitFile_version(ALL_FPGAS) != FIRMWARE_VERSION || read_PLL_status(ALL_FPGAS)) {
+		FILE_LOG(logINFO) << "Resetting instrument";
+		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version(ALL_FPGAS) << " PLL status: " << read_PLL_status(ALL_FPGAS);
 		//Setup the oscillators
 		setup_VCXO();
 		setup_PLL();
