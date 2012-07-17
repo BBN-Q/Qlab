@@ -1509,7 +1509,7 @@ int APS::stream_LL_data(){
 		if (pollBankID != currentBankID) {
 			FILE_LOG(logDEBUG) << "Bank switch detected for Device ID: " << deviceID_ << "; currentBankID = " << currentBankID << " polledBankID = " << pollBankID;
 			for(int chanct=0; chanct<4; chanct++){
-				write_LL_data(chanct, curBankNum%channels_[chanct].banks_.size(), currentBankID);
+				write_LL_data(chanct, curBankNum % channels_[chanct].banks_.size(), currentBankID);
 			}
 			curBankNum++;
 			currentBankID = pollBankID;
@@ -1520,6 +1520,12 @@ int APS::stream_LL_data(){
 			}
 		}
 		std::this_thread::sleep_for( std::chrono::milliseconds(10) );
+	}
+	
+	// reload banks 0 and 1 to get back to reset state
+	for (int chanct=0; chanct<4; chanct++) {
+		write_LL_data(chanct, 0, 0);
+		write_LL_data(chanct, 1, 1);
 	}
 
 	return 0;
