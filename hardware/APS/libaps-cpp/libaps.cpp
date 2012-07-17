@@ -167,6 +167,10 @@ int set_run_mode(int deviceID, int channelNum, int mode) {
 	return _APSRack.set_run_mode(deviceID, channelNum, mode);
 }
 
+int set_repeat_mode(int deviceID, int channelNum, int mode) {
+	return _APSRack.set_repeat_mode(deviceID, channelNum, mode);
+}
+
 #ifdef __cplusplus
 }
 #endif

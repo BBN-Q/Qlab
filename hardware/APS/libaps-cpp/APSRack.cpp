@@ -95,8 +95,11 @@ int APSRack::get_sampleRate(const int & deviceID) const{
 }
 
 int APSRack::set_run_mode(const int & deviceID, const int & dac, const bool & mode){
-	//Pass through to APS method
 	return APSs_[deviceID].set_run_mode(dac, mode);
+}
+
+int APSRack::set_repeat_mode(const int & deviceID, const int & dac, const bool & mode){
+	return APSs_[deviceID].set_repeat_mode(dac, mode);
 }
 
 int APSRack::clear_channel_data(const int & deviceID) {
@@ -144,7 +147,7 @@ int APSRack::set_log(FILE * pFile) {
 }
 
 int APSRack::set_logging_level(const int & logLevel){
-	FILELog::ReportingLevel() = logLevel;
+	FILELog::ReportingLevel() = TLogLevel(logLevel);
 	return 0;
 }
 

@@ -51,7 +51,8 @@ OBJEXT=o
 LIBEXT=dll
 EXFLAGS=-Wl
 LIBFLAGS=-shared -o libaps.dll 
-LIBS=ftd2xx.lib -L'C:\MinGW\msys\1.0\home\qlab\hdf5\lib' -lhdf5 -lhdf5_cpp
+#LIBS=ftd2xx.lib -L'C:\MinGW\msys\1.0\home\qlab\hdf5\lib' -lhdf5 -lhdf5_cpp
+LIBS=ftd2xx.lib
 LFLAGS=
 CC=g++
 endif

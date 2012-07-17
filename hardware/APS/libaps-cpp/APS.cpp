@@ -194,7 +194,7 @@ int APS::load_sequence_file(const string & seqFile){
 	 * Load a sequence file from a H5 file
 	 */
 	//First open the file
-
+/*
 	H5::H5File H5SeqFile(seqFile, H5F_ACC_RDONLY);
 
 	const vector<string> chanStrs = {"chan_1", "chan_2", "chan_3", "chan_4"};
@@ -240,7 +240,7 @@ int APS::load_sequence_file(const string & seqFile){
 	}
 	//Close the file
 	H5SeqFile.close();
-
+*/
 
 	return 0;
 
@@ -392,6 +392,87 @@ int APS::stop(){
 	return 0;
 
 }
+
+int APS::set_run_mode(const int & dac, const bool & mode){
+/********************************************************************
+ * Description : Sets run mode
+ *
+ * Inputs :
+*              mode -  enable link list 1 = LL mode 0 = waveform mode
+*
+* Returns : 0 on success < 0 on failure
+*
+********************************************************************/
+  int dacModeMask;
+
+  auto fpga = dac2fpga(dac);
+  if (fpga == INVALID_FPGA) {
+    return -1;
+  }
+
+  // setup register addressing based on DAC
+  switch(dac) {
+    case 0:
+    case 2:
+      dacModeMask = CSRMSK_CHA_OUTMODE;
+      break;
+    case 1:
+    case 3:
+      dacModeMask = CSRMSK_CHB_OUTMODE;
+      break;
+    default:
+      return -2;
+  }
+
+  //Set the run mode bit
+  FILE_LOG(logINFO) << "Setting Run Mode ==> DAC: " << dac << " Mode: " << mode;
+  if (mode) {
+    FPGA::set_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
+  } else {
+    FPGA::clear_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
+  }
+
+  return 0;
+}
+
+int APS::set_repeat_mode(const int & dac, const bool & mode) {
+/*
+ * set_repeat_mode
+ * dac - channel (0-3)
+ * mode - 1 = one-shot 0 = continuous
+ */
+int dacModeMask;
+
+auto fpga = dac2fpga(dac);
+if (fpga == INVALID_FPGA) {
+  return -1;
+}
+
+// setup register addressing based on DAC
+switch(dac) {
+  case 0:
+  case 2:
+    dacModeMask   = CSRMSK_CHA_LLMODE;
+    break;
+  case 1:
+  case 3:
+    dacModeMask   = CSRMSK_CHB_LLMODE;
+    break;
+  default:
+    return -2;
+}
+
+//Set or clear the mode bit
+FILE_LOG(logINFO) << "Setting repeat mode ==> DAC: " << dac << " Mode: " << mode;
+if (mode) {
+	  FPGA::set_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
+} else {
+	  FPGA::clear_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
+}
+
+return 0;
+}
+
 
 int APS::add_LL_bank(const int & dac, const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger){
 
@@ -627,15 +708,14 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 	int dac02Reset, dac13Reset;
 
 	int pllBit;
-	UINT pllRegValue;
-	UINT pllResetBit, pllEnableAddr, pllEnableAddr2;
+	UINT pllEnableAddr, pllEnableAddr2;
 	UCHAR writeByte;
 
 	const vector<int> PLL_XOR_TEST = {PLL_02_XOR_BIT, PLL_13_XOR_BIT,PLL_GLOBAL_XOR_BIT};
 	const vector<int> PLL_LOCK_TEST = {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT};
 	const vector<int> PLL_RESET = {CSRMSK_CHA_PLLRST, CSRMSK_CHB_PLLRST, 0};
 
-	pllResetBit  = CSRMSK_CHA_PLLRST | CSRMSK_CHB_PLLRST;
+	UINT pllResetBit  = CSRMSK_CHA_PLLRST | CSRMSK_CHB_PLLRST;
 
 	FILE_LOG(logINFO) << "Running channel sync on FPGA " << fpga;
 
@@ -664,8 +744,7 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 			inSync = (APS::read_PLL_status(fpga, regAddress, pllBits) == 0) ? true : false;
 			//If we aren't locked then reset for the next try by clearing the PLL reset bits
 			if (resetPLL) {
-			UINT pllRegValue = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_PLL_RESET_ADDR, fpga);
-			FPGA::write_FPGA(handle_, FPGA_ADDR_REGWRITE | FPGA_PLL_RESET_ADDR, pllRegValue & ~pllResetBit, fpga);
+				FPGA::clear_bit(handle_, fpga, FPGA_PLL_RESET_ADDR, pllResetBit);
 			}
 			//Otherwise just wait
 			else{
@@ -725,13 +804,13 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 				(xorFlagCnts[2] < lowCutoff || xorFlagCnts[2] > highCutoff) ) {
 			// 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase, so 600 MHz clocks
 			// from DAC must be in phase. Move on.
-			FILE_LOG(logDEBUG2) << "DAC clocks in phase with reference, XOR counts : " << xorFlagCnts[0] << ", " << xorFlagCnts[1] << ", " << xorFlagCnts[2];
+			FILE_LOG(logDEBUG1) << "DAC clocks in phase with reference, XOR counts : " << xorFlagCnts[0] << ", " << xorFlagCnts[1] << ", " << xorFlagCnts[2];
 			//Get out of MAX_PHAST_TEST ct loop
 			break;
 		}
 		else {
 			// 600 MHz clocks out of phase, reset DAC clocks that are 90/270 degrees out of phase with reference
-			FILE_LOG(logDEBUG2) << "DAC clocks out of phase; resetting, XOR counts: " << xorFlagCnts[0] << ", " << xorFlagCnts[1] << ", " << xorFlagCnts[2];
+			FILE_LOG(logDEBUG1) << "DAC clocks out of phase; resetting, XOR counts: " << xorFlagCnts[0] << ", " << xorFlagCnts[1] << ", " << xorFlagCnts[2];
 			writeByte = 0x2; //disable clock outputs
 			//If the 02 XOR Bit is coming up at half-count then reset it
 			if (xorFlagCnts[1] >= lowCutoff || xorFlagCnts[1] <= highCutoff) {
@@ -753,11 +832,8 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 			update_PLL_register();
 
 			// reset FPGA PLLs
-			pllRegValue = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_PLL_RESET_ADDR, fpga);
-			// Write PLL with bits set
-			FPGA::write_FPGA(handle_, FPGA_ADDR_REGWRITE | FPGA_PLL_RESET_ADDR, pllRegValue | pllResetBit, fpga);
-			// Clear reset bits
-			FPGA::write_FPGA(handle_, FPGA_ADDR_REGWRITE | FPGA_PLL_RESET_ADDR, pllRegValue & ~pllResetBit, fpga);
+			FPGA::set_bit(handle_, fpga, FPGA_PLL_RESET_ADDR, pllResetBit);
+			FPGA::clear_bit(handle_, fpga, FPGA_PLL_RESET_ADDR, pllResetBit);
 
 			// wait for the PLL to relock
 			inSync = wait_PLL_relock(false, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, PLL_LOCK_TEST);
@@ -794,12 +870,12 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 			}
 			else {
 				// PLLs out of sync, reset
-				FILE_LOG(logDEBUG2) << "Channel " << pllStrs[pll] << " PLL not in sync.. resetting (XOR Count " << xorFlagCnt << " )";
+				FILE_LOG(logDEBUG1) << "Channel " << pllStrs[pll] << " PLL not in sync.. resetting (XOR Count " << xorFlagCnt << " )";
 				globalSync = false;
 
 				if (pll == 2) { // global pll compare did not sync
 					if (numRetries > 0) {
-						FILE_LOG(logDEBUG2) << "Global sync failed; retrying.";
+						FILE_LOG(logDEBUG) << "Global sync failed; retrying.";
 						// restart both DAC clocks and try again
 						writeByte = 0x2;
 						FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr, &writeByte);
@@ -813,16 +889,16 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 						//Try again by recursively calling the same function
 						return APS::test_PLL_sync(fpga, numRetries - 1);
 					}
+					// we failed, but enable DDRs to get a usable state
+					FPGA::set_bit(handle_, fpga, FPGA_OFF_CSR, ddr_mask);
+
 					FILE_LOG(logERROR) << "Error could not sync PLLs";
 					return -9;
 				}
 
-				// Read PLL register
-				pllRegValue = FPGA::read_FPGA(handle_, FPGA_ADDR_REGWRITE | FPGA_PLL_RESET_ADDR, fpga);
-				// Write PLL with bit set
-				FPGA::write_FPGA(handle_, FPGA_ADDR_REGWRITE | FPGA_PLL_RESET_ADDR, pllRegValue | PLL_RESET[pll], fpga);
-				// Write original value (making sure to clear the PLL reset bit)
-				FPGA::write_FPGA(handle_, FPGA_ADDR_REGWRITE | FPGA_PLL_RESET_ADDR, pllRegValue & ~PLL_RESET[pll], fpga);
+				// reset a single channel PLL
+				FPGA::set_bit(handle_, fpga, FPGA_PLL_RESET_ADDR, PLL_RESET[pll]);
+				FPGA::clear_bit(handle_, fpga, FPGA_PLL_RESET_ADDR, PLL_RESET[pll]);
 
 				// wait for lock
 				inSync = wait_PLL_relock(false, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, vector<int>(PLL_LOCK_TEST[pll]));
@@ -1163,7 +1239,7 @@ int APS::disable(const FPGASELECT & fpga)
 	FILE_LOG(logINFO) << "Disable FPGA: " << fpga;
 
 	int dacSwTrig = TRIGLEDMSK_CHA_SWTRIG | TRIGLEDMSK_CHB_SWTRIG;
-	int dacSMReset = CSRMSK_CHA_SMRST | CSRMSK_CHA_SMRST;
+	int dacSMReset = CSRMSK_CHA_SMRST | CSRMSK_CHB_SMRST;
 
 
 	FPGA::clear_bit(handle_, fpga, FPGA_OFF_TRIGLED, dacSwTrig);
@@ -1305,86 +1381,6 @@ int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 }
 
 
-int APS::set_run_mode(const int & dac, const bool & mode)
-/********************************************************************
- * Description : Sets run mode
- *
- * Inputs :
-*              mode -  enable link list 1 = LL mode 0 = waveform mode
-*
-* Returns : 0 on success < 0 on failure
-*
-********************************************************************/
-{
-  int dacModeMask;
-
-  auto fpga = dac2fpga(dac);
-  if (fpga == INVALID_FPGA) {
-    return -1;
-  }
-
-  // setup register addressing based on DAC
-  switch(dac) {
-    case 0:
-    case 2:
-      dacModeMask = CSRMSK_CHA_OUTMODE;
-      break;
-    case 1:
-    case 3:
-      dacModeMask = CSRMSK_CHB_OUTMODE;
-      break;
-    default:
-      return -2;
-  }
-
-  //Set the run mode bit
-  FILE_LOG(logINFO) << "Setting Run Mode ==> DAC: " << dac << " Mode: " << mode;
-  if (mode) {
-    FPGA::set_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
-  } else {
-    FPGA::clear_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
-  }
-
-  return 0;
-}
-
-int APS::set_repeat_mode(const int & dac, const bool & mode) {
-/*
- * set_repeat_mode
- * dac - channel (0-3)
- * mode - 1 = one-shot 0 = continuous
- */
-int dacModeMask;
-
-auto fpga = dac2fpga(dac);
-if (fpga == INVALID_FPGA) {
-  return -1;
-}
-
-// setup register addressing based on DAC
-switch(dac) {
-  case 0:
-  case 2:
-    dacModeMask   = CSRMSK_CHA_LLMODE;
-    break;
-  case 1:
-  case 3:
-    dacModeMask   = CSRMSK_CHB_LLMODE;
-    break;
-  default:
-    return -2;
-}
-
-//Set or clear the mode bit
-FILE_LOG(logINFO) << "Setting repeat mode ==> DAC: " << dac << " Mode: " << mode;
-if (mode) {
-	  FPGA::set_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
-} else {
-	  FPGA::clear_bit(handle_, fpga, FPGA_OFF_CSR, dacModeMask);
-}
-
-return 0;
-}
 
 int APS::write_LL_data(const int & dac, const int & bankNum, const int & targetBank){
 

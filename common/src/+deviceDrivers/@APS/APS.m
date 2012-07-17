@@ -65,8 +65,8 @@ classdef APS < hgsetget
         MAX_LL_LENGTH = 512;
 
         % run modes
-        LL_ENABLE = 1;
-        LL_DISABLE = 0;
+        RUN_SEQUENCE = 1;
+        RUN_WAVEFORM = 0;
 
         % repeat modes
         CONTINUOUS = 0;
@@ -505,21 +505,27 @@ classdef APS < hgsetget
         
         
         %% Private Triggering/Stopping methods
-        function trigger_FPGA_debug(aps, fpga)
+        function triggerFPGA_debug(aps, fpga)
             aps.librarycall('trigger_FPGA_debug',fpga);
         end
         
-        function disable_FPGA_debug(aps, fpga)
+        function disableFPGA_debug(aps, fpga)
             aps.librarycall('disable_FPGA_debug', fpga);
         end
         
-        %% Private mode methods
-        function val = set_run_mode(aps, ch, mode)
+        function val = setRunMode(aps, ch, mode)
             % id : DAC channel (1-4)
             % mode : 1 = sequence, 0 = waveform
             val = aps.librarycall('set_run_mode',ch-1, mode);
         end
         
+        function val = setRepeatMode(aps, ch, mode)
+            % id : DAC channel (1-4)
+            % mode : 1 = one-shot, 0 = continous
+            val = aps.librarycall('set_repeat_mode', ch-1, mode);
+        end
+        
+        %% Private mode methods
         function val = setLinkListRepeat(aps,ch, repeat)
             % TODO
 %             val = aps.librarycall(sprintf('Dac: %i Link List Repeat: %i', ch-1, repeat), ...
@@ -560,8 +566,9 @@ classdef APS < hgsetget
         end
         
         function setDebugLevel(aps, level)
-            % TODO
-%             calllib(aps.library_name, 'APS_SetDebugLevel', level);
+            % sets logging level in libaps.log
+            % level = {logERROR=0, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4}
+            calllib(aps.library_name, 'set_logging_level', level);
         end
 
     end
@@ -599,21 +606,24 @@ classdef APS < hgsetget
                 error('Could not open aps')
             end
 
+            % quieter debug info at this point
+            aps.setDebugLevel(4);
             aps.init(forceLoad);
+            %aps.setDebugLevel(3);
 
-%             wf = [zeros([1,2000]) 0.8*ones([1,2000])];
-%             
-%             for ch = 1:4
-%                 aps.loadWaveform(ch, wf);
-%             end
-
+            wf = [zeros([1,2000]) 0.8*ones([1,2000])];
+            
             for ch = 1:4
-                aps.setEnabled(ch, 1);
+                aps.loadWaveform(ch, wf);
+                aps.setRunMode(ch, aps.RUN_WAVEFORM);
             end
-            
-            
-            aps.loadConfig([aps.library_path filesep 'UnitTest.h5']);
+
+%             for ch = 1:4
+%                 aps.setEnabled(ch, 1);
+%             end
+%             aps.loadConfig([aps.library_path filesep 'UnitTest.h5']);
             aps.triggerSource = 'external';
+            aps.setDebugLevel(5);
             aps.run();
             keyboard
             aps.stop();

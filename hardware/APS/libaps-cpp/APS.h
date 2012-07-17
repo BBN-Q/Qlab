@@ -50,6 +50,7 @@ public:
 
 	int set_run_mode(const int &, const bool &);
 	int set_repeat_mode(const int &, const bool &);
+
 	int add_LL_bank(const int & dac, const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger);
 
 	int clear_channel_data();
