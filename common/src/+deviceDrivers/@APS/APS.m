@@ -195,7 +195,7 @@ classdef APS < hgsetget
             end
 
             if ~exist('filename','var')
-                filename = [aps.bit_file_path aps.defaultBitFileName];
+                filename = [obj.bit_file_path obj.defaultBitFileName];
             end
             
             obj.librarycall('initAPS', [filename 0], force);
@@ -208,9 +208,9 @@ classdef APS < hgsetget
 
             switch(class(waveform))
                 case 'int16'
-                    obj.librarycall('set_waveform_int', ch-1, waveform);
+                    obj.librarycall('set_waveform_int', ch-1, waveform, length(waveform));
                 case 'double'
-                    obj.librarycall('set_waveform_float', ch-1, waveform);
+                    obj.librarycall('set_waveform_float', ch-1, waveform, length(waveform));
                 otherwise
                     error('Unhandled waveform data type');
             end
@@ -268,7 +268,7 @@ classdef APS < hgsetget
                         repeatCount = h5readatt(filename, ['/', channelStr, '/linkListData'], 'repeatCount');
                         
                         aps.setLinkListRepeat(ch, repeatCount);
-                        aps.set_run_mode(ch, aps.LL_ENABLE, aps.LL_CONTINUOUS);
+                        aps.set_run_mode(ch, aps.LL_ENABLE);
                     end
                 end
             end
@@ -383,6 +383,7 @@ classdef APS < hgsetget
             % build library path
             if ~libisloaded(obj.library_name)
                 loadlibrary([obj.library_path libfname], [obj.library_path 'libaps.h']);
+                calllib(obj.library_name, 'init');
             end
         end
         
@@ -438,8 +439,7 @@ classdef APS < hgsetget
 %             if id + 1 > aps.num_devices
 %                 error('Device id %i not found.', id);
 %             end
-            
-            val = aps.librarycall('open_by_ID');
+            val = calllib(aps.library_name, 'connect_by_ID', aps.device_id);
             if (val == 0)
                 aps.is_open = 1;
             else
@@ -485,18 +485,19 @@ classdef APS < hgsetget
 %         end
         
         function fname = defaultBitFileName(obj)
+            %TODO
             % current device's serial number is at index device_id + 1 in
             % deviceSerials cell array
-            if ismember(obj.deviceSerials{obj.device_id+1}, obj.DAC2_SERIALS)
-                fname = 'mqco_dac2_latest.bit';
-            else
+%             if ismember(obj.deviceSerials{obj.device_id+1}, obj.DAC2_SERIALS)
+%                 fname = 'mqco_dac2_latest.bit';
+%             else
                 fname = 'mqco_aps_latest.bit';
-            end
+%             end
         end
         
         %% Private Waveform/Link list methods
         function addLinkList(aps,ch,offsets,counts, repeat, trigger, length)
-            val = aps.librarycall('add_LL_bank',ch, length, offsets,counts,repeat,trigger);
+            val = aps.librarycall('add_LL_bank',ch-1, length, offsets,counts,repeat,trigger);
             if (val < 0)
                 error('addLinkList returned an error code of: %i\n', val);
             end
@@ -600,12 +601,19 @@ classdef APS < hgsetget
 
             aps.init(forceLoad);
 
-            wf = [zeros([1,2000]) 0.8*ones([1,2000])];
-            
+%             wf = [zeros([1,2000]) 0.8*ones([1,2000])];
+%             
+%             for ch = 1:4
+%                 aps.loadWaveform(ch, wf);
+%             end
+
             for ch = 1:4
-                aps.loadWaveform(ch, wf);
+                aps.setEnabled(ch, 1);
             end
             
+            
+            aps.loadConfig([aps.library_path filesep 'UnitTest.h5']);
+            aps.triggerSource = 'external';
             aps.run();
             keyboard
             aps.stop();

@@ -1426,7 +1426,7 @@ size_t bankLength = channels_[dac].banks_[bankNum].length;
 if ( int(bankLength) > MAX_LL_LENGTH)  {
 	return -3;
 }
-FILE_LOG(logINFO) << "Loading LinkList length " << bankLength << " into FPGA " << fpga << " bank " << bankNum << " targetBank " << targetBank;
+FILE_LOG(logINFO) << "Loading LinkList length " << bankLength << " into DAC " << dac << " bank " << bankNum << " targetBank " << targetBank;
 
 //Set the link list size
 int lastElementOffset = (targetBank==0) ? (bankLength-1) : (bankLength-1) + MAX_LL_LENGTH ;

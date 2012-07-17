@@ -570,7 +570,7 @@ int FPGA::clear_bit(FT_HANDLE deviceHandle, const FPGASELECT & fpga, const int &
 			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, FPGA2);
 			if (currentState != currentState2) {
 				// note the mismatch in the log file but continue on using FPGA1's data
-				FILE_LOG(logERROR) << "FPGA::clear_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
+				FILE_LOG(logERROR) << "FPGA::clear_bit: FPGA registers don't match. Addr: " << myhex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
 			}
 		}
 	};
@@ -613,7 +613,7 @@ int FPGA::set_bit(FT_HANDLE deviceHandle, const FPGASELECT & fpga, const int & a
 			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, FPGA2);
 			if (currentState != currentState2) {
 				// note the mismatch in the log file but continue on using FPGA1's data
-				FILE_LOG(logERROR) << "FPGA::set_bit: FPGA registers don't match. Addr: << " << std::hex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
+				FILE_LOG(logERROR) << "FPGA::set_bit: FPGA registers don't match. Addr: " << myhex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
 			}
 		}
 	};

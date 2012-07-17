@@ -25,7 +25,7 @@ void FTDI::get_device_serials(vector<string> & deviceSerials) {
 	ftStatus = FT_ListDevices(pBufSerials, &numDevices, FT_LIST_ALL | FT_OPEN_BY_SERIAL_NUMBER);
 
 	if(!FT_SUCCESS(ftStatus)) {
-		FILE_LOG(logERROR) << "Unable to run FT_ListDevices " << static_cast<int>(ftStatus);
+		FILE_LOG(logERROR) << "Unable to run FT_ListDevices with error code" << static_cast<int>(ftStatus);
 		}
 
 	FILE_LOG(logDEBUG) << "Found " << numDevices << " devices attached";
