@@ -8,8 +8,8 @@ from PySide import QtGui, QtCore, QtUiTools
 import APS
 
 #libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
-libPath = './'
-bitFilePath = './'
+libPath = '../libaps-cpp/'
+bitFilePath = '../../../common/src/+deviceDrivers/@APS/'
 
 class ThreadSignals(QtCore.QObject):
     message = QtCore.Signal(str)
@@ -27,7 +27,7 @@ class LoadBitFileRunner(QtCore.QRunnable):
     def run(self):
         self.signals.message.emit('Programming FPGA bitfile....')
         self.aps.connect(self.apsNum)
-        self.aps.loadBitFile(self.bitFileName)
+        self.aps.init(True, self.bitFileName)
         self.signals.message.emit('Loaded firmware version {0}'.format(self.aps.readBitFileVersion()))
         self.aps.disconnect()
         self.signals.finished.emit()
@@ -190,19 +190,19 @@ class APScontrol(object):
         #Get the run mode
         if self.ui.sequencerMode.currentIndex() == 0:
             self.printMessage('Continous Mode')
-            settings['runMode'] = self.aps.LL_CONTINUOUS
+            settings['repeatMode'] = self.aps.CONTINUOUS
         else:
             self.printMessage('One Shot Mode')
-            settings['runMode'] = self.aps.LL_ONESHOT
+            settings['repeatMode'] = self.aps.ONESHOT
         
 
         #Check to see how to trigger
         if self.ui.triggerType.currentIndex() == 0:  # Internal (aka Software Trigger)
-            settings['triggerSource'] = self.aps.TRIGGER_SOFTWARE
+            settings['triggerSource'] = 'internal'
             self.printMessage('Sofware trigger.')
         else: # External (aka Software Trigger):
             self.printMessage('Hardware trigger.')
-            settings['triggerSource'] = self.aps.TRIGGER_HARDWARE
+            settings['triggerSource'] = 'external'
         
         
         #Get the four channel mode stuff

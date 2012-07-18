@@ -150,7 +150,12 @@ classdef APS < hgsetget
 
             % set amplitude and offset before loading waveform data so that we
  			% only have to load it once.
-			obj.librarycall('Clearing waveform cache', 'APS_ClearAllWaveforms');
+			
+			if (~strcmp(settings.lastseqfile, settings.seqfile) || settings.seqforce)
+				% if we are going to call loadConfig below, we can clear all channel data first
+				obj.librarycall('clear_channel_data');
+			end
+			
             for ct = 1:4
                 ch = obj.channelStrs{ct};
 				obj.setAmplitude(ct, settings.(ch).amplitude);
@@ -360,6 +365,18 @@ classdef APS < hgsetget
         function delay = getTriggerDelay(aps, ch)
             delay = aps.librarycall('get_channel_trigDelay',ch-1);
         end
+
+		function val = setRunMode(aps, ch, mode)
+            % id : DAC channel (1-4)
+            % mode : 1 = sequence, 0 = waveform
+            val = aps.librarycall('set_run_mode',ch-1, mode);
+        end
+        
+        function val = setRepeatMode(aps, ch, mode)
+            % id : DAC channel (1-4)
+            % mode : 1 = one-shot, 0 = continous
+            val = aps.librarycall('set_repeat_mode', ch-1, mode);
+        end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Private methods
@@ -496,7 +513,7 @@ classdef APS < hgsetget
         end
         
         %% Private Waveform/Link list methods
-        function addLinkList(aps,ch,offsets,counts, repeat, trigger, length)
+        function addLinkList(aps, ch, offsets, counts, repeat, trigger, length)
             val = aps.librarycall('add_LL_bank',ch-1, length, offsets,counts,repeat,trigger);
             if (val < 0)
                 error('addLinkList returned an error code of: %i\n', val);
@@ -511,18 +528,6 @@ classdef APS < hgsetget
         
         function disableFPGA_debug(aps, fpga)
             aps.librarycall('disable_FPGA_debug', fpga);
-        end
-        
-        function val = setRunMode(aps, ch, mode)
-            % id : DAC channel (1-4)
-            % mode : 1 = sequence, 0 = waveform
-            val = aps.librarycall('set_run_mode',ch-1, mode);
-        end
-        
-        function val = setRepeatMode(aps, ch, mode)
-            % id : DAC channel (1-4)
-            % mode : 1 = one-shot, 0 = continous
-            val = aps.librarycall('set_repeat_mode', ch-1, mode);
         end
         
         %% Private mode methods
