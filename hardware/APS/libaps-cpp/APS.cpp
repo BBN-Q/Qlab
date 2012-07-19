@@ -196,7 +196,6 @@ int APS::load_sequence_file(const string & seqFile){
 	 * Load a sequence file from a H5 file
 	 */
 	//First open the file
-/*
 	H5::H5File H5SeqFile(seqFile, H5F_ACC_RDONLY);
 
 	const vector<string> chanStrs = {"chan_1", "chan_2", "chan_3", "chan_4"};
@@ -242,8 +241,6 @@ int APS::load_sequence_file(const string & seqFile){
 	}
 	//Close the file
 	H5SeqFile.close();
-*/
-
 	return 0;
 
 }
