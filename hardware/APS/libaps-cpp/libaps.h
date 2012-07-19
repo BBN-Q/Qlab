@@ -21,6 +21,9 @@ extern "C" {
 
 EXPORT int init();
 
+EXPORT int get_numDevices();
+EXPORT void get_deviceSerial(int, char *);
+
 EXPORT int connect_by_ID(int);
 
 EXPORT int connect_by_serial(char *);

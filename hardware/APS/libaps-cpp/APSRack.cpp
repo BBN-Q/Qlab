@@ -31,12 +31,16 @@ int APSRack::initAPS(const int & deviceID, const string & bitFile, const bool & 
 	return APSs_[deviceID].init(bitFile, forceReload);
 }
 
-int APSRack::get_num_devices() {
+int APSRack::get_num_devices() const {
 
 	int numDevices;
 	FT_ListDevices(&numDevices, NULL, FT_LIST_NUMBER_ONLY);
 	return numDevices;
 
+}
+
+string APSRack::get_deviceSerial(const int & deviceID) const{
+	return deviceSerials_[deviceID];
 }
 
 //This will reset the APS vector so it really should only be called during initialization

@@ -10,6 +10,7 @@
 
 OS=$(shell uname)
 
+
 ####### Mac OS X #######
 ifeq (${OS},Darwin)
 CFLAGS=-Wall -std=c++11 -stdlib=libc++ -g
@@ -45,38 +46,56 @@ else
 #CC=cl
 
 ##mingw
-CFLAGS=-Wall -Os -std=c++11 -I'C:\MinGW\msys\1.0\local\include\cpp' -I'C:\MinGW\msys\1.0\local\include'
+CFLAGS=-Wall -std=c++11 -I'C:\MinGW\msys\1.0\local\include\cpp' -I'C:\MinGW\msys\1.0\local\include'
 OBJFLAGS=-c
 OBJEXT=o
 LIBEXT=dll
 EXFLAGS=-Wl
 LIBFLAGS=-shared -o libaps.dll 
-LIBS=ftd2xx.lib -L'C:\MinGW\msys\1.0\local\lib' -lhdf5_cpp -lhdf5
-#LIBS=ftd2xx.lib
+LIBS=-L'C:\MinGW\msys\1.0\local\lib'
+TESTLIBS=-L.
 LFLAGS=
 CC=g++
+
+ifeq ($(target), 32)
+	CFLAGS += -m32
+	LIBS += ftd2xx_32.lib -lhdf5_cpp_32 -lhdf5_32
+	LIBFLAGS=-shared -o libaps.dll
+	TESTLIBS += -laps
+else
+	LIBS += ftd2xx.lib -lhdf5_cpp -lhdf5
+	LIBFLAGS=-shared -o libaps64.dll
+	TESTLIBS += -laps64
+endif
+
 endif
 endif
 
+ifeq ($(mode), debug)
+	CFLAGS += -g
+else
+	CFLAGS += -Os
+endif
 
 OBJECTS=APSRack.$(OBJEXT) APS.$(OBJEXT) FTDI.$(OBJEXT) Channel.$(OBJEXT) LLBank.$(OBJEXT) FPGA.$(OBJEXT)
 
 all: $(OBJECTS) libaps test
 
 libaps: $(OBJECTS) libaps.cpp
-	$(CC) $(CFLAGS) $(LIBFLAGS) libaps.cpp $(OBJECTS) $(LIBS) 
+	$(CC) $(CFLAGS) $(LIBFLAGS) libaps.cpp $(OBJECTS) $(LIBS)
 
 %.$(OBJEXT):%.cpp
 	$(CC) $(CFLAGS) $(OBJFLAGS) $<
 
 test: $(OBJECTS) test.cpp
-	$(CC) $(CFLAGS) -o test test.cpp $(OBJECTS) $(LIBS) -L. -laps	
+	$(CC) $(CFLAGS) -o test test.cpp $(OBJECTS) $(LIBS) $(TESTLIBS)	
 
 clean:
 	rm -f *.$(OBJEXT)
 	rm -f test.exe
 	rm -f a.out
 	rm -f libaps.$(LIBEXT)
+	rm -f libaps64.$(LIBEXT)
 
 tidy:
 	rm -f *.$(OBJEXT)

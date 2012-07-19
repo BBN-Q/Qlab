@@ -23,6 +23,17 @@ int init() {
 	return 0;
 }
 
+int get_numDevices(){
+	return APSRack_.get_num_devices();
+}
+
+void get_deviceSerial(int deviceID, char* deviceSerial){
+	//Assumes sufficient memory has been allocated
+	string serialStr = APSRack_.get_deviceSerial(deviceID);
+	size_t strLen = serialStr.copy(deviceSerial, serialStr.size());
+	deviceSerial[strLen] = '\0';
+}
+
 //Connect to a device specified by ID
 int connect_by_ID(int deviceID){
 	return APSRack_.connect(deviceID);

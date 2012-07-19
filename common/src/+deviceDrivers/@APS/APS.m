@@ -337,6 +337,11 @@ classdef APS < hgsetget
             end
         end
         
+        function source = get.triggerSource(obj)
+            valueMap = containers.Map({obj.TRIGGER_SOFTWARE, obj.TRIGGER_HARDWARE},...
+                {'internal', 'external'});
+            source = valueMap(obj.librarycall('get_trigger_source'));
+        
         function val = setOffset(aps, ch, offset)
             % sets offset voltage of channel 
             val = aps.librarycall('set_channel_offset', ch-1, offset);

@@ -25,7 +25,8 @@ public:
 	int disconnect(const int &);
 	int disconnect(const string &);
 
-	int get_num_devices();
+	int get_num_devices() const;
+	string get_deviceSerial(const int &) const;
 	void enumerate_devices();
 
 	int program_FPGA(const int &, const string &, const FPGASELECT &, const int &);

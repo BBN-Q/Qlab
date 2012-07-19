@@ -28,6 +28,8 @@ int APS::connect(){
 	if (success == 0) {
 		FILE_LOG(logDEBUG) << "Opened connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
 	}
+
+	// TODO: restore state information from file
 	return success;
 }
 
@@ -37,6 +39,8 @@ int APS::disconnect(){
 	if (success == 0) {
 		FILE_LOG(logDEBUG) << "Closed connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
 	}
+
+	// TODO: save state information to file
 	return success;
 }
 
@@ -76,6 +80,7 @@ int APS::init(const string & bitFile, const bool & forceReload){
 
 		return bytesProgramed;
 	}
+	samplingRate_ = get_sampleRate();
 
 	return 0;
 }
@@ -351,7 +356,7 @@ int APS::run() {
 
 	//Depending on how the channels are enabled, trigger the appropriate FPGA's
 	vector<bool> channelsEnabled;
-	bool allChannels = false;
+	bool allChannels = true;
 	for (const auto tmpChannel : channels_){
 		channelsEnabled.push_back(tmpChannel.enabled_);
 		allChannels &= tmpChannel.enabled_;
@@ -369,24 +374,27 @@ int APS::run() {
 	if (allChannels) {
 		trigger(ALL_FPGAS);
 	}
-	else if (channelsEnabled[0] || channelsEnabled[1]) {
-		trigger(FPGA1);
-	}
-	else if (channelsEnabled[2] || channelsEnabled[3]) {
-		trigger(FPGA2);
+	else {
+		if (channelsEnabled[0] || channelsEnabled[1]) {
+			trigger(FPGA1);
+		}
+		if (channelsEnabled[2] || channelsEnabled[3]) {
+			trigger(FPGA2);
+		}
 	}
 
 	return 0;
 }
 
 int APS::stop(){
-	disable(ALL_FPGAS);
 	running_ = false;
 
 	if (channels_[0].banks_.size() > 2){
 		bankBouncerThread_->join();
 		delete bankBouncerThread_;
 	}
+
+	disable(ALL_FPGAS);
 
 	return 0;
 
@@ -1105,9 +1113,9 @@ int APS::setup_DAC(const int & dac) const
 			break;
 	}
 	edgeMHD = MHD;
-	FILE_LOG(logINFO) << "Found MHD = " << int(edgeMHD);
+	FILE_LOG(logDEBUG) << "Found MHD = " << int(edgeMHD);
 	SD = (edgeMHD - edgeMSD) / 2;
-	FILE_LOG(logINFO) << "Setting SD = " << int(SD);
+	FILE_LOG(logDEBUG) << "Setting SD = " << int(SD);
 
 	// Clear MSD and MHD
 	MHD = 0;
@@ -1172,6 +1180,9 @@ int APS::trigger(const FPGASELECT & fpga)
  * Returns : 0
  ********************************************************************/
 {
+
+	FILE_LOG(logINFO) << "Trigger FPGA: " << fpga;
+
 	int dacSwTrig   = TRIGLEDMSK_CHA_SWTRIG | TRIGLEDMSK_CHB_SWTRIG;
 	int dacTrigSrc  = CSRMSK_CHA_TRIGSRC | CSRMSK_CHB_TRIGSRC;
 	int dacSMReset  = CSRMSK_CHA_SMRST | CSRMSK_CHB_SMRST;
@@ -1347,7 +1358,7 @@ int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 		return -1;
 	}
 
-	FILE_LOG(logDEBUG) << "Loading Waveform length " << wfData.size() << " (FPGA count = " << wfLength << " ) into FPGA  " << fpga << " DAC " << dac;
+	FILE_LOG(logINFO) << "Loading Waveform length " << wfData.size() << " (FPGA count = " << wfLength << " ) into FPGA  " << fpga << " DAC " << dac;
 
 	//Write the waveform parameters
 	//TODO: handle arbitrary offsets

@@ -8,9 +8,7 @@ import os
 import numpy as np
 import h5py
 
-libPathDebug = '../libaps-cpp/'
-
-class APS:
+class APS (object):
     # implements interface to libaps
     
     # class properties
@@ -26,7 +24,7 @@ class APS:
     
     # constants 
     RUN_SEQUENCE = 1
-    RUN_WAVEFORM = 1
+    RUN_WAVEFORM = 0
     
     CONTINUOUS = 0
     ONESHOT = 1
@@ -44,7 +42,7 @@ class APS:
     #DAC2 devices use a different bit file
     DAC2Serials = ('A6UQZB7Z', 'A6001nBU', 'A6001ixV', 'A6001nBT')
 
-    def __init__(self,libPath= libPathDebug, bitFilePath = ''):
+    def __init__(self, bitFilePath = ''):
         #Load the approriate library with some platform/architecture checks
         #Check for 32bit 64bit python from sys.maxsize
         #We do this because we can run 32bit programs on 64bit architectures so
@@ -53,52 +51,43 @@ class APS:
         extDict = {'Windows':'.dll', 'Linux':'.so', 'Darwin':'.dylib'}        
         libName = 'libaps' + str64bit + extDict[platform.system()]
         
-        if len(libPath) == 0:
-            # build path for library
-            scriptPath = os.path.dirname(os.path.realpath( __file__ ))
-            libPath = scriptPath + '/../libaps-cpp/'
+        scriptPath = os.path.dirname(os.path.realpath( __file__ ))
+        libPath = scriptPath + '/../libaps-cpp/'
             
         print 'Loading', libPath  + libName
         self.lib = ctypes.cdll.LoadLibrary(libPath  + libName)
+        # set up argtypes and restype for functions with arguments that aren't ints or strings
+        self.lib.set_channel_scale.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float]
+        self.lib.get_channel_scale.restype = ctypes.c_float
+        self.lib.set_channel_offset.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float]
+        self.lib.get_channel_offset.restype = ctypes.c_float
         # initialize DLL
         self.lib.init()
         
         if len(bitFilePath) == 0:
-            # build path for bit file
-            # see: http://code.activestate.com/recipes/474083-get-the-path-of-the-currently-executing-python-scr/
-            scriptPath = libPath
-            extendedPath = 'APS'
-            try:
-                baseIdx = scriptPath.index(extendedPath)
-                self.bit_file_path = scriptPath[0:baseIdx+len(extendedPath)] + '/'
-            except ValueError:
-                print 'Error finding bit file path in: ', scriptPath
+            self.bit_file_path = scriptPath + '/../'
                 
         #Initialize the channel settings
         # TODO: check contents of this structure are all necessary
         self.channelSettings = {}
         for chanName in self.CHANNELNAMES:
             self.channelSettings[chanName] = {'amplitude':1, 'offset':0, 'enabled':False, 'seqfile':None}
-        
-        #Initialize trigger settings
-        self.triggerSource = 'internal'
     
     def __del__(self):
         if self.is_open:
             self.disconnect()
         
     def enumerate(self):
-        # TODO
         #List the number of devices attached and their serial numbers
         
         #First get the number of devices        
-        numDevices = self.lib.APS_NumDevices()
+        numDevices = self.lib.get_numDevices()
 
         self.deviceSerials = []
         #Now, for each device, get the associated serial number
         charBuffer = ctypes.create_string_buffer(64)
         for ct in range(numDevices):
-            self.lib.APS_GetSerialNum(ct,charBuffer, 64)
+            self.lib.get_deviceSerial(ct,charBuffer)
             self.deviceSerials.append(charBuffer.value)
 
         return numDevices, self.deviceSerials
@@ -115,7 +104,7 @@ class APS:
         self.lib.disconnect_by_ID(self.device_id)
         self.is_open = 0
         
-    def open(self,ID,force = 0):
+    def open(self, ID):
         self.device_id = ID
         
         # TODO
@@ -126,12 +115,12 @@ class APS:
         #    return 2
 
         if self.is_open:
-            if self.device_id ~= ID:
+            if self.device_id != ID:
                 self.disconnect()
             else:
                 return 0
         
-        val = self.lib.connect_by_id(self.device_id,force)
+        val = self.lib.connect_by_ID(self.device_id)
         if val == 0:
             self.is_open = 1
             print 'Opened device:', ID
@@ -178,12 +167,14 @@ class APS:
 
     def getDefaultBitFileName(self):
         #Check whether we have a DACII or APS device
-        if not self.deviceSerials:
-            return None
-        elif self.deviceSerials[self.device_id] in self.DAC2Serials:
-            return os.path.abspath(self.bit_file_path + 'mqco_dac2_latest.bit')
-        else:
-            return os.path.abspath(self.bit_file_path + 'mqco_aps_latest.bit')
+        # TODO
+        #if not self.deviceSerials:
+        #    return None
+        #elif self.deviceSerials[self.device_id] in self.DAC2Serials:
+        #    return os.path.abspath(self.bit_file_path + 'mqco_dac2_latest.bit')
+        #else:
+        #    return os.path.abspath(self.bit_file_path + 'mqco_aps_latest.bit')
+        return os.path.abspath(self.bit_file_path + 'mqco_aps_latest.bit')        
 
     def init(self, force = False, filename = None):
         if not self.is_open:
@@ -203,27 +194,28 @@ class APS:
             print 'APS unit is not open'
             return -1
             
-        if waveform.dtype == dtype('int16'):
+        if waveform.dtype == np.dtype('int16') or waveform.dtype == np.dtype('int32'):
+            waveform = waveform.astype('int16')
             c_int_p = ctypes.POINTER(ctypes.c_int16)
             waveform_p = waveform.ctypes.data_as(c_int_p) 
-        
+            val = self.librarycall('set_waveform_int', ch-1, waveform_p, waveform.size)
             
-        elif waveform.dtype == dtype('float64'):
+        elif waveform.dtype == np.dtype('float32') or waveform.dtype == np.dtype('float64'):
             # libaps-cpp expects float rather than double
             waveform = waveform.astype('float32')
-            c_float_p = ctypes.POINTER(ctypes.c_float32)
+            c_float_p = ctypes.POINTER(ctypes.c_float)
             waveform_p = waveform.ctypes.data_as(c_float_p)
+            val = self.librarycall('set_waveform_float', ch-1, waveform_p, waveform.size)
         else:
-            raise NameError 'Unhandled waveform data type. Use int16 or float64'
-        
-        val = self.librarycall('loadWaveform', ch-1, waveform_p)
+            raise NameError('Unhandled waveform data type. Use int16 or float64')
+
         self.set_enabled(ch, True)
 
         if val < 0:
             print 'loadWaveform returned an error code of:', val
         return val
         
-    def addLinkList(self, ch, offsets, counts, repeat, trigger, length):
+    def add_LL_bank(self, ch, offsets, counts, repeat, trigger, length):
         if not self.is_open:
             print 'APS unit is not open'
             return -1
@@ -249,7 +241,6 @@ class APS:
         
         if val < 0:
             print 'add_LL_bank returned an error code of:', val
-        print 'Done'
         
     def librarycall(self, functionName,  *args):
         if not self.is_open:
@@ -282,21 +273,22 @@ class APS:
     
     @property
     def samplingRate(self):
-        return self.librarycall('get_samplingRate')
+        return self.librarycall('get_sampleRate')
     
     @samplingRate.setter
     def samplingRate(self, freq):
-        self.librarycall('set_samplingRate', freq)
+        self.librarycall('set_sampleRate', freq)
     
     @property
     def triggerSource(self):
-        return self.librarycall('get_triggerSource')
+        valueMap = {self.TRIGGER_SOFTWARE: 'internal', self.TRIGGER_HARDWARE: 'external'}
+        return valueMap[self.librarycall('get_trigger_source')]
     
     @triggerSource.setter
     def triggerSource(self, source):
         allowedValues = {'internal': self.TRIGGER_SOFTWARE, 'external': self.TRIGGER_HARDWARE}
         assert source in allowedValues, 'Unrecognized trigger source.'
-        self.librarycall('set_triggerSource', allowedValues[source])
+        self.librarycall('set_trigger_source', allowedValues[source])
     
     def read_PLL_status(self):
         # TODO
@@ -313,12 +305,12 @@ class APS:
 
     def set_amplitude(self, ch, amplitude):
         return self.librarycall('set_channel_scale', ch-1, amplitude)
-	
-	def set_enabled(self, ch, enabled):
-		return self.librarycall('set_channel_enabled', ch-1, enabled)
+    
+    def set_enabled(self, ch, enabled):
+        return self.librarycall('set_channel_enabled', ch-1, enabled)
         
     def set_trigger_delay(self, ch, delay):
-       return self.librarycall('set_channel_trigDelay', ch-1, delay)
+        return self.librarycall('set_channel_trigDelay', ch-1, delay)
         
     def load_config(self, filename):
         '''
@@ -328,7 +320,7 @@ class APS:
         #Clear the old LinkList data
         self.librarycall('clear_channel_data')
 
-        with h5py.File(fileName, 'r') as FID:
+        with h5py.File(filename, 'r') as FID:
             assert FID.attrs['Version'] == 1.6, 'Oops! This code expects APS HDF5 file version 1.6.'
 
             #Look for the 4 channel data
@@ -340,60 +332,96 @@ class APS:
 
                     tmpLLData = tmpChan['linkListData']
                     
-                    for bank in tempLLData.values():
-                        self.add_LL_bank(bank['offset'], bank['count'], bank['repeat'], bank['trigger'], int(bank.attrs['length'][0]))
+                    for bank in tmpLLData.values():
+                        self.add_LL_bank(ct+1,bank['offset'].value, bank['count'].value, bank['repeat'].value, bank['trigger'].value, int(bank.attrs['length'][0]))
                         
-                    self.setLinkListRepeat(ct+1, int(tmpLLData.attrs['repeatCount'][0])
+                    self.setLinkListRepeat(ct+1, int(tmpLLData.attrs['repeatCount'][0]))
                     self.setRunMode(ct+1, self.RUN_SEQUENCE)
+
+    def load_waveform_from_file(self, ch, filename):
+        '''
+        Loads a single channel waveform from an HDF5 file
+        Expects data in variable 'WFVec'
+        '''
+        with h5py.File(filename, 'r') as FID:
+            self.loadWaveform(ch, FID['WFVec'].value)
                 
     def setAll(self, settings):
         '''
-        Again mimicing the Matlab driver to load all the setttings from a dictionary.
+        Again mimicing the Matlab driver to load all the settings from a dictionary.
         '''
+        
         #First load all the channel offsets, scalings, enabled
         for ch, channelName in enumerate(self.CHANNELNAMES):
-            self.set_amplitude(ch, settings[channelName]['amplitude'])
-            self.set_offset(ch, settings[channelName]['offset'])
-			self.set_enabled(ch, settings[channelName]['enabled'])
-        
+            self.set_amplitude(ch+1, settings[channelName]['amplitude'])
+            self.set_offset(ch+1, settings[channelName]['offset'])
+            self.set_enabled(ch+1, settings[channelName]['enabled'])
+            self.setRepeatMode(ch+1, settings['repeatMode'])
+            if settings[channelName]['seqfile']:
+                self.load_waveform_from_file(ch+1, settings[channelName]['seqfile'])
+       
+        print('Got here')
         #Load the sequence file information
-        self.load_config(settings['chAll']['seqfile'], 0)
-        self.samplingRate = settings['frequency']        
+        if 'chAll' in settings and settings['chAll']['seqfile']:
+            print('should not get here')
+            self.load_config(settings['chAll']['seqfile'])
+        print('got here2')
+        self.samplingRate = settings['frequency']
+        print('set sampling rate')
         self.triggerSource = settings['triggerSource']
-        self.setRepeatMode(settings['repeatMode'])
-
+        print('set trigger source')
+ 
     def run(self):
         '''
         Set the trigger and start things going.
         '''
-		self.librarycall('run')
+        self.librarycall('run')
 
     def stop(self):
         ''' Stop everything '''
         self.librarycall('stop')
+    
+    def set_log_level(self, level):
+        '''
+        set logging level (info = 2, debug = 3, debug1 = 4, debug2 = 5)
+        '''
+        self.lib.set_logging_level(level)
 
         
     def unitTestBasic(self):
         self.connect(0)
         #print "Current Bit File Version: ", self.readBitFileVersion()
         print "Initializing"
-        self.init()
+        self.init(False)
         # if self.readBitFileVersion() != 16:
         #     self.loadBitFile()
         #     print "Current Bit File Version: ", self.readBitFileVersion()
         
-        wf = np.hstack((np.zeros(2000,1,dtype=np.float64), 0.8*np.ones(2000,1,dtype=np.float64)))
+        wf = np.hstack((np.zeros((2000),dtype=np.float64), 0.7*np.ones((2000),dtype=np.float64)))
         
         for ct in range(4):
             self.loadWaveform(ct+1, wf)
+            self.setRunMode(ct+1, self.RUN_WAVEFORM)
+            self.set_amplitude(ct+1, 1.0)
 
         print 'Done with load Waveform'
         self.run()
         print 'Done with Trigger'
+        raw_input("Press Enter to continue...")
+        self.stop()
+        
+        self.samplingRate = 1200
+
+        scriptPath = os.path.dirname(os.path.realpath( __file__ ))
+        libPath = scriptPath + '/../libaps-cpp/'
+        aps.load_config(libPath + '/UnitTest.h5');
+        aps.triggerSource = 'external';
+        self.run()
+        raw_input("Press Enter to continue...")
         self.stop()
         self.disconnect();
 
 
 if __name__ == '__main__':
-    aps = APS(libPathDebug)
+    aps = APS()
     aps.unitTestBasic()

@@ -62,7 +62,6 @@ int Channel::set_waveform(const vector<float> & data) {
 }
 
 int Channel::set_waveform(const vector<short> & data) {
-	FILE_LOG(logDEBUG2) << "End of data vector: " << *(data.end()-1);
 	//Check whether we need to resize the waveform vector
 	if (data.size() > size_t(MAX_WFLENGTH)){
 		FILE_LOG(logERROR) << "Tried to update waveform to longer than max allowed: " << data.size();

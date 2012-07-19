@@ -7,9 +7,7 @@ from PySide import QtGui, QtCore, QtUiTools
 
 import APS
 
-#libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
-libPath = '../libaps-cpp/'
-bitFilePath = '../../../common/src/+deviceDrivers/@APS/'
+bitFilePath = '../'
 
 class ThreadSignals(QtCore.QObject):
     message = QtCore.Signal(str)
@@ -108,7 +106,7 @@ class APScontrol(object):
             tmpLineEdit.validator().setRange(-1,1,4)
             
         #Create an APS class instance for interacting with the instrument
-        self.aps = APS.APS(libPath, bitFilePath)
+        self.aps = APS.APS(bitFilePath)
 
         #Enumerate the number of connected APS devices and fill out the combo box
         (numAPS, deviceSerials) = self.aps.enumerate()
@@ -217,7 +215,8 @@ class APScontrol(object):
             settings[channelName]['amplitude'] = float(getattr(self.ui,'ch{0}scale'.format(ct+1)).text())
             settings[channelName]['offset'] = float(getattr(self.ui,'ch{0}offset'.format(ct+1)).text())
             settings[channelName]['enabled'] = bool(getattr(self.ui,'ch{0}enable'.format(ct+1)).isChecked())
-            settings[channelName]['seqfile'] = getattr(self.ui,'ch{0}file'.format(ct+1)).text()
+            if not settings['fourChannelMode']:
+                settings[channelName]['seqfile'] = getattr(self.ui,'ch{0}file'.format(ct+1)).text()
             #Do a check whether the file exists
             if (not settings['fourChannelMode']) and settings[channelName]['enabled'] and (not os.path.isfile(settings[channelName]['seqfile'])):
                 QtGui.QMessageBox.warning(self.ui, 'Oops!', 'Channel {0} is enabled with a non-existent file.'.format(ct+1))
