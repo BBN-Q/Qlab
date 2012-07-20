@@ -1318,8 +1318,12 @@ int APS::set_offset_register(const int & dac, const float & offset) {
 	return 0;
 }
 
-//Write waveform data FPGA memory
 int APS::write_waveform(const int & dac, const vector<short> & wfData) {
+	/*Write waveform data to FPGA memory
+	 * dac = channel (0-3)
+	 * wfData = signed short waveform data
+	 */
+
 
 	ULONG tmpData, wfLength;
 	int offsetReg, sizeReg, startAddr;
@@ -1384,7 +1388,13 @@ int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 
 
 
-int APS::write_LL_data(const int & dac, const int & bankNum, const int & targetBank){
+int APS::write_LL_data(const int & dac, const int & bankNum, const int & targetBank) {
+	/*
+	 * write_LL_data
+	 * dac = channel (0-3)
+	 * bankNum = LL bank number to load (having previously been stored in the driver with add_LL_bank()
+	 * targetBank = where to load the bank (0 = bank A, 1 = bank B)
+	 */
 
 	int startAddr;
 	int sizeReg;
@@ -1407,7 +1417,6 @@ int APS::write_LL_data(const int & dac, const int & bankNum, const int & targetB
 			}
 			break;
 		case 1:
-			// fall through
 		case 3:
 			if (targetBank == 0) {
 				startAddr    = FPGA_ADDR_CHB_LL_A_WRITE;

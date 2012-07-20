@@ -469,14 +469,9 @@ classdef APS < hgsetget
             val = aps.open(id);
         end
         
-%         function val = readBitFileVersion(aps)
-%             val = aps.librarycall('APS_ReadBitFileVersion', aps.device_id);
-%             aps.bit_file_version = val;
-%             if val >= aps.ELL_VERSION
-%                 aps.max_waveform_points = aps.ELL_MAX_WAVFORM;
-%                 aps.max_ll_length = aps.ELL_MAX_LL;
-%             end
-%         end
+        function val = readBitFileVersion(aps)
+            val = aps.librarycall('read_bitfile_version');
+        end
         
         function fname = defaultBitFileName(obj)
             % current device's serial number is at index device_id + 1 in
@@ -566,7 +561,7 @@ classdef APS < hgsetget
                 
         sequence = LinkListSequences(sequence)
         
-        function aps = UnitTest(forceLoad)
+        function UnitTest(forceLoad)
             % work around for not knowing full name
             % of class - cannot use simply APS when in 
             % experiment framework
@@ -591,6 +586,7 @@ classdef APS < hgsetget
             aps.setDebugLevel(4);
             aps.init(forceLoad);
             %aps.setDebugLevel(3);
+            fprintf('Current bitfile version: %d\n', aps.readBitFileVersion())
 
             wf = [zeros([1,2000]) 0.8*ones([1,2000])];
             

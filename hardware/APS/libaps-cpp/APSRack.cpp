@@ -63,6 +63,10 @@ void APSRack::enumerate_devices() {
 	}
 }
 
+int APSRack::read_bitfile_version(const int & deviceID) const {
+	return APSs_[deviceID].read_bitFile_version(ALL_FPGAS);
+}
+
 int APSRack::connect(const int & deviceID){
 	//Connect to a instrument specified by deviceID
 	return APSs_[deviceID].connect();

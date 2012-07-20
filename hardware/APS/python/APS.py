@@ -137,14 +137,7 @@ class APS (object):
         
         
     def readBitFileVersion(self):
-        # TODO
-        return 0
-        #ver = self.lib.APS_ReadBitFileVersion(self.device_id)
-        #self.bit_file_version = ver
-        #if ver >= self.ELL_VERSION:
-        #    self.max_waveform_points = self.ELL_MAX_WAVEFORM
-        #    self.max_ll_length = self.ELL_MAX_LL
-        #return ver
+        return self.librarycall('read_bitfile_version')
 
     def getDefaultBitFileName(self):
         #Check whether we have a DACII or APS device
@@ -369,12 +362,9 @@ class APS (object):
         
     def unitTestBasic(self):
         self.connect(0)
-        #print "Current Bit File Version: ", self.readBitFileVersion()
         print "Initializing"
         self.init(False)
-        # if self.readBitFileVersion() != 16:
-        #     self.loadBitFile()
-        #     print "Current Bit File Version: ", self.readBitFileVersion()
+        print "Current Bit File Version: ", self.readBitFileVersion()
         
         wf = np.hstack((np.zeros((2000),dtype=np.float64), 0.7*np.ones((2000),dtype=np.float64)))
         

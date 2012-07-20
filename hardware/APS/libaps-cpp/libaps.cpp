@@ -64,14 +64,8 @@ int initAPS(int deviceID, char * bitFile, int forceReload){
 	return APSRack_.initAPS(deviceID, string(bitFile), forceReload);
 }
 
-//Program the current FPGA
-//Assumes null-terminated bitFile
-int program_FPGA(int deviceID, char * bitFile, int fpga, int expectedVersion){
-	return APSRack_.program_FPGA(deviceID, string(bitFile), FPGASELECT(fpga), expectedVersion);
-}
-
-int setup_DACs(int deviceID){
-	return APSRack_.setup_DACs(deviceID);
+int read_bitfile_version(int deviceID) {
+	return APSRack_.read_bitfile_version(deviceID);
 }
 
 int set_sampleRate(int deviceID, int freq){

@@ -28,6 +28,7 @@ public:
 	int get_num_devices() const;
 	string get_deviceSerial(const int &) const;
 	void enumerate_devices();
+	int read_bitfile_version(const int &) const;
 
 	int program_FPGA(const int &, const string &, const FPGASELECT &, const int &);
 
