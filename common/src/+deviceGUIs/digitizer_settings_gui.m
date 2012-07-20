@@ -26,7 +26,7 @@ function [get_settings_fcn, set_settings_fcn] = digitizer_settings_gui(parent, s
 handles = struct();
 
 % If there is no parent figure given, generate a new one
-if nargin < 1 
+if nargin < 1
     handles.parent = figure( ...
         'Tag', 'figure1', ...
         'Units', 'characters', ...
@@ -89,7 +89,11 @@ build_gui();
 %If we are not passed explicit settings then create an emtpy structure
 if nargin < 2
     settings = struct();
+else
+    %Set the card type
+    set_selected(handles.cardType, find(strcmp(settings.deviceName, get(handles.cardType,'String'))))
 end
+
 
 %Update the GUI elements with the available choice for the given digitizer
 %card and the current settings
@@ -106,7 +110,7 @@ set_settings_fcn = @set_gui_elements;
         % Creation of all uicontrols
         
         
-         %Create the main panel containing everything with a VBox layout
+        %Create the main panel containing everything with a VBox layout
         handles.mainPanel = uiextras.Panel('Parent', handles.parent, 'Title', 'Digitizer Settings', 'Padding', 5, 'FontSize', 12 );
         handles.mainVBox = uiextras.VBox('Parent',handles.mainPanel, 'Spacing', 10);
         
@@ -220,7 +224,7 @@ set_settings_fcn = @set_gui_elements;
         avgSettings.ditherRange = str2double(get(handles.ditherRange,'String'));
         switch scope_settings.deviceName
             case 'AlazarATS9870'
-                avgSettings.trigResync = false;
+                avgSettings.trigResync = 0;
             case {'AgilentAP240'}
                 avgSettings.trigResync = cardParams.resyncs(get_selected(handles.trigResync));
         end
@@ -249,6 +253,27 @@ set_settings_fcn = @set_gui_elements;
                 
                 %Update the range text
                 set(handles.statictext_vertScale,'String','Scale (Vpp):');
+                
+                %Update the settings structure
+                if strcmp(settings.deviceName ,'AlazarATS9870')
+                    settings.deviceName = 'AgilentAP240';
+                    tmpMap = containers.Map({1, 5, 7}, {'int', 'ext', 'ref'});
+                    settings.clockType = tmpMap(settings.clockType);
+                    tmpMap = containers.Map({2, 5, 6, 7, 10, 11, 12}, {.05, .1, .2, .5, 1, 2, 5});
+                    settings.vertical.verticalScale  = tmpMap(settings.vertical.verticalScale);
+                    tmpMap = containers.Map({1, 2}, {4, 3});
+                    settings.vertical.verticalCoupling  = tmpMap(settings.vertical.verticalCoupling);
+                    tmpMap = containers.Map({0,1}, {0, 4});
+                    settings.vertical.bandwidth  = tmpMap(settings.vertical.bandwidth);
+                    tmpMap = containers.Map({2, 0, 1}, {-1, 1, 2});
+                    settings.trigger.triggerSource  = tmpMap(settings.trigger.triggerSource);
+                    tmpMap = containers.Map({2,1}, {0,1});
+                    settings.trigger.triggerCoupling  = tmpMap(settings.trigger.triggerCoupling);
+                    tmpMap = containers.Map({1e6, 10e6, 100e6, 250e6, 500e6, 1e9},{1e6, 10e6, 100e6, 250e6, 500e6, 1e9});
+                    settings.horizontal.samplingRate  = tmpMap(settings.horizontal.samplingRate);
+                end
+                
+                
             case 'AlazarATS9870'
                 cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {0, 2});
                 cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {1, 5, 7});
@@ -263,6 +288,27 @@ set_settings_fcn = @set_gui_elements;
                 
                 %Update the range text
                 set(handles.statictext_vertScale,'String','Scale (Vp):');
+                
+                %Update the settings structure
+                if strcmp(settings.deviceName ,'AgilentAP240')
+                    settings.deviceName = 'AlazarATS9870';
+                    tmpMap = containers.Map({'int', 'ext', 'ref'}, {1, 5, 7});
+                    settings.clockType = tmpMap(settings.clockType);
+                    tmpMap = containers.Map({.05, .1, .2, .5, 1, 2, 5}, {2, 5, 6, 7, 10, 11, 12});
+                    settings.vertical.verticalScale  = tmpMap(settings.vertical.verticalScale);
+                    tmpMap = containers.Map({0,1,2,3,4}, {2, 2, 1, 2, 1}); 
+                    settings.vertical.verticalCoupling  = tmpMap(settings.vertical.verticalCoupling);
+                    tmpMap = containers.Map({0,2,3,5,1,4}, {0, 1, 1, 1, 1, 1});  
+                    settings.vertical.bandwidth  = tmpMap(settings.vertical.bandwidth);
+                    tmpMap = containers.Map({-1, 1, 2}, {2, 0, 1});
+                    settings.trigger.triggerSource  = tmpMap(settings.trigger.triggerSource);
+                    tmpMap = containers.Map({0,1,3,4}, {2, 1, 2, 1});
+                    settings.trigger.triggerCoupling  = tmpMap(settings.trigger.triggerCoupling);
+                    tmpMap = containers.Map({1e6, 2e6, 2.5e6, 4e6, 5e6, 10e6, 20e6, 25e6, 40e6, 50e6, 100e6, 200e6, 250e6, 400e6, 500e6, 1e9, 2e9},...
+                                            {1e6, 1e6, 1e6,   1e6, 10e6,10e6, 10e6, 10e6, 10e6, 100e6,100e6, 250e6, 250e6, 500e6, 500e6, 1e9, 1e9});
+                    settings.horizontal.samplingRate  = tmpMap(settings.horizontal.samplingRate);
+                end
+                
                 
         end
         
@@ -330,7 +376,9 @@ set_settings_fcn = @set_gui_elements;
             defaults.averager.nbrWaveforms = settings.averager.nbrWaveforms;
             defaults.averager.nbrRoundRobins = settings.averager.nbrRoundRobins;
             defaults.averager.ditherRange = settings.averager.ditherRange;
-            defaults.averager.trigResync = resyncsInv(settings.averager.trigResync);
+            if ~isempty(cardParams.resyncs)
+                defaults.averager.trigResync = resyncsInv(settings.averager.trigResync);
+            end
         end
         
         % depth first traversal of defaults using a stack

@@ -56,88 +56,16 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         
     end
     
-    properties(Dependent)
+    properties (Dependent = true)
+        horizontal; 
         
-        horizontal;   %fields of sampleInterval and delayTime
-        %sampleInterval Sampling interval in seconds
-        %delayTime
-        %Trigger delay time in seconds, with respect to the
-        %beginning of the record. A positive number
-        %corresponds to a trigger before the beginning of the
-        %record (post-trigger recording). A negative number
-        %corresponds to pre-trigger recording. It cannot be less
-        %than -(sampInterval * record_length), which
-        %corresponds to 100% pre-trigger.
+        vertical;   
         
-        vertical;   %Configures the vertical control parameters
-        %for a specified channel of the digitizer.
-        %fields of vert_channel, vert_scale, offset, vert_coupling, bandwidth
-        %vert_channel - 1...Nchan, or –1,… for the External Input
-        %vert_scale - in Volts, but see triggerSource below
-        %offset - in Volts
-        %vert_coupling - = 0 Ground (Averagers ONLY)
-        %				 = 1 DC, 1 MΩ
-        %				 = 2 AC, 1 MΩ
-        %				 = 3 DC, 50 Ω
-        %				 = 4 AC, 50 Ω
-        
-        trigger;   %Configures the trigger source control parameters
-        %for the specified trigger source
-        %(channel or External).
-        %fields of trigChannel, trigger_coupling, trigger_slope,
-        %trigger_level, trigger_level2
-        
-        %trigChannel - > 1 for internal, <-1 for exernal
-        
-        %trigger_coupling - 0 DC, 1 AC, 2 HF (if available),
-        %3 DC 50W, 4 AC 50W both external trigger only
-        
-        %trigger_slope - 0  Positive, 1  Negative,
-        %2 out of Window, 3  into Window, 4  HF divide,
-        %5  Spike Stretcher
-        
-        %trigger_level  Trigger threshold in % of the
-        %vertical Full Scale of the channel
-        %or in mV if using an External trigger src
-        
-        %trigger_level2 Trigger threshold 2 (as above) for
-        %use when Window trigger is selected
+        trigger;   
         
         
-        averager;  %Configures the averager
-        %fields of record_length, nbrSegments, num_avg,
-        %ditherRange, trigResync, data_start, data_stop
-        
-        %record_length  - Number of data samples per waveform segment.
-        %May assume values between 16 or 32 and the available
-        %memory length, in multiples of 16 or 32 as ref to manual
-        
-        %nbrSegments - Number of waveform segments to acquire.
-        %May assume values between 1 and 8192.
-        
-        %nbrWaveforms - Number of waveforms to average before going to
-        %next segment. Values 1 - 65535
-        
-        %num_avg - Alias for nbrWaveforms to maintain backward
-        %compatibility
-        
-        %nbrRoundRobins - Number of times to perform the full
-        %segment cycle during data accumulation.
-        
-        %ditherRange -
-        %Range of offset dithering, in ADC LSB’s. May assume
-        %values v = 0, 1…15 for AP units and 31 for U1084A
-        %units. The offset is dithered over the range
-        % [ -v, + v] in steps of ~1/8 LSB. For Averagers ONLY.
-        
-        %trigResync - 0 (no resync), 1 (resync) and 2 (free run)
-        
-        %data_start - point to start from, value between 16 and
-        %record_length, in samples, need to be multiple of 16
-        
-        %data_stop - point to stop at, value between 16 and
-        %record_length ,in samples, need to be multiple of 16
-        
+        averager;  
+        %ditherRange %needs to be implemented in software
         
         
     end
@@ -280,7 +208,9 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         end
         
         %Wait for the acquisition to complete and average in software
-        function wait_for_acquisition(obj, timeOut)
+        function status = wait_for_acquisition(obj, timeOut)
+            %Dummy status for compatiblity with AP240 driver
+            status = 0;
             if ~exist('timeOut','var')
                 timeOut = obj.timeOut;
             end
@@ -374,11 +304,11 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %Assume for now that we are using a 10MHz external clock
             %TODO: handle internal/external clock rates
             %Calculate the decimation factor
-            decimationFac = round(1e9*horzSettings.sampleInterval);
+            decimationFac = round(1e9/horzSettings.samplingRate);
             obj.call_API('AlazarSetCaptureClock', obj.boardHandle, obj.defs('EXTERNAL_CLOCK_10MHz_REF'),1e9,obj.defs('CLOCK_EDGE_RISING'),decimationFac);
             
             %Calculate the trigger delay in sample units
-            trigDelayPts = round(horzSettings.delayTime/horzSettings.sampleInterval);
+            trigDelayPts = round(horzSettings.delayTime*horzSettings.samplingRate);
             obj.call_API('AlazarSetTriggerDelay', obj.boardHandle, trigDelayPts);
         end
         
@@ -387,8 +317,8 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             % hard coded to set both channels identically, though this
             % is not required by the hardware
             %We are always 50Ohm coupled for the ATS9870
-            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_A'), vertSettings.vert_coupling, vertSettings.vert_scale, obj.defs('IMPEDANCE_50_OHM'));
-            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_B'), vertSettings.vert_coupling, vertSettings.vert_scale, obj.defs('IMPEDANCE_50_OHM'));
+            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_A'), vertSettings.verticalCoupling, vertSettings.verticalScale, obj.defs('IMPEDANCE_50_OHM'));
+            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_B'), vertSettings.verticalCoupling, vertSettings.verticalScale, obj.defs('IMPEDANCE_50_OHM'));
             
             %Set the bandwidth
             if vertSettings.bandwidth
@@ -401,31 +331,31 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             %If the trigger channel is external then we also need to setup
             %that channel
-            if(trigSettings.source == 2)
+            if(trigSettings.triggerSource == 2)
                 %We can only choose 1V or 5V range
-                if trigSettings.level < 0.5
+                if trigSettings.triggerLevel*1000 < 0.5
                     extTrigLevel = obj.defs('ETR_1V');
                     trigChannelRange = 1;
                 else
                     extTrigLevel = obj.defs('ETR_5V');
                     trigChannelRange = 5;
                 end
-                obj.call_API('AlazarSetExternalTrigger',obj.boardHandle, trigSettings.coupling, extTrigLevel);
+                obj.call_API('AlazarSetExternalTrigger',obj.boardHandle, trigSettings.triggerCoupling, extTrigLevel);
                 
                 %Otherwise setup the channel
             else
-                trigChannelRange = obj.settings.vertical.vert_scale;
+                trigChannelRange = obj.settings.vertical.verticalScale;
                 %TODO: implement
             end
             
             %We need to set the trigger level as a percentage of the full
             %range so figure that out
-            trigLevelCode = uint8(128 + 127*(trigSettings.level/trigChannelRange));
+            trigLevelCode = uint8(128 + 127*(trigSettings.triggerLevel*1000/trigChannelRange));
             
             %Set the rest of the trigger parameters
             %We'll default to trigger engine J and single condition for
             %now
-            obj.call_API('AlazarSetTriggerOperation', obj.boardHandle, obj.defs('TRIG_ENGINE_OP_J'), obj.defs('TRIG_ENGINE_J'), trigSettings.source, trigSettings.slope, trigLevelCode, ...
+            obj.call_API('AlazarSetTriggerOperation', obj.boardHandle, obj.defs('TRIG_ENGINE_OP_J'), obj.defs('TRIG_ENGINE_J'), trigSettings.triggerSource, trigSettings.triggerSlope, trigLevelCode, ...
                 obj.defs('TRIG_ENGINE_K'), obj.defs('TRIG_DISABLE'), obj.defs('TRIGGER_SLOPE_POSITIVE'), 128);
             
             %We'll wait forever for a trigger
@@ -489,6 +419,11 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
         end
         
+        function val = get.averager(obj)
+            %Here the averaging is done in software so we just return the
+            %settings passed in. 
+            val = obj.settings.averager;
+        end
         
     end %methods
 end %classdef

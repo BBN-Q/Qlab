@@ -171,12 +171,16 @@ classdef AgilentAP240 < hgsetget
         %%constructor
         function obj = AgilentAP240()
             AqRoot=getenv('AcqirisDxRoot');
+            if isempty(AqRoot)
+                error('It seems the Agilent AP240 is not installed on this computer.')
+            end
             addpath([AqRoot,'\bin']);
             addpath([AqRoot,'\MATLAB\mex'],[AqRoot,'\MATLAB\mex\functions']);
             obj.channel_on = 1;
             obj.triggerSource = -1;
             [status instrumentID] = Aq_InitWithOptions(obj.resourceName, 0, 0, obj.options);
             assert(status == 0, 'Error in Aq_InitWithOptions: %d', status);
+                
             
             obj.instrID  = instrumentID;
             
