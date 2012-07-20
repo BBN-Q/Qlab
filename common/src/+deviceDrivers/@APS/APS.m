@@ -38,6 +38,7 @@ classdef APS < hgsetget
         library_path;
         library_name = 'libaps';
         device_id = 0;
+        deviceSerials;
 
         bit_file_path = '';
         expected_bit_file_ver = hex2dec('10');
@@ -341,6 +342,7 @@ classdef APS < hgsetget
             valueMap = containers.Map({obj.TRIGGER_SOFTWARE, obj.TRIGGER_HARDWARE},...
                 {'internal', 'external'});
             source = valueMap(obj.librarycall('get_trigger_source'));
+        end
         
         function val = setOffset(aps, ch, offset)
             % sets offset voltage of channel 
@@ -427,19 +429,14 @@ classdef APS < hgsetget
         function num_devices = enumerate(aps)
             %TODO
             % Return the number of devices and their serial numbers
-            aps.num_devices = calllib(aps.library_name,'APS_NumDevices');
-            num_devices = aps.num_devices;
+            num_devices = calllib(aps.library_name,'get_numDevices');
 
             %Reset cell array
             aps.deviceSerials = cell(num_devices,1);
             %For each device load the serial number
             for ct = 1:num_devices
-                [success, deviceSerial] = calllib(aps.library_name, 'APS_GetSerialNum',ct-1, blanks(64), 64);
-                if success == 0
-                    aps.deviceSerials{ct} = deviceSerial;
-                else
-                    error('Unable to get serial number');
-                end
+                deviceSerial = calllib(aps.library_name, 'get_deviceSerial',ct-1, blanks(64));
+                aps.deviceSerials{ct} = deviceSerial;
             end
         end
                 
@@ -454,13 +451,10 @@ classdef APS < hgsetget
                 end
             end
             aps.device_id = id;
-            
-            %TODO
-            % populate list of device id's and serials
-%             aps.enumerate();
-%             if id + 1 > aps.num_devices
-%                 error('Device id %i not found.', id);
-%             end
+
+            if id + 1 > aps.enumerate()
+                error('Device id %i not found.', id);
+            end
             val = calllib(aps.library_name, 'connect_by_ID', aps.device_id);
             if (val == 0)
                 aps.is_open = 1;
@@ -470,31 +464,9 @@ classdef APS < hgsetget
         end
         
         function val = openBySerialNum(aps,serial)
-            %TODO
-%           % open by device ID
-%             if (aps.is_open)
-%                 if (aps.deviceSe ~= id)
-%                     aps.disconnect();
-%                     aps.device_id = id;
-%                 else
-%                     val = 0;
-%                     return;
-%                 end
-%             end
-%             
-%             %TODO
-%             % populate list of device id's and serials
-% %             aps.enumerate();
-% %             if id + 1 > aps.num_devices
-% %                 error('Device id %i not found.', id);
-% %             end
-%             
-%             val = aps.librarycall('open_by_serialNum',aps.device_id);
-%             if (val == 0)
-%                 aps.is_open = 1;
-%             else
-%                 error('Unable to open APS device.');
-%             end
+            % open by device serial number
+            id = calllib(aps.library_name, 'serial2ID', serial);
+            val = aps.open(id);
         end
         
 %         function val = readBitFileVersion(aps)
@@ -507,14 +479,13 @@ classdef APS < hgsetget
 %         end
         
         function fname = defaultBitFileName(obj)
-            %TODO
             % current device's serial number is at index device_id + 1 in
             % deviceSerials cell array
-%             if ismember(obj.deviceSerials{obj.device_id+1}, obj.DAC2_SERIALS)
-%                 fname = 'mqco_dac2_latest.bit';
-%             else
+            if ismember(obj.deviceSerials{obj.device_id+1}, obj.DAC2_SERIALS)
+                fname = 'mqco_dac2_latest.bit';
+            else
                 fname = 'mqco_aps_latest.bit';
-%             end
+            end
         end
         
         %% Private Waveform/Link list methods

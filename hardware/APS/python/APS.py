@@ -107,12 +107,10 @@ class APS (object):
     def open(self, ID):
         self.device_id = ID
         
-        # TODO
         # populate list of device id's and serials
-        #num_devices = self.enumerate()
-        #if ID + 1 > num_devices:
-        #    print 'APS Device: ', ID, 'not found'
-        #    return 2
+        if ID + 1 > self.enumerate():
+            print 'APS Device: ', ID, 'not found'
+            return 2
 
         if self.is_open:
             if self.device_id != ID:
@@ -134,26 +132,9 @@ class APS (object):
         return val
             
     def openBySerialNum(self,serialNum):
-        # TODO
-        pass
-        # populate list of device id's and serials
-        #self.enumerate()
-        #if serialNum not in self.deviceSerials:
-        #    print 'APS Device: ', serialNum, 'not found.'
-        #    return 2
-        #
-        #cstr = ctypes.create_string_buffer(serialNum)
-        #val = self.lib.APS_OpenBySerialNum(cstr)
-        #if val >= 0:
-        #    self.is_open = 1
-        #    self.device_id = val
-        #elif val == -1:
-        #    print 'Could not open device: ', serialNum
-        #elif val == -2:
-        #    print 'APS Device: ', serialNum, 'not found.'
-        #else:
-        #    print 'Unknown return: ', val
-        #return val
+        ID = self.lib.serial2ID(serialNum);
+        return self.open(ID)
+        
         
     def readBitFileVersion(self):
         # TODO
@@ -167,14 +148,12 @@ class APS (object):
 
     def getDefaultBitFileName(self):
         #Check whether we have a DACII or APS device
-        # TODO
-        #if not self.deviceSerials:
-        #    return None
-        #elif self.deviceSerials[self.device_id] in self.DAC2Serials:
-        #    return os.path.abspath(self.bit_file_path + 'mqco_dac2_latest.bit')
-        #else:
-        #    return os.path.abspath(self.bit_file_path + 'mqco_aps_latest.bit')
-        return os.path.abspath(self.bit_file_path + 'mqco_aps_latest.bit')        
+        if not self.deviceSerials:
+            return None
+        elif self.deviceSerials[self.device_id] in self.DAC2Serials:
+            return os.path.abspath(self.bit_file_path + 'mqco_dac2_latest.bit')
+        else:
+            return os.path.abspath(self.bit_file_path + 'mqco_aps_latest.bit')        
 
     def init(self, force = False, filename = None):
         if not self.is_open:
