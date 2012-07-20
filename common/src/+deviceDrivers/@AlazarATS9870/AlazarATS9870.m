@@ -138,9 +138,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %Make the call
             retCode = calllib('ATSApi', functionName, varargin{:});
             %Check for success
-            if retCode ~= obj.defs('ApiSuccess')
-                error('Error: %s failed -- %s', functionName, errorToText(retCode));
-            end
+            assert(retCode == obj.defs('ApiSuccess'), 'Error: %s failed -- %s', functionName, errorToText(retCode));
         end
         
         %Function to flash the LED (at least then we know something works).
@@ -164,8 +162,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             obj.settings = settings;
             fields = fieldnames(settings);
             for tmpName = fields'
-                tmpName = tmpName{1};
-                switch tmpName
+                switch tmpName{1}
                     case 'horizontal'
                         obj.horizontal = settings.horizontal;
                     case 'vertical'
@@ -175,10 +172,10 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                     case 'averager'
                         obj.averager = settings.averager;
                     otherwise
-                        if ismember(tmpName, methods(obj))
-                            feval(['obj.' tmpName], settings.(tmpName));
-                        elseif ismember(tmpName, properties(obj))
-                            obj.(tmpName) = settings.(tmpName);
+                        if ismember(tmpName{1}, methods(obj))
+                            feval(['obj.' tmpName{1}], settings.(tmpName{1}));
+                        elseif ismember(tmpName{1}, properties(obj))
+                            obj.(tmpName{1}) = settings.(tmpName{1});
                         end
                 end
             end
@@ -332,8 +329,9 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %If the trigger channel is external then we also need to setup
             %that channel
             if(trigSettings.triggerSource == 2)
-                %We can only choose 1V or 5V range
-                if trigSettings.triggerLevel*1000 < 0.5
+                %We can only choose 1V or 5V range and triggerLevel comes
+                %in mV
+                if trigSettings.triggerLevel/1000 < 0.5
                     extTrigLevel = obj.defs('ETR_1V');
                     trigChannelRange = 1;
                 else
@@ -350,7 +348,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             %We need to set the trigger level as a percentage of the full
             %range so figure that out
-            trigLevelCode = uint8(128 + 127*(trigSettings.triggerLevel*1000/trigChannelRange));
+            trigLevelCode = uint8(128 + 127*(trigSettings.triggerLevel/1000/trigChannelRange));
             
             %Set the rest of the trigger parameters
             %We'll default to trigger engine J and single condition for
@@ -425,10 +423,13 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             val = obj.settings.averager;
         end
         
+        function val = get.horizontal(obj)
+            %Alazar doesn't seem to provide a way to get settings out of
+            %the card so just return the input settings
+            val = obj.settings.horizontal;
+        end
+            
+        
     end %methods
 end %classdef
-
-
-
-
 

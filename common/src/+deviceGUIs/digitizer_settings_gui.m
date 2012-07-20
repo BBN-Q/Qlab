@@ -255,24 +255,25 @@ set_settings_fcn = @set_gui_elements;
                 set(handles.statictext_vertScale,'String','Scale (Vpp):');
                 
                 %Update the settings structure
-                if strcmp(settings.deviceName ,'AlazarATS9870')
-                    settings.deviceName = 'AgilentAP240';
-                    tmpMap = containers.Map({1, 5, 7}, {'int', 'ext', 'ref'});
-                    settings.clockType = tmpMap(settings.clockType);
-                    tmpMap = containers.Map({2, 5, 6, 7, 10, 11, 12}, {.05, .1, .2, .5, 1, 2, 5});
-                    settings.vertical.verticalScale  = tmpMap(settings.vertical.verticalScale);
-                    tmpMap = containers.Map({1, 2}, {4, 3});
-                    settings.vertical.verticalCoupling  = tmpMap(settings.vertical.verticalCoupling);
-                    tmpMap = containers.Map({0,1}, {0, 4});
-                    settings.vertical.bandwidth  = tmpMap(settings.vertical.bandwidth);
-                    tmpMap = containers.Map({2, 0, 1}, {-1, 1, 2});
-                    settings.trigger.triggerSource  = tmpMap(settings.trigger.triggerSource);
-                    tmpMap = containers.Map({2,1}, {0,1});
-                    settings.trigger.triggerCoupling  = tmpMap(settings.trigger.triggerCoupling);
-                    tmpMap = containers.Map({1e6, 10e6, 100e6, 250e6, 500e6, 1e9},{1e6, 10e6, 100e6, 250e6, 500e6, 1e9});
-                    settings.horizontal.samplingRate  = tmpMap(settings.horizontal.samplingRate);
+                if isfield(settings, 'deviceName')
+                    if strcmp(settings.deviceName ,'AlazarATS9870')
+                        settings.deviceName = 'AgilentAP240';
+                        tmpMap = containers.Map({1, 5, 7}, {'int', 'ext', 'ref'});
+                        settings.clockType = tmpMap(settings.clockType);
+                        tmpMap = containers.Map({2, 5, 6, 7, 10, 11, 12}, {.05, .1, .2, .5, 1, 2, 5});
+                        settings.vertical.verticalScale  = tmpMap(settings.vertical.verticalScale);
+                        tmpMap = containers.Map({1, 2}, {4, 3});
+                        settings.vertical.verticalCoupling  = tmpMap(settings.vertical.verticalCoupling);
+                        tmpMap = containers.Map({0,1}, {0, 4});
+                        settings.vertical.bandwidth  = tmpMap(settings.vertical.bandwidth);
+                        tmpMap = containers.Map({2, 0, 1}, {-1, 1, 2});
+                        settings.trigger.triggerSource  = tmpMap(settings.trigger.triggerSource);
+                        tmpMap = containers.Map({2,1}, {0,1});
+                        settings.trigger.triggerCoupling  = tmpMap(settings.trigger.triggerCoupling);
+                        tmpMap = containers.Map({1e6, 10e6, 100e6, 250e6, 500e6, 1e9},{1e6, 10e6, 100e6, 250e6, 500e6, 1e9});
+                        settings.horizontal.samplingRate  = tmpMap(settings.horizontal.samplingRate);
+                    end
                 end
-                
                 
             case 'AlazarATS9870'
                 cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {0, 2});
@@ -290,25 +291,26 @@ set_settings_fcn = @set_gui_elements;
                 set(handles.statictext_vertScale,'String','Scale (Vp):');
                 
                 %Update the settings structure
-                if strcmp(settings.deviceName ,'AgilentAP240')
-                    settings.deviceName = 'AlazarATS9870';
-                    tmpMap = containers.Map({'int', 'ext', 'ref'}, {1, 5, 7});
-                    settings.clockType = tmpMap(settings.clockType);
-                    tmpMap = containers.Map({.05, .1, .2, .5, 1, 2, 5}, {2, 5, 6, 7, 10, 11, 12});
-                    settings.vertical.verticalScale  = tmpMap(settings.vertical.verticalScale);
-                    tmpMap = containers.Map({0,1,2,3,4}, {2, 2, 1, 2, 1}); 
-                    settings.vertical.verticalCoupling  = tmpMap(settings.vertical.verticalCoupling);
-                    tmpMap = containers.Map({0,2,3,5,1,4}, {0, 1, 1, 1, 1, 1});  
-                    settings.vertical.bandwidth  = tmpMap(settings.vertical.bandwidth);
-                    tmpMap = containers.Map({-1, 1, 2}, {2, 0, 1});
-                    settings.trigger.triggerSource  = tmpMap(settings.trigger.triggerSource);
-                    tmpMap = containers.Map({0,1,3,4}, {2, 1, 2, 1});
-                    settings.trigger.triggerCoupling  = tmpMap(settings.trigger.triggerCoupling);
-                    tmpMap = containers.Map({1e6, 2e6, 2.5e6, 4e6, 5e6, 10e6, 20e6, 25e6, 40e6, 50e6, 100e6, 200e6, 250e6, 400e6, 500e6, 1e9, 2e9},...
-                                            {1e6, 1e6, 1e6,   1e6, 10e6,10e6, 10e6, 10e6, 10e6, 100e6,100e6, 250e6, 250e6, 500e6, 500e6, 1e9, 1e9});
-                    settings.horizontal.samplingRate  = tmpMap(settings.horizontal.samplingRate);
+                if isfield(settings, 'deviceName')
+                    if strcmp(settings.deviceName ,'AgilentAP240')
+                        settings.deviceName = 'AlazarATS9870';
+                        tmpMap = containers.Map({'int', 'ext', 'ref'}, {1, 5, 7});
+                        settings.clockType = tmpMap(settings.clockType);
+                        tmpMap = containers.Map({.05, .1, .2, .5, 1, 2, 5}, {2, 5, 6, 7, 10, 11, 12});
+                        settings.vertical.verticalScale  = tmpMap(settings.vertical.verticalScale);
+                        tmpMap = containers.Map({0,1,2,3,4}, {2, 2, 1, 2, 1}); 
+                        settings.vertical.verticalCoupling  = tmpMap(settings.vertical.verticalCoupling);
+                        tmpMap = containers.Map({0,2,3,5,1,4}, {0, 1, 1, 1, 1, 1});  
+                        settings.vertical.bandwidth  = tmpMap(settings.vertical.bandwidth);
+                        tmpMap = containers.Map({-1, 1, 2}, {2, 0, 1});
+                        settings.trigger.triggerSource  = tmpMap(settings.trigger.triggerSource);
+                        tmpMap = containers.Map({0,1,3,4}, {2, 1, 2, 1});
+                        settings.trigger.triggerCoupling  = tmpMap(settings.trigger.triggerCoupling);
+                        tmpMap = containers.Map({1e6, 2e6, 2.5e6, 4e6, 5e6, 10e6, 20e6, 25e6, 40e6, 50e6, 100e6, 200e6, 250e6, 400e6, 500e6, 1e9, 2e9},...
+                                                {1e6, 1e6, 1e6,   1e6, 10e6,10e6, 10e6, 10e6, 10e6, 100e6,100e6, 250e6, 250e6, 500e6, 500e6, 1e9, 1e9});
+                        settings.horizontal.samplingRate  = tmpMap(settings.horizontal.samplingRate);
+                    end
                 end
-                
                 
         end
         
@@ -329,10 +331,10 @@ set_settings_fcn = @set_gui_elements;
             defaults.vertical.verticalOffset = 0;
             defaults.vertical.verticalCoupling = 'DC, 50 Ohm';
             defaults.vertical.bandwidth = 'no limit';
-            defaults.trigger.trigger_level = 500;
-            defaults.trigger.trigger_ch = 'External';
-            defaults.trigger.trigger_coupling = 'DC';
-            defaults.trigger.trigger_slope = 'Rising';
+            defaults.trigger.triggerLevel = 500;
+            defaults.trigger.triggerSource = 'External';
+            defaults.trigger.triggerCoupling = 'DC';
+            defaults.trigger.triggerSlope = 'Rising';
             defaults.averager.recordLength = 10000;
             defaults.averager.nbrSegments = 1;
             defaults.averager.nbrWaveforms = 1000;
