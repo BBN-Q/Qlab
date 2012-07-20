@@ -52,8 +52,11 @@ int FTDI::connect(const int & deviceID, FT_HANDLE & deviceHandle) {
 			FILE_LOG(logERROR) << "Unable to set USB timeouts for device " << deviceID;
 			return -1;
 		}
-		else{
-			FILE_LOG(logDEBUG2) << "Set timeouts OK for " << deviceID;
+		//Since we are polling a few bytes at a time on the device we can shorten up the latency
+		ftStatus = FT_SetLatencyTimer(deviceHandle, 2);
+		if(!FT_SUCCESS(ftStatus)) {
+			FILE_LOG(logERROR) << "Unable to set latency for device " << deviceID;
+			return -1;
 		}
 	}
 

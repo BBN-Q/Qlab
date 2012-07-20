@@ -136,6 +136,10 @@ int set_trigger_source(int deviceID, int triggerSource) {
 	return APSRack_.set_trigger_source(deviceID,triggerSource);
 }
 
+int get_trigger_source(int deviceID) {
+	return APSRack_.get_trigger_source(deviceID);
+}
+
 int set_channel_offset(int deviceID, int channelNum, float offset){
 	return APSRack_.set_channel_offset(deviceID, channelNum, offset);
 }

@@ -26,7 +26,7 @@ int APS::connect(){
 	int success = 0;
 	success = FTDI::connect(deviceID_, handle_);
 	if (success == 0) {
-		FILE_LOG(logDEBUG) << "Opened connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
+		FILE_LOG(logINFO) << "Opened connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
 	}
 
 	// TODO: restore state information from file
@@ -37,7 +37,7 @@ int APS::disconnect(){
 	int success = 0;
 	success = FTDI::disconnect(handle_);
 	if (success == 0) {
-		FILE_LOG(logDEBUG) << "Closed connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
+		FILE_LOG(logINFO) << "Closed connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
 	}
 
 	// TODO: save state information to file
@@ -196,7 +196,8 @@ int APS::get_sampleRate() const{
 }
 
 int APS::clear_channel_data() {
-	for (auto ch : channels_) {
+	FILE_LOG(logINFO) << "Clearing all channel data for APS " << deviceID_;
+	for (auto & ch : channels_) {
 		ch.clear_data();
 	}
 	return 0;
@@ -213,8 +214,8 @@ int APS::load_sequence_file(const string & seqFile){
 	//For now assume 4 channel data
 	//TODO: check the channelDataFor attribute
 	for(int chanct=0; chanct<4; chanct++){
-		//Reset the LL banks
-		channels_[chanct].reset_LL_banks();
+		//Reset the channel data
+		channels_[chanct].clear_data();
 
 		//Load the waveform library first
 		string chanStr = chanStrs[chanct];
@@ -611,8 +612,6 @@ int APS::setup_PLL() {
 		{0x18, 0x70},  // Clear calibration flag so that next set generates 0 to 1.
 		{0x232, 0x1},   // Set bit 0 to 1 to simultaneously update all registers with pending writes.
 	};
-
-//	PLL_Routine.reserve(27);
 
 
 	// Go through the routine
@@ -1371,18 +1370,21 @@ int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 	}
 
 	//Reset the checksums
-	reset_checksums(fpga);
+	if (FILELog::ReportingLevel() >= logDEBUG) {
+		reset_checksums(fpga);
+	}
 
 	//Format the data and add to write queue
 	write(fpga, startAddr, wfData, true);
 	flush();
 
 	//Verify the checksums
-	if (!verify_checksums(fpga)){
-		FILE_LOG(logERROR) << "Checksums didn't match after writing waveform data";
-		return -2;
+	if (FILELog::ReportingLevel() >= logDEBUG) {
+		if (!verify_checksums(fpga)){
+			FILE_LOG(logERROR) << "Checksums didn't match after writing waveform data";
+			return -2;
+		}
 	}
-
 	return 0;
 }
 
@@ -1443,7 +1445,9 @@ int APS::write_LL_data(const int & dac, const int & bankNum, const int & targetB
 	FILE_LOG(logDEBUG2) << "Writing Link List Control Reg: " << myhex << sizeReg << " = " << lastElementOffset;
 
 	// clear checksums
-	reset_checksums(fpga);
+	if (FILELog::ReportingLevel() >= logDEBUG) {
+		reset_checksums(fpga);
+	}
 
 	// write control reg
 	write(fpga, sizeReg, lastElementOffset, true);
@@ -1452,10 +1456,12 @@ int APS::write_LL_data(const int & dac, const int & bankNum, const int & targetB
 	write(fpga, startAddr, channels_[dac].banks_[bankNum].get_packed_data(), true);
 	flush();
 
-	// verify the checksum
-	if (!verify_checksums(fpga)){
-		FILE_LOG(logERROR) << "Checksums didn't match after writing LL data";
-		return -2;
+	// verify the checksum if we are in sufficient debug mode
+	if (FILELog::ReportingLevel() >= logDEBUG) {
+		if (!verify_checksums(fpga)){
+			FILE_LOG(logERROR) << "Checksums didn't match after writing LL data";
+			return -2;
+		}
 	}
 
 	return 0;

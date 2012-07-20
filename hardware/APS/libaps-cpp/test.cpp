@@ -225,10 +225,6 @@ int main(int argc, char** argv) {
 
 	disconnect_by_ID(0);
 
-//	APS tmpAPS;
-//	cout << "tmpAPS" << endl;
-//	tmpAPS.load_sequence_file("RamseyBBNAPS34.h5");
-
 	cout << "Made it through!" << endl;
 
 	return 0;
