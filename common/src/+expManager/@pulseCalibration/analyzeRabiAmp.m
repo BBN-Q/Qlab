@@ -17,7 +17,7 @@ function [piAmp, offsetPhase] = analyzeRabiAmp(data)
     offset = mean(data);
     phase = 0;
     % check sign of amp
-    if data(1) > offset
+    if data(end/2) > offset
         amp = -amp;
     end
     

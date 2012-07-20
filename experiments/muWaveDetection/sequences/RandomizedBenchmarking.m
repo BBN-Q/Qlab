@@ -14,8 +14,8 @@ elseif length(varargin) > 2
 end
 
 basename = 'RB';
-fixedPt = 20000; %15000
-cycleLength = 23000; %19000
+fixedPt = 40000; %15000
+cycleLength = 43000; %19000
 nbrRepeats = 1;
 introduceError = 0;
 errorAmp = 0.2;
@@ -27,7 +27,7 @@ qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 
 % if using SSB, set the frequency here
-SSBFreq = -100e6;
+SSBFreq = 0e6;
 
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
@@ -90,11 +90,26 @@ compiler = ['compileSequence' IQkey];
 % end
 
 
-compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot};
-if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-    feval(compiler, compileArgs{:});
-end
+% compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot};
+% if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
+%     feval(compiler, compileArgs{:});
+% end
 
+seqParams = struct(...
+    'basename', basename, ...
+    'suffix', '', ...
+    'numSteps', 1, ...
+    'nbrRepeats', nbrRepeats, ...
+    'fixedPt', fixedPt, ...
+    'cycleLength', cycleLength, ...
+    'measLength', 2000);
+patternDict = containers.Map();
+if ~isempty(calseq), calseq = {calseq}; end
+patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
+measChannels = {'M1'};
+awgs = {'TekAWG', 'BBNAPS'};
+
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
 
 
 end

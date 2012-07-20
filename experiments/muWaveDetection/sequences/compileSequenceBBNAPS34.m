@@ -59,7 +59,6 @@ measSeq = {pg.pulse('M', 'width', measLength)};
 ch1m1 = repmat(pg.makePattern([], fixedPt-500, ones(100,1), cycleLength), 1, segments)';
 ch1m2 = repmat(int32(pg.getPatternSeq(measSeq, 1, params.measDelay, fixedPt+measLength)), 1, segments)';
 ch4m2 = repmat(pg.makePattern([], 5, ones(100,1), cycleLength), 1, segments)';
-ch2m2 = ch4m2;
 
 % concatenate link lists
 ch56seq = IQ_seq{1};

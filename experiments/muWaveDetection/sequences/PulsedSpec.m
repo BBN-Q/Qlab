@@ -20,7 +20,7 @@ cycleLength = 18000;
 numsteps = 1;
 nbrRepeats = 1;
 specLength = 9600;
-specAmp = 4000;
+specAmp = 8000;
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));

@@ -41,7 +41,6 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         ExpParams
         awgParams
         targetAWGIdx = 1
-        scope
         scopeParams
         testMode = false;
         costFunctionGoal = 0.075; % tweak experimentally
@@ -150,7 +149,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             Init@expManager.homodyneDetection2D(obj);
             
             IQchannels = obj.channelMap.(obj.ExpParams.Qubit);
-            IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
+            IQkey = IQchannels.IQkey;
             
             % find AWG instrument parameters(s) - traverse in the same way
             % used to find the awg objects, to try to preserve the ordering
@@ -168,7 +167,6 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                             obj.targetAWGIdx = numAWGs;
                         end
                     case 'deviceDrivers.AgilentAP240'
-                        obj.scope = obj.Instr.(InstrName);
                         obj.scopeParams = obj.inputStructure.InstrParams.(InstrName);
                 end
             end

@@ -86,13 +86,27 @@ end
 
 % just a pi pulse for scaling
 calseq={{pg.pulse('Xp')}};
+% 
+% compiler = ['compileSequence' IQkey];
+% compileArgs = {basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot};
+% if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
+%     feval(compiler, compileArgs{:});
+% else
+%     error('Unable to find compiler for IQkey: %s',IQkey) 
+% end
+seqParams = struct(...
+    'basename', basename, ...
+    'suffix', '', ...
+    'numSteps', numsteps, ...
+    'nbrRepeats', nbrRepeats, ...
+    'fixedPt', fixedPt, ...
+    'cycleLength', cycleLength, ...
+    'measLength', 2000);
+patternDict = containers.Map();
+if ~isempty(calseq), calseq = {calseq}; end
+patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
+measChannels = {'M1'};
+awgs = {'TekAWG', 'BBNAPS'};
 
-compiler = ['compileSequence' IQkey];
-compileArgs = {basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot};
-if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-    feval(compiler, compileArgs{:});
-else
-    error('Unable to find compiler for IQkey: %s',IQkey) 
-end
-
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
 end

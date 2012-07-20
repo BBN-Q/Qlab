@@ -11,11 +11,10 @@ if ~exist('makePlot', 'var')
 end
 
 pathAWG = 'U:\AWG\Pi2Cal\';
-pathAPS = 'U:\APS\Pi2Cal\';
 basename = 'Pi2Cal';
 
-IQchannels = obj.channelMap.(qubit);
-IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
+qubitMap = obj.channelMap.(qubit);
+IQkey = qubitMap.IQkey;
 
 fixedPt = 6000;
 cycleLength = 15000;
@@ -25,7 +24,7 @@ numPi2s = 9; % number of odd numbered pi/2 sequences for each rotation direction
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
 qParams = params.(qubit); % choose target qubit here
 
-pg1 = PatternGen(...
+pg = PatternGen(...
     'dPiAmp', obj.pulseParams.piAmp, ...
     'dPiOn2Amp', obj.pulseParams.pi2Amp, ...
     'dSigma', qParams.sigma, ...
@@ -43,7 +42,7 @@ pulseLib = containers.Map();
 pulses = {'QId', 'X90p', 'X90m', 'Y90p', 'Y90m'};
 for p = pulses
     pname = cell2mat(p);
-    pulseLib(pname) = pg1.pulse(pname);
+    pulseLib(pname) = pg.pulse(pname);
 end
 
 patseq{1} = {pulseLib('QId')};
@@ -70,17 +69,28 @@ end
 numsteps = 1;
 nbrRepeats = 2;
 nbrPatterns = nbrRepeats*length(patseq);
-calseq = {};
+calseq = [];
 
-compiler = ['compileSequence' IQkey];
-compileArgs = {basename, pg1, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot};
-if ~obj.testMode && exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-    feval(compiler, compileArgs{:});
-end
+% prepare parameter structures for the pulse compiler
+seqParams = struct(...
+    'basename', basename, ...
+    'suffix', '', ...
+    'numSteps', numsteps, ...
+    'nbrRepeats', nbrRepeats, ...
+    'fixedPt', fixedPt, ...
+    'cycleLength', cycleLength, ...
+    'measLength', 2000);
+patternDict = containers.Map();
+if ~isempty(calseq), calseq = {calseq}; end
+patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap);
+measChannels = {'M1'};
+awgs = {'TekAWG', 'BBNAPS'};
 
-filename{1} = [pathAWG basename IQkey '.awg'];
-if ismember(IQkey, {'BBNAPS12', 'BBNAPS34'})
-    filename{2} = [pathAPS basename IQkey '.h5'];
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
+
+filename{1} = [pathAWG basename '-' qubitMap.instr '.awg'];
+if ismember(IQkey, {'BBNAPS_12', 'BBNAPS_34'})
+    filename{2} = [pathAWG basename '-BBNAPS' '.h5'];
 end
 
 end

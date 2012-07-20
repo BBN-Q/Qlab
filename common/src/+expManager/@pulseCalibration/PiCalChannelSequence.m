@@ -11,11 +11,10 @@ if ~exist('makePlot', 'var')
 end
 
 pathAWG = 'U:\AWG\PiCal\';
-pathAPS = 'U:\APS\PiCal\';
 basename = 'PiCal';
 
-IQchannels = obj.channelMap.(qubit);
-IQkey = [IQchannels.instr num2str(IQchannels.i) num2str(IQchannels.q)];
+qubitMap = obj.channelMap.(qubit);
+IQkey = qubitMap.IQkey;
 
 fixedPt = 6000;
 cycleLength = 15000;
@@ -70,17 +69,28 @@ nbrRepeats = 2;
 nbrPatterns = nbrRepeats*length(patseq);
 numsteps = 1;
 
-calseq = {};
+calseq = [];
 
-compiler = ['compileSequence' IQkey];
-compileArgs = {basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot};
-if ~obj.testMode && exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-    feval(compiler, compileArgs{:});
-end
+% prepare parameter structures for the pulse compiler
+seqParams = struct(...
+    'basename', basename, ...
+    'suffix', '', ...
+    'numSteps', numsteps, ...
+    'nbrRepeats', nbrRepeats, ...
+    'fixedPt', fixedPt, ...
+    'cycleLength', cycleLength, ...
+    'measLength', 2000);
+patternDict = containers.Map();
+if ~isempty(calseq), calseq = {calseq}; end
+patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap);
+measChannels = {'M1'};
+awgs = {'TekAWG', 'BBNAPS'};
 
-filename{1} = [pathAWG basename IQkey '.awg'];
-if ismember(IQkey, {'BBNAPS12', 'BBNAPS34'})
-    filename{2} = [pathAPS basename IQkey '.h5'];
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
+
+filename{1} = [pathAWG basename '-' qubitMap.instr '.awg'];
+if ismember(IQkey, {'BBNAPS_12', 'BBNAPS_34'})
+    filename{2} = [pathAWG basename '-BBNAPS' '.h5'];
 end
 
 end

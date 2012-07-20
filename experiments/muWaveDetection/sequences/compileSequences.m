@@ -41,7 +41,7 @@ for measCh = measChannels
     pgM = PatternGen('correctionT', ChParams.T,'bufferDelay',ChParams.bufferDelay,'bufferReset',ChParams.bufferReset,'bufferPadding',ChParams.bufferPadding, 'cycleLength', seqParams.cycleLength, 'linkList', 1, 'dmodFrequency',SSBFreq);
     
     measSeq = {{pgM.pulse('Xtheta', 'pType', 'tanh', 'sigma', 1, 'buffer', 0, 'amp', 8191, 'width', seqParams.measLength)}};
-    patternDict(IQkey) = struct('pg', pgM, 'patseq', {measSeq}, 'calseq', [], 'channelMap', qubitMap.(measCh));
+    patternDict(IQkey) = struct('pg', pgM, 'patseq', {repmat(measSeq, 1, nbrPatterns)}, 'calseq', {repmat(measSeq,1,calPatterns)}, 'channelMap', qubitMap.(measCh));
 end
 
 % keep track of whether all channels on all AWGs are used
@@ -94,7 +94,7 @@ for IQkey = channelNames
 
             chI(nbrPatterns*seqParams.numSteps + n, :) = patx + ChParams.offset;
             chQ(nbrPatterns*seqParams.numSteps + n, :) = paty + ChParams.offset;
-            chBuffer(nbrPatterns*numSteps + n, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
+            chBuffer(nbrPatterns*seqParams.numSteps + n, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
         end
         
         awgChannels(IQkey) = {chI, chQ};
@@ -124,7 +124,7 @@ for IQkey = channelNames
         end
         
         for n = 1:calPatterns;
-            IQ_seq{nbrPatterns + n} = pg.build(calseq{floor((n-1)/nbrRepeats)+1}, 1, ChParams.delay, seqParams.fixedPt, gated);
+            IQ_seq{nbrPatterns + n} = pg.build(calseq{floor((n-1)/seqParams.nbrRepeats)+1}, 1, ChParams.delay, seqParams.fixedPt, gated);
             [patx, paty] = pg.linkListToPattern(IQ_seq{nbrPatterns + n}, 1);
             
             if ~gated
@@ -164,9 +164,9 @@ for awgChannel = keys(awgChannels)
 end
 
 % plotting variables
-plotColors = {'r', 'b', 'g', 'c', 'k', 'y'};
+plotColors = {'r', 'b', 'g', 'c', 'm', 'k'};
 colorIdx = 0;
-markerPlotColors = {'r-', 'b-', 'g-', 'c-', 'k-', 'y-'};
+markerPlotColors = {'r-', 'b-', 'g-', 'c-', 'm-', 'k-'};
 markerColorIdx = 0;
 if makePlot
     figure();
@@ -206,14 +206,14 @@ for awg = awgs
             plot(ch34{1}(plotIdx,:), plotColors{ 1+mod(colorIdx+2, length(plotColors)) });
             plot(ch34{2}(plotIdx,:), plotColors{ 1+mod(colorIdx+3, length(plotColors)) });
             colorIdx = colorIdx + 4;
-            plot(5000*ch1m1(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx, length(markerPlotColors)) });
-            plot(5000*ch1m2(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+1, length(markerPlotColors)) });
-            plot(5000*ch2m1(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+2, length(markerPlotColors)) });
-            plot(5000*ch2m2(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+3, length(markerPlotColors)) });
-            plot(5000*ch3m1(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+4, length(markerPlotColors)) });
-            plot(5000*ch3m2(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+5, length(markerPlotColors)) });
-            plot(5000*ch4m1(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+6, length(markerPlotColors)) });
-            plot(5000*ch4m2(plotIdx,:), markerPlotColors{ 1+mod(markerColorIdx+7, length(markerPlotColors)) });
+            plot(5000*int32(ch1m1(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx, length(markerPlotColors)) });
+            plot(5000*int32(ch1m2(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+1, length(markerPlotColors)) });
+            plot(5000*int32(ch2m1(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+2, length(markerPlotColors)) });
+            plot(5000*int32(ch2m2(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+3, length(markerPlotColors)) });
+            plot(5000*int32(ch3m1(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+4, length(markerPlotColors)) });
+            plot(5000*int32(ch3m2(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+5, length(markerPlotColors)) });
+            plot(5000*int32(ch4m1(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+6, length(markerPlotColors)) });
+            plot(5000*int32(ch4m2(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+7, length(markerPlotColors)) });
         end
     else
         % export APS

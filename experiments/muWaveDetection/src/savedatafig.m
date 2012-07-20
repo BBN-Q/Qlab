@@ -4,7 +4,7 @@ function savedatafig(dataobj)
     % saveas the current figure to file with a nearly identical name (.out
     % -> .fig)
     
-    saveas(gcf, [dataobj.path strrep(dataobj.filename, '.out', '.fig')]);
-    saveas(gcf, [dataobj.path strrep(dataobj.filename, '.out', '.png')]);
+    saveas(gcf, [dataobj.path strrep(dataobj.filename, '.h5', '.fig')]);
+    saveas(gcf, [dataobj.path strrep(dataobj.filename, '.h5', '.png')]);
 end
     

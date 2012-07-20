@@ -25,24 +25,24 @@ qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 
 % if using SSB, set the frequency here
-SSBFreq = -100e6;
+SSBFreq = 0e6;
 
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
 
 angle = pi/2;
 numPsQId = 4; % number pseudoidentities
-numsteps = 11; %number of drag parameters (11)
+numDeltaSteps = 11; %number of drag parameters (11)
 deltamax=1.0;
 deltamin=-1.0;
-delta=linspace(deltamin,deltamax,numsteps);
+delta=linspace(deltamin,deltamax,numDeltaSteps);
 
 sindex = 0;
 % QId
 % N applications of psuedoidentity
 % X90p, (sequence of +/-X90p), U90p
 % (1-numPsQId) of +/-X90p
-for i=1:numsteps
+for i=1:numDeltaSteps
     sindex=sindex+1;
     patseq{sindex} = {pg.pulse('QId')};
     for j = 1:numPsQId
@@ -58,10 +58,24 @@ end
 % just a pi pulse for scaling
 calseq={{pg.pulse('Xp')}};
 
-compiler = ['compileSequence' IQkey];
-compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 10};
-if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-    feval(compiler, compileArgs{:});
-end
+% compiler = ['compileSequence' IQkey];
+% compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 10};
+% if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
+%     feval(compiler, compileArgs{:});
+% end
+seqParams = struct(...
+    'basename', basename, ...
+    'suffix', '', ...
+    'numSteps', 1, ...
+    'nbrRepeats', nbrRepeats, ...
+    'fixedPt', fixedPt, ...
+    'cycleLength', cycleLength, ...
+    'measLength', 2000);
+patternDict = containers.Map();
+if ~isempty(calseq), calseq = {calseq}; end
+patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
+measChannels = {'M1'};
+awgs = {'TekAWG', 'BBNAPS'};
 
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
 end

@@ -44,11 +44,23 @@ end
 
 % trigger at beginning of measurement pulse
 % measure from (6000:9000)
-measLength = 2000;
-measSeq = {pg.pulse('M', 'width', measLength)};
-ch1m1 = repmat(pg.makePattern([], fixedPt-500, ones(100,1), cycleLength), 1, numSegments)';
-ch1m2 = repmat(int32(pg.getPatternSeq(measSeq, 1, params.measDelay, fixedPt+measLength)), 1, numSegments)';
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.('M1').IQkey;
+SSBFreq = +10e6;
+ChParams = params.(IQkey);
+pgM = PatternGen('correctionT', ChParams.T,'bufferDelay',ChParams.bufferDelay,'bufferReset',ChParams.bufferReset,'bufferPadding',ChParams.bufferPadding, 'cycleLength', cycleLength, 'linkList', ChParams.linkListMode, 'dmodFrequency',SSBFreq);
 
+measLength = 2000;
+measSeq = {pgM.pulse('Xtheta', 'pType', 'tanh', 'sigma', 1, 'buffer', 0, 'amp', 8191, 'width', measLength)};
+ch1m1 = repmat(pg.makePattern([], fixedPt-500, ones(100,1), cycleLength), 1, numSegments)';
+measSeq = pgM.build(measSeq, 1, params.(IQkey).delay, fixedPt+measLength, false);
+ch4m2 = repmat(pg.makePattern([], 5, ones(100,1), cycleLength), 1, numSegments)';
+[patx,paty] = pgM.linkListToPattern(measSeq, 1);
+% remove difference of delays
+delayDiff = params.TekAWG12.delay - ChParams.delay;
+patx = circshift(patx, [0, delayDiff]);
+paty = circshift(paty, [0, delayDiff]);
+ch1m2 = repmat(pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay), 1, numSegments)';
 
 if makePlot
     myn = plotIdx;
@@ -59,17 +71,31 @@ if makePlot
     plot(5000*ch4m1(myn,:), 'k')
     plot(5000*ch1m1(myn,:),'.')
     plot(5000*ch1m2(myn,:), 'g')
+    [measI, measQ] = pgM.linkListToPattern(measSeq, 1);
+    plot(measI, 'c')
+    plot(measQ, 'y')
     grid on
     hold off
 end
+
+strippedBasename = basename;
+basename = [basename 'BBNAPS34'];
+% make APS file
+exportAPSConfig(tempdir, basename, measSeq, measSeq);
+disp('Moving APS file to destination');
+if ~exist(['U:\APS\' strippedBasename '\'], 'dir')
+    mkdir(['U:\APS\' strippedBasename '\']);
+end
+pathAPS = ['U:\APS\' strippedBasename '\' basename '.h5'];
+movefile([tempdir basename '.h5'], pathAPS);
 
 % add offsets to unused channels
 ch1 = ch1 + params.TekAWG12.offset;
 ch2 = ch2 + params.TekAWG12.offset;
 
 % make TekAWG file
-strippedBasename = basename;
-basename = [basename 'TekAWG34' seqSuffix];
+% strippedBasename = basename;
+basename = [strippedBasename 'TekAWG34' seqSuffix];
 options = struct('m21_high', 2.0, 'm41_high', 2.0);
 TekPattern.exportTekSequence(tempdir, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch3m2, ch4, ch4m1, ch4m2, options);
 disp('Moving AWG file to destination');
