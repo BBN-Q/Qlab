@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Qlab by BBN-Q</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="stylesheets/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/BBN-Q/Qlab">View On GitHub</a></li>
+          <li class="downloads"><a href="https://github.com/BBN-Q/Qlab/zipball/master">ZIP</a></li>
+          <li class="downloads"><a href="https://github.com/BBN-Q/Qlab/tarball/master">TAR</a></li>
+          <li class="title">DOWNLOADS</li>
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>Qlab</h1>
+          <p>Measurement and control software for superconducting qubits.</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/BBN-Q">BBN-Q</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></span>
+        </div>
+
+        <h1>Raytheon BBN Technologies' Qlab</h1>
+
+<p>A MATLAB framework for superconducting qubit systems.</p>
+
+<h2>Installation</h2>
+
+<p>To download or clone the repository, you must first be granted access by a member of the BBN Qlab team. Contact one of us to get access.</p>
+
+<p>Once you have access, simply download and unzip the latest release. Or, if you want the tip of the development repository, clone a local copy with</p>
+
+<pre><code>git clone git@github.com:BBN-Q/Qlab.git localname
+</code></pre>
+
+<p>The code is loosely organized into</p>
+
+<ul>
+<li>
+<code>analysis/</code> - routines for data analysis</li>
+<li>
+<code>experiment/</code> - experiment control and measurement</li>
+<li>
+<code>common/</code> - instrument drivers, pulse generation, and general utilities</li>
+<li>
+<code>hardware/</code> - firmware and and non-MATLAB drivers for BBN hardware</li>
+</ul><p>Before running any of the scripts, add <code>basedir/common/src</code> and <code>basedir/common/src/util</code> to your MATLAB path. The pulse generation routines in <code>experiment/muWaveDection/sequences</code> further depend on setting a MATLAB preference for the path to a pulse configuration file. See the <a href="http://github.com/BBN-Q/Qlab/wiki/Pulse-Generation">pulse generation</a> documentation for details.</p>
+
+<p>See the <a href="http://github.com/BBN-Q/Qlab/wiki">wiki</a> for further help.</p>
+
+<p>All source is distributed under the Apache open source <a href="http://github.com/BBN-Q/Qlab/blob/master/LICENSE">license</a>.</p>
+
+<h2>Team</h2>
+
+<p>Principal developers: Blake Johnson (<a href="https://github.com/blakejohnson" class="user-mention">@blakejohnson</a>) and Colm Ryan (<a href="https://github.com/caryan" class="user-mention">@caryan</a>)</p>
+      </section>
+
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><!--<![endif]-->
+    
+  </body>
+</html>
