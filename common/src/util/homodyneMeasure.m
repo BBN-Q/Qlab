@@ -61,7 +61,14 @@ function [iavg, qavg] = homodyneMeasure(scope, DHsettings, displayScope)
             iavg = mean(Amp_I);
             qavg = mean(Amp_Q);
         case 'DH1'
-            [iavg qavg] = digitalHomodyne(Amp_I, DHsettings.IFfreq*1e6, scope.horizontal.sampleInterval);
+            switch DHsettings.channel
+                case {1, '1'}
+                    [iavg qavg] = digitalHomodyne(Amp_I, DHsettings.IFfreq*1e6, scope.horizontal.sampleInterval);
+                case {2, '2'} 
+                    [iavg qavg] = digitalHomodyne(Amp_Q, DHsettings.IFfreq*1e6, scope.horizontal.sampleInterval);
+                otherwise
+                    error('Unhandled digital homodyne channel parameter')
+            end
         case 'DIQ'
             [iavg qavg] = digitalHomodyneIQ(Amp_I, Amp_Q, ...
                 DHsettings.IFfreq*1e6, scope.horizontal.sampleInterval);

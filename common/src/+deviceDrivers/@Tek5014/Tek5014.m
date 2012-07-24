@@ -135,16 +135,19 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
             % determine whether to use GPIB or TCPIP by the form of the
             % address
             ip_re = '\d+\.\d+\.\d+\.\d+';
+            gpib_re = '\d+';
 
-            if isnumeric(address)
-                % create a GPIB object
-                obj.deviceObj_awg = gpib('ni', 0, address);
-			elseif (ischar(address) && regexp(address, ip_re))
+            if ischar(address) && ~isempty(regexp(address, ip_re))
                 % Create a TCPIP object.
                 obj.deviceObj_awg = tcpip(address, obj.DEFAULT_SOCKET);
+            elseif ischar(address) && ~isempty(regexp(address, gpib_re))
+                % create a GPIB object
+                obj.deviceObj_awg = gpib('ni', 0, str2double(address));
+            elseif isnumeric(address)
+                obj.deviceObj_awg = gpib('ni', 0, address);
             else
-				error(['connect: Invalid address: ', address]);
-			end
+                error(['connect: Invalid address: ', address]);
+            end
             
             set(obj.deviceObj_awg, 'OutputBufferSize', obj.buffer_size);
             fopen(obj.deviceObj_awg);

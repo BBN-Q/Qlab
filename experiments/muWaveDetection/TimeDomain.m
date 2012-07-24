@@ -1,45 +1,26 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- % Module Name :  TimeDomain.m
- %
- % Author/Date : Blake Johnson / October 19, 2010
- %
- % Description : A GUI sweeper for homodyneDetection2D.
- %
- % Version: 2.0
- %
- %    Modified    By    Reason
- %    --------    --    ------
- %    March 2012  Colm Ryan: Refactored to proper GUI layouts.
- %
- % Copyright 2010,2012 Raytheon BBN Technologies
- %
- % Licensed under the Apache License, Version 2.0 (the "License");
- % you may not use this file except in compliance with the License.
- % You may obtain a copy of the License at
- %
- %     http://www.apache.org/licenses/LICENSE-2.0
- %
- % Unless required by applicable law or agreed to in writing, software
- % distributed under the License is distributed on an "AS IS" BASIS,
- % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- % See the License for the specific language governing permissions and
- % limitations under the License.
- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function TimeDomain(cfg_file_name)
+% Description : A GUI sweeper for homodyneDetection2D.
 % This script will execute a time domain (2D) experiment using the
 % default parameters found in the cfg file or specified using the GUI.
+%
+% Author/Date : Blake Johnson / October 19, 2010
+%
+ 
+% Copyright 2010-2012 Raytheon BBN Technologies
+%
+% Licensed under the Apache License, Version 2.0 (the "License");
+% you may not use this file except in compliance with the License.
+% You may obtain a copy of the License at
+%
+%     http://www.apache.org/licenses/LICENSE-2.0
+%
+% Unless required by applicable law or agreed to in writing, software
+% distributed under the License is distributed on an "AS IS" BASIS,
+% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+% See the License for the specific language governing permissions and
+% limitations under the License.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%     CLEAR      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function TimeDomain(cfg_file_name)
 
-% close open instruments
-temp = instrfind;
-if ~isempty(temp)
-    fclose(temp);
-    delete(temp)
-end
-clear temp;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%     BASIC INPUTS      %%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -53,7 +34,7 @@ cfg_path = [base_path, filesep, 'cfg'];
 basename = 'TimeDomain';
 
 if nargin < 1
-	cfg_file_name = fullfile(cfg_path, 'TimeDomain.cfg');
+	cfg_file_name = fullfile(cfg_path, 'TimeDomain.json');
 end
 
 % list of instruments expected in the settings structs
@@ -128,9 +109,9 @@ get_power_settings = sweepGUIs.PowerSweepGUI(SweepTabPanel, '');
 get_phase_settings = sweepGUIs.PhaseSweepGUI(SweepTabPanel, '');
 [get_time_settings, set_time_settings] = sweepGUIs.TimeSweepGUI(SweepTabPanel, '');
 get_AWGSequence_settings = sweepGUIs.AWGSequenceSweepGUI(SweepTabPanel, '');
+get_AWGChannel_settings = sweepGUIs.AWGChannelSweepGUI(SweepTabPanel, '');
 
-
-SweepTabPanel.TabNames = {'Freq. A', 'Power', 'Phase', 'X-Axis', 'AWG Sequence'};
+SweepTabPanel.TabNames = {'Freq. A', 'Power', 'Phase', 'X-Axis', 'Seq.', 'Channel'};
 SweepTabPanel.SelectedChild = 1;
 
 % Add the measurement settings panels
@@ -145,8 +126,8 @@ ExpSetupVBox = uiextras.VBox('Parent', ExpSetupPanel, 'Spacing', 5);
 
 %Add sweep/loop selector
 tmpGrid = uiextras.Grid('Parent', ExpSetupVBox, 'Spacing', 5);
-[~, ~, fastLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Fast Loop:', 'fastloop',  {'frequencyA', 'power', 'phase', 'dc', 'TekCh', 'CrossDriveTuneUp', 'Repeat', 'AWGSequence', 'nothing'});
-set(fastLoop, 'Value', 9);
+[~, ~, fastLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Fast Loop:', 'fastloop',  {'nothing', 'frequencyA', 'power', 'phase', 'Repeat', 'AWGSequence', 'AWGChannel'});
+set(fastLoop, 'Value', 1);
 [~, ~, softAvgs] = uiextras.labeledEditBox(tmpGrid, 'Soft Averages:', 'softAvgs', prevSettings.ExpParams.softAvgs);
 [~, ~, deviceName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Device Name:', 'deviceName', prevSettings.deviceName);
 [~, ~, exptName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Experiment:', 'expName', prevSettings.exptName);
@@ -201,11 +182,6 @@ set(mainGrid, 'RowSizes', -1, 'ColumnSizes', [-1.05 -1.2, -1]);
 % 
 % get_dc_settings = sweepGUIs.DCSweepGUI(DCtab, 5, 2, '');
 % get_tekChannel_settings = sweepGUIs.TekChannelSweepGUI(TekChtab, 5, 2, '');
-% 
-% 
-% % add path and file controls\
-% %Crude hack to pull out a handle to the experiment editbox.
-% [get_path_and_file, exptBox] = path_and_file_controls(mainWindow, [910 525], commonSettings, prevSettings);
 
 
 %Now that everything is setup draw the window
@@ -259,10 +235,9 @@ set(mainWindow, 'Visible', 'on');
 % 		settings.SweepParams.dc = get_dc_settings();
         settings.SweepParams.time = get_time_settings();
         settings.SweepParams.AWGSequence = get_AWGSequence_settings();
-%         settings.SweepParams.TekCh = get_tekChannel_settings();
+        settings.SweepParams.AWGChannel = get_AWGChannel_settings();
   
         %%%%%%%%%%%%%%%%%%%%%%% Hacked-in sweeps %%%%%%%%%%%%%%%%%%%%%%%%%%
-        settings.SweepParams.CrossDriveTuneUp = struct('type', 'sweeps.CrossDriveTuneUp');
         settings.SweepParams.Repeat = struct('type', 'sweeps.Repeat', 'stop', 20);
 		% add 'nothing' sweep
 		settings.SweepParams.nothing = struct('type', 'sweeps.Nothing');
@@ -296,7 +271,7 @@ set(mainWindow, 'Visible', 'on');
         settings.counter = counter.value;
         
         % save settings to specific program cfg file as well as common cfg.
-        common_cfg_name = fullfile(cfg_path, 'common.cfg');
+        common_cfg_name = fullfile(cfg_path, 'common.json');
 		writeCfgFromStruct(cfg_file_name, settings);
         writeCfgFromStruct(common_cfg_name, settings);
 

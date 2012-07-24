@@ -1,19 +1,9 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Module Name :  writeCfgFromStruct.m
+% writeCfgFromStruct(file_name, params)
+% Write experiment configuration to JSON file.
 %
-% Author/Date : Blake Johnson / October 19, 2010
-%
-% Description : Creates a config file from a structure of parameters by 
-% performing a depth-first traversal of the input.
-%
-% Version: 1.1
-%
-%    Modified    By    Reason
-%    --------    --    ------
-%    12-13-2010  BRJ   Allow FID inputs in addition to string file names,
-%                      to make this compatible with Exp.writeDataFileHeader
-%
-% Copyright 2010 Raytheon BBN Technologies
+% Authors/Date : Blake Johnson and Colm Ryan / July 24, 2012
+
+% Copyright 2012 Raytheon BBN Technologies
 %
 % Licensed under the Apache License, Version 2.0 (the "License");
 % you may not use this file except in compliance with the License.
@@ -27,48 +17,8 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
-function writeCfgFromStruct(file_name, instruct)
-    if isnumeric(file_name)
-        fid = file_name;
-        closeFile = false;
-    else
-        fid = fopen(file_name, 'w');
-        closeFile = true;
-    end
-	
-	% depth first traversal of struct using a stack
-	s = stack();
-	% push a cell array composed of the base name and the input struct
-	s.push({'' instruct});
-	
-	while ~s.isempty()
-		u = s.pop();
-		name = u{1};
-		value = u{2};
-		
-		% if current element is itself a struct, add all its children to the
-		% stack
-		if isstruct(value)
-			elementNames = fieldnames(value);
-			len = numel(elementNames);
-	
-			for i = len:-1:1
-				% record the hierarchy of names in first element of the cell
-				% array
-				if ~strcmp(name, '')
-					namestack = [name '.' elementNames{i}];
-				else
-					namestack = elementNames{i};
-				end
-				s.push({namestack value.(elementNames{i})});
-			end
-		elseif ~isempty(value)
-			fprintf(fid, '%s \t%s\n', name, almostany2str(value, true));
-		end
-	end
-
-	% close cfg file
-    if closeFile
-        fclose(fid);
-    end
+function writeCfgFromStruct(file_name, params)
+    fid = fopen(file_name, 'w');
+	fprintf(fid, '%s', jsonlab.savejson('',params));
+    fclose(fid);
 end

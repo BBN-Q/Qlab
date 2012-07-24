@@ -1,46 +1,26 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- % Module Name :  muWaveDetectionSweep.m
- %
- % Author/Date : Blake Johnson / October 19, 2010
- %
- % Description : A GUI 2D sweeper for homodyneDetection.
- %
- % Version: 1.0
- %
- %    Modified    By    Reason
- %    --------    --    ------
- %    March 2012 Colm Ryan to add GUI Layouts
- %
- % Copyright 2010 Raytheon BBN Technologies
- %
- % Licensed under the Apache License, Version 2.0 (the "License");
- % you may not use this file except in compliance with the License.
- % You may obtain a copy of the License at
- %
- %     http://www.apache.org/licenses/LICENSE-2.0
- %
- % Unless required by applicable law or agreed to in writing, software
- % distributed under the License is distributed on an "AS IS" BASIS,
- % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- % See the License for the specific language governing permissions and
- % limitations under the License.
-
- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function muWaveDetectionSweep()
+% Module Name :  muWaveDetectionSweep.m
+%
+% Author/Date : Blake Johnson / October 19, 2010
+%
+% Description : A GUI 2D sweeper for homodyneDetection.
 % This script will execute the experiment muWaveDetection using the
 % default parameters found in the cfg file or specified using the GUI.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%     CLEAR      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Copyright 2010-2012 Raytheon BBN Technologies
+%
+% Licensed under the Apache License, Version 2.0 (the "License");
+% you may not use this file except in compliance with the License.
+% You may obtain a copy of the License at
+%
+%     http://www.apache.org/licenses/LICENSE-2.0
+%
+% Unless required by applicable law or agreed to in writing, software
+% distributed under the License is distributed on an "AS IS" BASIS,
+% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+% See the License for the specific language governing permissions and
+% limitations under the License.
 
-% close open instruments
-temp = instrfind;
-if ~isempty(temp)
-    fclose(temp);
-    delete(temp)
-end
-clear temp;
+function muWaveDetectionSweep()
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%     BASIC INPUTS      %%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -54,7 +34,7 @@ cfg_path = [base_path, filesep, 'cfg'];
 basename = 'muWaveDetection';
 
 if nargin < 1
-	cfg_file_name = fullfile(cfg_path, 'muWaveDetectionSweep.cfg');
+	cfg_file_name = fullfile(cfg_path, 'muWaveDetectionSweep.json');
 end
 
 % list of instruments expected in the settings structs
@@ -258,7 +238,7 @@ set(mainWindow, 'Visible', 'on');
         settings.counter = counter.value;
         
         % save settings to specific program cfg file as well as common cfg.
-        common_cfg_name = fullfile(cfg_path, 'common.cfg');
+        common_cfg_name = fullfile(cfg_path, 'common.json');
 		writeCfgFromStruct(cfg_file_name, settings);
         writeCfgFromStruct(common_cfg_name, settings);
 

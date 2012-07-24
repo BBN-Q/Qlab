@@ -166,11 +166,14 @@ classdef APS < deviceDrivers.lib.deviceDriverBase
         
         function connect(obj,address)
             % address = device ID (number) or serial number (string)
-            
+        
+            deviceID_re = '\d+';
             if isnumeric(address)
-                val = obj.open(address);
+                obj.open(address);
+            elseif ~isempty(regexp(address, deviceID_re))
+                obj.open(str2double(address));
             else
-                val = obj.openBySerialNum(address);
+                obj.openBySerialNum(address);
             end
             
         end

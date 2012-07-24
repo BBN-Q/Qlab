@@ -195,11 +195,11 @@ classdef homodyneDetection2D < expManager.expBase
                     DQ = mean(qsignal(range,:))';
                 case 'DH1'
                     switch ExpParams.digitalHomodyne.channel
-                        case 1
+                        case {1, '1'}
                             [DI DQ] = obj.digitalHomodyne(isignal, ...
                                 ExpParams.digitalHomodyne.IFfreq*1e6, ...
                                 obj.scope.horizontal.sampleInterval, ExpParams.filter.start, ExpParams.filter.length);
-                        case 2
+                        case {2, '2'}
                             [DI DQ] = obj.digitalHomodyne(qsignal, ...
                                 ExpParams.digitalHomodyne.IFfreq*1e6, ...
                                 obj.scope.horizontal.sampleInterval, ExpParams.filter.start, ExpParams.filter.length);

@@ -113,11 +113,7 @@ classdef  expBase < handle
         %% methods related to handling instruments
         function openInstruments(obj)
             % clean up all instrument objects
-            openInstruments = instrfind;
-            if ~isempty(openInstruments)
-                fclose(openInstruments);
-            end
-            delete(openInstruments);
+            delete(instrfind);
             
             % removed instruments that have enable = false
 			obj.removeDisabledInstr();
