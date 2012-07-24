@@ -87,7 +87,7 @@ cardParamsUIDict('samplingRate') = 'samplingRates';
 build_gui();
 
 %If we are not passed explicit settings then create an emtpy structure
-if nargin < 2
+if nargin < 2 || isempty(fieldnames(settings))
     settings = struct();
 else
     %Set the card type
