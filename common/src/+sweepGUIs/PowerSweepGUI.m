@@ -41,7 +41,7 @@ settings_fcn = @get_settings;
         tmpVBox = uiextras.VBox('Parent', handles.mainPanel, 'Spacing', 2);
         tmpHBox1 =  uiextras.HBox('Parent', tmpVBox, 'Spacing', 5);
         [~, ~, handles.genID] = uiextras.labeledPopUpMenu(tmpHBox1, 'Generator:', 'genID',  {'RF','LO','Spec','Spec2'});
-        [~, ~, handles.powerUnits] = uiextras.labeledPopUpMenu(tmpHBox1, 'Generator:', 'powerUnits',  {'dBm', 'mW'});
+        [~, ~, handles.powerUnits] = uiextras.labeledPopUpMenu(tmpHBox1, 'Units:', 'powerUnits',  {'dBm', 'mW'});
         uiextras.Empty('Parent', tmpHBox1);
         tmpHBox1.Sizes =  [-2, -2, -1];
         tmpHBox2 = uiextras.HButtonBox('Parent', tmpVBox, 'Spacing', 5, 'VerticalAlignment', 'bottom');

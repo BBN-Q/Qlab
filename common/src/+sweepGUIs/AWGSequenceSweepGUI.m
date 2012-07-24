@@ -1,11 +1,4 @@
 function [get_settings_fcn, set_settings_fcn] = AWGSequenceSweepGUI(parent, name)
-% TIMESWEEP
-%-------------------------------------------------------------------------------
-% File name   : TimeSweep.m
-% Generated on: 17-Jun-2011 17:18:34          
-% Description :
-%-------------------------------------------------------------------------------
-
 
 % Initialize handles structure
 handles = struct();
@@ -22,7 +15,7 @@ if nargin < 1
 			'MenuBar', 'none', ...
 			'NumberTitle', 'off', ...
 			'Color', get(0,'DefaultUicontrolBackgroundColor'));
-	name = ['X-Axis Labels'];
+	name = ['AWG Sequence'];
 else
 	handles.parent = parent;
 	name = ['AWG Sequence ' name];
