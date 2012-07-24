@@ -344,7 +344,7 @@ classdef AgilentAP240 < hgsetget
             % lop off first 5 points from each segment
             AqDataBuffer = AqDataBuffer(firstPt:end, :);
             
-            times = linspace(firstPt*double(dataDesc.sampTime),double(obj.averager.recordLength - 1) * double(dataDesc.sampTime),obj.averager.recordLength-firstPt);
+            times = linspace(firstPt*double(dataDesc.sampTime),double(obj.averager.recordLength - 1) * double(dataDesc.sampTime),obj.averager.recordLength-firstPt+1);
             
             assert(status == 0, 'Error in AqD1_readData: %d', status);
         end
