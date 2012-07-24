@@ -37,13 +37,11 @@ loadJSON();
         tmpHBox1 = uiextras.HButtonBox('Parent', tmpVBox, 'Spacing', 5, 'VerticalAlignment', 'bottom');
         textParams = {'Parent', tmpHBox1, 'Style', 'text', 'FontSize', 10};
         uicontrol(textParams{:}, 'String', 'Experiment');
-        uicontrol(textParams{:}, 'String', 'Channel');
         uiextras.Empty('Parent', tmpHBox1);
         
         tmpHBox2 = uiextras.HButtonBox('Parent', tmpVBox, 'Spacing', 5, 'VerticalAlignment', 'top');
         popUpParams = {'Parent', tmpHBox2, 'Style', 'popupmenu', 'BackgroundColor', [1, 1, 1], 'FontSize', 10, 'Callback', @updateFields, 'String', {''}};
         handles.expDropDown = uicontrol(popUpParams{:});
-        handles.channelDropDown = uicontrol(popUpParams{:}, 'String', {'TekAWG12','TekAWG34','BBNAPS12','BBNAPS34'});
         uicontrol('Parent', tmpHBox2, 'Style', 'pushbutton','String', 'Reload', 'Callback', @loadJSON);
                 
         %Try and patch up the sizing
@@ -54,16 +52,18 @@ loadJSON();
     end
 
     function loadJSON(~,~)
-        expParams = jsonlab.loadjson(getpref('qlab', 'ExpQuickPickFile'));
-        set(handles.expDropDown, 'String', fieldnames(expParams));
+        try
+            expParams = jsonlab.loadjson(getpref('qlab', 'ExpQuickPickFile'));
+            set(handles.expDropDown, 'String', fieldnames(expParams));
+        catch me
+            warning('Could not find expQuickPick preference');
+        end
     end
     
     function updateFields(~,~)
         %Get the current values
         expNames = get(handles.expDropDown,'String');
         expName = expNames{get(handles.expDropDown,'Value')};
-        channelNames = get(handles.channelDropDown,'String');
-        channelName = channelNames{get(handles.channelDropDown,'Value')};
  
         %Update the sequence files for the Tek and APS
         %Get the current Tek5104 settings
@@ -75,28 +75,15 @@ loadJSON();
         APSSettings = APSSettings_fcn();
         
         %Set the new names
-        switch channelName
-            case {'TekAWG12','TekAWG34'}
-                %Update the sequence files 
-                TekSettings.seqfile = fullfile(expParams.networkDrive, 'AWG', expParams.(expName).baseName, [expParams.(expName).baseName channelName '.awg']);
-                tmpSettings_fcn = GUIsetters('TekAWG');
-                tmpSettings_fcn(TekSettings)
-                
-                APSSettings.seqfile = fullfile(expParams.networkDrive, 'APS', 'Trigger', 'Trigger.h5');
-                tmpSettings_fcn = GUIsetters('BBNAPS');
-                tmpSettings_fcn(APSSettings)
-                
-            case {'BBNAPS12','BBNAPS34'}
-                %Update the sequence files 
-%                 TekSettings.seqfile = fullfile(expParams.networkDrive, 'AWG', 'Trigger', 'Trigger.awg');
-                TekSettings.seqfile = fullfile(expParams.networkDrive, 'AWG', expParams.(expName).baseName, [expParams.(expName).baseName channelName '.awg']);
-                tmpSettings_fcn = GUIsetters('TekAWG');
-                tmpSettings_fcn(TekSettings)
-                
-                APSSettings.seqfile = fullfile(expParams.networkDrive, 'APS', expParams.(expName).baseName, [expParams.(expName).baseName channelName '.h5']);
-                tmpSettings_fcn = GUIsetters('BBNAPS');
-                tmpSettings_fcn(APSSettings)
-        end
+
+        %Update the sequence files
+        TekSettings.seqfile = fullfile(expParams.networkDrive, 'AWG', expParams.(expName).baseName, [expParams.(expName).baseName '-TekAWG.awg']);
+        tmpSettings_fcn = GUIsetters('TekAWG');
+        tmpSettings_fcn(TekSettings)
+        
+        APSSettings.seqfile = fullfile(expParams.networkDrive, 'AWG', expParams.(expName).baseName, [expParams.(expName).baseName '-BBNAPS.h5']);
+        tmpSettings_fcn = GUIsetters('BBNAPS');
+        tmpSettings_fcn(APSSettings)
         
         %Update the number of segments
         digitizerSettings_fcn = GUIgetters('digitizer');

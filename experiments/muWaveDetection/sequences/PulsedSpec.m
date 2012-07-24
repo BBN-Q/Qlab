@@ -20,7 +20,7 @@ cycleLength = 18000;
 numsteps = 1;
 nbrRepeats = 1;
 specLength = 9600;
-specAmp = 8000;
+specAmp = 4000;
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
@@ -31,15 +31,23 @@ IQkey = qubitMap.(qubit).IQkey;
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode);
 
 patseq = {{pg.pulse('Xtheta', 'amp', specAmp, 'width', specLength, 'pType', 'square')}};
+calseq = [];
 
-calseq = {};
+% prepare parameter structures for the pulse compiler
+seqParams = struct(...
+    'basename', basename, ...
+    'suffix', '', ...
+    'numSteps', numsteps, ...
+    'nbrRepeats', nbrRepeats, ...
+    'fixedPt', fixedPt, ...
+    'cycleLength', cycleLength, ...
+    'measLength', 8000);
+patternDict = containers.Map();
+if ~isempty(calseq), calseq = {calseq}; end
+patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
+measChannels = {'M1'};
+awgs = {'TekAWG', 'BBNAPS'};
 
-compiler = ['compileSequence' IQkey];
-compileArgs = {basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot, 1};
-if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-    feval(compiler, compileArgs{:});
-else
-    error('Unable to find compiler for IQkey: %s',IQkey) 
-end
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 1);
 
 end
