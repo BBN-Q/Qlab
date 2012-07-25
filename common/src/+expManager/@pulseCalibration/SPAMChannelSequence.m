@@ -1,23 +1,21 @@
-function [filename, nbrPatterns] = rabiAmpChannelSequence(obj, qubit, makePlot)
+function [filename, nbrPatterns] = SPAMChannelSequence(obj, qubit, makePlot)
 
 if ~exist('makePlot', 'var')
     makePlot = false;
 end
 
-pathAWG = 'U:\AWG\Rabi\';
-basename = 'Rabi';
+pathAWG = 'U:\AWG\SPAM\';
+basename = 'SPAM';
+fixedPt = 6000;
+cycleLength = 8000;
+nbrRepeats = 1;
+
+% load config parameters from files
+params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+qParams = params.(qubit);
 
 qubitMap = obj.channelMap.(qubit);
 IQkey = qubitMap.IQkey;
-
-fixedPt = 2000;
-cycleLength = 6000;
-numsteps = 40; %should be even
-stepsize = 400;
-
-% load config parameters from file
-params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.(qubit); % choose target qubit here
 
 pg = PatternGen(...
     'dPiAmp', obj.pulseParams.piAmp, ...
@@ -33,29 +31,31 @@ pg = PatternGen(...
     'dmodFrequency', obj.pulseParams.SSBFreq ...
     );
 
-%Don't use zero because if there is a mixer offset it will be completely
-%different because the source is never pulsed
-amps = [-(numsteps/2)*stepsize:stepsize:-stepsize stepsize:stepsize:(numsteps/2)*stepsize];
 
-for n = 1:numsteps;
-    patseq{n} = {pg.pulse('Xtheta', 'amp', amps(n))};
+numPsQId = 10; % number pseudoidentities
+angleShifts = (pi/180)*(-2:0.5:2);
+
+patseq = {};
+
+for angleShift = angleShifts
+    patseq{end+1} = {pg.pulse('QId')};
+    SPAMBlock = {pg.pulse('Xp'),pg.pulse('Up','angle',pi/2+angleShift),pg.pulse('Xp'),pg.pulse('Up','angle',pi/2+angleShift)};
+     for SPAMct = 0:numPsQId
+        patseq{end+1} = {pg.pulse('Y90p')};
+        for ct = 0:SPAMct
+            patseq{end} = [patseq{end}, SPAMBlock];
+        end
+        patseq{end} = [patseq{end}, {pg.pulse('X90m')}];
+     end
 end
+calseq = {{pg.pulse('Xp')}};
 
-for n = 1:numsteps;
-    patseq{n+numsteps} = {pg.pulse('Ytheta', 'amp', amps(n))};
-end
+nbrPatterns = nbrRepeats*(length(patseq) + length(calseq));
 
-nbrRepeats = 1;
-nbrPatterns = nbrRepeats*length(patseq);
-numsteps = 1;
-
-calseq = [];
-
-% prepare parameter structures for the pulse compiler
 seqParams = struct(...
     'basename', basename, ...
     'suffix', '', ...
-    'numSteps', numsteps, ...
+    'numSteps', 1, ...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...

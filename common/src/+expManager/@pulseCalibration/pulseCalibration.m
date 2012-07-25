@@ -97,7 +97,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                     out = data.abs_Data;
                 case 'phase'
                     % unwrap assume phase data in radians
-                    out = 180/pi * unwrap(pi/180 * data.phaseData);
+                    out = 180/pi * unwrap(pi/180 * data.phase_Data);
                 otherwise
                     error('Unknown dataType can only be "amp" or "phase"');
             end
@@ -206,6 +206,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         % externally defined static methods
         [cost, J] = RepPulseCostFunction(data, angle);
         [amp, offsetPhase]  = analyzeRabiAmp(data);
+        bestParam = analyzeSlopes(data, numPsQIds, paramRange);
         
         function UnitTest()
             script = java.io.File(mfilename('fullpath'));

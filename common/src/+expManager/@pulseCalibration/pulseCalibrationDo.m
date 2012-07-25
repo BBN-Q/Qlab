@@ -137,14 +137,48 @@ end
 %% DRAG calibration    
 if ExpParams.DoDRAGCal
     % generate DRAG calibration sequence
-    [filenames, nbrSegments] = obj.DRAGSequence(ExpParams.Qubit);
+    [filenames, nbrSegments] = obj.APEChannelSequence(ExpParams.Qubit);
     obj.loadSequence(filenames);
 
     % measure
     data = obj.homodyneMeasurement(nbrSegments);
-    % analyze
-    obj.pulseParams.delta = obj.analyzeDRAG(data);
+
+    % analyze for the best value to two digits
+    numPsQId = 8; % number pseudoidentities
+    deltas = linspace(-1,1,11)';
+    
+    obj.pulseParams.delta = round(100*obj.analyzeSlopes(data, numPsQId, deltas))/100;
+    
+    title('DRAG Parameter Calibration');
+    text(10, 0.8, sprintf('Found best DRAG parameter of %.2f', obj.pulseParams.delta), 'FontSize', 12);
+
+    
 end
+
+%% SPAM calibration    
+if ExpParams.DoSPAMCal
+    % generate DRAG calibration sequence
+    [filenames, nbrSegments] = obj.SPAMChannelSequence(ExpParams.Qubit);
+    obj.loadSequence(filenames);
+
+    % measure
+    data = obj.homodyneMeasurement(nbrSegments);
+    
+    % analyze for the best value to two digits
+    numPsQId = 10; % number pseudoidentities
+    angleShifts = (pi/180)*(-2:0.5:2)';
+    deltaSkew = round(100*obj.analyzeSlopes(data, numPsQId, angleShifts))/100;
+    title('SPAM Phase Skew Calibration');
+    text(10, 0.8, sprintf('Found best \Delta Skew of %.2f', deltaSkew), 'FontSize', 12);
+    
+    tmpT = obj.pulseParams.T;
+    ampFactor = tmpT(1,1);
+    curSkew = atand(tmpT(1,2)/tmpT(1,1));
+    curSkew = curSkew - deltaSkew;
+    obj.pulseParams.T = [ampFactor, ampFactor*tand(curSkew); 0, secd(curSkew)];
+end
+
+
 
 %% Save updated parameters to file
 

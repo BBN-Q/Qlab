@@ -88,9 +88,7 @@ awgs = {'TekAWG', 'BBNAPS'};
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
 
-filename{1} = [pathAWG basename '-' qubitMap.instr '.awg'];
-if ismember(IQkey, {'BBNAPS_12', 'BBNAPS_34'})
-    filename{2} = [pathAWG basename '-BBNAPS' '.h5'];
-end
+filename{1} = [pathAWG basename '-TekAWG.awg'];
+filename{2} = [pathAWG basename '-BBNAPS.h5'];
 
 end
