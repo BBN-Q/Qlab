@@ -84,7 +84,7 @@ all: $(OBJECTS) libaps test
 libaps: $(OBJECTS) libaps.cpp
 	$(CC) $(CFLAGS) $(LIBFLAGS) libaps.cpp $(OBJECTS) $(LIBS)
 
-%.$(OBJEXT):%.cpp
+%.$(OBJEXT):%.cpp %.h headings.h
 	$(CC) $(CFLAGS) $(OBJFLAGS) $<
 
 test: $(OBJECTS) test.cpp
