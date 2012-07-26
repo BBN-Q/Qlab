@@ -227,7 +227,10 @@ int APSRack::save_bulk_state_file(string & stateFile){
 	// loop through available APS Units and save state
 	for(unsigned int  apsct = 0; apsct < APSs_.size(); apsct++) {
 		string rootStr = "/";
-		rootStr += APSs_[apsct].deviceSerial_;
+		rootStr += APSs_[apsct].deviceSerial_ ;
+		FILE_LOG(logDEBUG) << "Creating Group: " << rootStr;
+		H5::Group tmpGroup = H5StateFile.createGroup(rootStr);
+		tmpGroup.close();
 		APSs_[apsct].write_state_to_hdf5(H5StateFile, rootStr);
 	}
 	//Close the file
@@ -245,7 +248,7 @@ int APSRack::read_bulk_state_file(string & stateFile){
 	// loop through available APS Units and load data
 	for(unsigned int  apsct = 0; apsct < APSs_.size(); apsct++) {
 		string rootStr = "/";
-		rootStr += APSs_[apsct].deviceSerial_;
+		rootStr += "/" + APSs_[apsct].deviceSerial_;
 		APSs_[apsct].read_state_from_hdf5(H5StateFile, rootStr);
 	}
 	//Close the file
