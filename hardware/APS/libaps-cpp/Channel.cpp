@@ -130,8 +130,18 @@ int Channel::write_state_to_hdf5(H5::H5File & H5StateFile, const string & rootSt
 	FILE_LOG(logDEBUG) << "Writing Waveform: " << rootStr + "/waveformLib";
 	vector2h5array<float>(waveform_,  &H5StateFile, rootStr + "/waveformLib", rootStr + "/waveformLib",   H5::PredType::NATIVE_FLOAT);
 
+
+	// add channel state information to root group
+	H5::Group tmpGroup = H5StateFile.openGroup(rootStr);
+
+	element2h5attribute<float>("offset",  offset_,    &tmpGroup, H5::PredType::NATIVE_FLOAT);
+	element2h5attribute<float>("scale",   scale_,     &tmpGroup, H5::PredType::NATIVE_FLOAT);
+	element2h5attribute<bool>("enabled",  enabled_,   &tmpGroup, H5::PredType::NATIVE_UINT);
+	element2h5attribute<int>("trigDelay", trigDelay_, &tmpGroup, H5::PredType::NATIVE_INT);
+
+	tmpGroup.close();
+
 	//Save the linklist data
-	//First figure our how many banks there are from the attribute
 
 	// save number of banks to rootStr + /linkListData attribute "numBanks"
 	USHORT numBanks;
@@ -139,24 +149,8 @@ int Channel::write_state_to_hdf5(H5::H5File & H5StateFile, const string & rootSt
 
 	// set attribute
 	FILE_LOG(logDEBUG) << "Creating Group: " << rootStr + "/linkListData";
-	H5::Group tmpGroup = H5StateFile.createGroup(rootStr + "/linkListData");
-	hsize_t fdim[] = {1}; // dim sizes of ds (on disk)
-	// DataSpace on disk
-	H5::DataSpace fspace( 1, fdim );
-	H5::Attribute tmpAttribute = tmpGroup.createAttribute("numBanks", H5::PredType::NATIVE_UINT16,fspace);
-	FILE_LOG(logDEBUG) << "Creating Attribute: " << "numBanks" << "=" << numBanks;
-	tmpAttribute.write(H5::PredType::NATIVE_UINT16, &numBanks);
-	tmpAttribute.close();
-
-	float offset_;
-	float scale_;
-	bool enabled_;
-	vector<float> waveform_;
-	vector<LLBank> banks_;
-	int trigDelay_;
-
-
-
+	tmpGroup = H5StateFile.createGroup(rootStr + "/linkListData");
+	element2h5attribute<USHORT>("numBanks",  numBanks, &tmpGroup,H5::PredType::NATIVE_UINT16);
 	tmpGroup.close();
 
 	std::ostringstream tmpStream;
@@ -175,14 +169,19 @@ int Channel::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootS
 	// read waveform data
 	waveform_ = h5array2vector<float>(&H5StateFile, rootStr + "/waveformLib",   H5::PredType::NATIVE_INT16);
 
+	// load state information
+	H5::Group tmpGroup = H5StateFile.openGroup(rootStr);
+	offset_    = h5element2element<float>("offset",&tmpGroup, H5::PredType::NATIVE_FLOAT);
+	scale_     = h5element2element<float>("scale",&tmpGroup, H5::PredType::NATIVE_FLOAT);
+	enabled_   = h5element2element<bool>("enabled",&tmpGroup, H5::PredType::NATIVE_UINT);
+	trigDelay_ = h5element2element<int>("trigDelay",&tmpGroup, H5::PredType::NATIVE_INT);
+
 	//Load the linklist data
 	//First figure our how many banks there are from the attribute
-	H5::Group tmpGroup = H5StateFile.openGroup(rootStr + "/linkListData");
-	H5::Attribute tmpAttribute = tmpGroup.openAttribute("numBanks");
+	tmpGroup = H5StateFile.openGroup(rootStr + "/linkListData");
 	USHORT numBanks;
-	tmpAttribute.read(H5::PredType::NATIVE_UINT16, &numBanks);
-	tmpAttribute.close();
-	tmpGroup.close();
+	numBanks = h5element2element<USHORT>("numBanks",&tmpGroup, H5::PredType::NATIVE_UINT16);
+  tmpGroup.close();
 
 	std::ostringstream tmpStream;
 	//Now loop over the number of banks found and add the bank

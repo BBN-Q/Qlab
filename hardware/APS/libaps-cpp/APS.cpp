@@ -1585,8 +1585,8 @@ int APS::write_state_to_hdf5(H5::H5File & H5StateFile, const string & rootStr){
 		FILE_LOG(logDEBUG) << "Writing State For Channel " << chanct + 1 << " to hdf5 file";
 		FILE_LOG(logDEBUG) << "Creating Group: " << tmpStream.str();
 		H5::Group tmpGroup = H5StateFile.createGroup(tmpStream.str());
-		channels_[chanct].write_state_to_hdf5(H5StateFile,tmpStream.str());
 		tmpGroup.close();
+		channels_[chanct].write_state_to_hdf5(H5StateFile,tmpStream.str());
 	}
 	return 0;
 }

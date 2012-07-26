@@ -152,6 +152,29 @@ int vector2h5array(vector<T> & vectIn, const H5::H5File * h5File, const string &
 
 	return 0;
  };
+
+template <typename T>
+int element2h5attribute(const string & name, T & element, const H5::Group * group, const H5::DataType & dt = H5::PredType::NATIVE_DOUBLE) {
+	hsize_t fdim[] = {1}; // dim sizes of ds (on disk)
+	// DataSpace on disk
+	H5::DataSpace fspace( 1, fdim );
+
+	FILE_LOG(logDEBUG) << "Creating Attribute: " << name << " = " << element;
+	H5::Attribute tmpAttribute = group->createAttribute(name, dt,fspace);
+	tmpAttribute.write(dt, &element);
+	tmpAttribute.close();
+	return 0;
+}
+
+template <typename T>
+T h5element2element(const string & name, const H5::Group * group, const H5::DataType & dt = H5::PredType::NATIVE_DOUBLE) {
+	T element;
+	H5::Attribute tmpAttribute = group->openAttribute(name);
+	tmpAttribute.read(dt, &element);
+	tmpAttribute.close();
+	FILE_LOG(logDEBUG) << "Reading Attribute: " << name << " = " << element;
+	return element;
+}
 #endif /* HEADINGS_H_ */
 
 
