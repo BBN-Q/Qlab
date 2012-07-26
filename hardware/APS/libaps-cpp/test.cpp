@@ -5,12 +5,53 @@
  *      Author: cryan
  */
 
+
 #include "headings.h"
 
 #include "libaps.h"
 
 #include "test.h"
 
+void test::programSquareWaves() {
+	int waveformLen = 1000;
+	int pulseLen = 500;
+	int cnt;
+	int ret;
+
+	short int * pulseMem = 0;
+
+	pulseMem = (short int *) buildPulseMemory(waveformLen , pulseLen,INT_TYPE);
+	if (pulseMem == 0) return;
+
+	// load memory
+	for (cnt = 0 ; cnt < 4; cnt++ ) {
+		printf("Loading Waveform: %i ", cnt);
+		fflush(stdout);
+		ret = set_waveform_int(0, cnt, pulseMem, waveformLen);
+
+		if (ret < 0)
+			printf("Error: %i\n",ret);
+		else
+			printf("Done\n");
+	}
+
+	if (pulseMem) free(pulseMem);
+}
+
+void test::doBulkStateFileTest() {
+	programSquareWaves();
+
+	save_bulk_state_file();
+	read_bulk_state_file();
+}
+
+void test::doStateFilesTest() {
+	programSquareWaves();
+
+
+	save_state_files();
+	read_state_files();
+}
 
 void * test::buildPulseMemory(int waveformLen , int pulseLen, int pulseType) {
 	int cnt;
@@ -43,29 +84,10 @@ void * test::buildPulseMemory(int waveformLen , int pulseLen, int pulseType) {
 
 void test::doToggleTest() {
 
-	int waveformLen = 1000;
-	int pulseLen = 500;
-	int cnt;
 	int ask;
-	int ret;
 	char cmd;
 
-	short int * pulseMem = 0;
-
-	pulseMem = (short int *) buildPulseMemory(waveformLen , pulseLen,INT_TYPE);
-	if (pulseMem == 0) return;
-
-	// load memory
-	for (cnt = 0 ; cnt < 4; cnt++ ) {
-		printf("Loading Waveform: %i ", cnt);
-		fflush(stdout);
-		ret = set_waveform_int(0, cnt, pulseMem, waveformLen);
-
-		if (ret < 0)
-			printf("Error: %i\n",ret);
-		else
-			printf("Done\n");
-	}
+	programSquareWaves();
 
 	set_trigger_source(0,SOFTWARE_TRIGGER);
 
@@ -106,8 +128,6 @@ void test::doToggleTest() {
 		// input is buffered until \n'
 		cout << "\nCmd: [t]rigger [d]isable e[x]it: ";
 	}
-
-	if (pulseMem) free(pulseMem);
 
 	close(0);
 
@@ -151,11 +171,14 @@ void test::doStoreLoadTest() {
 void test::printHelp(){
 	string spacing = "   ";
 	cout << "BBN APS C++ Test Bench" << endl;
-	cout << spacing << "-b <bitfile> Path to bit file" << endl;
-	cout << spacing << "-t Toggle Test" << endl;
-	cout << spacing << "-w Run Waveform StoreLoad Tests" << endl;
-	cout << spacing << "-0 Redirect log to stdout" << endl;
-	cout << spacing << "-h Print This Help Message" << endl;
+	cout << spacing << "-b  <bitfile> Path to bit file" << endl;
+	cout << spacing << "-t  Toggle Test" << endl;
+	cout << spacing << "-w  Run Waveform StoreLoad Tests" << endl;
+	cout << spacing << "-bf Run Bulk State File Test" << endl;
+	cout << spacing << "-sf Run  State File Test" << endl;
+	cout << spacing << "-d  Used default DACII bitfile" << endl;
+	cout << spacing << "-0  Redirect log to stdout" << endl;
+	cout << spacing << "-h  Print This Help Message" << endl;
 }
 
 // command options functions taken from:
@@ -178,12 +201,19 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
 
 int main(int argc, char** argv) {
 
+	set_logging_level(logDEBUG);
+
 	if (cmdOptionExists(argv, argv + argc, "-h")) {
 		test::printHelp();
 		return 0;
 	}
 
 	string bitFile = getCmdOption(argv, argv + argc, "-b");
+
+	if (cmdOptionExists(argv, argv + argc, "-d")) {
+		bitFile = "../../../common/src/+deviceDrivers/@APS/mqco_dac2_latest.bit";
+	}
+
 
 	if (bitFile.length() == 0) {
 		bitFile = "../../../common/src/+deviceDrivers/@APS/mqco_aps_latest.bit";
@@ -222,6 +252,13 @@ int main(int argc, char** argv) {
 		test::doStoreLoadTest();
 	}
 
+	if (cmdOptionExists(argv, argv + argc, "-bf")) {
+		test::doBulkStateFileTest();
+	}
+
+	if (cmdOptionExists(argv, argv + argc, "-sf")) {
+		test::doStateFilesTest();
+	}
 
 	disconnect_by_ID(0);
 

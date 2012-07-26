@@ -49,7 +49,6 @@ using boost::thread;
 //Needed for usleep on gcc 4.7
 #include <unistd.h>
 
-
 //Deal with some Windows/Linux difference
 #ifdef _WIN32
 #include "windows.h"
@@ -80,7 +79,6 @@ struct CheckSum {
 
 //PLL routines go through sets of address/data pairs
 typedef std::pair<ULONG, UCHAR> PLLAddrData;
-
 
 //Load all the constants
 #include "constants.h"
@@ -123,6 +121,36 @@ vector<T> h5array2vector(const H5::H5File * h5File, const string & dataPath, con
    h5Array.close();
 
    return vecOut;
+ };
+
+//Helper function for saving 1D dataset from H5 files
+template <typename T>
+int vector2h5array(vector<T> & vectIn, const H5::H5File * h5File, const string & name, const string & dataPath, const H5::DataType & dt = H5::PredType::NATIVE_DOUBLE)
+ {
+
+	const int VECTOR_RANK = 2;
+	const int ARRAY_DIM2 = 1;
+
+	// This function written using HD5 library version 1.8.9
+	// some of the data types that the HD5 C++ examples include
+	// are not defined with the current header files
+	// lines where the datatype has been changed to a standard datatype will be labeled
+
+	// MISSING DEFINE: HD5:HD5std_string dataset_name(name);
+	string dataset_name = name;
+
+	hsize_t fdim[] = {vectIn.size(), ARRAY_DIM2}; // dim sizes of ds (on disk)
+
+	// DataSpace on disk
+	H5::DataSpace fspace( VECTOR_RANK, fdim );
+
+	H5::DataSet h5Array = h5File->createDataSet(dataset_name,dt, fspace);
+
+	h5Array.write(&vectIn[0], dt);
+
+	h5Array.close();
+
+	return 0;
  };
 #endif /* HEADINGS_H_ */
 

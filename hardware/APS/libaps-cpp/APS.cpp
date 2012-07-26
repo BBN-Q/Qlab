@@ -1545,3 +1545,61 @@ int APS::stream_LL_data(){
 
 	return 0;
 }
+
+int APS::save_state_file(string & stateFile){
+
+	if (stateFile.length() == 0) {
+		stateFile += "cache_" + deviceSerial_ + ".h5";
+	}
+
+	FILE_LOG(logDEBUG) << "Writing State For Device: " << deviceSerial_ << " to hdf5 file: " << stateFile;
+	H5::H5File H5StateFile(stateFile, H5F_ACC_TRUNC);
+	string rootStr = "";
+	write_state_to_hdf5(H5StateFile, rootStr);
+	//Close the file
+	H5StateFile.close();
+	return 0;
+}
+
+int APS::read_state_file(string & stateFile){
+
+	if (stateFile.length() == 0) {
+		stateFile += "cache_" + deviceSerial_ + ".h5";
+	}
+
+	FILE_LOG(logDEBUG) << "Reading State For Device: " << deviceSerial_ << " from hdf5 file: " << stateFile;
+	H5::H5File H5StateFile(stateFile, H5F_ACC_RDONLY);
+	string rootStr = "";
+	read_state_from_hdf5(H5StateFile, rootStr);
+	//Close the file
+	H5StateFile.close();
+	return 0;
+}
+
+int APS::write_state_to_hdf5(H5::H5File & H5StateFile, const string & rootStr){
+	std::ostringstream tmpStream;
+	//For now assume 4 channel data
+	for(int chanct=0; chanct<4; chanct++){
+		tmpStream.str("");
+		tmpStream << rootStr << "chan_" << chanct+1;
+		FILE_LOG(logDEBUG) << "Writing State For Channel " << chanct + 1 << " to hdf5 file";
+		FILE_LOG(logDEBUG) << "Creating Group: " << tmpStream.str();
+		H5::Group tmpGroup = H5StateFile.createGroup(tmpStream.str());
+		channels_[chanct].write_state_to_hdf5(H5StateFile,tmpStream.str());
+		tmpGroup.close();
+	}
+	return 0;
+}
+
+int APS::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootStr){
+	//For now assume 4 channel data
+	std::ostringstream tmpStream;
+	for(int chanct=0; chanct<4; chanct++){
+		tmpStream.str("");
+		tmpStream << rootStr << "chan_" << chanct+1;
+		FILE_LOG(logDEBUG) << "Reading State For Channel " << chanct + 1<< " from hdf5 file";
+		channels_[chanct].read_state_from_hdf5(H5StateFile,tmpStream.str());
+	}
+	return 0;
+}
+

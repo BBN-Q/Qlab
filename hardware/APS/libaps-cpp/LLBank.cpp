@@ -34,3 +34,22 @@ vector<ULONG> LLBank::get_packed_data(){
 	}
 	return vecOut;
 }
+
+int LLBank::write_state_to_hdf5(H5::H5File & H5StateFile, const string & rootStr){
+	H5::DataType dt = H5::PredType::NATIVE_UINT16;
+	vector2h5array<USHORT>(offset_,  &H5StateFile, "offset",  rootStr + "/offset",  dt);
+	vector2h5array<USHORT>(count_,   &H5StateFile, "count",   rootStr + "/count",   dt);
+	vector2h5array<USHORT>(repeat_,  &H5StateFile, "repeat",  rootStr + "/repeat",  dt);
+	vector2h5array<USHORT>(trigger_, &H5StateFile, "trigger", rootStr + "/trigger", dt);
+	return 0;
+}
+
+int LLBank::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootStr){
+	H5::DataType dt = H5::PredType::NATIVE_UINT16;
+	offset_  = h5array2vector<USHORT>(&H5StateFile, rootStr + "/offset",  dt);
+	count_   = h5array2vector<USHORT>(&H5StateFile, rootStr + "/count",   dt);
+	repeat_  = h5array2vector<USHORT>(&H5StateFile, rootStr + "/repeat",  dt);
+	trigger_ = h5array2vector<USHORT>(&H5StateFile, rootStr + "/trigger", dt);
+	return 0;
+}
+

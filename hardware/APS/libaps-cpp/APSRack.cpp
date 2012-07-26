@@ -198,4 +198,58 @@ unsigned short APSRack::get_channel_trigDelay(const int & deviceID, const int & 
 	return APSs_[deviceID].get_channel_trigDelay(dac);
 }
 
+int APSRack::save_state_files(){
+	// loop through available APS Units and save state
+	for(unsigned int apsct = 0; apsct < APSs_.size(); apsct++) {
+		string stateFileName = ""; // use default file name
+		APSs_[apsct].save_state_file(stateFileName);
+	}
+	return 0;
+}
+
+int APSRack::read_state_files(){
+	// loop through available APS Units and load state
+	for(unsigned int  apsct = 0; apsct < APSs_.size(); apsct++) {
+		string stateFileName = ""; // use default file name
+		APSs_[apsct].read_state_file(stateFileName);
+	}
+	return 0;
+}
+
+int APSRack::save_bulk_state_file(string & stateFile){
+
+	if (stateFile.length() == 0) {
+		stateFile += "cache_APSRack.h5";
+	}
+
+	FILE_LOG(logDEBUG) << "Writing Bulk State File " << stateFile;
+	H5::H5File H5StateFile(stateFile, H5F_ACC_TRUNC);
+	// loop through available APS Units and save state
+	for(unsigned int  apsct = 0; apsct < APSs_.size(); apsct++) {
+		string rootStr = "/";
+		rootStr += APSs_[apsct].deviceSerial_;
+		APSs_[apsct].write_state_to_hdf5(H5StateFile, rootStr);
+	}
+	//Close the file
+	H5StateFile.close();
+	return 0;
+}
+
+int APSRack::read_bulk_state_file(string & stateFile){
+	if (stateFile.length() == 0) {
+		stateFile += "cache_APSRack.h5";
+	}
+	FILE_LOG(logDEBUG) << "Reading Bulk State File " << stateFile;
+	H5::H5File H5StateFile(stateFile, H5F_ACC_RDONLY);
+
+	// loop through available APS Units and load data
+	for(unsigned int  apsct = 0; apsct < APSs_.size(); apsct++) {
+		string rootStr = "/";
+		rootStr += APSs_[apsct].deviceSerial_;
+		APSs_[apsct].read_state_from_hdf5(H5StateFile, rootStr);
+	}
+	//Close the file
+	H5StateFile.close();
+	return 0;
+}
 

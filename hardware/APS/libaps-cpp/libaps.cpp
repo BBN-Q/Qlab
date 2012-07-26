@@ -180,6 +180,23 @@ int set_repeat_mode(int deviceID, int channelNum, int mode) {
 	return APSRack_.set_repeat_mode(deviceID, channelNum, mode);
 }
 
+int save_state_files() {
+	return APSRack_.save_state_files();
+}
+
+int read_state_files() {
+	return APSRack_.read_state_files();
+}
+
+int save_bulk_state_file() {
+	string fileName = "";
+	return APSRack_.save_bulk_state_file(fileName);
+}
+int read_bulk_state_file() {
+	string fileName = "";
+	return APSRack_.read_bulk_state_file(fileName);
+}
+
 #ifdef __cplusplus
 }
 #endif

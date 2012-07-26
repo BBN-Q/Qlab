@@ -33,6 +33,8 @@ public:
 
 	int clear_data();
 
+	int write_state_to_hdf5( H5::H5File & , const string & );
+	int read_state_from_hdf5(H5::H5File & , const string & );
 
 	friend class APS;
 

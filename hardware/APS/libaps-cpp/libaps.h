@@ -73,6 +73,12 @@ EXPORT int get_running(int);
 EXPORT int set_log(char *);
 EXPORT int set_logging_level(int);
 
+EXPORT int save_state_files();
+EXPORT int read_state_files();
+EXPORT int save_bulk_state_file();
+EXPORT int read_bulk_state_file();
+
+
 #ifdef __cplusplus
 }
 #endif

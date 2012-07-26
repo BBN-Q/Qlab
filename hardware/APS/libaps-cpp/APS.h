@@ -114,6 +114,11 @@ private:
 
 	int stream_LL_data();
 	int read_LL_status(const int &);
+
+	int save_state_file(string &);
+	int read_state_file(string &);
+	int write_state_to_hdf5(  H5::H5File & , const string & );
+	int read_state_from_hdf5( H5::H5File & , const string & );
 };
 
 inline FPGASELECT dac2fpga(const int & dac)
