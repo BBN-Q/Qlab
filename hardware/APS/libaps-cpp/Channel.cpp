@@ -128,7 +128,7 @@ int Channel::write_state_to_hdf5(H5::H5File & H5StateFile, const string & rootSt
 
 	// write waveform data
 	FILE_LOG(logDEBUG) << "Writing Waveform: " << rootStr + "/waveformLib";
-	vector2h5array<float>(waveform_,  &H5StateFile, rootStr + "/waveformLib", rootStr + "/waveformLib",   H5::PredType::NATIVE_INT16);
+	vector2h5array<float>(waveform_,  &H5StateFile, rootStr + "/waveformLib", rootStr + "/waveformLib",   H5::PredType::NATIVE_FLOAT);
 
 	//Save the linklist data
 	//First figure our how many banks there are from the attribute
@@ -147,6 +147,16 @@ int Channel::write_state_to_hdf5(H5::H5File & H5StateFile, const string & rootSt
 	FILE_LOG(logDEBUG) << "Creating Attribute: " << "numBanks" << "=" << numBanks;
 	tmpAttribute.write(H5::PredType::NATIVE_UINT16, &numBanks);
 	tmpAttribute.close();
+
+	float offset_;
+	float scale_;
+	bool enabled_;
+	vector<float> waveform_;
+	vector<LLBank> banks_;
+	int trigDelay_;
+
+
+
 	tmpGroup.close();
 
 	std::ostringstream tmpStream;
