@@ -71,7 +71,7 @@ int Channel::set_waveform(const vector<short> & data) {
 
 	//Copy over the waveform data and convert to scaled floats
 	//Waveform length must be a integer multiple of WF_MODULUS so resize to that
-	waveform_.resize(size_t(WF_MODULUS*ceil(data.size()/WF_MODULUS)), 0);
+	waveform_.resize(size_t(WF_MODULUS*ceil(float(data.size())/WF_MODULUS)), 0);
 	for(size_t ct=0; ct<data.size(); ct++){
 		waveform_[ct] = float(data[ct])/MAX_WFAMP;
 	}

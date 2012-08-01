@@ -13,7 +13,7 @@
 #include "test.h"
 
 void test::programSquareWaves() {
-	int waveformLen = 1000;
+	int waveformLen = 1001;
 	int pulseLen = 500;
 	int cnt;
 	int ret;
@@ -25,7 +25,7 @@ void test::programSquareWaves() {
 
 	// load memory
 	for (cnt = 0 ; cnt < 4; cnt++ ) {
-		printf("Loading Waveform: %i ", cnt);
+		printf("Loading Waveform: %i\n", cnt);
 		fflush(stdout);
 		ret = set_waveform_int(0, cnt, pulseMem, waveformLen);
 
@@ -179,6 +179,7 @@ void test::printHelp(){
 	cout << spacing << "-d  Used default DACII bitfile" << endl;
 	cout << spacing << "-0  Redirect log to stdout" << endl;
 	cout << spacing << "-h  Print This Help Message" << endl;
+	cout << spacing << "-wf Program square wave" << endl;
 }
 
 // command options functions taken from:
@@ -243,6 +244,10 @@ int main(int argc, char** argv) {
 	set_waveform_float(0, 0, &waveform.front(), waveform.size());
 
 	// select test to run
+
+	if (cmdOptionExists(argv, argv + argc, "-wf")) {
+		test::programSquareWaves();
+	}
 
 	if (cmdOptionExists(argv, argv + argc, "-t")) {
 		test::doToggleTest();

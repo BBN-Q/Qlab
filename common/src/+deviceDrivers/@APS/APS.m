@@ -590,7 +590,6 @@ classdef APS < hgsetget
             end
 
             % quieter debug info at this point
-            aps.setDebugLevel(4);
             aps.init(forceLoad);
             %aps.setDebugLevel(3);
             fprintf('Current bitfile version: %d\n', aps.readBitFileVersion())

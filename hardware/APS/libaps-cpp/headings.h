@@ -30,7 +30,6 @@ using std::endl;
 using std::map;
 using std::runtime_error;
 
-
 //std::thread
 #include <thread>
 using std::thread;
@@ -71,6 +70,8 @@ using boost::thread;
 #define EXPORT
 #endif
 
+#include "logger.h"
+
 //Simple structure for pairs of address/data checksums
 struct CheckSum {
 	WORD address;
@@ -91,8 +92,6 @@ typedef std::pair<ULONG, UCHAR> PLLAddrData;
 #include "APS.h"
 #include "APSRack.h"
 
-
-#include "logger.h"
 
 //Helper function for hex formating with the 0x out front
 inline std::ios_base&

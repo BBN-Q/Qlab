@@ -1323,7 +1323,6 @@ int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 	 * wfData = signed short waveform data
 	 */
 
-
 	ULONG tmpData, wfLength;
 	int offsetReg, sizeReg, startAddr;
 	//We assume the Channel object has properly formated the waveform
@@ -1345,14 +1344,13 @@ int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 			return -2;
 	}
 
-	//Waveform length used by FPGA must be an integer multiple of WF_MODULUS and is 0 counted
-	wfLength = wfData.size() / WF_MODULUS - 1;
-
 	auto fpga = dac2fpga(dac);
 	if (fpga == INVALID_FPGA) {
 		return -1;
 	}
 
+	//Waveform length used by FPGA must be an integer multiple of WF_MODULUS and is 0 counted
+	wfLength = wfData.size() / WF_MODULUS - 1;
 	FILE_LOG(logINFO) << "Loading Waveform length " << wfData.size() << " (FPGA count = " << wfLength << " ) into FPGA  " << fpga << " DAC " << dac;
 
 	//Write the waveform parameters
