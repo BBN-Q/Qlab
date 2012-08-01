@@ -59,7 +59,7 @@ EXPORT int reset_LL_banks(int, int);
 EXPORT int set_run_mode(int, int, int);
 EXPORT int set_repeat_mode(int, int, int);
 
-EXPORT int load_sequence_file(int, char*);
+//EXPORT int load_sequence_file(int, char*);
 
 EXPORT int clear_channel_data(int);
 

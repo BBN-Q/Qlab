@@ -60,11 +60,11 @@ CC=g++
 
 ifeq ($(target), 32)
 	CFLAGS += -m32
-	LIBS += ftd2xx_32.lib -lhdf5_cpp_32 -lhdf5_32
+	LIBS += -lftd2xx_32 -lhdf5_cpp_32 -lhdf5_32
 	LIBFLAGS=-shared -o libaps.dll
 	TESTLIBS += -laps
 else
-	LIBS += ftd2xx.lib -lhdf5_cpp -lhdf5
+	LIBS += -lftd2xx -lhdf5_cpp -lhdf5
 	LIBFLAGS=-shared -o libaps64.dll
 	TESTLIBS += -laps64
 endif

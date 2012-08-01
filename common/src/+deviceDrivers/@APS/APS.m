@@ -394,10 +394,12 @@ classdef APS < hgsetget
         function load_library(obj)
             
             if strcmp(computer,'PCWIN64')
-                libfname = 'libaps64.dll';
+                libfname = ['build64' filesep 'libaps64.dll'];
                 obj.library_name = 'libaps64';
+                protoFile = @obj.libaps64;
             elseif (ispc())
-                libfname = 'libaps.dll';
+                libfname = ['build32' filesep 'libaps.dll'];
+                protoFile = @obj.libaps32;
             elseif (ismac())
                 libfname = 'libaps.dylib';
             else
@@ -406,7 +408,7 @@ classdef APS < hgsetget
             
             % build library path
             if ~libisloaded(obj.library_name)
-                loadlibrary([obj.library_path libfname], [obj.library_path 'libaps.h']);
+                loadlibrary([obj.library_path libfname], protoFile);
                 calllib(obj.library_name, 'init');
             end
         end
@@ -561,6 +563,11 @@ classdef APS < hgsetget
                 
         sequence = LinkListSequences(sequence)
         
+        %Reference prototype file for fast loading of shared library
+        [methodinfo,structs,enuminfo,ThunkLibName]=libaps64
+        [methodinfo,structs,enuminfo,ThunkLibName]=libaps32
+        
+            
         function UnitTest(forceLoad)
             % work around for not knowing full name
             % of class - cannot use simply APS when in 
