@@ -7,7 +7,7 @@ end
 path = fileparts(mfilename('fullpath'));
 cfg_path = [path '/../cfg/'];
 
-cfg_name = fullfile(cfg_path, 'TimeDomain.cfg');
+cfg_name = fullfile(cfg_path, 'TimeDomain.json');
 if exist(cfg_name, 'file')
     commonSettings = parseParamFile(cfg_name);
 else
@@ -41,11 +41,11 @@ cfg = struct('ExpParams', ExpParams, ...
     'InstrParams', commonSettings.InstrParams, ...
     'SweepParams', Sweeps);
 
-writeCfgFromStruct(fullfile(cfg_path, 'singleShotFidelity.cfg'), cfg);
+writeCfgFromStruct(fullfile(cfg_path, 'singleShotFidelity.json'), cfg);
 
 % create object instance
 if ~exist('qubit2','var')
-    SSMeasurement = expManager.singleShotFidelity(path, fullfile(cfg_path, 'singleShotFidelity.cfg'), 'singleShotFidelity', 1);
+    SSMeasurement = expManager.singleShotFidelity(path, fullfile(cfg_path, 'singleShotFidelity.json'), 'singleShotFidelity', 1);
     SSMeasurement.qubit = qubit1;
 else
     SSMeasurement = expManager.singleShotFidelityMultiQ(path, fullfile(cfg_path, 'singleShotFidelity.cfg'), 'singleShotFidelity', 1);

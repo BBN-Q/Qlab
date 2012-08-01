@@ -45,9 +45,9 @@ sindex = 0;
 for i=1:numDeltaSteps
     sindex=sindex+1;
     patseq{sindex} = {pg.pulse('QId')};
-    for j = 1:numPsQId
+    for j = 0:numPsQId
         patseq{sindex + j} = {pg.pulse('X90p', 'delta', delta(i))};
-        for k = 1:j
+        for k = 0:j
             patseq{sindex + j}(2*k:2*k+1) = {pg.pulse('X90p','delta',delta(i)),pg.pulse('X90m','delta',delta(i))};
         end
         patseq{sindex+j}{2*(j+1)} = pg.pulse('U90p', 'angle', angle, 'delta', delta(i));
@@ -58,11 +58,6 @@ end
 % just a pi pulse for scaling
 calseq={{pg.pulse('Xp')}};
 
-% compiler = ['compileSequence' IQkey];
-% compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 10};
-% if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-%     feval(compiler, compileArgs{:});
-% end
 seqParams = struct(...
     'basename', basename, ...
     'suffix', '', ...
