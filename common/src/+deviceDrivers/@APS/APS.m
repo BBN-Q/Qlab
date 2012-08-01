@@ -82,7 +82,7 @@ classdef APS < hgsetget
         TRIGGER_HARDWARE = 2;
         ALL_DACS = -1;
         
-        DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV', 'A6001nBT'};
+        DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV', 'A6001nBT', 'A6001nBS'};
 
     end
     
