@@ -16,15 +16,13 @@ settings.chan_4.offset = 0;
 settings.samplingRate = 1200;
 settings.triggerSource = 'external';
 %settings.triggerSource = 'internal';
-settings.seqfile = 'U:\AWG\Ramsey\Ramsey-BBNAPS1.h5';
+settings.seqfile = 'U:\AWG\Ramsey\Ramsey-BBNAPS.h5';
 % settings.seqfile = 'U:\APS\Ramsey\RamseyBBNAPS34.h5';
 settings.seqforce = true;
 
 awg = deviceDrivers.APS();
-awg.open(0,1);
-if ~awg.is_open
-    error('Fail')
-end
+awg.connect(0);
+
 awg.stop();
 forceLoadBitFile = 0;
 awg.init(forceLoadBitFile);
@@ -33,5 +31,5 @@ awg.run();
 
 keyboard
 awg.stop();
-awg.close();
+awg.disconnect();
 delete(awg); clear awg

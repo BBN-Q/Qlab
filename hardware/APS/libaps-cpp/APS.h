@@ -48,7 +48,7 @@ public:
 		return write_waveform(dac, channels_[dac].prep_waveform());
 	}
 
-	int set_run_mode(const int &, const bool &);
+	int set_run_mode(const int &, const RUN_MODE &);
 	int set_repeat_mode(const int &, const bool &);
 
 	int add_LL_bank(const int & dac, const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger);

@@ -229,6 +229,10 @@ int APS::load_sequence_file(const string & seqFile){
 		USHORT numBanks;
 		tmpAttribute.read(H5::PredType::NATIVE_UINT16, &numBanks);
 		tmpAttribute.close();
+		tmpAttribute = tmpGroup.openAttribute("repeatCount");
+		USHORT repeatCount;
+		tmpAttribute.read(H5::PredType::NATIVE_UINT16, &repeatCount);
+		tmpAttribute.close();
 		tmpGroup.close();
 
 		//Now loop over the number of banks found and add the bank
@@ -249,7 +253,12 @@ int APS::load_sequence_file(const string & seqFile){
 
 			//Push back the new bank
 			add_LL_bank(chanct, offset, count, repeat, trigger);
+
 		}
+		//TODO: Set the repeat count
+
+		//Set the run mode to sequence
+		set_run_mode(chanct, RUN_SEQUENCE);
 	}
 	//Close the file
 	H5SeqFile.close();
@@ -407,7 +416,7 @@ int APS::stop() {
 
 }
 
-int APS::set_run_mode(const int & dac, const bool & mode) {
+int APS::set_run_mode(const int & dac, const RUN_MODE & mode) {
 /********************************************************************
  * Description : Sets run mode
  *

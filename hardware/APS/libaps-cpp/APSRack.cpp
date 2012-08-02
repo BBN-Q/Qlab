@@ -104,7 +104,7 @@ int APSRack::get_sampleRate(const int & deviceID) const{
 	return APSs_[deviceID].get_sampleRate();
 }
 
-int APSRack::set_run_mode(const int & deviceID, const int & dac, const bool & mode){
+int APSRack::set_run_mode(const int & deviceID, const int & dac, const RUN_MODE & mode){
 	return APSs_[deviceID].set_run_mode(dac, mode);
 }
 

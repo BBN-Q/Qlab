@@ -117,6 +117,7 @@ vector<T> h5array2vector(const H5::H5File * h5File, const string & dataPath, con
   // Read in data from file to memory
    h5Array.read(&vecOut.front(), dt);
 
+   arraySpace.close();
    h5Array.close();
 
    return vecOut;

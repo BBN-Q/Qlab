@@ -86,6 +86,10 @@ int set_waveform_int(int deviceID, int channelNum, short* data, int numPts){
 	return APSRack_.set_waveform(deviceID, channelNum, vector<short>(data, data+numPts));
 }
 
+int load_sequence_file(int deviceID, char * seqFile){
+	return APSRack_.load_sequence_file(deviceID, string(seqFile));
+}
+
 int clear_channel_data(int deviceID) {
 	return APSRack_.clear_channel_data(deviceID);
 }
@@ -173,7 +177,7 @@ int add_LL_bank(int deviceID, int channelNum, int length, unsigned short* offset
 }
 
 int set_run_mode(int deviceID, int channelNum, int mode) {
-	return APSRack_.set_run_mode(deviceID, channelNum, mode);
+	return APSRack_.set_run_mode(deviceID, channelNum, RUN_MODE(mode));
 }
 
 int set_repeat_mode(int deviceID, int channelNum, int mode) {

@@ -159,6 +159,8 @@ typedef enum {INVALID_FPGA=0, FPGA1, FPGA2, ALL_FPGAS} FPGASELECT;
 
 typedef enum {LED_PLL_SYNC=1, LED_RUNNING} LED_MODE;
 
+typedef enum {RUN_WAVEFORM=0, RUN_SEQUENCE} RUN_MODE;
+
 static const int MAX_WFLENGTH = 8192;
 static const int MAX_WFAMP = 8191;
 static const int WF_MODULUS = 4;

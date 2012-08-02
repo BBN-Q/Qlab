@@ -67,7 +67,7 @@ public:
 		return APSs_[deviceID].set_waveform(dac, data);
 	}
 
-	int set_run_mode(const int &, const int &, const bool &);
+	int set_run_mode(const int &, const int &, const RUN_MODE &);
 	int set_repeat_mode(const int &, const int &, const bool & mode);
 
 	int add_LL_bank(const int &, const int &, const vector<USHORT> &, const vector<USHORT> &, const vector<USHORT> &, const vector<USHORT> &);
