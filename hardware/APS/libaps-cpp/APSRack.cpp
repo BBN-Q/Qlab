@@ -11,6 +11,8 @@ APSRack::APSRack() : numDevices_{0} {
 }
 
 APSRack::~APSRack()  {
+	//Close the logging file so we don't leave it dangling
+	fclose(Output2FILE::Stream());
 }
 
 //Initialize the rack by polling for devices and serial numbers
@@ -147,6 +149,9 @@ int APSRack::get_running(const int & deviceID){
 
 int APSRack::set_log(FILE * pFile) {
 	if (pFile) {
+		//Close the current file
+		if(Output2FILE::Stream()) fclose(Output2FILE::Stream());
+		//Assign the new one
 		Output2FILE::Stream() = pFile;
 		return 1;
 	} else {

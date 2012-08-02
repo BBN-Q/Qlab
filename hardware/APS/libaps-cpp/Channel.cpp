@@ -45,8 +45,6 @@ float Channel::get_scale() const{
 }
 
 
-
-
 int Channel::set_waveform(const vector<float> & data) {
 	//Check whether we need to resize the waveform vector
 	if (data.size() > size_t(MAX_WFLENGTH)){
@@ -56,7 +54,7 @@ int Channel::set_waveform(const vector<float> & data) {
 
 	//Copy over the waveform data
 	//Waveform length must be a integer multiple of WF_MODULUS so resize to that
-	waveform_.resize(size_t(WF_MODULUS*ceil(data.size()/WF_MODULUS)), 0);
+	waveform_.resize(size_t(WF_MODULUS*ceil(float(data.size())/WF_MODULUS)), 0);
 	std::copy(data.begin(), data.end(), waveform_.begin());
 
 	return 0;
