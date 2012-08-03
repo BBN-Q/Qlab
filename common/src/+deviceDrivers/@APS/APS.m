@@ -250,7 +250,8 @@ classdef APS < hgsetget
             % APS.loadConfig(filename) 
             %   filename - full path to hdf5 sequence file
             
-            aps.libraryCall('load_sequence_file', [filename 0]);
+            status = aps.libraryCall('load_sequence_file', [filename 0]);
+            assert(status == 0, 'load_sequence_file returned error code %d', status);
         end
             
         function run(aps)
@@ -551,7 +552,6 @@ classdef APS < hgsetget
         
         LinkListUnitTest(sequence, dc_offset)
         LinkListUnitTest2
-        LinkListUnitTestC
                 
         sequence = LinkListSequences(sequence)
         
@@ -595,7 +595,7 @@ classdef APS < hgsetget
             keyboard
             aps.stop();
 
-            aps.loadConfig(fullfile(aps.library_path, 'UnitTest.h5'));
+            aps.loadConfig(fullfile(aps.library_path, '..', 'examples', 'Ramsey.h5'));
             aps.triggerSource = 'external';
             %aps.setDebugLevel(5);
             aps.run();

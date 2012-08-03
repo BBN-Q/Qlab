@@ -12,7 +12,7 @@ classdef APSPattern < handle
         max_ll_length = 512;
         ELL_MIN_COUNT = 3;
         
-        %% ELL Linklist Masks and Contants
+        % ELL Linklist Masks and Contants
         ELL_ADDRESS            = hex2dec('07FF');
         %ELL_TIME_AMPLITUDE     = hex2dec('8000');
         ELL_TIME_AMPLITUDE_BIT = 16;
@@ -35,15 +35,14 @@ classdef APSPattern < handle
     end
     
     methods (Static)
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %% Link List Format Conversion
-        %%
-        %% Converts link lists produced by PaternGen to a format suitable for use with the
-        %% APS. Enforces length of waveform mod 4 = 0. Attempts to adjust padding to
-        %% compenstate.
-        %%
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+        % forward references
+        exportAPSConfig(path, basename, varargin)
+        
+        % Link List Format Conversion
+        %
+        % Converts link lists produced by PaternGen to a format suitable for use with the
+        % APS. Enforces length of waveform mod 4 = 0. Attempts to adjust padding to
+        % compenstate.
         function [xlib, ylib] = buildWaveformLibrary(pattern, useVarients)
             self = APSPattern;
             waveforms = pattern.waveforms;
@@ -168,7 +167,6 @@ classdef APSPattern < handle
             library.waveforms = data;
         end
 
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function paddingLib = preprocessEntry(entry, paddingLib, resetCounts)
             % preprocessEntry marks used waveforms in the library and
             % indicates which padding varients need to be generated
@@ -292,8 +290,8 @@ classdef APSPattern < handle
                 entry.repeat = entry.repeat + pendingLength;
             end
 
-            %% convert from 1 based count to 0 based count
-            %% div by 4 required for APS addresses
+            % convert from 1 based count to 0 based count
+            % div by 4 required for APS addresses
             address = (entryData.offset - 1) / ADDRESS_UNIT;
 
             % offset register format
@@ -350,11 +348,9 @@ classdef APSPattern < handle
 
         end
 
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
         function triggerVal = entryToTrigger(entry)
             % handle trigger values
-            %% Trigger Delay
+            % Trigger Delay
             %  15  14  13   12   11  10 9 8 7 6 5 4 3 2 1 0
             % | Mode |                Delay                |
             % Mode 0 0 = short pulse (0)
@@ -387,7 +383,6 @@ classdef APSPattern < handle
             triggerVal = bitor(triggerVal, triggerMode);
         end
 
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function [wf, banks] = convertLinkListFormat(pattern, useVarients, waveformLibrary, miniLinkRepeat)
             aps = APSPattern;
             if aps.verbose
@@ -406,8 +401,7 @@ classdef APSPattern < handle
                 miniLinkRepeat = 0;
             end
 
-            wf = APSWaveform();
-            wf.data = waveformLibrary.waveforms;
+            wf = waveformLibrary.waveforms;
 
             curBank = 1;
             [banks{curBank} idx] = aps.allocateBank();
@@ -567,7 +561,7 @@ classdef APSPattern < handle
                 end
             end
         end
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
         function [pattern] = linkListToPattern(wf, banks)
             aps = APSPattern;
             if aps.verbose
@@ -625,8 +619,6 @@ classdef APSPattern < handle
                 end
             end
         end
-
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         function [unifiedX unifiedY] = unifySequenceLibraryWaveforms(sequences)
             unifiedX = java.util.Hashtable();
