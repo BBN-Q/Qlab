@@ -7,9 +7,6 @@ from PySide import QtGui, QtCore, QtUiTools
 
 import APS
 
-#libPath = '../../../common/src/+deviceDrivers/@APS/lib/'
-libPath = './'
-bitFilePath = './'
 
 class ThreadSignals(QtCore.QObject):
     message = QtCore.Signal(str)
@@ -27,7 +24,7 @@ class LoadBitFileRunner(QtCore.QRunnable):
     def run(self):
         self.signals.message.emit('Programming FPGA bitfile....')
         self.aps.connect(self.apsNum)
-        self.aps.loadBitFile(self.bitFileName)
+        self.aps.init(True, self.bitFileName)
         self.signals.message.emit('Loaded firmware version {0}'.format(self.aps.readBitFileVersion()))
         self.aps.disconnect()
         self.signals.finished.emit()
@@ -108,7 +105,7 @@ class APScontrol(object):
             tmpLineEdit.validator().setRange(-1,1,4)
             
         #Create an APS class instance for interacting with the instrument
-        self.aps = APS.APS(libPath, bitFilePath)
+        self.aps = APS.APS()
 
         #Enumerate the number of connected APS devices and fill out the combo box
         (numAPS, deviceSerials) = self.aps.enumerate()
@@ -190,19 +187,19 @@ class APScontrol(object):
         #Get the run mode
         if self.ui.sequencerMode.currentIndex() == 0:
             self.printMessage('Continous Mode')
-            settings['runMode'] = self.aps.LL_CONTINUOUS
+            settings['repeatMode'] = self.aps.CONTINUOUS
         else:
             self.printMessage('One Shot Mode')
-            settings['runMode'] = self.aps.LL_ONESHOT
+            settings['repeatMode'] = self.aps.ONESHOT
         
 
         #Check to see how to trigger
         if self.ui.triggerType.currentIndex() == 0:  # Internal (aka Software Trigger)
-            settings['triggerSource'] = self.aps.TRIGGER_SOFTWARE
+            settings['triggerSource'] = 'internal'
             self.printMessage('Sofware trigger.')
         else: # External (aka Software Trigger):
             self.printMessage('Hardware trigger.')
-            settings['triggerSource'] = self.aps.TRIGGER_HARDWARE
+            settings['triggerSource'] = 'external'
         
         
         #Get the four channel mode stuff
@@ -212,12 +209,14 @@ class APScontrol(object):
             settings['chAll']['seqfile'] = self.ui.chAllfile.text()
 
         #Pull out specific channel properties
-        for ct,channelName in enumerate(self.aps.CHANNELNAMES):
+        CHANNELNAMES = ('chan_1','chan_2','chan_3','chan_4')
+        for ct,channelName in enumerate(CHANNELNAMES):
             settings[channelName] = {}
             settings[channelName]['amplitude'] = float(getattr(self.ui,'ch{0}scale'.format(ct+1)).text())
             settings[channelName]['offset'] = float(getattr(self.ui,'ch{0}offset'.format(ct+1)).text())
             settings[channelName]['enabled'] = bool(getattr(self.ui,'ch{0}enable'.format(ct+1)).isChecked())
-            settings[channelName]['seqfile'] = getattr(self.ui,'ch{0}file'.format(ct+1)).text()
+            if not settings['fourChannelMode']:
+                settings[channelName]['seqfile'] = getattr(self.ui,'ch{0}file'.format(ct+1)).text()
             #Do a check whether the file exists
             if (not settings['fourChannelMode']) and settings[channelName]['enabled'] and (not os.path.isfile(settings[channelName]['seqfile'])):
                 QtGui.QMessageBox.warning(self.ui, 'Oops!', 'Channel {0} is enabled with a non-existent file.'.format(ct+1))

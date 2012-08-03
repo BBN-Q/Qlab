@@ -235,7 +235,7 @@ for awg = awgs
         end
         
         % export the file
-        exportAPSConfig(tempdir, basename, ch12seq, ch34seq);
+        APSPattern.exportAPSConfig(tempdir, basename, ch12seq, ch34seq);
         disp(['Moving APS ' awg ' file to destination']);
         pathAPS = ['U:\AWG\' seqParams.basename '\' basename '.h5'];
         movefile([tempdir basename '.h5'], pathAPS);

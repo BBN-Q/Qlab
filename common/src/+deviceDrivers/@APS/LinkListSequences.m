@@ -6,6 +6,17 @@ function output = LinkListSequences(sequence)
 %% And ELL link lists and plots for comparision
 %% May be Called Using Some Varient of deviceDrivers.APS.LinkListFormatUnitTest
 
+%% A number of the sequences in this script are broken as of 5/15/12
+%
+%  1 - Works
+%  2 - Works
+%  3 - No output
+%  4 - Works
+%  5 - crash in pg.build
+%  6 - crash in pg.build
+%  7 - Entry count < 3 no output
+
+
 % Uses PatternGen Link List Generator to develop link lists
 
 if exist('../../common/src/','dir')
@@ -348,7 +359,7 @@ switch sequence
             {pg.pulse('Xp', 'width', pulseLength, 'pType', 'square')}...
             };
         
-        patSeq = {...
+        patseq = {...
             {pg2.pulse('Xp', 'width', pulseLength, 'pType', 'square')}...
             };
         
