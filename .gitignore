@@ -5,6 +5,7 @@
 *.log
 *.pyc
 *.exe
+*.bit
 .DS_Store*
 Thumbs.db
 data/
@@ -13,8 +14,13 @@ cfg/
 cfg/*
 *.cfg
 build/
+build32/
+build64/
 dist/
-*.obj
+# eclipse ignores
 .cproject
 .project
+.pydevproject
+*.prefs
+# sequence data files
 /experiments/muWaveDetection/sequences/*.txt
