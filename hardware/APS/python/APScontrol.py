@@ -7,7 +7,6 @@ from PySide import QtGui, QtCore, QtUiTools
 
 import APS
 
-bitFilePath = '../'
 
 class ThreadSignals(QtCore.QObject):
     message = QtCore.Signal(str)
@@ -106,7 +105,7 @@ class APScontrol(object):
             tmpLineEdit.validator().setRange(-1,1,4)
             
         #Create an APS class instance for interacting with the instrument
-        self.aps = APS.APS(bitFilePath)
+        self.aps = APS.APS()
 
         #Enumerate the number of connected APS devices and fill out the combo box
         (numAPS, deviceSerials) = self.aps.enumerate()
@@ -210,7 +209,8 @@ class APScontrol(object):
             settings['chAll']['seqfile'] = self.ui.chAllfile.text()
 
         #Pull out specific channel properties
-        for ct,channelName in enumerate(self.aps.CHANNELNAMES):
+        CHANNELNAMES = ('chan_1','chan_2','chan_3','chan_4')
+        for ct,channelName in enumerate(CHANNELNAMES):
             settings[channelName] = {}
             settings[channelName]['amplitude'] = float(getattr(self.ui,'ch{0}scale'.format(ct+1)).text())
             settings[channelName]['offset'] = float(getattr(self.ui,'ch{0}offset'.format(ct+1)).text())

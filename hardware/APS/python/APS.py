@@ -13,9 +13,8 @@ class APS (object):
     
     # class properties
     device_id = 0
-    #num_devices = 0
-    #deviceSerials = []
-    bit_file_path = ''
+    device_serial = ''
+
     expected_bit_file_ver = 0x10
     Address = 0
 
@@ -35,14 +34,15 @@ class APS (object):
     ALL_DACS = -1    
     VALID_FREQUENCIES = [1200,600,300,100,40]
 
-    CHANNELNAMES = ('chan_1','chan_2','chan_3','chan_4')
     
     lastSeqFile = ''
     
     #DAC2 devices use a different bit file
-    DAC2Serials = ('A6UQZB7Z', 'A6001nBU', 'A6001ixV', 'A6001nBT')
+    DAC2Serials = ('A6UQZB7Z', 'A6001nBU', 'A6001ixV', 'A6001nBT', 'A6001nBS')
 
-    def __init__(self, bitFilePath = ''):
+    APS_ROOT = '/../'
+
+    def __init__(self):
         #Load the approriate library with some platform/architecture checks
         #Check for 32bit 64bit python from sys.maxsize
         #We do this because we can run 32bit programs on 64bit architectures so
@@ -52,26 +52,27 @@ class APS (object):
         libName = 'libaps' + str64bit + extDict[platform.system()]
         
         scriptPath = os.path.dirname(os.path.realpath( __file__ ))
-        libPath = scriptPath + '/../libaps-cpp/'
+        self.APS_ROOT = scriptPath + self.APS_ROOT
+        
+        if str64bit == '64':
+            libPath = self.APS_ROOT + 'libaps-cpp/build64/'
+        else:
+            libPath = self.APS_ROOT + 'libaps-cpp/build32/'
+        
             
         print 'Loading', libPath  + libName
+        #Add the library folder to the path so we can load all the dependencies
+        os.environ['PATH'] += ';'+libPath
         self.lib = ctypes.cdll.LoadLibrary(libPath  + libName)
         # set up argtypes and restype for functions with arguments that aren't ints or strings
         self.lib.set_channel_scale.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float]
         self.lib.get_channel_scale.restype = ctypes.c_float
         self.lib.set_channel_offset.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float]
         self.lib.get_channel_offset.restype = ctypes.c_float
+
         # initialize DLL
         self.lib.init()
         
-        if len(bitFilePath) == 0:
-            self.bit_file_path = scriptPath + '/../'
-                
-        #Initialize the channel settings
-        # TODO: check contents of this structure are all necessary
-        self.channelSettings = {}
-        for chanName in self.CHANNELNAMES:
-            self.channelSettings[chanName] = {'amplitude':1, 'offset':0, 'enabled':False, 'seqfile':None}
     
     def __del__(self):
         if self.is_open:
@@ -83,18 +84,17 @@ class APS (object):
         #First get the number of devices        
         numDevices = self.lib.get_numDevices()
 
-        self.deviceSerials = []
+        deviceSerials = []
         #Now, for each device, get the associated serial number
         charBuffer = ctypes.create_string_buffer(64)
         for ct in range(numDevices):
             self.lib.get_deviceSerial(ct,charBuffer)
-            self.deviceSerials.append(charBuffer.value)
+            deviceSerials.append(charBuffer.value)
 
-        return numDevices, self.deviceSerials
+        return numDevices, deviceSerials
         
     def connect(self, address):
         # Experiment framework function for connecting to an APS
-        
         if type(address) is int:
             self.open(address)
         else:
@@ -105,10 +105,9 @@ class APS (object):
         self.is_open = 0
         
     def open(self, ID):
-        self.device_id = ID
-        
         # populate list of device id's and serials
-        if ID + 1 > self.enumerate():
+        numDevices, deviceSerials = self.enumerate()
+        if ID + 1 > numDevices:
             print 'APS Device: ', ID, 'not found'
             return 2
 
@@ -117,6 +116,9 @@ class APS (object):
                 self.disconnect()
             else:
                 return 0
+
+        self.device_id = ID
+        self.device_serial = deviceSerials[ID]
         
         val = self.lib.connect_by_ID(self.device_id)
         if val == 0:
@@ -135,18 +137,15 @@ class APS (object):
         ID = self.lib.serial2ID(serialNum);
         return self.open(ID)
         
-        
     def readBitFileVersion(self):
         return self.librarycall('read_bitfile_version')
 
     def getDefaultBitFileName(self):
         #Check whether we have a DACII or APS device
-        if not self.deviceSerials:
-            return None
-        elif self.deviceSerials[self.device_id] in self.DAC2Serials:
-            return os.path.abspath(self.bit_file_path + 'mqco_dac2_latest.bit')
+        if self.device_serial in self.DAC2Serials:
+            return os.path.abspath(self.APS_ROOT + 'bitfiles/mqco_dac2_latest.bit')
         else:
-            return os.path.abspath(self.bit_file_path + 'mqco_aps_latest.bit')        
+            return os.path.abspath(self.APS_ROOT + 'bitfiles/mqco_aps_latest.bit')        
 
     def init(self, force = False, filename = None):
         if not self.is_open:
@@ -289,26 +288,8 @@ class APS (object):
         Load a complete 4 channel configuration file
         '''
 
-        #Clear the old LinkList data
-        self.librarycall('clear_channel_data')
-
-        with h5py.File(filename, 'r') as FID:
-            assert FID.attrs['Version'] == 1.6, 'Oops! This code expects APS HDF5 file version 1.6.'
-
-            #Look for the 4 channel data
-            for ct,channel in enumerate(self.CHANNELNAMES):
-                if channel in FID.keys():
-                    tmpChan = FID[channel]
-                    # ct is zero indexed, so add one
-                    self.loadWaveform(ct+1, tmpChan['waveformLib'].value)
-
-                    tmpLLData = tmpChan['linkListData']
-                    
-                    for bank in tmpLLData.values():
-                        self.add_LL_bank(ct+1,bank['offset'].value, bank['count'].value, bank['repeat'].value, bank['trigger'].value, int(bank.attrs['length'][0]))
-                        
-                    self.setLinkListRepeat(ct+1, int(tmpLLData.attrs['repeatCount'][0]))
-                    self.setRunMode(ct+1, self.RUN_SEQUENCE)
+        #Pass through to C
+        self.librarycall('load_sequence_file', str(filename));
 
     def load_waveform_from_file(self, ch, filename):
         '''
@@ -324,24 +305,20 @@ class APS (object):
         '''
         
         #First load all the channel offsets, scalings, enabled
-        for ch, channelName in enumerate(self.CHANNELNAMES):
+        CHANNELNAMES = ('chan_1','chan_2','chan_3','chan_4')
+        for ch, channelName in enumerate(CHANNELNAMES):
             self.set_amplitude(ch+1, settings[channelName]['amplitude'])
             self.set_offset(ch+1, settings[channelName]['offset'])
             self.set_enabled(ch+1, settings[channelName]['enabled'])
             self.setRepeatMode(ch+1, settings['repeatMode'])
-            if settings[channelName]['seqfile']:
+            if 'seqfile' in settings[channelName] and settings[channelName]['seqfile']:
                 self.load_waveform_from_file(ch+1, settings[channelName]['seqfile'])
        
-        print('Got here')
         #Load the sequence file information
         if 'chAll' in settings and settings['chAll']['seqfile']:
-            print('should not get here')
             self.load_config(settings['chAll']['seqfile'])
-        print('got here2')
         self.samplingRate = settings['frequency']
-        print('set sampling rate')
         self.triggerSource = settings['triggerSource']
-        print('set trigger source')
  
     def run(self):
         '''
@@ -381,9 +358,7 @@ class APS (object):
         
         self.samplingRate = 1200
 
-        scriptPath = os.path.dirname(os.path.realpath( __file__ ))
-        libPath = scriptPath + '/../libaps-cpp/'
-        aps.load_config(libPath + '/UnitTest.h5');
+        aps.load_config(self.APS_ROOT + '/libaps-cpp/UnitTest.h5');
         aps.triggerSource = 'external';
         self.run()
         raw_input("Press Enter to continue...")
