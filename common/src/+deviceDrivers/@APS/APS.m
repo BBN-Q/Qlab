@@ -408,6 +408,7 @@ classdef APS < hgsetget
                     protoFile = @obj.libaps64;
                 case 'PCWIN'
                     libfname = [filesep 'build32' filesep 'libaps.dll'];
+                    obj.library_name = 'libaps';
                     protoFile = @obj.libaps32;
                 case 'MACI64'
                     libfname = 'libaps.dylib';
