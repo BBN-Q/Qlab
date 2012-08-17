@@ -28,17 +28,14 @@ function setInstrument(obj, amp, phase)
             timeStep = 1/samplingRate;
             tpts = timeStep*(0:(waveform_length-1));
 
-            obj.awg.stop();
-            
             % scale I waveform
             obj.awg.setAmplitude(I_channel, amp);
             
             % generate new Q waveform with phase shift
             qwf = -0.5 * sin(fssb.*tpts + phase);
-            % TODO update when APS can take normalized waveform data
-            obj.awg.loadWaveform(Q_channel, round(8191*qwf));
 
-            obj.awg.run();
-            pause(0.2);
+            obj.awg.loadWaveform(Q_channel, qwf);
+
+            pause(0.1);
     end
 end

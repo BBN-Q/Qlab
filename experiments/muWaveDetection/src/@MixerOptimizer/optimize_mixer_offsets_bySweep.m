@@ -145,13 +145,9 @@ sa.peakAmplitude();
                 awg.operationComplete();
                 pause(0.1);
             case 'deviceDrivers.APS'
-                awg.stop();
-                
                 obj.awg.setOffset(awg_I_channel, vertex.a);
                 obj.awg.setOffset(awg_Q_channel, vertex.b);
-                
-                obj.awg.run();
-                pause(0.2);
+                pause(0.1);
         end
         
     end

@@ -151,7 +151,7 @@ classdef MixerOptimizer < expManager.expBase
                     obj.awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
                 case 'deviceDrivers.APS'
 
-                    %Setup a waveform with a 1200 sinusoid for both
+                    %Setup a SSB waveform with a 1200 pt sinusoid for both
                     %channels
                     samplingRate = 1.2e9;
                     waveformLength = 1200;
@@ -163,18 +163,22 @@ classdef MixerOptimizer < expManager.expBase
                     obj.awg.setOffset(awg_I_channel, i_offset);
                     % TODO: update APS driver to accept normalized
                     % waveforms in the range (-1, 1)
-                    obj.awg.loadWaveform(awg_I_channel, round(iwf*8191));
+                    obj.awg.loadWaveform(awg_I_channel, iwf);
  
                     % q waveform
                     qwf = -0.5 * sin(2*pi*fssb.*tpts);
                     obj.awg.setOffset(awg_Q_channel, q_offset);
                     % same TODO item here as above
-                    obj.awg.loadWaveform(awg_Q_channel, round(qwf*8191));
+                    obj.awg.loadWaveform(awg_Q_channel, qwf);
                     
                     obj.awg.triggerSource = 'internal';
                     
-                    obj.awg.setLinkListMode(awg_I_channel, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
-                    obj.awg.setLinkListMode(awg_Q_channel, obj.awg.LL_DISABLE, obj.awg.LL_CONTINUOUS);
+                    %Set all channels to continuous waveform to avoid a
+                    %conflict betweent the two FPGAs
+                    for ct = 1:4
+                       obj.awg.setRepeatMode(ct, obj.awg.CONTINUOUS);
+                       obj.awg.setRunMode(ct, obj.awg.RUN_WAVEFORM);
+                    end
                     
                     unusedChannels = setdiff(1:4, [awg_I_channel, awg_Q_channel]);
                     obj.awg.setEnabled(unusedChannels(1), 0);
