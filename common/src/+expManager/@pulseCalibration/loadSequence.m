@@ -2,7 +2,7 @@ function loadSequence(obj, paths, qubit)
     % loadSequence(paths)
     % Load a set of pattern files onto one or more AWGs
     
-    if length(paths) > length(obj.awg)
+    if length(paths) < length(obj.awg)
         error('Must provide a sequence path for each AWG');
     end
     
@@ -12,7 +12,7 @@ function loadSequence(obj, paths, qubit)
     obj.awgParams{obj.targetAWGIdx}.(['chan_' num2str(IQchannels.i)]).offset = obj.pulseParams.i_offset;
     obj.awgParams{obj.targetAWGIdx}.(['chan_' num2str(IQchannels.q)]).offset = obj.pulseParams.q_offset;
     
-    for i = 1:length(paths)
+    for i = 1:length(obj.awg)
         % load sequence
         params = obj.awgParams{i};
         awg = obj.awg{i};
