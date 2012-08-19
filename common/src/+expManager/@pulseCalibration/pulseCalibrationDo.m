@@ -145,7 +145,7 @@ if ExpParams.DoDRAGCal
 
     % analyze for the best value to two digits
     numPsQId = 8; % number pseudoidentities
-    deltas = linspace(-1,1,11)';
+    deltas = linspace(-2,0,11)';
     
     obj.pulseParams.delta = round(100*obj.analyzeSlopes(data, numPsQId, deltas))/100;
     
@@ -166,15 +166,15 @@ if ExpParams.DoSPAMCal
     
     % analyze for the best value to two digits
     numPsQId = 10; % number pseudoidentities
-    angleShifts = (pi/180)*(-2:0.5:2)';
-    deltaSkew = round(100*obj.analyzeSlopes(data, numPsQId, angleShifts))/100;
+    angleShifts = (-2:0.5:2)';
+    phaseSkew = round(100*obj.analyzeSlopes(data, numPsQId, angleShifts))/100;
     title('SPAM Phase Skew Calibration');
-    text(10, 0.8, sprintf('Found best \Delta Skew of %.2f', deltaSkew), 'FontSize', 12);
+    text(10, 0.8, sprintf('Found best phase Skew of %.2f', phaseSkew), 'FontSize', 12);
     
     tmpT = obj.pulseParams.T;
     ampFactor = tmpT(1,1);
     curSkew = atand(tmpT(1,2)/tmpT(1,1));
-    curSkew = curSkew - deltaSkew;
+    curSkew = curSkew - phaseSkew;
     obj.pulseParams.T = [ampFactor, ampFactor*tand(curSkew); 0, secd(curSkew)];
 end
 

@@ -27,15 +27,16 @@ for ct = 1:numParams
     
     %Create the fitted values and plot
     fitYs = fitResult(1)*(1:numPsQId) + fitResult(2);
-    plot(h, (ct-1)*(numPsQId+1)+2:ct*(numPsQId+1), fitYs, 'r');
+    tmpLine = plot(h, (ct-1)*(numPsQId+1)+2:ct*(numPsQId+1), fitYs, 'r', 'LineWidth', 2);
 
     %Sort out whether the fit was any good and use the Rsquared to filter
     sse = sum((fitYs-tmpData).^2);
     Rsquared = (sse/varEstimate)/(numPsQId-2);
-    if abs(1-Rsquared) < 1.0
+    if Rsquared < 10 %arbitrary heuristic that seems to match a good fit by eye
         slopes(ct) = fitResult(1);
     else
         slopes(ct) = nan;
+        set(tmpLine, 'LineStyle', '--');
     end
 end
 

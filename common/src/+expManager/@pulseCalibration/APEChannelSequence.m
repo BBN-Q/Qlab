@@ -34,26 +34,27 @@ pg = PatternGen(...
 angle = pi/2;
 numPsQId = 8; % number pseudoidentities
 numDeltaSteps = 11; %number of drag parameters (11)
-deltamax=1.0;
-deltamin=-1.0;
+deltamax=0.0;
+deltamin=-2.0;
 delta=linspace(deltamin,deltamax,numDeltaSteps);
 
-sindex = 0;
+sindex = 1;
 % QId
 % N applications of psuedoidentity
 % X90p, (sequence of +/-X90p), U90p
 % (1-numPsQId) of +/-X90p
-for i=1:numDeltaSteps
-    sindex=sindex+1;
+for ct=1:numDeltaSteps
+    curDelta = delta(ct);
     patseq{sindex} = {pg.pulse('QId')};
+    sindex=sindex+1;
     for j = 0:numPsQId
-        patseq{sindex + j} = {pg.pulse('X90p', 'delta', delta(i))};
-        for k = 0:j
-            patseq{sindex + j}(2*k:2*k+1) = {pg.pulse('X90p','delta',delta(i)),pg.pulse('X90m','delta',delta(i))};
+        patseq{sindex + j} = {pg.pulse('X90p', 'delta', curDelta)};
+        for k = 1:j
+            patseq{sindex + j}(2*k:2*k+1) = {pg.pulse('X90p','delta',curDelta),pg.pulse('X90m','delta',curDelta)};
         end
-        patseq{sindex+j}{2*(j+1)} = pg.pulse('U90p', 'angle', angle, 'delta', delta(i));
+        patseq{sindex+j}{end+1} = pg.pulse('U90p', 'angle', angle, 'delta', curDelta);
     end
-    sindex = sindex + numPsQId;
+    sindex = sindex + numPsQId+1;
 end
 
 % just a pi pulse for scaling
