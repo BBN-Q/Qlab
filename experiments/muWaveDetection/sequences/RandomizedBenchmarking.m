@@ -89,12 +89,6 @@ compiler = ['compileSequence' IQkey];
 % 
 % end
 
-
-% compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot};
-% if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-%     feval(compiler, compileArgs{:});
-% end
-
 seqParams = struct(...
     'basename', basename, ...
     'suffix', '', ...

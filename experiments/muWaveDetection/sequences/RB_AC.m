@@ -16,7 +16,7 @@ end
 
 basename = 'RB';
 fixedPt = 10000; %15000
-cycleLength = 19000; %19000
+cycleLength = 13000; %19000
 nbrRepeats = 1;
 
 % load config parameters from file
@@ -60,11 +60,22 @@ end
 
 calseq = {{pg.pulse('QId')},{pg.pulse('QId')},{pg.pulse('Xp')},{pg.pulse('Xp')}};
 
-compiler = ['compileSequence' IQkey];
-compileArgs = {basename, pg, patSeqs, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 43};
-if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-    feval(compiler, compileArgs{:});
-end
+seqParams = struct(...
+    'basename', basename, ...
+    'suffix', '', ...
+    'numSteps', 1, ...
+    'nbrRepeats', nbrRepeats, ...
+    'fixedPt', fixedPt, ...
+    'cycleLength', cycleLength, ...
+    'measLength', 2000);
+patternDict = containers.Map();
+if ~isempty(calseq), calseq = {calseq}; end
+patternDict(IQkey) = struct('pg', pg, 'patseq', {patSeqs}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
+measChannels = {'M1'};
+awgs = {'TekAWG', 'BBNAPS'};
+
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
+
 
     function outPulse = CliffPulse(cliffNum)
         %Create a pulse from a clifford Number.  Cliffords are numbered with 1 based indexing:
@@ -75,7 +86,7 @@ end
         xpulse = Xp(1,0);
         nutFreq = 0.5/(sum(xpulse)/pg.samplingRate);
         
-        defaultParams = {'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', 0};
+        defaultParams = {'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', -1.6};
         
         switch cliffNum
             case 1

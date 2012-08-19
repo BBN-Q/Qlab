@@ -1,21 +1,15 @@
-function RamseyCalSequence(varargin)
-
-%varargin assumes qubit and then makePlot
-qubit = 'q1';
-makePlot = true;
-
-if length(varargin) == 1
-    qubit = varargin{1};
-elseif length(varargin) == 2
-    qubit = varargin{1};
-    makePlot = varargin{2};
-elseif length(varargin) > 2
-    error('Too many input arguments.')
-end
+function RamseyCalSequence(qubit, pulseSpacings, pulsePhases, makePlot, plotSeqNum)
+%RamseyCalSequence Ramsey fringes with variable pulse spacing: pi/2-tau-pi/2
+% RamseyCalSequence(qubit, pulseSpacings, pulsePhases, makePlot, plotSeqNum)
+%   qubit - target qubit e.g. 'q1'
+%   pulseSpacings - array of pulse spacings to scan over e.g. 60*(1:200)
+%   pulsePhases - array or float of final pulse phases
+%   makePlot - whether to plot a sequence or not (boolean)
+%   plotSeqNum (optional) - which sequence to plot (int)
 
 basename = 'Ramsey';
-fixedPt = 34000; %40000
-cycleLength = 37000; %44000
+fixedPt = 15000; %40000
+cycleLength = 17000; %44000
 nbrRepeats = 1;
 
 % load config parameters from file
@@ -27,15 +21,10 @@ IQkey = qubitMap.(qubit).IQkey;
 SSBFreq = 0e6;
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T,'bufferDelay',params.(IQkey).bufferDelay,'bufferReset',params.(IQkey).bufferReset,'bufferPadding',params.(IQkey).bufferPadding, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
-numsteps = 200;
-stepsize = 60; %24 (300)
-delaypts = 0:stepsize:(numsteps-1)*stepsize;
-anglepts = 0:pi/4:(numsteps-1)*pi/4;
-anglepts = 0;
 patseq = {{...
     pg.pulse('X90p'), ...
-    pg.pulse('QId', 'width', delaypts), ...
-    pg.pulse('U90p', 'angle', anglepts)
+    pg.pulse('QId', 'width', pulseSpacings), ...
+    pg.pulse('U90p', 'angle', pulsePhases)
    }};
 calseq = {{pg.pulse('QId')}, {pg.pulse('QId')}, {pg.pulse('Xp')}, {pg.pulse('Xp')}};
 
@@ -49,7 +38,7 @@ calseq = {{pg.pulse('QId')}, {pg.pulse('QId')}, {pg.pulse('Xp')}, {pg.pulse('Xp'
 seqParams = struct(...
     'basename', basename, ...
     'suffix', '', ...
-    'numSteps', numsteps, ...
+    'numSteps', length(pulseSpacings), ...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
@@ -60,5 +49,9 @@ patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'cha
 measChannels = {'M1'};
 awgs = {'TekAWG', 'BBNAPS'};
 
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
+if ~makePlot
+    plotSeqNum = 0;
+end
+
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, plotSeqNum);
 end

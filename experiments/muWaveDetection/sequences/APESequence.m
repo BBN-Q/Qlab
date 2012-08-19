@@ -1,22 +1,15 @@
-function APESequence(varargin)
-
-%varargin assumes qubit and then makePlot
-qubit = 'q1';
-makePlot = true;
-
-if length(varargin) == 1
-    qubit = varargin{1};
-elseif length(varargin) == 2
-    qubit = varargin{1};
-    makePlot = varargin{2};
-elseif length(varargin) > 2
-    error('Too many input arguments.')
-end
+function APESequence(qubit, deltaScan, makePlot, plotSeqNum)
+%APESequence Calibrate the DRAG parameter through a flip-flop seuquence.
+% APESequence(qubit, deltaScan, makePlot, plotSeqNum)
+%   qubit - target qubit e.g. 'q1'
+%   deltaScan - delta parameter to scan over e.g. linspace(-1,1,11)
+%   makePlot - whether to plot a sequence or not (boolean)
+%   plotSeqNum (optional) - which sequence to plot (int)
 
 basename = 'APE';
 fixedPt = 6000;
 cycleLength = 8000;
-nbrRepeats = 2;
+nbrRepeats = 1;
 
 % load config parameters from files
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
@@ -31,28 +24,26 @@ pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', 
 
 
 angle = pi/2;
-numPsQId = 4; % number pseudoidentities
-numDeltaSteps = 11; %number of drag parameters (11)
-deltamax=1.0;
-deltamin=-1.0;
-delta=linspace(deltamin,deltamax,numDeltaSteps);
+numPsQId = 8; % number pseudoidentities
+numDeltaSteps = length(deltaScan); %number of drag parameters (11)
 
-sindex = 0;
+sindex = 1;
 % QId
 % N applications of psuedoidentity
 % X90p, (sequence of +/-X90p), U90p
 % (1-numPsQId) of +/-X90p
-for i=1:numDeltaSteps
-    sindex=sindex+1;
+for ct=1:numDeltaSteps
+    curDelta = deltaScan(ct);
     patseq{sindex} = {pg.pulse('QId')};
+    sindex=sindex+1;
     for j = 0:numPsQId
-        patseq{sindex + j} = {pg.pulse('X90p', 'delta', delta(i))};
-        for k = 0:j
-            patseq{sindex + j}(2*k:2*k+1) = {pg.pulse('X90p','delta',delta(i)),pg.pulse('X90m','delta',delta(i))};
+        patseq{sindex + j} = {pg.pulse('X90p', 'delta', curDelta)};
+        for k = 1:j
+            patseq{sindex + j}(2*k:2*k+1) = {pg.pulse('X90p','delta',curDelta),pg.pulse('X90m','delta',curDelta)};
         end
-        patseq{sindex+j}{2*(j+1)} = pg.pulse('U90p', 'angle', angle, 'delta', delta(i));
+        patseq{sindex+j}{end+1} = pg.pulse('U90p', 'angle', angle, 'delta', curDelta);
     end
-    sindex = sindex + numPsQId;
+    sindex = sindex + numPsQId+1;
 end
 
 % just a pi pulse for scaling
@@ -72,5 +63,9 @@ patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'cha
 measChannels = {'M1'};
 awgs = {'TekAWG', 'BBNAPS'};
 
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
+if ~makePlot
+    plotSeqNum = 0;
+end
+
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, plotSeqNum);
 end

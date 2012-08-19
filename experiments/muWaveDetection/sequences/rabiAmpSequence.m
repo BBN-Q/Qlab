@@ -1,24 +1,16 @@
-function rabiAmpSequence(varargin)
+function rabiAmpSequence(qubit, amps, makePlot, plotSeqNum)
+%rabiAmpSequence Rabi nutations by varying pulse amplitude.
+% rabiAmpSequence(qubit, amps, makePlot, plotSeqNum)
+%   qubit - target qubit e.g. 'q1'
+%   amps - pulse amplitudes to scan over e.g. -8000:200:8000
+%   makePlot - whether to plot a sequence or not (boolean)
+%   plotSeqNum (optional) - which sequence to plot (int)
 
-%varargin assumes qubit and then makePlot
-qubit = 'q1';
-makePlot = true;
-
-if length(varargin) == 1
-    qubit = varargin{1};
-elseif length(varargin) == 2
-    qubit = varargin{1};
-    makePlot = varargin{2};
-elseif length(varargin) > 2
-    error('Too many input arguments.')
-end
 
 basename = 'Rabi';
 fixedPt = 1000;
 cycleLength = 3000;
-numsteps = 81; % 81 or 100
 nbrRepeats = 1;
-stepsize = 200; % 200 or 80
 
 % load config parameters from files
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
@@ -30,8 +22,6 @@ IQkey = qubitMap.(qubit).IQkey;
 SSBFreq = 0e6;
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T,'bufferDelay',params.(IQkey).bufferDelay,'bufferReset',params.(IQkey).bufferReset,'bufferPadding',params.(IQkey).bufferPadding, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
-amps = -((numsteps-1)/2)*stepsize:stepsize:((numsteps-1)/2)*stepsize;
-% amps = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {{pg.pulse('Xtheta', 'amp', amps)}};
 calseq = [];
 
@@ -39,7 +29,7 @@ calseq = [];
 seqParams = struct(...
     'basename', basename, ...
     'suffix', '', ...
-    'numSteps', numsteps, ...
+    'numSteps', length(amps), ...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
@@ -50,6 +40,9 @@ patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'cha
 measChannels = {'M1'};
 awgs = {'TekAWG', 'BBNAPS'};
 
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
+if ~makePlot
+    plotSeqNum = 0;
+end
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, plotSeqNum);
 
 end

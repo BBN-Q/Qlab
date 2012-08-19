@@ -28,12 +28,12 @@ IQkey = qubitMap.(qubit).IQkey;
 SSBFreq = 0e6;
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T,'bufferDelay',params.(IQkey).bufferDelay,'bufferReset',params.(IQkey).bufferReset,'bufferPadding',params.(IQkey).bufferPadding, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
-numsteps = 110; %150
-stepsize = 60;
+numsteps = 100; %150
+stepsize = 240;
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 % anglepts = 0:pi/4:(numsteps-1)*pi/4;
 anglepts = 0;
-numPulses = 5;
+numPulses = 1;
 HahnBlock = {pg.pulse('QId', 'width', delaypts), pg.pulse('Yp'), pg.pulse('QId', 'width', delaypts)};
 patseq = {[...
     {pg.pulse('X90p')}, ...

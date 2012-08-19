@@ -1,21 +1,14 @@
-function T1Sequence(varargin)
-
-%varargin assumes qubit and then makePlot
-qubit = 'q1';
-makePlot = true;
-
-if length(varargin) == 1
-    qubit = varargin{1};
-elseif length(varargin) == 2
-    qubit = varargin{1};
-    makePlot = varargin{2};
-elseif length(varargin) > 2
-    error('Too many input arguments.')
-end
+function T1Sequence(qubit, pulseSpacings, makePlot, plotSeqNum)
+%T1Sequence T1 measurement by inversion-recovery.
+% T1Sequence(qubit, pulseSpacings, makePlot, plotSeqNum)
+%   qubit - target qubit e.g. 'q1'
+%   pulseSpacings - pulse spacings to scan over e.g. 120*(1:150);
+%   makePlot - whether to plot a sequence or not (boolean)
+%   plotSeqNum (optional) - which sequence to plot (int)
 
 basename = 'T1';
-fixedPt = 64000; %40000
-cycleLength = 67000; %44000
+fixedPt = 20000; %40000
+cycleLength = 23000; %44000
 nbrRepeats = 1;
 
 % load config parameters from file
@@ -28,12 +21,9 @@ IQkey = qubitMap.(qubit).IQkey;
 SSBFreq = 0e6;
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T,'bufferDelay',params.(IQkey).bufferDelay,'bufferReset',params.(IQkey).bufferReset,'bufferPadding',params.(IQkey).bufferPadding, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
-numsteps = 200 ; %250
-stepsize = 240; %24
-delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {{...
     pg.pulse('Xp'), ...
-    pg.pulse('QId', 'width', delaypts) ...
+    pg.pulse('QId', 'width', pulseSpacings) ...
     }};
 
 calseq = {{pg.pulse('QId')}, {pg.pulse('QId')}, {pg.pulse('Xp')}, {pg.pulse('Xp')}};
@@ -48,7 +38,7 @@ calseq = {{pg.pulse('QId')}, {pg.pulse('QId')}, {pg.pulse('Xp')}, {pg.pulse('Xp'
 seqParams = struct(...
     'basename', basename, ...
     'suffix', '', ...
-    'numSteps', numsteps, ...
+    'numSteps', length(pulseSpacings), ...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
@@ -59,5 +49,8 @@ patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'cha
 measChannels = {'M1'};
 awgs = {'TekAWG', 'BBNAPS'};
 
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
+if ~makePlot
+    plotSeqNum = 0;
+end
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, plotSeqNum);
 end
