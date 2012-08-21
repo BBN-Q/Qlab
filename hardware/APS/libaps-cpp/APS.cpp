@@ -200,6 +200,17 @@ int APS::clear_channel_data() {
 	for (auto & ch : channels_) {
 		ch.clear_data();
 	}
+	// clear waveform length registers
+	write(ALL_FPGAS, FPGA_OFF_CHA_SIZE, 0, true);
+	write(ALL_FPGAS, FPGA_OFF_CHB_SIZE, 0, true);
+
+	// clear LL length registers
+	write(ALL_FPGAS, FPGA_OFF_CHA_LL_A_CTRL, 0, true);
+	write(ALL_FPGAS, FPGA_OFF_CHA_LL_B_CTRL, 0, true);
+	write(ALL_FPGAS, FPGA_OFF_CHB_LL_A_CTRL, 0, true);
+	write(ALL_FPGAS, FPGA_OFF_CHB_LL_B_CTRL, 0, true);
+	flush();
+
 	return 0;
 }
 
@@ -214,15 +225,14 @@ int APS::load_sequence_file(const string & seqFile){
 
 		const vector<string> chanStrs = {"chan_1", "chan_2", "chan_3", "chan_4"};
 		//For now assume 4 channel data
+		//Reset the channel data
+		clear_channel_data();
 		//TODO: check the channelDataFor attribute
 		for(int chanct=0; chanct<4; chanct++){
-			//Reset the channel data
-			channels_[chanct].clear_data();
-
 			//Load the waveform library first
 			string chanStr = chanStrs[chanct];
 			vector<short> tmpVec = h5array2vector<short>(&H5SeqFile, chanStr + "/waveformLib", H5::PredType::NATIVE_INT16);
-			APS::set_waveform(chanct, tmpVec);
+			set_waveform(chanct, tmpVec);
 
 			//Load the linklist data
 			//First figure our how many banks there are from the attribute
