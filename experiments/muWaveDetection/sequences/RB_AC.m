@@ -31,7 +31,7 @@ SSBFreq = 0e6;
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
 % load in random Clifford sequences from text file
-FID = fopen('RB_ISeqs.txt');
+FID = fopen('RB_ISeqs_AC.txt');
 if ~FID
     error('Could not open Clifford sequence list')
 end
@@ -86,7 +86,7 @@ compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
         xpulse = Xp(1,0);
         nutFreq = 0.5/(sum(xpulse)/pg.samplingRate);
         
-        defaultParams = {'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', -1.6};
+        defaultParams = {'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', -1.8};
         
         switch cliffNum
             case 1

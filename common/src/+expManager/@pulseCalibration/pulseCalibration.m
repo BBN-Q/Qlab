@@ -71,8 +71,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             % homodyneMeasurement calls homodyneDetection2DDo and returns
             % the amplitude data
             
-            % set digitizer with the appropriate number of segments (why do
-            % we have to set it in so many places)?
+            % set digitizer with the appropriate number of segments
             obj.scopeParams.averager.nbrSegments = nbrSegments;
             obj.scope.averager = obj.scopeParams.averager;
 

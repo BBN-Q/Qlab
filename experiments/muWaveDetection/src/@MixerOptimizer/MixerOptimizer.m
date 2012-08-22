@@ -151,6 +151,7 @@ classdef MixerOptimizer < expManager.expBase
                     obj.awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
                 case 'deviceDrivers.APS'
 
+                    obj.awg.stop();
                     %Setup a SSB waveform with a 1200 pt sinusoid for both
                     %channels
                     samplingRate = 1.2e9;
@@ -183,6 +184,8 @@ classdef MixerOptimizer < expManager.expBase
                     unusedChannels = setdiff(1:4, [awg_I_channel, awg_Q_channel]);
                     obj.awg.setEnabled(unusedChannels(1), 0);
                     obj.awg.setEnabled(unusedChannels(2), 0);
+                    
+                    obj.awg.run();
             end
             
         end

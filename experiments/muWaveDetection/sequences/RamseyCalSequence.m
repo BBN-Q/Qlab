@@ -28,13 +28,6 @@ patseq = {{...
    }};
 calseq = {{pg.pulse('QId')}, {pg.pulse('QId')}, {pg.pulse('Xp')}, {pg.pulse('Xp')}};
 
-% compiler = ['compileSequence' IQkey];
-% compileArgs = {basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot, 39};
-% if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-%     feval(compiler, compileArgs{:});
-% else
-%     error('Unable to find compiler for IQkey: %s',IQkey) 
-% end
 seqParams = struct(...
     'basename', basename, ...
     'suffix', '', ...

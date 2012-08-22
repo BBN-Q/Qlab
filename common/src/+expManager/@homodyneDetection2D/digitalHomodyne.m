@@ -46,7 +46,7 @@ function [DI DQ DIQ] =  digitalHomodyne(varargin)
     %The signal is a 2D array with acquisition along a column
     
     %Create the weighted reference signal
-    refSignal = (1/integrationPts)*exp(1i*2*pi*IFfreq*sampInterval*(1:1:size(ch1Signal,1)))';
+    refSignal = (2/integrationPts)*exp(1i*2*pi*IFfreq*sampInterval*(1:1:size(ch1Signal,1)))';
     
     %Demodulate and filter
     if nargin == 5
