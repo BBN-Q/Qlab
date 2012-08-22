@@ -24,10 +24,10 @@ channelNames = keys(patternDict);
 tempPatterns = patternDict(channelNames{1});
 % note: this breaks if the patterns have different lengths, may want to
 % assert this
-nbrPatterns = length(tempPatterns.patseq)*seqParams.nbrRepeats;
-calPatterns = length(tempPatterns.calseq)*seqParams.nbrRepeats;
+nbrPatterns = length(tempPatterns.patseq);
+calPatterns = length(tempPatterns.calseq);
 numSegments = nbrPatterns*seqParams.numSteps + calPatterns;
-fprintf('Number of sequences: %i\n', numSegments);
+fprintf('Number of sequences: %i\n', numSegments*seqParams.nbrRepeats);
 
 % inject measurement sequences
 for measCh = measChannels
@@ -81,7 +81,7 @@ for IQkey = channelNames
 
         for n = 1:nbrPatterns;
             for stepct = 1:seqParams.numSteps
-                [patx paty] = pg.getPatternSeq(patseq{floor((n-1)/seqParams.nbrRepeats)+1}, stepct, ChParams.delay, seqParams.fixedPt);
+                [patx paty] = pg.getPatternSeq(patseq{n}, stepct, ChParams.delay, seqParams.fixedPt);
 
                 chI((n-1)*seqParams.numSteps + stepct, :) = patx + ChParams.offset;
                 chQ((n-1)*seqParams.numSteps + stepct, :) = paty + ChParams.offset;
@@ -90,7 +90,7 @@ for IQkey = channelNames
         end
 
         for n = 1:calPatterns;
-            [patx paty] = pg.getPatternSeq(calseq{floor((n-1)/seqParams.nbrRepeats)+1}, 1, ChParams.delay, seqParams.fixedPt);
+            [patx paty] = pg.getPatternSeq(calseq{n}, 1, ChParams.delay, seqParams.fixedPt);
 
             chI(nbrPatterns*seqParams.numSteps + n, :) = patx + ChParams.offset;
             chQ(nbrPatterns*seqParams.numSteps + n, :) = paty + ChParams.offset;
@@ -109,7 +109,7 @@ for IQkey = channelNames
             gated = false; % turn me back on when I work!
         end
         for n = 1:nbrPatterns;
-            IQ_seq{n} = pg.build(patseq{floor((n-1)/seqParams.nbrRepeats)+1}, seqParams.numSteps, ChParams.delay, seqParams.fixedPt, gated);
+            IQ_seq{n} = pg.build(patseq{n}, seqParams.numSteps, ChParams.delay, seqParams.fixedPt, gated);
             
             if ~gated
                 for stepct = 1:seqParams.numSteps
@@ -118,13 +118,13 @@ for IQkey = channelNames
                     % remove difference of delays
                     patx = circshift(patx, [0, ChParams.delayDiff]);
                     paty = circshift(paty, [0, ChParams.delayDiff]);
-                    chBuffer((n-1)*stepct + stepct, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
+                    chBuffer((n-1)*seqParams.numSteps + stepct, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
                 end
             end
         end
         
         for n = 1:calPatterns;
-            IQ_seq{nbrPatterns + n} = pg.build(calseq{floor((n-1)/seqParams.nbrRepeats)+1}, 1, ChParams.delay, seqParams.fixedPt, gated);
+            IQ_seq{nbrPatterns + n} = pg.build(calseq{n}, 1, ChParams.delay, seqParams.fixedPt, gated);
             [patx, paty] = pg.linkListToPattern(IQ_seq{nbrPatterns + n}, 1);
             
             if ~gated
@@ -184,7 +184,7 @@ for awg = awgs
         % export Tek
         % hack... really ought to store this info somewhere or be able to
         % change in from the user interface, rather than writing it to file
-        options = struct('m21_high', 2.0, 'm41_high', 2.0);
+        options = struct('m21_high', 2.0, 'm41_high', 2.0, 'nbrRepeats', seqParams.nbrRepeats);
         ch12 = awgChannels([awg '_12']);
         ch34 = awgChannels([awg '_34']);
         ch1m1 = awgChannels([awg '_1m1']);
@@ -235,7 +235,7 @@ for awg = awgs
         end
         
         % export the file
-        APSPattern.exportAPSConfig(tempdir, basename, ch12seq, ch34seq);
+        APSPattern.exportAPSConfig(tempdir, basename, seqParams.nbrRepeats, ch12seq, ch34seq);
         disp(['Moving APS ' awg ' file to destination']);
         pathAPS = ['U:\AWG\' seqParams.basename '\' basename '.h5'];
         movefile([tempdir basename '.h5'], pathAPS);

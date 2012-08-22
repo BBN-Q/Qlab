@@ -196,40 +196,47 @@ classdef TekPattern < handle
 		
 		function writeTekSeqTable(fid, basename, numsteps, options)
 			self = TekPattern;
-			for i = 1:numsteps
-                i_str = num2str(i);
-				% sequence wait: 1 = on, 0 = off
-				self.writeField(fid, ['SEQUENCE_WAIT_', i_str], 1, 'int16');
-				
-				% sequence loop: 0 = infinite (default = 1)
-                num_repeats = 1;
-                if ismember('num_repeats', fieldnames(options)) && isnumeric(options.num_repeats) && options.num_repeats >= 0
-                    num_repeats = options.num_repeats;
+            nbrRepeats = 1;
+            if isfield(options, 'nbrRepeats')
+                nbrRepeats = options.nbrRepeats;
+            end
+            
+			for stepct = 1:numsteps
+                for repeatct = 1:nbrRepeats
+                    i_str = num2str((stepct-1)*nbrRepeats + repeatct);
+                    % sequence wait: 1 = on, 0 = off
+                    self.writeField(fid, ['SEQUENCE_WAIT_', i_str], 1, 'int16');
+                    
+                    % sequence loop: 0 = infinite (default = 1)
+                    num_loops = 1;
+                    if ismember('num_repeats', fieldnames(options)) && isnumeric(options.num_repeats) && options.num_repeats >= 0
+                        num_loops = options.num_repeats;
+                    end
+                    self.writeField(fid, ['SEQUENCE_LOOP_', i_str], num_loops, 'int32');
+                    
+                    % sequence jump: 0 = off, -1 = next, n = element #
+                    self.writeField(fid, ['SEQUENCE_JUMP_', i_str], 0, 'int16');
+                    
+                    % sequence goto: 0 = off, n = element #
+                    if stepct == numsteps && repeatct == nbrRepeats
+                        goto = 1;
+                    else
+                        goto = 0;
+                    end
+                    self.writeField(fid, ['SEQUENCE_GOTO_', i_str], goto, 'int16');
+                    
+                    namestring = sprintf('%sCh1%03d', basename, stepct);
+                    self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_1_', i_str], namestring, 'char');
+                    
+                    namestring = sprintf('%sCh2%03d', basename, stepct);
+                    self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_2_', i_str], namestring, 'char');
+                    
+                    namestring = sprintf('%sCh3%03d', basename, stepct);
+                    self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_3_', i_str], namestring, 'char');
+                    
+                    namestring = sprintf('%sCh4%03d', basename, stepct);
+                    self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_4_', i_str], namestring, 'char');
                 end
-				self.writeField(fid, ['SEQUENCE_LOOP_', i_str], num_repeats, 'int32');
-				
-				% sequence jump: 0 = off, -1 = next, n = element #
-				self.writeField(fid, ['SEQUENCE_JUMP_', i_str], 0, 'int16');
-				
-				% sequence goto: 0 = off, n = element #
-				if i == numsteps
-					goto = 1;
-				else
-					goto = 0;
-				end
-				self.writeField(fid, ['SEQUENCE_GOTO_', i_str], goto, 'int16');
-				
-                namestring = sprintf('%sCh1%03d', basename, i);
-                self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_1_', i_str], namestring, 'char');
-                
-                namestring = sprintf('%sCh2%03d', basename, i);
-                self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_2_', i_str], namestring, 'char');
-                
-                namestring = sprintf('%sCh3%03d', basename, i);
-                self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_3_', i_str], namestring, 'char');
-                
-                namestring = sprintf('%sCh4%03d', basename, i);
-                self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_4_', i_str], namestring, 'char');
 			end
 		end
 

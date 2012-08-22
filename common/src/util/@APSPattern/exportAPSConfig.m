@@ -1,4 +1,4 @@
-function exportAPSConfig(path, basename, varargin)
+function exportAPSConfig(path, basename, nbrRepeats, varargin)
     %varargin is the IQ pairs of channels e.g. ch56seq
     %pass an empty array to skip a pair of channels
     VersionNum = 1.6;
@@ -12,7 +12,7 @@ function exportAPSConfig(path, basename, varargin)
         mkdir(path);
     end
     
-    miniLinkRepeat = 0;
+    miniLinkRepeat = nbrRepeats - 1;
     WaveformLibs = cell(1,4);
     LinkLists = cell(1,4);
     
