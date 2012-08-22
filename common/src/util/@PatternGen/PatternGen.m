@@ -226,7 +226,11 @@ classdef PatternGen < handle
             % calculate phase steps given the polar angle
             phaseSteps = -2*pi*cos(polarAngle)*calScale*gaussPulse/sampRate;
             % calculate DRAG correction to phase steps
-            phaseSteps = phaseSteps + 2*pi*params.delta*(sin(polarAngle)*(1/sampRate)*calScale*gaussPulse).^2;
+            % Note that our usual XY DRAG delta has implicit units of time.
+            % Consequently, we convert it to a dimensionless form in 
+            % the expression below
+            instantaneousDetuning = params.delta/sampRate*(2*pi*calScale*sin(polarAngle)*gaussPulse).^2;
+            phaseSteps = phaseSteps + instantaneousDetuning*(1/sampRate);
             % center phase ramp around the middle of the pulse
             phaseRamp = cumsum(phaseSteps) - phaseSteps/2;
             
