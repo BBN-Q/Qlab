@@ -137,7 +137,7 @@ end
 %% DRAG calibration    
 if ExpParams.DoDRAGCal
     % generate DRAG calibration sequence
-    [filenames, nbrSegments] = obj.APEChannelSequence(ExpParams.Qubit);
+    [filenames, nbrSegments, deltas] = obj.APEChannelSequence(ExpParams.Qubit);
     obj.loadSequence(filenames);
 
     % measure
@@ -145,7 +145,6 @@ if ExpParams.DoDRAGCal
 
     % analyze for the best value to two digits
     numPsQId = 8; % number pseudoidentities
-    deltas = linspace(-2,0,11)';
     
     obj.pulseParams.delta = round(100*obj.analyzeSlopes(data, numPsQId, deltas))/100;
     

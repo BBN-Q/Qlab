@@ -1,4 +1,4 @@
-function [filename, nbrPatterns] = APEChannelSequence(obj, qubit, makePlot)
+function [filename, nbrPatterns, delta] = APEChannelSequence(obj, qubit, makePlot)
 
 if ~exist('makePlot', 'var')
     makePlot = false;
@@ -34,9 +34,9 @@ pg = PatternGen(...
 angle = pi/2;
 numPsQId = 8; % number pseudoidentities
 numDeltaSteps = 11; %number of drag parameters (11)
-deltamax=0.0;
-deltamin=-2.0;
-delta=linspace(deltamin,deltamax,numDeltaSteps);
+deltamax=2.0;
+deltamin=0.0;
+delta=linspace(deltamin,deltamax,numDeltaSteps)';
 
 sindex = 1;
 % QId
