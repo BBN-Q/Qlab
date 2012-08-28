@@ -124,19 +124,25 @@ patseq{33} = {pg.pulse('X90m'),pg.pulse('X90m')};
 patseq{34} = {pg.pulse('Y90p'),pg.pulse('Y90p')};
 patseq{35} = {pg.pulse('Y90m'),pg.pulse('Y90m')};
 
-%for iindex = 1:nbrPulses
-%    for jindex = 1:nbrPulses
-%        patseq{(iindex-1)*nbrPulses+jindex} = {AllPulses{iindex}, AllPulses{jindex}};
-%    end
-%end
+calseq=[];
 
-% just a pi pulse for scaling
-calseq={};
+% prepare parameter structures for the pulse compiler
+seqParams = struct(...
+    'basename', basename, ...
+    'suffix', '', ...
+    'numSteps', 1, ...
+    'nbrRepeats', nbrRepeats, ...
+    'fixedPt', fixedPt, ...
+    'cycleLength', cycleLength, ...
+    'measLength', 2000);
+patternDict = containers.Map();
+if ~isempty(calseq), calseq = {calseq}; end
+patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
+measChannels = {'M1'};
+awgs = {'TekAWG', 'BBNAPS'};
 
-compiler = ['compileSequence' IQkey];
-compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 15};
-if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-    feval(compiler, compileArgs{:});
-end
+plotSeqNum = 10;
+
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, plotSeqNum);
 
 end

@@ -98,7 +98,11 @@ for IQkey = channelNames
         end
         
         awgChannels(IQkey) = {chI, chQ};
-        awgChannels(bufferIQkey) = chBuffer;
+        if isempty(awgChannels(bufferIQkey))
+            awgChannels(bufferIQkey) = chBuffer;
+        else
+            awgChannels(bufferIQkey) = awgChannels(bufferIQkey) | chBuffer;
+        end
     else % otherwise, we are constructing a link list
         IQ_seq = cell(nbrPatterns+calPatterns, 1);
         % decide whether to buffer on a TekAWG or on an APS
@@ -136,7 +140,13 @@ for IQkey = channelNames
         end
         
         awgChannels(IQkey) = IQ_seq;
-        if ~gated, awgChannels(bufferIQkey) = chBuffer; end
+        if ~gated
+            if isempty(awgChannels(bufferIQkey))
+                awgChannels(bufferIQkey) = chBuffer;
+            else
+                awgChannels(bufferIQkey) = awgChannels(bufferIQkey) | chBuffer;
+            end
+        end
     end
 end
 
