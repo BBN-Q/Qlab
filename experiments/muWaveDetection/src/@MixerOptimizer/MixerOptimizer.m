@@ -149,6 +149,9 @@ classdef MixerOptimizer < expManager.expBase
                     obj.awg.(['chan_' num2str(awg_Q_channel)]).skew = 0;
                     obj.awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
                     obj.awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
+                    
+                    obj.awg.run();
+                    obj.awg.operationComplete();
                 case 'deviceDrivers.APS'
 
                     obj.awg.stop();
