@@ -35,8 +35,7 @@ rhoIn(1,1) = 1;
 %Transform the initial state by the preparation pulse
 rhoPreps = cell(numPrep,1);
 for ct = 1:length(U_preps)
-    rhoPreps{ct} = U_preps{ct}
-    rhoIn*U_preps{ct}';
+    rhoPreps{ct} = U_preps{ct}*rhoIn*U_preps{ct}';
 end
 
 %Transform the measurement operators by the measurement pulses

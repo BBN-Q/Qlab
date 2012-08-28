@@ -1,4 +1,4 @@
-function [beta, paulis, C] = analyzeStateTomo(data, nbrQubits, nbrRepeats)
+function [beta, raw_paulis, C] = analyzeStateTomo(data, nbrQubits, nbrRepeats)
 %analyzeStateTomo Wrapper function for state tomography.
 %
 % [beta, paulis, C] = analyzeStateTomo(data, nbrQubits, nbrRepeats)
@@ -8,23 +8,23 @@ function [beta, paulis, C] = analyzeStateTomo(data, nbrQubits, nbrRepeats)
 calData = mean(reshape(data(1:nbrRepeats*2^nbrQubits), nbrRepeats, 2^nbrQubits), 1);
 tomoData = mean(reshape(data(nbrRepeats*2^nbrQubits+1:end), nbrRepeats, 4^nbrQubits), 1);
 
-[beta paulis] = PauliTomo(calData, tomoData);
+[beta raw_paulis] = PauliTomo(calData, tomoData);
 figure;
-bar(paulis)
+bar(raw_paulis)
 PauliLabel();
 title('Raw Inversion Pauli Decomposition');
 
-rhoRaw = getRho(paulis);
+rhoRaw = getRho(raw_paulis);
 rhoWizard = WizardTomo_(rhoRaw, 2);
 rhoPlot(rhoWizard);
 
 
 pauliLabels = {'II', 'XI', 'YI', 'ZI', 'IX', 'IY', 'IZ', 'XY', 'XZ', 'YX', 'YZ', 'ZX', 'ZY', 'XX', 'YY', 'ZZ'};
-pauliOps = paulis(nbrQubits);
+[pauliOps, pauliStrs] = paulis(nbrQubits);
 
 paulisWiz = zeros(16,1);
 for ct = 1:length(pauliOps)
-    pauliNum = find(strcmp(pauliLabels{ct}, pauliStruct.string));
+    pauliNum = find(strcmp(pauliLabels{ct}, pauliStrs));
     paulisWiz(ct) = real(trace(rhoWizard*pauliOps{pauliNum}));
 end
 figure;
