@@ -85,7 +85,7 @@ classdef AWGSequence < sweeps.Sweep
             
             function step_TekAWG()
                 obj.TekAWG.stop()
-                TekFile = fullfile('U:\AWG', [obj.sequenceFile, num2str(obj.points(index)), '.awg']);
+                TekFile = fullfile('U:\AWG', [obj.sequenceFile, '-TekAWG', num2str(obj.points(index)), '.awg']);
                 assert(logical(exist(TekFile, 'file')), 'AWGSequence ERROR: Could not find file %s\n', TekFile)
                 obj.TekParams.seqfile = TekFile;
                 obj.TekAWG.setAll(obj.TekParams);
@@ -93,7 +93,7 @@ classdef AWGSequence < sweeps.Sweep
             
             function step_BBNAPS()
                 obj.BBNAPS.stop()
-                APSFile = fullfile('U:\APS', [obj.sequenceFile, num2str(obj.points(index)), '.h5']);
+                APSFile = fullfile('U:\AWG', [obj.sequenceFile, '-BBNAPS', num2str(obj.points(index)), '.h5']);
                 assert(logical(exist(APSFile, 'file')), 'AWGSequence ERROR: Could not find file %s\n', APSFile)
                 obj.BBNParams.seqfile = APSFile;
                 obj.BBNAPS.setAll(obj.BBNParams);
