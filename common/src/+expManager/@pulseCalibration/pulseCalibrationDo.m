@@ -137,7 +137,12 @@ end
 %% DRAG calibration    
 if ExpParams.DoDRAGCal
     % generate DRAG calibration sequence
-    [filenames, nbrSegments, deltas] = obj.APEChannelSequence(ExpParams.Qubit);
+    if isfield(ExpParams,'DRAGparams')
+        deltas = ExpParams.DRAGparams(:);
+    else
+        deltas = linspace(-2,0,11)';
+    end
+    [filenames, nbrSegments] = obj.APEChannelSequence(ExpParams.Qubit, deltas);
     obj.loadSequence(filenames);
 
     % measure

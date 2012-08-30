@@ -1,4 +1,4 @@
-function [filename, nbrPatterns, delta] = APEChannelSequence(obj, qubit, makePlot)
+function [filename, nbrPatterns] = APEChannelSequence(obj, qubit, deltas, makePlot)
 
 if ~exist('makePlot', 'var')
     makePlot = false;
@@ -33,18 +33,14 @@ pg = PatternGen(...
 
 angle = pi/2;
 numPsQId = 8; % number pseudoidentities
-numDeltaSteps = 11; %number of drag parameters (11)
-deltamax=2.0;
-deltamin=0.0;
-delta=linspace(deltamin,deltamax,numDeltaSteps)';
 
 sindex = 1;
 % QId
 % N applications of psuedoidentity
 % X90p, (sequence of +/-X90p), U90p
 % (1-numPsQId) of +/-X90p
-for ct=1:numDeltaSteps
-    curDelta = delta(ct);
+for ct=1:length(deltas)
+    curDelta = deltas(ct);
     patseq{sindex} = {pg.pulse('QId')};
     sindex=sindex+1;
     for j = 0:numPsQId
