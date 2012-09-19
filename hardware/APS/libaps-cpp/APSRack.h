@@ -80,6 +80,9 @@ public:
 	int save_bulk_state_file(string & );
 	int read_bulk_state_file(string & );
 
+	int raw_write(int, int, UCHAR*);
+	int raw_read(int, FPGASELECT);
+
 private:
 	int numDevices_;
 	vector<APS> APSs_;

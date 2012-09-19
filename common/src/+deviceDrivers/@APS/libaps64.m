@@ -91,4 +91,10 @@ fcns.thunkname{fcnNum}='int32Thunk';fcns.name{fcnNum}='read_state_files'; fcns.c
 fcns.thunkname{fcnNum}='int32Thunk';fcns.name{fcnNum}='save_bulk_state_file'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}=[];fcnNum=fcnNum+1;
 %  int read_bulk_state_file (); 
 fcns.thunkname{fcnNum}='int32Thunk';fcns.name{fcnNum}='read_bulk_state_file'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}=[];fcnNum=fcnNum+1;
+%  int raw_write ( int , int , unsigned char *); 
+fcns.thunkname{fcnNum}='int32int32int32voidPtrThunk';fcns.name{fcnNum}='raw_write'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'int32', 'uint8Ptr'};fcnNum=fcnNum+1;
+%  int raw_read ( int , int ); 
+fcns.thunkname{fcnNum}='int32int32int32Thunk';fcns.name{fcnNum}='raw_read'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'int32'};fcnNum=fcnNum+1;
+%  int program_FPGA ( int , char *, int , int ); 
+fcns.thunkname{fcnNum}='int32int32cstringint32int32Thunk';fcns.name{fcnNum}='program_FPGA'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'cstring', 'int32', 'int32'};fcnNum=fcnNum+1;
 methodinfo=fcns;

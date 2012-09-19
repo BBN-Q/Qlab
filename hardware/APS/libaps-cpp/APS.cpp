@@ -55,13 +55,15 @@ int APS::init(const string & bitFile, const bool & forceReload){
 
 	if (forceReload || read_bitFile_version(ALL_FPGAS) != FIRMWARE_VERSION || read_PLL_status(ALL_FPGAS)) {
 		FILE_LOG(logINFO) << "Resetting instrument";
-		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version(ALL_FPGAS) << " PLL status: " << read_PLL_status(ALL_FPGAS);
+		//FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version(ALL_FPGAS) << " PLL status: " << read_PLL_status(ALL_FPGAS);
+		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version(FPGA1) << " PLL status: " << read_PLL_status(FPGA1);
 		//Setup the oscillators
 		setup_VCXO();
 		setup_PLL();
 
 		//Program the bitfile to both FPGA's
-		int bytesProgramed = program_FPGA(bitFile, ALL_FPGAS, 0x10);
+		//int bytesProgramed = program_FPGA(bitFile, ALL_FPGAS, 0x10);
+		int bytesProgramed = program_FPGA(bitFile, FPGA1, 0x10);
 
 		//Default to max sample rate
 		set_sampleRate(1200);
@@ -71,7 +73,8 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		reset_status_ctrl();
 
 		// test PLL sync on each FPGA
-		int status = test_PLL_sync(FPGA1) || test_PLL_sync(FPGA2);
+		//int status = test_PLL_sync(FPGA1) || test_PLL_sync(FPGA2);
+		int status = test_PLL_sync(FPGA1);
 		if (status) {
 			FILE_LOG(logERROR) << "DAC PLLs failed to sync";
 		}
@@ -83,7 +86,7 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		clear_channel_data();
 
 		// update LED mode
-		set_LED_mode(ALL_FPGAS, LED_RUNNING);
+		//set_LED_mode(ALL_FPGAS, LED_RUNNING);
 
 		return bytesProgramed;
 	}
@@ -101,6 +104,11 @@ int APS::setup_DACs() const{
 	return 0;
 }
 int APS::program_FPGA(const string & bitFile, const FPGASELECT & chipSelect, const int & expectedVersion) const {
+	/**
+	 * @param bitFile path to a Lattice bit file
+	 * @param chipSelect which FPGA to write to (FPGA1, FPGA2, BOTH_FGPAS)
+	 * @param expectedVersion - checks whether version register matches this value after programming. -1 = skip the check
+	 */
 
 	//Open the bitfile
 	FILE_LOG(logDEBUG2) << "Opening bitfile: " << bitFile;
@@ -120,7 +128,7 @@ int APS::program_FPGA(const string & bitFile, const FPGASELECT & chipSelect, con
 	//Pass of the data to a lower-level function to actually push it to the FPGA
 	int bytesProgrammed = FPGA::program_FPGA(handle_, fileData, chipSelect);
 
-	if (bytesProgrammed > 0) {
+	if (bytesProgrammed > 0 && expectedVersion != -1) {
 		// Read Bit File Version
 		int version;
 		bool ok = false;
@@ -793,7 +801,8 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 		bool inSync = false;
 		int testct = 0;
 		while (!inSync && (testct < 20)){
-			inSync = (APS::read_PLL_status(fpga, regAddress, pllBits) == 0) ? true : false;
+			FILE_LOG(logDEBUG2) << "Reading PLL status for pllBits with size " << pllBits.size() << " and first bit is " << pllBits[0];
+			inSync = (APS::read_PLL_status(fpga, regAddress, pllBits) == 1);
 			//If we aren't locked then reset for the next try by clearing the PLL reset bits
 			if (resetPLL) {
 				FPGA::clear_bit(handle_, fpga, FPGA_PLL_RESET_ADDR, pllResetBit);
@@ -841,7 +850,7 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 		for(int xorct = 0; xorct < xorCounts; xorct++) {
 			//TODO: fix up the hardcoded ugly stuff and maybe integrate with read_PLL_status
 			pllBit = FPGA::read_FPGA(handle_, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
-			if ((pllBit & 0x1ff) != 2*FIRMWARE_VERSION) {
+			if ((pllBit & 0x1ff) != FIRMWARE_VERSION) {
 				FILE_LOG(logERROR) << "Reg 0xF006 bitfile version does not match. Read " << std::hex << (pllBit & 0x1ff);
 				return -6;
 			}
@@ -851,7 +860,7 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 		}
 
 		// due to clock skews, need to accept a range of counts as "0" and "1"
-		if ( (xorFlagCnts[0] < lowCutoff || xorFlagCnts[0] > highCutoff) &&
+		if ( (xorFlagCnts[0] < lowCutoff ) &&
 				(xorFlagCnts[1] < lowCutoff || xorFlagCnts[1] > highCutoff) &&
 				(xorFlagCnts[2] < lowCutoff || xorFlagCnts[2] > highCutoff) ) {
 			// 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase, so 600 MHz clocks
@@ -864,12 +873,12 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 			// 600 MHz clocks out of phase, reset DAC clocks that are 90/270 degrees out of phase with reference
 			FILE_LOG(logDEBUG1) << "DAC clocks out of phase; resetting, XOR counts: " << xorFlagCnts[0] << ", " << xorFlagCnts[1] << ", " << xorFlagCnts[2];
 			writeByte = 0x2; //disable clock outputs
-			//If the 02 XOR Bit is coming up at half-count then reset it
+			//If the ChA XOR Bit is coming up at half-count then reset it
 			if (xorFlagCnts[1] >= lowCutoff || xorFlagCnts[1] <= highCutoff) {
 				dac02Reset = 1;
 				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr, &writeByte);
 			}
-			//If the 02 XOR Bit is coming up at half-count then reset it
+			//If the ChB XOR Bit is coming up at half-count then reset it
 			if (xorFlagCnts[2] >= lowCutoff || xorFlagCnts[2] <= highCutoff) {
 				dac13Reset = 1;
 				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr2, &writeByte);
@@ -907,7 +916,7 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 
 			for(int xorct = 0; xorct < xorCounts; xorct++) {
 				pllBit = FPGA::read_FPGA(handle_, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
-				if ((pllBit & 0x1ff) != 2*FIRMWARE_VERSION) {
+				if ((pllBit & 0x1ff) != FIRMWARE_VERSION) {
 					FILE_LOG(logERROR) << "Reg 0xF006 bitfile version does not match. Read " << std::hex << (pllBit & 0x1ff);
 					return -8;
 				}
@@ -938,6 +947,9 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 						FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr2, &writeByte);
 						update_PLL_register();
 
+						FPGA::set_bit(handle_, fpga, FPGA_PLL_RESET_ADDR, pllResetBit);
+						FPGA::clear_bit(handle_, fpga, FPGA_PLL_RESET_ADDR, pllResetBit);
+
 						//Try again by recursively calling the same function
 						return APS::test_PLL_sync(fpga, numRetries - 1);
 					}
@@ -953,7 +965,8 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 				FPGA::clear_bit(handle_, fpga, FPGA_PLL_RESET_ADDR, PLL_RESET[pll]);
 
 				// wait for lock
-				inSync = wait_PLL_relock(false, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, vector<int>(PLL_LOCK_TEST[pll]));
+				FILE_LOG(logDEBUG2) << "Waiting for relock of PLL " << pll << " by looking at bit " << PLL_LOCK_TEST[pll];
+				inSync = wait_PLL_relock(false, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, vector<int>(1, PLL_LOCK_TEST[pll]));
 				if (!inSync) {
 					FILE_LOG(logERROR) << "PLL " << pllStrs[pll] << " did not re-sync after reset";
 					return -10;
@@ -982,13 +995,13 @@ int APS::read_PLL_status(const FPGASELECT & fpga, const int & regAddr /*check he
 	 * PllLockBits = vector of register bit locations to query for lock state
 	 */
 
-	int pllStatus = 0;
+	int pllStatus = 1;
 
 	//We can latch based off either the USB or PLL clock.  USB seems to flicker so default to PLL for now but
 	//we should double check the FIRMWARE_VERSION
 	ULONG FIRMWARECHECK;
 	if (regAddr == (FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION)) {
-		FIRMWARECHECK = 2*FIRMWARE_VERSION;
+		FIRMWARECHECK = FIRMWARE_VERSION; // 2*FIRMWARE_VERSION in old firmware
 	}
 	else if (regAddr == (FPGA_ADDR_REGREAD | FPGA_OFF_VERSION)){
 		FIRMWARECHECK = FIRMWARE_VERSION;
@@ -1010,8 +1023,8 @@ int APS::read_PLL_status(const FPGASELECT & fpga, const int & regAddr /*check he
 
 	//Check each of the clocks in series
 	for(int tmpBit : pllLockBits){
-		pllStatus |= ((pllRegister >> tmpBit) & 0x1);
-		FILE_LOG(logDEBUG2) << "FPGA " << fpga << " PLL status: " << ((pllRegister >> tmpBit) & 0x1);
+		pllStatus &= ((pllRegister >> tmpBit) & 0x1);
+		FILE_LOG(logDEBUG2) << "FPGA " << fpga << " PLL status: " << ((pllRegister >> tmpBit) & 0x1) << " (bit " << tmpBit << " of " << myhex << pllRegister << " )";
 	}
 	return pllStatus;
 }

@@ -224,6 +224,18 @@ int read_bulk_state_file() {
 	return APSRack_.read_bulk_state_file(fileName);
 }
 
+int raw_write(int deviceID, int numBytes, UCHAR* data){
+	return APSRack_.raw_write(deviceID, numBytes, data);
+}
+
+int raw_read(int deviceID, int fpga){
+	return APSRack_.raw_read(deviceID, FPGASELECT(fpga));
+}
+
+int program_FPGA(int deviceID, char* bitFile, int chipSelect, int expectedVersion) {
+	return APSRack_.program_FPGA(deviceID, string(bitFile), FPGASELECT(chipSelect), expectedVersion);
+}
+
 #ifdef __cplusplus
 }
 #endif

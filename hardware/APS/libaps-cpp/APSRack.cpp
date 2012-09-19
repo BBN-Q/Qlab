@@ -261,3 +261,25 @@ int APSRack::read_bulk_state_file(string & stateFile){
 	return 0;
 }
 
+int APSRack::raw_write(int deviceID, int numBytes, UCHAR* data){
+	DWORD bytesWritten;
+	FT_Write(APSs_[deviceID].handle_, data, numBytes, &bytesWritten);
+	return int(bytesWritten);
+}
+
+int APSRack::raw_read(int deviceID, FPGASELECT fpga) {
+	DWORD bytesRead, bytesWritten;
+	UCHAR dataBuffer[2];
+	USHORT transferSize = 1;
+	int Command = APS_FPGA_IO;
+
+	//Send the read command byte
+	UCHAR commandPacket = 0x80 | Command | (fpga<<2) | transferSize;
+    FT_Write(APSs_[deviceID].handle_, &commandPacket, 1, &bytesWritten);
+
+	//Look for the data
+	FT_Read(APSs_[deviceID].handle_, dataBuffer, 2, &bytesRead);
+	FILE_LOG(logDEBUG2) << "Read " << bytesRead << " bytes with value" << myhex << ((dataBuffer[0] << 8) | dataBuffer[1]);
+	return int((dataBuffer[0] << 8) | dataBuffer[1]);
+}
+
