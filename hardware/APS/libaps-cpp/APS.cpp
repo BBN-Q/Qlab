@@ -552,26 +552,31 @@ int APS::add_LL_bank(const int & dac, const vector<unsigned short> & offset, con
  * Private Functions
  */
 
+int APS::write(const FPGASELECT & fpga, const unsigned int & addr, const USHORT & data, const bool & queue /* see header for default */){
+	//Create the vector and pass through
+	return write(fpga, addr, vector<USHORT>(1, data), queue);
+}
 
-int APS::write(const FPGASELECT & fpga, const ULONG & addr, const ULONG & data, const bool & queue /* see header for default */){
+int APS::write(const FPGASELECT & fpga, const unsigned int & addr, const vector<USHORT> & data, const bool & queue /* see header for default */){
 	/* APS::write
 	 * fpga = FPAG1, FPGA2, or ALL_FPGAS (for simultaneous writes)
-	 * addr = valid memory address
-	 * data = WORD length data
+	 * addr = valid memory address to start to write to
+	 * data = vector<WORD> data
 	 * queue = false - write immediately, true - add write command to output queue
 	 */
-	//Pack the data into COMMAND - ADDRESS - DATA
+
+	//Pack the data
 	vector<UCHAR> dataPacket = FPGA::format(fpga, addr, data);
 
 	//Update the software checksums
-	//Address checksum is defined as (bits 0-14: addr, 15: 0)
-	// so, set bit 15 to zero
-	checksums_[fpga].address += addr & 0x7FFF;
-	checksums_[fpga].data += data;
+	//Address checksum is defined as lower word of address
+	checksums_[fpga].address += addr & 0xFFFF;
+	for(auto tmpData : data)
+		checksums_[fpga].data += tmpData;
 
 	//Push into queue or write to FPGA
 	if (queue) {
-		for (const UCHAR tmpByte : dataPacket){
+		for (auto tmpByte : dataPacket){
 			writeQueue_.push_back(tmpByte);
 		}
 	}
@@ -849,7 +854,7 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 		//Take twenty counts of the the xor data
 		for(int xorct = 0; xorct < xorCounts; xorct++) {
 			//TODO: fix up the hardcoded ugly stuff and maybe integrate with read_PLL_status
-			pllBit = FPGA::read_FPGA(handle_, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
+			pllBit = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, fpga);
 			if ((pllBit & 0x1ff) != FIRMWARE_VERSION) {
 				FILE_LOG(logERROR) << "Reg 0xF006 bitfile version does not match. Read " << std::hex << (pllBit & 0x1ff);
 				return -6;
@@ -915,7 +920,7 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 			int xorFlagCnt = 0;
 
 			for(int xorct = 0; xorct < xorCounts; xorct++) {
-				pllBit = FPGA::read_FPGA(handle_, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga);
+				pllBit = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, fpga);
 				if ((pllBit & 0x1ff) != FIRMWARE_VERSION) {
 					FILE_LOG(logERROR) << "Reg 0xF006 bitfile version does not match. Read " << std::hex << (pllBit & 0x1ff);
 					return -8;
@@ -966,7 +971,7 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 
 				// wait for lock
 				FILE_LOG(logDEBUG2) << "Waiting for relock of PLL " << pll << " by looking at bit " << PLL_LOCK_TEST[pll];
-				inSync = wait_PLL_relock(false, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, vector<int>(1, PLL_LOCK_TEST[pll]));
+				inSync = wait_PLL_relock(false, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, {PLL_LOCK_TEST[pll]});
 				if (!inSync) {
 					FILE_LOG(logERROR) << "PLL " << pllStrs[pll] << " did not re-sync after reset";
 					return -10;
@@ -997,26 +1002,12 @@ int APS::read_PLL_status(const FPGASELECT & fpga, const int & regAddr /*check he
 
 	int pllStatus = 1;
 
-	//We can latch based off either the USB or PLL clock.  USB seems to flicker so default to PLL for now but
-	//we should double check the FIRMWARE_VERSION
-	ULONG FIRMWARECHECK;
-	if (regAddr == (FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION)) {
-		FIRMWARECHECK = FIRMWARE_VERSION; // 2*FIRMWARE_VERSION in old firmware
-	}
-	else if (regAddr == (FPGA_ADDR_REGREAD | FPGA_OFF_VERSION)){
-		FIRMWARECHECK = FIRMWARE_VERSION;
-	}
-	else{
-		FILE_LOG(logERROR) << "Undefined register address for PLL sync status reading.";
-		return -1;
-	}
-
 //	pll_bit = FPGA::read_FPGA(handle_, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga); // latched to USB clock (has version 0x020)
 //	pll_bit = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, fpga); // latched to 200 MHz PLL (has version 0x010)
 
 	ULONG pllRegister = FPGA::read_FPGA(handle_, regAddr, fpga);
 
-	if ((pllRegister & 0x1ff) != FIRMWARECHECK) {
+	if ((pllRegister & 0x1ff) != USHORT(FIRMWARE_VERSION)) {
 		FILE_LOG(logERROR) << "Reg 0x8006 bitfile version does not match. Read: " << std::hex << (pllRegister & 0x1ff);
 		return -1;
 	}
@@ -1411,7 +1402,7 @@ int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 	}
 
 	//Format the data and add to write queue
-	write(fpga, startAddr, wfData, true);
+	write(fpga, startAddr, vector<USHORT>(wfData.begin(), wfData.end()), true);
 	flush();
 
 	//Verify the checksums

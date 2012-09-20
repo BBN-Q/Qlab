@@ -98,11 +98,10 @@ static const int FPGA_OFF_CHB_TRIG_DELAY = 0x13; // DAC1/3 trigger delay
 
 
 
-static const int  FPGA_ADDR_REGREAD =   0x80000000; // 0x8000 in old version
-static const int  FPGA_ADDR_SYNC_REGREAD =  FPGA_ADDR_REGREAD; // 0xF000 in old version
+static const int  FPGA_ADDR_REGREAD =   0x80000000;
 
-static const int  FPGA_ADDR_CHA_WRITE =  0x1000;
-static const int  FPGA_ADDR_CHB_WRITE =  0x4000;
+static const int  FPGA_ADDR_CHA_WRITE =  0x20000000;
+static const int  FPGA_ADDR_CHB_WRITE =  0x30000000;
 
 static const int  FPGA_ADDR_CHA_LL_A_WRITE = 0x3000;
 static const int  FPGA_ADDR_CHA_LL_B_WRITE = 0x3800;

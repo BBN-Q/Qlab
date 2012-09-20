@@ -223,6 +223,7 @@ int main(int argc, char** argv) {
 	}
 
 	cout << "Programming using: " << string(bitFile) << endl;
+	cout << "or as a c string: " << const_cast<char*>(bitFile.c_str()) << endl;
 
 	//Initialize the APSRack from the DLL
 	init();

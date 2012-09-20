@@ -21,8 +21,8 @@ LLBank::~LLBank() {
 }
 
 
-vector<ULONG> LLBank::get_packed_data(){
-	vector<ULONG> vecOut;
+vector<USHORT> LLBank::get_packed_data(){
+	vector<USHORT> vecOut;
 
 	vecOut.reserve(4*length);
 

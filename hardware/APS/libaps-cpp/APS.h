@@ -76,15 +76,8 @@ private:
 	bool running_;
 
 
-	int write(const FPGASELECT &, const ULONG &, const ULONG &, const bool & queue = false);
-
-	template <typename T>
-	int write(const FPGASELECT & fpga, ULONG addr, const vector<T> & data, const bool & queue=false){
-		for(const T tmpData : data){
-			write(fpga, addr++, ULONG(tmpData), queue);
-		}
-		return 0;
-	}
+	int write(const FPGASELECT & fpga, const unsigned int & addr, const USHORT & data, const bool & queue = false);
+	int write(const FPGASELECT & fpga, const unsigned int & addr, const vector<USHORT> & data, const bool & queue = false);
 
 	int flush();
 	int reset_status_ctrl();

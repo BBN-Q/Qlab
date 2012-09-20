@@ -199,9 +199,11 @@ int FPGA::read_register(
 	switch(Command)
 	{
 	case APS_FPGA_IO:
-		packetLength = 1<<transferSize;
-		break;
+		FILE_LOG(logERROR) << "FPGA::read_register can no longer be used with APS_FPGA_IO commands.";
+		return -1;
 	case APS_FPGA_ADDR:
+		FILE_LOG(logERROR) << "FPGA::read_register can no longer be used with APS_FPGA_ADDR commands.";
+		return -1;
 	case APS_CONF_STAT:
 	case APS_STATUS_CTRL:
 		packetLength = 1;
@@ -265,15 +267,14 @@ int FPGA::write_register(
 	switch(Command)
 	{
 	case APS_FPGA_IO:
-		//packetLength = 1<<transferSize;
 		FILE_LOG(logERROR) << "FPGA::write_register can no longer be used with APS_FPGA_IO commands.";
 		return -1;
 	case APS_CONF_DATA:
 		packetLength = 61;
 		break;
 	case APS_FPGA_ADDR:
-		packetLength = 4;
-		break;
+		FILE_LOG(logERROR) << "FPGA::write_register can no longer be used with APS_FPGA_ADDR commands.";
+		return -1;
 	case APS_CONF_STAT:
 	case APS_STATUS_CTRL:
 		cs = 0;
@@ -307,79 +308,73 @@ int FPGA::write_register(
 }
 
 
-ULONG FPGA::read_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, FPGASELECT chipSelect)
-/*
- * Specialized form of read_register for FPGA info.
- */
+USHORT FPGA::read_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, FPGASELECT chipSelect)
 {
-	ULONG data;
-	UCHAR read[4];
 
 	if (chipSelect == ALL_FPGAS) chipSelect = FPGA1; // can only read from one FPGA at a time, assume we want data from FPGA 1
 
-	read[0] = (addr >> 24) & LSB_MASK;
-	read[1] = (addr >> 16) & LSB_MASK;
-	read[2] = (addr >> 8) & LSB_MASK;
-	read[3] = addr & LSB_MASK;
+	//Write the address with the read bit high
+	write_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, vector<USHORT>(0), chipSelect );
 
-	FPGA::write_register(deviceHandle, APS_FPGA_ADDR, 2, chipSelect, read);
+	//Now clock out the data by writing a read command byte
+	// Start all packets with a APS Command Byte with the R/W = 1 for read for 2 bytes
+	UCHAR commandPacket = 0x80 | APS_FPGA_IO | (chipSelect<<2) | 1;
+	DWORD bytesWritten, bytesRead;
+	FT_STATUS ftStatus;
+	ftStatus = FT_Write(deviceHandle, &commandPacket, 1, &bytesWritten);
+	if (!FT_SUCCESS(ftStatus) || bytesWritten != 1){
+		FILE_LOG(logDEBUG2) << "FPGA::read_register: Error writing to USB with status = " << ftStatus << "; bytes written = " << bytesWritten;
+	}
 
+	//Now read the data
+	UCHAR readData[2];
 	//Put some data to make sure they're updated
-	read[0] = 0xBA;
-	read[1] = 0xD0;
+	readData[0] = 0xBA;
+	readData[1] = 0xDD;
 
-	FPGA::read_register(deviceHandle, APS_FPGA_IO, 1, chipSelect, read);
+	ftStatus = FT_Read(deviceHandle, readData, 2, &bytesRead);
+	if (!FT_SUCCESS(ftStatus) || bytesRead != 2){
+		FILE_LOG(logDEBUG2) << "FPGA::read_register: Error reading from USB with status = " << ftStatus << "; bytes read = " << bytesRead;
+	}
 
-	data = (read[0] << 8) | read[1];
+	USHORT data = (readData[0] << 8) | readData[1];
 
 	FILE_LOG(logDEBUG2) << "Reading address " << myhex << addr << " with data " << data;
 
 	return data;
 }
 
-int FPGA::write_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, const ULONG & data, const FPGASELECT & fpga)
+int FPGA::write_FPGA(FT_HANDLE deviceHandle, const unsigned int & addr, const USHORT & data, const FPGASELECT & fpga){
+	//Create a vector and pass on
+	return write_FPGA(deviceHandle, addr, vector<USHORT>(1, data), fpga );
+}
+
+int FPGA::write_FPGA(FT_HANDLE deviceHandle, const unsigned int & addr, const vector<USHORT> & data, const FPGASELECT & fpga)
 /********************************************************************
  *
- * Function Name : APS_WriteFPGA()
+ * Function Name : Write_FPGA()
  *
- * Description :  Writes data to FPGA. 16 bit numbers are unpacked to 2 bytes
+ * Description :  Writes data to FPGA.
  *
- * Inputs :
- *              addr  - Address to write to
+ * Inputs :		deviceHandle
+ *              addr  - starting address to write to
  *              data   - Data to write
  *              fpga - FPGA selection bit (0 or 1, 2 = both)
  ********************************************************************/
 {
-	vector<UCHAR> dataPacket(10);
 
-	// command byte
-	dataPacket[0] = APS_FPGA_ADDR | (fpga<<2) | 2;
+	//Format for the block write
+	vector<UCHAR> dataPacket = format(fpga, addr, data);
 
-	// 32-bit address
-	dataPacket[1] = (addr >> 24) & LSB_MASK;
-	dataPacket[2] = (addr >> 16) & LSB_MASK;
-	dataPacket[3] = (addr >> 8) & LSB_MASK;
-	dataPacket[4] = addr & LSB_MASK;
+	FILE_LOG(logDEBUG2) << "Writing " << data.size() << " words at starting address: " << myhex << addr << " with Data[0]: " << data[0];
 
-	// command byte
-	dataPacket[5] = APS_FPGA_IO | (fpga<<2) | 2;
-
-	// count = 1
-	dataPacket[6] = 0x0;
-	dataPacket[7] = 0x1;
-
-	// 1 word of data
-	dataPacket[8] = (data >> 8) & LSB_MASK;
-	dataPacket[9] = data & LSB_MASK;
-
-	FILE_LOG(logDEBUG2) << "Writing Addr: " << myhex << addr << " Data: " << data;
-
-	FPGA::write_block(deviceHandle, dataPacket);
+	//Write to device
+	return write_block(deviceHandle, dataPacket);
 
 	return 0;
 }
 
-int FPGA::write_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, const ULONG & data, const FPGASELECT & fpga, map<FPGASELECT, CheckSum> & checksums)
+int FPGA::write_FPGA(FT_HANDLE deviceHandle, const unsigned int & addr, const vector<USHORT> & data, const FPGASELECT & fpga, map<FPGASELECT, CheckSum> & checksums)
 /********************************************************************
  *
  * Function Name : APS_WriteFPGA()
@@ -394,45 +389,25 @@ int FPGA::write_FPGA(FT_HANDLE deviceHandle, const ULONG & addr, const ULONG & d
  *              checksumData - vector of FPGA checksums passed by reference
  ********************************************************************/
 {
-	vector<UCHAR> dataPacket(10);
 
-	// command byte
-	dataPacket[0] = APS_FPGA_ADDR | (fpga<<2) | 2;
+	//Call the basic function to write the data
+	int bytesWritten;
+	bytesWritten = write_FPGA(deviceHandle, addr, data, fpga);
 
-	// 32-bit address
-	dataPacket[1] = (addr >> 24) & LSB_MASK;
-	dataPacket[2] = (addr >> 16) & LSB_MASK;
-	dataPacket[3] = (addr >> 8) & LSB_MASK;
-	dataPacket[4] = addr & LSB_MASK;
-
-	// command byte
-	dataPacket[5] = APS_FPGA_IO | (fpga<<2) | 2;
-
-	// count = 1
-	dataPacket[6] = 0x0;
-	dataPacket[7] = 0x1;
-
-	// 1 word of data
-	dataPacket[8] = (data >> 8) & LSB_MASK;
-	dataPacket[9] = data & LSB_MASK;
-
-	// TODO (update this section)
-	// address checksum is defined as (bits 0-14: addr, 15: 0)
-	// so, set bit 15 to zero
+	//Now update the software checksums
+	// address checksum is defined as lower word
 	if ((fpga==FPGA1) || (fpga == ALL_FPGAS)) {
-		checksums[FPGA1].address += addr & 0x7FFF;
-		checksums[FPGA1].data += data;
+		checksums[FPGA1].address += addr & 0xFFFF;
+		for (auto tmpData : data)
+			checksums[FPGA1].data += tmpData;
 	}
 	if((fpga==FPGA2) || (fpga == ALL_FPGAS)) {
-		checksums[FPGA2].address += addr & 0x7FFF;
-		checksums[FPGA2].data += data;
+		checksums[FPGA2].address += addr & 0xFFFF;
+		for (auto tmpData : data)
+			checksums[FPGA2].data += tmpData;
 	}
 
-	FILE_LOG(logDEBUG2) << "Writing Addr: " << myhex << addr << " Data: " << data;
-
-	FPGA::write_block(deviceHandle, dataPacket);
-
-	return 0;
+	return bytesWritten;
 }
 
 int FPGA::write_block(FT_HANDLE deviceHandle, vector<UCHAR> & dataPackets){
@@ -443,30 +418,76 @@ int FPGA::write_block(FT_HANDLE deviceHandle, vector<UCHAR> & dataPackets){
 	return(bytesWritten);
 }
 
-vector<UCHAR> FPGA::format(const FPGASELECT & fpga, const ULONG & addr, const ULONG & data){
+vector<UCHAR> FPGA::format(const FPGASELECT & fpga, const unsigned int & addr, const vector<USHORT> & data){
+/* Helper function to format data for the FGPA in block mode:
+ * 	command byte followed by 4 bytes address
+ * 	command byte followed by 2 bytes data length
+ * 	n bytes data
+ */
 
-	vector<UCHAR> dataPacket(10);
+	//Some constants
+	const UCHAR fpgaSelectMask = fpga << 2;
+	const UCHAR write2Bytes = APS_FPGA_IO | fpgaSelectMask | 1;
+	const UCHAR write4Bytes = APS_FPGA_IO | fpgaSelectMask | 2;
+	const UCHAR write8Bytes = APS_FPGA_IO | fpgaSelectMask | 3;
+	const UCHAR writeAddress = APS_FPGA_ADDR | fpgaSelectMask | 2;
 
-	// command byte
-	dataPacket[0] = APS_FPGA_ADDR | (fpga<<2) | 2;
+	//We return a vector of bytes to write
+	vector<UCHAR> dataPacket(0);
+	if (data.size() > 0) {
+		dataPacket.reserve(5 + 3 + data.size()/3 + data.size()%3 );
+	}
+	else{
+		dataPacket.reserve(5);
+	}
 
-	// 32-bit address
-	dataPacket[1] = (addr >> 24) & LSB_MASK;
-	dataPacket[2] = (addr >> 16) & LSB_MASK;
-	dataPacket[3] = (addr >> 8) & LSB_MASK;
-	dataPacket[4] = addr & LSB_MASK;
+	//First push on the address
+	//4Byte command byte with address line high
+	dataPacket.push_back(writeAddress);
 
-	// command byte
-	dataPacket[5] = APS_FPGA_IO | (fpga<<2) | 2;
+	// 4 bytes of address
+	dataPacket.push_back((addr >> 24) & LSB_MASK);
+	dataPacket.push_back((addr >> 16) & LSB_MASK);
+	dataPacket.push_back((addr >> 8) & LSB_MASK);
+	dataPacket.push_back(addr & LSB_MASK);
 
-	// count = 1
-	dataPacket[6] = 0x0;
-	dataPacket[7] = 0x1;
+	//Now push on the number of points data if necessary
+	if (data.size() > 0){
+		// command byte
+		dataPacket.push_back(write2Bytes);
 
-	// 1 word of data
-	dataPacket[8] = (data >> 8) & LSB_MASK;
-	dataPacket[9] = data & LSB_MASK;
+		//
+		dataPacket.push_back((data.size() >> 8) & LSB_MASK);
+		dataPacket.push_back(data.size() & LSB_MASK);
 
+		// push on data
+		int ptsRemaining = data.size();
+		int ptsToWrite = 0;
+		int wfIndex = 0;
+		while (ptsRemaining > 0) {
+			switch (ptsRemaining) {
+			case 1:
+				ptsToWrite = 1;
+				dataPacket.push_back(write2Bytes);
+				break;
+			case 2:
+			case 3:
+				ptsToWrite = 2;
+				dataPacket.push_back(write4Bytes);
+				break;
+			default: // 4 or more
+				ptsToWrite = 4;
+				dataPacket.push_back(write8Bytes);
+				break;
+			}
+
+			for (int ct = 0; ct < ptsToWrite; ct++, wfIndex++ ) {
+				dataPacket.push_back((data[wfIndex] >> 8) & LSB_MASK);
+				dataPacket.push_back(data[wfIndex] & LSB_MASK);
+			}
+			ptsRemaining -= ptsToWrite;
+		}
+	}
 	return dataPacket;
 }
 
