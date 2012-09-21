@@ -19,6 +19,13 @@
 extern "C" {
 #endif
 
+enum APSErrorCode {
+	APS_OK,
+	APS_UNKNOWN_ERROR = -1,
+	APS_FILE_ERROR = -2
+};
+
+
 EXPORT int init();
 
 EXPORT int get_numDevices();
