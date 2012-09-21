@@ -83,7 +83,6 @@ classdef APS < hgsetget
             
             % build path for bitfiles
             obj.bit_file_path = fullfile(curPath, obj.APS_ROOT, 'bitfiles');
-            
         end
         
         function delete(obj)
@@ -226,8 +225,15 @@ classdef APS < hgsetget
                 filename = fullfile(obj.bit_file_path, obj.defaultBitFileName);
             end
             
+            if ~exist(filename,'file')
+               error(sprintf('APS: bitfile %s not found ', filename));
+            end
+            
             %Call the dll with a null-terminated string
-            obj.libraryCall('initAPS', [filename 0], force);
+            err = obj.libraryCall('initAPS', [filename 0], force);
+            if (err < 0)
+               error(sprintf('APS: initAPS : %i', err));
+            end
         end
         
         function loadWaveform(obj, ch, waveform)
