@@ -15,12 +15,12 @@ APSRack APSRack_;
 extern "C" {
 #endif
 
-int init() {
+int init(){
 
 	APSRack_ = APSRack();
 	APSRack_.init();
 
-	return 0;
+	return APS_OK;
 }
 
 int get_numDevices(){
@@ -61,7 +61,17 @@ int serial2ID(char * deviceSerial){
 //Initialize an APS unit
 //Assumes null-terminated bitFile
 int initAPS(int deviceID, char * bitFile, int forceReload){
-	return APSRack_.initAPS(deviceID, string(bitFile), forceReload);
+	try {
+		return APSRack_.initAPS(deviceID, string(bitFile), forceReload);
+	} catch (std::exception& e) {
+		string error = e.what();
+		if (error.compare("Unable to open bitfile.") == 0) {
+			return APS_FILE_ERROR;
+		} else {
+			return APS_UNKNOWN_ERROR;
+		}
+	}
+
 }
 
 int read_bitfile_version(int deviceID) {
@@ -87,7 +97,13 @@ int set_waveform_int(int deviceID, int channelNum, short* data, int numPts){
 }
 
 int load_sequence_file(int deviceID, char * seqFile){
-	return APSRack_.load_sequence_file(deviceID, string(seqFile));
+	try {
+		return APSRack_.load_sequence_file(deviceID, string(seqFile));
+	} catch (...) {
+		return APS_UNKNOWN_ERROR;
+	}
+	// should not reach this point
+	return APS_UNKNOWN_ERROR;
 }
 
 int clear_channel_data(int deviceID) {
@@ -97,6 +113,7 @@ int clear_channel_data(int deviceID) {
 int run(int deviceID) {
 	return APSRack_.run(deviceID);
 }
+
 int stop(int deviceID) {
 	return APSRack_.stop(deviceID);
 }
@@ -119,6 +136,7 @@ int get_running(int deviceID){
 
 //Expects a null-terminated character array
 int set_log(char * fileNameArr) {
+
 	string fileName(fileNameArr);
 	if (fileName.compare("stdout") == 0){
 		return APSRack_.set_log(stdout);
@@ -127,7 +145,12 @@ int set_log(char * fileNameArr) {
 		return APSRack_.set_log(stderr);
 	}
 	else{
+
 		FILE* pFile = fopen(fileName.c_str(), "a");
+		if (!pFile) {
+			return APS_FILE_ERROR;
+		}
+
 		return APSRack_.set_log(pFile);
 	}
 }
