@@ -202,6 +202,8 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
 
 int main(int argc, char** argv) {
 
+	int err;
+
 	set_logging_level(logDEBUG);
 
 	if (cmdOptionExists(argv, argv + argc, "-h")) {
@@ -233,7 +235,12 @@ int main(int argc, char** argv) {
 	//Connect to device
 	connect_by_ID(0);
 
-	initAPS(0, const_cast<char*>(bitFile.c_str()), false);
+	err = initAPS(0, const_cast<char*>(bitFile.c_str()), false);
+
+	if (err != APS_OK) {
+		cout << "Error initializing APS Rack: " << err << endl;
+		exit(-1);
+	}
 
 	vector<float> waveform(0);
 
