@@ -1,28 +1,9 @@
-classdef AgilentE8363C < deviceDrivers.lib.GPIB
+classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
 %AGILENTE8363C
 %
 %
 % Author(s): rhiltner with generate_driver.py
 % Generated on: Fri Oct 16 11:37:54 2009
-
-
-
-    % Class-specific constant properties
-    properties (Constant = true)
-
-    end % end constant properties
-
-
-    % Class-specific private properties
-    properties (Access = private)
-
-    end % end private properties
-
-
-    % Class-specific public properties
-    properties (Access = public)
-
-    end % end public properties
 
 
     % Device properties correspond to instrument parameters
@@ -55,20 +36,10 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIB
     end % end device properties
 
 
-
-    % Class-specific private methods
-    methods (Access = private)
-
-    end % end private methods
-
-
     methods (Access = public)
         function obj = AgilentE8363C()
-        %AGILENTE8363C
-%             obj = obj@dev.DAObject.GPIB.GPIBWrapper();
-        end % end constructor
-
-
+            %AGILENTE8363C constructor
+        end
 
         % Instrument-specific methods
         function clear(obj)
@@ -175,14 +146,6 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIB
         end
         
     end % end methods
-
-    methods % Class-specific private property accessors
-
-    end % end private property accessors
-
-    methods % Class-specific public property accessors
-
-    end % end public property accessors
 
     methods % Instrument parameter accessors
         function val = get.identity(obj)
@@ -502,6 +465,4 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIB
     end % end instrument parameter accessors
 
 end % end classdef
-
-%---END OF FILE---%
 
