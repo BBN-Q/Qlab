@@ -62,16 +62,28 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
             obj.write(gpib_string);
         end
         
-        function val = getTrace(obj)
+        function [frequencies, s21] = getTrace(obj)
+            % re-average
+            obj.reaverage();
+            
+            % select measurement (how do we make this general??)
+            obj.select_measurement = 'CH1_S21_1';
+            s21 = obj.sweep_data;
+            
+            center_freq = obj.sweep_center;
+            span = obj.sweep_span;
+            frequencies = linspace(center_freq - span/2, center_freq + span/2, length(s21));
+        end
+        
+        function reaverage(obj)
+            % reaverage
+            % Clears current data and waits until NA has a full set of
+            % averages.
             obj.abort();
             obj.average_clear();
             
             obj.wait();
             obj.block_for_averaging();
-            % select measurement (how do we make this general??)
-            command_string = 'CALC:PAR:SEL ''CH1_S21_1'';';
-            obj.write(command_string);
-            val = obj.sweep_data;
         end
         function marker1_search(obj, value)
         %MARKER1_SEARCH
@@ -165,7 +177,9 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
         end
         function val = get.sweep_data(obj)
             gpib_string = ':CALCulate:DATA';
-            val = obj.query([gpib_string '? SDATA']);
+            textdata = obj.query([gpib_string '? SDATA']);
+            data = str2num(textdata);
+            val = data(1:2:end) + 1i*data(2:2:end);
         end
         function val = get.marker1_state(obj)
             gpib_string = ':CALCulate:MARKer1:STATe';
@@ -205,7 +219,7 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
         end
         function val = get.average_counts(obj)
             gpib_string = ':SENSe1:AVERage:COUNt';
-            val = obj.query([gpib_string '?']);
+            val = str2double(obj.query([gpib_string '?']));
         end
         function val = get.averaging(obj)
             gpib_string = ':SENSe1:AVERage:STATe';
@@ -213,11 +227,11 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
         end
         function val = get.sweep_center(obj)
             gpib_string = ':SENSe:FREQuency:CENTer';
-            val = obj.query([gpib_string '?']);
+            val = str2double(obj.query([gpib_string '?']));
         end
         function val = get.sweep_span(obj)
             gpib_string = ':SENSe:FREQuency:SPAN';
-            val = obj.query([gpib_string '?']);
+            val = str2double(obj.query([gpib_string '?']));
         end
         function val = get.sweep_mode(obj)
             gpib_string = ':SENSe:SWEep:MODE';
@@ -225,7 +239,7 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
         end
         function val = get.sweep_points(obj)
             gpib_string = ':SENSe:SWEep:POINts';
-            val = obj.query([gpib_string '?']);
+            val = str2double(obj.query([gpib_string '?']));
         end
         function val = get.power(obj)
             gpib_string = ':SOURce:POWer:LEVel:IMMediate:AMPLitude';
