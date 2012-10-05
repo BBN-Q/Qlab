@@ -8,23 +8,24 @@
 #ifndef CONSTANTS_H_
 #define CONSTANTS_H_
 
-
+//Some maximum sizes of things we can fit
 static const int  MAX_APS_CHANNELS = 4;
 static const int  MAX_APS_BANKS = 2;
 
 static const int  APS_WAVEFORM_UNIT_LENGTH = 4;
 
-static const int  MAX_WAVEFORM_LENGTH = 8192;
-
-static const int  NUM_BITS = 13;
-
-static const int  MAX_WF_VALUE = (pow(2,NUM_BITS)-1);
-
 static const int  MAX_APS_DEVICES = 10;
+
+static const int MAX_WF_LENGTH = 16384;
+static const int MAX_WF_AMP = 8191;
+static const int WF_MODULUS = 4;
+static const int MAX_LL_LENGTH = 4096;
 
 static const int APS_READTIMEOUT = 1000;
 static const int APS_WRITETIMEOUT = 500;
 
+
+//FPGA programming bits
 static const int  APS_PGM01_BIT = 1;
 static const int  APS_PGM23_BIT = 2;
 static const int  APS_PGM_BITS = (APS_PGM01_BIT | APS_PGM23_BIT);
@@ -41,7 +42,10 @@ static const int  APS_INIT01_BIT = 0x40;
 static const int  APS_INIT23_BIT = 0x80;
 static const int  APS_INIT_BITS = (APS_INIT01_BIT | APS_INIT23_BIT);
 
+static const int APS_OSCEN_BIT = 0x10;
 
+
+//Command byte bits
 static const int  APS_FPGA_IO = 0;
 static const int  APS_FPGA_ADDR = (1<<4);
 static const unsigned int  APS_DAC_SPI = (2<<4);
@@ -54,6 +58,7 @@ static const int  APS_CMD = (0x7<<4);
 
 static const int  LSB_MASK = 0xFF;
 
+//Clock bits
 static const int FPGA1_PLL_CYCLES_ADDR =  0x190;
 static const int FPGA1_PLL_BYPASS_ADDR = 0x191;
 static const int DAC0_ENABLE_ADDR = 0xF0;
@@ -67,49 +72,37 @@ static const int DAC3_ENABLE_ADDR = 0xF4;
 static const int FPGA2_PLL_ADDR = 0xF3;
 
 
-static const int APS_OSCEN_BIT = 0x10;
+// configRegister Locations
+//read-write is signified by the most highest bit in the address
+static const int FPGA_ADDR_REGWRITE = 0;
+static const int FPGA_ADDR_REGREAD =  (1 << 31);
+
+//The next three highest bits signify the bank selection
+static const int FPGA_BANKSEL_CSR = (0 << 28);
+static const int FPGA_BANKSEL_WF_CHA = (1 << 28);
+static const int FPGA_BANKSEL_WF_CHB = (2 << 28);
+static const int FPGA_BANKSEL_LL_CHA = (3 << 28);
+static const int FPGA_BANKSEL_LL_CHB = (4 << 28);
+
+//Registers we write to
+static const int FPGA_ADDR_CSR 	  =   FPGA_BANKSEL_CSR | 0x0;
+static const int FPGA_ADDR_TRIG_INTERVAL = FPGA_BANKSEL_CSR | 0x1;
+static const int  FPGA_ADDR_CHA_WF_LENGTH =  FPGA_BANKSEL_CSR | 0x3;
+static const int  FPGA_ADDR_CHB_WF_LENGTH =  FPGA_BANKSEL_CSR | 0x4;
+static const int  FPGA_ADDR_CHA_LL_LENGTH =  FPGA_BANKSEL_CSR | 0x5;
+static const int  FPGA_ADDR_CHB_LL_LENGTH =  FPGA_BANKSEL_CSR | 0x6;
+static const int FPGA_ADDR_CHA_ZERO = FPGA_BANKSEL_CSR | 0x7; // DAC0/2 zero offset register
+static const int FPGA_ADDR_CHB_ZERO = FPGA_BANKSEL_CSR | 0x8; // DAC1/3 zero offset register
+static const int FPGA_ADDR_LL_REPEAT = FPGA_BANKSEL_CSR | 0x9;
 
 
-// Register Locations
-static const int FPGA_ADDR_REGWRITE = 0x0000;
+//Registers we read from
+static const int  FPGA_ADDR_VERSION  =   FPGA_BANKSEL_CSR | 0x10;
 
-static const int  FPGA_OFF_CSR 	  =   0x0;
-static const int  FPGA_OFF_TRIGLED  =   0x1;
-static const int  FPGA_OFF_CHA_OFF   =   0x2;
-static const int  FPGA_OFF_CHA_SIZE  =   0x3;
-static const int  FPGA_OFF_CHB_OFF   =   0x4;
-static const int  FPGA_OFF_CHB_SIZE  =   0x5;
-static const int  FPGA_OFF_VERSION  =   0x11;  // 0x6 in old firmware
-static const int  FPGA_OFF_LLCTRL	=     0x7;
+static const int FPGA_ADDR_PLL_STATUS = FPGA_BANKSEL_CSR | 0x11;
+static const int FPGA_ADDR_CHA_LL_CURADDR = FPGA_BANKSEL_CSR | 0x12;
+static const int FPGA_ADDR_CHB_LL_CURADDR = FPGA_BANKSEL_CSR | 0x13;
 
-
-static const int FPGA_OFF_CHA_LL_A_CTRL = 0x7;  // A Control Register
-static const int FPGA_OFF_CHA_LL_B_CTRL = 0x8;  // B Control Register
-static const int FPGA_OFF_CHA_LL_REPEAT = 0x9;  // Repeat Count
-static const int FPGA_OFF_CHB_LL_A_CTRL = 0xA;  // A Control Register
-static const int FPGA_OFF_CHB_LL_B_CTRL = 0xB;  // B Control Register
-static const int FPGA_OFF_CHB_LL_REPEAT = 0xC;  // Repeat Count
-static const int FPGA_OFF_DATA_CHECKSUM = 0xD;  // Data Checksum Register
-static const int FPGA_OFF_ADDR_CHECKSUM = 0xE;  // Address Checksum Register
-static const int FPGA_OFF_CHA_ZERO = 0x10; // DAC0/2 zero offset register
-static const int FPGA_OFF_CHB_ZERO = 0x11; // DAC1/3 zero offset register
-static const int FPGA_OFF_CHA_TRIG_DELAY = 0x12; // DAC0/2 trigger delay
-static const int FPGA_OFF_CHB_TRIG_DELAY = 0x13; // DAC1/3 trigger delay
-
-
-
-static const int  FPGA_ADDR_REGREAD =   0x80000000;
-
-static const int  FPGA_ADDR_CHA_WRITE =  0x20000000;
-static const int  FPGA_ADDR_CHB_WRITE =  0x30000000;
-
-static const int  FPGA_ADDR_CHA_LL_A_WRITE = 0x3000;
-static const int  FPGA_ADDR_CHA_LL_B_WRITE = 0x3800;
-
-static const int  FPGA_ADDR_CHB_LL_A_WRITE = 0x6000;
-static const int  FPGA_ADDR_CHB_LL_B_WRITE = 0x6800;
-
-static const int FPGA_PLL_RESET_ADDR = 0x0;
 
 //PLL bits
 static const int PLL_GLOBAL_XOR_BIT = 15;
@@ -119,35 +112,24 @@ static const int PLL_02_LOCK_BIT = 12;
 static const int PLL_13_LOCK_BIT = 11;
 static const int REFERENCE_PLL_LOCK_BIT = 10;
 static const int MAX_PHASE_TEST_CNT = 40;
-static const int FIRMWARE_VERSION =  0X010;
 
+//Expected version
+static const int FIRMWARE_VERSION =  0x1;
 
-//Each FPGA has a CHA/B associated with it
-static const int CSRMSK_CHA_SMRST = 0x1; // state machine reset
+//Each FPGA has a CHA/B CSR with some configuration bits
+static const int CSRMSK_CHA_SMRSTN = 0x1; // state machine reset
 static const int CSRMSK_CHA_PLLRST = 0x2; // pll reset
 static const int CSRMSK_CHA_DDR = 0x4; // DDR enable
-static const int CSRMSK_CHA_MEMLCK = 0x8; // waveform memory lock (1 = locked, 0 = unlocked)
 static const int CSRMSK_CHA_TRIGSRC = 0x10; // trigger source (1 = external, 0 = internal)
 static const int CSRMSK_CHA_OUTMODE = 0x20; // output mode (1 = link list, 0 = waveform)
 static const int CSRMSK_CHA_LLMODE = 0x40; // LL repeat mode (1 = one-shot, 0 = continuous)
-static const int CSRMSK_CHA_LLSTATUS = 0x80; // LL status (1 = LL A active, 0 = LL B active)
 
 static const int CSRMSK_CHB_SMRST = 0x100; // state machine reset
 static const int CSRMSK_CHB_PLLRST = 0x200; // pll reset
 static const int CSRMSK_CHB_DDR = 0x400; // DDR enable
-static const int CSRMSK_CHB_MEMLCK = 0x800;
 static const int CSRMSK_CHB_TRIGSRC = 0x1000;
 static const int CSRMSK_CHB_OUTMODE = 0x2000;
 static const int CSRMSK_CHB_LLMODE = 0x4000;
-static const int CSRMSK_CHB_LLSTATUS = 0x8000;
-
-static const int TRIGLEDMSK_CHA_SWTRIG = 0x1; // Channel 0/2 internal trigger (1 = enabled, 0 = disabled)
-static const int TRIGLEDMSK_CHB_SWTRIG = 0x2; // Channel 1/3 internal trigger (1 = enabled, 0 = disabled)
-static const int TRIGLEDMSK_WFMTRIG02 = 0x4; // Waveform trigger output channel 0/2 (1 = enabled, 0 = disabled)
-static const int TRIGLEDMSK_WFMTRIG13 = 0x8; // Waveform trigger output channel 1/3 (1 = enabled, 0 = disabled)
-static const int TRIGLEDMSK_MODE = 0x10; // LED mode (0 = PLL sync, 1 = statement machine enabled)
-static const int TRIGLEDMSK_SWLED0 = 0x20; // internal LED 0
-static const int TRIGLEDMSK_SWLED1 = 0x40; // internal LED 1
 
 enum {
 	SOFTWARE_TRIGGER=1,
@@ -159,12 +141,6 @@ typedef enum {INVALID_FPGA=0, FPGA1, FPGA2, ALL_FPGAS} FPGASELECT;
 typedef enum {LED_PLL_SYNC=1, LED_RUNNING} LED_MODE;
 
 typedef enum {RUN_WAVEFORM=0, RUN_SEQUENCE} RUN_MODE;
-
-static const int MAX_WFLENGTH = 8192;
-static const int MAX_WFAMP = 8191;
-static const int WF_MODULUS = 4;
-static const int MAX_LL_LENGTH = 512;
-
 
 
 #endif /* CONSTANTS_H_ */

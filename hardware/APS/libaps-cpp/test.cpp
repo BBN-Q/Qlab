@@ -91,6 +91,11 @@ void test::doToggleTest() {
 
 	set_trigger_source(0,SOFTWARE_TRIGGER);
 
+	//Enable all channels
+	for (int ct=0; ct<4; ct++){
+		set_channel_enabled(0, ct, 1);
+	}
+
 	ask = 1;
 	cout << "Cmd: [t]rigger [d]isable e[x]it: ";
 	while(ask) {
@@ -101,20 +106,17 @@ void test::doToggleTest() {
 
 		case 'T':
 			printf("Triggering");
-			trigger_FPGA_debug(0, 0);
-			trigger_FPGA_debug(0, 2);
+			run(0);
 			break;
 
 		case 'D':
 			printf("Disabling");
-			disable_FPGA_debug(0,0);
-			disable_FPGA_debug(0,2);
+			stop(0);
 			break;
 
 		case 'X':case 'x':
 			printf("Exiting\n");
-			disable_FPGA_debug(0,0);
-			disable_FPGA_debug(0,2);
+			stop(0);
 			ask = 0;
 			continue;
 		case '\r':

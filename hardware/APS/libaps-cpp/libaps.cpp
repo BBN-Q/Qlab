@@ -86,6 +86,10 @@ int get_sampleRate(int deviceID){
 	return APSRack_.get_sampleRate(deviceID);
 }
 
+int set_trigger_interval(int deviceID, double interval){
+	return APSRack_.set_trigger_interval(deviceID, interval);
+}
+
 //Load the waveform library as floats
 int set_waveform_float(int deviceID, int channelNum, float* data, int numPts){
 	return APSRack_.set_waveform(deviceID, channelNum, vector<float>(data, data+numPts));
@@ -116,14 +120,6 @@ int run(int deviceID) {
 
 int stop(int deviceID) {
 	return APSRack_.stop(deviceID);
-}
-
-int trigger_FPGA_debug(int deviceID, int fpga){
-	return APSRack_.trigger_FPGA_debug(deviceID, FPGASELECT(fpga));
-}
-
-int disable_FPGA_debug(int deviceID, int fpga){
-	return APSRack_.disable_FPGA_debug(deviceID, FPGASELECT(fpga));
 }
 
 int reset_LL_banks(int deviceID, int channelNum){

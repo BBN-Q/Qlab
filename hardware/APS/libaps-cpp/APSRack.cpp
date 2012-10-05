@@ -123,14 +123,6 @@ int APSRack::stop(const int & deviceID) {
 	return APSs_[deviceID].stop();
 }
 
-int APSRack::trigger_FPGA_debug(const int & deviceID, const FPGASELECT & fpga){
-	return APSs_[deviceID].trigger(fpga);
-}
-
-int APSRack::disable_FPGA_debug(const int & deviceID, const FPGASELECT & fpga){
-	return APSs_[deviceID].disable(fpga);
-}
-
 int APSRack::load_sequence_file(const int & deviceID, const string & seqFile){
 	return APSs_[deviceID].load_sequence_file(seqFile);
 }
@@ -145,6 +137,10 @@ int APSRack::reset_LL_banks(const int & deviceID, const int & channelNum){
 
 int APSRack::get_running(const int & deviceID){
 	return APSs_[deviceID].running_;
+}
+
+int APSRack::set_trigger_interval(const int & deviceID, const double & interval){
+	return APSs_[deviceID].set_trigger_interval(interval);
 }
 
 int APSRack::set_log(FILE * pFile) {

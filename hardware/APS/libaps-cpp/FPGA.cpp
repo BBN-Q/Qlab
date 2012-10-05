@@ -684,7 +684,7 @@ int FPGA::set_bit(FT_HANDLE deviceHandle, const FPGASELECT & fpga, const int & a
  ********************************************************************/
 {
 
-	//Read the current state so we know how set the uncleared bits.
+	//Read the current state so we know how set the unset bits.
 	int currentState, currentState2;
 	//Use a lambda because we'll need the same call below
 	auto check_cur_state = [&] () {

@@ -38,8 +38,6 @@ public:
 
 	int run(const int &);
 	int stop(const int &);
-	int trigger_FPGA_debug(const int &, const FPGASELECT &);
-	int disable_FPGA_debug(const int &, const FPGASELECT &);
 	int set_trigger_source(const int &, const int &);
 	int get_trigger_source(const int &) const;
 
@@ -55,6 +53,8 @@ public:
 
 	int set_channel_trigDelay(const int &, const int &, const USHORT &);
 	unsigned short get_channel_trigDelay(const int &, const int &);
+
+	int set_trigger_interval(const int &, const double &);
 
 	int get_running(const int &);
 

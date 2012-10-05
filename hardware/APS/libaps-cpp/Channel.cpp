@@ -47,7 +47,7 @@ float Channel::get_scale() const{
 
 int Channel::set_waveform(const vector<float> & data) {
 	//Check whether we need to resize the waveform vector
-	if (data.size() > size_t(MAX_WFLENGTH)){
+	if (data.size() > size_t(MAX_WF_LENGTH)){
 		FILE_LOG(logERROR) << "Tried to update waveform to longer than max allowed: " << data.size();
 		return -1;
 	}
@@ -62,7 +62,7 @@ int Channel::set_waveform(const vector<float> & data) {
 
 int Channel::set_waveform(const vector<short> & data) {
 	//Check whether we need to resize the waveform vector
-	if (data.size() > size_t(MAX_WFLENGTH)){
+	if (data.size() > size_t(MAX_WF_LENGTH)){
 		FILE_LOG(logERROR) << "Tried to update waveform to longer than max allowed: " << data.size();
 		return -1;
 	}
@@ -71,7 +71,7 @@ int Channel::set_waveform(const vector<short> & data) {
 	//Waveform length must be a integer multiple of WF_MODULUS so resize to that
 	waveform_.resize(size_t(WF_MODULUS*ceil(float(data.size())/WF_MODULUS)), 0);
 	for(size_t ct=0; ct<data.size(); ct++){
-		waveform_[ct] = float(data[ct])/MAX_WFAMP;
+		waveform_[ct] = float(data[ct])/MAX_WF_AMP;
 	}
 	return 0;
 }
@@ -80,20 +80,20 @@ vector<short> Channel::prep_waveform() const{
 	//Apply the scale,offset and covert to integer format
 	vector<short> prepVec(waveform_.size());
 	for(size_t ct=0; ct<prepVec.size(); ct++){
-		prepVec[ct] = short(MAX_WFAMP*(scale_*waveform_[ct]+offset_));
+		prepVec[ct] = short(MAX_WF_AMP*(scale_*waveform_[ct]+offset_));
 	}
 
 	//Clip to the max and min values allowed
-	if (*max_element(prepVec.begin(), prepVec.end()) > MAX_WFAMP){
+	if (*max_element(prepVec.begin(), prepVec.end()) > MAX_WF_AMP){
 		FILE_LOG(logWARNING) << "Waveform element too positive; clipping to max";
 		for(short & tmpVal : prepVec){
-			if (tmpVal > MAX_WFAMP) tmpVal = MAX_WFAMP;
+			if (tmpVal > MAX_WF_AMP) tmpVal = MAX_WF_AMP;
 		}
 	}
-	if (*min_element(prepVec.begin(), prepVec.end()) < -MAX_WFAMP){
+	if (*min_element(prepVec.begin(), prepVec.end()) < -MAX_WF_AMP){
 		FILE_LOG(logWARNING) << "Waveform element too negative; clipping to max";
 		for(short & tmpVal : prepVec){
-			if (tmpVal < -MAX_WFAMP) tmpVal = -MAX_WFAMP;
+			if (tmpVal < -MAX_WF_AMP) tmpVal = -MAX_WF_AMP;
 		}
 	}
 	return prepVec;

@@ -42,6 +42,9 @@ public:
 	int set_channel_trigDelay(const int &, const USHORT &);
 	unsigned short get_channel_trigDelay(const int &);
 
+	int set_trigger_interval(const double &);
+
+
 	template <typename T>
 	int set_waveform(const int & dac, const vector<T> & data){
 		channels_[dac].set_waveform(data);
@@ -86,14 +89,12 @@ private:
 	int setup_PLL();
 	int set_PLL_freq(const FPGASELECT &, const int &);
 	int test_PLL_sync(const FPGASELECT & fpga, const int & numRetries = 5);
-	int read_PLL_status(const FPGASELECT & fpga, const int & regAddr = FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, const vector<int> & pllLockBits = std::initializer_list<int>({PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT}));
+	int read_PLL_status(const FPGASELECT & fpga, const int & regAddr = FPGA_ADDR_REGREAD | FPGA_ADDR_PLL_STATUS, const vector<int> & pllLockBits = std::initializer_list<int>({PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT}));
 	int get_PLL_freq(const FPGASELECT &) const;
 
 	int setup_VCXO();
 
 	int setup_DAC(const int &) const;
-
-	int set_LED_mode(const FPGASELECT &, const LED_MODE &);
 
 	int trigger(const FPGASELECT &);
 	int disable(const FPGASELECT &);
