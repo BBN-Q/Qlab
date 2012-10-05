@@ -22,11 +22,6 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
         IQ_Skew
     end % end device properties
     
-    % Class-specific private methods
-    methods (Access = private)
-        
-    end % end private methods
-    
     methods
         function obj = AgilentN5183A()
             %obj = obj@deviceDrivers.lib.uWSource();
@@ -36,67 +31,67 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
         % getters
         function val = get.frequency(obj)
             gpib_string = ':freq?;';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = str2double(temp)*1e-9; % convert to GHz
         end
         function val = get.power(obj)
             gpib_string = ':power?;';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = str2double(temp);
         end
         function val = get.phase(obj)
             gpib_string = ':phase?;';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = str2double(temp);
         end
         function val = get.output(obj)
             gpib_string = ':output?;';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = temp;
         end
         function val = get.mod(obj)
             gpib_string = ':output:mod?;';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = temp;
         end
         function val = get.alc(obj)
             gpib_string = ':power:alc?;';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = temp;
         end
         function val = get.pulse(obj)
             gpib_string = ':pulm:state?;';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = temp;
         end
         function val = get.pulseSource(obj)
             gpib_string = ':pulm:source?;';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = temp;
         end
         function val = get.IQ(obj)
             gpib_string = ':dm:state?;';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = temp;
         end
         function val = get.IQ_Adjust(obj)
             gpib_string = ':dm:IQAD?;';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = temp;
         end
         function val = get.IQ_IOffset(obj)
             gpib_string = ':dm:iqad:ioff?;';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = str2double(temp);
         end
         function val = get.IQ_QOffset(obj)
             gpib_string = ':dm:iqad:qoff?;';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = str2double(temp);
         end
         function val = get.IQ_Skew(obj)
             gpib_string = ':dm:iqad:qskew?;';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = str2double(temp);
         end
         
@@ -112,8 +107,8 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             gpib_string = sprintf(gpib_string, value);
 
             %mode_string = ':freq:mode fixed'; %set to fixed
-            %obj.Write(mode_string);
-            obj.Write(gpib_string);
+            %obj.write(mode_string);
+            obj.write(gpib_string);
         end
         function obj = set.power(obj, value)
             gpib_string = ':power %ddbm;';
@@ -124,7 +119,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             end
             
             gpib_string = sprintf(gpib_string, value);
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.output(obj, value)
             gpib_string = ':output ';
@@ -140,7 +135,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             end
             
             gpib_string =[gpib_string checkMapObj(value) ';'];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         % set phase in degrees
         function obj = set.phase(obj, value)
@@ -152,7 +147,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             end
             
             gpib_string = sprintf(gpib_string, value);
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.mod(obj, value)
             gpib_string = ':output:mod ';
@@ -168,7 +163,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             end
             
             gpib_string =[gpib_string checkMapObj(value) ';'];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.alc(obj, value)
             gpib_string = ':power:alc ';
@@ -184,7 +179,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             end
             
             gpib_string =[gpib_string checkMapObj(value) ';'];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.pulse(obj, value)
             gpib_string = ':pulm:state ';
@@ -200,7 +195,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             end
             
             gpib_string = [gpib_string checkMapObj(value) ';'];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.pulseSource(obj, value)
             gpib_string = ':pulm:source ';
@@ -214,7 +209,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             end
             
             gpib_string = [gpib_string checkMapObj(value) ';'];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.IQ(obj, value)
             gpib_string = ':dm:state ';
@@ -230,7 +225,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             end
             
             gpib_string = [gpib_string checkMapObj(value) ';'];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.IQ_Adjust(obj, value)
             gpib_string = ':dm:IQAD ';
@@ -246,7 +241,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             end
             
             gpib_string = [gpib_string checkMapObj(value) ';'];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.IQ_IOffset(obj, value)
             gpib_string = ':dm:iqad:ioff %d;';
@@ -257,7 +252,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             end
             
             gpib_string = sprintf(gpib_string, value);
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.IQ_QOffset(obj, value)
             gpib_string = ':dm:iqad:qoff %d;';
@@ -268,7 +263,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             end
             
             gpib_string = sprintf(gpib_string, value);
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.IQ_Skew(obj, value)
             gpib_string = ':dm:iqad:qskew %d;';
@@ -279,7 +274,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             end
             
             gpib_string = sprintf(gpib_string, value);
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
     end % end instrument parameter accessors
     

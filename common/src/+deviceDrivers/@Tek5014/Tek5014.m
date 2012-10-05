@@ -12,7 +12,7 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
-classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
+classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
 	% AWG5014 is an instrument wrapper class for the Tektronix Arbitrary Waveform Generator 5014.
 	% Like the other instrument classes, it provides an interface for interacting with device 
 	% while abstracting away the GPIB instruction set.
@@ -26,19 +26,12 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
 	
     % Define properties
     properties (Constant = true)
-        %% Class Constants
-        REVISION_NUMBER = 0.2; 
-        DEFAULT_TCPIP_ADDR = '128.33.89.94';
-        DEFAULT_SOCKET = 4000;
+        DEFAULT_PORT = 4000;
         LRG_WAVEFORM = 0	%	Split waveforms into smaller subunits (0 = off, 1 = on)
     end
     
     properties (Access = public)
-        %% Public class properties
 		%% Device, group, and channel object for the AWG.
-		deviceObj_awg;		%	Instrument object, either TCPIP or GPIB.
-        buffer_size = 1000000;	%	Buffer size for sending waveform data.
-        address;            %	device TCPIP or GPIB address
 
         chan_1;             %	Instantiation of awg_channel object.
         chan_2;             %	Instantiation of awg_channel object.	
@@ -123,57 +116,14 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
         % depending on the form of the address
             import deviceDrivers.lib.awg_channel;
             
-            if ~exist('address', 'var')
-                address = obj.DEFAULT_TCPIP_ADDR;
-            end
+            % call superclass method
+            connect@deviceDrivers.lib.GPIBorEthernet(obj, address);
             
-            obj.address = address;
-            if ~isempty(obj.deviceObj_awg)
-                obj.disconnect();
-            end
-            
-            % determine whether to use GPIB or TCPIP by the form of the
-            % address
-            ip_re = '\d+\.\d+\.\d+\.\d+';
-            gpib_re = '\d+';
-
-            if ischar(address) && ~isempty(regexp(address, ip_re))
-                % Create a TCPIP object.
-                obj.deviceObj_awg = tcpip(address, obj.DEFAULT_SOCKET);
-            elseif ischar(address) && ~isempty(regexp(address, gpib_re))
-                % create a GPIB object
-                obj.deviceObj_awg = gpib('ni', 0, str2double(address));
-            elseif isnumeric(address)
-                obj.deviceObj_awg = gpib('ni', 0, address);
-            else
-                error(['connect: Invalid address: ', address]);
-            end
-            
-            set(obj.deviceObj_awg, 'OutputBufferSize', obj.buffer_size);
-            fopen(obj.deviceObj_awg);
-
+            % set up channel objects
             obj.chan_1 = awg_channel('1', obj);
             obj.chan_2 = awg_channel('2', obj);
             obj.chan_3 = awg_channel('3', obj);
             obj.chan_4 = awg_channel('4', obj);
-        end
-
-        function disconnect(obj)
-            flushoutput(obj.deviceObj_awg);
-            fclose(obj.deviceObj_awg);
-            delete(obj.deviceObj_awg);
-        end
-        
-        function write(obj, msg)
-            fprintf(obj.deviceObj_awg, msg);
-        end
-        
-        function val = read(obj)
-            val = fgets(obj.deviceObj_awg);
-        end
-        
-        function val = query(obj, msg)
-            val = query(obj.deviceObj_awg, msg);
         end
 		
 		% instrument meta-setter
@@ -423,7 +373,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
             % write
             obj.deleteWaveform(name);
             obj.createWaveform(name, length(waveform), 'integer');
-            binblockwrite(obj.deviceObj_awg, bindata, [':wlist:waveform:data "' name '",']); %data transmission
+            obj.binblockwrite(bindata, [':wlist:waveform:data "' name '",']); %data transmission
         end
 
         function sendWaveformReal(obj, name, waveform, marker1, marker2)
@@ -463,7 +413,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
             
             obj.deleteWaveform(name);
             obj.createWaveform(name, 'real', length(buffer));
-            binblockwrite(obj.deviceObj_awg, binblock, [':wlist:waveform:data "' name '",']); %data transmission
+            obj.binblockwrite(binblock, [':wlist:waveform:data "' name '",']); %data transmission
         end
         
         function createWaveform(obj, name, size, type)
@@ -478,14 +428,14 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
         function val = getWaveform(obj, name)
             gpib_string = ['WLIST:WAVeform:DATA? "', name, '"'];
             obj.write(gpib_string);
-            val = binblockread(obj.deviceObj_awg, 'uint16');
+            val = obj.binblockread('uint16');
         end
         
         function val = getWaveformReal(obj, name, startIndex, blockSize)
             gpib_string = ['WLIST:WAVeform:DATA? ', name, ',', ... 
                     num2str(startIndex),',', num2str(blockSize)];
             obj.write(gpib_string);
-            val = binblockread(obj.deviceObj_awg, 'single');
+            val = obj.binblockread('single');
         end
 
         function sendMarkerData(obj, name, marker1, marker2)
@@ -503,7 +453,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.deviceDriverBase
             % merge markers
             m = marker1 + marker2; %check dec2bin(m(2),8)
             
-            binblockwrite(obj.deviceObj_awg, m, [':wlist:waveform:marker:data "' name '",']); %data transmission
+            obj.binblockwrite(m, [':wlist:waveform:marker:data "' name '",']); %data transmission
         end
 
     end % end public methods

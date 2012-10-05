@@ -1,4 +1,8 @@
 classdef GPIBorEthernet < hgsetget
+    properties (Constant = true)
+       DEFAULT_PORT = 5025; % for TCP/IP communication
+    end
+    
     properties (Access = protected)
         interface
         buffer_size = 1048576 % 1 MB buffer
@@ -12,7 +16,7 @@ classdef GPIBorEthernet < hgsetget
 
             if ischar(address) && ~isempty(regexp(address, ip_re, 'once'))
                 % Create a TCPIP object.
-                obj.interface = tcpip(address, obj.DEFAULT_SOCKET);
+                obj.interface = tcpip(address, obj.DEFAULT_PORT);
             elseif ischar(address) && ~isempty(regexp(address, gpib_re, 'once'))
                 % create a GPIB object
                 obj.interface = gpib('ni', 0, str2double(address));
@@ -33,16 +37,25 @@ classdef GPIBorEthernet < hgsetget
             delete(obj.interface);
         end
         
-        function Write(obj, string)
+        function write(obj, string)
             fprintf(obj.interface, string);
         end
         
-        function val = Query(obj, string)
+        function val = query(obj, string)
             val = query(obj.interface, string);
         end
         
-        function val = Read(obj)
-            val = fgets(obj.interface);
+        function val = read(obj)
+            val = fgetl(obj.interface);
+        end
+        
+        % binary read/write functions
+        function binblockwrite(obj, varargin)
+            binblockwrite(obj.interface, varargin{:});
+        end
+        
+        function val = binblockread(obj, varargin)
+            val = binblockread(obj.interface, varargin{:});
         end
     end
 end

@@ -40,28 +40,28 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
         function reset(obj)
             %RESET
             gpib_string = '*RST';
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
             pause(3)
         end
         function trigger(obj)
             gpib_string = '*TRG';
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
     end
     methods % Instrument parameter accessors
         %% get
         function val = get.identity(obj)
             gpib_string = '*IDN';
-            val = obj.Query([gpib_string '?']);
+            val = obj.query([gpib_string '?']);
         end
         function val = get.outputLoad(obj)
             gpib_string = 'OUTPut:LOAD';
-            temp = obj.Query([gpib_string '?']);
+            temp = obj.query([gpib_string '?']);
             val = str2double(temp);
         end
         function val = get.triggerSource(obj)
             gpib_string = 'TRIGger:SOURce';
-            val = obj.Query([gpib_string '?']);
+            val = obj.query([gpib_string '?']);
         end
         function val = get.samplingRate(obj)
             val = obj.samplingRate;
@@ -71,25 +71,25 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
         end
         function val = get.numWaveforms(obj)
             gpib_string = 'BURSt:NCYCles';
-            temp = obj.Query([gpib_string '?']);
+            temp = obj.query([gpib_string '?']);
             val = str2double(temp);
         end
         function val = get.burstMode(obj)
             gpib_string = 'BURSt:MODE';
-            val = obj.Query([gpib_string '?']);
+            val = obj.query([gpib_string '?']);
         end
         function val = get.burstState(obj)
             gpib_string = 'BURSt:STATE';
-            val = obj.Query([gpib_string '?']);
+            val = obj.query([gpib_string '?']);
         end
         function val = get.offset(obj)
             gpib_string = 'VOLT:OFFSET';
-            temp = obj.Query([gpib_string '?']);
+            temp = obj.query([gpib_string '?']);
             val = str2double(temp);
         end
         function val = get.period(obj)
             gpib_string = 'PULSE:PERIOD?';
-            temp = obj.Query(gpib_string);
+            temp = obj.query(gpib_string);
             val = str2double(temp);
         end
         %% set
@@ -102,7 +102,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
 %                 error('Invalid input');
 %             end
 %             gpib_string = [gpib_string ' ' checkMapObj(value)];
-%             obj.Write(gpib_string);
+%             obj.write(gpib_string);
 %         end
         function obj = set.outputLoad(obj, value)
             gpib_string = 'OUTPut:LOAD';
@@ -113,7 +113,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
                 valueStr = num2str(value);
             end
             gpib_string = [gpib_string ' ' valueStr];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.burstMode(obj, value)
             gpib_string = 'BURSt:MODE';
@@ -127,7 +127,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
                 error('Invalid input');
             end
             gpib_string = [gpib_string ' ' checkMapObj(value)];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.triggerSource(obj, value)
             gpib_string = 'TRIGger:SOURce';
@@ -141,7 +141,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
                 error('Invalid input');
             end
             gpib_string = [gpib_string ' ' checkMapObj(value)];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.samplingRate(obj, value)
             if ~(isnumeric(value) && isscalar(value))
@@ -166,7 +166,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
                 valueStr = num2str(value);
             end
             gpib_string = [gpib_string ' ' valueStr];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.burstState(obj, value)
             gpib_string = 'BURSt:STATE';
@@ -179,7 +179,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
                 error('Invalid input');
             end
             gpib_string = [gpib_string ' ' checkMapObj(value)];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.offset(obj, value)
             gpib_string = 'VOLT:OFFSET';
@@ -190,7 +190,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
                 valueStr = num2str(value);
             end
             gpib_string = [gpib_string ' ' valueStr];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.period(obj, value)
             gpib_string = 'PULSE:PERIOD';
@@ -201,7 +201,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
                 valueStr = num2str(value);
             end
             gpib_string = [gpib_string ' ' valueStr];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
     end
 end % end class definition
