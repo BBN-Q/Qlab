@@ -425,14 +425,14 @@ int APS::run() {
 
 	//If all channels are enabled then trigger together
 	if (allChannels) {
-		FPGA::set_bit(handle_, ALL_FPGAS, 0, CSRMSK_CHA_SMRSTN );
+		FPGA::set_bit(handle_, ALL_FPGAS, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
 	}
 	else {
 		if (channelsEnabled[0] || channelsEnabled[1]) {
-			FPGA::set_bit(handle_, FPGA1, 0, CSRMSK_CHA_SMRSTN );
+			FPGA::set_bit(handle_, FPGA1, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
 		}
 		if (channelsEnabled[2] || channelsEnabled[3]) {
-			FPGA::set_bit(handle_, FPGA2, 0, CSRMSK_CHA_SMRSTN );
+			FPGA::set_bit(handle_, FPGA2, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
 		}
 	}
 
@@ -652,18 +652,18 @@ int APS::setup_PLL() {
 		{0xF3, 0x00},  // Enable un-inverted 400mv clock on OUT3
 		{0xF4, 0x00},  // Enable un-inverted 400mv clock on OUT4
 		{0xF5, 0x00},  // Enable un-inverted 400mv clock on OUT5
-		{0x190, 0x00}, //	No division on channel 0
-		{0x191, 0x80}, //	Bypass 0 divider
-		{0x193, 0x11}, //	(2 high, 2 low = 1.2 GHz / 4 = 300 MHz = Reference 300 MHz)
-		{0x196, 0x00}, //	No division on channel 2
-		{0x197, 0x80}, //   Bypass 2 divider
-		{0x1E0, 0x0}, // Set VCO post divide to 2
+		{0x190, 0x00}, // No division on channel 0
+		{0x191, 0x80}, // Bypass 0 divider
+		{0x193, 0x11}, // (2 high, 2 low = 1.2 GHz / 4 = 300 MHz = Reference 300 MHz)
+		{0x196, 0x00}, // No division on channel 2
+		{0x197, 0x80}, // Bypass 2 divider
+		{0x1E0, 0x0},  // Set VCO post divide to 2
 		{0x1E1, 0x2},  // Select VCO as clock source for VCO divider
 		{0x232, 0x1},  // Set bit 0 to 1 to simultaneously update all registers with pending writes.
 		{0x18, 0x71},  // Initiate Calibration.  Must be followed by Update Registers Command
 		{0x232, 0x1},  // Set bit 0 to 1 to simultaneously update all registers with pending writes.
 		{0x18, 0x70},  // Clear calibration flag so that next set generates 0 to 1.
-		{0x232, 0x1},   // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+		{0x232, 0x1},  // Set bit 0 to 1 to simultaneously update all registers with pending writes.
 	};
 
 
@@ -1139,19 +1139,19 @@ int APS::setup_DAC(const int & dac) const
 	FPGA::read_SPI(handle_, APS_DAC_SPI, controllerAddr, &data);
 	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(controllerAddr & 0x1F) << " Val: " << int(data & 0xFF);
 	data = 0;
-	FPGA::write_SPI(handle_,  APS_DAC_SPI, controllerAddr, &data);
+	FPGA::write_SPI(handle_, APS_DAC_SPI, controllerAddr, &data);
 
 	// Slide the data valid window left (with MSD) and check for the interrupt
 	SD = 0;  //(sample delay nibble, stored in Reg. 5, bits 7:4)
 	MSD = 0; //(setup delay nibble, stored in Reg. 4, bits 7:4)
 	MHD = 0; //(hold delay nibble,  stored in Reg. 4, bits 3:0)
 	data = SD << 4;
-	FPGA::write_SPI(handle_,  APS_DAC_SPI, sdAddr, &data);
+	FPGA::write_SPI(handle_, APS_DAC_SPI, sdAddr, &data);
 
 	for (MSD = 0; MSD < 16; MSD++) {
 		FILE_LOG(logDEBUG2) <<  "Setting MSD: " << int(MSD);
 		data = (MSD << 4) | MHD;
-		FPGA::write_SPI(handle_,  APS_DAC_SPI, msdMhdAddr, &data);
+		FPGA::write_SPI(handle_, APS_DAC_SPI, msdMhdAddr, &data);
 		FILE_LOG(logDEBUG2) <<  "Write Reg: " << myhex << int(msdMhdAddr & 0x1F) << " Val: " << int(data & 0xFF);
 		//FPGA::read_SPI(handle_, APS_DAC_SPI, msd_mhd_addr, &data);
 		//dlog(DEBUG_VERBOSE2, "Read reg 0x%x, value 0x%x\n", msd_mhd_addr & 0x1F, data & 0xFF);
@@ -1199,6 +1199,18 @@ int APS::setup_DAC(const int & dac) const
 	data = (1 << 7) | (1 << 6) | (filter_length << 2) | (threshold & 0x3);
 	FPGA::write_SPI(handle_, APS_DAC_SPI, controller_addr, &data);
 	*/
+	
+	// turn on sync FIFO (reg 0, bit 2)
+	ULONG syncAddr = 0x0 | (dac << 5);
+	ULONG fifoStatusAddr = 0x7 | (dac << 5);
+	FILE_LOG(logDEBUG) << "Enabling FIFO";
+	FPGA::read_SPI(handle_, APS_DAC_SPI, syncAddr, &data);
+	FPGA::write_SPI(handle_, APS_DAC_SPI, syncAddr, data | (1 << 2));
+	// read back FIFO phase to ensure we are in a safe zone
+	FPGA::read_SPI(handle_, APS_DAC_SPI, fifoStatusAddr, &data);
+	// phase (FIFOSTAT) is in bits <6:4>
+	FILE_LOG(logDEBUG2) << "Read: " << myhex << int(data & 0xFF);
+	FILE_LOG(logDEBUG) << "FIFO phase = " << ((data & 0x70) >> 4);
 	return 0;
 }
 

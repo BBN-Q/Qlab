@@ -660,15 +660,10 @@ int FPGA::clear_bit(FT_HANDLE deviceHandle, const FPGASELECT & fpga, const int &
 	check_cur_state();
 	FILE_LOG(logDEBUG2) << "Addr: " << myhex << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
 
-	//TODO: take out if possible
-	usleep(100);
-
 	FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | addr, currentState & ~mask, fpga);
 
 	if (FILELog::ReportingLevel() >= logDEBUG2) {
 		// verify write
-		//TODO: take out if possible
-		usleep(100);
 		check_cur_state();
 	}
 
@@ -703,14 +698,10 @@ int FPGA::set_bit(FT_HANDLE deviceHandle, const FPGASELECT & fpga, const int & a
 	check_cur_state();
 	FILE_LOG(logDEBUG2) << "Addr: " <<  myhex << addr << " Current State: " << currentState << " Mask: " << mask << " Writing: " << (currentState | mask);
 
-	// TODO: take out, if possible
-	usleep(100);
-
 	FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | addr, currentState | mask, fpga);
 
 	if (FILELog::ReportingLevel() >= logDEBUG2) {
 		// verify write
-		usleep(100);
 		check_cur_state();
 		if ((currentState & mask) == 0) {
 			FILE_LOG(logERROR) << "ERROR: FPGA::set_bit checked data does not match set value";
