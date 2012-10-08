@@ -245,6 +245,9 @@ int main(int argc, char** argv) {
 		exit(-1);
 	}
 
+	set_trigger_interval(0, 20e-6);
+
+
 	vector<float> waveform(0);
 
 	for(int ct=0; ct<1000;ct++){

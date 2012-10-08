@@ -63,7 +63,7 @@ int APS::init(const string & bitFile, const bool & forceReload){
 
 		//Program the bitfile to both FPGA's
 		//int bytesProgramed = program_FPGA(bitFile, ALL_FPGAS, 0x10);
-		int bytesProgramed = program_FPGA(bitFile, FPGA1, 0x10);
+		int bytesProgramed = program_FPGA(bitFile, FPGA1, FIRMWARE_VERSION);
 
 		//Default to max sample rate
 		set_sampleRate(1200);
@@ -403,7 +403,11 @@ int APS::set_trigger_interval(const double & interval){
 	//SM clock is 1/4 of samplingRate so the trigger interval in SM clock periods is
 	int clockCycles = interval*0.25*samplingRate_*1e6;
 
-	return FPGA::write_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL, clockCycles, ALL_FPGAS);
+	//Trigger interval is 32bits wide so have to split up into two 16bit words
+	USHORT upperWord = clockCycles >> 16;
+	USHORT lowerWord = 0xFFFF  & clockCycles;
+
+	return write(ALL_FPGAS, FPGA_ADDR_TRIG_INTERVAL, {upperWord, lowerWord}, false);
 }
 
 
@@ -870,10 +874,6 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 		for(int xorct = 0; xorct < xorCounts; xorct++) {
 			//TODO: fix up the hardcoded ugly stuff and maybe integrate with read_PLL_status
 			pllBit = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_ADDR_PLL_STATUS, fpga);
-			if ((pllBit & 0x1ff) != FIRMWARE_VERSION) {
-				FILE_LOG(logERROR) << "Reg 0xF006 bitfile version does not match. Read " << std::hex << (pllBit & 0x1ff);
-				return -6;
-			}
 			xorFlagCnts[0] += (pllBit >> PLL_GLOBAL_XOR_BIT) & 0x1;
 			xorFlagCnts[1] += (pllBit >> PLL_02_XOR_BIT) & 0x1;
 			xorFlagCnts[2] += (pllBit >> PLL_13_XOR_BIT) & 0x1;
@@ -936,10 +936,6 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 
 			for(int xorct = 0; xorct < xorCounts; xorct++) {
 				pllBit = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_ADDR_PLL_STATUS, fpga);
-				if ((pllBit & 0x1ff) != FIRMWARE_VERSION) {
-					FILE_LOG(logERROR) << "Reg 0xF006 bitfile version does not match. Read " << std::hex << (pllBit & 0x1ff);
-					return -8;
-				}
 				xorFlagCnt += (pllBit >> PLL_XOR_TEST[pll]) & 0x1;
 			}
 
@@ -1021,11 +1017,6 @@ int APS::read_PLL_status(const FPGASELECT & fpga, const int & regAddr /*check he
 //	pll_bit = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, fpga); // latched to 200 MHz PLL (has version 0x010)
 
 	ULONG pllRegister = FPGA::read_FPGA(handle_, regAddr, fpga);
-
-	if ((pllRegister & 0x1ff) != USHORT(FIRMWARE_VERSION)) {
-		FILE_LOG(logERROR) << "Reg 0x8006 bitfile version does not match. Read: " << std::hex << (pllRegister & 0x1ff);
-		return -1;
-	}
 
 	//Check each of the clocks in series
 	for(int tmpBit : pllLockBits){
