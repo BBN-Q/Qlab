@@ -166,6 +166,7 @@ classdef homodyneDetection2D < expManager.expBase
         end
         %% Class destructor
         function delete(obj)
+            obj.CleanUp()
         end
         %% error checking method
         function errorCheckExpParams(obj)

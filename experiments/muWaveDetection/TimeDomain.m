@@ -107,11 +107,11 @@ SweepTabPanel = uiextras.TabPanel('Parent', SweepPanel, 'Padding', 5, 'Highlight
 get_freqA_settings = sweepGUIs.FrequencySweepGUI(SweepTabPanel, 'A');
 get_power_settings = sweepGUIs.PowerSweepGUI(SweepTabPanel, '');
 get_phase_settings = sweepGUIs.PhaseSweepGUI(SweepTabPanel, '');
-[get_time_settings, set_time_settings] = sweepGUIs.TimeSweepGUI(SweepTabPanel, '');
 get_AWGSequence_settings = sweepGUIs.AWGSequenceSweepGUI(SweepTabPanel, '');
 get_AWGChannel_settings = sweepGUIs.AWGChannelSweepGUI(SweepTabPanel, '');
+[get_time_settings, set_time_settings] = sweepGUIs.TimeSweepGUI(SweepTabPanel, '');
 
-SweepTabPanel.TabNames = {'Freq. A', 'Power', 'Phase', 'X-Axis', 'Seq.', 'Channel'};
+SweepTabPanel.TabNames = {'Freq. A', 'Power', 'Phase', 'Seq.', 'Channel', 'X-Axis'};
 SweepTabPanel.SelectedChild = 1;
 
 % Add the measurement settings panels
@@ -291,7 +291,6 @@ set(mainWindow, 'Visible', 'on');
 
 		Exp.Init();
 		Exp.Do();
-		Exp.CleanUp();
 
         %After a succesful run uncheck the force reload buttons
         for tmpAWGPanel = AWGTabPanel.Children
