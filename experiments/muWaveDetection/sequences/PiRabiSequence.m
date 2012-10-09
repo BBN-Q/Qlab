@@ -5,19 +5,22 @@ if ~exist('makePlot', 'var')
 end
 
 basename = 'PiRabi';
-fixedPt = 6000;
-cycleLength = 10000;
+fixedPt = 4000;
+cycleLength = 6000;
 nbrRepeats = 1;
 
-numsteps = 80;
+numsteps = 40;
 
 % load config parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
 qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 
-controlQ = 'q3';
+controlQ = 'q1';
+targetQ = 'q3';
 q1Params = params.(controlQ);
 IQkey1 = qubitMap.(controlQ).IQkey;
+q2Params = params.(targetQ);
+IQkey2 = qubitMap.(targetQ).IQkey;
 CRParams = params.CR;
 IQkeyCR = qubitMap.CR.IQkey;
 
@@ -25,12 +28,15 @@ IQkeyCR = qubitMap.CR.IQkey;
 SSBFreq = 0e6;
 pg1 = PatternGen('dPiAmp', q1Params.piAmp, 'dPiOn2Amp', q1Params.pi2Amp, 'dSigma', q1Params.sigma, 'dPulseType', q1Params.pulseType, 'dDelta', q1Params.delta, 'correctionT', params.(IQkey1).T, 'dBuffer', q1Params.buffer, 'dPulseLength', q1Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey1).linkListMode, 'dmodFrequency',SSBFreq);
 
+SSBFreq = 0e6;
+pg2 = PatternGen('dPiAmp', q2Params.piAmp, 'dPiOn2Amp', q2Params.pi2Amp, 'dSigma', q2Params.sigma, 'dPulseType', q2Params.pulseType, 'dDelta', q2Params.delta, 'correctionT', params.(IQkey2).T, 'dBuffer', q2Params.buffer, 'dPulseLength', q2Params.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey2).linkListMode, 'dmodFrequency',SSBFreq);
+
 SSBFreq = 0;
 CRParams.buffer = 0;
 pgCR = PatternGen('dPiAmp', CRParams.piAmp, 'dPiOn2Amp', CRParams.pi2Amp, 'dSigma', CRParams.sigma, 'dPulseType', CRParams.pulseType, 'dDelta', CRParams.delta, 'correctionT', params.(IQkeyCR).T, 'dBuffer', CRParams.buffer, 'dPulseLength', CRParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkeyCR).linkListMode, 'dmodFrequency',SSBFreq);
 
-minWidth = 16+6*CRParams.sigma; %16+6*CRParams.sigma; 
-stepsize = 8;
+minWidth = 16+4*CRParams.sigma; %16+6*CRParams.sigma; 
+stepsize = 4;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 % pulseLength = 120*ones(numsteps,1);
 
@@ -38,16 +44,21 @@ pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 amps = 4000;
 
 patseq1  = {...
-    {pg1.pulse('Xp'), pg1.pulse('QId', 'duration', pulseLength+32), pg1.pulse('Xp')},...
-    {pg1.pulse('QId')}...
+    {pg1.pulse('Xp'), pg1.pulse('QId', 'duration', pulseLength+16), pg1.pulse('Xp'), pg1.pulse('QId', 'duration', pulseLength+16), pg1.pulse('QId')},...
+    {pg1.pulse('Xp'), pg1.pulse('QId', 'duration', pulseLength+16), pg1.pulse('Xp')}...
     };
 patseqCR = {...
-    pgCR.pulse('Xtheta', 'pType', 'dragGaussOn', 'width', 3*CRParams.sigma, 'amp', amps), ...
-    pgCR.pulse('Xtheta', 'width', pulseLength-6*CRParams.sigma, 'pType', 'square', 'amp', amps*(1-exp(-4.5))), ...
-    pgCR.pulse('Xtheta', 'pType', 'dragGaussOff', 'width', 3*CRParams.sigma, 'amp', amps), ...
-    pgCR.pulse('QId', 'width', q1Params.pulseLength + q1Params.buffer+16) ...
+    pgCR.pulse('Xtheta', 'pType', 'dragGaussOn', 'width', 2*CRParams.sigma, 'amp', amps), ...
+    pgCR.pulse('Xtheta', 'width', pulseLength-4*CRParams.sigma, 'pType', 'square', 'amp', amps*(1-exp(-2))), ...
+    pgCR.pulse('Xtheta', 'pType', 'dragGaussOff', 'width', 2*CRParams.sigma, 'amp', amps), ...
+    pgCR.pulse('QId', 'width', q1Params.pulseLength + q1Params.buffer+24), ...
+    pgCR.pulse('Xtheta', 'pType', 'dragGaussOn', 'width', 2*CRParams.sigma, 'amp', -amps), ...
+    pgCR.pulse('Xtheta', 'width', pulseLength-4*CRParams.sigma, 'pType', 'square', 'amp', -amps*(1-exp(-2))), ...
+    pgCR.pulse('Xtheta', 'pType', 'dragGaussOff', 'width', 2*CRParams.sigma, 'amp', -amps), ...
+    pgCR.pulse('QId', 'width', q1Params.pulseLength + q1Params.buffer+8) ...
     };
 
+patseq2 = {{pg2.pulse('U90p', 'angle', pi/2)}, {pg2.pulse('U90p', 'angle', pi/2)}};
 patseqCR = repmat({patseqCR}, 1, 2);
 
 % patseqCR = {...
@@ -57,8 +68,10 @@ patseqCR = repmat({patseqCR}, 1, 2);
 %     pgCR.pulse('QId', 'width', q1Params.pulseLength + q1Params.buffer), ...
 %     };
 
-%calseq = [];
-calseq1 = {{pg1.pulse('QId')}, {pg1.pulse('Xp')}};
+% calseq1 = [];
+% calseqCR = [];
+calseq1 = {{pg1.pulse('QId')}, {pg1.pulse('QId')}};
+calseq2 = {{pg2.pulse('QId')}, {pg2.pulse('Xp')}};
 calseqCR = {{pgCR.pulse('QId')}, {pgCR.pulse('QId')}};
 
 seqParams = struct(...
@@ -71,13 +84,15 @@ seqParams = struct(...
     'measLength', 2000);
 patternDict = containers.Map();
 if ~isempty(calseq1), calseq1 = {calseq1}; end
+if ~isempty(calseq2), calseq2 = {calseq2}; end
 if ~isempty(calseqCR), calseqCR = {calseqCR}; end
 patternDict(IQkey1) = struct('pg', pg1, 'patseq', {patseq1}, 'calseq', calseq1, 'channelMap', qubitMap.(controlQ));
+patternDict(IQkey2) = struct('pg', pg2, 'patseq', {patseq2}, 'calseq', calseq2, 'channelMap', qubitMap.(targetQ));
 patternDict(IQkeyCR) = struct('pg', pgCR, 'patseq', {patseqCR}, 'calseq', calseqCR, 'channelMap', qubitMap.CR);
 measChannels = {'M1'};
 awgs = {'TekAWG', 'BBNAPS'};
 
-plotSeqNum = 10;
+plotSeqNum = 70;
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, plotSeqNum);
 
