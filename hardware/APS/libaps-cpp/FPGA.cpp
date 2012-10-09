@@ -496,7 +496,7 @@ int FPGA::write_SPI
 		FT_HANDLE deviceHandle,
 		ULONG Command,   // APS_DAC_SPI, APS_PLL_SPI, or APS_VCXO_SPI
 		const ULONG & Address,   // SPI register address.  Ignored for VCXO since address embedded in the data
-		UCHAR *Data      // Data bytes to be written.  1 for DAC, 1 for PLL, or 4 for VCXO.  LS Byte first.
+		const vector<UCHAR> & Data      // Data bytes to be written.  1 for DAC, 1 for PLL, or 4 for VCXO.  LS Byte first.
 )
 /********************************************************************
  *
@@ -547,7 +547,7 @@ int FPGA::write_SPI
 		break;
 	case APS_VCXO_SPI:
 		// Copy out data bytes to be in MS Byte first order
-		byteBuffer.assign(Data, Data+4);
+		byteBuffer = Data;
 		break;
 	default:
 		// Ignore unsupported commands

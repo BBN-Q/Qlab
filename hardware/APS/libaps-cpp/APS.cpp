@@ -637,6 +637,9 @@ int APS::setup_PLL() {
 	// Disable DDRs
 	int ddrMask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
 	FPGA::clear_bit(handle_, ALL_FPGAS, FPGA_ADDR_CSR, ddrMask);
+	// disable dac FIFOs
+	for (int dac = 0; dac < 4; dac++)
+		disable_DAC_FIFO(dac);
 
 	// Setup modified for 300 MHz FPGA clock rate
 	//Setup of a vector of address-data pairs for all the writes we need for the PLL routine
@@ -673,7 +676,7 @@ int APS::setup_PLL() {
 
 	// Go through the routine
 	for (auto tmpPair : PLL_Routine){
-		FPGA::write_SPI(handle_, APS_PLL_SPI, tmpPair.first, &tmpPair.second);
+		FPGA::write_SPI(handle_, APS_PLL_SPI, tmpPair.first, {tmpPair.second});
 	}
 
 	// enable the oscillator
@@ -736,6 +739,9 @@ int APS::set_PLL_freq(const FPGASELECT & fpga, const int & freq) {
 	// Disable DDRs
 	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
 	FPGA::clear_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
+	// disable DAC FIFOs
+	for (int dac = 0; dac < 4; dac++)
+		disable_DAC_FIFO(dac);
 
 	// Disable oscillator by clearing APS_STATUS_CTRL register
 	if (APS::clear_status_ctrl() != 1) return -4;
@@ -751,7 +757,7 @@ int APS::set_PLL_freq(const FPGASELECT & fpga, const int & freq) {
 	};
 	// Go through the routine
 	for (auto tmpPair : PLL_Routine){
-		FPGA::write_SPI(handle_, APS_PLL_SPI, tmpPair.first, &tmpPair.second);
+		FPGA::write_SPI(handle_, APS_PLL_SPI, tmpPair.first, {tmpPair.second});
 	}
 
 	// Enable Oscillator
@@ -759,6 +765,9 @@ int APS::set_PLL_freq(const FPGASELECT & fpga, const int & freq) {
 
 	// Enable DDRs
 	FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
+	// Enable DAC FIFOs
+	for (int dac = 0; dac < 4; dac++)
+		enable_DAC_FIFO(dac);
 
 	return 0;
 }
@@ -819,6 +828,9 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 	// Disable DDRs
 	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
 	FPGA::clear_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
+	// disable DAC FIFOs
+	for (int dac = 0; dac < 4; dac++)
+		disable_DAC_FIFO(dac);
 
 	//A little helper function to wait for the PLL's to lock and reset if necessary
 	auto wait_PLL_relock = [this, &fpga, &pllResetBit](bool resetPLL, const int & regAddress, const vector<int> & pllBits) -> bool {
@@ -858,7 +870,7 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 	auto update_PLL_register = [this] (){
 		ULONG address = 0x232;
 		UCHAR data = 0x1;
-		FPGA::write_SPI(handle_, APS_PLL_SPI, address, &data);
+		FPGA::write_SPI(handle_, APS_PLL_SPI, address, {data});
 	};
 
 	FILE_LOG(logINFO) << "Testing for DAC clock phase sync";
@@ -896,20 +908,20 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 			//If the ChA XOR Bit is coming up at half-count then reset it
 			if (xorFlagCnts[1] >= lowCutoff || xorFlagCnts[1] <= highCutoff) {
 				dac02Reset = 1;
-				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr, &writeByte);
+				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr, {writeByte});
 			}
 			//If the ChB XOR Bit is coming up at half-count then reset it
 			if (xorFlagCnts[2] >= lowCutoff || xorFlagCnts[2] <= highCutoff) {
 				dac13Reset = 1;
-				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr2, &writeByte);
+				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr2, {writeByte});
 			}
 			//Actually update things
 			update_PLL_register();
 			writeByte = 0x0; // enable clock outputs
 			if (dac02Reset)
-				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr, &writeByte);
+				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr, {writeByte});
 			if (dac13Reset)
-				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr2, &writeByte);
+				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr2, {writeByte});
 			update_PLL_register();
 
 			// reset FPGA PLLs
@@ -955,12 +967,12 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 						FILE_LOG(logDEBUG) << "Global sync failed; retrying.";
 						// restart both DAC clocks and try again
 						writeByte = 0x2;
-						FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr, &writeByte);
-						FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr2, &writeByte);
+						FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr, {writeByte});
+						FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr2, {writeByte});
 						update_PLL_register();
 						writeByte = 0x0;
-						FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr, &writeByte);
-						FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr2, &writeByte);
+						FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr, {writeByte});
+						FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr2, {writeByte});
 						update_PLL_register();
 
 						FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, pllResetBit);
@@ -971,6 +983,9 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 					}
 					// we failed, but enable DDRs to get a usable state
 					FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
+					// enable DAC FIFOs
+					for (int dac = 0; dac < 4; dac++)
+						enable_DAC_FIFO(dac);
 
 					FILE_LOG(logERROR) << "Error could not sync PLLs";
 					return -9;
@@ -993,6 +1008,9 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 
 	// Enable DDRs
 	FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
+	// enable DAC FIFOs
+	for (int dac = 0; dac < 4; dac++)
+		disable_DAC_FIFO(dac);
 
 	if (!globalSync) {
 		FILE_LOG(logWARNING) << "PLLs are not in sync";
@@ -1080,10 +1098,10 @@ int APS::setup_VCXO() {
 	FILE_LOG(logINFO) << "Setting up VCX0";
 
 	// Register 00 VCXO value, MS Byte First
-	UCHAR Reg00Bytes[4] = {0x8, 0x60, 0x0, 0x4};
+	vector<UCHAR> Reg00Bytes = {0x8, 0x60, 0x0, 0x4};
 
 	// Register 01 VCXO value, MS Byte First
-	UCHAR Reg01Bytes[4] = {0x64, 0x91, 0x0, 0x61};
+	vector<UCHAR> Reg01Bytes = {0x64, 0x91, 0x0, 0x61};
 
 	// ensure the oscillator is disabled before programming
 	if (APS::clear_status_ctrl() != 1)
@@ -1130,19 +1148,19 @@ int APS::setup_DAC(const int & dac) const
 	FPGA::read_SPI(handle_, APS_DAC_SPI, controllerAddr, &data);
 	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(controllerAddr & 0x1F) << " Val: " << int(data & 0xFF);
 	data = 0;
-	FPGA::write_SPI(handle_, APS_DAC_SPI, controllerAddr, &data);
+	FPGA::write_SPI(handle_, APS_DAC_SPI, controllerAddr, {data});
 
 	// Slide the data valid window left (with MSD) and check for the interrupt
 	SD = 0;  //(sample delay nibble, stored in Reg. 5, bits 7:4)
 	MSD = 0; //(setup delay nibble, stored in Reg. 4, bits 7:4)
 	MHD = 0; //(hold delay nibble,  stored in Reg. 4, bits 3:0)
 	data = SD << 4;
-	FPGA::write_SPI(handle_, APS_DAC_SPI, sdAddr, &data);
+	FPGA::write_SPI(handle_, APS_DAC_SPI, sdAddr, {data});
 
 	for (MSD = 0; MSD < 16; MSD++) {
 		FILE_LOG(logDEBUG2) <<  "Setting MSD: " << int(MSD);
 		data = (MSD << 4) | MHD;
-		FPGA::write_SPI(handle_, APS_DAC_SPI, msdMhdAddr, &data);
+		FPGA::write_SPI(handle_, APS_DAC_SPI, msdMhdAddr, {data});
 		FILE_LOG(logDEBUG2) <<  "Write Reg: " << myhex << int(msdMhdAddr & 0x1F) << " Val: " << int(data & 0xFF);
 		//FPGA::read_SPI(handle_, APS_DAC_SPI, msd_mhd_addr, &data);
 		//dlog(DEBUG_VERBOSE2, "Read reg 0x%x, value 0x%x\n", msd_mhd_addr & 0x1F, data & 0xFF);
@@ -1161,7 +1179,7 @@ int APS::setup_DAC(const int & dac) const
 	for (MHD = 0; MHD < 16; MHD++) {
 		FILE_LOG(logDEBUG2) <<  "Setting MHD: " << int(MHD);
 		data = (MSD << 4) | MHD;
-		FPGA::write_SPI(handle_,  APS_DAC_SPI, msdMhdAddr, &data);
+		FPGA::write_SPI(handle_,  APS_DAC_SPI, msdMhdAddr, {data});
 		FPGA::read_SPI(handle_, APS_DAC_SPI, sdAddr, &data);
 		FILE_LOG(logDEBUG2) << "Read: " << myhex << int(data & 0xFF);
 		bool check = data & 1;
@@ -1177,10 +1195,10 @@ int APS::setup_DAC(const int & dac) const
 	// Clear MSD and MHD
 	MHD = 0;
 	data = (MSD << 4) | MHD;
-	FPGA::write_SPI(handle_, APS_DAC_SPI, msdMhdAddr, &data);
+	FPGA::write_SPI(handle_, APS_DAC_SPI, msdMhdAddr, {data});
 	// Set the optimal sample delay (SD)
 	data = SD << 4;
-	FPGA::write_SPI(handle_, APS_DAC_SPI, sdAddr, &data);
+	FPGA::write_SPI(handle_, APS_DAC_SPI, sdAddr, {data});
 
 	// AD9376 data sheet advises us to enable surveilance and auto modes, but this
 	// has introduced output glitches in limited testing
@@ -1191,18 +1209,35 @@ int APS::setup_DAC(const int & dac) const
 	FPGA::write_SPI(handle_, APS_DAC_SPI, controller_addr, &data);
 	*/
 	
-	// turn on sync FIFO (reg 0, bit 2)
+	// turn on SYNC FIFO
+	enable_DAC_FIFO(dac);
+
+	return 0;
+}
+
+int APS::enable_DAC_FIFO(const int & dac) const {
+	BYTE data;
 	ULONG syncAddr = 0x0 | (dac << 5);
 	ULONG fifoStatusAddr = 0x7 | (dac << 5);
-	FILE_LOG(logDEBUG) << "Enabling FIFO";
+	FILE_LOG(logDEBUG) << "Enabling DAC " << dac << " FIFO";
+	// set sync bit (Reg 0, bit 2)
 	FPGA::read_SPI(handle_, APS_DAC_SPI, syncAddr, &data);
-	FPGA::write_SPI(handle_, APS_DAC_SPI, syncAddr, data | (1 << 2));
+	FPGA::write_SPI(handle_, APS_DAC_SPI, syncAddr, {UCHAR(data | (1 << 2))} );
 	// read back FIFO phase to ensure we are in a safe zone
 	FPGA::read_SPI(handle_, APS_DAC_SPI, fifoStatusAddr, &data);
 	// phase (FIFOSTAT) is in bits <6:4>
 	FILE_LOG(logDEBUG2) << "Read: " << myhex << int(data & 0xFF);
 	FILE_LOG(logDEBUG) << "FIFO phase = " << ((data & 0x70) >> 4);
-	return 0;
+}
+
+int APS::disable_DAC_FIFO(const int & dac) const {
+	BYTE data, mask;
+	ULONG syncAddr = 0x0 | (dac << 5);
+	FILE_LOG(logDEBUG) << "Disable DAC " << dac << " FIFO";
+	// clear sync bit
+	FPGA::read_SPI(handle_, APS_DAC_SPI, syncAddr, &data);
+	mask = (0x1 << 2);
+	FPGA::write_SPI(handle_, APS_DAC_SPI, syncAddr, {data & ~mask} );
 }
 
 int APS::reset_checksums(const FPGASELECT & fpga){

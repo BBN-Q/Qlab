@@ -95,6 +95,9 @@ private:
 	int setup_VCXO();
 
 	int setup_DAC(const int &) const;
+	int enable_DAC_FIFO(const int &) const;
+	int disable_DAC_FIFO(const int &) const;
+
 
 	int trigger(const FPGASELECT &);
 	int disable(const FPGASELECT &);

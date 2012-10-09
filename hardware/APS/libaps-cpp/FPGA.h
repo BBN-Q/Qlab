@@ -21,7 +21,7 @@ int read_register(FT_HANDLE, const ULONG &, const ULONG &, const FPGASELECT &, U
 int write_register(FT_HANDLE, const ULONG &, const ULONG &, const FPGASELECT &, UCHAR *);
 
 int read_SPI(FT_HANDLE, ULONG, const ULONG &, UCHAR *);
-int write_SPI(FT_HANDLE, ULONG, const ULONG &, UCHAR *);
+int write_SPI(FT_HANDLE, ULONG, const ULONG &, const vector<UCHAR> &);
 
 int clear_bit(FT_HANDLE, const FPGASELECT &, const int &, const int &);
 int set_bit(FT_HANDLE, const FPGASELECT &, const int &, const int &);
