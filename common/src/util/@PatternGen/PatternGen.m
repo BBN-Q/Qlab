@@ -592,16 +592,9 @@ classdef PatternGen < handle
                 
                 reducedIndex = 1 + mod(n-1, length(pulse.hashKeys));
                 entry.key = pulse.hashKeys{reducedIndex};
-                if pulse.isTimeAmplitude
-                    % repeat = width for time/amplitude pulses
-                    entry.length = 1;
-                    entry.repeat = size(pulse.pulseArray{reducedIndex},1);
-                    entry.isTimeAmplitude = 1;
-                else
-                    entry.length = length(pulse.pulseArray{reducedIndex});
-                    entry.repeat = 1;
-                    entry.isTimeAmplitude = 0;
-                end
+                entry.length = size(pulse.pulseArray{reducedIndex},1);
+                entry.repeat = 1;
+                entry.isTimeAmplitude = pulse.isTimeAmplitude;
                 entry.isZero = pulse.isZero || strcmp(entry.key,padWaveformKey);
                 if entry.isZero
                     % remove zero pulses from pulse collection
@@ -639,19 +632,19 @@ classdef PatternGen < handle
                     xsum = xsum + LinkList{1+ii}.repeat * LinkList{1+ii}.length;
                 end
                 
-                % pad left but setting repeat count
-                LinkList{1}.repeat = fixedPoint + delay - xsum;
+                % pad left
+                LinkList{1}.length = fixedPoint + delay - xsum;
                 %Catch a pulse sequence is too long when the initial padding is less than zero
-                if(LinkList{1}.repeat < 0)
+                if(LinkList{1}.length < 0)
                     error('Pulse sequence step %i is too long.  Try increasing the fixedpoint.',n);
                 end
 
-                xsum = xsum + LinkList{1}.repeat;
+                xsum = xsum + LinkList{1}.length;
                 
                 % pad right by adding pad waveform with appropriate repeat
                 LinkList{end} = buildEntry(padPulse, 1);
                 
-                LinkList{end}.repeat = obj.cycleLength - xsum;
+                LinkList{end}.length = obj.cycleLength - xsum;
                 
                 % add gating markers
                 if gated

@@ -1,7 +1,7 @@
 function exportAPSConfig(path, basename, nbrRepeats, varargin)
     %varargin is the IQ pairs of channels e.g. ch56seq
     %pass an empty array to skip a pair of channels
-    VersionNum = 1.6;
+    VersionNum = 2;
     
     useVarients = 1;
     
@@ -21,23 +21,13 @@ function exportAPSConfig(path, basename, nbrRepeats, varargin)
         Qch = 2*ct;
         if ~isempty(varargin{ct})
             seq = varargin{ct};
-            [xWfLib, yWfLib] = APSPattern.buildWaveformLibrary(seq, useVarients);
-            [WaveformLibs{Ich}, xbanks] = APSPattern.convertLinkListFormat(seq, useVarients, xWfLib, miniLinkRepeat);
-            [WaveformLibs{Qch}, ybanks] = APSPattern.convertLinkListFormat(seq, useVarients, yWfLib, miniLinkRepeat);
+            wfLibrary = APSPattern.build_WFLib(seq, useVarients);
+            [LinkLists{Ich}, WaveformLibs{Ich}, WaveformLibs{Qch}] = APSPattern.convertLinkListFormat(seq, useVarients, wfLibrary);
 
             %Setup the structures for the linkList data
-            LinkLists{Ich} = struct('repeatCount', 0);
-            LinkLists{Qch} = struct('repeatCount', 0);
-            LinkLists{Ich}.numBanks = length(xbanks);
-            for bankct = 1:LinkLists{Ich}.numBanks
-                bankStr = sprintf('bank%d',bankct);
-                LinkLists{Ich}.(bankStr) = xbanks{bankct};
-                fprintf('Length of Bank %d: %d\n', bankct, LinkLists{Ich}.(bankStr).length)
-            end 
-            LinkLists{Qch}.numBanks = length(ybanks);
-            for bankct = 1:LinkLists{Qch}.numBanks
-                LinkLists{Qch}.(sprintf('bank%d',bankct)) = ybanks{bankct};
-            end 
+            LinkLists{Ich}.repeatCount = miniLinkRepeat;
+            fprintf('Length of LL for pair %d: %d\n', ct, LinkLists{Ich}.length)
+            LinkLists{Qch} = [];
         else
             WaveformLibs{Ich} = [];
             LinkLists{Ich} = [];
@@ -70,29 +60,31 @@ function exportAPSConfig(path, basename, nbrRepeats, varargin)
         h5write(fileName, [channelStr, '/waveformLib'], WaveformLibs{channel});
         
         %An attribute whether there is LinkList data specified
-        h5writeatt(fileName, channelStr, 'isLinkListData', uint16(LinkLists{channel}.numBanks > 0));
+        isLLData = ~isempty(LinkLists{channel});
+        h5writeatt(fileName, channelStr, 'isLinkListData', uint8(isLLData));
         
-        %Now loop over each bank
-        for bankct = 1:LinkLists{channel}.numBanks
-            bankStr = sprintf('bank%d',bankct);
-            curBank = LinkLists{channel}.(bankStr);
-            groupStr = [channelStr, '/linkListData/', bankStr];
-            bankLength = double(curBank.length);
-            h5create(fileName, [groupStr, '/offset'], [1, bankLength], 'Datatype', 'uint16');
-            h5write(fileName, [groupStr, '/offset'], curBank.offset);
+        %An attribute whether there is LinkList data specified
+        h5writeatt(fileName, channelStr, 'isIQMode', uint8(1));
+        
+        if isLLData
+            %Write out the LL data
+            groupStr = [channelStr, '/linkListData/'];
+            bankLength = double(LinkLists{channel}.length);
+            h5create(fileName, [groupStr, '/addr'], [1, bankLength], 'Datatype', 'uint16');
+            h5write(fileName, [groupStr, '/addr'], LinkLists{channel}.addr);
             h5create(fileName, [groupStr, '/count'], [1, bankLength], 'Datatype', 'uint16');
-            h5write(fileName, [groupStr, '/count'], curBank.count);
-            h5create(fileName, [groupStr, '/trigger'], [1, bankLength], 'Datatype', 'uint16');
-            h5write(fileName, [groupStr, '/trigger'], curBank.trigger);
+            h5write(fileName, [groupStr, '/count'], LinkLists{channel}.count);
+            h5create(fileName, [groupStr, '/trigger1'], [1, bankLength], 'Datatype', 'uint16');
+            h5write(fileName, [groupStr, '/trigger1'], LinkLists{channel}.trigger1);
+            h5create(fileName, [groupStr, '/trigger2'], [1, bankLength], 'Datatype', 'uint16');
+            h5write(fileName, [groupStr, '/trigger2'], LinkLists{channel}.trigger2);
             h5create(fileName, [groupStr, '/repeat'], [1, bankLength], 'Datatype', 'uint16');
-            h5write(fileName, [groupStr, '/repeat'], curBank.repeat);
+            h5write(fileName, [groupStr, '/repeat'], LinkLists{channel}.repeat);
             h5writeatt(fileName, groupStr, 'length', uint16(bankLength));
+
+            %Finally the repeatCount
+            h5writeatt(fileName, [channelStr, '/linkListData'], 'repeatCount',  uint16(LinkLists{channel}.repeatCount));
         end
-        
-        %Then the number of banks
-        h5writeatt(fileName, [channelStr, '/linkListData'], 'numBanks',  uint16(LinkLists{channel}.numBanks));
-        
-        %Finally the repeatCount
-        h5writeatt(fileName, [channelStr, '/linkListData'], 'repeatCount',  uint16(LinkLists{channel}.repeatCount));
     end
+    
 end
