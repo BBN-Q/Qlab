@@ -20,10 +20,9 @@ if nargin < 1
 			'MenuBar', 'none', ...
 			'NumberTitle', 'off', ...
 			'Color', get(0,'DefaultUicontrolBackgroundColor'));
-	name = 'TekAWG settings';
+	name = 'TekAWG';
 else
 	handles.parent = parent;
-	name = [name ' settings'];
 end
 
 % Create all UI controls
@@ -48,7 +47,10 @@ set_settings_fcn = @set_GUI_fields;
 
         tmpVBox_main = uiextras.VBox('Parent', handles.mainPanel, 'Spacing', 5);
         
-        handles.enable = uicontrol('Parent', tmpVBox_main, 'Style', 'checkbox', 'FontSize', 10, 'String', 'Enable');
+        tmpHBox0 = uiextras.HBox('Parent', tmpVBox_main, 'Spacing', 5);
+        
+        handles.enable = uicontrol('Parent', tmpHBox0, 'Style', 'checkbox', 'FontSize', 10, 'String', 'Enable');
+        handles.isMaster = uicontrol('Parent', tmpHBox0, 'Style', 'checkbox', 'FontSize', 10, 'String', 'Master');
 
         tmpHBox_top = uiextras.HBox('Parent', tmpVBox_main, 'Spacing', 5); 
         
@@ -75,6 +77,16 @@ set_settings_fcn = @set_GUI_fields;
         handles.ch3off = uicontrol('Parent', tmpHBox3, editBoxParams{:});
         handles.ch4off = uicontrol('Parent', tmpHBox3, editBoxParams{:});
 
+        %Setup a file system watcher for TimeDomain parameters and update
+        %the offsets
+        cfgFileWatcher = System.IO.FileSystemWatcher();
+        cfgFileWatcher.Path = getpref('qlab','cfgDir');
+        cfgFileWatcher.Filter = 'TimeDomain.json';
+        cfgFileWatcher.EnableRaisingEvents = true;
+        cfgFileListener = addlistener(cfgFileWatcher, 'Changed', @updateOffsets);
+        set(handles.ch1off, 'DeleteFcn', @(~,~) delete(cfgFileListener));
+
+        
         tmpHBox4 = uiextras.HButtonBox('Parent', tmpVBox1, 'Spacing', 5, 'ButtonSize', [50,25]);
         uiextras.Empty('Parent', tmpHBox4);
         radioButtonParams = {'Style', 'radiobutton', 'FontSize', 10, 'Parent', tmpHBox4, 'String', 'On'};
@@ -104,7 +116,8 @@ set_settings_fcn = @set_GUI_fields;
         seqFileListener = addlistener(handles.seqFileWatcher, 'Changed', @(~,~) set(handles.seqforce, 'Value', true));
         %Clear the listener when the uicontrol is deleted so they don't pile up
         set(handles.seqfile, 'DeleteFcn', @(~,~) delete(seqFileListener));
-
+        
+        
         %Try and size things up
         tmpHBox5.Sizes = [-1, -3.5, -1.25];
         tmpVBox_main.Sizes = [-1, -8, -1];
@@ -114,14 +127,21 @@ set_settings_fcn = @set_GUI_fields;
 
     function update_seqfile_callback(~,~)
         %Point the FileSystemWatcher to the new file
-        [path, name, ext] = fileparts(get(handles.seqfile, 'String'));
+        [path, fileName, ext] = fileparts(get(handles.seqfile, 'String'));
         handles.seqFileWatcher.Path = path;
-        handles.seqFileWatcher.Filter = [name, ext];
+        handles.seqFileWatcher.Filter = [fileName, ext];
         handles.seqFileWatcher.EnableRaisingEvents = true;
         %Update the force loader checkbox
         set(handles.seqforce, 'Value', true);
     end
-        
+    
+    function updateOffsets(~,~)
+        params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'));
+        for ct = 1:4
+            channelOffset = params.InstrParams.(name).(['chan_' num2str(ct)]).offset;
+            set(handles.(['ch' num2str(ct) 'off']), 'String', channelOffset);
+        end
+    end
 
 	function selected = get_selected(hObject)
 		menu = get(hObject,'String');
@@ -144,6 +164,7 @@ set_settings_fcn = @set_GUI_fields;
 		settings = struct();
 		
 		settings.enable = get(handles.enable, 'Value');
+        settings.isMaster = get(handles.isMaster, 'Value');
 		settings.deviceName = 'Tek5014';
 		settings.Address = get(handles.gpibAddress, 'String');
 
@@ -183,10 +204,11 @@ set_settings_fcn = @set_GUI_fields;
 		% defaults from it
 		defaults = struct();
 		defaults.enable = 0;
+        defaults.isMaster = 0;
 		defaults.Address = 'GPIB0::2::INSTR';
 		defaults.scaleMode = 'Amp/Off';
-        for i = 1:4
-            channel = ['chan_' num2str(i)];
+        for ct = 1:4
+            channel = ['chan_' num2str(ct)];
             defaults.(channel).amplitude = 1;
             defaults.(channel).offset = 0;
             defaults.(channel).enabled = 1;
@@ -199,20 +221,21 @@ set_settings_fcn = @set_GUI_fields;
 
 		if ~isempty(fieldnames(settings))
 			fields = fieldnames(settings);
-			for i = 1:length(fields)
-				name = fields{i};
-				defaults.(name) = settings.(name);
+			for ct = 1:length(fields)
+				tmpName = fields{ct};
+				defaults.(tmpName) = settings.(tmpName);
 			end
 		end
 		
 		set(handles.enable, 'Value', defaults.enable);
-		set(handles.gpibAddress, 'String', num2str(defaults.Address));
+		set(handles.isMaster, 'Value', defaults.isMaster);
+        set(handles.gpibAddress, 'String', num2str(defaults.Address));
 		set_selected(handles.scaleMode, defaults.scaleMode);
-        for i = 1:4
-            channel = ['chan_' num2str(i)];
-            set(handles.(['ch' num2str(i) 'amp']), 'String', defaults.(channel).amplitude);
-            set(handles.(['ch' num2str(i) 'off']), 'String', defaults.(channel).offset);
-            set(handles.(['ch' num2str(i) 'enable']), 'Value', defaults.(channel).enabled);
+        for ct = 1:4
+            channel = ['chan_' num2str(ct)];
+            set(handles.(['ch' num2str(ct) 'amp']), 'String', defaults.(channel).amplitude);
+            set(handles.(['ch' num2str(ct) 'off']), 'String', defaults.(channel).offset);
+            set(handles.(['ch' num2str(ct) 'enable']), 'Value', defaults.(channel).enabled);
         end
 		set(handles.seqfile, 'String', defaults.seqfile);
         update_seqfile_callback()
