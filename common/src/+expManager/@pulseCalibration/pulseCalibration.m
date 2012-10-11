@@ -36,7 +36,6 @@ classdef pulseCalibration < expManager.homodyneDetection2D
     properties
         pulseParams
         pulseParamPath
-        mixerCalPath
         channelMap
         ExpParams
         awgParams
@@ -57,13 +56,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
 			% superclass constructor
             obj = obj@expManager.homodyneDetection2D(data_path, cfgFileName, basename, filenumber);
             
-            script = mfilename('fullpath');
-            sindex = strfind(script, 'common');
-            script = [script(1:sindex-1) 'experiments/muWaveDetection/'];
-            
-            obj.mixerCalPath = [script 'cfg/mixercal.mat'];
             obj.pulseParamPath = getpref('qlab', 'pulseParamsBundleFile');
-            
             obj.channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
         end
 
@@ -162,6 +155,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                     case {'deviceDrivers.Tek5014', 'deviceDrivers.APS'}
                         numAWGs = numAWGs + 1;
                         obj.awgParams{numAWGs} = obj.inputStructure.InstrParams.(InstrName);
+                        obj.awgParams{numAWGs}.InstrName = InstrName;
                         if strcmp(InstrName, IQchannels.instr)
                             obj.targetAWGIdx = numAWGs;
                         end

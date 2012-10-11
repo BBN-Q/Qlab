@@ -186,6 +186,7 @@ end
 
 %% Save updated parameters to file
 
+%First the pulse parameters
 % Load the previous parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
 
@@ -194,8 +195,8 @@ params.(ExpParams.Qubit).piAmp = obj.pulseParams.piAmp;
 params.(ExpParams.Qubit).pi2Amp = obj.pulseParams.pi2Amp;
 params.(ExpParams.Qubit).delta = obj.pulseParams.delta;
 
-IQchannels = obj.channelMap.(obj.ExpParams.Qubit);
-IQkey = IQchannels.IQkey;
+channelMap = obj.channelMap.(obj.ExpParams.Qubit);
+IQkey = channelMap.IQkey;
 
 params.(IQkey).T = obj.pulseParams.T;
 
@@ -203,9 +204,16 @@ FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'wt'); %open in text mode
 fprintf(FID, jsonlab.savejson('',params));
 fclose(FID);
 
-% TODO: save I/Q offsets
+%Now the offsets
+params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'));
+params.InstrParams.(channelMap.instr).(sprintf('chan_%d', channelMap.i)).offset = obj.pulseParams.i_offset;
+params.InstrParams.(channelMap.instr).(sprintf('chan_%d', channelMap.q)).offset = obj.pulseParams.q_offset;
+FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'),'wt'); %open in text mode
+fprintf(FID, jsonlab.savejson('',params));
+fclose(FID);
 
-% for now, just display the results
+
+% Display the final results
 obj.pulseParams
 
 end
