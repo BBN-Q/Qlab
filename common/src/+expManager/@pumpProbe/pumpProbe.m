@@ -1,7 +1,8 @@
 % pumpProbe.m
 % Performs a pump-probe experiment with a network analyzer and a source.
 
-% Authors: Blake Johnson and Hanhee Paik
+% Authors: Blake Johnson and Hanhee Paik was just watching and learning.
+% (but later did some debugging)
 % Date: Oct 4, 2012
 
 % Copyright 2012 Raytheon BBN Technologies
@@ -36,40 +37,56 @@ classdef pumpProbe < expManager.homodyneDetection
         function Do(obj)
             fluxBiases = obj.expSettings.fluxBiases;
             pumpFreqs = obj.expSettings.pumpFreqs;
-            %pumpPowers = obj.expSettings.pumpPowers;
+            pumpPowers = obj.expSettings.pumpPowers;
             naPowers = obj.expSettings.naPowers;
             naStartCenterFreq = obj.expSettings.naStartCenterFreq;
+            naSpan = obj.expSettings.naSpan;
             
-			% step the flux bias
-            for ii = 1:length(fluxBiases)
-                fprintf('Setting flux bias to: %f\n', fluxBiases(ii));
-                obj.Instr.dcbias.offset = fluxBiases(ii);
-                % turn off the pump
-                obj.Instr.source.output = 0;
-                % set the NA to a 1 GHz span
-                obj.Instr.na.sweep_span = 1e9;
-                % set NA center frequency
-                obj.Instr.na.sweep_center = naStartCenterFreq;
-                % step NA power
-                for jj = 1:length(naPowers)
-                    fprintf('Setting NA power to: %f\n', naPowers(jj));
-                    obj.Instr.na.power = naPowers(jj);
-                    % take a NA trace
-                    [~, data1(ii,jj,:)] = obj.Instr.na.getTrace();
-                end
-                
-%                 % turn on the pump
-%                 obj.Instr.source.output = 1;
-%                 % set the NA center frequency and span
-%                 
-%                 obj.Instr.na.sweep_span = 1e9;
-%                 % step the pump frequency independent of the NA
-%                 for jj = 1:length(pumpFreqs)
-%                     obj.Instr.source.frequency = pumpFreqs(jj);
+% 			% step the flux bias
+% %             for ii = 1:length(fluxBiases)
+%                 obj.Instr.dcbias.offset = fluxBiases(1);
+%                 fprintf('Setting flux bias to: %f\n', fluxBiases(1));
+%                 %obj.Instr.dcbias.offset = fluxBiases(ii);
+%                 obj.Instr.dcbias.offset = fluxBiases(1);
+% %                 turn off the pump
+%                  obj.Instr.source.output = 0;
+%                 % set the NA to a 1 GHz span
+%                 obj.Instr.na.sweep_span = 1.4e9;
+%                 % set NA center frequency
+%                  obj.Instr.na.sweep_center = naStartCenterFreq;
+%                 % step NA power
+%                  for jj = 1:length(naPowers)
+%                      fprintf('Setting NA power to: %f\n', naPowers(jj));
+%                     obj.Instr.na.power = naPowers(jj);
 %                     % take a NA trace
-%                     [~, data2(ii,jj,:)] = obj.Instr.na.getTrace();
+%                     [~, data] = obj.Instr.na.getTrace();
+                        % write data to file
+                        % obj.DataFileHandler.write({data});
 %                 end
-%             
+%                 
+                % turn on the pump
+                obj.Instr.source.output = 1;
+                % set the NA center frequency and span
+                obj.Instr.na.sweep_span = naSpan;
+                % set NA power
+                obj.Instr.na.power = -20;
+                % step the pump frequency = na center frequency
+%                 for jj = 1:length(pumpFreqs)
+                    obj.Instr.na.sweep_center = naStartCenterFreq;
+                    obj.Instr.source.frequency = naStartCenterFreq;
+%                     fprintf('Setting pump and network analyzer center f to: %f\n', pumpFreqs(jj));
+                    for kk = 1:length(pumpPowers)
+                        fprintf('Setting pump power to: %f\n', pumpPowers(kk));
+                        obj.Instr.source.power = pumpPowers(kk);
+                        % take a NA trace
+                        [~, data] = obj.Instr.na.getTrace();
+                        % write data to file
+                        obj.DataFileHandler.write({data});
+                    end
+%                 end
+                  % turn off source and take the background
+%                   obj.Instr.source.output = 0;
+%                   [~, databackground] = obj.Instr.na.getTrace();
 %                 % set the NA to a 200 MHz span
 %                 obj.Instr.na.sweep_span = 0.2e9;
 %                 % step the pump frequency and NA center frequency
@@ -77,16 +94,44 @@ classdef pumpProbe < expManager.homodyneDetection
 %                     obj.Instr.source.frequency = pumpFreqs(jj);
 %                     obj.Instr.na.sweep_center = pumpFreqs(jj);
 %                     % take a NA trace
-%                     [~, data3(ii,jj,:)] = obj.Instr.na.getTrace();
+%                     [~, data] = obj.Instr.na.getTrace();
+% write data to file
+% %                       obj.DataFileHandler.write({data});
 %                 end
-            end
+            %end
             
             %save(obj.DataFileName, 'data1', 'data2', 'data3', 'fluxBiases', 'pumpFreqs', 'naPowers');
-            save(obj.DataFileName, 'data1', 'fluxBiases', 'naPowers');
+            %save(obj.DataFileName, 'data2', 'fluxBiases', 'naPowers');
+            %save(obj.DataFileName, 'data2', 'databackground','fluxBiases', 'pumpFreqs', 'pumpPowers');
+            %save(obj.DataFileName, 'data1', 'fluxBiases', 'pumpFreqs', 'naPowers');
+
         end
-        
-        function createDataFileName(obj)
-            obj.DataFileName = sprintf('%03d_%s.mat', obj.filenumber, obj.Name);
+
+        function Init(obj)
+            % parse cfg file
+            obj.parseExpcfgFile();
+
+            % Check params for errors
+            obj.errorCheckExpParams();
+            
+            % Open all instruments
+            obj.openInstruments();
+            
+            % Prepare all instruments for measurement
+            obj.initializeInstruments();
+
+            header = obj.inputStructure;
+            naCenterFreq = header.expParams.naStartCenterFreq;
+            naSpan = header.expParams.naSpan;
+            naPoints = header.InstrParams.na.sweep_points;
+            header.xpoints = linspace(naCenterFreq - naSpan/2, naCenterFreq + naSpan/2, naPoints);
+            header.xlabel = 'Frequency (Hz)';
+            header.ypoints = obj.expSettings.naPowers;
+            header.ylabel = 'NA powers (dBm)';
+            
+            % open data file
+            dataDimension = 2;
+            obj.openDataFile(dataDimension, header);
         end
         
         function errorCheckExpParams(obj)
