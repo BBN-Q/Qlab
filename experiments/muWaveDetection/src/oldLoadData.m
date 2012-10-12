@@ -27,7 +27,7 @@ function data = oldLoadData(makePlot, fullpath)
     Exp.DataFileName = filename;
 
     % parse
-    Exp.parseExpcfgFile;
+    %Exp.parseExpcfgFile;
     [data, h1, h2] = Exp.parseDataFile(makePlot);
     data.loops = Exp.populateLoopStructure(true);
     data.filename = filename;
