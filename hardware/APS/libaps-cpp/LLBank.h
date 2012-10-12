@@ -15,43 +15,29 @@
 class LLBank {
 public:
 	LLBank();
-	LLBank(const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &);
+	LLBank(const WordVec &, const WordVec &, const WordVec &, const WordVec &);
+	LLBank(const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 	~LLBank();
 
+	void clear();
+
 	size_t length;
 
-	vector<USHORT> get_packed_data();
+	WordVec get_packed_data(const size_t &, const size_t &);
+	bool IQMode;
 
 	int write_state_to_hdf5(  H5::H5File & , const string & );
 	int read_state_from_hdf5( H5::H5File & , const string & );
 
 private:
-	vector<unsigned short> offset_;
-	vector<unsigned short> count_;
-	vector<unsigned short> repeat_;
-	vector<unsigned short> trigger_;
-	vector<UCHAR> packedBank_;
+	WordVec addr_;
+	WordVec count_;
+	WordVec repeat_;
+	WordVec trigger1_;
+	WordVec trigger2_;
+	vector<UCHAR> packedData_;
+	void pack_data();
+
 };
 
-class LLBank_IQ {
-public:
-	LLBank_IQ();
-	LLBank_IQ(const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short>);
-	~LLBank_IQ();
-
-	size_t length;
-
-	vector<USHORT> get_packed_data();
-
-	int write_state_to_hdf5(  H5::H5File & , const string & );
-	int read_state_from_hdf5( H5::H5File & , const string & );
-
-private:
-	vector<unsigned short> offset_;
-	vector<unsigned short> count_;
-	vector<unsigned short> repeat_;
-	vector<unsigned short> trigger_;
-	vector<UCHAR> packedBank_;
-};
-
-#endif /* LLBank_H_ */
+#endif /* LLBANK_H_ */

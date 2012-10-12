@@ -241,47 +241,29 @@ int APS::load_sequence_file(const string & seqFile){
 			set_waveform(chanct, tmpVec);
 
 			//Check if there is the linklist data and if it is IQ mode style
+			H5::Group chanGroup = H5SeqFile.openGroup(chanStr);
 			USHORT isLinkListData, isIQMode;
-			H5::Group tmpGroup = H5SeqFile.openGroup(chanStr);
-			H5::Attribute tmpAttribute = tmpGroup.openAttribute("isLinkListData");
-			tmpAttribute.read(H5::PredType::NATIVE_UINT16, &isLinkListData);
-			tmpAttribute.close();
-			tmpAttribute = tmpGroup.openAttribute("isIQMode");
-			tmpAttribute.read(H5::PredType::NATIVE_UINT16, &isIQMode);
-			tmpAttribute.close();
-			tmpGroup.close();
+			isLinkListData = h5element2element<USHORT>("isLinkListData", &chanGroup, H5::PredType::NATIVE_UINT16);
+			isIQMode = h5element2element<USHORT>("isIQMode", &chanGroup, H5::PredType::NATIVE_UINT16);
+			chanGroup.close();
 
 			//Load the linklist data
 			if (isLinkListData){
-				std::ostringstream tmpStream;
-				tmpStream.str(""); tmpStream << chanStr << "/linkListData/addr";
-				vector<USHORT> addr = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
-				tmpStream.str(""); tmpStream << chanStr << "/linkListData/count";
-				vector<USHORT> count = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
-				tmpStream.str(""); tmpStream << chanStr << "/linkListData/repeat";
-				vector<USHORT> repeat = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
-				tmpStream.str(""); tmpStream << chanStr << "/linkListData/trigger1";
-				vector<USHORT> trigger1 = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
-				tmpStream.str(""); tmpStream << chanStr << "/linkListData/trigger2";
-				vector<USHORT> trigger2 = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
-
-				//Push back the new LL data
 				if (isIQMode){
-					switch (chanct){
-					case 0:
-						set_LLData_IQ(FPGA1, addr, count, trigger1, trigger2, repeat);
-						break;
-					case 2:
-						set_LLData_IQ(FPGA2, addr, count, trigger1, trigger2, repeat);
-						break;
+					channels_[chanct].LLBank_.IQMode = true;
+					channels_[chanct].LLBank_.read_state_from_hdf5(H5SeqFile, chanStrs[chanct]+"/linkListData");
+					//If the length is less than can fit on the chip then write it to the device
+					if (channels_[chanct].LLBank_.length < MAX_LL_LENGTH){
+						write_LL_data_IQ(dac2fpga(chanct), 0, 0, channels_[chanct].LLBank_.length, true );
 					}
-				}
 
+				}
+				else{
+					channels_[chanct].LLBank_.read_state_from_hdf5(H5SeqFile, chanStrs[chanct]+"/linkListData");
+				}
 			}
 			//TODO: Set the repeat count
 
-			//Set the run mode to sequence
-			set_run_mode(chanct, RUN_SEQUENCE);
 		}
 		//Close the file
 		H5SeqFile.close();
@@ -290,7 +272,7 @@ int APS::load_sequence_file(const string & seqFile){
 	catch (H5::FileIException & e) {
 		return -1;
 	}
-
+	return 0;
 }
 
 int APS::set_channel_enabled(const int & dac, const bool & enable){
@@ -427,8 +409,8 @@ int APS::run() {
 
 	running_ = true;
 
-	//If we have more than two banks we need to start the thread
-	if (channels_[0].banks_.size() > 2){
+	//If we have more LL entries than we cna handle then we need to stream
+	if (channels_[0].LLBank_.length > MAX_LL_LENGTH){
 		bankBouncerThread_ = new thread(&APS::stream_LL_data, this);
 	}
 
@@ -452,7 +434,7 @@ int APS::stop() {
 	// stop all channels
 	running_ = false;
 
-	if (channels_[0].banks_.size() > 2){
+	if (channels_[0].LLBank_.length > MAX_LL_LENGTH){
 		bankBouncerThread_->join();
 		delete bankBouncerThread_;
 	}
@@ -544,46 +526,31 @@ int APS::set_repeat_mode(const int & dac, const bool & mode) {
 	return 0;
 }
 
-int APS::set_LLData_IQ(const FPGASELECT & fpga, const vector<unsigned short> & addr, const vector<unsigned short> & count, const vector<unsigned short> & trigger1, const vector<unsigned short> & trigger2,  const vector<unsigned short> & repeat){
+int APS::set_LL_data_IQ(const FPGASELECT & fpga, const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat){
 
-	size_t lengthLL = addr.size();
+	//We store the IQ linklist data in channels 1 and 3
+	int dataChan;
+	switch(fpga){
+		case FPGA1:
+			dataChan = 0;
+			break;
+		case FPGA2:
+			dataChan = 2;
+			break;
+		default:
+			return -1;
+	}
+	channels_[dataChan].LLBank_ = LLBank(addr, count, trigger1, trigger2, repeat);
 
-	//If it is short enough than just write it to the device
-	if (lengthLL < MAX_LL_LENGTH){
-		add_LL_bank_IQ(fpga, addr, count, trigger1, trigger2, repeat);
-		write_LL_bank_IQ(fpga, 0, 0);
+	//If we can fit it on then do so
+	if (addr.size() > MAX_LL_LENGTH){
+		write_LL_data_IQ(fpga, 0, 0, addr.size(), true );
 	}
 
 	return 0;
-}
 
-int APS::add_LL_bank_IQ(const FPGASELECT & fpga, const vector<unsigned short> & addr, const vector<unsigned short> & count, const vector<unsigned short> & trigger1, const vector<unsigned short> & trigger2, const vector<unsigned short> & repeat){
 
 }
-
-int APS::add_LL_bank(const int & dac, const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger) {
-	/* APS::add_LL_bank
-	 * dac = channel (0-3)
-	 * offset
-	 * count
-	 * repeat
-	 * trigger
-	 */
-
-	//Update the driver storage
-	channels_[dac].add_LL_bank(offset, count, repeat, trigger);
-
-	//If it is one of the first two banks then write to device
-	size_t curBank = channels_[dac].banks_.size()-1;
-	if ( curBank < 2){
-		write_LL_bank(dac, curBank, curBank);
-	}
-	//Otherwise print a message so we know something has happened
-	FILE_LOG(logINFO) << "Loaded LL bank into driver at bank position: " << curBank;
-
-	return 0;
-}
-
 
 /*
  *
@@ -1394,8 +1361,36 @@ int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 }
 
 
+int APS::write_LL_data_IQ(const FPGASELECT & fpga, const ULONG & startAddr, const size_t & startIdx, const size_t & stopIdx, const bool & writeLengthFlag){
 
-int APS::write_LL_data(const int & dac, const int & bankNum, const int & targetBank) {
+	//We store the IQ linklist data in channels 1 and 3
+	int dataChan;
+	switch(fpga){
+		case FPGA1:
+			dataChan = 0;
+			break;
+		case FPGA2:
+			dataChan = 2;
+			break;
+		default:
+			return -1;
+	}
+
+	//Write the packed data
+	write(fpga, FPGA_BANKSEL_LL_CHA | startAddr, channels_[dataChan].LLBank_.get_packed_data(startIdx, stopIdx), true);
+
+	//If necessary write the LL length register
+	if (writeLengthFlag){
+		FILE_LOG(logDEBUG2) << "Writing Link List Length: " << myhex << stopIdx << " at address: " << FPGA_ADDR_CHA_LL_LENGTH;
+		write(fpga, FPGA_ADDR_CHA_LL_LENGTH, stopIdx, true);
+	}
+
+	//Flush the queue to the device
+	flush();
+	return 0;
+}
+
+//int APS::write_LL_data(const int & dac, const int & bankNum, const int & targetBank) {
 	/*
 	 * write_LL_data
 	 * dac = channel (0-3)
@@ -1470,54 +1465,44 @@ int APS::write_LL_data(const int & dac, const int & bankNum, const int & targetB
 			return -2;
 		}
 	}
-	*/
 	return 0;
 
 }
+	*/
 
-int APS::read_LL_status(const int & dac){
-
-	//TODO: make work
+int APS::read_LL_addr(const FPGASELECT & fpga){
 	/*
+	 * Read the currently playing LL address
+	 */
+	return FPGA::read_FPGA(handle_, FPGA_ADDR_CHA_LL_CURADDR, fpga);
+}
 
-	int linklistStatusMask;
-
-	int val;
-	int status;
-
-	FPGASELECT fpga = dac2fpga(dac);
-	if (fpga == INVALID_FPGA) {
+int APS::read_LL_addr(const int & dac){
+	/*
+	 * Read the currently playing LL address
+	 */
+	int fpgaAddr;
+	switch (dac){
+	case 0:
+	case 2:
+		fpgaAddr = FPGA_ADDR_CHA_LL_CURADDR;
+		break;
+	case 1:
+	case 3:
+		fpgaAddr = FPGA_ADDR_CHB_LL_CURADDR;
+		break;
+	default:
 		return -1;
 	}
-
-	// setup register addressing based on DAC
-	switch(dac) {
-		case 0:
-		case 2:
-			linklistStatusMask  = CSRMSK_CHA_LLSTATUS;
-			break;
-		case 1:
-		case 3:
-			linklistStatusMask  = CSRMSK_CHB_LLSTATUS;
-			break;
-		default:
-			return -2;
-	}
-
-	// read CSR
-	val = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_ADDR_CSR, fpga);
-	status = (val & linklistStatusMask) == linklistStatusMask;
-
-	FILE_LOG(logDEBUG2) << "CSR = " << myhex << val << "; LL Status = " << std::dec << status;
-
-	return status;
-	*/
-
-	return 0;
+	return FPGA::read_FPGA(handle_, fpgaAddr, dac2fpga(dac));
 }
 
-int APS::stream_LL_data(USHORT initAddrSW, const FPGASELECT & fpga){
 
+//int APS::stream_LL_data_IQ(const FPGASELECT & fpga){
+//
+//	return 0;
+//}
+/*
 	USHORT curAddrSW, stopAddrSW, curAddrHW;
 	curAddrSW = initAddrSW;
 
@@ -1565,6 +1550,7 @@ int APS::stream_LL_data(USHORT initAddrSW, const FPGASELECT & fpga){
 
 	return 0;
 }
+*/
 
 int APS::save_state_file(string & stateFile){
 

@@ -60,8 +60,7 @@ EXPORT int get_trigger_source(int);
 EXPORT int set_waveform_float(int, int, float*, int);
 EXPORT int set_waveform_int(int, int, short*, int);
 
-EXPORT int add_LL_bank(int, int, int, unsigned short*, unsigned short*, unsigned short*, unsigned short*);
-EXPORT int reset_LL_banks(int, int);
+EXPORT int set_LL_data_IQ(int, int, int, unsigned short*, unsigned short*, unsigned short*, unsigned short*, unsigned short*);
 
 EXPORT int set_run_mode(int, int, int);
 EXPORT int set_repeat_mode(int, int, int);

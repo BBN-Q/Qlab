@@ -8,9 +8,9 @@
 #include "headings.h"
 #include "Channel.h"
 
-Channel::Channel() : number{-1}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0), trigDelay_{0}{}
+Channel::Channel() : number{-1}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), trigDelay_{0}{}
 
-Channel::Channel( int number) : number{number}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0), trigDelay_{0}{}
+Channel::Channel( int number) : number{number}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), trigDelay_{0}{}
 
 Channel::~Channel() {
 	// TODO Auto-generated destructor stub
@@ -99,25 +99,8 @@ vector<short> Channel::prep_waveform() const{
 	return prepVec;
 }
 
-int Channel::reset_LL_banks(){
-	banks_.clear();
-	return 0;
-}
-
-int Channel::add_LL_bank(const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger){
-
-	if( (offset.size() != count.size()) || (offset.size() != repeat.size()) || (offset.size() != trigger.size())){
-		FILE_LOG(logERROR) << "All LL bank vectors must have same size.";
-		return -1;
-	}
-
-	banks_.push_back(LLBank(offset, count, repeat, trigger));
-
-	return 0;
-}
-
 int Channel::clear_data() {
-	reset_LL_banks();
+	LLBank_.clear();
 	waveform_.clear();
 	return 0;
 }
@@ -142,23 +125,23 @@ int Channel::write_state_to_hdf5(H5::H5File & H5StateFile, const string & rootSt
 	//Save the linklist data
 
 	// save number of banks to rootStr + /linkListData attribute "numBanks"
-	USHORT numBanks;
-	numBanks = banks_.size();//get number of banks from channel
-
-	// set attribute
-	FILE_LOG(logDEBUG) << "Creating Group: " << rootStr + "/linkListData";
-	tmpGroup = H5StateFile.createGroup(rootStr + "/linkListData");
-	element2h5attribute<USHORT>("numBanks",  numBanks, &tmpGroup,H5::PredType::NATIVE_UINT16);
-	tmpGroup.close();
-
-	std::ostringstream tmpStream;
-	//Now loop over the number of banks found and add the bank
-	for (USHORT bankct=0; bankct<numBanks; bankct++) {
-		tmpStream.str("");
-		tmpStream << rootStr << "/linkListData/bank" << bankct+1 ;
-		FILE_LOG(logDEBUG) << "Writing State Bank: " << bankct+1 << " from hdf5";
-		banks_[bankct].write_state_to_hdf5(H5StateFile, tmpStream.str() );
-	}
+//	USHORT numBanks;
+//	numBanks = banks_.size();//get number of banks from channel
+//
+//	// set attribute
+//	FILE_LOG(logDEBUG) << "Creating Group: " << rootStr + "/linkListData";
+//	tmpGroup = H5StateFile.createGroup(rootStr + "/linkListData");
+//	element2h5attribute<USHORT>("numBanks",  numBanks, &tmpGroup,H5::PredType::NATIVE_UINT16);
+//	tmpGroup.close();
+//
+//	std::ostringstream tmpStream;
+//	//Now loop over the number of banks found and add the bank
+//	for (USHORT bankct=0; bankct<numBanks; bankct++) {
+//		tmpStream.str("");
+//		tmpStream << rootStr << "/linkListData/bank" << bankct+1 ;
+//		FILE_LOG(logDEBUG) << "Writing State Bank: " << bankct+1 << " from hdf5";
+//		banks_[bankct].write_state_to_hdf5(H5StateFile, tmpStream.str() );
+//	}
 	return 0;
 }
 
@@ -189,7 +172,7 @@ int Channel::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootS
 		tmpStream << "/linkListData/bank" << bankct+1;
 		FILE_LOG(logDEBUG) << "Reading State Bank: " << bankct+1 << " from hdf5";
 		bank.read_state_from_hdf5( H5StateFile, tmpStream.str());
-		banks_.push_back(bank);
+//		banks_.push_back(bank);
 	}
 	return 0;
 }

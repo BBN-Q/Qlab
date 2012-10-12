@@ -70,8 +70,8 @@ public:
 	int set_run_mode(const int &, const int &, const RUN_MODE &);
 	int set_repeat_mode(const int &, const int &, const bool & mode);
 
-	int add_LL_bank(const int &, const int &, const vector<USHORT> &, const vector<USHORT> &, const vector<USHORT> &, const vector<USHORT> &);
-	int reset_LL_banks(const int &, const int &);
+	int set_LL_data(const int &, const int &, const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
+	int set_LL_data(const int &, const int &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 
 	int load_sequence_file(const int &, const string &);
 

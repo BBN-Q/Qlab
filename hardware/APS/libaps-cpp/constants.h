@@ -19,7 +19,7 @@ static const int  MAX_APS_DEVICES = 10;
 static const int MAX_WF_LENGTH = 16384;
 static const int MAX_WF_AMP = 8191;
 static const int WF_MODULUS = 4;
-static const int MAX_LL_LENGTH = 4096;
+static const size_t MAX_LL_LENGTH = 4096;
 
 static const int APS_READTIMEOUT = 1000;
 static const int APS_WRITETIMEOUT = 500;

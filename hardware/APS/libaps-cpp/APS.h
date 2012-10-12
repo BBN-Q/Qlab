@@ -54,8 +54,7 @@ public:
 	int set_run_mode(const int &, const RUN_MODE &);
 	int set_repeat_mode(const int &, const bool &);
 
-	int set_LLData_IQ(const FPGASELECT &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &,  const vector<unsigned short> & );
-
+	int set_LLData_IQ(const FPGASELECT &, const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 	int clear_channel_data();
 
 	int load_sequence_file(const string &);
@@ -107,11 +106,8 @@ private:
 
 	int write_waveform(const int &, const vector<short> &);
 
-	int add_LL_bank_IQ(const FPGASELECT &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &);
-	int write_LL_bank_IQ(const FPGASELECT &, const USHORT &, const size_t &);
-	int add_LL_bank(const int &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &);
-	int write_LL_bank(const int &, const int &, const int &);
-
+	int write_LL_data_IQ(const FPGASELECT &, const ULONG &, const size_t &, const size_t &, const bool &);
+	int set_LL_data_IQ(const FPGASELECT &, const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 	int stream_LL_data();
 	int read_LL_addr(const FPGASELECT &);
 	int read_LL_addr(const int &);

@@ -127,12 +127,8 @@ int APSRack::load_sequence_file(const int & deviceID, const string & seqFile){
 	return APSs_[deviceID].load_sequence_file(seqFile);
 }
 
-int APSRack::add_LL_bank(const int & deviceID, const int & channelNum, const vector<USHORT> & offset, const vector<USHORT> & count, const vector<USHORT> & repeat, const vector<USHORT> & trigger){
-	return APSs_[deviceID].add_LL_bank(channelNum, offset, count, repeat, trigger);
-}
-
-int APSRack::reset_LL_banks(const int & deviceID, const int & channelNum){
-	return APSs_[deviceID].channels_[channelNum].reset_LL_banks();
+int APSRack::set_LL_data(const int & deviceID, const int & channelNum, const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat){
+	return APSs_[deviceID].set_LLData_IQ(dac2fpga(channelNum), addr, count, trigger1, trigger2, repeat);
 }
 
 int APSRack::get_running(const int & deviceID){

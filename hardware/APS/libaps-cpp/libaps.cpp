@@ -122,10 +122,6 @@ int stop(int deviceID) {
 	return APSRack_.stop(deviceID);
 }
 
-int reset_LL_banks(int deviceID, int channelNum){
-	return APSRack_.reset_LL_banks(deviceID, channelNum);
-}
-
 int get_running(int deviceID){
 	return APSRack_.get_running(deviceID);
 }
@@ -190,9 +186,11 @@ unsigned short get_channel_trigDelay(int deviceID, int dac){
 	return APSRack_.get_channel_trigDelay(deviceID, dac);
 }
 
-int add_LL_bank(int deviceID, int channelNum, int length, unsigned short* offset, unsigned short* count, unsigned short* repeat, unsigned short* trigger){
+int set_LL_data_IQ(int deviceID, int channelNum, int length, unsigned short* addr, unsigned short* count,
+					unsigned short* trigger1, unsigned short * trigger2, unsigned short* repeat){
 	//Convert data pointers to vectors and passed through
-	return APSRack_.add_LL_bank(deviceID, channelNum, vector<USHORT>(offset, offset+length), vector<USHORT>(count, count+length), vector<USHORT>(repeat, repeat+length), vector<USHORT>(trigger, trigger+length));
+	return APSRack_.set_LL_data(deviceID, channelNum, WordVec(addr, addr+length), WordVec(count, count+length),
+			WordVec(trigger1, trigger1+length), WordVec(trigger2, trigger2+length), WordVec(repeat, repeat+length));
 }
 
 int set_run_mode(int deviceID, int channelNum, int mode) {

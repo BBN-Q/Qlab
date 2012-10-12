@@ -28,9 +28,6 @@ public:
 	int set_waveform(const vector<short> &);
 	vector<short> prep_waveform() const;
 
-	int reset_LL_banks();
-	int add_LL_bank(const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &);
-
 	int clear_data();
 
 	int write_state_to_hdf5( H5::H5File & , const string & );
@@ -43,7 +40,7 @@ private:
 	float scale_;
 	bool enabled_;
 	vector<float> waveform_;
-	vector<LLBank> banks_;
+	LLBank LLBank_;
 	int trigDelay_;
 };
 
