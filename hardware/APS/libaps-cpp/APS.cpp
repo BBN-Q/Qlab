@@ -269,14 +269,13 @@ int APS::load_sequence_file(const string & seqFile){
 				if (isIQMode){
 					switch (chanct){
 					case 0:
-						set_LLData_IQ(0, addr, count, trigger1, trigger2, repeat);
+						set_LLData_IQ(FPGA1, addr, count, trigger1, trigger2, repeat);
 						break;
 					case 2:
-						set_LLData_IQ(1, addr, count, trigger1, trigger2, repeat);
+						set_LLData_IQ(FPGA2, addr, count, trigger1, trigger2, repeat);
 						break;
 					}
 				}
-				add_LL_bank(chanct, offset, count, repeat, trigger);
 
 			}
 			//TODO: Set the repeat count
@@ -558,7 +557,9 @@ int APS::set_LLData_IQ(const FPGASELECT & fpga, const vector<unsigned short> & a
 	return 0;
 }
 
-int APS::add_LL_bank_IQ()
+int APS::add_LL_bank_IQ(const FPGASELECT & fpga, const vector<unsigned short> & addr, const vector<unsigned short> & count, const vector<unsigned short> & trigger1, const vector<unsigned short> & trigger2, const vector<unsigned short> & repeat){
+
+}
 
 int APS::add_LL_bank(const int & dac, const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger) {
 	/* APS::add_LL_bank
@@ -1515,44 +1516,52 @@ int APS::read_LL_status(const int & dac){
 	return 0;
 }
 
-int APS::stream_LL_data(){
+int APS::stream_LL_data(USHORT initAddrSW, const FPGASELECT & fpga){
 
-	int currentBankID, pollBankID;
+	USHORT curAddrSW, stopAddrSW, curAddrHW;
+	curAddrSW = initAddrSW;
 
-	//Banks 0 and 1 have already been loaded so the next one is 2
-	int curBankNum = 2;
+	//Go through the LL entries and calculate lengths and start points of each miniLL
+	vector<size_t> lengthMiniLL;
+	for(auto tmpWord : LLData_.repeat_){
+	}
 
-	//Initialize to the starting bank
-	currentBankID  = 0;
+	//Helper function to see how many miniLL's we can write
+	auto
+
+	//Write the first set of data
+
+
 
 	while(running_) {
-		//Poll for current bank to see if bank has switched
-		pollBankID = read_LL_status(0);
+		//Poll for current hardware address
+		curAddrHW = read_LL_addr(fpga);
 
-		FILE_LOG(logDEBUG2) << "Device ID: " << deviceID_ << " Current Bank: " << pollBankID;
+		FILE_LOG(logDEBUG2) << "Device ID: " << deviceID_ << " Current LL Addr: " << myhex << curAddrHW;
 
-		//If it isn't what we used to have then the device must have switched
-		if (pollBankID != currentBankID) {
-			FILE_LOG(logDEBUG) << "Bank switch detected for Device ID: " << deviceID_ << "; currentBankID = " << currentBankID << " polledBankID = " << pollBankID;
-			for(int chanct=0; chanct<4; chanct++){
-				write_LL_data(chanct, curBankNum % channels_[chanct].banks_.size(), currentBankID);
-			}
-			curBankNum++;
-			currentBankID = pollBankID;
+		//Check how many we can fit in
+		int entriesOpen = curAddrHW-curAddrSW;
 
-			pollBankID = read_LL_status(0);
-			if (pollBankID != currentBankID) {
-				FILE_LOG(logWARNING) << "Bank swapped during load of link list";
-			}
+		//If it is negative we've looped back to the beginning
+		if (entriesOpen < 0){
+			entriesOpen = MAX_LL_LENGTH - curAddrSW;
 		}
+
+		//See how many more miniLL's we can fit in
+		int curSum = 0;
+		stopAddrSW = curAddrSW;
+		while ((curSum + lengthMiniLL[stopAddrSW+1]) < entriesOpen){
+			curSum += lengthMiniLL[++stopAddrSW];
+		}
+
+		bool writeEndFlag = (stopAddrSW+lengthMiniLL[stopAddrSW+1]) < MAX_LL_LENGTH;
+		write_LL_data(fpga, curAddrSW, stopAddrSW, writeEndFlag);
+
+
+		//Sleep for 10ms to reduce bus congestion
 		std::this_thread::sleep_for( std::chrono::milliseconds(10) );
 	}
 	
-	// reload banks 0 and 1 to get back to reset state
-	for (int chanct=0; chanct<4; chanct++) {
-		write_LL_data(chanct, 0, 0);
-		write_LL_data(chanct, 1, 1);
-	}
 
 	return 0;
 }

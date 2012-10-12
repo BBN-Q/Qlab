@@ -113,7 +113,10 @@ private:
 	int write_LL_bank(const int &, const int &, const int &);
 
 	int stream_LL_data();
-	int read_LL_status(const int &);
+	int read_LL_addr(const FPGASELECT &);
+	int read_LL_addr(const int &);
+
+
 
 	int save_state_file(string &);
 	int read_state_file(string &);
