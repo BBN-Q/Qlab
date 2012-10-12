@@ -54,7 +54,7 @@ public:
 	int set_run_mode(const int &, const RUN_MODE &);
 	int set_repeat_mode(const int &, const bool &);
 
-	int add_LL_bank(const int & dac, const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger);
+	int set_LLData_IQ(const FPGASELECT &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &,  const vector<unsigned short> & );
 
 	int clear_channel_data();
 
@@ -107,7 +107,10 @@ private:
 
 	int write_waveform(const int &, const vector<short> &);
 
-	int write_LL_data(const int &, const int &, const int &);
+	int add_LL_bank_IQ(const FPGASELECT &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &);
+	int write_LL_bank_IQ(const FPGASELECT &, const USHORT &, const size_t &);
+	int add_LL_bank(const int &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &);
+	int write_LL_bank(const int &, const int &, const int &);
 
 	int stream_LL_data();
 	int read_LL_status(const int &);

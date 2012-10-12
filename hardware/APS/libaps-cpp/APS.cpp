@@ -240,36 +240,42 @@ int APS::load_sequence_file(const string & seqFile){
 			vector<short> tmpVec = h5array2vector<short>(&H5SeqFile, chanStr + "/waveformLib", H5::PredType::NATIVE_INT16);
 			set_waveform(chanct, tmpVec);
 
-			//Load the linklist data
-			//First figure our how many banks there are from the attribute
-			H5::Group tmpGroup = H5SeqFile.openGroup(chanStr + "/linkListData");
-			H5::Attribute tmpAttribute = tmpGroup.openAttribute("numBanks");
-			USHORT numBanks;
-			tmpAttribute.read(H5::PredType::NATIVE_UINT16, &numBanks);
+			//Check if there is the linklist data and if it is IQ mode style
+			USHORT isLinkListData, isIQMode;
+			H5::Group tmpGroup = H5SeqFile.openGroup(chanStr);
+			H5::Attribute tmpAttribute = tmpGroup.openAttribute("isLinkListData");
+			tmpAttribute.read(H5::PredType::NATIVE_UINT16, &isLinkListData);
 			tmpAttribute.close();
-			tmpAttribute = tmpGroup.openAttribute("repeatCount");
-			USHORT repeatCount;
-			tmpAttribute.read(H5::PredType::NATIVE_UINT16, &repeatCount);
+			tmpAttribute = tmpGroup.openAttribute("isIQMode");
+			tmpAttribute.read(H5::PredType::NATIVE_UINT16, &isIQMode);
 			tmpAttribute.close();
 			tmpGroup.close();
 
-			//Now loop over the number of banks found and add the bank
-			for (USHORT bankct=0; bankct<numBanks; bankct++){
+			//Load the linklist data
+			if (isLinkListData){
 				std::ostringstream tmpStream;
-				tmpStream.str("");
-				tmpStream << chanStr << "/linkListData/bank" << bankct+1 << "/offset";
-				vector<USHORT> offset = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
-				tmpStream.str("");
-				tmpStream << chanStr << "/linkListData/bank" << bankct+1 << "/count";
+				tmpStream.str(""); tmpStream << chanStr << "/linkListData/addr";
+				vector<USHORT> addr = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
+				tmpStream.str(""); tmpStream << chanStr << "/linkListData/count";
 				vector<USHORT> count = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
-				tmpStream.str("");
-				tmpStream << chanStr << "/linkListData/bank" << bankct+1 << "/repeat";
+				tmpStream.str(""); tmpStream << chanStr << "/linkListData/repeat";
 				vector<USHORT> repeat = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
-				tmpStream.str("");
-				tmpStream << chanStr << "/linkListData/bank" << bankct+1 << "/trigger";
-				vector<USHORT> trigger = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
+				tmpStream.str(""); tmpStream << chanStr << "/linkListData/trigger1";
+				vector<USHORT> trigger1 = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
+				tmpStream.str(""); tmpStream << chanStr << "/linkListData/trigger2";
+				vector<USHORT> trigger2 = h5array2vector<USHORT>(&H5SeqFile, tmpStream.str(), H5::PredType::NATIVE_UINT16);
 
-				//Push back the new bank
+				//Push back the new LL data
+				if (isIQMode){
+					switch (chanct){
+					case 0:
+						set_LLData_IQ(0, addr, count, trigger1, trigger2, repeat);
+						break;
+					case 2:
+						set_LLData_IQ(1, addr, count, trigger1, trigger2, repeat);
+						break;
+					}
+				}
 				add_LL_bank(chanct, offset, count, repeat, trigger);
 
 			}
@@ -539,6 +545,20 @@ int APS::set_repeat_mode(const int & dac, const bool & mode) {
 	return 0;
 }
 
+int APS::set_LLData_IQ(const FPGASELECT & fpga, const vector<unsigned short> & addr, const vector<unsigned short> & count, const vector<unsigned short> & trigger1, const vector<unsigned short> & trigger2,  const vector<unsigned short> & repeat){
+
+	size_t lengthLL = addr.size();
+
+	//If it is short enough than just write it to the device
+	if (lengthLL < MAX_LL_LENGTH){
+		add_LL_bank_IQ(fpga, addr, count, trigger1, trigger2, repeat);
+		write_LL_bank_IQ(fpga, 0, 0);
+	}
+
+	return 0;
+}
+
+int APS::add_LL_bank_IQ()
 
 int APS::add_LL_bank(const int & dac, const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger) {
 	/* APS::add_LL_bank
@@ -547,8 +567,6 @@ int APS::add_LL_bank(const int & dac, const vector<unsigned short> & offset, con
 	 * count
 	 * repeat
 	 * trigger
-	 *
-	 * See Scott Stafford's specification for bit formats of the data
 	 */
 
 	//Update the driver storage
@@ -557,7 +575,7 @@ int APS::add_LL_bank(const int & dac, const vector<unsigned short> & offset, con
 	//If it is one of the first two banks then write to device
 	size_t curBank = channels_[dac].banks_.size()-1;
 	if ( curBank < 2){
-		write_LL_data(dac, curBank, curBank);
+		write_LL_bank(dac, curBank, curBank);
 	}
 	//Otherwise print a message so we know something has happened
 	FILE_LOG(logINFO) << "Loaded LL bank into driver at bank position: " << curBank;
@@ -1010,7 +1028,7 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 	FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
 	// enable DAC FIFOs
 	for (int dac = 0; dac < 4; dac++)
-		disable_DAC_FIFO(dac);
+		enable_DAC_FIFO(dac);
 
 	if (!globalSync) {
 		FILE_LOG(logWARNING) << "PLLs are not in sync";
@@ -1222,12 +1240,14 @@ int APS::enable_DAC_FIFO(const int & dac) const {
 	FILE_LOG(logDEBUG) << "Enabling DAC " << dac << " FIFO";
 	// set sync bit (Reg 0, bit 2)
 	FPGA::read_SPI(handle_, APS_DAC_SPI, syncAddr, &data);
-	FPGA::write_SPI(handle_, APS_DAC_SPI, syncAddr, {UCHAR(data | (1 << 2))} );
+	int status = FPGA::write_SPI(handle_, APS_DAC_SPI, syncAddr, {UCHAR(data | (1 << 2))} );
 	// read back FIFO phase to ensure we are in a safe zone
 	FPGA::read_SPI(handle_, APS_DAC_SPI, fifoStatusAddr, &data);
 	// phase (FIFOSTAT) is in bits <6:4>
 	FILE_LOG(logDEBUG2) << "Read: " << myhex << int(data & 0xFF);
 	FILE_LOG(logDEBUG) << "FIFO phase = " << ((data & 0x70) >> 4);
+
+	return status;
 }
 
 int APS::disable_DAC_FIFO(const int & dac) const {
@@ -1237,7 +1257,7 @@ int APS::disable_DAC_FIFO(const int & dac) const {
 	// clear sync bit
 	FPGA::read_SPI(handle_, APS_DAC_SPI, syncAddr, &data);
 	mask = (0x1 << 2);
-	FPGA::write_SPI(handle_, APS_DAC_SPI, syncAddr, {data & ~mask} );
+	return FPGA::write_SPI(handle_, APS_DAC_SPI, syncAddr, {UCHAR(data & ~mask)} );
 }
 
 int APS::reset_checksums(const FPGASELECT & fpga){
