@@ -242,7 +242,7 @@ classdef APS < hgsetget
             %   ch - channel (1-4)
             %   waveform - int16 format waveform data (-8192, 8191) or
             %       float data in the range (-1.0, 1.0)
-
+            assert((ch>0) && (ch<5), 'Oops! The channel must be in the range 1 through 4');
             switch(class(waveform))
                 case 'int16'
                     obj.libraryCall('set_waveform_int', ch-1, waveform, length(waveform));
@@ -398,6 +398,15 @@ classdef APS < hgsetget
             % sets logging level in libaps.log
             % level = {logERROR=0, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4}
             calllib(aps.library_name, 'set_logging_level', level);
+        end
+        
+        function setTriggerInterval(aps, interval)
+            %Sets the internal trigger interval
+            aps.libraryCall('set_trigger_interval', interval);
+        end
+
+        function val = readRegister(aps, fpga, addr)
+            val = aps.libraryCall('read_register', fpga, addr);
         end
 
         

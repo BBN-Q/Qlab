@@ -12,10 +12,14 @@ LLBank::LLBank() : length{0}, addr_(0), count_(0), repeat_(0),trigger1_(0), trig
 }
 
 LLBank::LLBank(const WordVec & addr, const WordVec & count, const WordVec & trigger, const WordVec & repeat) :
-		length(addr.size()), IQMode(false), addr_(addr), count_(count), repeat_(repeat), trigger1_(trigger){};
+		length(addr.size()), IQMode(false), addr_(addr), count_(count), repeat_(repeat), trigger1_(trigger){
+	pack_data();
+};
 
 LLBank::LLBank(const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat) :
-		length(addr.size()), IQMode(true), addr_(addr), count_(count), repeat_(repeat), trigger1_(trigger1), trigger2_(trigger2){};
+		length(addr.size()), IQMode(true), addr_(addr), count_(count), repeat_(repeat), trigger1_(trigger1), trigger2_(trigger2){
+	pack_data();
+};
 
 LLBank::~LLBank() {
 	// TODO Auto-generated destructor stub
@@ -32,34 +36,51 @@ void LLBank::clear(){
 }
 
 WordVec LLBank::get_packed_data(const size_t & startIdx, const size_t & stopIdx){
+	//Pull out packed data starting at startIdx but not inclusive of stopIdx
 	WordVec vecOut;
+	//If we are in IQ mode then we have an extra word for every entry
 	int lengthMult = IQMode ? 5 : 4;
-	vecOut.assign(packedData_.begin()+lengthMult*startIdx, packedData_.begin()+lengthMult*stopIdx-1);
+	//Handle wrapping around the top of the LL data
+	if (stopIdx < startIdx){
+		vecOut.assign(packedData_.begin()+lengthMult*startIdx, packedData_.end());
+		vecOut.insert(vecOut.end(), packedData_.begin(), packedData_.begin()+lengthMult*stopIdx);
+	}
+	else{
+		vecOut.assign(packedData_.begin()+lengthMult*startIdx, packedData_.begin()+lengthMult*stopIdx);
+	}
 	return vecOut;
 }
 
 int LLBank::write_state_to_hdf5(H5::H5File & H5StateFile, const string & rootStr){
+	H5::Group chanGroup = H5StateFile.openGroup(rootStr);
 	H5::DataType dt = H5::PredType::NATIVE_UINT16;
-	vector2h5array<USHORT>(addr_,  &H5StateFile, "offset",  rootStr + "/offset",  dt);
+	USHORT tmpLength = static_cast<USHORT>(length);
+	element2h5attribute<USHORT>("length", tmpLength, &chanGroup, dt);
+	chanGroup.close();
+	vector2h5array<USHORT>(addr_,  &H5StateFile, "addr",  rootStr + "/addr",  dt);
 	vector2h5array<USHORT>(count_,   &H5StateFile, "count",   rootStr + "/count",   dt);
 	vector2h5array<USHORT>(repeat_,  &H5StateFile, "repeat",  rootStr + "/repeat",  dt);
-	vector2h5array<USHORT>(trigger1_, &H5StateFile, "trigger", rootStr + "/trigger1", dt);
+	vector2h5array<USHORT>(trigger1_, &H5StateFile, "trigger1", rootStr + "/trigger1", dt);
 	if (IQMode){
-		vector2h5array<USHORT>(trigger2_, &H5StateFile, "trigger", rootStr + "/trigger2", dt);
+		vector2h5array<USHORT>(trigger2_, &H5StateFile, "trigger2", rootStr + "/trigger2", dt);
 	}
 	return 0;
 }
 
 int LLBank::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootStr){
+	H5::Group chanGroup = H5StateFile.openGroup(rootStr);
 	H5::DataType dt = H5::PredType::NATIVE_UINT16;
-	addr_  = h5array2vector<USHORT>(&H5StateFile, rootStr + "/offset",  dt);
+	length = h5element2element<USHORT>("length", &chanGroup, dt);
+	chanGroup.close();
+	addr_  = h5array2vector<USHORT>(&H5StateFile, rootStr + "/addr",  dt);
 	count_   = h5array2vector<USHORT>(&H5StateFile, rootStr + "/count",   dt);
 	trigger1_ = h5array2vector<USHORT>(&H5StateFile, rootStr + "/trigger1", dt);
 	repeat_  = h5array2vector<USHORT>(&H5StateFile, rootStr + "/repeat",  dt);
 	if(IQMode){
-		trigger2_ = h5array2vector<USHORT>(&H5StateFile, rootStr + "/trigger1", dt);
+		trigger2_ = h5array2vector<USHORT>(&H5StateFile, rootStr + "/trigger2", dt);
 	}
 
+	pack_data();
 	return 0;
 }
 

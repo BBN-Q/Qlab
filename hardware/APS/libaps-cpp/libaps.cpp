@@ -226,6 +226,10 @@ int raw_read(int deviceID, int fpga){
 	return APSRack_.raw_read(deviceID, FPGASELECT(fpga));
 }
 
+int read_register(int deviceID, int fpga, int addr){
+	return APSRack_.read_register(deviceID, FPGASELECT(fpga), addr);
+}
+
 int program_FPGA(int deviceID, char* bitFile, int chipSelect, int expectedVersion) {
 	return APSRack_.program_FPGA(deviceID, string(bitFile), FPGASELECT(chipSelect), expectedVersion);
 }

@@ -409,9 +409,13 @@ int APS::run() {
 
 	running_ = true;
 
-	//If we have more LL entries than we cna handle then we need to stream
-	if (channels_[0].LLBank_.length > MAX_LL_LENGTH){
-		bankBouncerThread_ = new thread(&APS::stream_LL_data, this);
+	//If we have more LL entries than we can handle then we need to stream
+	for (int chanct = 0; chanct < 4; ++chanct) {
+		if (channelsEnabled[chanct]){
+			if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH){
+				bankBouncerThread_ = new thread(&APS::stream_LL_data, this, chanct);
+			}
+		}
 	}
 
 	//If all channels are enabled then trigger together
@@ -526,7 +530,7 @@ int APS::set_repeat_mode(const int & dac, const bool & mode) {
 	return 0;
 }
 
-int APS::set_LL_data_IQ(const FPGASELECT & fpga, const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat){
+int APS::set_LLData_IQ(const FPGASELECT & fpga, const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat){
 
 	//We store the IQ linklist data in channels 1 and 3
 	int dataChan;
@@ -543,7 +547,7 @@ int APS::set_LL_data_IQ(const FPGASELECT & fpga, const WordVec & addr, const Wor
 	channels_[dataChan].LLBank_ = LLBank(addr, count, trigger1, trigger2, repeat);
 
 	//If we can fit it on then do so
-	if (addr.size() > MAX_LL_LENGTH){
+	if (addr.size() < MAX_LL_LENGTH){
 		write_LL_data_IQ(fpga, 0, 0, addr.size(), true );
 	}
 
@@ -597,6 +601,7 @@ int APS::write(const FPGASELECT & fpga, const unsigned int & addr, const vector<
 int APS::flush() {
 	// flush write queue to USB interface
 	int bytesWritten = FPGA::write_block(handle_, writeQueue_);
+	FILE_LOG(logDEBUG1) << "Flushed " << bytesWritten << " bytes to device";
 	writeQueue_.clear();
 	return bytesWritten;
 }
@@ -970,8 +975,8 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 					// we failed, but enable DDRs to get a usable state
 					FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
 					// enable DAC FIFOs
-					for (int dac = 0; dac < 4; dac++)
-						enable_DAC_FIFO(dac);
+					//for (int dac = 0; dac < 4; dac++)
+						//enable_DAC_FIFO(dac);
 
 					FILE_LOG(logERROR) << "Error could not sync PLLs";
 					return -9;
@@ -995,8 +1000,8 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 	// Enable DDRs
 	FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
 	// enable DAC FIFOs
-	for (int dac = 0; dac < 4; dac++)
-		enable_DAC_FIFO(dac);
+	//for (int dac = 0; dac < 4; dac++)
+		//enable_DAC_FIFO(dac);
 
 	if (!globalSync) {
 		FILE_LOG(logWARNING) << "PLLs are not in sync";
@@ -1196,7 +1201,7 @@ int APS::setup_DAC(const int & dac) const
 	*/
 	
 	// turn on SYNC FIFO
-	enable_DAC_FIFO(dac);
+//	enable_DAC_FIFO(dac);
 
 	return 0;
 }
@@ -1361,7 +1366,7 @@ int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 }
 
 
-int APS::write_LL_data_IQ(const FPGASELECT & fpga, const ULONG & startAddr, const size_t & startIdx, const size_t & stopIdx, const bool & writeLengthFlag){
+int APS::write_LL_data_IQ(const FPGASELECT & fpga, const ULONG & startAddr, const size_t & startIdx, const size_t & stopIdx, const bool & writeLengthFlag ){
 
 	//We store the IQ linklist data in channels 1 and 3
 	int dataChan;
@@ -1376,13 +1381,31 @@ int APS::write_LL_data_IQ(const FPGASELECT & fpga, const ULONG & startAddr, cons
 			return -1;
 	}
 
+	size_t entriesToWrite = (stopIdx-startIdx)%MAX_LL_LENGTH;
+
+	FILE_LOG(logDEBUG) << "Writing LL Data for Channel: " << dataChan << "; Length: " << (stopIdx-startIdx)%MAX_LL_LENGTH;
+
+	WordVec writeData;
+
+	//Sort out whether we'll have to wrap around the top of the memory
+	if ( (startAddr+entriesToWrite) > MAX_LL_LENGTH){
+		//Pull out the first segment
+		size_t tmpStopIdx = ((MAX_LL_LENGTH-startAddr) + startIdx)%channels_[dataChan].LLBank_.length;
+		writeData = channels_[dataChan].LLBank_.get_packed_data(startIdx, tmpStopIdx);
+		WordVec tmpData = channels_[dataChan].LLBank_.get_packed_data(tmpStopIdx, stopIdx);
+		writeData.insert(writeData.end(), tmpData.begin(), tmpData.end());
+	}
+	else{
+		writeData = channels_[dataChan].LLBank_.get_packed_data(startIdx, stopIdx);
+	}
+
 	//Write the packed data
-	write(fpga, FPGA_BANKSEL_LL_CHA | startAddr, channels_[dataChan].LLBank_.get_packed_data(startIdx, stopIdx), true);
+	write(fpga, FPGA_BANKSEL_LL_CHA | startAddr, writeData, true);
 
 	//If necessary write the LL length register
 	if (writeLengthFlag){
 		FILE_LOG(logDEBUG2) << "Writing Link List Length: " << myhex << stopIdx << " at address: " << FPGA_ADDR_CHA_LL_LENGTH;
-		write(fpga, FPGA_ADDR_CHA_LL_LENGTH, stopIdx, true);
+		write(fpga, FPGA_ADDR_CHA_LL_LENGTH, stopIdx-1, true);
 	}
 
 	//Flush the queue to the device
@@ -1498,59 +1521,84 @@ int APS::read_LL_addr(const int & dac){
 }
 
 
-//int APS::stream_LL_data_IQ(const FPGASELECT & fpga){
-//
-//	return 0;
-//}
-/*
-	USHORT curAddrSW, stopAddrSW, curAddrHW;
-	curAddrSW = initAddrSW;
+int APS::stream_LL_data(const int chan){
+
+	FPGASELECT fpga = dac2fpga(chan);
+
+	//To reduce traffic on the USB bus write only when we have a decent block size
+	//TODO:: implement
+	const int MIN_WRITE_SIZE = MAX_LL_LENGTH/4;
+
+	//The current addresses in hardware and software
+	//nextMiniLL is the final miniLL we would like to write (% #miniLL's)
+	//lastMiniLL is the last miniLL we have written (% #miniLL's)
+	//curAddrHW is the currently playing LL entry in hardware (% MAX_LL_LENGTH)
+	//nextWriteAddrHW is the next address we write to in hardware (% MAX_LL_LENGTH)
+	USHORT nextMiniLL, lastMiniLL, curAddrHW, nextWriteAddrHW;
 
 	//Go through the LL entries and calculate lengths and start points of each miniLL
-	vector<size_t> lengthMiniLL;
-	for(auto tmpWord : LLData_.repeat_){
+	vector<size_t> lengthsMiniLL, startMiniLLPts;
+	const USHORT startMiniLLMask = (1 << 15);
+	const USHORT endMiniLLMask = (1 << 14);
+	size_t lengthCt;
+	for(size_t ct = 0; ct < channels_[chan].LLBank_.length; ct++){
+		USHORT curWord = channels_[chan].LLBank_.length;
+		if (curWord & startMiniLLMask){
+			startMiniLLPts.push_back(ct);
+			lengthCt = 0;
+		}
+		lengthCt++;
+		if (curWord & endMiniLLMask){
+			lengthsMiniLL.push_back(lengthCt);
+		}
 	}
+	size_t numMiniLLs = startMiniLLPts.size();
 
 	//Helper function to see how many miniLL's we can write
-	auto
+	auto entries_can_write = [&]() {
+		//Check how many we can fit in
+		USHORT entriesOpen = (curAddrHW-nextWriteAddrHW)%MAX_LL_LENGTH;
+		//If it is negative we've looped back to the beginning
+		size_t entriesToWrite = 0;
+		while ((entriesToWrite + lengthsMiniLL[nextMiniLL]) < entriesOpen){
+			entriesToWrite += lengthsMiniLL[nextMiniLL];
+			nextMiniLL = (nextMiniLL+1)%numMiniLLs;
+		}
+		FILE_LOG(logDEBUG2) << "Device ID: " << deviceID_ << " Next write Addr: " << nextWriteAddrHW << " Can write " << entriesToWrite << " entries.";
+	};
 
-	//Write the first set of data
+	//Write the LL length to the max
+	FILE_LOG(logDEBUG2) << "Writing Link List Length: " << myhex << MAX_LL_LENGTH << " at address: " << FPGA_ADDR_CHA_LL_LENGTH;
+	write(fpga, FPGA_ADDR_CHA_LL_LENGTH, MAX_LL_LENGTH-1, false);
 
-
+	nextMiniLL = 0;
+	lastMiniLL = MAX_LL_LENGTH;
+	nextWriteAddrHW = 0;
+	curAddrHW = MAX_LL_LENGTH +1;
 
 	while(running_) {
-		//Poll for current hardware address
-		curAddrHW = read_LL_addr(fpga);
-
-		FILE_LOG(logDEBUG2) << "Device ID: " << deviceID_ << " Current LL Addr: " << myhex << curAddrHW;
-
-		//Check how many we can fit in
-		int entriesOpen = curAddrHW-curAddrSW;
-
-		//If it is negative we've looped back to the beginning
-		if (entriesOpen < 0){
-			entriesOpen = MAX_LL_LENGTH - curAddrSW;
-		}
 
 		//See how many more miniLL's we can fit in
-		int curSum = 0;
-		stopAddrSW = curAddrSW;
-		while ((curSum + lengthMiniLL[stopAddrSW+1]) < entriesOpen){
-			curSum += lengthMiniLL[++stopAddrSW];
+		entries_can_write();
+
+		//If there is something to write then do so
+		if ((nextMiniLL - lastMiniLL)%numMiniLLs > 1){
+			write_LL_data_IQ(fpga, nextWriteAddrHW, lastMiniLL+1, nextMiniLL, false);
+			lastMiniLL = nextMiniLL-1;
 		}
-
-		bool writeEndFlag = (stopAddrSW+lengthMiniLL[stopAddrSW+1]) < MAX_LL_LENGTH;
-		write_LL_data(fpga, curAddrSW, stopAddrSW, writeEndFlag);
-
 
 		//Sleep for 10ms to reduce bus congestion
 		std::this_thread::sleep_for( std::chrono::milliseconds(10) );
+
+		//Poll for current hardware address
+		curAddrHW = read_LL_addr(fpga);
+		FILE_LOG(logDEBUG2) << "Device ID: " << deviceID_ << " Current LL Addr: " << myhex << curAddrHW;
+
 	}
 	
 
 	return 0;
 }
-*/
 
 int APS::save_state_file(string & stateFile){
 

@@ -29,11 +29,11 @@ int set_bit(FT_HANDLE, const FPGASELECT &, const int &, const int &);
 USHORT read_FPGA(FT_HANDLE, const ULONG &, FPGASELECT);
 
 int write_FPGA(FT_HANDLE, const unsigned int &, const USHORT &, const FPGASELECT &);
-int write_FPGA(FT_HANDLE, const unsigned int &, const vector<USHORT> &, const FPGASELECT &);
-int write_FPGA(FT_HANDLE, const unsigned int &, const vector<USHORT> &, const FPGASELECT &, map<FPGASELECT, CheckSum> &);
+int write_FPGA(FT_HANDLE, const unsigned int &, const WordVec &, const FPGASELECT &);
+int write_FPGA(FT_HANDLE, const unsigned int &, const WordVec &, const FPGASELECT &, map<FPGASELECT, CheckSum> &);
 
 int write_block(FT_HANDLE, vector<UCHAR> &);
-vector<UCHAR> format(const FPGASELECT &, const unsigned int &, const vector<USHORT> &);
+vector<UCHAR> format(const FPGASELECT &, const unsigned int &, const WordVec &);
 
 } //end namespace FPGA
 

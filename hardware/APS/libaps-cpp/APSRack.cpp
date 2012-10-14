@@ -275,3 +275,6 @@ int APSRack::raw_read(int deviceID, FPGASELECT fpga) {
 	return int((dataBuffer[0] << 8) | dataBuffer[1]);
 }
 
+int APSRack::read_register(int deviceID, FPGASELECT fpga, int addr){
+	return FPGA::read_FPGA(APSs_[deviceID].handle_, addr, fpga);
+}

@@ -82,6 +82,7 @@ public:
 
 	int raw_write(int, int, UCHAR*);
 	int raw_read(int, FPGASELECT);
+	int read_register(int, FPGASELECT, int);
 
 private:
 	int numDevices_;

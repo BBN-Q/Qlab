@@ -35,7 +35,7 @@ private:
 	WordVec repeat_;
 	WordVec trigger1_;
 	WordVec trigger2_;
-	vector<UCHAR> packedData_;
+	WordVec packedData_;
 	void pack_data();
 
 };

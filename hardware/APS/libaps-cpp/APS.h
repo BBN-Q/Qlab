@@ -108,7 +108,7 @@ private:
 
 	int write_LL_data_IQ(const FPGASELECT &, const ULONG &, const size_t &, const size_t &, const bool &);
 	int set_LL_data_IQ(const FPGASELECT &, const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
-	int stream_LL_data();
+	int stream_LL_data(const int);
 	int read_LL_addr(const FPGASELECT &);
 	int read_LL_addr(const int &);
 

@@ -247,6 +247,7 @@ int main(int argc, char** argv) {
 
 	set_trigger_interval(0, 20e-6);
 
+	load_sequence_file(0, "U:\\AWG\\Rabi\\Rabi-BBNAPS.h5");
 
 	vector<float> waveform(0);
 
