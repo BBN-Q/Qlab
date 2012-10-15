@@ -7,10 +7,10 @@
 
 #include "APS.h"
 
-APS::APS() :  deviceID_{-1}, handle_{NULL}, channels_(4), triggerSource_{SOFTWARE_TRIGGER}, samplingRate_{-1}, running_{false} {}
+APS::APS() :  deviceID_{-1}, handle_{NULL}, channels_(4), samplingRate_{-1}, running_{false} {}
 
 APS::APS(int deviceID, string deviceSerial) :  deviceID_{deviceID}, deviceSerial_{deviceSerial},
-		handle_{NULL}, triggerSource_{SOFTWARE_TRIGGER}, samplingRate_{-1}, running_{false} {
+		handle_{NULL}, samplingRate_{-1}, running_{false} {
 		for(int ct=0; ct<4; ct++){
 			channels_.push_back(Channel(ct));
 		}
@@ -384,6 +384,27 @@ unsigned short APS::get_channel_trigDelay(const int & dac){
 	return 0;
 }
 
+int APS::set_trigger_source(const TRIGGERSOURCE & triggerSource){
+
+	int returnVal;
+	switch (triggerSource){
+	case INTERNAL:
+		returnVal = FPGA::clear_bit(handle_, ALL_FPGAS, FPGA_ADDR_CSR, CSRMSK_CHA_TRIGSRC);
+		break;
+	case EXTERNAL:
+		returnVal = FPGA::set_bit(handle_, ALL_FPGAS, FPGA_ADDR_CSR, CSRMSK_CHA_TRIGSRC);
+		break;
+	default:
+		returnVal = -1;
+		break;
+	}
+	return returnVal;
+}
+
+TRIGGERSOURCE APS::get_trigger_source() const{
+	int regVal = FPGA::read_FPGA(handle_, FPGA_ADDR_CSR, FPGA1);
+	return TRIGGERSOURCE(regVal & CSRMSK_CHA_TRIGSRC);
+}
 
 int APS::set_trigger_interval(const double & interval){
 
@@ -509,11 +530,11 @@ int APS::set_repeat_mode(const int & dac, const bool & mode) {
 	switch(dac) {
 	  case 0:
 	  case 2:
-	    dacModeMask   = CSRMSK_CHA_LLMODE;
+	    dacModeMask   = CSRMSK_CHA_REPMODE;
 	    break;
 	  case 1:
 	  case 3:
-	    dacModeMask   = CSRMSK_CHB_LLMODE;
+	    dacModeMask   = CSRMSK_CHB_REPMODE;
 	    break;
 	  default:
 	    return -2;

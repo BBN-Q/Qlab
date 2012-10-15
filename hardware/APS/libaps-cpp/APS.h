@@ -31,6 +31,9 @@ public:
 	int set_sampleRate(const int &);
 	int get_sampleRate() const;
 
+	int set_trigger_source(const TRIGGERSOURCE &);
+	TRIGGERSOURCE get_trigger_source() const;
+
 	int set_channel_enabled(const int &, const bool &);
 	bool get_channel_enabled(const int &) const;
 	int set_channel_offset(const int &, const float &);
@@ -71,7 +74,6 @@ private:
 	FT_HANDLE handle_;
 	vector<Channel> channels_;
 	map<FPGASELECT, CheckSum> checksums_;
-	int triggerSource_;
 	int samplingRate_;
 	vector<UCHAR> writeQueue_;
 	thread * bankBouncerThread_;

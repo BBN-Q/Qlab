@@ -122,19 +122,16 @@ static const int CSRMSK_CHA_PLLRST = 0x2; // pll reset
 static const int CSRMSK_CHA_DDR = 0x4; // DDR enable
 static const int CSRMSK_CHA_TRIGSRC = 0x10; // trigger source (1 = external, 0 = internal)
 static const int CSRMSK_CHA_OUTMODE = 0x20; // output mode (1 = link list, 0 = waveform)
-static const int CSRMSK_CHA_LLMODE = 0x40; // LL repeat mode (1 = one-shot, 0 = continuous)
+static const int CSRMSK_CHA_REPMODE = 0x40; // LL repeat mode (1 = one-shot, 0 = continuous)
 
 static const int CSRMSK_CHB_SMRST = 0x100; // state machine reset
 static const int CSRMSK_CHB_PLLRST = 0x200; // pll reset
 static const int CSRMSK_CHB_DDR = 0x400; // DDR enable
 static const int CSRMSK_CHB_TRIGSRC = 0x1000;
 static const int CSRMSK_CHB_OUTMODE = 0x2000;
-static const int CSRMSK_CHB_LLMODE = 0x4000;
+static const int CSRMSK_CHB_REPMODE = 0x4000;
 
-enum {
-	SOFTWARE_TRIGGER=1,
-	HARDWARE_TRIGGER
-};
+typedef enum {INTERNAL=0, EXTERNAL} TRIGGERSOURCE;
 
 typedef enum {INVALID_FPGA=0, FPGA1, FPGA2, ALL_FPGAS} FPGASELECT;
 

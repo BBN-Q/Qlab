@@ -38,8 +38,8 @@ public:
 
 	int run(const int &);
 	int stop(const int &);
-	int set_trigger_source(const int &, const int &);
-	int get_trigger_source(const int &) const;
+	int set_trigger_source(const int &, const TRIGGERSOURCE &);
+	TRIGGERSOURCE get_trigger_source(const int &) const;
 
 	int get_sampleRate(const int &) const;
 	int set_sampleRate(const int &, const int &);

@@ -152,11 +152,11 @@ int set_logging_level(int logLevel){
 }
 
 int set_trigger_source(int deviceID, int triggerSource) {
-	return APSRack_.set_trigger_source(deviceID,triggerSource);
+	return APSRack_.set_trigger_source(deviceID, TRIGGERSOURCE(triggerSource));
 }
 
 int get_trigger_source(int deviceID) {
-	return APSRack_.get_trigger_source(deviceID);
+	return int(APSRack_.get_trigger_source(deviceID));
 }
 
 int set_channel_offset(int deviceID, int channelNum, float offset){

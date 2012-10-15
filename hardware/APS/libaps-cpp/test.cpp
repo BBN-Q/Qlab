@@ -89,7 +89,7 @@ void test::doToggleTest() {
 
 	programSquareWaves();
 
-	set_trigger_source(0,SOFTWARE_TRIGGER);
+	set_trigger_source(0,0);
 
 	//Enable all channels
 	for (int ct=0; ct<4; ct++){
@@ -160,7 +160,7 @@ void test::doStoreLoadTest() {
 
 	printf("Triggering:\n");
 
-	set_trigger_source(0,SOFTWARE_TRIGGER);
+	set_trigger_source(0, 0);
 	run(0);
 
 	printf("Press key:\n");

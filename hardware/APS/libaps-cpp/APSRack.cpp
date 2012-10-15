@@ -156,12 +156,12 @@ int APSRack::set_logging_level(const int & logLevel){
 	return 0;
 }
 
-int APSRack::set_trigger_source(const int & deviceID, const int & triggerSource) {
-	return APSs_[deviceID].triggerSource_ = triggerSource;
+int APSRack::set_trigger_source(const int & deviceID, const TRIGGERSOURCE & triggerSource) {
+	return APSs_[deviceID].set_trigger_source(triggerSource);
 }
 
-int APSRack::get_trigger_source(const int & deviceID) const{
-	return APSs_[deviceID].triggerSource_;
+TRIGGERSOURCE APSRack::get_trigger_source(const int & deviceID) const{
+	return APSs_[deviceID].get_trigger_source();
 }
 
 int APSRack::set_channel_enabled(const int & deviceID, const int & channelNum, const bool & enable){
