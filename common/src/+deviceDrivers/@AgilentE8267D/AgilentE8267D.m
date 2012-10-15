@@ -1,4 +1,4 @@
-classdef (Sealed) AgilentE8267D < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
+classdef (Sealed) AgilentE8267D < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBorEthernet
     % Agilent E8267D vector signal generator
     %
     %
