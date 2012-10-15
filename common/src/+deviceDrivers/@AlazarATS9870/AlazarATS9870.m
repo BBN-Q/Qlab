@@ -275,19 +275,26 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             numRepeats = obj.settings.averager.nbrWaveforms*obj.settings.averager.nbrRoundRobins;
             obj.averagedData{1} = sumDataA/numRepeats;
             obj.averagedData{2} = sumDataB/numRepeats;
-            
-            %Release the buffers to prevent memory leak
+
+            %Clear and reallocate the buffer ptrs
+            %Try to abort any in progress acquisitions and transfers
+            obj.call_API('AlazarAbortAsyncRead', obj.boardHandle);
+
             for ct = 1:obj.buffers.numBuffers
                 clear obj.buffers.bufferPtrs{ct}
             end
-            obj.buffers.numBuffers = 0;
-            obj.buffers.bufferPtrs = {};
+            obj.buffers.bufferPtrs = cell(1, obj.buffers.numBuffers);
+            for ct = 1:obj.buffers.numBuffers
+                obj.buffers.bufferPtrs{ct} = libpointer('uint8Ptr', zeros(obj.buffers.bufferSize,1));
+            end
+            
         end
         
         %Dummy function for consistency with Acqiris card where average
         %data is stored on card
-        function avgWaveform = transfer_waveform(obj, channel)
+        function [avgWaveform, times] = transfer_waveform(obj, channel)
             avgWaveform = obj.averagedData{channel};
+            times = (1/obj.horizontal.samplingRate)*(0:obj.averager.recordLength-1);
         end
         
         
@@ -426,7 +433,9 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         function val = get.horizontal(obj)
             %Alazar doesn't seem to provide a way to get settings out of
             %the card so just return the input settings
+            %Fake the sampleInterval
             val = obj.settings.horizontal;
+            val.sampleInterval = 1/val.samplingRate;
         end
             
         
