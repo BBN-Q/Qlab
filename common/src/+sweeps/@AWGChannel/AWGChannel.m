@@ -75,7 +75,7 @@ classdef AWGChannel < sweeps.Sweep
                 switch (obj.AWGType)
                     case 'Tek'
                         channel_str = sprintf('chan_%d', ch);
-                        obj.Instr.(channel_str).Amplitude = obj.points(index);
+                        obj.Instr.(channel_str).amplitude = obj.points(index);
                     case 'APS'
                         obj.Instr.setAmplitude(ch, obj.points(index));
                 end
@@ -87,7 +87,7 @@ classdef AWGChannel < sweeps.Sweep
                 switch (obj.AWGType)
                     case 'Tek'
                         channel_str = sprintf('chan_%d', ch);
-                        obj.Instr.(channel_str).Offset = obj.points(index);
+                        obj.Instr.(channel_str).offset = obj.points(index);
                     case 'APS'
                         obj.Instr.setOffset(ch, obj.points(index));
                 end

@@ -43,7 +43,8 @@ classdef Frequency < sweeps.Sweep
                 end
 
                 % if we are sweeping RFgen, find LOgen and the IF frequency
-                if strcmp(SweepParams.genID, 'RFgen')
+                % if we want to lock them
+                if strcmp(SweepParams.genID, 'RFgen') && SweepParams.lockLOtoRF
                     ExpParams = params.ExpParams;
                     if isfield(Instr, 'LOgen') && isfield(ExpParams, 'digitalHomodyne') && ~strcmp(ExpParams.digitalHomodyne.DHmode, 'OFF')
                         obj.LOInstr = Instr.LOgen;

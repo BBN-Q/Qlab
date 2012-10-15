@@ -118,7 +118,7 @@ classdef APS < hgsetget
             %   aps.connect(0);
             %   aps.connect('A6UQZB7Z')
         
-            deviceID_re = '\d+';
+            deviceID_re = '^\d+';
             if isnumeric(address)
                 obj.open(address);
             elseif ~isempty(regexp(address, deviceID_re))
@@ -200,7 +200,7 @@ classdef APS < hgsetget
 			
             % parse remaining settings
 			fields = fieldnames(settings);
-			for j = 1:length(fields);
+            for j = 1:length(fields);
 				name = fields{j};
                 if ismember(name, methods(obj))
                     feval(['obj.' name], settings.(name));

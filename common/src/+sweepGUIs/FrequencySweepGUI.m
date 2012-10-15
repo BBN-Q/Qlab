@@ -52,8 +52,9 @@ settings_fcn = @get_settings;
         tmpVBox = uiextras.VBox('Parent', handles.mainPanel, 'Spacing', 2);
         tmpHBox1 =  uiextras.HBox('Parent', tmpVBox, 'Spacing', 5);
         [~, ~, handles.genID] = uiextras.labeledPopUpMenu(tmpHBox1, 'Generator:', 'genID',  {'RF','LO','Spec','Spec2'});
+        %Pull off the "gen" suffix and set the menu to the previous value
         set(handles.genID, 'Value', find(strcmp(prevSettings.genID(1:end-3), get(handles.genID,'String'))));
-        uiextras.Empty('Parent', tmpHBox1);
+        handles.lockLOtoRF = uicontrol('Parent', tmpHBox1, 'Style', 'checkbox', 'String', 'Lock LO to RF');
         tmpHBox2 = uiextras.HButtonBox('Parent', tmpVBox, 'Spacing', 5, 'VerticalAlignment', 'bottom');
         textParams = {'Parent', tmpHBox2, 'Style', 'text', 'FontSize', 10};
         uicontrol(textParams{:}, 'String', 'Start');
@@ -88,6 +89,7 @@ settings_fcn = @get_settings;
 		settings.stop = get_numeric(handles.stopFreq);
 		settings.step = get_numeric(handles.stepFreq);
 		settings.genID = [get_selected(handles.genID) 'gen'];
+        settings.lockLOtoRF = get(handles.lockLOtoRF, 'Value');
 	end
 
 end

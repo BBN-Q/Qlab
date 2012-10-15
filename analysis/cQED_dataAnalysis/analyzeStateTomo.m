@@ -15,9 +15,9 @@ PauliLabel();
 title('Raw Inversion Pauli Decomposition');
 
 rhoRaw = getRho(raw_paulis);
-rhoWizard = WizardTomo_(rhoRaw, 2);
+rhoWizard = WizardTomo_(rhoRaw, nbrQubits);
 rhoPlot(rhoWizard);
-
+purity = real(trace(rhoWizard^2))
 
 pauliLabels = {'II', 'XI', 'YI', 'ZI', 'IX', 'IY', 'IZ', 'XY', 'XZ', 'YX', 'YZ', 'ZX', 'ZY', 'XX', 'YY', 'ZZ'};
 [pauliOps, pauliStrs] = paulis(nbrQubits);

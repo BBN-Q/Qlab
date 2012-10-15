@@ -108,8 +108,9 @@ get_freqA_settings = sweepGUIs.FrequencySweepGUI(SweepTabPanel, 'A', prevSetting
 get_freqB_settings = sweepGUIs.FrequencySweepGUI(SweepTabPanel, 'B', prevSettings.SweepParams.frequencyB);
 get_power_settings = sweepGUIs.PowerSweepGUI(SweepTabPanel, '');
 get_phase_settings = sweepGUIs.PhaseSweepGUI(SweepTabPanel, '');
+get_AWGChannel_settings = sweepGUIs.AWGChannelSweepGUI(SweepTabPanel, '');
 
-SweepTabPanel.TabNames = {'Freq. A', 'Freq. B', 'Power', 'Phase'};
+SweepTabPanel.TabNames = {'Freq. A', 'Freq. B', 'Power', 'Phase', 'Channel'};
 SweepTabPanel.SelectedChild = 1;
 
 % Add the measurement settings panels
@@ -123,8 +124,8 @@ ExpSetupVBox = uiextras.VBox('Parent', ExpSetupPanel, 'Spacing', 5);
 
 %Add sweep/loop selector
 tmpGrid = uiextras.Grid('Parent', ExpSetupVBox, 'Spacing', 5);
-[~, ~, fastLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Fast Loop:', 'fastloop',  {'frequencyA', 'frequencyB', 'power', 'phase', 'dc', 'TekCh', 'nothing'});
-[~, ~, slowLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Slow Loop:', 'slowloop',  {'frequencyA', 'frequencyB', 'power', 'phase', 'dc', 'TekCh', 'nothing'});
+[~, ~, fastLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Fast Loop:', 'fastloop',  {'frequencyA', 'frequencyB', 'power', 'phase', 'dc', 'AWGChannel', 'nothing'});
+[~, ~, slowLoop] = uiextras.labeledPopUpMenu(tmpGrid, 'Slow Loop:', 'slowloop',  {'frequencyA', 'frequencyB', 'power', 'phase', 'dc', 'AWGChannel', 'nothing'});
 set(slowLoop, 'Value', 7);
 [~, ~, deviceName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Device Name:', 'deviceName', prevSettings.deviceName);
 [~, ~, exptName_EditBox] = uiextras.labeledEditBox(tmpGrid, 'Experiment:', 'expName', prevSettings.exptName);
@@ -212,7 +213,7 @@ set(mainWindow, 'Visible', 'on');
 		settings.SweepParams.power = get_power_settings();
 		settings.SweepParams.phase = get_phase_settings();
 % 		settings.SweepParams.dc = get_dc_settings();
-%         settings.SweepParams.TekCh = get_tekChannel_settings();
+        settings.SweepParams.AWGChannel = get_AWGChannel_settings();
 		% add 'nothing' sweep
 		settings.SweepParams.nothing = struct('type', 'sweeps.Nothing');
 		
@@ -255,8 +256,6 @@ set(mainWindow, 'Visible', 'on');
 		% Run the actual experiment
 		Exp.Init();
 		Exp.Do();
-		Exp.CleanUp();
-
         %Call the stop button call_back to clean-up
         stop_callback()
     end

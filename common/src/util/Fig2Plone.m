@@ -10,6 +10,9 @@ ploneSite = 'echelon.bbn.com:8080/QLab';
 
 %Save the figure handle as a Matlab figure and .png (I'd really like to
 %move to svg).  See also savedatafig
+
+%make sure saved file has same aspect ratio as shown on screen 
+set(figHandle, 'PaperPositionMode','auto');
 saveas(figHandle, [dataObj.path strrep(dataObj.filename, '.h5', '.fig')]);
 imageFile = [dataObj.path strrep(dataObj.filename, '.h5', '.png')];
 saveas(figHandle, imageFile)

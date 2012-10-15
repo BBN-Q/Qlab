@@ -31,7 +31,7 @@ pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', 
 
 numsteps = 101;
 minWidth = 24;
-stepsize = 6; % 12
+stepsize = 12; % 12
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 %pulseLength = minWidth*ones([numsteps,1]);
 patseq = {{pg.pulse('Xtheta', 'amp', 2000, 'width', pulseLength, 'pType', 'square')}};

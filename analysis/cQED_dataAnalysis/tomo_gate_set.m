@@ -5,8 +5,8 @@ function gateSet = tomo_gate_set(nbrQubits, nbrPulses)
  
 %Basic Pauli operators
 X = [0,1; 1,0];
-Y = [0,-1i,1i,0];
-Z = [1 0;0 -1];
+Y = [0,-1i; 1i,0];
+Z = [1 0; 0 -1];
 I = eye(2);
 
 
@@ -55,7 +55,7 @@ gateSet = cell(numGates,1);
 for gatect = 1:numGates
     gateSet{gatect} = 1;
     for qubitct = 1:nbrQubits
-        gateSet{gatect} = kron(gateSeq{gatect}, Uset1Q{kronMat(gatect, qubitct)});
+        gateSet{gatect} = kron(gateSet{gatect}, Uset1Q{kronMat(gatect, qubitct)});
     end
 end
 

@@ -1,4 +1,4 @@
-function [gateFidelity, choiSDP] = analyzeProcessTomo(data, idealProcessStr, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrRepeats)
+function [gateFidelity, choiSDP] = analyzeProcessTomo(data, idealProcess, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrRepeats)
 %analyzeProcess Performs SDP tomography, calculates gates fidelites and plots pauli maps.
 %
 % [gateFidelity, choiSDP] = analyzeProcessTomo(data, idealProcessStr, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrRepeats) 
@@ -31,14 +31,18 @@ end
 
 
 %Setup the state preparation and measurement pulse sets
-U_preps = tomo_gate_set(nbrReadoutPulses);
-U_meas  = tomo_gate_set(nbrPrepPulses);
+U_preps = tomo_gate_set(nbrQubits, nbrReadoutPulses);
+U_meas  = tomo_gate_set(nbrQubits, nbrPrepPulses);
 
 %Call the SDP program to do the constrained optimization
-[choiSDP, choiLSQ] = QPT_SDP(expResults, measOps, measMap, U_preps, U_meas, nbrQubits);
+[choiSDP, choiLSQ] = QPT_SDP(measMat, measOps, measMap, U_preps, U_meas, nbrQubits);
 
 %Calculate the overlaps with the ideal gate
-unitaryIdeal = str2unitary(idealProcessStr);
+if ischar(idealProcess)
+    unitaryIdeal = str2unitary(idealProcess);
+else
+    unitaryIdeal = idealProcess;
+end
 choiIdeal = unitary2choi(unitaryIdeal);
 
 %Create the pauli operator strings

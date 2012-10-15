@@ -8,8 +8,8 @@ function RamseyCalSequence(qubit, pulseSpacings, pulsePhases, makePlot, plotSeqN
 %   plotSeqNum (optional) - which sequence to plot (int)
 
 basename = 'Ramsey';
-fixedPt = 15000; %40000
-cycleLength = 17000; %44000
+fixedPt = pulseSpacings(end)+1000;
+cycleLength = fixedPt+2000; 
 nbrRepeats = 1;
 
 % load config parameters from file
