@@ -1,11 +1,12 @@
 classdef GPIBorEthernet < hgsetget
-    properties (Constant = true)
-       DEFAULT_PORT = 5025; % for TCP/IP communication
-    end
+%     properties (Constant = true)
+%        
+%     end
     
     properties (Access = protected)
         interface
         buffer_size = 1048576 % 1 MB buffer
+        DEFAULT_PORT = 5025; % for TCP/IP communication
     end
     methods
         function connect(obj, address)

@@ -26,7 +26,6 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
 	
     % Define properties
     properties (Constant = true)
-        DEFAULT_PORT = 4000;
         LRG_WAVEFORM = 0	%	Split waveforms into smaller subunits (0 = off, 1 = on)
     end
     
@@ -109,6 +108,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
     
     methods (Access = public) 
         function obj = Tek5014()
+            obj.DEFAULT_PORT = 4000;
         end
         
         function obj = connect(obj, address)
