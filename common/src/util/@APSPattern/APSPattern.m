@@ -360,7 +360,13 @@ classdef APSPattern < handle
             end
             
             entryData.addr = library.offsets.(entry.key);
-            entryData.length = library.lengths.(entry.key);
+            if entry.isTimeAmplitude
+                % TA pairs are always 4 points long in the library, so pull
+                % the length from the input entry
+                entryData.length = entry.length;
+            else
+                entryData.length = library.lengths.(entry.key);
+            end
             entryData.varientWFs = library.varients.(entry.key);
             % pad non-TAZ waveforms if the pendingLength is positive, provided we have an appropriate varient
             if pendingLength > 0 && ~entry.isZero && ~entry.isTimeAmplitude && ~isempty(entryData.varientWFs)

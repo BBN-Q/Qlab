@@ -61,8 +61,8 @@ classdef APS < hgsetget
         % for DEBUG methods
         LEDMODE_PLLSYNC = 1;
         LEDMODE_RUNNING = 2;
-        TRIGGER_SOFTWARE = 1;
-        TRIGGER_HARDWARE = 2;
+        TRIGGER_INTERNAL = 0;
+        TRIGGER_EXTERNAL = 1;
         ALL_DACS = -1;
         
         DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV', 'A6001nBT', 'A6001nBS'};
@@ -316,7 +316,7 @@ classdef APS < hgsetget
             % sets internal or external trigger
             checkMap = containers.Map({...
 	            'internal','external','int', 'ext'},...
-                {aps.TRIGGER_SOFTWARE,aps.TRIGGER_HARDWARE,aps.TRIGGER_SOFTWARE,aps.TRIGGER_HARDWARE});
+                {aps.TRIGGER_INTERNAL,aps.TRIGGER_EXTERNAL,aps.TRIGGER_INTERNAL,aps.TRIGGER_EXTERNAL});
             
             trig = lower(trig);
             if not(checkMap.isKey(trig))
@@ -328,7 +328,7 @@ classdef APS < hgsetget
         end
         
         function source = get.triggerSource(obj)
-            valueMap = containers.Map({obj.TRIGGER_SOFTWARE, obj.TRIGGER_HARDWARE},...
+            valueMap = containers.Map({obj.TRIGGER_INTERNAL, obj.TRIGGER_EXTERNAL},...
                 {'internal', 'external'});
             source = valueMap(obj.libraryCall('get_trigger_source'));
         end

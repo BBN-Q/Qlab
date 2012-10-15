@@ -535,7 +535,7 @@ classdef PatternGen < handle
                     retVal.isTimeAmplitude = 1;
                     %We only want to hash the first point as only the
                     %amplitude matters. 
-                    retVal.hashKeys{ii} = obj.hashArray(retVal.pulseArray{ii}(1,:));
+                    retVal.hashKeys{ii} = obj.hashArray(retVal.pulseArray{ii}(fix(end/2),:));
                 end
                 if ismember(p, identityPulses)
                     retVal.isZero = 1;
@@ -606,7 +606,9 @@ classdef PatternGen < handle
                     %Shorten up square waveforms to the first point so as
                     %not to waste waveform memory
                     tmpPulse = obj.pulseCollection(entry.key);
-                    obj.pulseCollection(entry.key) = tmpPulse(1,:);
+                    if size(tmpPulse,1) > 1
+                        obj.pulseCollection(entry.key) = tmpPulse(fix(end/2),:);
+                    end
                 end
                 entry.hasMarkerData = 0;
                 entry.markerDelay = 0;
