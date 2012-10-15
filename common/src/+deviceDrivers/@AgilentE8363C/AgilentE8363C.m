@@ -66,8 +66,12 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
             % re-average
             obj.reaverage();
             
-            % select measurement (how do we make this general??)
-            obj.select_measurement = 'CH1_S21_1';
+            % select measurement
+            % get measurement name
+            measurement = obj.measurements;
+            % take the part before the comma
+            commaPos = strfind(measurement, ',');
+            obj.select_measurement = measurement(1:commaPos-1);
             s21 = obj.sweep_data;
             
             center_freq = obj.sweep_center;
@@ -177,7 +181,7 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
         end
         function val = get.sweep_data(obj)
             gpib_string = ':CALCulate:DATA';
-            textdata = obj.query([gpib_string '? SDATA']);
+            textdata = obj.query([gpib_string '? SDATA;']);
             data = str2num(textdata);
             val = data(1:2:end) + 1i*data(2:2:end);
         end
@@ -336,7 +340,7 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
 
             gpib_string = [gpib_string ' ' value];
             obj.write(gpib_string);
-            obj.select_measurement = value;
+%             obj.select_measurement = value;
         end
         function obj = set.trace_source(obj, value)
             gpib_string = ':DISPlay:WINDow1:TRACe1:FEED';
