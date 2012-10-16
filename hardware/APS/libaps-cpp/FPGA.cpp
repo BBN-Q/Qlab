@@ -100,8 +100,8 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 	for(int ct = 0, ok = 0; ct < maxAttemptCnt && ok == 0; ct++) {
 		FILE_LOG(logDEBUG2) << "Attempt: "  << ct+1;
 
-		// Set Program and Reset Bits
-		writeByte = (PgmMask | RstMask) & 0xF;
+		// Set *ALL* Program and Reset Bits
+		writeByte = (APS_PGM_BITS | APS_FRST_BITS) & 0xF;
 		FILE_LOG(logDEBUG2) << "Write 2: " << myhex << int(writeByte);
 		if(FPGA::write_register(deviceHandle, APS_CONF_STAT, 0, INVALID_FPGA, &writeByte) != 1)return(-5);
 
@@ -167,7 +167,7 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 	usleep(10000);
 
 	//Assert the RESET pin to reset all registers and state machines
-	writeByte = PgmMask & ~RstMask & 0xF;
+	writeByte = ~RstMask & 0xF;
 	FILE_LOG(logDEBUG2) << "Write 3: "  << myhex << int(writeByte);
 	if(FPGA::write_register(deviceHandle,  APS_CONF_STAT, 0, INVALID_FPGA, &writeByte) != 1) return(-4);
 

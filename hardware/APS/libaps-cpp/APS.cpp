@@ -62,8 +62,8 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		setup_PLL();
 
 		//Program the bitfile to both FPGA's
-		//int bytesProgramed = program_FPGA(bitFile, ALL_FPGAS, 0x10);
-		int bytesProgramed = program_FPGA(bitFile, FPGA1, FIRMWARE_VERSION);
+		int bytesProgramed = program_FPGA(bitFile+"_FPGA1.bit", FPGA1, FIRMWARE_VERSION);
+		bytesProgramed = program_FPGA(bitFile+"_FPGA2.bit", FPGA2, FIRMWARE_VERSION);
 
 		//Default to max sample rate
 		set_sampleRate(1200);
@@ -73,8 +73,8 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		reset_status_ctrl();
 
 		// test PLL sync on each FPGA
-		//int status = test_PLL_sync(FPGA1) || test_PLL_sync(FPGA2);
-		int status = test_PLL_sync(FPGA1);
+		//int status = test_PLL_sync(FPGA1);
+		int status = test_PLL_sync(FPGA1) || test_PLL_sync(FPGA2);
 		if (status) {
 			FILE_LOG(logERROR) << "DAC PLLs failed to sync";
 		}
@@ -84,9 +84,6 @@ int APS::init(const string & bitFile, const bool & forceReload){
 
 		// clear channel data
 		clear_channel_data();
-
-		// update LED mode
-		//set_LED_mode(ALL_FPGAS, LED_RUNNING);
 
 		return bytesProgramed;
 	}
@@ -111,7 +108,7 @@ int APS::program_FPGA(const string & bitFile, const FPGASELECT & chipSelect, con
 	 */
 
 	//Open the bitfile
-	FILE_LOG(logDEBUG2) << "Opening bitfile: " << bitFile;
+	FILE_LOG(logDEBUG) << "Opening bitfile: " << bitFile;
 	std::ifstream FID (bitFile, std::ios::in|std::ios::binary);
 	//Get the size
 	if (!FID.is_open()){
