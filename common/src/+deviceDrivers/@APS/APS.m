@@ -43,7 +43,7 @@ classdef APS < hgsetget
 
         NUM_CHANNELS = 4;
 
-        EXPECTED_BIT_FILE_VERSION = hex2dec('10');
+        EXPECTED_BIT_FILE_VERSION = hex2dec('1');
 
         ADDRESS_UNIT = 4;
         MAX_WAVEFORM_VALUE = 8191;        
@@ -194,6 +194,7 @@ classdef APS < hgsetget
 				% load an AWG file if the settings file is changed or if force == true
 				if (~strcmp(settings.lastseqfile, settings.seqfile) || settings.seqforce)
 					obj.loadConfig(settings.seqfile);
+                    obj.setRunMode(1,1); obj.setRunMode(3,1);
 				end
 			end
 			settings = rmfield(settings, {'lastseqfile', 'seqfile', 'seqforce'});
@@ -225,9 +226,9 @@ classdef APS < hgsetget
                 filename = fullfile(obj.bit_file_path, obj.defaultBitFileName);
             end
             
-            if ~exist(filename,'file')
-               error(sprintf('APS: bitfile %s not found ', filename));
-            end
+%             if ~exist(filename,'file')
+%                error(sprintf('APS: bitfile %s not found ', filename));
+%             end
             
             %Call the dll with a null-terminated string
             err = obj.libraryCall('initAPS', [filename 0], force);
@@ -501,9 +502,9 @@ classdef APS < hgsetget
             % current device's serial number is at index device_ID + 1 in
             % device_serials cell array
             if ismember(obj.device_serial, obj.DAC2_SERIALS)
-                fname = 'mqco_dac2_latest.bit';
+                fname = 'mqco_dac2_latest';
             else
-                fname = 'mqco_aps_latest.bit';
+                fname = 'mqco_aps_latest';
             end
         end
         
