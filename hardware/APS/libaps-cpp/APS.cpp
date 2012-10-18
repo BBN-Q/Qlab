@@ -53,10 +53,10 @@ int APS::init(const string & bitFile, const bool & forceReload){
 	 * by looking at the current bitfile version and the PLL status.
 	 */
 
-	if (forceReload || read_bitFile_version(ALL_FPGAS) != FIRMWARE_VERSION || read_PLL_status(ALL_FPGAS)) {
+	if (forceReload || read_bitFile_version(ALL_FPGAS) != FIRMWARE_VERSION || !read_PLL_status(ALL_FPGAS)) {
 		FILE_LOG(logINFO) << "Resetting instrument";
-		//FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version(ALL_FPGAS) << " PLL status: " << read_PLL_status(ALL_FPGAS);
-		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version(FPGA1) << " PLL status: " << read_PLL_status(FPGA1);
+		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version(ALL_FPGAS) << " PLL status: " << read_PLL_status(ALL_FPGAS);
+		//FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version(FPGA1) << " PLL status: " << read_PLL_status(FPGA1);
 		//Setup the oscillators
 		setup_VCXO();
 		setup_PLL();
