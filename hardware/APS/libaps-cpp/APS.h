@@ -20,6 +20,7 @@ public:
 	int disconnect();
 
 	int init(const string &, const bool &);
+	int reset(const FPGASELECT &) const;
 
 	int setup_VCXO() const;
 	int setup_PLL() const;

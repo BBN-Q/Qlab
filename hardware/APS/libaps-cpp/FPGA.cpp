@@ -166,19 +166,32 @@ int FPGA::program_FPGA(FT_HANDLE deviceHandle, vector<UCHAR> bitFileData, const 
 	// wait 10ms for FPGA to deal with the bitfile data
 	usleep(10000);
 
-	//Assert the RESET pin to reset all registers and state machines
-	writeByte = ~RstMask & 0xF;
-	FILE_LOG(logDEBUG2) << "Write 3: "  << myhex << int(writeByte);
-	if(FPGA::write_register(deviceHandle,  APS_CONF_STAT, 0, INVALID_FPGA, &writeByte) != 1) return(-4);
-
-	//Deassert it
-	writeByte = 0xF;
-	FILE_LOG(logDEBUG2) << "Write 4: "  << myhex << int(writeByte);
-	if(FPGA::write_register(deviceHandle,  APS_CONF_STAT, 0, INVALID_FPGA, &writeByte) != 1) return(-5);
-
+	// Assert FPGA_RESETN to reset all registers and state machines
+	reset(deviceHandle, chipSelect);
 
 	// Return the number of data bytes written
 	return numBytesProgrammed;
+}
+
+int FPGA::reset(FT_HANDLE deviceHandle, const FPGASELECT & fpga) {
+	FILE_LOG(logDEBUG) << "Resetting FPGA " << fpga;
+	UCHAR RstMask=0;
+	if((fpga == FPGA1) || (fpga == ALL_FPGAS)){
+		RstMask |= APS_FRST01_BIT;
+	}
+	if((fpga == FPGA2) || (fpga == ALL_FPGAS)) {
+		RstMask |= APS_FRST23_BIT;
+	}
+	FILE_LOG(logDEBUG2) << "Reset mask " << myhex << RstMask;
+	// Bring RESETN low to reset all registers and state machines
+	UCHAR writeByte = ~RstMask & 0xF;
+	if(FPGA::write_register(deviceHandle, APS_CONF_STAT, 0, INVALID_FPGA, &writeByte) != 1) return(-1);
+
+	// Bring RESETN back high
+	writeByte = 0xF;
+	if(FPGA::write_register(deviceHandle, APS_CONF_STAT, 0, INVALID_FPGA, &writeByte) != 1) return(-2);
+
+	return 0;
 }
 
 int FPGA::read_register(

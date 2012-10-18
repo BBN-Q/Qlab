@@ -56,7 +56,6 @@ int APS::init(const string & bitFile, const bool & forceReload){
 	if (forceReload || read_bitFile_version(ALL_FPGAS) != FIRMWARE_VERSION || !read_PLL_status(ALL_FPGAS)) {
 		FILE_LOG(logINFO) << "Resetting instrument";
 		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version(ALL_FPGAS) << " PLL status: " << read_PLL_status(ALL_FPGAS);
-		//FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version(FPGA1) << " PLL status: " << read_PLL_status(FPGA1);
 		//Setup the oscillators
 		setup_VCXO();
 		setup_PLL();
@@ -64,6 +63,8 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		//Program the bitfile to both FPGA's
 		int bytesProgramed = program_FPGA(bitFile+"_FPGA1.bit", FPGA1, FIRMWARE_VERSION);
 		bytesProgramed = program_FPGA(bitFile+"_FPGA2.bit", FPGA2, FIRMWARE_VERSION);
+		//Reset all state machines
+		reset(ALL_FPGAS);
 
 		//Default to max sample rate
 		set_sampleRate(1200);
@@ -90,6 +91,10 @@ int APS::init(const string & bitFile, const bool & forceReload){
 	samplingRate_ = get_sampleRate();
 
 	return 0;
+}
+
+int APS::reset(const FPGASELECT & fpga) const {
+	return FPGA::reset(handle_, fpga);
 }
 
 

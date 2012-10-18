@@ -16,6 +16,7 @@
 namespace FPGA {
 
 int program_FPGA(FT_HANDLE, vector<UCHAR>, const FPGASELECT &);
+int reset(FT_HANDLE, const FPGASELECT &);
 
 int read_register(FT_HANDLE, const ULONG &, const ULONG &, const FPGASELECT &, UCHAR *);
 int write_register(FT_HANDLE, const ULONG &, const ULONG &, const FPGASELECT &, UCHAR *);
