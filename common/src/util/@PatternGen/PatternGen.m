@@ -775,26 +775,20 @@ classdef PatternGen < handle
             %     bufferPadding
             %     bufferDelay
             
-            % we're going to make an assumption to do this:
-            % all pulses have the same buffering, so if a LL entry has
-            % width W, we assume that the pulse width is (W - buffer).
-            %
-            % The strategy is the following: we only add triggers to zero
-            % entries. If the previous entry is a pulse, we need a trigger
-            % to switch low, and if the next entry is a pulse, we need a
-            % trigger to switch high. Depending on the sequence, this may
-            % result in multiple triggers in an entry which may need to be
-            % split when compiled for the particular hardware.
+            % The strategy is the following: we add triggers to zero
+            % entries and to pulses followed by zero entries. Zero entries
+            % followed by pulses get a trigger high. Pulses followed by
+            % zeros get a trigger low.
             
             state = 0; % 0 = low, 1 = high
             %Time from end of previous LL entry that trigger needs to go
             %high to gate pulse
-            startDelay = fix(obj.bufferPadding - obj.dBuffer/2 + obj.bufferDelay);
+            startDelay = fix(obj.bufferPadding - obj.bufferDelay);
             assert(startDelay > 0, 'PatternGen:addGatePulses Negative gate delays');
 
             LLlength = length(linkList);
             for ii = 1:LLlength-1
-                entryWidth = linkList{ii}.length * linkList{ii}.repeat;
+                entryWidth = linkList{ii}.length;
                 %If current state is low and next linkList is pulse, then
                 %we go high in this entry.
                 %If current state is high and next entry is TAZ then go low
@@ -804,11 +798,14 @@ classdef PatternGen < handle
                     linkList{ii}.markerDelay = entryWidth - startDelay;
                     linkList{ii}.markerMode = 0;
                     state = 1;
-                elseif state == 1 && linkList{ii+1}.isZero && linkList{ii+1}.length * linkList{ii+1}.repeat > obj.bufferReset
+                elseif state == 1 && linkList{ii+1}.isZero && linkList{ii+1}.length > obj.bufferReset
                     %Time from beginning of pulse LL entry that trigger needs to go
                     %low to end gate pulse
-                    endDelay = fix(entryWidth + obj.bufferPadding - obj.dBuffer/2 - obj.bufferDelay);
-                    assert(endDelay > 0, 'PatternGen:addGatePulses Negative gate delays');
+                    endDelay = fix(entryWidth + obj.bufferPadding - obj.bufferDelay);
+                    if endDelay < 0
+                        endDelay = 0;
+                        fprintf('addGatePulses warning: fixed buffer low pulse to start of pulse\n');
+                    end
                     linkList{ii}.hasMarkerData = 1;
                     linkList{ii}.markerDelay = endDelay;
                     linkList{ii}.markerMode = 0; % 0 = pulse mode
@@ -839,9 +836,9 @@ classdef PatternGen < handle
                     amplitude = wfLib(linkList{ct}.key);
                     xamp = amplitude(1,1);
                     yamp = amplitude(1,2);
-                    xpattern(idx:idx+linkList{ct}.repeat-1) = xamp * ones(1,linkList{ct}.repeat);
-                    ypattern(idx:idx+linkList{ct}.repeat-1) = yamp * ones(1,linkList{ct}.repeat);
-                    idx = idx + linkList{ct}.repeat;
+                    xpattern(idx:idx+linkList{ct}.length-1) = xamp * ones(1,linkList{ct}.length);
+                    ypattern(idx:idx+linkList{ct}.length-1) = yamp * ones(1,linkList{ct}.length);
+                    idx = idx + linkList{ct}.length;
                 else
                     currWf = wfLib(linkList{ct}.key);
                     xpattern(idx:idx+linkList{ct}.repeat*length(currWf)-1) = repmat(currWf(:,1)', 1, linkList{ct}.repeat);

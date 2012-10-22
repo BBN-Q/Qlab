@@ -410,41 +410,18 @@ classdef APSPattern < handle
         
         function [triggerVal1, triggerVal2] = entryToTrigger(entry)
             % handle trigger values
-            % Trigger Delay
-            %  15  14  13   12   11  10 9 8 7 6 5 4 3 2 1 0
-            % | Mode |                Delay                |
-            % Mode 0 0 = short pulse (0)
-            %      0 1 = rising edge (1)
-            %      1 0 = falling edge (2)
-            %      1 1 = no change (3)
-            % Delay = time in 4 sample increments ( 0 - 54.5 usec at max rate)
+            % APS only supports marker pulses, so convert high/low commands
+            % into pulses
+            % Delay = time in 4 sample increments
             
-            %TODO: make work
+            TRIGGER_INCREMENT = 4;
             
-            triggerVal1 = 0;
+            if entry.hasMarkerData
+                triggerVal1 = fix(entry.markerDelay / TRIGGER_INCREMENT);
+            else
+                triggerVal1 = 0;
+            end
             triggerVal2 = 0;
-            %             ELL_TRIGGER_DELAY      = 16383; %hex2dec('3FFF')
-            %             ELL_TRIGGER_MODE_SHIFT = 14;
-            %             TRIGGER_INCREMENT      = 4;
-            %
-            %             if entry.hasMarkerData
-            %                 % only currently supported markerMode in hardware is 'short
-            %                 % pulse' (0)
-            %                 if entry.markerMode ~= 3
-            %                     entry.markerMode = 0;
-            %                 end
-            %                 triggerMode = bitand(entry.markerMode, 3);
-            %                 triggerDelay = entry.markerDelay;
-            %             else
-            %                 triggerMode = 3; % do nothing
-            %                 triggerDelay = 0;
-            %             end
-            %
-            %             triggerMode = bitshift(triggerMode, ELL_TRIGGER_MODE_SHIFT);
-            %             triggerDelay = fix(triggerDelay / TRIGGER_INCREMENT);
-            %
-            %             triggerVal = bitand(triggerDelay, ELL_TRIGGER_DELAY);
-            %             triggerVal = bitor(triggerVal, triggerMode);
         end
         
         
