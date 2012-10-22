@@ -1,0 +1,5 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# shell scripts need to have LF on windows
+*.sh text eol=lf
