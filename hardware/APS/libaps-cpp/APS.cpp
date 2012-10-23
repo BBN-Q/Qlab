@@ -264,9 +264,14 @@ int APS::load_sequence_file(const string & seqFile){
 					channels_[chanct].LLBank_.read_state_from_hdf5(H5SeqFile, chanStrs[chanct]+"/linkListData");
 				}
 			}
-			//TODO: Set the repeat count
-
 		}
+		//Set the mini LL count
+		H5::Group rootGroup = H5SeqFile.openGroup("/");
+		USHORT miniLLRepeat;
+		miniLLRepeat = h5element2element<USHORT>("miniLLRepeat", &rootGroup, H5::PredType::NATIVE_UINT16);
+		rootGroup.close();
+		set_miniLL_repeat(miniLLRepeat);
+
 		//Close the file
 		H5SeqFile.close();
 		return 0;
@@ -315,77 +320,6 @@ float APS::get_channel_scale(const int & dac) const{
 	return channels_[dac].get_scale();
 }
 
-int APS::set_channel_trigDelay(const int & dac, const USHORT & delay){
-	/* set_channel_trigDelay
-	* Write the trigger delay register for the associated channel
-	* delay - unsigned 16-bit value (0, 65535) representing the trigger delay in units of FPGA clock cycles
-	*         ie., delay of 1 is 3.333 ns at full sampling rate.
-*/
-
-	//TODO: make work
-	/*
-	ULONG trigDelayRegisterAddr;
-
-	FPGASELECT fpga = dac2fpga(dac);
-	if (fpga == INVALID_FPGA) {
-		return -1;
-	}
-
-	switch (dac) {
-		case 0:
-		case 2:
-			trigDelayRegisterAddr = FPGA_OFF_CHA_TRIG_DELAY;
-			break;
-		case 1:
-		case 3:
-			trigDelayRegisterAddr = FPGA_OFF_CHB_TRIG_DELAY;
-			break;
-		default:
-			return -2;
-	}
-
-	FILE_LOG(logINFO) << "Setting trigger delay for channel " << dac << " to " << delay;
-
-	FPGA::write_FPGA(handle_, FPGA_ADDR_REGWRITE | trigDelayRegisterAddr, delay, fpga);
-	channels_[dac].trigDelay_ = delay;
-	*/
-	return 0;
-}
-
-unsigned short APS::get_channel_trigDelay(const int & dac){
-	 /* APS_ReadTriggerDelay
-	 * Read the trigger delay register for the associated channel
-	 */
-	//TODO: make work
-	/*
-
-	ULONG trigDelayRegisterAddr;
-
-	FPGASELECT fpga = dac2fpga(dac);
-	if (fpga == INVALID_FPGA) {
-		return -1;
-	}
-
-	switch (dac) {
-		case 0:
-			// fall through
-		case 2:
-			trigDelayRegisterAddr = FPGA_OFF_CHA_TRIG_DELAY;
-			break;
-		case 1:
-			// fall through
-		case 3:
-			trigDelayRegisterAddr = FPGA_OFF_CHB_TRIG_DELAY;
-			break;
-		default:
-			return -2;
-	}
-
-	return FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD| trigDelayRegisterAddr, fpga);
-	*/
-	return 0;
-}
-
 int APS::set_trigger_source(const TRIGGERSOURCE & triggerSource){
 
 	int returnVal;
@@ -418,6 +352,10 @@ int APS::set_trigger_interval(const double & interval){
 	USHORT lowerWord = 0xFFFF  & clockCycles;
 
 	return write(ALL_FPGAS, FPGA_ADDR_TRIG_INTERVAL, {upperWord, lowerWord}, false);
+}
+
+int APS::set_miniLL_repeat(const USHORT & miniLLRepeat){
+	return FPGA::write_FPGA(handle_, FPGA_ADDR_LL_REPEAT, miniLLRepeat, ALL_FPGAS);
 }
 
 

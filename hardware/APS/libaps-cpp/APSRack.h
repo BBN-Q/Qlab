@@ -40,6 +40,9 @@ public:
 	int stop(const int &);
 	int set_trigger_source(const int &, const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source(const int &) const;
+	int set_trigger_interval(const int &, const double &);
+
+	int set_miniLL_repeat(const int &, const USHORT &);
 
 	int get_sampleRate(const int &) const;
 	int set_sampleRate(const int &, const int &);
@@ -50,11 +53,6 @@ public:
 	float get_channel_scale(const int &, const int &) const;
 	int set_channel_enabled(const int &, const int &, const bool &);
 	bool get_channel_enabled(const int &, const int &) const;
-
-	int set_channel_trigDelay(const int &, const int &, const USHORT &);
-	unsigned short get_channel_trigDelay(const int &, const int &);
-
-	int set_trigger_interval(const int &, const double &);
 
 	int get_running(const int &);
 

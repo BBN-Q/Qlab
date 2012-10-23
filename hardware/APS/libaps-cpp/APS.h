@@ -43,10 +43,9 @@ public:
 	float get_channel_scale(const int &) const;
 	int set_offset_register(const int &, const float &);
 
-	int set_channel_trigDelay(const int &, const USHORT &);
-	unsigned short get_channel_trigDelay(const int &);
-
 	int set_trigger_interval(const double &);
+
+	int set_miniLL_repeat(const USHORT &);
 
 
 	template <typename T>

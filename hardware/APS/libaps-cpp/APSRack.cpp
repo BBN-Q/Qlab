@@ -164,6 +164,10 @@ TRIGGERSOURCE APSRack::get_trigger_source(const int & deviceID) const{
 	return APSs_[deviceID].get_trigger_source();
 }
 
+int APSRack::set_miniLL_repeat(const int & deviceID, const USHORT & repeat){
+	return APSs_[deviceID].set_miniLL_repeat(repeat);
+}
+
 int APSRack::set_channel_enabled(const int & deviceID, const int & channelNum, const bool & enable){
 	return APSs_[deviceID].set_channel_enabled(channelNum, enable);
 }
@@ -186,13 +190,6 @@ int APSRack::set_channel_scale(const int & deviceID, const int & channelNum, con
 
 float APSRack::get_channel_scale(const int & deviceID, const int & channelNum) const{
 	return APSs_[deviceID].get_channel_scale(channelNum);
-}
-
-int APSRack::set_channel_trigDelay(const int & deviceID, const int & channelNum, const USHORT & delay){
-	return APSs_[deviceID].set_channel_trigDelay(channelNum, delay);
-}
-unsigned short APSRack::get_channel_trigDelay(const int & deviceID, const int & dac){
-	return APSs_[deviceID].get_channel_trigDelay(dac);
 }
 
 int APSRack::save_state_files(){

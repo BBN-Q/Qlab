@@ -159,6 +159,10 @@ int get_trigger_source(int deviceID) {
 	return int(APSRack_.get_trigger_source(deviceID));
 }
 
+int set_miniLL_repeat(int deviceID, unsigned short repeat){
+	return APSRack_.set_miniLL_repeat(deviceID, repeat);
+}
+
 int set_channel_offset(int deviceID, int channelNum, float offset){
 	return APSRack_.set_channel_offset(deviceID, channelNum, offset);
 }
@@ -177,13 +181,6 @@ float get_channel_scale(int deviceID, int channelNum){
 }
 int get_channel_enabled(int deviceID, int channelNum){
 	return APSRack_.get_channel_enabled(deviceID, channelNum);
-}
-
-int set_channel_trigDelay(int deviceID, int channelNum, USHORT delay){
-	return APSRack_.set_channel_trigDelay(deviceID, channelNum, delay);
-}
-unsigned short get_channel_trigDelay(int deviceID, int dac){
-	return APSRack_.get_channel_trigDelay(deviceID, dac);
 }
 
 int set_LL_data_IQ(int deviceID, int channelNum, int length, unsigned short* addr, unsigned short* count,

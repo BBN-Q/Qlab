@@ -45,14 +45,14 @@ fcns.thunkname{fcnNum}='floatint32int32Thunk';fcns.name{fcnNum}='get_channel_sca
 fcns.thunkname{fcnNum}='int32int32int32int32Thunk';fcns.name{fcnNum}='set_channel_enabled'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'int32', 'int32'};fcnNum=fcnNum+1;
 %  int get_channel_enabled ( int , int ); 
 fcns.thunkname{fcnNum}='int32int32int32Thunk';fcns.name{fcnNum}='get_channel_enabled'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'int32'};fcnNum=fcnNum+1;
-%  int set_channel_trigDelay ( int , int , unsigned short ); 
-fcns.thunkname{fcnNum}='int32int32int32uint16Thunk';fcns.name{fcnNum}='set_channel_trigDelay'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'int32', 'uint16'};fcnNum=fcnNum+1;
-%  unsigned short get_channel_trigDelay ( int , int ); 
-fcns.thunkname{fcnNum}='uint16int32int32Thunk';fcns.name{fcnNum}='get_channel_trigDelay'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='uint16'; fcns.RHS{fcnNum}={'int32', 'int32'};fcnNum=fcnNum+1;
 %  int set_trigger_source ( int , int ); 
 fcns.thunkname{fcnNum}='int32int32int32Thunk';fcns.name{fcnNum}='set_trigger_source'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'int32'};fcnNum=fcnNum+1;
 %  int get_trigger_source ( int ); 
 fcns.thunkname{fcnNum}='int32int32Thunk';fcns.name{fcnNum}='get_trigger_source'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32'};fcnNum=fcnNum+1;
+%  int set_trigger_interval ( int , double ); 
+fcns.thunkname{fcnNum}='int32int32doubleThunk';fcns.name{fcnNum}='set_trigger_interval'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'double'};fcnNum=fcnNum+1;
+%  int set_miniLL_repeat ( int , unsigned short ); 
+fcns.thunkname{fcnNum}='int32int32uint16Thunk';fcns.name{fcnNum}='set_miniLL_repeat'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'uint16'};fcnNum=fcnNum+1;
 %  int set_waveform_float ( int , int , float *, int ); 
 fcns.thunkname{fcnNum}='int32int32int32voidPtrint32Thunk';fcns.name{fcnNum}='set_waveform_float'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'int32', 'singlePtr', 'int32'};fcnNum=fcnNum+1;
 %  int set_waveform_int ( int , int , short *, int ); 
@@ -63,8 +63,6 @@ fcns.thunkname{fcnNum}='int32int32int32int32voidPtrvoidPtrvoidPtrvoidPtrvoidPtrT
 fcns.thunkname{fcnNum}='int32int32int32int32Thunk';fcns.name{fcnNum}='set_run_mode'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'int32', 'int32'};fcnNum=fcnNum+1;
 %  int set_repeat_mode ( int , int , int ); 
 fcns.thunkname{fcnNum}='int32int32int32int32Thunk';fcns.name{fcnNum}='set_repeat_mode'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'int32', 'int32'};fcnNum=fcnNum+1;
-%  int set_trigger_interval ( int , double ); 
-fcns.thunkname{fcnNum}='int32int32doubleThunk';fcns.name{fcnNum}='set_trigger_interval'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'double'};fcnNum=fcnNum+1;
 %  int load_sequence_file ( int , char *); 
 fcns.thunkname{fcnNum}='int32int32cstringThunk';fcns.name{fcnNum}='load_sequence_file'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'cstring'};fcnNum=fcnNum+1;
 %  int clear_channel_data ( int ); 
@@ -95,4 +93,5 @@ fcns.thunkname{fcnNum}='int32int32int32Thunk';fcns.name{fcnNum}='raw_read'; fcns
 fcns.thunkname{fcnNum}='int32int32int32int32Thunk';fcns.name{fcnNum}='read_register'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'int32', 'int32'};fcnNum=fcnNum+1;
 %  int program_FPGA ( int , char *, int , int ); 
 fcns.thunkname{fcnNum}='int32int32cstringint32int32Thunk';fcns.name{fcnNum}='program_FPGA'; fcns.calltype{fcnNum}='Thunk'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'cstring', 'int32', 'int32'};fcnNum=fcnNum+1;
+enuminfo.APSErrorCode=struct('APS_OK',0,'APS_UNKNOWN_ERROR',-1,'APS_FILE_ERROR',-2);
 methodinfo=fcns;

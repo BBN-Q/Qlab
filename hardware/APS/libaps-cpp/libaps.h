@@ -51,11 +51,12 @@ EXPORT int set_channel_scale(int, int, float);
 EXPORT float get_channel_scale(int, int);
 EXPORT int set_channel_enabled(int, int, int);
 EXPORT int get_channel_enabled(int, int);
-EXPORT int set_channel_trigDelay(int, int, unsigned short);
-EXPORT unsigned short get_channel_trigDelay(int, int);
 
 EXPORT int set_trigger_source(int, int);
 EXPORT int get_trigger_source(int);
+EXPORT int set_trigger_interval(int, double);
+
+EXPORT int set_miniLL_repeat(int, unsigned short);
 
 EXPORT int set_waveform_float(int, int, float*, int);
 EXPORT int set_waveform_int(int, int, short*, int);
@@ -65,7 +66,6 @@ EXPORT int set_LL_data_IQ(int, int, int, unsigned short*, unsigned short*, unsig
 EXPORT int set_run_mode(int, int, int);
 EXPORT int set_repeat_mode(int, int, int);
 
-EXPORT int set_trigger_interval(int, double);
 
 EXPORT int load_sequence_file(int, char*);
 
