@@ -65,25 +65,24 @@ loadJSON();
         expNames = get(handles.expDropDown,'String');
         expName = expNames{get(handles.expDropDown,'Value')};
  
-        %Update the sequence files for the Tek and APS
+        %Update the sequence files for the Tek and APS's
         %Get the current Tek5104 settings
         TekSettings_fcn = GUIgetters('TekAWG');
         TekSettings = TekSettings_fcn();
-        
-        %Get the current APS settings
-        APSSettings_fcn = GUIgetters('BBNAPS');
-        APSSettings = APSSettings_fcn();
-        
-        %Set the new names
-
-        %Update the sequence files
         TekSettings.seqfile = fullfile(expParams.networkDrive, 'AWG', expParams.(expName).baseName, [expParams.(expName).baseName '-TekAWG.awg']);
         tmpSettings_fcn = GUIsetters('TekAWG');
         tmpSettings_fcn(TekSettings)
         
-        APSSettings.seqfile = fullfile(expParams.networkDrive, 'AWG', expParams.(expName).baseName, [expParams.(expName).baseName '-BBNAPS.h5']);
-        tmpSettings_fcn = GUIsetters('BBNAPS');
-        tmpSettings_fcn(APSSettings)
+        %Get the current APS settings
+        numAPSs = sum(strncmp('BBNAPS', GUIgetters.keys(), 6));
+        for APSct = 1:numAPSs
+            devName = sprintf('BBNAPS%d',APSct);
+            APSSettings_fcn = GUIgetters(devName);
+            APSSettings = APSSettings_fcn();
+            APSSettings.seqfile = fullfile(expParams.networkDrive, 'AWG', expParams.(expName).baseName, [expParams.(expName).baseName, '-' devName, '.h5']);
+            tmpSettings_fcn = GUIsetters(devName);
+            tmpSettings_fcn(APSSettings)
+        end
         
         %Update the number of segments
         digitizerSettings_fcn = GUIgetters('digitizer');

@@ -169,12 +169,16 @@ tmpHBox.Sizes = [-1, -2, -1];
 %Add the experiment quick picker
 GUIgetters = containers.Map();
 GUIgetters('TekAWG') = get_tekAWG_settings;
-GUIgetters('BBNAPS') = get_APS_settings{1};
+for ct = 1:numAPSs
+    GUIgetters(sprintf('BBNAPS%d',ct)) = get_APS_settings{ct};
+end
 GUIgetters('digitizer') = get_digitizer_settings;
 GUIgetters('xaxis') = get_time_settings;
 GUIsetters = containers.Map();
 GUIsetters('TekAWG') = set_tekAWG_GUI;
-GUIsetters('BBNAPS') = set_APS_settings;
+for ct = 1:numAPSs
+    GUIsetters(sprintf('BBNAPS%d',ct)) = set_APS_settings{ct};
+end
 GUIsetters('digitizer') = set_digitizer_settings;
 GUIsetters('xaxis') = set_time_settings;
 GUIsetters('exptBox') = exptName_EditBox;
