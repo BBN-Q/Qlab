@@ -238,16 +238,22 @@ int main(int argc, char** argv) {
 	//Connect to device
 	connect_by_ID(0);
 
-	err = initAPS(0, const_cast<char*>(bitFile.c_str()), false);
+	err = initAPS(0, const_cast<char*>(bitFile.c_str()), true);
 
 	if (err != APS_OK) {
 		cout << "Error initializing APS Rack: " << err << endl;
 		exit(-1);
 	}
 
-	set_trigger_interval(0, 20e-6);
+	set_trigger_interval(0, 0.1);
 
-	load_sequence_file(0, "U:\\AWG\\Rabi\\Rabi-BBNAPS.h5");
+	load_sequence_file(0, "U:\\AWG\\Ramsey\\Ramsey-BBNAPS.h5");
+
+	set_channel_enabled(0, 0, 1);
+	set_channel_enabled(0, 1, 1);
+	set_run_mode(0, 0, 1);
+
+	run(0);
 
 	vector<float> waveform(0);
 

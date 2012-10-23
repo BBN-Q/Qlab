@@ -100,7 +100,7 @@ int set_waveform_int(int deviceID, int channelNum, short* data, int numPts){
 	return APSRack_.set_waveform(deviceID, channelNum, vector<short>(data, data+numPts));
 }
 
-int load_sequence_file(int deviceID, char * seqFile){
+int load_sequence_file(int deviceID, const char * seqFile){
 	try {
 		return APSRack_.load_sequence_file(deviceID, string(seqFile));
 	} catch (...) {

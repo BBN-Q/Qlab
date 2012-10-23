@@ -61,8 +61,8 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		setup_PLL();
 
 		//Program the bitfile to both FPGA's
-		int bytesProgramed = program_FPGA(bitFile+"_FPGA1.bit", FPGA1, FIRMWARE_VERSION);
-		bytesProgramed = program_FPGA(bitFile+"_FPGA2.bit", FPGA2, FIRMWARE_VERSION);
+		program_FPGA(bitFile+"_FPGA1.bit", FPGA1, FIRMWARE_VERSION);
+		program_FPGA(bitFile+"_FPGA2.bit", FPGA2, FIRMWARE_VERSION);
 		//Reset all state machines
 		reset(ALL_FPGAS);
 
@@ -86,7 +86,7 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		// clear channel data
 		clear_channel_data();
 
-		return bytesProgramed;
+		return 0;
 	}
 	samplingRate_ = get_sampleRate();
 
@@ -142,7 +142,7 @@ int APS::program_FPGA(const string & bitFile, const FPGASELECT & chipSelect, con
 		if (!ok) return -11;
 	}
 
-	return bytesProgrammed;
+	return 0;
 }
 
 int APS::read_bitFile_version(const FPGASELECT & chipSelect) const {
@@ -1497,33 +1497,17 @@ int APS::stream_LL_data(const int chan){
 	//nextWriteAddrHW is the next address we write to in hardware (% MAX_LL_LENGTH)
 	USHORT nextMiniLL, lastMiniLL, curAddrHW, nextWriteAddrHW;
 
-	//Go through the LL entries and calculate lengths and start points of each miniLL
-	vector<size_t> lengthsMiniLL, startMiniLLPts;
-	const USHORT startMiniLLMask = (1 << 15);
-	const USHORT endMiniLLMask = (1 << 14);
-	size_t lengthCt;
-	for(size_t ct = 0; ct < channels_[chan].LLBank_.length; ct++){
-		USHORT curWord = channels_[chan].LLBank_.length;
-		if (curWord & startMiniLLMask){
-			startMiniLLPts.push_back(ct);
-			lengthCt = 0;
-		}
-		lengthCt++;
-		if (curWord & endMiniLLMask){
-			lengthsMiniLL.push_back(lengthCt);
-		}
-	}
-	size_t numMiniLLs = startMiniLLPts.size();
+	//Get a pointer shortcut to the current bank
+	LLBank* curLLBank = &channels_[chan].LLBank_;
 
 	//Helper function to see how many miniLL's we can write
 	auto entries_can_write = [&]() {
 		//Check how many we can fit in
 		USHORT entriesOpen = (curAddrHW-nextWriteAddrHW)%MAX_LL_LENGTH;
-		//If it is negative we've looped back to the beginning
 		size_t entriesToWrite = 0;
-		while ((entriesToWrite + lengthsMiniLL[nextMiniLL]) < entriesOpen){
-			entriesToWrite += lengthsMiniLL[nextMiniLL];
-			nextMiniLL = (nextMiniLL+1)%numMiniLLs;
+		while ((entriesToWrite + curLLBank->miniLLLengths[nextMiniLL]) < entriesOpen){
+			entriesToWrite += curLLBank->miniLLLengths[nextMiniLL];
+			nextMiniLL = (nextMiniLL+1)%curLLBank->numMiniLLs;
 		}
 		FILE_LOG(logDEBUG2) << "Device ID: " << deviceID_ << " Next write Addr: " << nextWriteAddrHW << " Can write " << entriesToWrite << " entries.";
 	};
@@ -1532,6 +1516,7 @@ int APS::stream_LL_data(const int chan){
 	FILE_LOG(logDEBUG2) << "Writing Link List Length: " << myhex << MAX_LL_LENGTH << " at address: " << FPGA_ADDR_CHA_LL_LENGTH;
 	write(fpga, FPGA_ADDR_CHA_LL_LENGTH, MAX_LL_LENGTH-1, false);
 
+	//Initialize things so that the first time through we write as many as we can
 	nextMiniLL = 0;
 	lastMiniLL = MAX_LL_LENGTH;
 	nextWriteAddrHW = 0;
@@ -1543,7 +1528,7 @@ int APS::stream_LL_data(const int chan){
 		entries_can_write();
 
 		//If there is something to write then do so
-		if ((nextMiniLL - lastMiniLL)%numMiniLLs > 1){
+		if ((nextMiniLL - lastMiniLL)%curLLBank->numMiniLLs > 1){
 			write_LL_data_IQ(fpga, nextWriteAddrHW, lastMiniLL+1, nextMiniLL, false);
 			lastMiniLL = nextMiniLL-1;
 		}

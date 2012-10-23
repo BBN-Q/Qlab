@@ -66,8 +66,7 @@ EXPORT int set_LL_data_IQ(int, int, int, unsigned short*, unsigned short*, unsig
 EXPORT int set_run_mode(int, int, int);
 EXPORT int set_repeat_mode(int, int, int);
 
-
-EXPORT int load_sequence_file(int, char*);
+EXPORT int load_sequence_file(int, const char*);
 
 EXPORT int clear_channel_data(int);
 

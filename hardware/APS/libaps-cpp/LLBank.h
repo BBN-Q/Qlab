@@ -22,12 +22,16 @@ public:
 	void clear();
 
 	size_t length;
+	bool IQMode;
+	size_t numMiniLLs;
+	WordVec miniLLLengths;
+	WordVec miniLLStartIdx;
 
 	WordVec get_packed_data(const size_t &, const size_t &);
-	bool IQMode;
 
 	int write_state_to_hdf5(  H5::H5File & , const string & );
 	int read_state_from_hdf5( H5::H5File & , const string & );
+
 
 private:
 	WordVec addr_;
@@ -36,8 +40,7 @@ private:
 	WordVec trigger1_;
 	WordVec trigger2_;
 	WordVec packedData_;
-	void pack_data();
-
+	void init_data();
 };
 
 #endif /* LLBANK_H_ */

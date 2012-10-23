@@ -13,12 +13,12 @@ LLBank::LLBank() : length{0}, addr_(0), count_(0), repeat_(0),trigger1_(0), trig
 
 LLBank::LLBank(const WordVec & addr, const WordVec & count, const WordVec & trigger, const WordVec & repeat) :
 		length(addr.size()), IQMode(false), addr_(addr), count_(count), repeat_(repeat), trigger1_(trigger){
-	pack_data();
+	init_data();
 };
 
 LLBank::LLBank(const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat) :
 		length(addr.size()), IQMode(true), addr_(addr), count_(count), repeat_(repeat), trigger1_(trigger1), trigger2_(trigger2){
-	pack_data();
+	init_data();
 };
 
 LLBank::~LLBank() {
@@ -32,6 +32,9 @@ void LLBank::clear(){
 	repeat_.clear();
 	trigger1_.clear();
 	trigger2_.clear();
+	packedData_.clear();
+	miniLLStartIdx.clear();
+	miniLLLengths.clear();
 
 }
 
@@ -80,12 +83,34 @@ int LLBank::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootSt
 		trigger2_ = h5array2vector<USHORT>(&H5StateFile, rootStr + "/trigger2", dt);
 	}
 
-	pack_data();
+	init_data();
 	return 0;
 }
 
-void LLBank::pack_data(){
+void LLBank::init_data(){
 
+	//Sort out the length of the mini LL's and their start points
+	//Go through the LL entries and calculate lengths and start points of each miniLL
+	miniLLLengths.clear();
+	miniLLStartIdx.clear();
+	const USHORT startMiniLLMask = (1 << 15);
+	const USHORT endMiniLLMask = (1 << 14);
+	size_t lengthCt = 0;
+	for(size_t ct = 0; ct < length; ct++){
+		// flags are stored in repeat vector
+		USHORT curWord = repeat_[ct];
+		if (curWord & startMiniLLMask){
+			miniLLStartIdx.push_back(ct);
+			lengthCt = 0;
+		}
+		lengthCt++;
+		if (curWord & endMiniLLMask){
+			miniLLLengths.push_back(lengthCt);
+		}
+	}
+	numMiniLLs = miniLLLengths.size();
+
+	//Now pack the data for writing to the device
 	packedData_.clear();
 	size_t expectedLength = IQMode ? 5*length : 4*length;
 	packedData_.reserve(expectedLength);
