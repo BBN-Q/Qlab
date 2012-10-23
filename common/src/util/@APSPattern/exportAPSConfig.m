@@ -12,7 +12,7 @@ function exportAPSConfig(path, basename, nbrRepeats, varargin)
         mkdir(path);
     end
     
-    miniLinkRepeat = nbrRepeats - 1;
+    miniLLRepeat = nbrRepeats - 1;
     WaveformLibs = cell(1,4);
     LinkLists = cell(1,4);
     
@@ -25,7 +25,6 @@ function exportAPSConfig(path, basename, nbrRepeats, varargin)
             [LinkLists{Ich}, WaveformLibs{Ich}, WaveformLibs{Qch}] = APSPattern.convertLinkListFormat(seq, useVarients, wfLibrary);
 
             %Setup the structures for the linkList data
-            LinkLists{Ich}.repeatCount = miniLinkRepeat;
             fprintf('Length of LL for pair %d: %d\n', ct, LinkLists{Ich}.length)
             LinkLists{Qch} = [];
         else
@@ -50,6 +49,9 @@ function exportAPSConfig(path, basename, nbrRepeats, varargin)
 
     %And then specify which channels we have data for
     h5writeatt(fileName, '/', 'channelDataFor', channelDataFor);
+    
+    %An attribute for the miniLL repeat count
+    h5writeatt(fileName, '/', 'miniLLRepeat', uint16(miniLLRepeat));
 
     %Now create each channel group and put the associated data
     for channel = channelDataFor
@@ -82,8 +84,6 @@ function exportAPSConfig(path, basename, nbrRepeats, varargin)
             h5write(fileName, [groupStr, '/repeat'], LinkLists{channel}.repeat);
             h5writeatt(fileName, groupStr, 'length', uint16(bankLength));
 
-            %Finally the repeatCount
-            h5writeatt(fileName, [channelStr, '/linkListData'], 'repeatCount',  uint16(LinkLists{channel}.repeatCount));
         end
     end
     
