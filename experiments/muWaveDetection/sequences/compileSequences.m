@@ -255,6 +255,7 @@ for awg = awgs
             [patx, paty] = pg.linkListToPattern(ch12seq, 1+mod(plotIdx-1, length(ch12seq.linkLists)));
             plot(patx, plotColors{ 1+mod(colorIdx, length(plotColors)) });
             plot(paty, plotColors{ 1+mod(colorIdx+1, length(plotColors)) });
+            pg = patternDict([awg '_34']).pg;
             [patx, paty] = pg.linkListToPattern(ch34seq, 1+mod(plotIdx-1, length(ch34seq.linkLists)));
             plot(patx, plotColors{ 1+mod(colorIdx+2, length(plotColors)) });
             plot(paty, plotColors{ 1+mod(colorIdx+3, length(plotColors)) });

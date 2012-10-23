@@ -1,83 +1,69 @@
-function SweepPulseBuffer(makePlot)
-
-%Sweep the pulse buffer across a 180 degree pulse to determine the relative
-%delays.  Basically we're looking for a trapezoid as the buffer pulse sweeps across the main pulse 
-
-if ~exist('makePlot', 'var')
-    makePlot = true;
-end
-script = java.io.File(mfilename('fullpath'));
-path = char(script.getParentFile().getParentFile().getParentFile().getParent());
-addpath([path '/common/src'],'-END');
-addpath([path '/common/src/util/'],'-END');
-
-temppath = [char(script.getParent()) '\'];
-path = 'U:\AWG\SweepBufferPulse\';
-basename = 'SweepBufferPulse';
-
-fixedPt = 6000;
-cycleLength = 10000;
-numpoints = 50;
-step = 6;
-
-% load config parameters from file
-parent_path = char(script.getParentFile.getParent());
-cfg_path = [parent_path '/cfg/'];
-load([cfg_path 'pulseParamBundles.mat'], 'Ts', 'delays', 'measDelay', 'bufferDelays', 'bufferResets', 'bufferPaddings', 'offsets', 'piAmps', 'pi2Amps', 'sigmas', 'pulseTypes', 'deltas', 'buffers', 'pulseLengths');
+function SweepPulseBuffer(qubit, sweepPts, makePlot, plotSeqNum)
+%SweepBufferPulse Sweep the pulse buffer to find the optimum value
+% SweepBufferPulse(qubit, sweepPts, makePlot, plotSeqNum)
+%   qubit - target qubit e.g. 'q1'
+%   sweepPts - sweep points for the buffer delay
+%   makePlot - whether to plot a sequence or not (boolean)
+%   plotSeqNum (optional) - which sequence to plot (int)
 
 
-pg = PatternGen('dPiAmp', piAmps('q1'), 'dPiOn2Amp', pi2Amps('q1'), 'dSigma', sigmas('q1'), 'dPulseType', pulseTypes('q1'), 'dDelta', deltas('q1'), 'correctionT', Ts('12'), 'dBuffer', buffers('q1'), 'dPulseLength', pulseLengths('q1'), 'cycleLength', cycleLength);
+basename = 'SweepBuffer';
+fixedPt = 1000;
+cycleLength = 3000;
+nbrRepeats = 1;
 
-patseq = {pg.pulse('Xtheta','amp',1000,'width',64,'pType','square'), pg.pulse('QId','width',88)};
-bufferSweep = 0:step:(numpoints-1)*step;
-patseqBuffer = {pg.pulse('M','width',88), pg.pulse('QId','width',bufferSweep)};
+% load config parameters from files
+params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+qParams = params.(qubit);
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
 
-ch1 = zeros(numpoints, cycleLength);
-ch2 = ch1;
-ch3m1 = ch1;
+% if using SSB, set the frequency here
+SSBFreq = 0e6;
+qParams.buffer = 0;
+pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T,'bufferDelay',params.(IQkey).bufferDelay,'bufferReset',params.(IQkey).bufferReset,'bufferPadding',params.(IQkey).bufferPadding, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
-for kindex = 1:numpoints;
-	[patx paty] = pg.getPatternSeq(patseq, 1, delays('12'), fixedPt);
-	ch1(kindex, :) = patx + offsets('12');
-	ch2(kindex, :) = paty + offsets('12');
-    [patx ~] = pg.getPatternSeq(patseqBuffer, kindex, delays('12'), fixedPt);
-	ch3m1(kindex, :) = int32(patx);
-end
+patseq = {{pg.pulse('QId')}, {pg.pulse('QId')}, {pg.pulse('Xtheta', 'pType', 'square', 'amp', 4000)}, {pg.pulse('Xtheta', 'pType', 'square', 'amp', 4000)}};
+calseq = [];
 
-% trigger at beginning of measurement pulse
-% measure from (6000:9500)
-measLength = 3500;
-measSeq = {pg.pulse('M', 'width', measLength)};
-ch1m1 = zeros(numpoints, cycleLength);
-ch1m2 = zeros(numpoints, cycleLength);
-for n = 1:numpoints;
-	ch1m1(n,:) = pg.makePattern([], fixedPt-500, ones(100,1), cycleLength);
-	ch1m2(n,:) = int32(pg.getPatternSeq(measSeq, n, measDelay, fixedPt+measLength));
-end
+curBufferDelay = params.(IQkey).bufferDelay;
 
-if makePlot
-    myn = 40;
-    figure
-    plot(ch1(myn,:))
-    hold on
-    plot(ch2(myn,:), 'r')
-    plot(5000*ch3m1(myn,:), 'k')
-    plot(5000*ch1m1(myn,:),'.')
-    plot(5000*ch1m2(myn,:), 'g')
-    grid on
-    hold off
+expct = 1;
+for bufferDelay = sweepPts
+    
+    %Write the buffer delay to file
+    params.(IQkey).bufferDelay = bufferDelay;
+    FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'wt'); %open in text mode
+    fprintf(FID, jsonlab.savejson('',params));
+    fclose(FID);
+
+    % prepare parameter structures for the pulse compiler
+    seqParams = struct(...
+        'basename', basename, ...
+        'suffix', ['_', num2str(expct)], ...
+        'numSteps', 1, ...
+        'nbrRepeats', nbrRepeats, ...
+        'fixedPt', fixedPt, ...
+        'cycleLength', cycleLength, ...
+        'measLength', 2000);
+    patternDict = containers.Map();
+    if ~isempty(calseq), calseq = {calseq}; end
+    patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
+    measChannels = {'M1'};
+    awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
+    
+    if ~makePlot
+        plotSeqNum = 0;
+    end
+    compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, plotSeqNum);
+    expct = expct+1;
 end
 
-% fill remaining channels with empty stuff
-ch3 = zeros(numpoints, cycleLength);
-ch4 = zeros(numpoints, cycleLength);
-ch2m1 = ch3;
-ch2m2 = ch4;
-ch3 = ch3 + offsets('34');
-ch4 = ch4 + offsets('34');
 
-% make TekAWG file
-TekPattern.exportTekSequence(temppath, basename, ch1, ch1m1, ch1m2, ch2, ch2m1, ch2m2, ch3, ch3m1, ch2m2, ch4, ch2m1, ch2m2);
-disp('Moving AWG file to destination');
-movefile([temppath basename '.awg'], [path basename '.awg']);
+%Write the original delay back to the file
+params.(IQkey).bufferDelay = curBufferDelay;
+FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'wt'); %open in text mode
+fprintf(FID, jsonlab.savejson('',params));
+fclose(FID);
+
 end
