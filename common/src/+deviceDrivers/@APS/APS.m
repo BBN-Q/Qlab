@@ -55,8 +55,8 @@ classdef APS < hgsetget
         RUN_WAVEFORM = 0;
 
         % repeat modes
-        CONTINUOUS = 0;
-        ONESHOT = 1;
+        CONTINUOUS = 1;
+        TRIGGERED = 0;
         
         % for DEBUG methods
         LEDMODE_PLLSYNC = 1;
