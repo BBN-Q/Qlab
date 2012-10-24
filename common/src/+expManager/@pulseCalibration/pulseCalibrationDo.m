@@ -200,8 +200,8 @@ IQkey = channelMap.IQkey;
 
 params.(IQkey).T = obj.pulseParams.T;
 
-FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'wt'); %open in text mode
-fprintf(FID, jsonlab.savejson('',params));
+FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'w'); 
+fprintf(FID, '%s', jsonlab.savejson('',params));
 fclose(FID);
 
 %Now the offsets
@@ -209,7 +209,7 @@ params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json')
 params.InstrParams.(channelMap.instr).(sprintf('chan_%d', channelMap.i)).offset = obj.pulseParams.i_offset;
 params.InstrParams.(channelMap.instr).(sprintf('chan_%d', channelMap.q)).offset = obj.pulseParams.q_offset;
 FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'),'wt'); %open in text mode
-fprintf(FID, jsonlab.savejson('',params));
+fprintf(FID, '%s', jsonlab.savejson('',params));
 fclose(FID);
 
 
