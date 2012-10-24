@@ -553,7 +553,8 @@ classdef PatternGen < handle
                 array = 0;
             end
             obj.sha.reset();
-            obj.sha.update(array(:));
+            %Salt the array to avoid collisions
+            obj.sha.update([array(:); array(:)+10101]);
             h = obj.sha.digest();
             % concert to ASCII char array a-z
             h = char(97 + mod(h', 26));
