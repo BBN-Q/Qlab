@@ -156,7 +156,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                         numAWGs = numAWGs + 1;
                         obj.awgParams{numAWGs} = obj.inputStructure.InstrParams.(InstrName);
                         obj.awgParams{numAWGs}.InstrName = InstrName;
-                        if strcmp(InstrName, IQchannels.instr)
+                        if strcmp(InstrName, IQchannels.awg)
                             obj.targetAWGIdx = numAWGs;
                         end
                     case 'deviceDrivers.AgilentAP240'
@@ -169,7 +169,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                 params = jsonlab.loadjson(obj.pulseParamPath);
                 obj.pulseParams = params.(obj.ExpParams.Qubit);
                 obj.pulseParams.T = params.(IQkey).T;
-                channelParams = obj.inputStructure.InstrParams.(IQchannels.instr);
+                channelParams = obj.inputStructure.InstrParams.(IQchannels.awg);
                 obj.pulseParams.i_offset = channelParams.(['chan_' num2str(IQchannels.i)]).offset;
                 obj.pulseParams.q_offset = channelParams.(['chan_' num2str(IQchannels.q)]).offset;
                 obj.pulseParams.SSBFreq = obj.ExpParams.SSBFreq;

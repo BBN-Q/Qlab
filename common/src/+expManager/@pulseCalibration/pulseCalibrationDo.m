@@ -206,8 +206,8 @@ fclose(FID);
 
 %Now the offsets
 params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'));
-params.InstrParams.(channelMap.instr).(sprintf('chan_%d', channelMap.i)).offset = obj.pulseParams.i_offset;
-params.InstrParams.(channelMap.instr).(sprintf('chan_%d', channelMap.q)).offset = obj.pulseParams.q_offset;
+params.InstrParams.(channelMap.awg).(sprintf('chan_%d', channelMap.i)).offset = obj.pulseParams.i_offset;
+params.InstrParams.(channelMap.awg).(sprintf('chan_%d', channelMap.q)).offset = obj.pulseParams.q_offset;
 FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'),'wt'); %open in text mode
 fprintf(FID, '%s', jsonlab.savejson('',params));
 fclose(FID);
