@@ -379,7 +379,9 @@ int FPGA::write_FPGA(FT_HANDLE deviceHandle, const unsigned int & addr, const ve
 	//Format for the block write
 	vector<UCHAR> dataPacket = format(fpga, addr, data);
 
-	FILE_LOG(logDEBUG2) << "Writing " << data.size() << " words at starting address: " << myhex << addr << " with Data[0]: " << data[0];
+	if (data.size() > 0) {
+		FILE_LOG(logDEBUG2) << "Writing " << data.size() << " words at starting address: " << myhex << addr << " with Data[0]: " << data[0];
+	}
 
 	//Write to device
 	return write_block(deviceHandle, dataPacket);

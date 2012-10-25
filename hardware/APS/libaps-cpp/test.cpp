@@ -38,6 +38,17 @@ void test::programSquareWaves() {
 	if (pulseMem) free(pulseMem);
 }
 
+void test::streaming() {
+	set_trigger_interval(0, 0.1);
+	load_sequence_file(0, "U:\\AWG\\Ramsey\\Ramsey-BBNAPS.h5");
+	set_channel_enabled(0, 0, 1);
+	set_channel_enabled(0, 1, 1);
+	set_run_mode(0, 0, 1);
+	run(0);
+	Sleep(10);
+	stop(0);
+}
+
 void test::doBulkStateFileTest() {
 	programSquareWaves();
 
@@ -176,6 +187,7 @@ void test::printHelp(){
 	cout << spacing << "-b  <bitfile> Path to bit file" << endl;
 	cout << spacing << "-t  Toggle Test" << endl;
 	cout << spacing << "-w  Run Waveform StoreLoad Tests" << endl;
+	cout << spacing << "-stream LL Streaming Test" << endl;
 	cout << spacing << "-bf Run Bulk State File Test" << endl;
 	cout << spacing << "-sf Run  State File Test" << endl;
 	cout << spacing << "-d  Used default DACII bitfile" << endl;
@@ -216,16 +228,15 @@ int main(int argc, char** argv) {
 	string bitFile = getCmdOption(argv, argv + argc, "-b");
 
 	if (cmdOptionExists(argv, argv + argc, "-d")) {
-		bitFile = "../../../common/src/+deviceDrivers/@APS/mqco_dac2_latest.bit";
+		bitFile = "../bitfiles/mqco_dac2_latest";
 	}
 
 
 	if (bitFile.length() == 0) {
-		bitFile = "../../../common/src/+deviceDrivers/@APS/mqco_aps_latest.bit";
+		bitFile = "../bitfiles/mqco_aps_latest";
 	}
 
 	cout << "Programming using: " << string(bitFile) << endl;
-	cout << "or as a c string: " << const_cast<char*>(bitFile.c_str()) << endl;
 
 	//Initialize the APSRack from the DLL
 	init();
@@ -245,28 +256,27 @@ int main(int argc, char** argv) {
 		exit(-1);
 	}
 
-	set_trigger_interval(0, 0.1);
-
-	load_sequence_file(0, "U:\\AWG\\Ramsey\\Ramsey-BBNAPS.h5");
-
-	set_channel_enabled(0, 0, 1);
-	set_channel_enabled(0, 1, 1);
-	set_run_mode(0, 0, 1);
-
-	run(0);
-
 	vector<float> waveform(0);
 
 	for(int ct=0; ct<1000;ct++){
 		waveform.push_back(float(ct)/1000);
 	}
 
+	stop(0);
 	set_waveform_float(0, 0, &waveform.front(), waveform.size());
+	set_run_mode(0, 0, 0);
+	run(0);
+	Sleep(1);
+	stop(0);
 
 	// select test to run
 
 	if (cmdOptionExists(argv, argv + argc, "-wf")) {
 		test::programSquareWaves();
+	}
+
+	if (cmdOptionExists(argv, argv + argc, "-stream")) {
+		test::streaming();
 	}
 
 	if (cmdOptionExists(argv, argv + argc, "-t")) {

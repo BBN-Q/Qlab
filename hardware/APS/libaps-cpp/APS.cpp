@@ -1187,7 +1187,7 @@ int APS::enable_DAC_FIFO(const int & dac) const {
 int APS::disable_DAC_FIFO(const int & dac) const {
 	BYTE data, mask;
 	ULONG syncAddr = 0x0 | (dac << 5);
-	FILE_LOG(logDEBUG) << "Disable DAC " << dac << " FIFO";
+	FILE_LOG(logDEBUG1) << "Disable DAC " << dac << " FIFO";
 	// clear sync bit
 	FPGA::read_SPI(handle_, APS_DAC_SPI, syncAddr, &data);
 	mask = (0x1 << 2);
@@ -1518,9 +1518,9 @@ int APS::stream_LL_data(const int chan){
 
 	//Initialize things so that the first time through we write as many as we can
 	nextMiniLL = 0;
-	lastMiniLL = MAX_LL_LENGTH;
+	lastMiniLL = curLLBank->numMiniLLs-1;
 	nextWriteAddrHW = 0;
-	curAddrHW = MAX_LL_LENGTH +1;
+	curAddrHW = MAX_LL_LENGTH-1;
 
 	while(running_) {
 
@@ -1529,7 +1529,8 @@ int APS::stream_LL_data(const int chan){
 
 		//If there is something to write then do so
 		if ((nextMiniLL - lastMiniLL)%curLLBank->numMiniLLs > 1){
-			write_LL_data_IQ(fpga, nextWriteAddrHW, lastMiniLL+1, nextMiniLL, false);
+			USHORT startMiniLL = (lastMiniLL+1)%curLLBank->numMiniLLs;
+			write_LL_data_IQ(fpga, nextWriteAddrHW, curLLBank->miniLLStartIdx[startMiniLL] , curLLBank->miniLLStartIdx[nextMiniLL], false);
 			lastMiniLL = nextMiniLL-1;
 		}
 
@@ -1537,7 +1538,8 @@ int APS::stream_LL_data(const int chan){
 		std::this_thread::sleep_for( std::chrono::milliseconds(10) );
 
 		//Poll for current hardware address
-		curAddrHW = read_LL_addr(fpga);
+//		curAddrHW = read_LL_addr(fpga);
+		curAddrHW = (curAddrHW+200)%MAX_LL_LENGTH;
 		FILE_LOG(logDEBUG2) << "Device ID: " << deviceID_ << " Current LL Addr: " << myhex << curAddrHW;
 
 	}
