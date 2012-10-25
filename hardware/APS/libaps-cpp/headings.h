@@ -179,6 +179,12 @@ T h5element2element(const string & name, const H5::Group * group, const H5::Data
 	return element;
 }
 
+inline int mymod(int a, int b) {
+	int c = a % b;
+	if (c < 0)
+		c += b;
+	return c;
+}
 
 #endif /* HEADINGS_H_ */
 

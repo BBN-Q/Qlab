@@ -39,13 +39,12 @@ void test::programSquareWaves() {
 }
 
 void test::streaming() {
-	set_trigger_interval(0, 0.1);
-	load_sequence_file(0, "U:\\AWG\\Ramsey\\Ramsey-BBNAPS.h5");
+	set_trigger_interval(0, 0.0001);
+	load_sequence_file(0, "U:\\APS\\Ramsey-Streaming-short.h5");
 	set_channel_enabled(0, 0, 1);
-	set_channel_enabled(0, 1, 1);
 	set_run_mode(0, 0, 1);
 	run(0);
-	Sleep(10);
+	Sleep(10000);
 	stop(0);
 }
 
@@ -218,7 +217,7 @@ int main(int argc, char** argv) {
 
 	int err;
 
-	set_logging_level(logDEBUG);
+	set_logging_level(logDEBUG1);
 
 	if (cmdOptionExists(argv, argv + argc, "-h")) {
 		test::printHelp();
@@ -249,25 +248,25 @@ int main(int argc, char** argv) {
 	//Connect to device
 	connect_by_ID(0);
 
-	err = initAPS(0, const_cast<char*>(bitFile.c_str()), true);
+	err = initAPS(0, const_cast<char*>(bitFile.c_str()), false);
 
 	if (err != APS_OK) {
 		cout << "Error initializing APS Rack: " << err << endl;
 		exit(-1);
 	}
 
-	vector<float> waveform(0);
+//	vector<float> waveform(0);
+//
+//	for(int ct=0; ct<1000;ct++){
+//		waveform.push_back(float(ct)/1000);
+//	}
 
-	for(int ct=0; ct<1000;ct++){
-		waveform.push_back(float(ct)/1000);
-	}
-
-	stop(0);
-	set_waveform_float(0, 0, &waveform.front(), waveform.size());
-	set_run_mode(0, 0, 0);
-	run(0);
-	Sleep(1);
-	stop(0);
+//	stop(0);
+//	set_waveform_float(0, 0, &waveform.front(), waveform.size());
+//	set_run_mode(0, 0, 0);
+//	run(0);
+//	Sleep(1);
+//	stop(0);
 
 	// select test to run
 

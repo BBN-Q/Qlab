@@ -370,6 +370,8 @@ int APS::run() {
 
 	running_ = true;
 
+//	stream_LL_data(0);
+
 	//If we have more LL entries than we can handle then we need to stream
 	for (int chanct = 0; chanct < 4; ++chanct) {
 		if (channelsEnabled[chanct]){
@@ -1342,9 +1344,13 @@ int APS::write_LL_data_IQ(const FPGASELECT & fpga, const ULONG & startAddr, cons
 			return -1;
 	}
 
-	size_t entriesToWrite = (stopIdx-startIdx)%MAX_LL_LENGTH;
+	size_t entriesToWrite = stopIdx-startIdx;
+	if (entriesToWrite < 0) {
+		// must be wrapping around the end, compute the modular distance
+		entriesToWrite = mymod(stopIdx-startIdx, channels_[dataChan].LLBank_.length);
+	}
 
-	FILE_LOG(logDEBUG) << "Writing LL Data for Channel: " << dataChan << "; Length: " << (stopIdx-startIdx)%MAX_LL_LENGTH;
+	FILE_LOG(logDEBUG) << "Writing LL Data for Channel: " << dataChan << "; Length: " << entriesToWrite;
 
 	WordVec writeData;
 
@@ -1353,15 +1359,16 @@ int APS::write_LL_data_IQ(const FPGASELECT & fpga, const ULONG & startAddr, cons
 		//Pull out the first segment
 		size_t tmpStopIdx = ((MAX_LL_LENGTH-startAddr) + startIdx)%channels_[dataChan].LLBank_.length;
 		writeData = channels_[dataChan].LLBank_.get_packed_data(startIdx, tmpStopIdx);
-		WordVec tmpData = channels_[dataChan].LLBank_.get_packed_data(tmpStopIdx, stopIdx);
-		writeData.insert(writeData.end(), tmpData.begin(), tmpData.end());
+		//queue it
+		write(fpga, FPGA_BANKSEL_LL_CHA | startAddr, writeData, true);
+		//the second segment is written to the top of the memory (startAddr = 0)
+		writeData = channels_[dataChan].LLBank_.get_packed_data(tmpStopIdx, stopIdx);
+		write(fpga, FPGA_BANKSEL_LL_CHA | 0, writeData, true);
 	}
 	else{
 		writeData = channels_[dataChan].LLBank_.get_packed_data(startIdx, stopIdx);
+		write(fpga, FPGA_BANKSEL_LL_CHA | startAddr, writeData, true);
 	}
-
-	//Write the packed data
-	write(fpga, FPGA_BANKSEL_LL_CHA | startAddr, writeData, true);
 
 	//If necessary write the LL length register
 	if (writeLengthFlag){
@@ -1495,7 +1502,7 @@ int APS::stream_LL_data(const int chan){
 	//lastMiniLL is the last miniLL we have written (% #miniLL's)
 	//curAddrHW is the currently playing LL entry in hardware (% MAX_LL_LENGTH)
 	//nextWriteAddrHW is the next address we write to in hardware (% MAX_LL_LENGTH)
-	USHORT nextMiniLL, lastMiniLL, curAddrHW, nextWriteAddrHW;
+	int nextMiniLL, lastMiniLL, curAddrHW, nextWriteAddrHW;
 
 	//Get a pointer shortcut to the current bank
 	LLBank* curLLBank = &channels_[chan].LLBank_;
@@ -1503,13 +1510,14 @@ int APS::stream_LL_data(const int chan){
 	//Helper function to see how many miniLL's we can write
 	auto entries_can_write = [&]() {
 		//Check how many we can fit in
-		USHORT entriesOpen = (curAddrHW-nextWriteAddrHW)%MAX_LL_LENGTH;
+		USHORT entriesOpen = mymod(curAddrHW-nextWriteAddrHW, MAX_LL_LENGTH);
 		size_t entriesToWrite = 0;
 		while ((entriesToWrite + curLLBank->miniLLLengths[nextMiniLL]) < entriesOpen){
 			entriesToWrite += curLLBank->miniLLLengths[nextMiniLL];
 			nextMiniLL = (nextMiniLL+1)%curLLBank->numMiniLLs;
 		}
-		FILE_LOG(logDEBUG2) << "Device ID: " << deviceID_ << " Next write Addr: " << nextWriteAddrHW << " Can write " << entriesToWrite << " entries.";
+		FILE_LOG(logDEBUG1) << "Device ID: " << deviceID_ << " Next write Addr: " << nextWriteAddrHW << " Can write " << entriesToWrite << " entries.";
+		FILE_LOG(logDEBUG1) << "LastMiniLL: " << lastMiniLL << " nextMiniLL: " << nextMiniLL;
 	};
 
 	//Write the LL length to the max
@@ -1528,9 +1536,10 @@ int APS::stream_LL_data(const int chan){
 		entries_can_write();
 
 		//If there is something to write then do so
-		if ((nextMiniLL - lastMiniLL)%curLLBank->numMiniLLs > 1){
+		if (mymod(nextMiniLL - lastMiniLL, curLLBank->numMiniLLs) > 1){
 			USHORT startMiniLL = (lastMiniLL+1)%curLLBank->numMiniLLs;
-			write_LL_data_IQ(fpga, nextWriteAddrHW, curLLBank->miniLLStartIdx[startMiniLL] , curLLBank->miniLLStartIdx[nextMiniLL], false);
+			write_LL_data_IQ(fpga, USHORT(nextWriteAddrHW), curLLBank->miniLLStartIdx[startMiniLL] , curLLBank->miniLLStartIdx[nextMiniLL], false);
+			nextWriteAddrHW = mymod(nextWriteAddrHW + mymod(curLLBank->miniLLStartIdx[nextMiniLL] - curLLBank->miniLLStartIdx[startMiniLL], curLLBank->length), MAX_LL_LENGTH);
 			lastMiniLL = nextMiniLL-1;
 		}
 
@@ -1538,9 +1547,9 @@ int APS::stream_LL_data(const int chan){
 		std::this_thread::sleep_for( std::chrono::milliseconds(10) );
 
 		//Poll for current hardware address
-//		curAddrHW = read_LL_addr(fpga);
-		curAddrHW = (curAddrHW+200)%MAX_LL_LENGTH;
-		FILE_LOG(logDEBUG2) << "Device ID: " << deviceID_ << " Current LL Addr: " << myhex << curAddrHW;
+		curAddrHW = read_LL_addr(fpga);
+//		curAddrHW = (curAddrHW+200)%MAX_LL_LENGTH;
+		FILE_LOG(logDEBUG1) << "Device ID: " << deviceID_ << " Current LL Addr: " << curAddrHW;
 
 	}
 	
