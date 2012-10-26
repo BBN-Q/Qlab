@@ -557,7 +557,9 @@ classdef PatternGen < handle
             obj.sha.update([array(:); array(:)+10101]);
             h = obj.sha.digest();
             % convert to hex string
-            h = sprintf('%02X',h);
+            h = sprintf('%02x',uint8(h));
+            % turn numbers into uppercase letters
+            h(h < 'A') = h(h < 'A') + 17;
         end
         
         function seq = build(obj, pulseList, numsteps, delay, fixedPoint, gated)
