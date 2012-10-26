@@ -556,8 +556,8 @@ classdef PatternGen < handle
             %Salt the array to avoid collisions
             obj.sha.update([array(:); array(:)+10101]);
             h = obj.sha.digest();
-            % concert to ASCII char array a-z
-            h = char(97 + mod(h', 26));
+            % convert to hex string
+            h = sprintf('%02X',h);
         end
         
         function seq = build(obj, pulseList, numsteps, delay, fixedPoint, gated)
