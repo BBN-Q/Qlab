@@ -59,7 +59,7 @@ void APSRack::enumerate_devices() {
 	size_t devicect = 0;
 	for (string tmpSerial : deviceSerials_) {
 		serial2dev[tmpSerial] = devicect;
-		APSs_.push_back(APS(devicect, tmpSerial));
+		APSs_.emplace_back(devicect, tmpSerial);
 		FILE_LOG(logDEBUG) << "Device " << devicect << " has serial number " << tmpSerial;
 		devicect++;
 	}

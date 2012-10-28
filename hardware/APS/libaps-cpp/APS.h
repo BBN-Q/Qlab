@@ -76,9 +76,10 @@ private:
 	map<FPGASELECT, CheckSum> checksums_;
 	int samplingRate_;
 	vector<UCHAR> writeQueue_;
-	thread * bankBouncerThread_;
+	std::thread * bankBouncerThread_;
+	//Flag for whether are running so threads know when to die and return
 	bool running_;
-
+	std::mutex * mymutex_;
 
 	int write(const FPGASELECT & fpga, const unsigned int & addr, const USHORT & data, const bool & queue = false);
 	int write(const FPGASELECT & fpga, const unsigned int & addr, const vector<USHORT> & data, const bool & queue = false);

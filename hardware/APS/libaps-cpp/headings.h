@@ -30,9 +30,8 @@ using std::endl;
 using std::map;
 using std::runtime_error;
 
-//std::thread
 #include <thread>
-using std::thread;
+#include <mutex>
 #include <chrono>
 
 
