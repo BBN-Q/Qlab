@@ -40,7 +40,7 @@ void test::programSquareWaves() {
 
 void test::streaming() {
 	set_trigger_interval(0, 0.0001);
-	load_sequence_file(0, "U:\\APS\\Ramsey-Streaming-short.h5");
+	load_sequence_file(0, "U:\\APS\\Ramsey-Streaming.h5");
 	set_channel_enabled(0, 0, 1);
 	set_run_mode(0, 0, 1);
 	run(0);
@@ -248,7 +248,7 @@ int main(int argc, char** argv) {
 	//Connect to device
 	connect_by_ID(0);
 
-	err = initAPS(0, const_cast<char*>(bitFile.c_str()), false);
+	err = initAPS(0, const_cast<char*>(bitFile.c_str()), true);
 
 	if (err != APS_OK) {
 		cout << "Error initializing APS Rack: " << err << endl;

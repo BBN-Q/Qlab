@@ -79,6 +79,8 @@ private:
 	std::thread * bankBouncerThread_;
 	//Flag for whether are running so threads know when to die and return
 	bool running_;
+	//Flag for whether streaming is up and running
+	bool streaming_;
 	std::mutex * mymutex_;
 
 	int write(const FPGASELECT & fpga, const unsigned int & addr, const USHORT & data, const bool & queue = false);

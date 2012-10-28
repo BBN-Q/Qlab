@@ -370,12 +370,15 @@ int APS::run() {
 
 	running_ = true;
 
-
 	//If we have more LL entries than we can handle then we need to stream
 	for (int chanct = 0; chanct < 4; ++chanct) {
 		if (channelsEnabled[chanct]){
 			if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH){
+				streaming_ = false;
 				bankBouncerThread_ = new std::thread(&APS::stream_LL_data, this, chanct);
+				while(!streaming_){
+					usleep(10000);
+				}
 			}
 		}
 	}
@@ -394,7 +397,7 @@ int APS::run() {
 			FPGA::set_bit(handle_, FPGA2, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
 		}
 	}
-	FILE_LOG(logDEBUG1) << "Current CSR: " << FPGA::read_FPGA(handle_, 0, FPGA1);
+	FILE_LOG(logDEBUG2) << "Current CSR: " << FPGA::read_FPGA(handle_, 0, FPGA1);
 	mymutex_->unlock();
 	return 0;
 }
@@ -1533,13 +1536,12 @@ int APS::stream_LL_data(const int chan){
 		}
 		FILE_LOG(logDEBUG1) << "Device ID: " << deviceID_ << " Next write Addr: " << nextWriteAddrHW << " Can write " << entriesToWrite << " entries.";
 		FILE_LOG(logDEBUG1) << "LastMiniLL: " << lastMiniLL << " nextMiniLL: " << nextMiniLL;
-		FILE_LOG(logDEBUG1) << "LL Length Register: " << FPGA::read_FPGA(handle_, FPGA_ADDR_CHA_LL_LENGTH, FPGA1);
 	};
 
 	//Write the LL length to the max
 	FILE_LOG(logDEBUG1) << "Writing Link List Length: " << myhex << MAX_LL_LENGTH << " at address: " << FPGA_ADDR_CHA_LL_LENGTH;
 	write(fpga, FPGA_ADDR_CHA_LL_LENGTH, MAX_LL_LENGTH-1, false);
-	FILE_LOG(logDEBUG1) << "LL Length Register: " << FPGA::read_FPGA(handle_, FPGA_ADDR_CHA_LL_LENGTH, FPGA1);
+	FILE_LOG(logDEBUG2) << "LL Length Register: " << FPGA::read_FPGA(handle_, FPGA_ADDR_CHA_LL_LENGTH, FPGA1);
 
 	//Initialize things so that the first time through we write as many as we can
 	nextMiniLL = 0;
@@ -1552,6 +1554,8 @@ int APS::stream_LL_data(const int chan){
 	entries_can_write();
 	write_LL_data_IQ(fpga, 0, 0, curLLBank->miniLLStartIdx[nextMiniLL], false);
 	nextWriteAddrHW = curLLBank->miniLLStartIdx[nextMiniLL];
+	//Let the main thread know we are done
+	streaming_ = true;
 	mymutex_->unlock();
 
 	//Now loop while streaming
