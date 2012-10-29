@@ -263,6 +263,10 @@ classdef APS < hgsetget
             status = aps.libraryCall('load_sequence_file', [filename 0]);
             assert(status == 0, 'load_sequence_file returned error code %d', status);
         end
+        
+        function loadLL(obj, ch, addr, count, trigger1, trigger2, repeat)
+            obj.libraryCall('set_LL_data_IQ', ch, length(addr), addr, count, trigger1, trigger2, repeat);
+        end
             
         function run(aps)
             %run - Starts the aps 
