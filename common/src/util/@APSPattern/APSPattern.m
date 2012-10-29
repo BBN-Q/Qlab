@@ -1,172 +1,185 @@
 classdef APSPattern < handle
     
-    properties (Constant)
+    properties (Constant=true)
+        %APS contraints and constants
         ADDRESS_UNIT = 4;
         MIN_PAD_SIZE = 4;
-        MIN_LL_ENTRY_COUNT = 3;
+        MIN_LL_ENTRY_COUNT = 2;
         MAX_WAVEFORM_VALUE = 8191;
+        MAX_WAVEFORM_POINTS = 2^14;
+        MAX_REPEAT_COUNT = 2^10-1;
+        MAX_LL_ENTRIES = 4096;
         
-        ELL_MAX_WAVFORM = 8192;
-        max_waveform_points = 8192;
-        ELL_MAX_LL = 512;
-        max_ll_length = 512;
-        ELL_MIN_COUNT = 3;
-        
-        % ELL Linklist Masks and Contants
-        ELL_ADDRESS            = hex2dec('07FF');
-        %ELL_TIME_AMPLITUDE     = hex2dec('8000');
-        ELL_TIME_AMPLITUDE_BIT = 16;
-        %ELL_LL_TRIGGER         = hex2dec('8000');
-        ELL_LL_TRIGGER_BIT     = 16;
-        %ELL_ZERO               = hex2dec('4000');
-        ELL_ZERO_BIT           = 15;
-        %ELL_VALID_TRIGGER      = hex2dec('2000');
-        ELL_VALID_TRIGGER_BIT  = 14;
-        %ELL_FIRST_ENTRY        = hex2dec('1000');
-        ELL_FIRST_ENTRY_BIT    = 13;
-        %ELL_LAST_ENTRY         = hex2dec('800');
-        ELL_LAST_ENTRY_BIT     = 12;
-        ELL_TA_MAX             = hex2dec('FFFF');
-        ELL_TRIGGER_DELAY      = hex2dec('3FFF');
-        ELL_TRIGGER_MODE_SHIFT = 14;
-        ELL_TRIGGER_DELAY_UNIT = 3.333e-9;
-        
-        verbose = false;
+        %APS bit masks
+        START_MINILL_BIT = 16;
+        END_MINILL_BIT = 15;
+        WAIT_TRIG_BIT = 14;
+        TA_PAIR_BIT = 13;
     end
     
     methods (Static)
         % forward references
         exportAPSConfig(path, basename, varargin)
         
-        % Link List Format Conversion
-        %
-        % Converts link lists produced by PaternGen to a format suitable for use with the
-        % APS. Enforces length of waveform mod 4 = 0. Attempts to adjust padding to
-        % compenstate.
-        function [xlib, ylib] = buildWaveformLibrary(pattern, useVarients)
-            self = APSPattern;
-            waveforms = pattern.waveforms;
-            linkLists = pattern.linkLists;
-
-            keys = waveforms.keys();
-            xWFs = containers.Map();
-            yWFs = containers.Map();
-            for ii = 1:length(keys)
-                tempWf = waveforms(keys{ii});
-                xWFs(keys{ii}) = tempWf(:,1);
-                yWFs(keys{ii}) = tempWf(:,2);
-            end
-            
-            xlib = self.buildWaveformLibraryQuad(linkLists, xWFs, useVarients);
-            ylib = self.buildWaveformLibraryQuad(linkLists, yWFs, useVarients);
-        end
         
-        function library = buildWaveformLibraryQuad(linkLists, waveforms, useVarients)
-            % convert baseWaveforms to waveform array suitable for the APS
-            aps = APSPattern;
-
+        % Build the waveform library
+        %   - absorb paddings into waveform varients
+        %   - create the waveform vector
+        %   - associate offsets into the vector with each waveform
+        
+        function library = build_WFLib(pattern, useVarients)
+            
+            %Default to use variants
             if ~exist('useVarients','var')
                 useVarients = 1;
             end
             
+            %Load a reference to the class
+            %TODO: why is this static then?
+            self = APSPattern();
+            
+            %Pull out the waveforms and link lists
+            waveforms = pattern.waveforms;
+            linkLists = pattern.linkLists;
+            wfKeys = waveforms.keys();
+            
+            %Sort out whether we are using IQ mode from the size of the
+            %waveforms
+            if size(waveforms(wfKeys{1}),2) == 2
+                IQmode = true;
+            else
+                IQmode = false;
+            end
+            
             % populate paddingLib with empty arrays for every hash
             paddingLib = struct();
-            keys = waveforms.keys();
-            for ii = 1:length(keys)
-                paddingLib.(keys{ii}) = [];
+            for ct = 1:length(wfKeys)
+                paddingLib.(wfKeys{ct}) = [];
             end
             if useVarients
                 % preprocess waveforms
-                for ii = 1:length(linkLists)
-                    for jj = 1:length(linkLists{ii})
-                        paddingLib = aps.preprocessEntry(linkLists{ii}{jj}, paddingLib, jj == 1);
+                for miniLLct = 1:length(linkLists)
+                    for entryct = 1:length(linkLists{miniLLct})
+                        %Reset the paddings counts at the start of every
+                        %miniLL
+                        paddingLib = self.preprocessEntry(linkLists{miniLLct}{entryct}, paddingLib, entryct == 1);
                     end
                 end
             end
             
+            %Allocate space and structues
             offsets = struct();
             lengths = struct();
             varients = struct();
-
+            
             % allocate space for data;
-            data = zeros([1, aps.max_waveform_points],'int16');
-
+            wfVec_I = zeros([1, self.MAX_WAVEFORM_POINTS],'int16');
+            if IQmode
+                wfVec_Q = zeros([1, self.MAX_WAVEFORM_POINTS], 'int16');
+            end
+            
+            %Now loop through waveform library
             idx = 1;
-
-            % loop through waveform library
-            keys = waveforms.keys();
-            for ii = 1:length(keys)
-                key = keys{ii};
-                orgWF = waveforms(key);
-
-                maxPadding = aps.ADDRESS_UNIT*(aps.ELL_MIN_COUNT+1)-1;
+            for tmp = wfKeys
+                curKey = tmp{1};
+                origWF = waveforms(curKey);
+                
+                %The maximum padding we'll need before we can just create
+                %a new zero entry
+                maxPadding = self.ADDRESS_UNIT*(self.MIN_LL_ENTRY_COUNT+1)-1;
+                %Allocate a cell array for the original and the varients
                 varientWFs = cell(maxPadding+1,1);
-
-                paddings = sort(paddingLib.(key));
-                if isempty(paddings)
-                    paddings = 0;
+                
+                %See what varients are needed for this waveform
+                curPaddings = sort(paddingLib.(curKey));
+                if isempty(curPaddings)
+                    curPaddings = 0;
                 end
-
-                for padIdx = 1:length(paddings)
-                    leadPad = paddings(padIdx);
-                    assert(leadPad <= maxPadding, 'WF padding is too large')
-                    wf = [zeros([1,leadPad]) orgWF'];
-
-                    % pad total length to a multiple of 4
-                    if length(wf) == 1
+                
+                %Then add a waveform for each padding
+                for curPad = curPaddings
+                    assert(curPad <= maxPadding, 'WF padding is too large')
+                    
+                    %Add the padding to the waveform
+                    tmpWF_I = [zeros([1,curPad]) origWF(:,1)'];
+                    if IQmode
+                        tmpWF_Q = [zeros([1,curPad]), origWF(:,2)'];
+                    end
+                    
+                    %Handle TA pairs by padding out to 4 samples
+                    if length(tmpWF_I) == 1
                         % time amplitude pair
                         % pad out to 4 samples
-                        wf = ones([1,aps.ADDRESS_UNIT]) * wf;
+                        tmpWF_I = repmat(tmpWF_I, 1, 4);
+                        if IQmode
+                            tmpWF_Q = repmat(tmpWF_Q, 1, 4);
+                        end
                     end
-                    residual = mod(-length(wf),aps.ADDRESS_UNIT);
-                    if residual ~= 0 && residual < aps.MIN_PAD_SIZE
-                        wf(end+1:end+residual) = zeros([1,residual],'int16');
+                    
+                    %Pad total length to a multiple of 4
+                    residual = mod(-length(tmpWF_I), self.ADDRESS_UNIT);
+                    if residual ~= 0 && residual < self.MIN_PAD_SIZE
+                        tmpWF_I(end+1:end+residual) = 0;
+                        if IQmode
+                            tmpWF_Q(end+1:end+residual) = 0;
+                        end
                     end
-
-                    assert(mod(length(wf),aps.ADDRESS_UNIT) == 0, 'WF Padding Failed')
-
+                    
+                    assert(mod(length(tmpWF_I), self.ADDRESS_UNIT) == 0, 'WF Padding Failed')
+                    
                     %insert into global waveform array
-                    data(idx:idx+length(wf)-1) = wf;
-
+                    wfVec_I(idx:idx+length(tmpWF_I)-1) = tmpWF_I;
+                    if IQmode
+                        wfVec_Q(idx:idx+length(tmpWF_Q)-1) = tmpWF_Q;
+                    end
+                    
                     % insert the first instance of the waveform into the
                     % offset, length, and varient maps
-                    if ~isfield(offsets, key)
-                        offsets.(key) = idx;
-                        lengths.(key) = length(wf);
-                        varients.(key) = {};
+                    if ~isfield(offsets, curKey)
+                        offsets.(curKey) = idx;
+                        lengths.(curKey) = length(tmpWF_I);
+                        varients.(curKey) = {};
                     end
                     if useVarients
                         varient.offset = idx;
                         % set length of wf remove extra 8 points that
                         % are used to handle 0 and 1 count TA
-                        varient.length = length(wf);
-                        varient.pad = leadPad;
-                        varientWFs{leadPad+1} = varient; % store the varient at position varientWFs{leadPad+1}
+                        varient.length = length(tmpWF_I);
+                        varient.pad = curPad;
+                        varientWFs{curPad+1} = varient; % store the varient at position varientWFs{leadPad+1}
                     end
-                    idx = idx + length(wf);
+                    idx = idx + length(tmpWF_I);
                 end
-                if useVarients && length(orgWF) > 1
-                    varients.(key) = varientWFs;
+                if useVarients && length(origWF) > 1
+                    varients.(curKey) = varientWFs;
                 end
             end
-
-            if idx > aps.max_waveform_points
+            
+            if idx > self.MAX_WAVEFORM_POINTS
                 throw(MException('APS:OutOfMemory',sprintf('Waveform memory %i exceeds APS maximum of %i', idx, aps.max_waveform_points)));
             end
-
+            
             % trim data to only points used
-            data = data(1:idx-1);  % one extra point as it is the next insertion point
-
+            wfVec_I = wfVec_I(1:idx-1);  % subtract one point as idx is the next insertion point
+            if IQmode
+                wfVec_Q = wfVec_Q(1:idx-1);
+            end
+            
             % double check mod ADDRESS_UNIT
-            assert(mod(length(data),aps.ADDRESS_UNIT) == 0,...
+            assert(mod(length(wfVec_I), self.ADDRESS_UNIT) == 0,...
                 'Global Link List Waveform memory should be mod 4');
-
+            
+            %Update the library to return
             library.offsets = offsets;
             library.lengths = lengths;
             library.varients = varients;
-            library.waveforms = data;
+            library.wfVec_I = wfVec_I;
+            if IQmode
+                library.wfVec_Q = wfVec_Q;
+            end
         end
-
+        
+        %Helper function to find necessary paddings
         function paddingLib = preprocessEntry(entry, paddingLib, resetCounts)
             % preprocessEntry marks used waveforms in the library and
             % indicates which padding varients need to be generated
@@ -183,62 +196,148 @@ classdef APSPattern < handle
             % lookup of class properites is expensive, create locals
             ADDRESS_UNIT = 4;
             MIN_LL_ENTRY_COUNT = 3;
-
-            expectedLength = expectedLength + entry.length * entry.repeat;
-
+            
+            expectedLength = expectedLength + entry.length;
+            
             % if we have a zero that is less than count 3, we skip it and
             % pad the following entry
-            if entry.isZero && (pendingLength + entry.repeat < (MIN_LL_ENTRY_COUNT+1) * ADDRESS_UNIT)
+            if entry.isZero && (pendingLength + entry.length < (MIN_LL_ENTRY_COUNT+1) * ADDRESS_UNIT)
                 pendingLength = expectedLength - currentLength;
                 return;
             end
-
+            
             % pad non-TAZ waveforms if the pendingLength is positive
             paddings = paddingLib.(entry.key);
-            updateKey = 0;
+            updateKeyFlag = 0;
             if pendingLength > 0 && ~entry.isZero && ~entry.isTimeAmplitude
                 % add the padding length to the library
                 if ~any(paddings == pendingLength) % same as ~ismember(pendingLength, paddings), but faster
                     paddings(end+1) = pendingLength;
-                    updateKey = 1;
+                    updateKeyFlag = 1;
                 end
                 % the entry itself can potentially have additional padding to
                 % make the length an integer multiple of the ADDRESS_UNIT
                 residual = mod(-(entry.length + pendingLength), ADDRESS_UNIT);
                 entry.length = entry.length + pendingLength + residual;
-            % pad TAZ regardless of the sign of pendingLength
+                % pad TAZ regardless of the sign of pendingLength
             elseif entry.isZero
-                entry.repeat = entry.repeat + pendingLength;
+                entry.length = entry.length + pendingLength;
             elseif ~entry.isZero && ~entry.isTimeAmplitude
                 % mark this entry with padding = 0
                 if ~any(paddings == 0) % same as ~ismember(0, paddings)
                     paddings(end+1) = 0;
-                    updateKey = 1;
+                    updateKeyFlag = 1;
                 end
             end
-
-            if ~entry.isTimeAmplitude
-                % count val is (length in 4 sample units) - 1
-                countVal = fix(entry.length / ADDRESS_UNIT) - 1;
-            else
-                countVal = fix(entry.repeat / ADDRESS_UNIT) - 1;
-            end
-
+            
+            % count val is (length in 4 sample units) - 1
+            countVal = fix(entry.length / ADDRESS_UNIT) - 1;
+            
             currentLength = currentLength + (countVal+1) * ADDRESS_UNIT;
-
+            
             % if the pattern is running long, trim pendingLength
             pendingLength = expectedLength - currentLength;
-
+            
             % update library entry
-            if updateKey
+            if updateKeyFlag
                 paddingLib.(entry.key) = paddings;
             end
         end
-
-        function [offsetVal countVal ] = entryToOffsetCount(entry, library, firstEntry, lastEntry)
+        
+        %Main function to parse a set of patterns into link lists
+        function [bankData, wfVec_I, wfVec_Q] = convertLinkListFormat(pattern, useVarients, waveformLibrary)
+            self = APSPattern;
+            if ~exist('useVarients','var') || isempty(useVarients)
+                useVarients = 1;
+            end
+            
+            if ~exist('waveformLibrary','var') || isempty(waveformLibrary)
+                waveformLibrary = self.buildWaveformLibrary(pattern, useVarients);
+            end
+            
+            wfVec_I = waveformLibrary.wfVec_I;
+            if isfield(waveformLibrary, 'wfVec_Q')
+                IQmode = true;
+                wfVec_Q = waveformLibrary.wfVec_Q;
+            else
+                IQmode = false;
+                wfVec_Q = [];
+            end
+            
+            bankData = struct();
+            numLLEntries = sum(cellfun(@length, pattern.linkLists));
+            bankData.addr = zeros([1, numLLEntries], 'uint16');
+            bankData.count = zeros([1, numLLEntries], 'uint16');
+            bankData.repeat = zeros([1, numLLEntries], 'uint16');
+            bankData.trigger1 = zeros([1, numLLEntries], 'uint16');
+            bankData.trigger2 = zeros([1, numLLEntries], 'uint16');
+            
+            dropct = 0;
+            idx = 1;
+            for miniLLct = 1:length(pattern.linkLists)
+                %TODO: process LL entry to split multi-trigger entries
+                %                 linkList = self.preprocessLL(pattern.linkLists{miniLLct});
+                linkList = pattern.linkLists{miniLLct};
+                
+                lenLL = length(linkList);
+                assert(lenLL < self.MAX_LL_ENTRIES, 'Individual Link List %i exceeds APS maximum link list length', miniLLct)
+                
+                for entryct = 1:lenLL
+                    entry = linkList{entryct};
+                    
+                    [addr, count] = self.entryToOffsetCount(entry, waveformLibrary, entryct==1);
+                    
+                    if isempty(addr) % TAZ of count < 3, skip it
+                        dropct = dropct+1;
+                        continue
+                    end
+                    
+                    assert(count > self.MIN_LL_ENTRY_COUNT, 'Warning entry count < 3. This causes problems with APS\n')
+                    
+                    [triggerVal1, triggerVal2] = self.entryToTrigger(entry);
+                    
+                    bankData.addr(idx) = uint16(addr);
+                    bankData.count(idx) = uint16(count);
+                    bankData.trigger1(idx) = uint16(triggerVal1);
+                    bankData.trigger2(idx) = uint16(triggerVal2);
+                    
+                    %                     set repeat at end of LL list, unless this is the
+                    %                     first mini-LL, in which case we also set the repeat
+                    
+                    bankData.repeat(idx) = entry.repeat - 1; % make zero indexed
+                    %Check for beginning/end miniLL
+                    if entryct == 1
+                        bankData.repeat(idx) = bitset(bankData.repeat(idx), self.START_MINILL_BIT, 1);
+                        bankData.repeat(idx) = bitset(bankData.repeat(idx), self.WAIT_TRIG_BIT, 1);
+                    elseif entryct == lenLL
+                        bankData.repeat(idx) = bitset(bankData.repeat(idx), self.END_MINILL_BIT, 1);
+                    end
+                    
+                    if entry.isTimeAmplitude
+                        bankData.repeat(idx) = bitset(bankData.repeat(idx), self.TA_PAIR_BIT, 1);
+                    end
+                    
+                    idx = idx + 1;
+                end
+            end
+            
+            %Trim the banks if necessary
+            if dropct > 0
+                bankData.addr = bankData.addr(1:end-dropct);
+                bankData.count = bankData.count(1:end-dropct);
+                bankData.trigger1 = bankData.trigger1(1:end-dropct);
+                bankData.trigger2 = bankData.trigger2(1:end-dropct);
+                bankData.repeat = bankData.repeat(1:end-dropct);
+            end
+            bankData.length = length(bankData.addr);
+        end
+        
+        %Helper function to calculate address and counts for an entry
+        function [addr, count] = entryToOffsetCount(entry, library, resetCounts)
+            
             % state variables
             persistent expectedLength pendingLength currentLength
-            if firstEntry
+            if resetCounts
                 expectedLength = 0;
                 pendingLength = 0;
                 currentLength = 0;
@@ -246,29 +345,28 @@ classdef APSPattern < handle
             
             % lookup of class properites is expensive, create locals
             ADDRESS_UNIT = 4;
-            MIN_LL_ENTRY_COUNT = 3;
-            ELL_ADDRESS            = 2047; % 0x07FF
-            ELL_TIME_AMPLITUDE_BIT = 16;
-            ELL_LL_TRIGGER_BIT     = 16;
-            ELL_ZERO_BIT           = 15;
-            ELL_VALID_TRIGGER_BIT  = 14;
-            ELL_FIRST_ENTRY_BIT    = 13;
-            ELL_LAST_ENTRY_BIT     = 12;
-            ELL_TA_MAX             = 65535; % 0xFFFF
-
-            expectedLength = expectedLength + entry.length * entry.repeat;
-
+            MIN_LL_ENTRY_COUNT = 2;
+            MAX_TA_COUNT = 2^16;
+            
+            expectedLength = expectedLength + entry.length;
+            
             % if we have a zero that is less than count 3, we skip it and
             % pad the following entry
-            if entry.isZero && (pendingLength + entry.repeat < (MIN_LL_ENTRY_COUNT+1) * ADDRESS_UNIT)
+            if entry.isZero && (pendingLength + entry.length < (MIN_LL_ENTRY_COUNT+1) * ADDRESS_UNIT)
                 pendingLength = expectedLength - currentLength;
-                countVal = [];
-                offsetVal = [];
+                count = [];
+                addr = [];
                 return;
             end
-
-            entryData.offset = library.offsets.(entry.key);
-            entryData.length = library.lengths.(entry.key);
+            
+            entryData.addr = library.offsets.(entry.key);
+            if entry.isTimeAmplitude
+                % TA pairs are always 4 points long in the library, so pull
+                % the length from the input entry
+                entryData.length = entry.length;
+            else
+                entryData.length = library.lengths.(entry.key);
+            end
             entryData.varientWFs = library.varients.(entry.key);
             % pad non-TAZ waveforms if the pendingLength is positive, provided we have an appropriate varient
             if pendingLength > 0 && ~entry.isZero && ~entry.isTimeAmplitude && ~isempty(entryData.varientWFs)
@@ -278,294 +376,74 @@ classdef APSPattern < handle
                 if length(entryData.varientWFs) >= padIdx   % matlab index offset
                     varient = entryData.varientWFs(padIdx);
                     if iscell(varient), varient = varient{1}; end; % remove cell wrapper
-                    entryData.offset = varient.offset;
+                    entryData.addr = varient.offset;
                     entryData.length = varient.length;
                     assert(varient.pad == pendingLength,'Pending length pad does not match');
-                    if APSPattern.verbose
-                        fprintf('\tUsing WF varient with pad: %i\n', padIdx - 1);
-                    end
                 end
             elseif entry.isZero
                 % pad TAZ regardless of the sign of pendingLength
-                entry.repeat = entry.repeat + pendingLength;
+                entryData.length = entry.length + pendingLength;
             end
-
+            
             % convert from 1 based count to 0 based count
             % div by 4 required for APS addresses
-            address = (entryData.offset - 1) / ADDRESS_UNIT;
-
-            % offset register format
-            %  15  14  13   12   11  10 9 8 7 6 5 4 3 2 1 0
-            % | A | Z | T | LS | LE |      Offset / 4      |
-            %
-            %  Address - Address of start of waveform / 4
-            %  A       - Time Amplitude Pair
-            %  Z       - Output is Zero
-            %  T       - Entry has valid output trigger delay
-            %  LS      - Start of Mini Link List
-            %  LE      - End of Mini Link List
-
-            offsetVal = bitand(address, ELL_ADDRESS);  % trim address to 11-bits
-            if entry.isTimeAmplitude
-                offsetVal = bitset(offsetVal, ELL_TIME_AMPLITUDE_BIT);
-            end
-
-            if entry.isZero
-                offsetVal = bitset(offsetVal, ELL_ZERO_BIT);
-            end
-
-            if entry.hasMarkerData
-                offsetVal = bitset(offsetVal, ELL_VALID_TRIGGER_BIT);
-            end
-
-            if firstEntry  % start of link list
-                % handled outside of entryToOffsetCount
-            end
-
-            if lastEntry % mark end of link list
-                offsetVal = bitset(offsetVal, ELL_LAST_ENTRY_BIT);
-            end
-
+            addr = fix((entryData.addr - 1) / ADDRESS_UNIT);
+            
             % use entryData to get length as it includes the padded
             % length
-            if ~entry.isTimeAmplitude
-                % count val is (length in 4 sample units) - 1
-                countVal = fix(entryData.length / ADDRESS_UNIT) - 1;
-            else
-                countVal = fix(entry.repeat / ADDRESS_UNIT) - 1;
+            % count val is (length in 4 sample units) - 1
+            count = fix(entryData.length / ADDRESS_UNIT) - 1;
+            
+            if entry.isTimeAmplitude && (count > MAX_TA_COUNT)
+                %TODO: figure-out new repeat such that repeat*length =
+                %count
+                error('Link List countVal %i is too large', count);
             end
-            if (~entry.isTimeAmplitude && countVal > ELL_ADDRESS) || ...
-                    (entry.isTimeAmplitude && countVal > ELL_TA_MAX)
-                error('Link List countVal %i is too large', countVal);
-            end
-
-            currentLength = currentLength + (countVal+1) * ADDRESS_UNIT;
-
+            
+            currentLength = currentLength + (count+1) * ADDRESS_UNIT;
+            
             % test to see if the pattern is running long and we need to trim
             % pendingLength
-
             pendingLength = expectedLength - currentLength;
-
-        end
-
-        function triggerVal = entryToTrigger(entry)
-            % handle trigger values
-            % Trigger Delay
-            %  15  14  13   12   11  10 9 8 7 6 5 4 3 2 1 0
-            % | Mode |                Delay                |
-            % Mode 0 0 = short pulse (0)
-            %      0 1 = rising edge (1)
-            %      1 0 = falling edge (2)
-            %      1 1 = no change (3)
-            % Delay = time in 4 sample increments ( 0 - 54.5 usec at max rate)
             
-            ELL_TRIGGER_DELAY      = 16383; %hex2dec('3FFF')
-            ELL_TRIGGER_MODE_SHIFT = 14;
-            TRIGGER_INCREMENT      = 4;
-
-            if entry.hasMarkerData
-                % only currently supported markerMode in hardware is 'short
-                % pulse' (0)
-                if entry.markerMode ~= 3
-                    entry.markerMode = 0;
-                end
-                triggerMode = bitand(entry.markerMode, 3);
-                triggerDelay = entry.markerDelay;
-            else
-                triggerMode = 3; % do nothing
-                triggerDelay = 0;
-            end
-
-            triggerMode = bitshift(triggerMode, ELL_TRIGGER_MODE_SHIFT);
-            triggerDelay = fix(triggerDelay / TRIGGER_INCREMENT);
-
-            triggerVal = bitand(triggerDelay, ELL_TRIGGER_DELAY);
-            triggerVal = bitor(triggerVal, triggerMode);
-        end
-
-        function [wf, banks] = convertLinkListFormat(pattern, useVarients, waveformLibrary, miniLinkRepeat)
-            aps = APSPattern;
-            if aps.verbose
-               fprintf('APS::convertLinkListFormat useVarients = %i\n', useVarients) 
-            end
-
-            if ~exist('useVarients','var') || isempty(useVarients)
-                useVarients = 1;
-            end
-
-            if ~exist('waveformLibrary','var') || isempty(waveformLibrary)
-                waveformLibrary = aps.buildWaveformLibrary(pattern, useVarients);
-            end
-
-            if ~exist('miniLinkRepeat', 'var') || isempty(miniLinkRepeat)
-                miniLinkRepeat = 0;
-            end
-
-            wf = waveformLibrary.waveforms;
-
-            curBank = 1;
-            [banks{curBank} idx] = aps.allocateBank();
-
-            for i = 1:length(pattern.linkLists)
-                linkList = aps.preprocessLL(pattern.linkLists{i});
-
-                lenLL = length(linkList);
-
-                if  lenLL > aps.max_ll_length
-                    error('Individual Link List %i exceeds APS maximum link list length', i)
-                end
-
-                % if we are going to fall off the end of the current LL
-                % bank, allocate a new one
-                if (idx + lenLL) > aps.max_ll_length
-                    banks{curBank} = aps.trimBank(banks{curBank},idx-1);
-                    curBank = curBank + 1;
-                    [banks{curBank} idx] = aps.allocateBank();
-                end
-
-                for j = 1:lenLL
-                    entry = linkList{j};
-
-                    if aps.verbose
-                        fprintf('Entry %i: key: %s length: %2i repeat: %4i \n', j, entry.key, entry.length, ...
-                            entry.repeat);
-                    end
-
-                    [offsetVal countVal] = aps.entryToOffsetCount(entry, waveformLibrary, j == 1, j == lenLL - 1);
-
-                    if isempty(offsetVal) % TAZ of count < 3, skip it
-                        continue
-                    end
-
-                    if countVal < 3
-                        fprintf('Warning entry count < 3. This causes problems with APS\n')
-                    end
-
-                    % if we are at end end of the link list entry but this is
-                    % not the last of the link list entries set the mini link
-                    % list start flag
-                    if (i < length(pattern.linkLists)) && (j == lenLL)
-                        offsetVal = bitset(offsetVal, aps.ELL_FIRST_ENTRY_BIT);   
-                    end
-
-                    if aps.verbose
-                        fprintf('\tLink List Offset: %4i Length: %4i Expanded Length: %4i TA: %i Zero:%i\n', ...
-                            bitand(offsetVal,aps.ELL_ADDRESS) * aps.ADDRESS_UNIT, ...
-                            countVal, countVal * aps.ADDRESS_UNIT, ...
-                            entry.isTimeAmplitude, entry.isZero);
-                    end
-
-                    % also need to set the LS bit on the first mini-LL
-                    % entry
-                    if idx == 1
-                        offsetVal = bitset(offsetVal, aps.ELL_FIRST_ENTRY_BIT); 
-                    end
-
-                    triggerVal = aps.entryToTrigger(entry);
-
-                    banks{curBank}.offset(idx) = uint16(offsetVal);
-                    banks{curBank}.count(idx) = uint16(countVal);
-                    banks{curBank}.trigger(idx) = uint16(triggerVal);
-
-                    % set repeat at end of LL list, unless this is the
-                    % first mini-LL, in which case we also set the repeat
-                    if j == lenLL || idx == 1
-                        repeat = uint16(miniLinkRepeat);
-                        banks{curBank}.repeat(idx) = repeat;
-                    else
-                        banks{curBank}.repeat(idx) = 0;
-                    end
-
-                    idx = idx + 1;
-                end
-            end
-
-            % trim last bank
-            banks{curBank} = aps.trimBank(banks{curBank},idx-1);
         end
         
-        % helper methods used by convertLinkListFormat
-        function [bank, idx] = allocateBank()
-            self = APSPattern;
-            bank.offset = zeros([1,self.max_ll_length],'uint16');
-            bank.count = zeros([1,self.max_ll_length],'uint16');
-            bank.trigger = zeros([1,self.max_ll_length],'uint16');
-            bank.repeat = zeros([1,self.max_ll_length],'uint16');
-            bank.length = self.max_ll_length;
-
-            idx = 1;
-        end
-
-        function bank = trimBank(bank,len)
-            self = APSPattern;
-            bank.offset = bank.offset(1:len);
-            bank.count = bank.count(1:len);
-            bank.trigger = bank.trigger(1:len);
-            bank.repeat = bank.repeat(1:len);
-            bank.length = uint16(len);
-
-            % fix the last mini-LL entry of the current bank by
-            % clearing the LL_FIRST_ENTRY bit
-            bank.offset(end) = bitset(bank.offset(end), self.ELL_FIRST_ENTRY_BIT, 0);
-        end
-
-        function splitList = preprocessLL(linkList)
-            % Perform any tasks necessary to processing a link list before
-            % the main loop. At present, this only requires breaking 'zero'
-            % entries with multiple triggers into separate entries
-            MIN_LL_ENTRY_LENGTH = 16;
-            splitList = linkList;
-
-            kk = 1; % index into splitList
-            for ii = 1:length(linkList)
-                entry = linkList{ii};
-                % split an entry only if the entry is at least twice the
-                % minimum width + 4
-                if entry.hasMarkerData && entry.isZero && length(entry.markerDelay) > 1
-                    % if the entry is too short to split, clear the marker
-                    % data
-                    if entry.repeat < 2*MIN_LL_ENTRY_LENGTH + 4
-                        entry.hasMarkerData = 0;
-                        splitList{ii} = entry;
-                        kk = kk + 1;
-                    else
-                        origLength = entry.repeat;
-                        delays = entry.markerDelay;
-                        newEntriesLength = 0;
-                        newEntries = cell(length(delays),1);
-
-                        for jj = 1:length(delays)-1
-                            newEntries{jj} = entry;
-                            % make sure the entry is at least the minimum
-                            % length (plus a little extra to avoid putting
-                            % the trigger right on the boundary)
-                            newEntries{jj}.repeat = max(delays(jj)+4, MIN_LL_ENTRY_LENGTH);
-                            % subtract the consumed length from the remaining
-                            % delay
-                            newEntries{jj}.markerDelay = delays(jj) - newEntriesLength;
-                            newEntriesLength = newEntriesLength + newEntries{jj}.repeat;
-                        end
-
-                        % the final entry has the balance of the original
-                        % length
-                        newEntries{end} = entry;
-                        newEntries{end}.repeat = origLength - newEntriesLength;
-                        newEntries{end}.markerDelay = delays(end) - newEntriesLength;
-
-                        % insert the new entries
-                        splitList = [splitList(1:kk-1); newEntries; linkList(ii+1:end)];
-                        kk = kk + length(delays);
-                    end
-                else
-                    kk = kk + 1;
-                end
+        function [triggerVal1, triggerVal2] = entryToTrigger(entry)
+            % handle trigger values
+            % APS only supports marker pulses, so convert high/low commands
+            % into pulses
+            % Delay = time in 4 sample increments
+            
+            TRIGGER_INCREMENT = 4;
+            
+            if entry.hasMarkerData
+                triggerVal1 = fix(entry.markerDelay / TRIGGER_INCREMENT);
+            else
+                triggerVal1 = 0;
             end
+            triggerVal2 = 0;
+        end
+        
+        function maxRepInterval = estimateRepInterval(linkLists)
+            %estimateRepInterval - estimates the max rep rate to support streaming of link list data
+            %  maxRepInterval = estimateRepInterval(linkLists)
+            %    linkLists - a cell array of link lists from PatternGen.build
+            
+            % Our strategy is just to look at the two longest miniLLs and
+            % return the time it takes to write the second largest LL.
+            timePerEntry = .050/4096; % measured 46ms average for 4096 entries, use 50 ms as a conservative estimate
+            
+            sortedLengths = sort(cellfun(@length, linkLists), 'descend');
+            if (sum(sortedLengths(1:2)) > APSPattern.MAX_LL_ENTRIES)
+                fprinf('WARNING: cannot fit two of the largest LinkLists in memory simultaneously. Impossible to stream without clever ordering.\n');
+            end
+            maxRepInterval = timePerEntry*sortedLengths(2);
         end
         
         function [pattern] = linkListToPattern(wf, banks)
             aps = APSPattern;
             if aps.verbose
-               fprintf('APS::linkListToPattern\n') 
+                fprintf('APS::linkListToPattern\n')
             end
             pattern = [];
             if iscell(banks)
@@ -582,18 +460,18 @@ classdef APSPattern < handle
                 else
                     bank = banks;
                 end
-
+                
                 for j = 1:bank.length
-
+                    
                     offset = bank.offset(j);
                     count = bank.count(j) + 1; % length = (count+1)*ADDRESS_UNIT
                     TA = bitand(offset, aps.ELL_TIME_AMPLITUDE) == aps.ELL_TIME_AMPLITUDE;
                     zero = bitand(offset, aps.ELL_ZERO) == aps.ELL_ZERO;
-
+                    
                     idx = aps.ADDRESS_UNIT*bitand(offset, aps.ELL_ADDRESS) + 1;
-
+                    
                     expandedCount = aps.ADDRESS_UNIT * count;
-
+                    
                     if ~TA && ~zero
                         endIdx = aps.ADDRESS_UNIT*count + idx - 1;
                         if aps.verbose
@@ -615,59 +493,65 @@ classdef APSPattern < handle
                         newPat = wf.data(idx)*ones([1, expandedCount],'int16');
                     end
                     pattern = [pattern newPat];
-                    %keyboard
                 end
             end
-        end
-
-        function [unifiedX unifiedY] = unifySequenceLibraryWaveforms(sequences)
-            unifiedX = java.util.Hashtable();
-            unifiedY = java.util.Hashtable();
-            h = waitbar(0,'Unifying Waveform Tables');
-            n = length(sequences);
-            for seq = 1:n
-                waitbar(seq/n,h);
-                sequence = sequences{seq};
-                xwaveforms = sequence.llpatx.waveforms;
-                ywaveforms = sequence.llpaty.waveforms;
-
-                xkeys = xwaveforms.keys;
-                ykeys = ywaveforms.keys;
-
-                while xkeys.hasMoreElements()
-                    key = xkeys.nextElement();
-                    if ~unifiedX.containsKey(key)
-                        unifiedX.put(key,xwaveforms.get(key));
-                    end
-                end
-
-                while ykeys.hasMoreElements()
-                    key = ykeys.nextElement();
-                    if ~unifiedY.containsKey(key)
-                        unifiedY.put(key,ywaveforms.get(key));
-                    end
-                end
-            end
-
-            close(h);
         end
         
-        function unifiedX = unifySequenceLibraryWaveformsSingle(sequences)
-            unifiedX = java.util.Hashtable();
-            n = length(sequences);
-            for seq = 1:n
-                xwaveforms = sequences{seq}.waveforms;
-
-                xkeys = xwaveforms.keys;
-
-                while xkeys.hasMoreElements()
-                    key = xkeys.nextElement();
-                    if ~unifiedX.containsKey(key)
-                        unifiedX.put(key,xwaveforms.get(key));
-                    end
-                end
-            end
-        end
-
+        
     end
+    
 end
+
+%         function splitList = preprocessLL(linkList)
+%             % Perform any tasks necessary to processing a link list before
+%             % the main loop. At present, this only requires breaking 'zero'
+%             % entries with multiple triggers into separate entries
+%             MIN_LL_ENTRY_LENGTH = 16;
+%             splitList = linkList;
+%
+%             kk = 1; % index into splitList
+%             for ii = 1:length(linkList)
+%                 entry = linkList{ii};
+%                 % split an entry only if the entry is at least twice the
+%                 % minimum width + 4
+%                 if entry.hasMarkerData && entry.isZero && length(entry.markerDelay) > 1
+%                     % if the entry is too short to split, clear the marker
+%                     % data
+%                     if entry.repeat < 2*MIN_LL_ENTRY_LENGTH + 4
+%                         entry.hasMarkerData = 0;
+%                         splitList{ii} = entry;
+%                         kk = kk + 1;
+%                     else
+%                         origLength = entry.repeat;
+%                         delays = entry.markerDelay;
+%                         newEntriesLength = 0;
+%                         newEntries = cell(length(delays),1);
+%
+%                         for jj = 1:length(delays)-1
+%                             newEntries{jj} = entry;
+%                             % make sure the entry is at least the minimum
+%                             % length (plus a little extra to avoid putting
+%                             % the trigger right on the boundary)
+%                             newEntries{jj}.repeat = max(delays(jj)+4, MIN_LL_ENTRY_LENGTH);
+%                             % subtract the consumed length from the remaining
+%                             % delay
+%                             newEntries{jj}.markerDelay = delays(jj) - newEntriesLength;
+%                             newEntriesLength = newEntriesLength + newEntries{jj}.repeat;
+%                         end
+%
+%                         % the final entry has the balance of the original
+%                         % length
+%                         newEntries{end} = entry;
+%                         newEntries{end}.repeat = origLength - newEntriesLength;
+%                         newEntries{end}.markerDelay = delays(end) - newEntriesLength;
+%
+%                         % insert the new entries
+%                         splitList = [splitList(1:kk-1); newEntries; linkList(ii+1:end)];
+%                         kk = kk + length(delays);
+%                     end
+%                 else
+%                     kk = kk + 1;
+%                 end
+%             end
+%         end
+%

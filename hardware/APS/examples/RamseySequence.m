@@ -1,6 +1,6 @@
 function RamseySequence()
 
-fixedPt = 20000;
+fixedPt = 40000;
 
 % setup PatternGen object with defaults
 pg = PatternGen(...
@@ -15,11 +15,11 @@ pg = PatternGen(...
     'bufferPadding', 24, ... % additional width of gate pulses
     'dBuffer', 4, ... % space between pulses
     'dPulseLength', 4*12, ... % pulse length, 4*12 gives a +/- 2sigma cutoff for Gaussian pulses
-    'cycleLength', 21000, ... % total length of each pulse sequence
+    'cycleLength', fixedPt+1000, ... % total length of each pulse sequence
     'linkList', true, ... % enabled for use with APS
     'dmodFrequency', 0e6); % SSB modulation frequency in Hz
 
-numsteps = 150;
+numsteps = 300;
 stepsize = 120; % 100ns steps
 delaypts = 0:stepsize:(numsteps-1)*stepsize;
 patseq = {...
@@ -43,6 +43,7 @@ plot(ch2, 'r')
 % export file Ramsey.h5
 relpath = './';
 basename = 'Ramsey';
-APSPattern.exportAPSConfig(relpath, basename, IQ_seq);
+nbrRepeats = 1;
+APSPattern.exportAPSConfig(relpath, basename, nbrRepeats, IQ_seq);
 
 end

@@ -15,12 +15,12 @@ APSRack APSRack_;
 extern "C" {
 #endif
 
-int init() {
+int init(){
 
 	APSRack_ = APSRack();
 	APSRack_.init();
 
-	return 0;
+	return APS_OK;
 }
 
 int get_numDevices(){
@@ -61,7 +61,17 @@ int serial2ID(char * deviceSerial){
 //Initialize an APS unit
 //Assumes null-terminated bitFile
 int initAPS(int deviceID, char * bitFile, int forceReload){
-	return APSRack_.initAPS(deviceID, string(bitFile), forceReload);
+	try {
+		return APSRack_.initAPS(deviceID, string(bitFile), forceReload);
+	} catch (std::exception& e) {
+		string error = e.what();
+		if (error.compare("Unable to open bitfile.") == 0) {
+			return APS_FILE_ERROR;
+		} else {
+			return APS_UNKNOWN_ERROR;
+		}
+	}
+
 }
 
 int read_bitfile_version(int deviceID) {
@@ -76,6 +86,10 @@ int get_sampleRate(int deviceID){
 	return APSRack_.get_sampleRate(deviceID);
 }
 
+int set_trigger_interval(int deviceID, double interval){
+	return APSRack_.set_trigger_interval(deviceID, interval);
+}
+
 //Load the waveform library as floats
 int set_waveform_float(int deviceID, int channelNum, float* data, int numPts){
 	return APSRack_.set_waveform(deviceID, channelNum, vector<float>(data, data+numPts));
@@ -86,8 +100,14 @@ int set_waveform_int(int deviceID, int channelNum, short* data, int numPts){
 	return APSRack_.set_waveform(deviceID, channelNum, vector<short>(data, data+numPts));
 }
 
-int load_sequence_file(int deviceID, char * seqFile){
-	return APSRack_.load_sequence_file(deviceID, string(seqFile));
+int load_sequence_file(int deviceID, const char * seqFile){
+	try {
+		return APSRack_.load_sequence_file(deviceID, string(seqFile));
+	} catch (...) {
+		return APS_UNKNOWN_ERROR;
+	}
+	// should not reach this point
+	return APS_UNKNOWN_ERROR;
 }
 
 int clear_channel_data(int deviceID) {
@@ -97,20 +117,9 @@ int clear_channel_data(int deviceID) {
 int run(int deviceID) {
 	return APSRack_.run(deviceID);
 }
+
 int stop(int deviceID) {
 	return APSRack_.stop(deviceID);
-}
-
-int trigger_FPGA_debug(int deviceID, int fpga){
-	return APSRack_.trigger_FPGA_debug(deviceID, FPGASELECT(fpga));
-}
-
-int disable_FPGA_debug(int deviceID, int fpga){
-	return APSRack_.disable_FPGA_debug(deviceID, FPGASELECT(fpga));
-}
-
-int reset_LL_banks(int deviceID, int channelNum){
-	return APSRack_.reset_LL_banks(deviceID, channelNum);
 }
 
 int get_running(int deviceID){
@@ -119,6 +128,7 @@ int get_running(int deviceID){
 
 //Expects a null-terminated character array
 int set_log(char * fileNameArr) {
+
 	string fileName(fileNameArr);
 	if (fileName.compare("stdout") == 0){
 		return APSRack_.set_log(stdout);
@@ -127,7 +137,12 @@ int set_log(char * fileNameArr) {
 		return APSRack_.set_log(stderr);
 	}
 	else{
+
 		FILE* pFile = fopen(fileName.c_str(), "a");
+		if (!pFile) {
+			return APS_FILE_ERROR;
+		}
+
 		return APSRack_.set_log(pFile);
 	}
 }
@@ -137,11 +152,15 @@ int set_logging_level(int logLevel){
 }
 
 int set_trigger_source(int deviceID, int triggerSource) {
-	return APSRack_.set_trigger_source(deviceID,triggerSource);
+	return APSRack_.set_trigger_source(deviceID, TRIGGERSOURCE(triggerSource));
 }
 
 int get_trigger_source(int deviceID) {
-	return APSRack_.get_trigger_source(deviceID);
+	return int(APSRack_.get_trigger_source(deviceID));
+}
+
+int set_miniLL_repeat(int deviceID, unsigned short repeat){
+	return APSRack_.set_miniLL_repeat(deviceID, repeat);
 }
 
 int set_channel_offset(int deviceID, int channelNum, float offset){
@@ -164,16 +183,11 @@ int get_channel_enabled(int deviceID, int channelNum){
 	return APSRack_.get_channel_enabled(deviceID, channelNum);
 }
 
-int set_channel_trigDelay(int deviceID, int channelNum, USHORT delay){
-	return APSRack_.set_channel_trigDelay(deviceID, channelNum, delay);
-}
-unsigned short get_channel_trigDelay(int deviceID, int dac){
-	return APSRack_.get_channel_trigDelay(deviceID, dac);
-}
-
-int add_LL_bank(int deviceID, int channelNum, int length, unsigned short* offset, unsigned short* count, unsigned short* repeat, unsigned short* trigger){
+int set_LL_data_IQ(int deviceID, int channelNum, int length, unsigned short* addr, unsigned short* count,
+					unsigned short* trigger1, unsigned short * trigger2, unsigned short* repeat){
 	//Convert data pointers to vectors and passed through
-	return APSRack_.add_LL_bank(deviceID, channelNum, vector<USHORT>(offset, offset+length), vector<USHORT>(count, count+length), vector<USHORT>(repeat, repeat+length), vector<USHORT>(trigger, trigger+length));
+	return APSRack_.set_LL_data(deviceID, channelNum, WordVec(addr, addr+length), WordVec(count, count+length),
+			WordVec(trigger1, trigger1+length), WordVec(trigger2, trigger2+length), WordVec(repeat, repeat+length));
 }
 
 int set_run_mode(int deviceID, int channelNum, int mode) {
@@ -199,6 +213,22 @@ int save_bulk_state_file() {
 int read_bulk_state_file() {
 	string fileName = "";
 	return APSRack_.read_bulk_state_file(fileName);
+}
+
+int raw_write(int deviceID, int numBytes, UCHAR* data){
+	return APSRack_.raw_write(deviceID, numBytes, data);
+}
+
+int raw_read(int deviceID, int fpga){
+	return APSRack_.raw_read(deviceID, FPGASELECT(fpga));
+}
+
+int read_register(int deviceID, int fpga, int addr){
+	return APSRack_.read_register(deviceID, FPGASELECT(fpga), addr);
+}
+
+int program_FPGA(int deviceID, char* bitFile, int chipSelect, int expectedVersion) {
+	return APSRack_.program_FPGA(deviceID, string(bitFile), FPGASELECT(chipSelect), expectedVersion);
 }
 
 #ifdef __cplusplus

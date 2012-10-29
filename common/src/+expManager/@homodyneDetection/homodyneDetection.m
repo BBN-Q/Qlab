@@ -99,6 +99,20 @@ classdef homodyneDetection < expManager.expBase
 			obj.homodyneDetectionDo();
         end
         function CleanUp(obj)
+            % turn off all microwave sources and stop all AWGs
+            InstrumentNames = fieldnames(obj.Instr);
+            for Instr_index = 1:numel(InstrumentNames)
+                InstrName = InstrumentNames{Instr_index};
+                DriverName = class(obj.Instr.(InstrName));
+                if isa(obj.Instr.(InstrName), 'deviceDrivers.lib.uWSource')
+                    obj.Instr.(InstrName).output = 0;
+                end
+                
+                if strcmp(DriverName, 'deviceDrivers.Tek5014') || strcmp(DriverName, 'deviceDrivers.APS')
+                    obj.Instr.(InstrName).stop();
+                end
+            end
+
             % close all instruments
             obj.closeInstruments();
 
@@ -106,7 +120,8 @@ classdef homodyneDetection < expManager.expBase
             obj.finalizeData();
         end
         %% Class destructor
-        function delete(obj) %#ok<MANU>
+        function delete(obj) 
+            obj.CleanUp();
         end
         %% error checking method
         function errorCheckExpParams(obj)

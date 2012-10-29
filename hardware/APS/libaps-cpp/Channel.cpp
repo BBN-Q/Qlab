@@ -8,9 +8,9 @@
 #include "headings.h"
 #include "Channel.h"
 
-Channel::Channel() : number{-1}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0), trigDelay_{0}{}
+Channel::Channel() : number{-1}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), trigDelay_{0}{}
 
-Channel::Channel( int number) : number{number}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), banks_(0), trigDelay_{0}{}
+Channel::Channel( int number) : number{number}, offset_{0.0}, scale_{1.0}, enabled_{false}, waveform_(0), trigDelay_{0}{}
 
 Channel::~Channel() {
 	// TODO Auto-generated destructor stub
@@ -47,7 +47,7 @@ float Channel::get_scale() const{
 
 int Channel::set_waveform(const vector<float> & data) {
 	//Check whether we need to resize the waveform vector
-	if (data.size() > size_t(MAX_WFLENGTH)){
+	if (data.size() > size_t(MAX_WF_LENGTH)){
 		FILE_LOG(logERROR) << "Tried to update waveform to longer than max allowed: " << data.size();
 		return -1;
 	}
@@ -62,7 +62,7 @@ int Channel::set_waveform(const vector<float> & data) {
 
 int Channel::set_waveform(const vector<short> & data) {
 	//Check whether we need to resize the waveform vector
-	if (data.size() > size_t(MAX_WFLENGTH)){
+	if (data.size() > size_t(MAX_WF_LENGTH)){
 		FILE_LOG(logERROR) << "Tried to update waveform to longer than max allowed: " << data.size();
 		return -1;
 	}
@@ -71,7 +71,7 @@ int Channel::set_waveform(const vector<short> & data) {
 	//Waveform length must be a integer multiple of WF_MODULUS so resize to that
 	waveform_.resize(size_t(WF_MODULUS*ceil(float(data.size())/WF_MODULUS)), 0);
 	for(size_t ct=0; ct<data.size(); ct++){
-		waveform_[ct] = float(data[ct])/MAX_WFAMP;
+		waveform_[ct] = float(data[ct])/MAX_WF_AMP;
 	}
 	return 0;
 }
@@ -80,44 +80,27 @@ vector<short> Channel::prep_waveform() const{
 	//Apply the scale,offset and covert to integer format
 	vector<short> prepVec(waveform_.size());
 	for(size_t ct=0; ct<prepVec.size(); ct++){
-		prepVec[ct] = short(MAX_WFAMP*(scale_*waveform_[ct]+offset_));
+		prepVec[ct] = short(MAX_WF_AMP*(scale_*waveform_[ct]+offset_));
 	}
 
 	//Clip to the max and min values allowed
-	if (*max_element(prepVec.begin(), prepVec.end()) > MAX_WFAMP){
+	if (*max_element(prepVec.begin(), prepVec.end()) > MAX_WF_AMP){
 		FILE_LOG(logWARNING) << "Waveform element too positive; clipping to max";
 		for(short & tmpVal : prepVec){
-			if (tmpVal > MAX_WFAMP) tmpVal = MAX_WFAMP;
+			if (tmpVal > MAX_WF_AMP) tmpVal = MAX_WF_AMP;
 		}
 	}
-	if (*min_element(prepVec.begin(), prepVec.end()) < -MAX_WFAMP){
+	if (*min_element(prepVec.begin(), prepVec.end()) < -MAX_WF_AMP){
 		FILE_LOG(logWARNING) << "Waveform element too negative; clipping to max";
 		for(short & tmpVal : prepVec){
-			if (tmpVal < -MAX_WFAMP) tmpVal = -MAX_WFAMP;
+			if (tmpVal < -MAX_WF_AMP) tmpVal = -MAX_WF_AMP;
 		}
 	}
 	return prepVec;
 }
 
-int Channel::reset_LL_banks(){
-	banks_.clear();
-	return 0;
-}
-
-int Channel::add_LL_bank(const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger){
-
-	if( (offset.size() != count.size()) || (offset.size() != repeat.size()) || (offset.size() != trigger.size())){
-		FILE_LOG(logERROR) << "All LL bank vectors must have same size.";
-		return -1;
-	}
-
-	banks_.push_back(LLBank(offset, count, repeat, trigger));
-
-	return 0;
-}
-
 int Channel::clear_data() {
-	reset_LL_banks();
+	LLBank_.clear();
 	waveform_.clear();
 	return 0;
 }
@@ -142,23 +125,23 @@ int Channel::write_state_to_hdf5(H5::H5File & H5StateFile, const string & rootSt
 	//Save the linklist data
 
 	// save number of banks to rootStr + /linkListData attribute "numBanks"
-	USHORT numBanks;
-	numBanks = banks_.size();//get number of banks from channel
-
-	// set attribute
-	FILE_LOG(logDEBUG) << "Creating Group: " << rootStr + "/linkListData";
-	tmpGroup = H5StateFile.createGroup(rootStr + "/linkListData");
-	element2h5attribute<USHORT>("numBanks",  numBanks, &tmpGroup,H5::PredType::NATIVE_UINT16);
-	tmpGroup.close();
-
-	std::ostringstream tmpStream;
-	//Now loop over the number of banks found and add the bank
-	for (USHORT bankct=0; bankct<numBanks; bankct++) {
-		tmpStream.str("");
-		tmpStream << rootStr << "/linkListData/bank" << bankct+1 ;
-		FILE_LOG(logDEBUG) << "Writing State Bank: " << bankct+1 << " from hdf5";
-		banks_[bankct].write_state_to_hdf5(H5StateFile, tmpStream.str() );
-	}
+//	USHORT numBanks;
+//	numBanks = banks_.size();//get number of banks from channel
+//
+//	// set attribute
+//	FILE_LOG(logDEBUG) << "Creating Group: " << rootStr + "/linkListData";
+//	tmpGroup = H5StateFile.createGroup(rootStr + "/linkListData");
+//	element2h5attribute<USHORT>("numBanks",  numBanks, &tmpGroup,H5::PredType::NATIVE_UINT16);
+//	tmpGroup.close();
+//
+//	std::ostringstream tmpStream;
+//	//Now loop over the number of banks found and add the bank
+//	for (USHORT bankct=0; bankct<numBanks; bankct++) {
+//		tmpStream.str("");
+//		tmpStream << rootStr << "/linkListData/bank" << bankct+1 ;
+//		FILE_LOG(logDEBUG) << "Writing State Bank: " << bankct+1 << " from hdf5";
+//		banks_[bankct].write_state_to_hdf5(H5StateFile, tmpStream.str() );
+//	}
 	return 0;
 }
 
@@ -189,7 +172,7 @@ int Channel::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootS
 		tmpStream << "/linkListData/bank" << bankct+1;
 		FILE_LOG(logDEBUG) << "Reading State Bank: " << bankct+1 << " from hdf5";
 		bank.read_state_from_hdf5( H5StateFile, tmpStream.str());
-		banks_.push_back(bank);
+//		banks_.push_back(bank);
 	}
 	return 0;
 }

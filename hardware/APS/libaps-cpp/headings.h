@@ -30,9 +30,8 @@ using std::endl;
 using std::map;
 using std::runtime_error;
 
-//std::thread
 #include <thread>
-using std::thread;
+#include <mutex>
 #include <chrono>
 
 
@@ -80,6 +79,9 @@ struct CheckSum {
 
 //PLL routines go through sets of address/data pairs
 typedef std::pair<ULONG, UCHAR> PLLAddrData;
+
+//some vectors
+typedef vector<unsigned short> WordVec;
 
 //Load all the constants
 #include "constants.h"
@@ -175,6 +177,14 @@ T h5element2element(const string & name, const H5::Group * group, const H5::Data
 	FILE_LOG(logDEBUG) << "Reading Attribute: " << name << " = " << element;
 	return element;
 }
+
+inline int mymod(int a, int b) {
+	int c = a % b;
+	if (c < 0)
+		c += b;
+	return c;
+}
+
 #endif /* HEADINGS_H_ */
 
 

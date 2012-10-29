@@ -38,10 +38,11 @@ public:
 
 	int run(const int &);
 	int stop(const int &);
-	int trigger_FPGA_debug(const int &, const FPGASELECT &);
-	int disable_FPGA_debug(const int &, const FPGASELECT &);
-	int set_trigger_source(const int &, const int &);
-	int get_trigger_source(const int &) const;
+	int set_trigger_source(const int &, const TRIGGERSOURCE &);
+	TRIGGERSOURCE get_trigger_source(const int &) const;
+	int set_trigger_interval(const int &, const double &);
+
+	int set_miniLL_repeat(const int &, const USHORT &);
 
 	int get_sampleRate(const int &) const;
 	int set_sampleRate(const int &, const int &);
@@ -52,9 +53,6 @@ public:
 	float get_channel_scale(const int &, const int &) const;
 	int set_channel_enabled(const int &, const int &, const bool &);
 	bool get_channel_enabled(const int &, const int &) const;
-
-	int set_channel_trigDelay(const int &, const int &, const USHORT &);
-	unsigned short get_channel_trigDelay(const int &, const int &);
 
 	int get_running(const int &);
 
@@ -70,8 +68,8 @@ public:
 	int set_run_mode(const int &, const int &, const RUN_MODE &);
 	int set_repeat_mode(const int &, const int &, const bool & mode);
 
-	int add_LL_bank(const int &, const int &, const vector<USHORT> &, const vector<USHORT> &, const vector<USHORT> &, const vector<USHORT> &);
-	int reset_LL_banks(const int &, const int &);
+	int set_LL_data(const int &, const int &, const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
+	int set_LL_data(const int &, const int &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 
 	int load_sequence_file(const int &, const string &);
 
@@ -79,6 +77,10 @@ public:
 	int read_state_files();
 	int save_bulk_state_file(string & );
 	int read_bulk_state_file(string & );
+
+	int raw_write(int, int, UCHAR*);
+	int raw_read(int, FPGASELECT);
+	int read_register(int, FPGASELECT, int);
 
 private:
 	int numDevices_;

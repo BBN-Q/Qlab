@@ -28,7 +28,8 @@ classdef MixerOptimizer < expManager.expBase
         sa % spectrum analyzer
         specgen % the LO source of the mixer to calibrate
         awg % the AWG driving the I/Q ports of the mixer
-        cfg_path;
+        channelParams
+        qubit
         costFunctionGoal = -70;
         testMode = false
         optimMode = 'sweep' %optimize by naive sweeping ('sweep') or clever searching ('search')
@@ -36,20 +37,34 @@ classdef MixerOptimizer < expManager.expBase
     
     methods
         % constructor
-        function obj = MixerOptimizer(cfg_file_path)
+        function obj = MixerOptimizer(cfg_file_path, qubit)
             if ~exist('cfg_file_path', 'var')
-                cfg_file_path = '../../cfg/optimize_mixer.cfg';
+                cfg_file_path = fullfile(getpref('qlab', 'cfgDir'),'optimize_mixer.json');
             end
             % call super class
             obj = obj@expManager.expBase('optimize_mixer', '', cfg_file_path, 1);
-            obj.cfg_path = fileparts(cfg_file_path);
-            
-            % load config
-            obj.parseExpcfgFile();
+            obj.qubit = qubit;
         end
         
         %% class methods
         function Init(obj)
+            % load config
+            obj.parseExpcfgFile();
+            timeDomainCfg = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'),'TimeDomain.json'));
+            
+            % pull in more configuration data from TimeDomain.json based
+            % upon the requested logical channel in the Qubit2ChannelMap
+            channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+            assert(isfield(channelMap, obj.qubit), 'Qubit %s not found in channel map', obj.qubit);
+            obj.channelParams = channelMap.(obj.qubit);
+            % grab the AWG
+            obj.inputStructure.InstrParams.AWG = timeDomainCfg.InstrParams.(obj.channelParams.awg);
+            % grab the uW source
+            obj.inputStructure.InstrParams.Specgen = timeDomainCfg.InstrParams.(obj.channelParams.source);
+            % grab AWG channels for mixer I and Q
+            obj.inputStructure.ExpParams.Mixer.I_channel = obj.channelParams.i;
+            obj.inputStructure.ExpParams.Mixer.Q_channel = obj.channelParams.q;
+            
             obj.errorCheckExpParams();
             obj.openInstruments();
             obj.initializeInstruments();
@@ -62,6 +77,10 @@ classdef MixerOptimizer < expManager.expBase
                 obj.sa = obj.Instr.spectrum_analyzer;
                 obj.specgen = obj.Instr.Specgen;
                 obj.awg = obj.Instr.AWG;
+                
+                % turn modulation off on Specgen
+                obj.specgen.mod = 0;
+                obj.specgen.pulse = 0;
             end
         end
         function Do(obj)
@@ -89,8 +108,20 @@ classdef MixerOptimizer < expManager.expBase
             obj.sa.sweep();
             obj.sa.peakAmplitude();
 
-            % save transformation and offsets to file
-            save([obj.cfg_path '/mixercal.mat'], 'i_offset', 'q_offset', 'T', '-v7.3');
+            % update transformation matrix T in pulse param file
+            params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+            params.(obj.channelParams.IQkey).T = T;
+            FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'w'); 
+            fprintf(FID, '%s', jsonlab.savejson('',params));
+            fclose(FID);
+            
+            % update i and q offsets in TimeDomain
+            params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'));
+            params.InstrParams.(obj.channelParams.awg).(sprintf('chan_%d', obj.channelParams.i)).offset = i_offset;
+            params.InstrParams.(obj.channelParams.awg).(sprintf('chan_%d', obj.channelParams.q)).offset = q_offset;
+            FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'),'wt'); %open in text mode
+            fprintf(FID, '%s', jsonlab.savejson('',params));
+            fclose(FID);
             
             %Print out a summary for the notebook
             fprintf('\nSummary:\n');
@@ -149,6 +180,9 @@ classdef MixerOptimizer < expManager.expBase
                     obj.awg.(['chan_' num2str(awg_Q_channel)]).skew = 0;
                     obj.awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
                     obj.awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
+                    
+                    obj.awg.run();
+                    obj.awg.operationComplete();
                 case 'deviceDrivers.APS'
 
                     obj.awg.stop();

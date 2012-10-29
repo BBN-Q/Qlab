@@ -137,7 +137,12 @@ end
 %% DRAG calibration    
 if ExpParams.DoDRAGCal
     % generate DRAG calibration sequence
-    [filenames, nbrSegments] = obj.APEChannelSequence(ExpParams.Qubit);
+    if isfield(ExpParams,'DRAGparams')
+        deltas = ExpParams.DRAGparams(:);
+    else
+        deltas = linspace(-2,0,11)';
+    end
+    [filenames, nbrSegments] = obj.APEChannelSequence(ExpParams.Qubit, deltas);
     obj.loadSequence(filenames);
 
     % measure
@@ -145,7 +150,6 @@ if ExpParams.DoDRAGCal
 
     % analyze for the best value to two digits
     numPsQId = 8; % number pseudoidentities
-    deltas = linspace(-2,0,11)';
     
     obj.pulseParams.delta = round(100*obj.analyzeSlopes(data, numPsQId, deltas))/100;
     
@@ -182,6 +186,7 @@ end
 
 %% Save updated parameters to file
 
+%First the pulse parameters
 % Load the previous parameters from file
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
 
@@ -190,18 +195,25 @@ params.(ExpParams.Qubit).piAmp = obj.pulseParams.piAmp;
 params.(ExpParams.Qubit).pi2Amp = obj.pulseParams.pi2Amp;
 params.(ExpParams.Qubit).delta = obj.pulseParams.delta;
 
-IQchannels = obj.channelMap.(obj.ExpParams.Qubit);
-IQkey = IQchannels.IQkey;
+channelMap = obj.channelMap.(obj.ExpParams.Qubit);
+IQkey = channelMap.IQkey;
 
 params.(IQkey).T = obj.pulseParams.T;
 
-FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'wt'); %open in text mode
-fprintf(FID, jsonlab.savejson('',params));
+FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'w'); 
+fprintf(FID, '%s', jsonlab.savejson('',params));
 fclose(FID);
 
-% TODO: save I/Q offsets
+%Now the offsets
+params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'));
+params.InstrParams.(channelMap.awg).(sprintf('chan_%d', channelMap.i)).offset = obj.pulseParams.i_offset;
+params.InstrParams.(channelMap.awg).(sprintf('chan_%d', channelMap.q)).offset = obj.pulseParams.q_offset;
+FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'),'wt'); %open in text mode
+fprintf(FID, '%s', jsonlab.savejson('',params));
+fclose(FID);
 
-% for now, just display the results
+
+% Display the final results
 obj.pulseParams
 
 end

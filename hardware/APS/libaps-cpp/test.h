@@ -9,6 +9,7 @@ namespace test {
 	void doToggleTest();
 
 	void programSquareWaves();
+	void streaming();
 	void doBulkStateFileTest();
 	void doStateFilesTest();
 

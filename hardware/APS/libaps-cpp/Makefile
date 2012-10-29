@@ -63,10 +63,12 @@ ifeq ($(target), 32)
 	LIBS += -lftd2xx_32 -lhdf5_cpp_32 -lhdf5_32
 	LIBFLAGS=-shared -o libaps.dll
 	TESTLIBS += -laps
+	TESTOBJS = libaps.$(OBJEXT)
 else
 	LIBS += -lftd2xx -lhdf5_cpp -lhdf5
 	LIBFLAGS=-shared -o libaps64.dll
 	TESTLIBS += -laps64
+	TESTOBJS = libaps.$(OBJEXT)
 endif
 
 endif
@@ -88,8 +90,8 @@ libaps: $(OBJECTS) libaps.cpp
 %.$(OBJEXT):%.cpp %.h headings.h
 	$(CC) $(CFLAGS) $(OBJFLAGS) $<
 
-test: $(OBJECTS) test.cpp
-	$(CC) $(CFLAGS) -o test test.cpp $(OBJECTS) $(LIBS) $(TESTLIBS)	
+test: $(OBJECTS) $(TESTOBJS) test.cpp
+	$(CC) $(CFLAGS) -o test test.cpp $(OBJECTS) $(TESTOBJS) $(LIBS)
 
 clean:
 	rm -f *.$(OBJEXT)

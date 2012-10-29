@@ -11,26 +11,36 @@
 #define LLBANK_H_
 
 
-//An individual bank of a LL
+//An individual bank of a LL for a single channel
 class LLBank {
 public:
 	LLBank();
-	LLBank(const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &, const vector<unsigned short> &);
+	LLBank(const WordVec &, const WordVec &, const WordVec &, const WordVec &);
+	LLBank(const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 	~LLBank();
 
-	size_t length;
+	void clear();
 
-	vector<ULONG> get_packed_data();
+	size_t length;
+	bool IQMode;
+	size_t numMiniLLs;
+	WordVec miniLLLengths;
+	WordVec miniLLStartIdx;
+
+	WordVec get_packed_data(const size_t &, const size_t &);
 
 	int write_state_to_hdf5(  H5::H5File & , const string & );
 	int read_state_from_hdf5( H5::H5File & , const string & );
 
+
 private:
-	vector<unsigned short> offset_;
-	vector<unsigned short> count_;
-	vector<unsigned short> repeat_;
-	vector<unsigned short> trigger_;
-	vector<UCHAR> packedBank_;
+	WordVec addr_;
+	WordVec count_;
+	WordVec repeat_;
+	WordVec trigger1_;
+	WordVec trigger2_;
+	WordVec packedData_;
+	void init_data();
 };
 
-#endif /* LLBank_H_ */
+#endif /* LLBANK_H_ */

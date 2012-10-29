@@ -98,15 +98,19 @@ for IQkey = channelNames
         end
         
         awgChannels(IQkey) = {chI, chQ};
-        awgChannels(bufferIQkey) = chBuffer;
+        if isempty(awgChannels(bufferIQkey))
+            awgChannels(bufferIQkey) = chBuffer;
+        else
+            awgChannels(bufferIQkey) = awgChannels(bufferIQkey) | chBuffer;
+        end
     else % otherwise, we are constructing a link list
         IQ_seq = cell(nbrPatterns+calPatterns, 1);
         % decide whether to buffer on a TekAWG or on an APS
-        if strcmpi(IQkey(1:3), 'tek')
+        if strcmpi(bufferIQkey(1:3), 'tek')
             chBuffer = zeros(numSegments, seqParams.cycleLength, 'uint8');
             gated = false;
         else
-            gated = false; % turn me back on when I work!
+            gated = true;
         end
         for n = 1:nbrPatterns;
             IQ_seq{n} = pg.build(patseq{n}, seqParams.numSteps, ChParams.delay, seqParams.fixedPt, gated);
@@ -136,7 +140,13 @@ for IQkey = channelNames
         end
         
         awgChannels(IQkey) = IQ_seq;
-        if ~gated, awgChannels(bufferIQkey) = chBuffer; end
+        if ~gated
+            if isempty(awgChannels(bufferIQkey))
+                awgChannels(bufferIQkey) = chBuffer;
+            else
+                awgChannels(bufferIQkey) = awgChannels(bufferIQkey) | chBuffer;
+            end
+        end
     end
 end
 
@@ -201,10 +211,10 @@ for awg = awgs
         movefile([tempdir basename '.awg'], pathAWG);
         
         if makePlot
-            plot(ch12{1}(plotIdx,:), plotColors{ 1+mod(colorIdx, length(plotColors)) });
-            plot(ch12{2}(plotIdx,:), plotColors{ 1+mod(colorIdx+1, length(plotColors)) });
-            plot(ch34{1}(plotIdx,:), plotColors{ 1+mod(colorIdx+2, length(plotColors)) });
-            plot(ch34{2}(plotIdx,:), plotColors{ 1+mod(colorIdx+3, length(plotColors)) });
+            plot(ch12{1}(plotIdx,:)-8192, plotColors{ 1+mod(colorIdx, length(plotColors)) });
+            plot(ch12{2}(plotIdx,:)-8192, plotColors{ 1+mod(colorIdx+1, length(plotColors)) });
+            plot(ch34{1}(plotIdx,:)-8192, plotColors{ 1+mod(colorIdx+2, length(plotColors)) });
+            plot(ch34{2}(plotIdx,:)-8192, plotColors{ 1+mod(colorIdx+3, length(plotColors)) });
             colorIdx = colorIdx + 4;
             plot(5000*int32(ch1m1(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx, length(markerPlotColors)) });
             plot(5000*int32(ch1m2(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+1, length(markerPlotColors)) });
@@ -245,6 +255,7 @@ for awg = awgs
             [patx, paty] = pg.linkListToPattern(ch12seq, 1+mod(plotIdx-1, length(ch12seq.linkLists)));
             plot(patx, plotColors{ 1+mod(colorIdx, length(plotColors)) });
             plot(paty, plotColors{ 1+mod(colorIdx+1, length(plotColors)) });
+            pg = patternDict([awg '_34']).pg;
             [patx, paty] = pg.linkListToPattern(ch34seq, 1+mod(plotIdx-1, length(ch34seq.linkLists)));
             plot(patx, plotColors{ 1+mod(colorIdx+2, length(plotColors)) });
             plot(paty, plotColors{ 1+mod(colorIdx+3, length(plotColors)) });

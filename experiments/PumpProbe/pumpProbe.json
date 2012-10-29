@@ -1,0 +1,20 @@
+{
+    "InstrParams": {
+        "dcbias": {
+            "deviceName": "Agilent33220A",
+            "Address": "128.33.89.13"
+        },
+        "na": {
+            "deviceName": "AgilentE8363C",
+            "Address": "128.33.89.39",
+            "averaging": "on",
+            "average_counts": 500
+        },
+        "source": {
+            "deviceName": "AgilentN5183A",
+            "Address": "128.33.89.217",
+            "output": 1
+        }
+    },
+    "SoftwareDevelopmentMode": 0
+}

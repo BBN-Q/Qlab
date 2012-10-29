@@ -6,7 +6,7 @@ function [get_settings_fcn, set_settings_fcn] = APS_settings_GUI(parent, name, s
 
 pmval_to_sample_rate = [1200,600,300,100,40];
 trigSourceMap = containers.Map({'External','Internal'}, {'external', 'internal'});
-previousConfigFile = '';
+previousConfigFile = 'dummy';
 
 % Initialize handles structure
 handles = struct();
@@ -22,10 +22,9 @@ if nargin < 1
         'NumberTitle', 'off', ...
         'Color', get(0,'DefaultUicontrolBackgroundColor'));
 
-    name = ['BBN APS settings'];
+    name = 'BBNAPS';
 else
     handles.parent = parent;
-    name = [name ' settings'];
 end
 
 % Create all UI controls
@@ -50,8 +49,11 @@ set_settings_fcn = @set_GUI_fields;
         
         tmpVBox_main = uiextras.VBox('Parent', handles.mainPanel, 'Spacing', 5);
         
-        handles.enable = uicontrol('Parent', tmpVBox_main, 'Style', 'checkbox', 'FontSize', 10, 'String', 'Enable');
-        
+        tmpHBox0 = uiextras.HBox('Parent', tmpVBox_main, 'Spacing', 5);
+
+        handles.enable = uicontrol('Parent', tmpHBox0, 'Style', 'checkbox', 'FontSize', 10, 'String', 'Enable');
+        handles.isMaster = uicontrol('Parent', tmpHBox0, 'Style', 'checkbox', 'FontSize', 10, 'String', 'Master');
+
         tmpHBox_top = uiextras.HBox('Parent', tmpVBox_main, 'Spacing', 5);
         
         tmpVBox1 = uiextras.VBox('Parent', tmpHBox_top, 'Spacing', 5);
@@ -77,6 +79,15 @@ set_settings_fcn = @set_GUI_fields;
         handles.ch3off = uicontrol('Parent', tmpHBox3, editBoxParams{:});
         handles.ch4off = uicontrol('Parent', tmpHBox3, editBoxParams{:});
         
+        %Setup a file system watcher for TimeDomain parameters and update
+        %the offsets
+        cfgFileWatcher = System.IO.FileSystemWatcher();
+        cfgFileWatcher.Path = getpref('qlab','cfgDir');
+        cfgFileWatcher.Filter = 'TimeDomain.json';
+        cfgFileWatcher.EnableRaisingEvents = true;
+        cfgFileListener = addlistener(cfgFileWatcher, 'Changed', @updateOffsets);
+        set(handles.ch1off, 'DeleteFcn', @(~,~) delete(cfgFileListener));
+     
         tmpHBox4 = uiextras.HButtonBox('Parent', tmpVBox1, 'Spacing', 5, 'ButtonSize', [50,25]);
         uiextras.Empty('Parent', tmpHBox4);
         radioButtonParams = {'Style', 'radiobutton', 'FontSize', 10, 'Parent', tmpHBox4, 'String', 'On'};
@@ -86,7 +97,7 @@ set_settings_fcn = @set_GUI_fields;
         handles.ch4enable = uicontrol(radioButtonParams{:});
         
         tmpVBox2 =  uiextras.VBox('Parent', tmpHBox_top, 'Spacing', 5);
-        [~, ~, handles.triggerSource] = uiextras.labeledPopUpMenu(tmpVBox2, 'Scale Mode:', 'triggerSource',  {'External','Internal'});
+        [~, ~, handles.triggerSource] = uiextras.labeledPopUpMenu(tmpVBox2, 'Trigger Source:', 'triggerSource',  {'External','Internal'});
         [~, ~, handles.samplingRate] = uiextras.labeledPopUpMenu(tmpVBox2, 'Samp. Rate:', 'samplingRate', {'1.2 GHz'; '600 MHz'; '300 MHz'; '100 MHz'; '40 MHz'});
         [~, ~, handles.devID] = uiextras.labeledEditBox(tmpVBox2, 'Device ID:', 'devID', '');
         
@@ -117,13 +128,22 @@ set_settings_fcn = @set_GUI_fields;
 
     function update_seqfile_callback(~,~)
         %Point the FileSystemWatcher to the new file
-        [path, name, ext] = fileparts(get(handles.seqfile, 'String'));
+        [path, fileName, ext] = fileparts(get(handles.seqfile, 'String'));
         handles.seqFileWatcher.Path = path;
-        handles.seqFileWatcher.Filter = [name, ext];
+        handles.seqFileWatcher.Filter = [fileName, ext];
         handles.seqFileWatcher.EnableRaisingEvents = true;
         %Update the force loader checkbox
         set(handles.seqforce, 'Value', true);
     end
+
+    function updateOffsets(~,~)
+        params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'));
+        for ct = 1:4
+            channelOffset = params.InstrParams.(name).(['chan_' num2str(ct)]).offset;
+            set(handles.(['ch' num2str(ct) 'off']), 'String', channelOffset);
+        end
+    end
+
 
     function selected = get_selected(hObject)
         menu = get(hObject,'String');
@@ -146,6 +166,7 @@ set_settings_fcn = @set_GUI_fields;
         settings = struct();
         
         settings.enable = get(handles.enable, 'Value');
+        settings.isMaster = get(handles.isMaster, 'Value');
         settings.deviceName = 'APS';
         settings.Address = get(handles.devID, 'String');
         
@@ -177,6 +198,7 @@ set_settings_fcn = @set_GUI_fields;
         % defaults from it
         defaults = struct();
         defaults.enable = 0;
+        defaults.isMaster = 0;
         defaults.Address = 0;
         for i = 1:4
             channel = ['chan_' num2str(i)];
@@ -192,12 +214,13 @@ set_settings_fcn = @set_GUI_fields;
         if ~isempty(fieldnames(settings))
             fields = fieldnames(settings);
             for i = 1:length(fields)
-                name = fields{i};
-                defaults.(name) = settings.(name);
+                tmpName = fields{i};
+                defaults.(tmpName) = settings.(tmpName);
             end
         end
         
         set(handles.enable, 'Value', defaults.enable);
+        set(handles.isMaster, 'Value', defaults.isMaster);
         set(handles.devID, 'String', num2str(defaults.Address));
         for i = 1:4
             channel = ['chan_' num2str(i)];

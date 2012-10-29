@@ -25,11 +25,8 @@ function [iavg, qavg] = homodyneMeasure(scope, DHsettings, displayScope)
     end
     
     % set the card to acquire
-    success = scope.acquire();
-    if success ~= 0
-        error('failed to start acquisition');
-    end
-
+    scope.acquire();
+    
     success = scope.wait_for_acquisition();
     if success ~= 0
         error('failed to acquire waveform')

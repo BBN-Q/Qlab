@@ -1,0 +1,46 @@
+{
+	"cfg_file_name": "optimize_mixer.json",
+	"InstrParams": {
+		"spectrum_analyzer": {
+			"enable": 1,
+			"deviceName": "HP71000",
+			"Address": 18
+		}
+	},
+	"ExpParams": {
+		"SpecAnalyzer": {
+			"span": 100000,
+			"resolution_bw": 10000,
+			"sweep_points": 20
+		},
+		"Search": {
+			"max_offset": 0.5,
+			"max_steps": 50,
+			"min_step_size": 0.001,
+			"power_threshold": 2,
+			"distance_threshold": 0.002,
+			"local_search": 0
+		},
+		"SSBAWGFile": "U:\\AWG\\MixerCal\\MixerCal.awg",
+		"SSBFreq": 10000000,
+		"Sweep": {
+			"offset": {
+				"start": -0.5,
+				"stop": 0.5,
+				"numPoints": 50
+			},
+			"ampFactor": {
+				"start": 0.85,
+				"stop": 1.15,
+				"numPoints": 50
+			},
+			"phaseSkew": {
+				"start": -10,
+				"stop": 10,
+				"numPoints": 50
+			}
+		}
+	},
+	"verbose": 0,
+	"SoftwareDevelopmentMode": 0
+}

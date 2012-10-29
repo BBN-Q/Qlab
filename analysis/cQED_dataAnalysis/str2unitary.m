@@ -35,7 +35,7 @@ switch strIn
     case '1QZ90'
         Uout = expm(-1i*(pi/4)*Z);
     case 'Id'
-        Uout = speye(4);
+        Uout = eye(4);
     case 'XI'
         Uout = expm(-1i*kron(X,I)*pi/2);
     case 'IX'

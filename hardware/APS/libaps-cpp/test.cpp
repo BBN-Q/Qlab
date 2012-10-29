@@ -38,6 +38,16 @@ void test::programSquareWaves() {
 	if (pulseMem) free(pulseMem);
 }
 
+void test::streaming() {
+	set_trigger_interval(0, 0.0001);
+	load_sequence_file(0, "U:\\APS\\Ramsey-Streaming.h5");
+	set_channel_enabled(0, 0, 1);
+	set_run_mode(0, 0, 1);
+	run(0);
+	Sleep(10000);
+	stop(0);
+}
+
 void test::doBulkStateFileTest() {
 	programSquareWaves();
 
@@ -89,7 +99,12 @@ void test::doToggleTest() {
 
 	programSquareWaves();
 
-	set_trigger_source(0,SOFTWARE_TRIGGER);
+	set_trigger_source(0,0);
+
+	//Enable all channels
+	for (int ct=0; ct<4; ct++){
+		set_channel_enabled(0, ct, 1);
+	}
 
 	ask = 1;
 	cout << "Cmd: [t]rigger [d]isable e[x]it: ";
@@ -101,20 +116,17 @@ void test::doToggleTest() {
 
 		case 'T':
 			printf("Triggering");
-			trigger_FPGA_debug(0, 0);
-			trigger_FPGA_debug(0, 2);
+			run(0);
 			break;
 
 		case 'D':
 			printf("Disabling");
-			disable_FPGA_debug(0,0);
-			disable_FPGA_debug(0,2);
+			stop(0);
 			break;
 
 		case 'X':case 'x':
 			printf("Exiting\n");
-			disable_FPGA_debug(0,0);
-			disable_FPGA_debug(0,2);
+			stop(0);
 			ask = 0;
 			continue;
 		case '\r':
@@ -158,7 +170,7 @@ void test::doStoreLoadTest() {
 
 	printf("Triggering:\n");
 
-	set_trigger_source(0,SOFTWARE_TRIGGER);
+	set_trigger_source(0, 0);
 	run(0);
 
 	printf("Press key:\n");
@@ -174,6 +186,7 @@ void test::printHelp(){
 	cout << spacing << "-b  <bitfile> Path to bit file" << endl;
 	cout << spacing << "-t  Toggle Test" << endl;
 	cout << spacing << "-w  Run Waveform StoreLoad Tests" << endl;
+	cout << spacing << "-stream LL Streaming Test" << endl;
 	cout << spacing << "-bf Run Bulk State File Test" << endl;
 	cout << spacing << "-sf Run  State File Test" << endl;
 	cout << spacing << "-d  Used default DACII bitfile" << endl;
@@ -202,7 +215,9 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
 
 int main(int argc, char** argv) {
 
-	set_logging_level(logDEBUG);
+	int err;
+
+	set_logging_level(logDEBUG1);
 
 	if (cmdOptionExists(argv, argv + argc, "-h")) {
 		test::printHelp();
@@ -212,12 +227,12 @@ int main(int argc, char** argv) {
 	string bitFile = getCmdOption(argv, argv + argc, "-b");
 
 	if (cmdOptionExists(argv, argv + argc, "-d")) {
-		bitFile = "../../../common/src/+deviceDrivers/@APS/mqco_dac2_latest.bit";
+		bitFile = "../bitfiles/mqco_dac2_latest";
 	}
 
 
 	if (bitFile.length() == 0) {
-		bitFile = "../../../common/src/+deviceDrivers/@APS/mqco_aps_latest.bit";
+		bitFile = "../bitfiles/mqco_aps_latest";
 	}
 
 	cout << "Programming using: " << string(bitFile) << endl;
@@ -233,20 +248,34 @@ int main(int argc, char** argv) {
 	//Connect to device
 	connect_by_ID(0);
 
-	initAPS(0, const_cast<char*>(bitFile.c_str()), false);
+	err = initAPS(0, const_cast<char*>(bitFile.c_str()), true);
 
-	vector<float> waveform(0);
-
-	for(int ct=0; ct<1000;ct++){
-		waveform.push_back(float(ct)/1000);
+	if (err != APS_OK) {
+		cout << "Error initializing APS Rack: " << err << endl;
+		exit(-1);
 	}
 
-	set_waveform_float(0, 0, &waveform.front(), waveform.size());
+//	vector<float> waveform(0);
+//
+//	for(int ct=0; ct<1000;ct++){
+//		waveform.push_back(float(ct)/1000);
+//	}
+
+//	stop(0);
+//	set_waveform_float(0, 0, &waveform.front(), waveform.size());
+//	set_run_mode(0, 0, 0);
+//	run(0);
+//	Sleep(1);
+//	stop(0);
 
 	// select test to run
 
 	if (cmdOptionExists(argv, argv + argc, "-wf")) {
 		test::programSquareWaves();
+	}
+
+	if (cmdOptionExists(argv, argv + argc, "-stream")) {
+		test::streaming();
 	}
 
 	if (cmdOptionExists(argv, argv + argc, "-t")) {

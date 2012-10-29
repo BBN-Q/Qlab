@@ -3,8 +3,6 @@ function [get_settings_fcn, set_settings_fcn] = AWGSequenceSweepGUI(parent, name
 % Initialize handles structure
 handles = struct();
 
-AWGNameList = {'TekAWG','BBNAPS','Both'};
-
 % if there is no parent figure given, generate one
 if nargin < 1 
 	handles.parent = figure( ...
@@ -44,14 +42,12 @@ set_settings_fcn = @set_GUI_fields;
         uicontrol(textParams{:}, 'String', 'Start');
         uicontrol(textParams{:}, 'String', 'Stop');
         uicontrol(textParams{:}, 'String', 'File Name');
-        uicontrol(textParams{:}, 'String', 'AWG');
         
         tmpHBox2 = uiextras.HButtonBox('Parent', tmpVBox, 'Spacing', 5, 'VerticalAlignment', 'top');
         editParams = {'Parent', tmpHBox2, 'Style', 'edit', 'BackgroundColor', [1, 1, 1], 'FontSize', 10};
         handles.start = uicontrol(editParams{:}, 'String', 1);
         handles.stop = uicontrol(editParams{:}, 'String', 1);
         handles.sequenceFile = uicontrol(editParams{:}, 'String', '\RB\RBTekAWG12_');
-        handles.AWGName = uicontrol('Parent', tmpHBox2, 'Style', 'popupmenu', 'String', AWGNameList, 'BackgroundColor', [1, 1, 1], 'FontSize', 10);
         
         %Try and patch up the sizing
         tmpVBox.Sizes = [-1, -1];
@@ -71,7 +67,6 @@ set_settings_fcn = @set_GUI_fields;
 		settings.stop = get_numeric(handles.stop);
         settings.step = 1;
         settings.sequenceFile =  get(handles.sequenceFile, 'String');
-        settings.AWGName = AWGNameList{get(handles.AWGName,'Value')}; 
     end
 
     function set_GUI_fields(settings)
@@ -80,7 +75,7 @@ set_settings_fcn = @set_GUI_fields;
         defaults.start = 1;
         defaults.step = 1;
         defaults.stop = 1;
-        defaults.sequenceFile = '\RB\RBTekAWG12_';
+        defaults.sequenceFile = '\';
         
         if ~isempty(fieldnames(settings))
 			fields = fieldnames(settings);
@@ -93,7 +88,6 @@ set_settings_fcn = @set_GUI_fields;
         set(handles.start,'String',num2str(defaults.start));
         set(handles.stop,'String',num2str(defaults.stop));
         set(handles.sequenceFile, 'String', defaults.sequenceFile);
-        set(handles.AWGName, 'Value', 1);
     end
 
 end

@@ -2,7 +2,7 @@ function rhoWizard = WizardTomo_(rhoRAW, num)
 % Jay Gambetta and John Smolin 
 %this function allpies Wizard tomography to the state matrix of num qubits 
     
-    jerrydogyfactor = trace(rhoRAW)
+    jerrydogyfactor = trace(rhoRAW);
     rhoRAW=rhoRAW/jerrydogyfactor;
     rhoWizard=  zeros(2^num,2^num);  
     [u,v]=eig(rhoRAW);

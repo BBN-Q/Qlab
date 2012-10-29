@@ -59,7 +59,7 @@ void APSRack::enumerate_devices() {
 	size_t devicect = 0;
 	for (string tmpSerial : deviceSerials_) {
 		serial2dev[tmpSerial] = devicect;
-		APSs_.push_back(APS(devicect, tmpSerial));
+		APSs_.emplace_back(devicect, tmpSerial);
 		FILE_LOG(logDEBUG) << "Device " << devicect << " has serial number " << tmpSerial;
 		devicect++;
 	}
@@ -123,28 +123,20 @@ int APSRack::stop(const int & deviceID) {
 	return APSs_[deviceID].stop();
 }
 
-int APSRack::trigger_FPGA_debug(const int & deviceID, const FPGASELECT & fpga){
-	return APSs_[deviceID].trigger(fpga);
-}
-
-int APSRack::disable_FPGA_debug(const int & deviceID, const FPGASELECT & fpga){
-	return APSs_[deviceID].disable(fpga);
-}
-
 int APSRack::load_sequence_file(const int & deviceID, const string & seqFile){
 	return APSs_[deviceID].load_sequence_file(seqFile);
 }
 
-int APSRack::add_LL_bank(const int & deviceID, const int & channelNum, const vector<USHORT> & offset, const vector<USHORT> & count, const vector<USHORT> & repeat, const vector<USHORT> & trigger){
-	return APSs_[deviceID].add_LL_bank(channelNum, offset, count, repeat, trigger);
-}
-
-int APSRack::reset_LL_banks(const int & deviceID, const int & channelNum){
-	return APSs_[deviceID].channels_[channelNum].reset_LL_banks();
+int APSRack::set_LL_data(const int & deviceID, const int & channelNum, const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat){
+	return APSs_[deviceID].set_LLData_IQ(dac2fpga(channelNum), addr, count, trigger1, trigger2, repeat);
 }
 
 int APSRack::get_running(const int & deviceID){
 	return APSs_[deviceID].running_;
+}
+
+int APSRack::set_trigger_interval(const int & deviceID, const double & interval){
+	return APSs_[deviceID].set_trigger_interval(interval);
 }
 
 int APSRack::set_log(FILE * pFile) {
@@ -164,12 +156,16 @@ int APSRack::set_logging_level(const int & logLevel){
 	return 0;
 }
 
-int APSRack::set_trigger_source(const int & deviceID, const int & triggerSource) {
-	return APSs_[deviceID].triggerSource_ = triggerSource;
+int APSRack::set_trigger_source(const int & deviceID, const TRIGGERSOURCE & triggerSource) {
+	return APSs_[deviceID].set_trigger_source(triggerSource);
 }
 
-int APSRack::get_trigger_source(const int & deviceID) const{
-	return APSs_[deviceID].triggerSource_;
+TRIGGERSOURCE APSRack::get_trigger_source(const int & deviceID) const{
+	return APSs_[deviceID].get_trigger_source();
+}
+
+int APSRack::set_miniLL_repeat(const int & deviceID, const USHORT & repeat){
+	return APSs_[deviceID].set_miniLL_repeat(repeat);
 }
 
 int APSRack::set_channel_enabled(const int & deviceID, const int & channelNum, const bool & enable){
@@ -194,13 +190,6 @@ int APSRack::set_channel_scale(const int & deviceID, const int & channelNum, con
 
 float APSRack::get_channel_scale(const int & deviceID, const int & channelNum) const{
 	return APSs_[deviceID].get_channel_scale(channelNum);
-}
-
-int APSRack::set_channel_trigDelay(const int & deviceID, const int & channelNum, const USHORT & delay){
-	return APSs_[deviceID].set_channel_trigDelay(channelNum, delay);
-}
-unsigned short APSRack::get_channel_trigDelay(const int & deviceID, const int & dac){
-	return APSs_[deviceID].get_channel_trigDelay(dac);
 }
 
 int APSRack::save_state_files(){
@@ -261,3 +250,28 @@ int APSRack::read_bulk_state_file(string & stateFile){
 	return 0;
 }
 
+int APSRack::raw_write(int deviceID, int numBytes, UCHAR* data){
+	DWORD bytesWritten;
+	FT_Write(APSs_[deviceID].handle_, data, numBytes, &bytesWritten);
+	return int(bytesWritten);
+}
+
+int APSRack::raw_read(int deviceID, FPGASELECT fpga) {
+	DWORD bytesRead, bytesWritten;
+	UCHAR dataBuffer[2];
+	USHORT transferSize = 1;
+	int Command = APS_FPGA_IO;
+
+	//Send the read command byte
+	UCHAR commandPacket = 0x80 | Command | (fpga<<2) | transferSize;
+    FT_Write(APSs_[deviceID].handle_, &commandPacket, 1, &bytesWritten);
+
+	//Look for the data
+	FT_Read(APSs_[deviceID].handle_, dataBuffer, 2, &bytesRead);
+	FILE_LOG(logDEBUG2) << "Read " << bytesRead << " bytes with value" << myhex << ((dataBuffer[0] << 8) | dataBuffer[1]);
+	return int((dataBuffer[0] << 8) | dataBuffer[1]);
+}
+
+int APSRack::read_register(int deviceID, FPGASELECT fpga, int addr){
+	return FPGA::read_FPGA(APSs_[deviceID].handle_, addr, fpga);
+}

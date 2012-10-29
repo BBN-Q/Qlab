@@ -535,7 +535,7 @@ classdef PatternGen < handle
                     retVal.isTimeAmplitude = 1;
                     %We only want to hash the first point as only the
                     %amplitude matters. 
-                    retVal.hashKeys{ii} = obj.hashArray(retVal.pulseArray{ii}(1,:));
+                    retVal.hashKeys{ii} = obj.hashArray(retVal.pulseArray{ii}(fix(end/2),:));
                 end
                 if ismember(p, identityPulses)
                     retVal.isZero = 1;
@@ -553,10 +553,13 @@ classdef PatternGen < handle
                 array = 0;
             end
             obj.sha.reset();
-            obj.sha.update(array(:));
+            %Salt the array to avoid collisions
+            obj.sha.update([array(:); array(:)+10101]);
             h = obj.sha.digest();
-            % concert to ASCII char array a-z
-            h = char(97 + mod(h', 26));
+            % convert to hex string
+            h = sprintf('%02x',uint8(h));
+            % turn numbers into uppercase letters
+            h(h < 'A') = h(h < 'A') + 17;
         end
         
         function seq = build(obj, pulseList, numsteps, delay, fixedPoint, gated)
@@ -592,16 +595,9 @@ classdef PatternGen < handle
                 
                 reducedIndex = 1 + mod(n-1, length(pulse.hashKeys));
                 entry.key = pulse.hashKeys{reducedIndex};
-                if pulse.isTimeAmplitude
-                    % repeat = width for time/amplitude pulses
-                    entry.length = 1;
-                    entry.repeat = size(pulse.pulseArray{reducedIndex},1);
-                    entry.isTimeAmplitude = 1;
-                else
-                    entry.length = length(pulse.pulseArray{reducedIndex});
-                    entry.repeat = 1;
-                    entry.isTimeAmplitude = 0;
-                end
+                entry.length = size(pulse.pulseArray{reducedIndex},1);
+                entry.repeat = 1;
+                entry.isTimeAmplitude = pulse.isTimeAmplitude;
                 entry.isZero = pulse.isZero || strcmp(entry.key,padWaveformKey);
                 if entry.isZero
                     % remove zero pulses from pulse collection
@@ -613,7 +609,9 @@ classdef PatternGen < handle
                     %Shorten up square waveforms to the first point so as
                     %not to waste waveform memory
                     tmpPulse = obj.pulseCollection(entry.key);
-                    obj.pulseCollection(entry.key) = tmpPulse(1,:);
+                    if size(tmpPulse,1) > 1
+                        obj.pulseCollection(entry.key) = tmpPulse(fix(end/2),:);
+                    end
                 end
                 entry.hasMarkerData = 0;
                 entry.markerDelay = 0;
@@ -639,19 +637,19 @@ classdef PatternGen < handle
                     xsum = xsum + LinkList{1+ii}.repeat * LinkList{1+ii}.length;
                 end
                 
-                % pad left but setting repeat count
-                LinkList{1}.repeat = fixedPoint + delay - xsum;
+                % pad left
+                LinkList{1}.length = fixedPoint + delay - xsum;
                 %Catch a pulse sequence is too long when the initial padding is less than zero
-                if(LinkList{1}.repeat < 0)
+                if(LinkList{1}.length < 0)
                     error('Pulse sequence step %i is too long.  Try increasing the fixedpoint.',n);
                 end
 
-                xsum = xsum + LinkList{1}.repeat;
+                xsum = xsum + LinkList{1}.length;
                 
                 % pad right by adding pad waveform with appropriate repeat
                 LinkList{end} = buildEntry(padPulse, 1);
                 
-                LinkList{end}.repeat = obj.cycleLength - xsum;
+                LinkList{end}.length = obj.cycleLength - xsum;
                 
                 % add gating markers
                 if gated
@@ -780,26 +778,20 @@ classdef PatternGen < handle
             %     bufferPadding
             %     bufferDelay
             
-            % we're going to make an assumption to do this:
-            % all pulses have the same buffering, so if a LL entry has
-            % width W, we assume that the pulse width is (W - buffer).
-            %
-            % The strategy is the following: we only add triggers to zero
-            % entries. If the previous entry is a pulse, we need a trigger
-            % to switch low, and if the next entry is a pulse, we need a
-            % trigger to switch high. Depending on the sequence, this may
-            % result in multiple triggers in an entry which may need to be
-            % split when compiled for the particular hardware.
+            % The strategy is the following: we add triggers to zero
+            % entries and to pulses followed by zero entries. Zero entries
+            % followed by pulses get a trigger high. Pulses followed by
+            % zeros get a trigger low.
             
             state = 0; % 0 = low, 1 = high
             %Time from end of previous LL entry that trigger needs to go
             %high to gate pulse
-            startDelay = fix(obj.bufferPadding - obj.dBuffer/2 + obj.bufferDelay);
+            startDelay = fix(obj.bufferPadding - obj.bufferDelay);
             assert(startDelay > 0, 'PatternGen:addGatePulses Negative gate delays');
 
             LLlength = length(linkList);
             for ii = 1:LLlength-1
-                entryWidth = linkList{ii}.length * linkList{ii}.repeat;
+                entryWidth = linkList{ii}.length;
                 %If current state is low and next linkList is pulse, then
                 %we go high in this entry.
                 %If current state is high and next entry is TAZ then go low
@@ -809,11 +801,14 @@ classdef PatternGen < handle
                     linkList{ii}.markerDelay = entryWidth - startDelay;
                     linkList{ii}.markerMode = 0;
                     state = 1;
-                elseif state == 1 && linkList{ii+1}.isZero && linkList{ii+1}.length * linkList{ii+1}.repeat > obj.bufferReset
+                elseif state == 1 && linkList{ii+1}.isZero && linkList{ii+1}.length > obj.bufferReset
                     %Time from beginning of pulse LL entry that trigger needs to go
                     %low to end gate pulse
-                    endDelay = fix(entryWidth + obj.bufferPadding - obj.dBuffer/2 - obj.bufferDelay);
-                    assert(endDelay > 0, 'PatternGen:addGatePulses Negative gate delays');
+                    endDelay = fix(entryWidth + obj.bufferPadding - obj.bufferDelay);
+                    if endDelay < 0
+                        endDelay = 0;
+                        fprintf('addGatePulses warning: fixed buffer low pulse to start of pulse\n');
+                    end
                     linkList{ii}.hasMarkerData = 1;
                     linkList{ii}.markerDelay = endDelay;
                     linkList{ii}.markerMode = 0; % 0 = pulse mode
@@ -844,9 +839,9 @@ classdef PatternGen < handle
                     amplitude = wfLib(linkList{ct}.key);
                     xamp = amplitude(1,1);
                     yamp = amplitude(1,2);
-                    xpattern(idx:idx+linkList{ct}.repeat-1) = xamp * ones(1,linkList{ct}.repeat);
-                    ypattern(idx:idx+linkList{ct}.repeat-1) = yamp * ones(1,linkList{ct}.repeat);
-                    idx = idx + linkList{ct}.repeat;
+                    xpattern(idx:idx+linkList{ct}.length-1) = xamp * ones(1,linkList{ct}.length);
+                    ypattern(idx:idx+linkList{ct}.length-1) = yamp * ones(1,linkList{ct}.length);
+                    idx = idx + linkList{ct}.length;
                 else
                     currWf = wfLib(linkList{ct}.key);
                     xpattern(idx:idx+linkList{ct}.repeat*length(currWf)-1) = repmat(currWf(:,1)', 1, linkList{ct}.repeat);

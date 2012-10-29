@@ -51,9 +51,9 @@ function analyzeSimulRB(data1, data2)
     legend(h, {'00', '01', '10', '11'})
     
 %     fitSeqFidCross(seqlengths, meanPops', true)
-    [~,~,~,yfit] = fitSimulRB(seqlengths', meanPops', true);
+    fitSimulRB2(seqlengths, meanPops, meanStdErrors);
     % save data to file
-    [~, filename, ~] = fileparts(data1.filename);
-    filename = [data1.path filename '_populations.mat'];
-    save(filename, 'seqlengths', 'meanPops', 'meanStdErrors', 'xpts', 'populations', 'yfit', '-v7.3');
+    %[~, filename, ~] = fileparts(data1.filename);
+    %filename = [data1.path filename '_populations.mat'];
+    %save(filename, 'seqlengths', 'meanPops', 'meanStdErrors', 'xpts', 'populations', 'yfit', '-v7.3');
 end

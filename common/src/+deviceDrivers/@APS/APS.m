@@ -43,7 +43,7 @@ classdef APS < hgsetget
 
         NUM_CHANNELS = 4;
 
-        EXPECTED_BIT_FILE_VERSION = hex2dec('10');
+        EXPECTED_BIT_FILE_VERSION = hex2dec('1');
 
         ADDRESS_UNIT = 4;
         MAX_WAVEFORM_VALUE = 8191;        
@@ -55,14 +55,14 @@ classdef APS < hgsetget
         RUN_WAVEFORM = 0;
 
         % repeat modes
-        CONTINUOUS = 0;
-        ONESHOT = 1;
+        CONTINUOUS = 1;
+        TRIGGERED = 0;
         
         % for DEBUG methods
         LEDMODE_PLLSYNC = 1;
         LEDMODE_RUNNING = 2;
-        TRIGGER_SOFTWARE = 1;
-        TRIGGER_HARDWARE = 2;
+        TRIGGER_INTERNAL = 0;
+        TRIGGER_EXTERNAL = 1;
         ALL_DACS = -1;
         
         DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV', 'A6001nBT', 'A6001nBS'};
@@ -83,7 +83,6 @@ classdef APS < hgsetget
             
             % build path for bitfiles
             obj.bit_file_path = fullfile(curPath, obj.APS_ROOT, 'bitfiles');
-            
         end
         
         function delete(obj)
@@ -119,7 +118,7 @@ classdef APS < hgsetget
             %   aps.connect(0);
             %   aps.connect('A6UQZB7Z')
         
-            deviceID_re = '\d+';
+            deviceID_re = '^\d+';
             if isnumeric(address)
                 obj.open(address);
             elseif ~isempty(regexp(address, deviceID_re))
@@ -195,13 +194,14 @@ classdef APS < hgsetget
 				% load an AWG file if the settings file is changed or if force == true
 				if (~strcmp(settings.lastseqfile, settings.seqfile) || settings.seqforce)
 					obj.loadConfig(settings.seqfile);
+                    obj.setRunMode(1,1); obj.setRunMode(3,1);
 				end
 			end
 			settings = rmfield(settings, {'lastseqfile', 'seqfile', 'seqforce'});
 			
             % parse remaining settings
 			fields = fieldnames(settings);
-			for j = 1:length(fields);
+            for j = 1:length(fields);
 				name = fields{j};
                 if ismember(name, methods(obj))
                     feval(['obj.' name], settings.(name));
@@ -226,8 +226,15 @@ classdef APS < hgsetget
                 filename = fullfile(obj.bit_file_path, obj.defaultBitFileName);
             end
             
+%             if ~exist(filename,'file')
+%                error(sprintf('APS: bitfile %s not found ', filename));
+%             end
+            
             %Call the dll with a null-terminated string
-            obj.libraryCall('initAPS', [filename 0], force);
+            err = obj.libraryCall('initAPS', [filename 0], force);
+            if (err < 0)
+               error(sprintf('APS: initAPS : %i', err));
+            end
         end
         
         function loadWaveform(obj, ch, waveform)
@@ -236,7 +243,7 @@ classdef APS < hgsetget
             %   ch - channel (1-4)
             %   waveform - int16 format waveform data (-8192, 8191) or
             %       float data in the range (-1.0, 1.0)
-
+            assert((ch>0) && (ch<5), 'Oops! The channel must be in the range 1 through 4');
             switch(class(waveform))
                 case 'int16'
                     obj.libraryCall('set_waveform_int', ch-1, waveform, length(waveform));
@@ -255,6 +262,18 @@ classdef APS < hgsetget
             
             status = aps.libraryCall('load_sequence_file', [filename 0]);
             assert(status == 0, 'load_sequence_file returned error code %d', status);
+        end
+        
+        function loadLL(obj, ch, addr, count, trigger1, trigger2, repeat)
+            %loadLL - Directly loads link list data into memory (if it fits)
+            % APS.loadLL(ch, addr, count, trigger1, trigger2, repeat)
+            %  ch - channel to load (1-4)
+            %  addr - vector of addresses
+            %  count - vector of counts
+            %  trigger1 - vector of I channel triggers
+            %  trigger2 - vector of Q channel triggers
+            %  repeat - vector of repeats
+            obj.libraryCall('set_LL_data_IQ', ch-1, length(addr), addr, count, trigger1, trigger2, repeat);
         end
             
         function run(aps)
@@ -310,7 +329,7 @@ classdef APS < hgsetget
             % sets internal or external trigger
             checkMap = containers.Map({...
 	            'internal','external','int', 'ext'},...
-                {aps.TRIGGER_SOFTWARE,aps.TRIGGER_HARDWARE,aps.TRIGGER_SOFTWARE,aps.TRIGGER_HARDWARE});
+                {aps.TRIGGER_INTERNAL,aps.TRIGGER_EXTERNAL,aps.TRIGGER_INTERNAL,aps.TRIGGER_EXTERNAL});
             
             trig = lower(trig);
             if not(checkMap.isKey(trig))
@@ -322,7 +341,7 @@ classdef APS < hgsetget
         end
         
         function source = get.triggerSource(obj)
-            valueMap = containers.Map({obj.TRIGGER_SOFTWARE, obj.TRIGGER_HARDWARE},...
+            valueMap = containers.Map({obj.TRIGGER_INTERNAL, obj.TRIGGER_EXTERNAL},...
                 {'internal', 'external'});
             source = valueMap(obj.libraryCall('get_trigger_source'));
         end
@@ -392,6 +411,15 @@ classdef APS < hgsetget
             % sets logging level in libaps.log
             % level = {logERROR=0, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4}
             calllib(aps.library_name, 'set_logging_level', level);
+        end
+        
+        function setTriggerInterval(aps, interval)
+            %Sets the internal trigger interval
+            aps.libraryCall('set_trigger_interval', interval);
+        end
+
+        function val = readRegister(aps, fpga, addr)
+            val = aps.libraryCall('read_register', fpga, addr);
         end
 
         
@@ -486,9 +514,9 @@ classdef APS < hgsetget
             % current device's serial number is at index device_ID + 1 in
             % device_serials cell array
             if ismember(obj.device_serial, obj.DAC2_SERIALS)
-                fname = 'mqco_dac2_latest.bit';
+                fname = 'mqco_dac2_latest';
             else
-                fname = 'mqco_aps_latest.bit';
+                fname = 'mqco_aps_latest';
             end
         end
         

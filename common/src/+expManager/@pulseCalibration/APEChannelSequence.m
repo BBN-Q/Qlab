@@ -1,4 +1,4 @@
-function [filename, nbrPatterns] = APEChannelSequence(obj, qubit, makePlot)
+function [filename, nbrPatterns] = APEChannelSequence(obj, qubit, deltas, makePlot)
 
 if ~exist('makePlot', 'var')
     makePlot = false;
@@ -33,18 +33,14 @@ pg = PatternGen(...
 
 angle = pi/2;
 numPsQId = 8; % number pseudoidentities
-numDeltaSteps = 11; %number of drag parameters (11)
-deltamax=0.0;
-deltamin=-2.0;
-delta=linspace(deltamin,deltamax,numDeltaSteps);
 
 sindex = 1;
 % QId
 % N applications of psuedoidentity
 % X90p, (sequence of +/-X90p), U90p
 % (1-numPsQId) of +/-X90p
-for ct=1:numDeltaSteps
-    curDelta = delta(ct);
+for ct=1:length(deltas)
+    curDelta = deltas(ct);
     patseq{sindex} = {pg.pulse('QId')};
     sindex=sindex+1;
     for j = 0:numPsQId
@@ -74,11 +70,20 @@ patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap);
 measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS'};
+awgs = cellfun(@(x) x.InstrName, obj.awgParams, 'UniformOutput',false);
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
 
-filename{1} = [pathAWG basename '-TekAWG.awg'];
-filename{2} = [pathAWG basename '-BBNAPS.h5'];
+for awgct = 1:length(awgs)
+    switch awgs{awgct}(1:6)
+        case 'TekAWG'
+            filename{awgct} = [pathAWG basename '-' awgs{awgct}, '.awg'];
+        case 'BBNAPS'
+            filename{awgct} = [pathAWG basename '-', awgs{awgct}, '.h5'];
+        otherwise
+            error('Unknown AWG type.');
+    end
+end
+
 
 end

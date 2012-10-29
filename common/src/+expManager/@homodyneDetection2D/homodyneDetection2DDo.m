@@ -30,7 +30,10 @@ if isempty(scopeHandle) && displayScope
     scopeHandle = figure('HandleVisibility', 'callback');
 end
 
+%Find the master AWG
+
 % stop the master and make sure it stopped
+
 masterAWG = obj.awg{1};
 masterAWG.stop();
 masterAWG.operationComplete();

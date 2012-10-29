@@ -86,7 +86,7 @@ compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
         xpulse = Xp(1,0);
         nutFreq = 0.5/(sum(xpulse)/pg.samplingRate);
         
-        defaultParams = {'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', -1.8};
+        defaultParams = {'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', -0.3};
         
         switch cliffNum
             case 1

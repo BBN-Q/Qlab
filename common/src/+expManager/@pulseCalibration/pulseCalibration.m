@@ -36,7 +36,6 @@ classdef pulseCalibration < expManager.homodyneDetection2D
     properties
         pulseParams
         pulseParamPath
-        mixerCalPath
         channelMap
         ExpParams
         awgParams
@@ -57,13 +56,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
 			% superclass constructor
             obj = obj@expManager.homodyneDetection2D(data_path, cfgFileName, basename, filenumber);
             
-            script = mfilename('fullpath');
-            sindex = strfind(script, 'common');
-            script = [script(1:sindex-1) 'experiments/muWaveDetection/'];
-            
-            obj.mixerCalPath = [script 'cfg/mixercal.mat'];
             obj.pulseParamPath = getpref('qlab', 'pulseParamsBundleFile');
-            
             obj.channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
         end
 
@@ -162,7 +155,8 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                     case {'deviceDrivers.Tek5014', 'deviceDrivers.APS'}
                         numAWGs = numAWGs + 1;
                         obj.awgParams{numAWGs} = obj.inputStructure.InstrParams.(InstrName);
-                        if strcmp(InstrName, IQchannels.instr)
+                        obj.awgParams{numAWGs}.InstrName = InstrName;
+                        if strcmp(InstrName, IQchannels.awg)
                             obj.targetAWGIdx = numAWGs;
                         end
                     case 'deviceDrivers.AgilentAP240'
@@ -175,7 +169,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                 params = jsonlab.loadjson(obj.pulseParamPath);
                 obj.pulseParams = params.(obj.ExpParams.Qubit);
                 obj.pulseParams.T = params.(IQkey).T;
-                channelParams = obj.inputStructure.InstrParams.(IQchannels.instr);
+                channelParams = obj.inputStructure.InstrParams.(IQchannels.awg);
                 obj.pulseParams.i_offset = channelParams.(['chan_' num2str(IQchannels.i)]).offset;
                 obj.pulseParams.q_offset = channelParams.(['chan_' num2str(IQchannels.q)]).offset;
                 obj.pulseParams.SSBFreq = obj.ExpParams.SSBFreq;

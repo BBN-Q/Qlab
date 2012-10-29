@@ -20,6 +20,7 @@ public:
 	int disconnect();
 
 	int init(const string &, const bool &);
+	int reset(const FPGASELECT &) const;
 
 	int setup_VCXO() const;
 	int setup_PLL() const;
@@ -31,6 +32,9 @@ public:
 	int set_sampleRate(const int &);
 	int get_sampleRate() const;
 
+	int set_trigger_source(const TRIGGERSOURCE &);
+	TRIGGERSOURCE get_trigger_source() const;
+
 	int set_channel_enabled(const int &, const bool &);
 	bool get_channel_enabled(const int &) const;
 	int set_channel_offset(const int &, const float &);
@@ -39,8 +43,10 @@ public:
 	float get_channel_scale(const int &) const;
 	int set_offset_register(const int &, const float &);
 
-	int set_channel_trigDelay(const int &, const USHORT &);
-	unsigned short get_channel_trigDelay(const int &);
+	int set_trigger_interval(const double &);
+
+	int set_miniLL_repeat(const USHORT &);
+
 
 	template <typename T>
 	int set_waveform(const int & dac, const vector<T> & data){
@@ -51,8 +57,7 @@ public:
 	int set_run_mode(const int &, const RUN_MODE &);
 	int set_repeat_mode(const int &, const bool &);
 
-	int add_LL_bank(const int & dac, const vector<unsigned short> & offset, const vector<unsigned short> & count, const vector<unsigned short> & repeat, const vector<unsigned short> & trigger);
-
+	int set_LLData_IQ(const FPGASELECT &, const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 	int clear_channel_data();
 
 	int load_sequence_file(const string &);
@@ -69,22 +74,17 @@ private:
 	FT_HANDLE handle_;
 	vector<Channel> channels_;
 	map<FPGASELECT, CheckSum> checksums_;
-	int triggerSource_;
 	int samplingRate_;
 	vector<UCHAR> writeQueue_;
-	thread * bankBouncerThread_;
+	std::thread * bankBouncerThread_;
+	//Flag for whether are running so threads know when to die and return
 	bool running_;
+	//Flag for whether streaming is up and running
+	bool streaming_;
+	std::mutex * mymutex_;
 
-
-	int write(const FPGASELECT &, const ULONG &, const ULONG &, const bool & queue = false);
-
-	template <typename T>
-	int write(const FPGASELECT & fpga, ULONG addr, const vector<T> & data, const bool & queue=false){
-		for(const T tmpData : data){
-			write(fpga, addr++, ULONG(tmpData), queue);
-		}
-		return 0;
-	}
+	int write(const FPGASELECT & fpga, const unsigned int & addr, const USHORT & data, const bool & queue = false);
+	int write(const FPGASELECT & fpga, const unsigned int & addr, const vector<USHORT> & data, const bool & queue = false);
 
 	int flush();
 	int reset_status_ctrl();
@@ -92,15 +92,16 @@ private:
 
 	int setup_PLL();
 	int set_PLL_freq(const FPGASELECT &, const int &);
-	int test_PLL_sync(const FPGASELECT & fpga, const int & numRetries = 5);
-	int read_PLL_status(const FPGASELECT & fpga, const int & regAddr = FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, const vector<int> & pllLockBits = std::initializer_list<int>({PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT}));
+	int test_PLL_sync(const FPGASELECT & fpga, const int & numRetries = 2);
+	int read_PLL_status(const FPGASELECT & fpga, const int & regAddr = FPGA_ADDR_REGREAD | FPGA_ADDR_PLL_STATUS, const vector<int> & pllLockBits = std::initializer_list<int>({PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT}));
 	int get_PLL_freq(const FPGASELECT &) const;
 
 	int setup_VCXO();
 
 	int setup_DAC(const int &) const;
+	int enable_DAC_FIFO(const int &) const;
+	int disable_DAC_FIFO(const int &) const;
 
-	int set_LED_mode(const FPGASELECT &, const LED_MODE &);
 
 	int trigger(const FPGASELECT &);
 	int disable(const FPGASELECT &);
@@ -110,10 +111,13 @@ private:
 
 	int write_waveform(const int &, const vector<short> &);
 
-	int write_LL_data(const int &, const int &, const int &);
+	int write_LL_data_IQ(const FPGASELECT &, const ULONG &, const size_t &, const size_t &, const bool &);
+	int set_LL_data_IQ(const FPGASELECT &, const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
+	int stream_LL_data(const int);
+	int read_LL_addr(const FPGASELECT &);
+	int read_LL_addr(const int &);
 
-	int stream_LL_data();
-	int read_LL_status(const int &);
+
 
 	int save_state_file(string &);
 	int read_state_file(string &);

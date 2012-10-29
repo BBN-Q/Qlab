@@ -1,29 +1,23 @@
-classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
-% Agilent 33220A
+% Driver for Agilent 33220A function generator
+
+% Original author: Will Kelly
+% Updated by: Blake Johnson on 10/4/12
+
+% Copyright 2010 Raytheon BBN Technologies
 %
+% Licensed under the Apache License, Version 2.0 (the "License");
+% you may not use this file except in compliance with the License.
+% You may obtain a copy of the License at
 %
-% Author(s): wkelly
-% 06/08/2010
+%     http://www.apache.org/licenses/LICENSE-2.0
+%
+% Unless required by applicable law or agreed to in writing, software
+% distributed under the License is distributed on an "AS IS" BASIS,
+% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+% See the License for the specific language governing permissions and
+% limitations under the License.
 
-
-
-    % Class-specific constant properties
-    properties (Constant = true)
-
-    end % end constant properties
-
-
-    % Class-specific private properties
-    properties (Access = private)
-
-    end % end private properties
-
-
-    % Class-specific public properties
-    properties (Access = public)
-
-    end % end public properties
-
+classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
 
     % Device properties correspond to instrument parameters
     properties (Access = public)
@@ -37,7 +31,6 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
         burstState      % {ON|OFF}
         offset          % in Volts
         period          % in seconds
-        
     end % end device properties
  
         
@@ -47,28 +40,28 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
         function reset(obj)
             %RESET
             gpib_string = '*RST';
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
             pause(3)
         end
         function trigger(obj)
             gpib_string = '*TRG';
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
     end
     methods % Instrument parameter accessors
         %% get
         function val = get.identity(obj)
             gpib_string = '*IDN';
-            val = obj.Query([gpib_string '?']);
+            val = obj.query([gpib_string '?']);
         end
         function val = get.outputLoad(obj)
             gpib_string = 'OUTPut:LOAD';
-            temp = obj.Query([gpib_string '?']);
+            temp = obj.query([gpib_string '?']);
             val = str2double(temp);
         end
         function val = get.triggerSource(obj)
             gpib_string = 'TRIGger:SOURce';
-            val = obj.Query([gpib_string '?']);
+            val = obj.query([gpib_string '?']);
         end
         function val = get.samplingRate(obj)
             val = obj.samplingRate;
@@ -78,25 +71,25 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
         end
         function val = get.numWaveforms(obj)
             gpib_string = 'BURSt:NCYCles';
-            temp = obj.Query([gpib_string '?']);
+            temp = obj.query([gpib_string '?']);
             val = str2double(temp);
         end
         function val = get.burstMode(obj)
             gpib_string = 'BURSt:MODE';
-            val = obj.Query([gpib_string '?']);
+            val = obj.query([gpib_string '?']);
         end
         function val = get.burstState(obj)
             gpib_string = 'BURSt:STATE';
-            val = obj.Query([gpib_string '?']);
+            val = obj.query([gpib_string '?']);
         end
         function val = get.offset(obj)
             gpib_string = 'VOLT:OFFSET';
-            temp = obj.Query([gpib_string '?']);
+            temp = obj.query([gpib_string '?']);
             val = str2double(temp);
         end
         function val = get.period(obj)
             gpib_string = 'PULSE:PERIOD?';
-            temp = obj.Query(gpib_string);
+            temp = obj.query(gpib_string);
             val = str2double(temp);
         end
         %% set
@@ -109,7 +102,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
 %                 error('Invalid input');
 %             end
 %             gpib_string = [gpib_string ' ' checkMapObj(value)];
-%             obj.Write(gpib_string);
+%             obj.write(gpib_string);
 %         end
         function obj = set.outputLoad(obj, value)
             gpib_string = 'OUTPut:LOAD';
@@ -120,7 +113,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
                 valueStr = num2str(value);
             end
             gpib_string = [gpib_string ' ' valueStr];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.burstMode(obj, value)
             gpib_string = 'BURSt:MODE';
@@ -134,7 +127,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
                 error('Invalid input');
             end
             gpib_string = [gpib_string ' ' checkMapObj(value)];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.triggerSource(obj, value)
             gpib_string = 'TRIGger:SOURce';
@@ -148,7 +141,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
                 error('Invalid input');
             end
             gpib_string = [gpib_string ' ' checkMapObj(value)];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.samplingRate(obj, value)
             if ~(isnumeric(value) && isscalar(value))
@@ -173,7 +166,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
                 valueStr = num2str(value);
             end
             gpib_string = [gpib_string ' ' valueStr];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.burstState(obj, value)
             gpib_string = 'BURSt:STATE';
@@ -186,7 +179,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
                 error('Invalid input');
             end
             gpib_string = [gpib_string ' ' checkMapObj(value)];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.offset(obj, value)
             gpib_string = 'VOLT:OFFSET';
@@ -197,7 +190,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
                 valueStr = num2str(value);
             end
             gpib_string = [gpib_string ' ' valueStr];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.period(obj, value)
             gpib_string = 'PULSE:PERIOD';
@@ -208,7 +201,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIB
                 valueStr = num2str(value);
             end
             gpib_string = [gpib_string ' ' valueStr];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
     end
 end % end class definition

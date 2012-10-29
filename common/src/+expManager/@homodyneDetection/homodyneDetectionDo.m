@@ -46,7 +46,7 @@ if ~SD_mode
                 if success_flag_AWG ~= 1, error('AWG timed out'), end
             case 'deviceDrivers.APS'
                 Instr.(InstrName).run();
-            case 'deviceDrivers.AgilentAP240'
+            case {'deviceDrivers.AgilentAP240', 'deviceDrivers.AlazarATS9870'}
                 scope = Instr.(InstrName); % we're going to need this later
             otherwise
                 % don't need to do anything with this instrument

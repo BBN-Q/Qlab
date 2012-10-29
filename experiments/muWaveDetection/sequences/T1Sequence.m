@@ -7,8 +7,8 @@ function T1Sequence(qubit, pulseSpacings, makePlot, plotSeqNum)
 %   plotSeqNum (optional) - which sequence to plot (int)
 
 basename = 'T1';
-fixedPt = 20000; %40000
-cycleLength = 23000; %44000
+fixedPt = pulseSpacings(end)+1000;
+cycleLength = fixedPt+2000; 
 nbrRepeats = 1;
 
 % load config parameters from file
