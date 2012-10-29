@@ -424,6 +424,21 @@ classdef APSPattern < handle
             triggerVal2 = 0;
         end
         
+        function maxRepInterval = estimateRepInterval(linkLists)
+            %estimateRepInterval - estimates the max rep rate to support streaming of link list data
+            %  maxRepInterval = estimateRepInterval(linkLists)
+            %    linkLists - a cell array of link lists from PatternGen.build
+            
+            % Our strategy is just to look at the two longest miniLLs and
+            % return the time it takes to write the second largest LL.
+            timePerEntry = .050/4096; % measured 46ms average for 4096 entries, use 50 ms as a conservative estimate
+            
+            sortedLengths = sort(cellfun(@length, linkLists), 'descend');
+            if (sum(sortedLengths(1:2)) > APSPattern.MAX_LL_ENTRIES)
+                fprinf('WARNING: cannot fit two of the largest LinkLists in memory simultaneously. Impossible to stream without clever ordering.\n');
+            end
+            maxRepInterval = timePerEntry*sortedLengths(2);
+        end
         
         function [pattern] = linkListToPattern(wf, banks)
             aps = APSPattern;
@@ -478,7 +493,6 @@ classdef APSPattern < handle
                         newPat = wf.data(idx)*ones([1, expandedCount],'int16');
                     end
                     pattern = [pattern newPat];
-                    %keyboard
                 end
             end
         end
@@ -488,17 +502,6 @@ classdef APSPattern < handle
     
 end
 
-% classdef APSPattern < handle
-%
-%     end
-%
-%
-
-%
-
-%
-%
-%
 %         function splitList = preprocessLL(linkList)
 %             % Perform any tasks necessary to processing a link list before
 %             % the main loop. At present, this only requires breaking 'zero'
@@ -552,55 +555,3 @@ end
 %             end
 %         end
 %
-%
-%         function [unifiedX unifiedY] = unifySequenceLibraryWaveforms(sequences)
-%             unifiedX = java.util.Hashtable();
-%             unifiedY = java.util.Hashtable();
-%             h = waitbar(0,'Unifying Waveform Tables');
-%             n = length(sequences);
-%             for seq = 1:n
-%                 waitbar(seq/n,h);
-%                 sequence = sequences{seq};
-%                 xwaveforms = sequence.llpatx.waveforms;
-%                 ywaveforms = sequence.llpaty.waveforms;
-%
-%                 xkeys = xwaveforms.keys;
-%                 ykeys = ywaveforms.keys;
-%
-%                 while xkeys.hasMoreElements()
-%                     key = xkeys.nextElement();
-%                     if ~unifiedX.containsKey(key)
-%                         unifiedX.put(key,xwaveforms.get(key));
-%                     end
-%                 end
-%
-%                 while ykeys.hasMoreElements()
-%                     key = ykeys.nextElement();
-%                     if ~unifiedY.containsKey(key)
-%                         unifiedY.put(key,ywaveforms.get(key));
-%                     end
-%                 end
-%             end
-%
-%             close(h);
-%         end
-%
-%         function unifiedX = unifySequenceLibraryWaveformsSingle(sequences)
-%             unifiedX = java.util.Hashtable();
-%             n = length(sequences);
-%             for seq = 1:n
-%                 xwaveforms = sequences{seq}.waveforms;
-%
-%                 xkeys = xwaveforms.keys;
-%
-%                 while xkeys.hasMoreElements()
-%                     key = xkeys.nextElement();
-%                     if ~unifiedX.containsKey(key)
-%                         unifiedX.put(key,xwaveforms.get(key));
-%                     end
-%                 end
-%             end
-%         end
-%
-%     end
-% end

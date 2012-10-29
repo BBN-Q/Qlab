@@ -265,7 +265,15 @@ classdef APS < hgsetget
         end
         
         function loadLL(obj, ch, addr, count, trigger1, trigger2, repeat)
-            obj.libraryCall('set_LL_data_IQ', ch, length(addr), addr, count, trigger1, trigger2, repeat);
+            %loadLL - Directly loads link list data into memory (if it fits)
+            % APS.loadLL(ch, addr, count, trigger1, trigger2, repeat)
+            %  ch - channel to load (1-4)
+            %  addr - vector of addresses
+            %  count - vector of counts
+            %  trigger1 - vector of I channel triggers
+            %  trigger2 - vector of Q channel triggers
+            %  repeat - vector of repeats
+            obj.libraryCall('set_LL_data_IQ', ch-1, length(addr), addr, count, trigger1, trigger2, repeat);
         end
             
         function run(aps)

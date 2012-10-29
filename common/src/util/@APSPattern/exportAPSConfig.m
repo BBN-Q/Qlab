@@ -27,6 +27,9 @@ function exportAPSConfig(path, basename, nbrRepeats, varargin)
             %Setup the structures for the linkList data
             fprintf('Length of LL for pair %d: %d\n', ct, LinkLists{Ich}.length)
             LinkLists{Qch} = [];
+            if LinkLists{Ich}.length > APSPattern.MAX_LL_ENTRIES
+                fprintf('Estimated max rep interval: %g\n', APSPattern.estimateRepInterval(seq.linkLists));
+            end
         else
             WaveformLibs{Ich} = [];
             LinkLists{Ich} = [];
