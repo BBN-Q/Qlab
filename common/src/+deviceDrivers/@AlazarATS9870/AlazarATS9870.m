@@ -54,6 +54,9 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         %All the settings for the device
         settings
         
+        %Vertical scale
+        verticalScale
+        
     end
     
     properties (Dependent = true)
@@ -275,6 +278,10 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             numRepeats = obj.settings.averager.nbrWaveforms*obj.settings.averager.nbrRoundRobins;
             obj.averagedData{1} = sumDataA/numRepeats;
             obj.averagedData{2} = sumDataB/numRepeats;
+            
+            %Rescale data to appropriate scale, i.e. map (0,255) to (-Vs,Vs)
+            obj.averagedData{1} = obj.averagedData{1} * 2*obj.verticalScale/255 - obj.verticalScale;
+            obj.averagedData{2} = obj.averagedData{2} * 2*obj.verticalScale/255 - obj.verticalScale;
 
             %Clear and reallocate the buffer ptrs
             %Try to abort any in progress acquisitions and transfers
@@ -321,14 +328,18 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             % hard coded to set both channels identically, though this
             % is not required by the hardware
             %We are always 50Ohm coupled for the ATS9870
-            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_A'), vertSettings.verticalCoupling, vertSettings.verticalScale, obj.defs('IMPEDANCE_50_OHM'));
-            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_B'), vertSettings.verticalCoupling, vertSettings.verticalScale, obj.defs('IMPEDANCE_50_OHM'));
+            scaleMap = containers.Map({.04, .1, .2, .4, 1, 2, 4}, {2, 5, 6, 7, 10, 11, 12});
+            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_A'), vertSettings.verticalCoupling, scaleMap(vertSettings.verticalScale), obj.defs('IMPEDANCE_50_OHM'));
+            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_B'), vertSettings.verticalCoupling, scaleMap(vertSettings.verticalScale), obj.defs('IMPEDANCE_50_OHM'));
             
             %Set the bandwidth
             if vertSettings.bandwidth
                 obj.call_API('AlazarSetBWLimit',obj.boardHandle, obj.defs('CHANNEL_A'), 1)
                 obj.call_API('AlazarSetBWLimit',obj.boardHandle, obj.defs('CHANNEL_B'), 1)
             end
+            
+            % update obj property
+            obj.verticalScale = vertSettings.verticalScale;
         end
         
         function set.trigger(obj, trigSettings)
@@ -441,4 +452,3 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         
     end %methods
 end %classdef
-
