@@ -37,8 +37,12 @@ if nargin < 1
 	cfg_file_name = fullfile(cfg_path, 'muWaveDetectionSweep.json');
 end
 
+numAPSs = 2;
 % list of instruments expected in the settings structs
-instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'TekAWG', 'BBNAPS'};
+instrumentNames = {'scope', 'RFgen', 'LOgen', 'Specgen', 'Spec2gen', 'Spec3gen', 'TekAWG'};
+for ct = 1:numAPSs
+    instrumentNames{end+1} = sprintf('BBNAPS%d', ct);
+end
 % load previous settings structs
 [commonSettings, prevSettings] = get_previous_settings('muWaveDetectionSweep', cfg_path, instrumentNames);
 
@@ -95,9 +99,17 @@ sourceTabPanel.SelectedChild = 1;
 %Add the AWG's
 AWGPanel = uiextras.Panel('Parent', middleVBox, 'Title', 'AWG''s','FontSize',12, 'Padding', 5);
 AWGTabPanel = uiextras.TabPanel('Parent', AWGPanel, 'Padding', 5, 'HighlightColor', 'k');
-[get_tekAWG_settings, ~] = deviceGUIs.AWG5014_settings_GUI(AWGTabPanel, 'TekAWG', prevSettings.InstrParams.TekAWG);
-[get_APS_settings, ~] = deviceGUIs.APS_settings_GUI(AWGTabPanel, 'BBN APS', prevSettings.InstrParams.BBNAPS);
-AWGTabPanel.TabNames = {'Tektronix','APS'};
+[get_tekAWG_settings, set_tekAWG_GUI] = deviceGUIs.AWG5014_settings_GUI(AWGTabPanel, 'TekAWG', prevSettings.InstrParams.TekAWG);
+tmpTabNames = cell(numAPSs+1,1);
+tmpTabNames{1} = 'Tektronix';
+get_APS_settings = cell(numAPSs,1);
+set_APS_settings = cell(numAPSs,1);
+for ct = 1:numAPSs
+    tmpStr = sprintf('BBNAPS%d',ct);
+    [get_APS_settings{ct}, set_APS_settings{ct}] = deviceGUIs.APS_settings_GUI(AWGTabPanel, tmpStr, prevSettings.InstrParams.(tmpStr));
+    tmpTabNames{ct+1} = tmpStr;
+end
+AWGTabPanel.TabNames = tmpTabNames;
 AWGTabPanel.SelectedChild = 1;
 
 %Add the Sweeps's
@@ -204,7 +216,9 @@ set(mainWindow, 'Visible', 'on');
 		settings.InstrParams.Specgen = get_spec_settings();
         settings.InstrParams.Spec2gen = get_spec2_settings();
 		settings.InstrParams.TekAWG = get_tekAWG_settings();
-        settings.InstrParams.BBNAPS = get_APS_settings();
+        for apsct = 1:numAPSs
+            settings.InstrParams.(sprintf('BBNAPS%d',apsct)) = get_APS_settings{apsct}();
+        end
 % 		settings.InstrParams.BBNdc = get_DCsource_settings();
 		
 		% get sweep settings
