@@ -99,7 +99,7 @@ classdef AWGChannel < sweeps.Sweep
                 case 'amp'
                     obj.stepAmplitude(index);
                 case 'offset'
-                    obj.obj.stepOffset(index);
+                    obj.stepOffset(index);
             end
         end
     end

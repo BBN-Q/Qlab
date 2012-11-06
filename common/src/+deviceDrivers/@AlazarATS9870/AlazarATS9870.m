@@ -340,6 +340,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             % update obj property
             obj.verticalScale = vertSettings.verticalScale;
+            obj.settings.vertical = vertSettings;
         end
         
         function set.trigger(obj, trigSettings)
@@ -376,6 +377,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             %We'll wait forever for a trigger
             obj.call_API('AlazarSetTriggerTimeOut', obj.boardHandle, 0);
+            obj.settings.trigger = trigSettings;
         end
         
         function set.averager(obj, avgSet)
@@ -432,7 +434,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             for ct = 1:obj.buffers.numBuffers
                 obj.buffers.bufferPtrs{ct} = libpointer('uint8Ptr', zeros(obj.buffers.bufferSize,1));
             end
-            
+            obj.settings.averager = avgSet;
         end
         
         function val = get.averager(obj)

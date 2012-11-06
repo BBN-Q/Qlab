@@ -90,13 +90,10 @@ classdef singleShotFidelity < expManager.expBase
                     case {'deviceDrivers.Tek5014', 'deviceDrivers.APS'}
                         numAWGs = numAWGs + 1;
                         obj.awg{numAWGs} = obj.Instr.(InstrName);
-                    case 'deviceDrivers.AgilentAP240'
+                    case {'deviceDrivers.AgilentAP240', 'deviceDrivers.AlazarATS9870'}
                         obj.scope = obj.Instr.(InstrName);
                 end
             end
-%             % create a generic 'time' sweep
-%             timeSweep = struct('type', 'sweeps.Time', 'number', 1, 'start', 0, 'step', 1);
-%             obj.inputStructure.SweepParams = struct('time', timeSweep);
 
             % construct loop object and file header
             [obj.Loop, dimension] = obj.populateLoopStructure();

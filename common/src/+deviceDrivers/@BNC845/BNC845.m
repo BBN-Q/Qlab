@@ -23,6 +23,8 @@ classdef (Sealed) BNC845 < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBor
         % getters
         function val = get.frequency(obj)
             val = str2double(obj.query('SOURCE:FREQUENCY?'));
+            %Convert to GHz units
+            val = 1e-9*val;
         end
         
         function val = get.power(obj)
@@ -92,12 +94,10 @@ classdef (Sealed) BNC845 < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBor
             % Validate input
             onOffMap = containers.Map({'on','1','off','0'},...
                 {'ON','ON','OFF','OFF'});
-%             holdMap = containers.Map({'on','1','off','0'},{'OFF','OFF','ON','ON'});
             if not (onOffMap.isKey( lower(value) ))
                 error('Invalid input');
             end
             obj.write(sprintf('SOURCE:POWER:ALC %s',onOffMap(value)));
-%             obj.write(sprintf('SOURCE:POWER:ALC:HOLD %s',holdMap(value)));
         end
         
         function obj = set.pulse(obj, value)
@@ -107,11 +107,14 @@ classdef (Sealed) BNC845 < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBor
             % Validate input
             onOffMap = containers.Map({'on','1','off','0'},...
                 {'ON','ON','OFF','OFF'});
+            holdMap = containers.Map({'on','1','off','0'},{'ON','ON','OFF','OFF'});
             if not (onOffMap.isKey( lower(value) ))
                 error('Invalid input');
             end
             
             obj.write(sprintf('SOURCE:PULM:STATE %s', onOffMap(value)));
+            obj.write(sprintf('SOURCE:POWER:ALC:HOLD %s',holdMap(value)));
+
         end
         
         function obj = set.pulseSource(obj, value)

@@ -2,7 +2,7 @@ function SingleShotSequence(qubit)
 
 basename = 'SingleShot';
 fixedPt = 2000;
-cycleLength = 12000;
+cycleLength = 5000;
 nbrRepeats = 1;
 
 % load config parameters from files
@@ -17,11 +17,24 @@ SSBFreq = -100e6;
 pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
 
 patseq = {{pg.pulse('QId')}, {pg.pulse('Xp')}};
+calseq  = [];
 
-compiler = ['compileSequence' IQkey];
-compileArgs = {basename, pg, patseq, {}, 1, nbrRepeats, fixedPt, cycleLength, false};
-if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-    feval(compiler, compileArgs{:});
-end
+% prepare parameter structures for the pulse compiler
+seqParams = struct(...
+    'basename', basename, ...
+    'suffix', '', ...
+    'numSteps', 1, ...
+    'nbrRepeats', nbrRepeats, ...
+    'fixedPt', fixedPt, ...
+    'cycleLength', cycleLength, ...
+    'measLength', 2000);
+patternDict = containers.Map();
+if ~isempty(calseq), calseq = {calseq}; end
+patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
+measChannels = {'M1'};
+awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
+
+compileSequences(seqParams, patternDict, measChannels, awgs, false, 0);
+
 
 end

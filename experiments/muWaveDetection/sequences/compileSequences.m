@@ -37,9 +37,7 @@ for measCh = measChannels
     ChParams = params.(IQkey);
     % shift the delay to include the measurement length
     params.(IQkey).delay = ChParams.delay + seqParams.measLength;
-    % force link list mode to true when constructing this PatternGen object
-    pgM = PatternGen('correctionT', ChParams.T,'bufferDelay',ChParams.bufferDelay,'bufferReset',ChParams.bufferReset,'bufferPadding',ChParams.bufferPadding, 'cycleLength', seqParams.cycleLength, 'linkList', 1, 'dmodFrequency',SSBFreq);
-    
+    pgM = PatternGen('correctionT', ChParams.T,'bufferDelay',ChParams.bufferDelay,'bufferReset',ChParams.bufferReset,'bufferPadding',ChParams.bufferPadding, 'cycleLength', seqParams.cycleLength, 'linkList', ChParams.linkListMode, 'dmodFrequency',SSBFreq);    
     measSeq = {{pgM.pulse('Xtheta', 'pType', 'tanh', 'sigma', 1, 'buffer', 0, 'amp', 4000, 'width', seqParams.measLength)}};
     patternDict(IQkey) = struct('pg', pgM, 'patseq', {repmat(measSeq, 1, nbrPatterns)}, 'calseq', {repmat(measSeq,1,calPatterns)}, 'channelMap', qubitMap.(measCh));
 end
@@ -194,7 +192,7 @@ for awg = awgs
         % export Tek
         % hack... really ought to store this info somewhere or be able to
         % change in from the user interface, rather than writing it to file
-        options = struct('m21_high', 2.0, 'm41_high', 2.0, 'nbrRepeats', seqParams.nbrRepeats);
+        options = struct('m12_high', 2.5, 'm21_high', 2.5, 'm22_high', 2.5, 'nbrRepeats', seqParams.nbrRepeats);
         ch12 = awgChannels([awg '_12']);
         ch34 = awgChannels([awg '_34']);
         ch1m1 = awgChannels([awg '_1m1']);

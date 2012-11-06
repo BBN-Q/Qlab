@@ -159,7 +159,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                         if strcmp(InstrName, IQchannels.awg)
                             obj.targetAWGIdx = numAWGs;
                         end
-                    case 'deviceDrivers.AgilentAP240'
+                    case {'deviceDrivers.AgilentAP240', 'deviceDrivers.AlazarATS9870'}
                         obj.scopeParams = obj.inputStructure.InstrParams.(InstrName);
                 end
             end
