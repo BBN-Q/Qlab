@@ -25,14 +25,14 @@ classdef (Sealed) HP8673B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
 		% Instrument parameter accessors
         function val = get.frequency(obj)
             gpib_string = 'FR';
-            temp = obj.Query([gpib_string '?']);
+            temp = obj.query([gpib_string '?']);
 			expr = 'FR(\d+)HZ';
             tokens = regexp(temp, expr, 'tokens');
             val = str2double(tokens{1})/1e9;
         end
         function val = get.power(obj)
             gpib_string = 'LEOA';
-            temp = obj.Query(gpib_string);
+            temp = obj.query(gpib_string);
 			expr = 'LE(.+)DM';
             tokens = regexp(temp, expr, 'tokens');
             val = str2double(tokens{1});
@@ -47,7 +47,7 @@ classdef (Sealed) HP8673B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
                 error('Invalid input');
             end
             gpib_string = sprintf(gpib_string,value);
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.power(obj, value)
             gpib_string = 'AP %.6f dB';
@@ -60,7 +60,7 @@ classdef (Sealed) HP8673B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
             end
             
             gpib_string = sprintf(gpib_string,value);
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.output(obj, value)
             gpib_string = 'OUTPUT RF%d';
@@ -76,7 +76,7 @@ classdef (Sealed) HP8673B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
             end
             
             gpib_string = sprintf(gpib_string, checkMapObj(value));
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.pulse(obj, value)
             gpib_string = 'P';
@@ -92,7 +92,7 @@ classdef (Sealed) HP8673B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
             end
             
             gpib_string = [gpib_string checkMapObj(value) ';'];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
     end % end instrument parameter accessors
     

@@ -63,15 +63,12 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
         end
         
         function [frequencies, s21] = getTrace(obj)
-            % re-average
-            obj.reaverage();
-            
             % select measurement
             % get measurement name
             measurement = obj.measurements;
             % take the part before the comma
             commaPos = strfind(measurement, ',');
-            obj.select_measurement = measurement(1:commaPos-1);
+            obj.select_measurement = measurement(2:commaPos-1);
             s21 = obj.sweep_data;
             
             center_freq = obj.sweep_center;
