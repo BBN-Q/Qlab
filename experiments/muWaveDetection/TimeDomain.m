@@ -103,7 +103,7 @@ AWGPanel = uiextras.Panel('Parent', middleVBox, 'Title', 'AWG''s','FontSize',12,
 AWGTabPanel = uiextras.TabPanel('Parent', AWGPanel, 'Padding', 5, 'HighlightColor', 'k');
 [get_tekAWG_settings, set_tekAWG_GUI] = deviceGUIs.AWG5014_settings_GUI(AWGTabPanel, 'TekAWG', prevSettings.InstrParams.TekAWG);
 tmpTabNames = cell(numAPSs+1,1);
-tmpTabNames{1} = 'Tektronix';
+tmpTabNames{1} = 'TekAWG';
 get_APS_settings = cell(numAPSs,1);
 set_APS_settings = cell(numAPSs,1);
 for ct = 1:numAPSs
@@ -122,7 +122,7 @@ get_freqA_settings = sweepGUIs.FrequencySweepGUI(SweepTabPanel, 'A');
 get_power_settings = sweepGUIs.PowerSweepGUI(SweepTabPanel, '');
 get_phase_settings = sweepGUIs.PhaseSweepGUI(SweepTabPanel, '');
 get_AWGSequence_settings = sweepGUIs.AWGSequenceSweepGUI(SweepTabPanel, '');
-get_AWGChannel_settings = sweepGUIs.AWGChannelSweepGUI(SweepTabPanel, '');
+get_AWGChannel_settings = sweepGUIs.AWGChannelSweepGUI(SweepTabPanel, '', AWGTabPanel.TabNames);
 [get_time_settings, set_time_settings] = sweepGUIs.TimeSweepGUI(SweepTabPanel, '');
 
 SweepTabPanel.TabNames = {'Freq. A', 'Power', 'Phase', 'Seq.', 'Channel', 'X-Axis'};

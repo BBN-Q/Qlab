@@ -30,7 +30,6 @@ classdef AWGChannel < sweeps.Sweep
             if ~sweepPtsOnly
                 % look for the AWG instrument object
                 assert(isfield(Instr, SweepParams.AWGName), 'Could not find AWG instrument');
-                %obj.Instr = Instr.TekAWG.(channel_str);
                 obj.Instr = Instr.(SweepParams.AWGName);
             end
             
