@@ -1,23 +1,51 @@
 {
 	"q1": {
-		"instr": "TekAWG",
-		"i": 1,
-		"q": 2,
-		"marker": "3m1",
-		"IQkey": "TekAWG12"
-	},
-	"q2": {
-		"instr": "TekAWG",
+		"awg": "BBNAPS1",
 		"i": 3,
 		"q": 4,
-		"marker": "4m1",
-		"IQkey": "TekAWG34"
+		"marker": "TekAWG_3m1",
+		"IQkey": "BBNAPS1_34",
+		"source": "Logen"
+	},
+	"q2": {
+		"awg": "TekAWG",
+		"i": 3,
+		"q": 4,
+		"marker": "TekAWG_3m1",
+		"IQkey": "TekAWG_34",
+		"source": "Specgen3"
 	},
 	"q3": {
-		"instr": "BBNAPS",
+		"awg": "BBNAPS1",
 		"i": 1,
 		"q": 2,
-		"marker": "3m1",
-		"IQkey": "BBNAPS12"
+		"marker": "TekAWG_2m2",
+		"IQkey": "BBNAPS1_12",
+		"source": "Specgen2"
+	},
+	"CR": {
+		"awg": "BBNAPS2",
+		"i": 1,
+		"q": 2,
+		"marker": "TekAWG_2m2",
+		"IQkey": "BBNAPS2_12",
+		"source": "Specgen"
+	},
+	"M1": {
+		"awg": "BBNAPS2",
+		"i": 3,
+		"q": 4,
+		"marker": "TekAWG_1m2",
+		"IQkey": "BBNAPS2_34",
+		"source": "Rfgen"
+	},
+	"M2": {
+		"awg": "BBNAPS",
+		"i": 1,
+		"q": 2,
+		"marker": "TekAWG_2m2",
+		"IQkey": "BBNAPS_12",
+		"source": "Logen"
 	}
+
 }
