@@ -185,8 +185,8 @@ for awg = awgs
     awg = awg{1};
     basename = [seqParams.basename '-' awg seqParams.suffix];
     % create the directory if it doesn't exist
-    if ~exist(['U:\AWG\' seqParams.basename '\'], 'dir')
-        mkdir(['U:\AWG\' seqParams.basename '\']);
+    if ~exist(fullfile(getpref('qlab', 'awgDir'), seqParams.basename), 'dir')
+        mkdir(fullfile(getpref('qlab', 'awgDir'), seqParams.basename));
     end
     if strcmpi(awg(1:3), 'tek')
         % export Tek
@@ -205,7 +205,7 @@ for awg = awgs
         ch4m2 = awgChannels([awg '_4m2']);
         TekPattern.exportTekSequence(tempdir, basename, ch12{1}, ch1m1, ch1m2, ch12{2}, ch2m1, ch2m2, ch34{1}, ch3m1, ch3m2, ch34{2}, ch4m1, ch4m2, options);
         disp(['Moving AWG ' awg ' file to destination']);
-        pathAWG = ['U:\AWG\' seqParams.basename '\' basename '.awg'];
+        pathAWG = fullfile(getpref('qlab', 'awgDir'), seqParams.basename, [basename '.awg']);
         movefile([tempdir basename '.awg'], pathAWG);
         
         if makePlot
@@ -245,7 +245,7 @@ for awg = awgs
         % export the file
         APSPattern.exportAPSConfig(tempdir, basename, seqParams.nbrRepeats, ch12seq, ch34seq);
         disp(['Moving APS ' awg ' file to destination']);
-        pathAPS = ['U:\AWG\' seqParams.basename '\' basename '.h5'];
+        pathAPS = fullfile(getpref('qlab', 'awgDir'), seqParams.basename, [basename '.h5']);
         movefile([tempdir basename '.h5'], pathAPS);
         
         if makePlot
