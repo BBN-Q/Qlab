@@ -1,106 +1,124 @@
 {
 	"q1": {
-		"buffer": 4,
+		"buffer": 8,
 		"pulseType": "drag",
-		"piAmp": 4911.533914,
-		"pi2Amp": 2455.598477,
-		"delta": 0.92,
-		"pulseLength": 48,
+		"piAmp": 5289.276875,
+		"pi2Amp": 2587.181588,
+		"delta": -0.36,
+		"pulseLength": 60,
 		"channelType": "logical",
-		"sigma": 12
+		"sigma": 15
 	},
 	"q3": {
-		"buffer": 4,
+		"buffer": 8,
 		"pulseType": "drag",
-		"piAmp": 7466.90922,
-		"pi2Amp": 3586.905937,
-		"delta": -0.5,
-		"pulseLength": 48,
+		"piAmp": 4474.3384,
+		"pi2Amp": 2216.546318,
+		"delta": -1.1,
+		"pulseLength": 60,
 		"channelType": "logical",
-		"sigma": 12
+		"sigma": 15
 	},
 	"q2": {
 		"buffer": 4,
 		"pulseType": "drag",
-		"piAmp": 5092.303683,
-		"pi2Amp": 2521.821641,
-		"delta": 0.88,
-		"pulseLength": 48,
+		"piAmp": 7319,
+		"pi2Amp": 3640,
+		"delta": -0.6,
+		"pulseLength": 64,
+		"channelType": "logical",
+		"sigma": 16
+	},
+	"TekAWG_12": {
+		"linkListMode": 0,
+		"delay": 0,
+		"bufferReset": 120,
+		"T": [
+			[0.9213,0.03201151264],
+			[0,1.000603461]
+		],
+		"offset": 8192,
+		"bufferDelay": -72,
+		"channelType": "physical",
+		"bufferPadding": 24
+	},
+	"BBNAPS2_34": {
+		"linkListMode": 1,
+		"delay": -104,
+		"bufferDelay": -56,
+		"T": [
+			[0.9241,0.1913719101],
+			[0,1.021218041]
+		],
+		"offset": 0,
+		"bufferReset": 120,
+		"channelType": "physical",
+		"bufferPadding": 12,
+		"delayDiff": 104
+	},
+	"TekAWG_34": {
+		"linkListMode": 0,
+		"delay": 0,
+		"bufferReset": 120,
+		"T": [
+			[0.9883,-0.04055810465],
+			[0,1.000841715]
+		],
+		"offset": 8192,
+		"bufferDelay": -72,
+		"channelType": "physical",
+		"bufferPadding": 24
+	},
+	"BBNAPS1_34": {
+		"linkListMode": 1,
+		"delay": -104,
+		"bufferDelay": -56,
+		"T": [
+			[1.010782473,-0.1108772228],
+			[0,1.005998445]
+		],
+		"offset": 0,
+		"bufferReset": 100,
+		"channelType": "physical",
+		"bufferPadding": 12,
+		"delayDiff": 104
+	},
+	"CR": {
+		"buffer": 8,
+		"pulseType": "drag",
+		"piAmp": 6274,
+		"pi2Amp": 3095,
+		"delta": 0,
+		"pulseLength": 20,
 		"channelType": "logical",
 		"sigma": 12
 	},
-	"CR21": {
-		"buffer": 4,
-		"pulseType": "drag",
-		"piAmp": 5120,
-		"pi2Amp": 2560,
-		"delta": 0,
-		"pulseLength": 48,
-		"channelType": "logical",
-		"sigma_cr": 12,
-		"sigma": 9,
-		"angle_X": 1.649336143
-	},
-	"BBNAPS12": {
+	"BBNAPS2_12": {
 		"linkListMode": 1,
-		"delay": -130,
-		"bufferDelay": 30,
+		"delay": -104,
+		"bufferDelay": -52,
 		"T": [
-			[1,0],
-			[0,0.9398028688]
+			[1.0256,-0.05013149968],
+			[0,1.001193923]
 		],
 		"offset": 0,
 		"bufferReset": 120,
 		"channelType": "physical",
-		"bufferPadding": 12
+		"bufferPadding": 12,
+		"delayDiff": 104
 	},
-	"BBNAPS34": {
+	"BBNAPS1_12": {
 		"linkListMode": 1,
-		"delay": -130,
-		"bufferDelay": 30,
+		"delay": -104,
+		"bufferDelay": -56,
 		"T": [
-			[1,0],
-			[0,0.9532057734]
+			[0.9233717045,0.0282115631],
+			[0,1.000466627]
 		],
 		"offset": 0,
-		"bufferReset": 120,
+		"bufferReset": 100,
 		"channelType": "physical",
-		"bufferPadding": 12
-	},
-	"TekAWG12": {
-		"linkListMode": 0,
-		"delay": -43,
-		"bufferDelay": -78,
-		"T": [
-			[1,0],
-			[0,1]
-		],
-		"offset": 8193,
-		"bufferReset": 120,
-		"channelType": "physical",
-		"bufferPadding": 12
-	},
-	"TekAWG34": {
-		"linkListMode": 0,
-		"delay": -43,
-		"bufferDelay": -78,
-		"T": [
-			[1,0],
-			[0,1]
-		],
-		"offset": 8193,
-		"bufferReset": 120,
-		"channelType": "physical",
-		"bufferPadding": 12
-	},
-	"CR23": {
-		"buffer": 4,
-		"pulseType": "drag",
-		"piAmp": 6000,
-		"pi2Amp": 0,
-		"delta": 0,
-		"pulseLength": 0,
-		"channelType": "logical",
-		"sigma": 16
+		"bufferPadding": 12,
+		"delayDiff": 104
 	}
 }
