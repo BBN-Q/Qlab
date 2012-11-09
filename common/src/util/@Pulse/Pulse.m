@@ -99,9 +99,9 @@ classdef Pulse < handle
                     obj.isTimeAmplitude = 1;
                     %We only want to hash the first point as only the
                     %amplitude matters. 
-                    obj.hashKeys{ii} = Pulse.hashArray(obj.pulseArray{ii}(fix(end/2),:));
+                    obj.hashKeys{ii} = Pulse.hash(obj.pulseArray{ii}(fix(end/2),:));
                 end
-                if ismember(p, obj.identityPulses)
+                if ismember(label, obj.identityPulses)
                     obj.isZero = 1;
                 end
            end

@@ -37,7 +37,7 @@ for measCh = measChannels
     ChParams = params.(IQkey);
     % shift the delay to include the measurement length
     params.(IQkey).delay = ChParams.delay + seqParams.measLength;
-    pgM = PatternGen('correctionT', ChParams.T,'bufferDelay',ChParams.bufferDelay,'bufferReset',ChParams.bufferReset,'bufferPadding',ChParams.bufferPadding, 'cycleLength', seqParams.cycleLength, 'linkList', ChParams.linkListMode, 'dmodFrequency',SSBFreq);    
+    pgM = PatternGen(measCh, 'cycleLength', seqParams.cycleLength, 'SSBFreq', SSBFreq);    
     measSeq = {{pgM.pulse('Xtheta', 'pType', 'tanh', 'sigma', 1, 'buffer', 0, 'amp', 4000, 'width', seqParams.measLength)}};
     patternDict(IQkey) = struct('pg', pgM, 'patseq', {repmat(measSeq, 1, nbrPatterns)}, 'calseq', {repmat(measSeq,1,calPatterns)}, 'channelMap', qubitMap.(measCh));
 end
@@ -72,7 +72,7 @@ for IQkey = channelNames
     calseq = patternDict(IQkey).calseq;
 
     % if not in link list mode, allocate memory for patterns
-    if (~pg.linkList)
+    if (~pg.linkListMode)
         chI = zeros(numSegments, seqParams.cycleLength, 'int16');
         chQ = chI;
         chBuffer = zeros(numSegments, seqParams.cycleLength, 'uint8');
@@ -164,7 +164,7 @@ for awgChannel = keys(awgChannels)
             ChParams = params.(awgChannel);
             awgChannels(awgChannel) = repmat({ChParams.offset*ones(numSegments, seqParams.cycleLength, 'int16')}, 1, 2);
         else
-            pg = PatternGen('linkList', 1, 'cycleLength', seqParams.cycleLength);
+            pg = PatternGen('linkListMode', 1, 'cycleLength', seqParams.cycleLength);
             patternDict(awgChannel) = struct('pg', pg);
             awgChannels(awgChannel) = {pg.build({pg.pulse('QId')}, 1, 0, seqParams.fixedPt, false)};
         end

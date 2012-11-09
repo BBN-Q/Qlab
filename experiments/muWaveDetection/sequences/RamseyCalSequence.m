@@ -37,7 +37,7 @@ qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
 measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS1'};
+awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
 
 if ~makePlot
     plotSeqNum = 0;
