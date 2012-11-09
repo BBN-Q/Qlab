@@ -49,11 +49,8 @@ classdef PatternGen < handle
         arbPulses;
         arbfname = '';
         linkListMode = false; % enable to construct link lists
-        sha = java.security.MessageDigest.getInstance('SHA-1');
         pulseCollection;
     end
-    
-
     
     methods
         % constructor
@@ -145,15 +142,6 @@ classdef PatternGen < handle
         
         function retVal = pulse(obj, p, varargin)
             self = obj;
-            if obj.linkListMode % if linkList mode is enabled, return a struct
-                retVal = struct();
-                retVal.pulseArray = {};
-                retVal.hashKeys = [];
-                retVal.isTimeAmplitude = 0;
-                retVal.isZero = 0;
-            else % otherwise return the pulseFunction closure
-                retVal = @pulseFunction;
-            end
             
             identityPulses = {'QId' 'MId' 'ZId'};
             qubitPulses = {'Xp' 'Xm' 'X90p' 'X90m' 'X45p' 'X45m' 'Xtheta' 'Yp' 'Ym' 'Y90p' 'Y90m' 'Y45p' 'Y45m' 'Ytheta' 'Up' 'Um' 'U90p' 'U90m' 'Utheta'};
@@ -174,7 +162,7 @@ classdef PatternGen < handle
             elseif ismember(p, measurementPulses) || ismember(p, fluxPulses) || ismember(p, identityPulses)
                 params.pType = 'square';
             end
-            params.arbfname = self.dArbfname; % for arbitrary pulse shapes
+            params.arbfname = self.arbfname; % for arbitrary pulse shapes
             params = parseargs(params, varargin{:});
             % if only a width was specified (not a duration), need to update the duration
             % parameter
@@ -216,7 +204,7 @@ classdef PatternGen < handle
             end       
             
             if ismethod(self, [params.pType 'Pulse'])
-                pf = eval(['@self.' params.pType 'Pulse']);
+                params.pf = eval(['@self.' params.pType 'Pulse']);
             else
                 error('%s is not a valid method', [params.pType 'Pulse'] )
             end
@@ -227,129 +215,17 @@ classdef PatternGen < handle
                 params.modFrequency = 0;
             end
             
-            % if amp, width, sigma, or angle is a vector, get the nth entry
-            function out = getelement(x, n)
-                if isscalar(x) || ischar(x)
-                    out = x;
-                else
-                    out = x(n);
-                end
-            end
+            params.samplingRate = 1.2e9;
             
-            function out = getlength(x)
-                if isscalar(x) || ischar(x)
-                    out = 1;
-                else
-                    out = length(x);
-                end
-            end
-            
-            % find longest parameter vector
-            nbrPulses = max(structfun(@getlength, params));
-            pulses = cell(nbrPulses,1);
-            modAngles = cell(nbrPulses,1);
-            frameChanges = zeros(nbrPulses,1);
-            % construct cell array of pulses for all parameter vectors
-            for n = 1:nbrPulses
-                % pick out the nth element of parameters provided as
-                % vectors
-                elementParams = structfun(@(x) getelement(x, n), params, 'UniformOutput', 0);
-                duration = elementParams.duration;
-                width = elementParams.width;
-                
-                %It seems we shoud be able to do this with nargout but all
-                %the pulse functions have vargout i.e. return -1 for
-                %nargout
-                %Try for the frame change version 
-                try  
-                    [xpulse, ypulse, frameChanges(n)] = pf(elementParams);
-                catch exception
-                    %If we don't have enough output arguments try for the
-                    %non frame-change version
-                   if strcmp(exception.identifier,'MATLAB:maxlhs')
-                       [xpulse,ypulse] = pf(elementParams);
-                   else 
-                       rethrow(exception);
-                   end
-                end
-                
-                % add buffer padding
-                if (duration > width)
-                    padleft = floor((duration - width)/2);
-                    padright = ceil((duration - width)/2);
-                    xpulse = [zeros(padleft,1); xpulse; zeros(padright,1)];
-                    ypulse = [zeros(padleft,1); ypulse; zeros(padright,1)];
-                end
-                
-                % store the pulse
-                pulses{n} = xpulse +1j*ypulse;
-                
-                % precompute SSB modulation angles
-                timeStep = 1/self.samplingRate;
-                modAngles{n} = - 2*pi*params.modFrequency*timeStep*(0:(length(pulses{n})-1))';
-            end
-            
-            % create closure with the parameters defined above
-            function [xpulse, ypulse, frameChange] = pulseFunction(n, accumulatedPhase)
-                % n - index into parameter arrays
-                % accumulatedPhase - allows dynamic updating of the basis
-                %   based upon the position in time of the pulse
-                angle = params.angle(1+mod(n-1, length(params.angle)));
-                complexPulse = pulses{1+mod(n-1, length(pulses))};
-                
-                % rotate and correct the pulse
-                tmpAngles = angle + accumulatedPhase + modAngles{1+mod(n-1, length(modAngles))};
-                complexPulse = complexPulse.*exp(1j*tmpAngles);
-                xypairs = self.T*[real(complexPulse) imag(complexPulse)].';
-                xpulse = xypairs(1,:).';
-                ypulse = xypairs(2,:).';
-                
-                frameChange = frameChanges(1+mod(n-1, length(frameChanges)));
-            end
+            % create the Pulse object
+            retVal = Pulse(p, params, obj.linkListMode);
             
             if obj.linkListMode
-                % how this should look
-                %retVal.pulseArray = arrayfun(@pulseFunction, 1:nbrPulses, 'UniformOutput', 0);
-                %retVal.hashKeys = cellfun(@obj.hashArray, retVal.pulseArray, 'UniformOutput', 0);
-                % some weird MATLAB bug causes this not to work, hence the
-                % following for loop
-                retVal.pulseArray = cell(nbrPulses,1);
-                retVal.hashKeys = cell(nbrPulses,1);
-                for ii = 1:nbrPulses
-                    [xpulse, ypulse] = pulseFunction(ii, 0);
-                    retVal.pulseArray{ii} = [xpulse, ypulse];
-                    retVal.hashKeys{ii} = obj.hashArray(retVal.pulseArray{ii});
-                end
-                if strcmp(params.pType, 'square')
-                    %Square pulses are time/amplitude pairs
-                    retVal.isTimeAmplitude = 1;
-                    %We only want to hash the first point as only the
-                    %amplitude matters. 
-                    retVal.hashKeys{ii} = obj.hashArray(retVal.pulseArray{ii}(fix(end/2),:));
-                end
-                if ismember(p, identityPulses)
-                    retVal.isZero = 1;
-                end
+                % add hashed pulses to pulseCollection
                 for ii = 1:length(retVal.hashKeys)
                     self.pulseCollection(retVal.hashKeys{ii}) = retVal.pulseArray{ii};
                 end
             end
-            
-        end
-        
-        function h = hashArray(obj, array)
-            % uses java object to build hash string.
-            if isempty(array)
-                array = 0;
-            end
-            obj.sha.reset();
-            %Salt the array to avoid collisions
-            obj.sha.update([array(:); array(:)+10101]);
-            h = obj.sha.digest();
-            % convert to hex string
-            h = sprintf('%02x',uint8(h));
-            % turn numbers into uppercase letters
-            h(h < 'A') = h(h < 'A') + 17;
         end
         
         function seq = build(obj, pulseList, numsteps, delay, fixedPoint, gated)
@@ -373,7 +249,7 @@ classdef PatternGen < handle
             numPatterns = length(pulseList);
             
             padWaveform = [0,0];
-            padWaveformKey = obj.hashArray(padWaveform);
+            padWaveformKey = Pulse.hash(padWaveform);
             padPulse = struct();
             padPulse.pulseArray = {padWaveform};
             padPulse.hashKeys = {padWaveformKey};
@@ -642,6 +518,13 @@ classdef PatternGen < handle
         end
     end
     methods (Static)
+        function out = print(seq)
+            if iscell(seq)
+                out = cellfun(@PatternGen.print, seq, 'UniformOutput', false);
+            else
+                out = seq.print();
+            end
+        end
         function out = padLeft(m, len)
             if length(m) < len
                 out = [zeros(len - length(m), 1); m];

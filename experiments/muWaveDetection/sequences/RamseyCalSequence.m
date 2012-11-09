@@ -12,14 +12,9 @@ fixedPt = pulseSpacings(end)+1000;
 cycleLength = fixedPt+2000; 
 nbrRepeats = 1;
 
-% load config parameters from file
-params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.(qubit);
-qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
-IQkey = qubitMap.(qubit).IQkey;
 % if using SSB, set the frequency here
-SSBFreq = -100e6;
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T,'bufferDelay',params.(IQkey).bufferDelay,'bufferReset',params.(IQkey).bufferReset,'bufferPadding',params.(IQkey).bufferPadding, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
+SSBFreq = 0e6;
+pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
 
 patseq = {{...
     pg.pulse('X90p'), ...
@@ -38,9 +33,11 @@ seqParams = struct(...
     'measLength', 2000);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
 measChannels = {'M1'};
-awgs = {'TekAWG'};
+awgs = {'TekAWG', 'BBNAPS1'};
 
 if ~makePlot
     plotSeqNum = 0;
