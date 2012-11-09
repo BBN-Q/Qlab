@@ -20,16 +20,10 @@ nbrRepeats = 10;
 introduceError = 0;
 errorAmp = 0.2;
 
-% load config parameters from file
-params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.(qubit);
-qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
-IQkey = qubitMap.(qubit).IQkey;
-
 % if using SSB, set the frequency here
 SSBFreq = 0e6;
 
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
+pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
 
 % load in random Clifford sequences from text file
 % FID = fopen('RBsequences-long.txt');
@@ -67,8 +61,6 @@ end
 calseq = {{pg.pulse('QId')},{pg.pulse('QId')},{pg.pulse('Xp')},{pg.pulse('Xp')}};
 
 
-compiler = ['compileSequence' IQkey];
-
 %Split into the number of randomizations and shuffle to try and fit into
 %two banks
 % strippedBasename = basename;
@@ -99,9 +91,13 @@ seqParams = struct(...
     'measLength', 2000);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
+
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
+
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
 measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS'};
+awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
 
