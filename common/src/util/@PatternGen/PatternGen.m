@@ -29,15 +29,15 @@
 
 classdef PatternGen < handle
     properties
-        dPulseLength = 24;
-        dSigma = 6;
-        dPiAmp = 4000;
-        dPi2Amp = 2000;
-        dPi4Amp = 1000;
-        dDelta = -0.5;
-        dPulseType = 'gaussian';
-        dBuffer = 4;
-        dmodFrequency = 0; % SSB modulation frequency (sign matters!!)
+        pulseLength = 24;
+        sigma = 6;
+        piAmp = 4000;
+        pi2Amp = 2000;
+        pi4Amp = 1000;
+        delta = -0.5;
+        pulseType = 'gaussian';
+        buffer = 4;
+        SSBFreq = 0; % SSB modulation frequency (sign matters!!)
         % gating pulse parameters
         bufferDelay = 0;
         bufferReset = 12;
@@ -45,9 +45,9 @@ classdef PatternGen < handle
         
         cycleLength = 10000;
         samplingRate = 1.2e9; % in samples per second
-        correctionT = eye(2,2);
+        T = eye(2,2); % matrix correction matrix
         arbPulses;
-        dArbfname = '';
+        arbfname = '';
         linkListMode = false; % enable to construct link lists
         sha = java.security.MessageDigest.getInstance('SHA-1');
         pulseCollection;
@@ -67,6 +67,7 @@ classdef PatternGen < handle
             % intialize map containters
             obj.pulseCollection = containers.Map();
             obj.arbPulses = containers.Map();
+            
             if nargin > 0 && mod(nargin, 2) == 1 && ischar(varargin{1})
                 % called with a qubit name, load parameters from file
                 pulseParams = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
@@ -86,12 +87,9 @@ classdef PatternGen < handle
                 % first letter variant)
                 fnames = fieldnames(params);
                 for ii = 1:length(fnames)
-                    param = fnames{ii};
-                    dname = ['d' upper(param(1)) param(2:end)];
-                    if ismember(param, properties('PatternGen'))
-                        obj.(param) = params.(param);
-                    elseif ismember(dname, properties('PatternGen'))
-                        obj.(dname) = params.(param);
+                    paramName = fnames{ii};
+                    if ismember(paramName, properties('PatternGen'))
+                        obj.(paramName) = params.(paramName);
                     end
                 end
                 
@@ -135,7 +133,7 @@ classdef PatternGen < handle
                 xpat(len+1:len+increment) = xpulse;
                 ypat(len+1:len+increment) = ypulse;
                 len = len + increment;
-                accumulatedPhase = accumulatedPhase - 2*pi*obj.dmodFrequency*timeStep*increment + frameChange;
+                accumulatedPhase = accumulatedPhase - 2*pi*obj.SSBFreq*timeStep*increment + frameChange;
             end
             
             xpat = xpat(1:len);
@@ -164,15 +162,15 @@ classdef PatternGen < handle
             
             % set default pulse parameters
             params.amp = 0;
-            params.width = self.dPulseLength;
-            params.sigma = self.dSigma;
-            params.delta = self.dDelta;
+            params.width = self.pulseLength;
+            params.sigma = self.sigma;
+            params.delta = self.delta;
             params.angle = 0; % in radians
             params.rotAngle = 0;
-            params.modFrequency = self.dmodFrequency;
-            params.duration = params.width + self.dBuffer;
+            params.modFrequency = self.SSBFreq;
+            params.duration = params.width + self.buffer;
             if ismember(p, qubitPulses)
-                params.pType = self.dPulseType;
+                params.pType = self.pulseType;
             elseif ismember(p, measurementPulses) || ismember(p, fluxPulses) || ismember(p, identityPulses)
                 params.pType = 'square';
             end
@@ -181,7 +179,7 @@ classdef PatternGen < handle
             % if only a width was specified (not a duration), need to update the duration
             % parameter
             if ismember('width', varargin(1:2:end)) && ~ismember('duration', varargin(1:2:end))
-                params.duration = params.width + self.dBuffer;
+                params.duration = params.width + self.buffer;
             end
             
             % extract additional parameters from pulse name
@@ -198,22 +196,22 @@ classdef PatternGen < handle
             % set amplitude/rotation angle defaults
             switch p
                 case {'Xp','Yp','Up','Zp'}
-                    params.amp = self.dPiAmp;
+                    params.amp = self.piAmp;
                     params.rotAngle = pi;
                 case {'Xm','Ym','Um','Zm'}
-                    params.amp = -self.dPiAmp;
+                    params.amp = -self.piAmp;
                     params.rotAngle = pi;
                 case {'X90p','Y90p','U90p','Z90p'}
-                    params.amp = self.diPi2Amp;
+                    params.amp = self.pi2Amp;
                     params.rotAngle = pi/2;
                 case {'X90m','Y90m','U90m','Z90m'}
-                    params.amp = -self.diPi2Amp;
+                    params.amp = -self.pi2Amp;
                     params.rotAngle = pi/2;
                 case {'X45p','Y45p','U45p','Z45p'}
-                    params.amp = self.diPi4Amp;
+                    params.amp = self.pi4Amp;
                     params.rotAngle = pi/4;
                 case {'X45m','Y45m','U45m','Z45m'}
-                    params.amp = -self.diPi4Amp;
+                    params.amp = -self.pi4Amp;
                     params.rotAngle = pi/4;
             end       
             
@@ -302,7 +300,7 @@ classdef PatternGen < handle
                 % rotate and correct the pulse
                 tmpAngles = angle + accumulatedPhase + modAngles{1+mod(n-1, length(modAngles))};
                 complexPulse = complexPulse.*exp(1j*tmpAngles);
-                xypairs = self.correctionT*[real(complexPulse) imag(complexPulse)].';
+                xypairs = self.T*[real(complexPulse) imag(complexPulse)].';
                 xpulse = xypairs(1,:).';
                 ypulse = xypairs(2,:).';
                 
