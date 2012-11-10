@@ -124,7 +124,7 @@ classdef PatternGen < handle
             len = 0;
 
             for i = 1:numPatterns
-                [xpulse, ypulse, frameChange] = patList{i}(n, accumulatedPhase); % call the current pulse function;
+                [xpulse, ypulse, frameChange] = patList{i}.getPulse(n, accumulatedPhase); % get the pulse in the appropriate frame;
                 
                 increment = length(xpulse);
                 xpat(len+1:len+increment) = xpulse;
@@ -141,7 +141,6 @@ classdef PatternGen < handle
         end
         
         function retVal = pulse(obj, p, varargin)
-            self = obj;
             
             identityPulses = {'QId' 'MId' 'ZId'};
             qubitPulses = {'Xp' 'Xm' 'X90p' 'X90m' 'X45p' 'X45m' 'Xtheta' 'Yp' 'Ym' 'Y90p' 'Y90m' 'Y45p' 'Y45m' 'Ytheta' 'Up' 'Um' 'U90p' 'U90m' 'Utheta'};
@@ -150,24 +149,24 @@ classdef PatternGen < handle
             
             % set default pulse parameters
             params.amp = 0;
-            params.width = self.pulseLength;
-            params.sigma = self.sigma;
-            params.delta = self.delta;
+            params.width = obj..pulseLength;
+            params.sigma = obj.sigma;
+            params.delta = obj.delta;
             params.angle = 0; % in radians
             params.rotAngle = 0;
-            params.modFrequency = self.SSBFreq;
-            params.duration = params.width + self.buffer;
+            params.modFrequency = obj.SSBFreq;
+            params.duration = params.width + obj.buffer;
             if ismember(p, qubitPulses)
-                params.pType = self.pulseType;
+                params.pType = obj.pulseType;
             elseif ismember(p, measurementPulses) || ismember(p, fluxPulses) || ismember(p, identityPulses)
                 params.pType = 'square';
             end
-            params.arbfname = self.arbfname; % for arbitrary pulse shapes
+            params.arbfname = obj.arbfname; % for arbitrary pulse shapes
             params = parseargs(params, varargin{:});
             % if only a width was specified (not a duration), need to update the duration
             % parameter
             if ismember('width', varargin(1:2:end)) && ~ismember('duration', varargin(1:2:end))
-                params.duration = params.width + self.buffer;
+                params.duration = params.width + obj.buffer;
             end
             
             % extract additional parameters from pulse name
@@ -184,27 +183,27 @@ classdef PatternGen < handle
             % set amplitude/rotation angle defaults
             switch p
                 case {'Xp','Yp','Up','Zp'}
-                    params.amp = self.piAmp;
+                    params.amp = obj.piAmp;
                     params.rotAngle = pi;
                 case {'Xm','Ym','Um','Zm'}
-                    params.amp = -self.piAmp;
+                    params.amp = -obj.piAmp;
                     params.rotAngle = pi;
                 case {'X90p','Y90p','U90p','Z90p'}
-                    params.amp = self.pi2Amp;
+                    params.amp = obj.pi2Amp;
                     params.rotAngle = pi/2;
                 case {'X90m','Y90m','U90m','Z90m'}
-                    params.amp = -self.pi2Amp;
+                    params.amp = -obj.pi2Amp;
                     params.rotAngle = pi/2;
                 case {'X45p','Y45p','U45p','Z45p'}
-                    params.amp = self.pi4Amp;
+                    params.amp = obj.pi4Amp;
                     params.rotAngle = pi/4;
                 case {'X45m','Y45m','U45m','Z45m'}
-                    params.amp = -self.pi4Amp;
+                    params.amp = -obj.pi4Amp;
                     params.rotAngle = pi/4;
             end       
             
             if ismethod(self, [params.pType 'Pulse'])
-                params.pf = eval(['@self.' params.pType 'Pulse']);
+                params.pf = eval(['@obj.' params.pType 'Pulse']);
             else
                 error('%s is not a valid method', [params.pType 'Pulse'] )
             end
@@ -215,7 +214,9 @@ classdef PatternGen < handle
                 params.modFrequency = 0;
             end
             
-            params.samplingRate = 1.2e9;
+            % these parameters are always determined by the class properties
+            params.samplingRate = obj.samplingRate;
+            params.T = obj.T;
             
             % create the Pulse object
             retVal = Pulse(p, params, obj.linkListMode);
@@ -223,7 +224,7 @@ classdef PatternGen < handle
             if obj.linkListMode
                 % add hashed pulses to pulseCollection
                 for ii = 1:length(retVal.hashKeys)
-                    self.pulseCollection(retVal.hashKeys{ii}) = retVal.pulseArray{ii};
+                    obj.pulseCollection(retVal.hashKeys{ii}) = retVal.pulseArray{ii};
                 end
             end
         end
@@ -231,7 +232,7 @@ classdef PatternGen < handle
         function seq = build(obj, pulseList, numsteps, delay, fixedPoint, gated)
             % function pg.build(pulseList, numsteps, delay, fixedPoint)
             % inputs:
-            % pulseList - cell array of pulse functions (returned by PatternGen.pulse())
+            % pulseList - cell array of Pulse objects (generated by PatternGen.pulse())
             % numsteps - number of parameters to iterate over in pulseList
             % delay - offset from fixedPoint in # of samples
             % fixedPoint - the delay at which to right align the pulse

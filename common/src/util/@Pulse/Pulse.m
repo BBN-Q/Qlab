@@ -14,6 +14,7 @@ classdef Pulse < handle
        angles % rotation axis for each pulse
        modAngles
        frameChanges
+       T % mixer correction matrix
        
        % for link list mode
        hashKeys = [];
@@ -24,10 +25,10 @@ classdef Pulse < handle
    methods
        %constructor
        function obj = Pulse(label, params, linkListMode)
-           %Pulse(label, params, pf)
+           %Pulse(label, params, linkListMode)
            %  label - The name of the pulse
            %  params - pulse parameters
-           %  pf - a function handle to generate the pulse
+           %  linkListMode - controls whether final pulses are computed now
            obj.label = label;
            
            % precompute the pulses
@@ -37,8 +38,9 @@ classdef Pulse < handle
            obj.angles = zeros(nbrPulses, 1);
            obj.modAngles = cell(nbrPulses,1);
            obj.frameChanges = zeros(nbrPulses,1);
-           % pull out the pulse function handle
+           % pull out the pulse function handle and T matrix
            pf = params.pf;
+           obj.T = params.T;
            
            % construct cell array of pulses for all parameter vectors
            for n = 1:nbrPulses
@@ -117,9 +119,7 @@ classdef Pulse < handle
            % rotate and correct the pulse
            tmpAngles = angle + accumulatedPhase + obj.modAngles{1+mod(n-1, length(obj.modAngles))};
            complexPulse = complexPulse.*exp(1j*tmpAngles);
-           % TODO
-           %xypairs = obj.T*[real(complexPulse) imag(complexPulse)].';
-           xypairs = [real(complexPulse) imag(complexPulse)].';
+           xypairs = obj.T*[real(complexPulse) imag(complexPulse)].';
            xpulse = xypairs(1,:).';
            ypulse = xypairs(2,:).';
            
