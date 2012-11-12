@@ -62,7 +62,7 @@ public:
 	//Pass through both short and float waveforms
 	template <typename T>
 	int set_waveform(const int & deviceID, const int & dac, const vector<T> & data){
-		return APSs_[deviceID].set_waveform(dac, data);
+		return APSs_[deviceID]->set_waveform(dac, data);
 	}
 
 	int set_run_mode(const int &, const int &, const RUN_MODE &);
@@ -84,7 +84,7 @@ public:
 
 private:
 	int numDevices_;
-	vector<APS> APSs_;
+	vector<APS*> APSs_;
 	vector<string> deviceSerials_;
 };
 

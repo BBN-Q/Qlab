@@ -32,6 +32,8 @@ using std::runtime_error;
 
 #include <thread>
 #include <mutex>
+#include <atomic>
+#include <utility>
 #include <chrono>
 
 
@@ -91,6 +93,7 @@ typedef vector<unsigned short> WordVec;
 
 #include "LLBank.h"
 #include "Channel.h"
+#include "BankBouncerThread.h"
 #include "APS.h"
 #include "APSRack.h"
 

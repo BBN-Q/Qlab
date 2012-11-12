@@ -7,20 +7,20 @@
 
 #include "APS.h"
 
-APS::APS() :  deviceID_{-1}, handle_{NULL}, channels_(4), samplingRate_{-1}, running_{false}, mymutex_(new std::mutex) {}
+APS::APS() :  deviceID_{-1}, handle_{NULL}, channels_(4), samplingRate_{-1}, streaming_{false}, mymutex_{std::unique_ptr<std::mutex>(new std::mutex())} {}
 
 APS::APS(int deviceID, string deviceSerial) :  deviceID_{deviceID}, deviceSerial_{deviceSerial},
-		handle_{NULL}, samplingRate_{-1}, running_{false}, mymutex_(new std::mutex) {
-		for(int ct=0; ct<4; ct++){
-			channels_.push_back(Channel(ct));
-		}
-		checksums_[FPGA1] = CheckSum();
-		checksums_[FPGA2] = CheckSum();
+		handle_{NULL}, samplingRate_{-1}, streaming_{false}, mymutex_{std::unique_ptr<std::mutex>(new std::mutex())} {
+			myBankBouncerThreads_.reserve(4);
+			for(int ct=0; ct<4; ct++){
+				channels_.push_back(Channel(ct));
+				myBankBouncerThreads_.push_back(BankBouncerThread(ct, this));
+			}
+			checksums_[FPGA1] = CheckSum();
+			checksums_[FPGA2] = CheckSum();
 };
 
-APS::~APS() {
-	delete mymutex_;
-}
+APS::~APS() = default;
 
 int APS::connect(){
 	int success = 0;
@@ -368,14 +368,12 @@ int APS::run() {
 		allChannels &= tmpChannel.enabled_;
 	}
 
-	running_ = true;
-
 	//If we have more LL entries than we can handle then we need to stream
 	for (int chanct = 0; chanct < 4; ++chanct) {
 		if (channelsEnabled[chanct]){
 			if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH){
 				streaming_ = false;
-				bankBouncerThread_ = new std::thread(&APS::stream_LL_data, this, chanct);
+				myBankBouncerThreads_[chanct].start();
 				while(!streaming_){
 					usleep(10000);
 				}
@@ -404,11 +402,10 @@ int APS::run() {
 
 int APS::stop() {
 	// stop all channels
-	running_ = false;
-
-	if (channels_[0].LLBank_.length > MAX_LL_LENGTH){
-		bankBouncerThread_->join();
-		delete bankBouncerThread_;
+	for (int chanct = 0; chanct < 4; ++chanct) {
+		if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH){
+			myBankBouncerThreads_[chanct].stop();
+		}
 	}
 
 	//Put the state machines back in reset
@@ -1497,101 +1494,6 @@ int APS::read_LL_addr(const int & dac){
 }
 
 
-int APS::stream_LL_data(const int chan){
-
-	//Acquire the device lock
-	//This is not exception safe....
-	mymutex_->lock();
-
-	FPGASELECT fpga = dac2fpga(chan);
-
-	//To reduce traffic on the USB bus write only when we have a decent block size
-	//TODO:: implement
-//	const int MIN_WRITE_SIZE = MAX_LL_LENGTH/4;
-
-	//The current addresses in hardware and software
-	//nextMiniLL is the final miniLL we would like to write (% #miniLL's)
-	//lastMiniLL is the last miniLL we have written (% #miniLL's)
-	//curAddrHW is the currently playing LL entry in hardware (% MAX_LL_LENGTH)
-	//nextWriteAddrHW is the next address we write to in hardware (% MAX_LL_LENGTH)
-	int nextMiniLL, lastMiniLL, curAddrHW, nextWriteAddrHW, boundaryLLEntry;
-
-	//Get a pointer shortcut to the current bank
-	LLBank* curLLBank = &channels_[chan].LLBank_;
-
-	//Helper function to see how many miniLL's we can write
-	auto entries_can_write = [&]() {
-		//Check how many we can fit in
-		int entriesOpen = mymod(curAddrHW-nextWriteAddrHW, MAX_LL_LENGTH);
-		int entriesToWrite = 0;
-		//Find the currently playing miniLL by comparing the playing LL entry with the start points
-		//Since we are always looking ahead in the hardware we should offset curAddrHW by one
-		int currentEntry = mymod(mymod(curAddrHW-1, MAX_LL_LENGTH) + boundaryLLEntry, curLLBank->length);
-		WordVec::iterator curPlayMiniLLIt = std::lower_bound(curLLBank->miniLLStartIdx.begin(), curLLBank->miniLLStartIdx.end(), currentEntry);
-		//Subtract off the size of the currently playing miniLL
-		entriesOpen -= curLLBank->miniLLLengths[curPlayMiniLLIt-curLLBank->miniLLStartIdx.begin()];
-		while ((entriesToWrite + curLLBank->miniLLLengths[nextMiniLL]) < entriesOpen){
-			entriesToWrite += curLLBank->miniLLLengths[nextMiniLL];
-			nextMiniLL = (nextMiniLL+1)%curLLBank->numMiniLLs;
-		}
-		FILE_LOG(logDEBUG1) << "Device ID: " << deviceID_ << " Next write Addr: " << nextWriteAddrHW << " Can write " << entriesToWrite << " entries.";
-		FILE_LOG(logDEBUG1) << "LastMiniLL: " << lastMiniLL << " nextMiniLL: " << nextMiniLL;
-	};
-
-	//Write the LL length to the max
-	FILE_LOG(logDEBUG1) << "Writing Link List Length: " << myhex << MAX_LL_LENGTH << " at address: " << FPGA_ADDR_CHA_LL_LENGTH;
-	write(fpga, FPGA_ADDR_CHA_LL_LENGTH, MAX_LL_LENGTH-1, false);
-	FILE_LOG(logDEBUG2) << "LL Length Register: " << FPGA::read_FPGA(handle_, FPGA_ADDR_CHA_LL_LENGTH, FPGA1);
-
-	//Initialize things so that the first time through we write as many as we can
-	nextMiniLL = 0;
-	lastMiniLL = curLLBank->numMiniLLs-1;
-	boundaryLLEntry = 0;
-	nextWriteAddrHW = 0;
-	curAddrHW = MAX_LL_LENGTH-1;
-
-	//Write the first block
-	entries_can_write();
-	write_LL_data_IQ(fpga, 0, 0, curLLBank->miniLLStartIdx[nextMiniLL], false);
-	nextWriteAddrHW = curLLBank->miniLLStartIdx[nextMiniLL];
-	//Let the main thread know we are done
-	streaming_ = true;
-	mymutex_->unlock();
-
-	//Now loop while streaming
-	while(running_) {
-
-		//See how many more miniLL's we can fit in
-		entries_can_write();
-
-		//If there is something to write then do so
-		if (mymod(nextMiniLL - lastMiniLL, curLLBank->numMiniLLs) > 1){
-			USHORT startMiniLL = (lastMiniLL+1)%curLLBank->numMiniLLs;
-			USHORT curWriteAddrHW = nextWriteAddrHW;
-			write_LL_data_IQ(fpga, USHORT(curWriteAddrHW), curLLBank->miniLLStartIdx[startMiniLL] , curLLBank->miniLLStartIdx[nextMiniLL], false);
-			nextWriteAddrHW = mymod(nextWriteAddrHW + mymod(curLLBank->miniLLStartIdx[nextMiniLL] - curLLBank->miniLLStartIdx[startMiniLL], curLLBank->length), MAX_LL_LENGTH);
-			// if we've wrapped around, need to update state information about the miniLL index and entry of the left-most edge
-			if (nextWriteAddrHW < curWriteAddrHW) {
-				boundaryLLEntry = (MAX_LL_LENGTH - curWriteAddrHW) + curLLBank->miniLLStartIdx[startMiniLL];
-			}
-			lastMiniLL = nextMiniLL-1;
-		}
-
-		//Sleep for 10ms to reduce bus congestion
-		std::this_thread::sleep_for( std::chrono::milliseconds(10) );
-
-		//Poll for current hardware address
-		mymutex_->lock();
-		curAddrHW = read_LL_addr(fpga);
-		mymutex_->unlock();
-		FILE_LOG(logDEBUG1) << "Device ID: " << deviceID_ << " Current LL Addr: " << curAddrHW;
-
-	}
-	
-
-	return 0;
-}
-
 int APS::save_state_file(string & stateFile){
 
 	if (stateFile.length() == 0) {
@@ -1649,3 +1551,95 @@ int APS::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootStr){
 	return 0;
 }
 
+void BankBouncerThread::run(){
+	//Acquire the device lock
+	//This is not exception safe....
+	myAPS_->mymutex_->lock();
+
+	FPGASELECT fpga = dac2fpga(channel_);
+
+	//To reduce traffic on the USB bus write only when we have a decent block size
+	//TODO:: implement
+//	const int MIN_WRITE_SIZE = MAX_LL_LENGTH/4;
+
+	//The current addresses in hardware and software
+	//nextMiniLL is the final miniLL we would like to write (% #miniLL's)
+	//lastMiniLL is the last miniLL we have written (% #miniLL's)
+	//curAddrHW is the currently playing LL entry in hardware (% MAX_LL_LENGTH)
+	//nextWriteAddrHW is the next address we write to in hardware (% MAX_LL_LENGTH)
+	int nextMiniLL, lastMiniLL, curAddrHW, nextWriteAddrHW, boundaryLLEntry;
+
+	//Get a pointer shortcut to the current bank
+	LLBank* curLLBank = &myAPS_->channels_[channel_].LLBank_;
+
+	//Helper function to see how many miniLL's we can write
+	auto entries_can_write = [&]() {
+		//Check how many we can fit in
+		int entriesOpen = mymod(curAddrHW-nextWriteAddrHW, MAX_LL_LENGTH);
+		int entriesToWrite = 0;
+		//Find the currently playing miniLL by comparing the playing LL entry with the start points
+		//Since we are always looking ahead in the hardware we should offset curAddrHW by one
+		int currentEntry = mymod(mymod(curAddrHW-1, MAX_LL_LENGTH) + boundaryLLEntry, curLLBank->length);
+		WordVec::iterator curPlayMiniLLIt = std::lower_bound(curLLBank->miniLLStartIdx.begin(), curLLBank->miniLLStartIdx.end(), currentEntry);
+		//Subtract off the size of the currently playing miniLL
+		entriesOpen -= curLLBank->miniLLLengths[curPlayMiniLLIt-curLLBank->miniLLStartIdx.begin()];
+		while ((entriesToWrite + curLLBank->miniLLLengths[nextMiniLL]) < entriesOpen){
+			entriesToWrite += curLLBank->miniLLLengths[nextMiniLL];
+			nextMiniLL = (nextMiniLL+1)%curLLBank->numMiniLLs;
+		}
+		FILE_LOG(logDEBUG1) << "Device ID: " << myAPS_->deviceID_ << " Next write Addr: " << nextWriteAddrHW << " Can write " << entriesToWrite << " entries.";
+		FILE_LOG(logDEBUG1) << "LastMiniLL: " << lastMiniLL << " nextMiniLL: " << nextMiniLL;
+	};
+
+	//Write the LL length to the max
+	FILE_LOG(logDEBUG1) << "Writing Link List Length: " << myhex << MAX_LL_LENGTH << " at address: " << FPGA_ADDR_CHA_LL_LENGTH;
+	myAPS_->write(fpga, FPGA_ADDR_CHA_LL_LENGTH, MAX_LL_LENGTH-1, false);
+	FILE_LOG(logDEBUG2) << "LL Length Register: " << FPGA::read_FPGA(myAPS_->handle_, FPGA_ADDR_CHA_LL_LENGTH, FPGA1);
+
+	//Initialize things so that the first time through we write as many as we can
+	nextMiniLL = 0;
+	lastMiniLL = curLLBank->numMiniLLs-1;
+	boundaryLLEntry = 0;
+	nextWriteAddrHW = 0;
+	curAddrHW = MAX_LL_LENGTH-1;
+
+	//Write the first block
+	entries_can_write();
+	myAPS_->write_LL_data_IQ(fpga, 0, 0, curLLBank->miniLLStartIdx[nextMiniLL], false);
+	nextWriteAddrHW = curLLBank->miniLLStartIdx[nextMiniLL];
+	//Let the main thread know we are done
+	myAPS_->streaming_ = true;
+	myAPS_->mymutex_->unlock();
+
+	//Now loop while streaming
+	while(running_) {
+
+		//See how many more miniLL's we can fit in
+		entries_can_write();
+
+		//If there is something to write then do so
+		if (mymod(nextMiniLL - lastMiniLL, curLLBank->numMiniLLs) > 1){
+			USHORT startMiniLL = (lastMiniLL+1)%curLLBank->numMiniLLs;
+			USHORT curWriteAddrHW = nextWriteAddrHW;
+			myAPS_->write_LL_data_IQ(fpga, USHORT(curWriteAddrHW), curLLBank->miniLLStartIdx[startMiniLL] , curLLBank->miniLLStartIdx[nextMiniLL], false);
+			nextWriteAddrHW = mymod(nextWriteAddrHW + mymod(curLLBank->miniLLStartIdx[nextMiniLL] - curLLBank->miniLLStartIdx[startMiniLL], curLLBank->length), MAX_LL_LENGTH);
+			// if we've wrapped around, need to update state information about the miniLL index and entry of the left-most edge
+			if (nextWriteAddrHW < curWriteAddrHW) {
+				boundaryLLEntry = (MAX_LL_LENGTH - curWriteAddrHW) + curLLBank->miniLLStartIdx[startMiniLL];
+			}
+			lastMiniLL = nextMiniLL-1;
+		}
+
+		//Sleep for 10ms to reduce bus congestion
+		std::this_thread::sleep_for( std::chrono::milliseconds(10) );
+
+		//Poll for current hardware address
+		myAPS_->mymutex_->lock();
+		curAddrHW = myAPS_->read_LL_addr(fpga);
+		myAPS_->mymutex_->unlock();
+		FILE_LOG(logDEBUG1) << "Device ID: " << myAPS_->deviceID_ << " Current LL Addr: " << curAddrHW;
+
+	}
+	
+
+}
