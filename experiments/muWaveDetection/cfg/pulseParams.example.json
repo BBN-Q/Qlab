@@ -120,5 +120,11 @@
 		"channelType": "physical",
 		"bufferPadding": 12,
 		"delayDiff": 104
-	}
+	},
+    "M1": {
+        "channelType": "logical"
+    },
+    "M2": {
+        "channelType": "logical"
+    }
 }

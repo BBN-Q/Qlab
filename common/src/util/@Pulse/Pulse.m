@@ -41,6 +41,7 @@ classdef Pulse < handle
            % pull out the pulse function handle and T matrix
            pf = params.pf;
            obj.T = params.T;
+           params = rmfield(params, 'T'); % getelement does not work on matrix elements
            
            % construct cell array of pulses for all parameter vectors
            for n = 1:nbrPulses

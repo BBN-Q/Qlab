@@ -149,7 +149,7 @@ classdef PatternGen < handle
             
             % set default pulse parameters
             params.amp = 0;
-            params.width = obj..pulseLength;
+            params.width = obj.pulseLength;
             params.sigma = obj.sigma;
             params.delta = obj.delta;
             params.angle = 0; % in radians
@@ -202,7 +202,7 @@ classdef PatternGen < handle
                     params.rotAngle = pi/4;
             end       
             
-            if ismethod(self, [params.pType 'Pulse'])
+            if ismethod(obj, [params.pType 'Pulse'])
                 params.pf = eval(['@obj.' params.pType 'Pulse']);
             else
                 error('%s is not a valid method', [params.pType 'Pulse'] )
