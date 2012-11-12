@@ -26,11 +26,11 @@ public:
     virtual ~Runnable() { try { stop(); } catch(...) { /*??*/ } }
 
     //However, we do want to allow moving to put in a vector
-    Runnable(Runnable && rhs){
+    Runnable(Runnable && rhs) {
     	running_ = rhs.running_.load();
     	m_thread_ = std::move(rhs.m_thread_);
     }
-    Runnable& operator=(Runnable&& rhs){
+    Runnable& operator=(Runnable&& rhs) {
     	running_ = rhs.running_.load();
     	m_thread_ = std::move(rhs.m_thread_);
     	return *this;

@@ -7,18 +7,32 @@
 
 #include "APS.h"
 
-APS::APS() :  deviceID_{-1}, handle_{NULL}, channels_(4), samplingRate_{-1}, streaming_{false}, mymutex_{std::unique_ptr<std::mutex>(new std::mutex())} {}
+APS::APS() :  deviceID_{-1}, handle_{nullptr}, channels_(4), samplingRate_{-1}, writeQueue_(0), streaming_{false}, mymutex_{std::unique_ptr<std::mutex>(new std::mutex())} {}
 
 APS::APS(int deviceID, string deviceSerial) :  deviceID_{deviceID}, deviceSerial_{deviceSerial},
-		handle_{NULL}, samplingRate_{-1}, streaming_{false}, mymutex_{std::unique_ptr<std::mutex>(new std::mutex())} {
+		handle_{nullptr}, samplingRate_{-1}, writeQueue_(0), streaming_{false}, mymutex_{std::unique_ptr<std::mutex>(new std::mutex())} {
+			channels_.reserve(4);
 			myBankBouncerThreads_.reserve(4);
-			for(int ct=0; ct<4; ct++){
+			for(size_t ct=0; ct<4; ct++){
 				channels_.push_back(Channel(ct));
-				myBankBouncerThreads_.push_back(BankBouncerThread(ct, this));
+				myBankBouncerThreads_.emplace_back(ct, this);
 			}
 			checksums_[FPGA1] = CheckSum();
 			checksums_[FPGA2] = CheckSum();
 };
+
+APS::APS(APS && other) : deviceID_{other.deviceID_}, handle_{other.handle_}, samplingRate_{other.samplingRate_}, writeQueue_{std::move(other.writeQueue_)},
+		streaming_{other.streaming_.load()}, mymutex_{std::move(other.mymutex_)} {
+	channels_.reserve(4);
+	myBankBouncerThreads_.reserve(4);
+	for(size_t ct=0; ct<4; ct++){
+		channels_.push_back(std::move(other.channels_[ct]));
+		myBankBouncerThreads_.push_back(std::move(other.myBankBouncerThreads_[ct]));
+	}
+	checksums_[FPGA1] = other.checksums_[FPGA1];
+	checksums_[FPGA2] = other.checksums_[FPGA2];
+};
+
 
 APS::~APS() = default;
 

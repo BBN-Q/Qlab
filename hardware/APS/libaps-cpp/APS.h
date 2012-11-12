@@ -12,14 +12,17 @@
 
 class APS {
 
-	//Since the APS contains non-copyable mutexs and atomic members then explicitly prevent copying
-	APS(const APS&) = delete;
-	APS& operator=(const APS&) = delete;
 
 public:
+	//Constructors
 	APS();
 	APS(int, string);
+	//Move-ctor
+	APS(APS&&);
+
 	~APS();
+
+
 
 	int connect();
 	int disconnect();
@@ -75,6 +78,11 @@ public:
 	friend class BankBouncerThread;
 
 private:
+
+	//Since the APS contains non-copyable mutexs and atomic members then explicitly prevent copying
+	APS(const APS&) = delete;
+	APS& operator=(const APS&) = delete;
+
 	int deviceID_;
 	string deviceSerial_;
 	FT_HANDLE handle_;

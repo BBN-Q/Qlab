@@ -6,7 +6,6 @@
  *      Author: qlab
  */
 
-#include "headings.h"
 #include "libaps.h"
 
 APSRack APSRack_;
@@ -17,7 +16,6 @@ extern "C" {
 
 int init(){
 
-	APSRack_ = APSRack();
 	APSRack_.init();
 
 	return APS_OK;
