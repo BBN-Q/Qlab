@@ -22,8 +22,6 @@ public:
 
 	~APS();
 
-
-
 	int connect();
 	int disconnect();
 

@@ -385,7 +385,7 @@ int APS::run() {
 	//If we have more LL entries than we can handle then we need to stream
 	for (int chanct = 0; chanct < 4; ++chanct) {
 		if (channelsEnabled[chanct]){
-			if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH){
+			if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH && !myBankBouncerThreads_[chanct].isRunning()){
 				streaming_ = false;
 				myBankBouncerThreads_[chanct].start();
 				while(!streaming_){
@@ -1621,6 +1621,7 @@ void BankBouncerThread::run(){
 	entries_can_write();
 	myAPS_->write_LL_data_IQ(fpga, 0, 0, curLLBank->miniLLStartIdx[nextMiniLL], false);
 	nextWriteAddrHW = curLLBank->miniLLStartIdx[nextMiniLL];
+	lastMiniLL = nextMiniLL - 1;
 	//Let the main thread know we are done
 	myAPS_->streaming_ = true;
 	myAPS_->mymutex_->unlock();

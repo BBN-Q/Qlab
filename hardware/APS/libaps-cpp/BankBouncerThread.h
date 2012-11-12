@@ -36,8 +36,26 @@ public:
     	return *this;
     }
 
-    void stop() { running_ = false; m_thread_.join(); }
-    void start() { running_ = true; m_thread_ = std::thread(&Runnable::run, this); }
+    void stop() {
+    	if (running_) {
+    		running_ = false;
+    		m_thread_.join();
+    	} else {
+    		running_ = false;
+    	}
+    }
+    void start() {
+    	if (!running_) {
+    		running_ = true;
+    		m_thread_ = std::thread(&Runnable::run, this);
+    	} else {
+    		running_ = true;
+    	}
+    }
+
+    bool isRunning() {
+    	return running_;
+    }
 
 protected:
     virtual void run() = 0;
