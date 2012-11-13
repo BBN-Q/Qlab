@@ -1,10 +1,10 @@
-function PulsedSpec(qubit, makePlot, plotSeqNum)
+function PulsedSpec(qubit, makePlot)
 
 
 basename = 'PulsedSpec';
 
 fixedPt = 10000;
-cycleLength = 18000;
+cycleLength = 19000;
 numsteps = 1;
 nbrRepeats = 1;
 specLength = 9600;
@@ -29,17 +29,13 @@ seqParams = struct(...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
-    'measLength', 4000);
+    'measLength', 8000);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
 measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS'};
+awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
 
-if ~makePlot
-    plotSeqNum = 0;
-end
-
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, plotSeqNum);
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 
 end

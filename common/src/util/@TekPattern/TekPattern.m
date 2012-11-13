@@ -19,12 +19,13 @@
 
 classdef TekPattern < handle
 	methods (Static)
-		function status = exportTekSequence(path, basename, patCh1, m11, m12, patCh2, m21, m22, patCh3, m31, m32, patCh4, m41, m42, options)
-			% error check
-			dims = size(patCh1);
-			if (~isequal(size(m11), dims) || ~isequal(size(m12), dims) || ~isequal(size(patCh2), dims) || ~isequal(size(m21), dims) || ~isequal(size(m22), dims) || ~isequal(size(patCh3), dims) || ~isequal(size(m31), dims) || ~isequal(size(m32), dims) || ~isequal(size(patCh4), dims) || ~isequal(size(m41), dims) || ~isequal(size(m42), dims))
-				error('inputs must all have the same dimensions');
-            end
+		function exportTekSequence(path, basename, seqData, options)
+
+            %Check that all channels have the same dimension
+            dims = structfun(@size, seqData, 'UniformOutput', false);
+            assert(all(range(cell2mat(struct2cell(dims))) == 0), 'All channels must have same dimensions');
+
+            %Default options structure
             if ~exist('options', 'var')
                 options = struct();
             end
@@ -38,10 +39,10 @@ classdef TekPattern < handle
 			if options.verbose
                 disp('Packing patterns');
             end
-			packedCh1 = self.packPattern(patCh1, m11, m12);
-			packedCh2 = self.packPattern(patCh2, m21, m22);
-			packedCh3 = self.packPattern(patCh3, m31, m32);
-			packedCh4 = self.packPattern(patCh4, m41, m42);
+			packedCh1 = self.packPattern(seqData.ch1, seqData.ch1m1, seqData.ch1m2);
+			packedCh2 = self.packPattern(seqData.ch2, seqData.ch2m1, seqData.ch2m2);
+			packedCh3 = self.packPattern(seqData.ch3, seqData.ch3m1, seqData.ch3m2);
+			packedCh4 = self.packPattern(seqData.ch4, seqData.ch4m1, seqData.ch4m2);
             if options.verbose
                 disp('Done packing');
             end
@@ -57,7 +58,7 @@ classdef TekPattern < handle
 			fid = fopen(fullpath, 'w');
 
 			% write header information
-            numsteps = size(patCh1,1);
+            numsteps = dims.ch1(1);
 			self.writeTekHeader(fid, numsteps, basename, options);
 
 			% write patterns

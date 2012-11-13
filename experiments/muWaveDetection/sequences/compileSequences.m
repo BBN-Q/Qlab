@@ -1,4 +1,4 @@
-function compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, plotIdx)
+function compileSequences(seqParams, patternDict, measChannels, awgs, makePlot)
 % inputs:
 % seqParams - structure of:
 %   basename - string specifying the target folder and file name
@@ -70,26 +70,26 @@ for IQkey = channelNames
     pg = patternDict(IQkey).pg;
     patseq = patternDict(IQkey).patseq;
     calseq = patternDict(IQkey).calseq;
-
+    
     % if not in link list mode, allocate memory for patterns
     if (~pg.linkListMode)
         chI = zeros(numSegments, seqParams.cycleLength, 'int16');
         chQ = chI;
         chBuffer = zeros(numSegments, seqParams.cycleLength, 'uint8');
-
+        
         for n = 1:nbrPatterns;
             for stepct = 1:seqParams.numSteps
                 [patx paty] = pg.getPatternSeq(patseq{n}, stepct, ChParams.delay, seqParams.fixedPt);
-
+                
                 chI((n-1)*seqParams.numSteps + stepct, :) = patx + ChParams.offset;
                 chQ((n-1)*seqParams.numSteps + stepct, :) = paty + ChParams.offset;
                 chBuffer((n-1)*seqParams.numSteps + stepct, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
             end
         end
-
+        
         for n = 1:calPatterns;
             [patx paty] = pg.getPatternSeq(calseq{n}, 1, ChParams.delay, seqParams.fixedPt);
-
+            
             chI(nbrPatterns*seqParams.numSteps + n, :) = patx + ChParams.offset;
             chQ(nbrPatterns*seqParams.numSteps + n, :) = paty + ChParams.offset;
             chBuffer(nbrPatterns*seqParams.numSteps + n, :) = pg.bufferPulse(patx, paty, 0, ChParams.bufferPadding, ChParams.bufferReset, ChParams.bufferDelay);
@@ -116,7 +116,7 @@ for IQkey = channelNames
             if ~gated
                 for stepct = 1:seqParams.numSteps
                     [patx, paty] = pg.linkListToPattern(IQ_seq{n}, stepct);
-
+                    
                     % remove difference of delays
                     patx = circshift(patx, [0, ChParams.delayDiff]);
                     paty = circshift(paty, [0, ChParams.delayDiff]);
@@ -149,8 +149,8 @@ for IQkey = channelNames
 end
 
 % setup digitizer and slave AWG triggers (hardcoded for now)
-awgChannels('TekAWG_1m1') = repmat(pg.makePattern([], seqParams.fixedPt-500, ones(100,1), seqParams.cycleLength), 1, numSegments)';
-awgChannels('TekAWG_4m2') = repmat(pg.makePattern([], 5, ones(100,1), seqParams.cycleLength), 1, numSegments)';
+awgChannels('TekAWG_1m1') = repmat(uint8(pg.makePattern([], seqParams.fixedPt-500, ones(100,1), seqParams.cycleLength)), 1, numSegments)';
+awgChannels('TekAWG_4m2') = repmat(uint8(pg.makePattern([], 5, ones(100,1), seqParams.cycleLength)), 1, numSegments)';
 
 % check for empty channels and fill them
 for awgChannel = keys(awgChannels)
@@ -171,16 +171,7 @@ for awgChannel = keys(awgChannels)
     end
 end
 
-% plotting variables
-plotColors = {'r', 'b', 'g', 'c', 'm', 'k'};
-colorIdx = 0;
-markerPlotColors = {'r-', 'b-', 'g-', 'c-', 'm-', 'k-'};
-markerColorIdx = 0;
-if makePlot
-    figure();
-    hold on
-end
-
+awgFiles = {};
 for awg = awgs
     awg = awg{1};
     basename = [seqParams.basename '-' awg seqParams.suffix];
@@ -193,35 +184,15 @@ for awg = awgs
         % hack... really ought to store this info somewhere or be able to
         % change in from the user interface, rather than writing it to file
         options = struct('m12_high', 2.5, 'm21_high', 2.5, 'm22_high', 2.5, 'nbrRepeats', seqParams.nbrRepeats);
-        ch12 = awgChannels([awg '_12']);
-        ch34 = awgChannels([awg '_34']);
-        ch1m1 = awgChannels([awg '_1m1']);
-        ch1m2 = awgChannels([awg '_1m2']);
-        ch2m1 = awgChannels([awg '_2m1']);
-        ch2m2 = awgChannels([awg '_2m2']);
-        ch3m1 = awgChannels([awg '_3m1']);
-        ch3m2 = awgChannels([awg '_3m2']);
-        ch4m1 = awgChannels([awg '_4m1']);
-        ch4m2 = awgChannels([awg '_4m2']);
-        TekPattern.exportTekSequence(tempdir, basename, ch12{1}, ch1m1, ch1m2, ch12{2}, ch2m1, ch2m2, ch34{1}, ch3m1, ch3m2, ch34{2}, ch4m1, ch4m2, options);
+        TekPattern.exportTekSequence(tempdir, basename, extract_Tek_channel(awg), options);
         disp(['Moving AWG ' awg ' file to destination']);
         pathAWG = fullfile(getpref('qlab', 'awgDir'), seqParams.basename, [basename '.awg']);
         movefile([tempdir basename '.awg'], pathAWG);
+        awgFiles{end+1} = fullfile(getpref('qlab', 'awgDir'), seqParams.basename, [basename '.h5']);
         
         if makePlot
-            plot(ch12{1}(plotIdx,:)-8192, plotColors{ 1+mod(colorIdx, length(plotColors)) });
-            plot(ch12{2}(plotIdx,:)-8192, plotColors{ 1+mod(colorIdx+1, length(plotColors)) });
-            plot(ch34{1}(plotIdx,:)-8192, plotColors{ 1+mod(colorIdx+2, length(plotColors)) });
-            plot(ch34{2}(plotIdx,:)-8192, plotColors{ 1+mod(colorIdx+3, length(plotColors)) });
-            colorIdx = colorIdx + 4;
-            plot(5000*int32(ch1m1(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx, length(markerPlotColors)) });
-            plot(5000*int32(ch1m2(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+1, length(markerPlotColors)) });
-            plot(5000*int32(ch2m1(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+2, length(markerPlotColors)) });
-            plot(5000*int32(ch2m2(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+3, length(markerPlotColors)) });
-            plot(5000*int32(ch3m1(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+4, length(markerPlotColors)) });
-            plot(5000*int32(ch3m2(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+5, length(markerPlotColors)) });
-            plot(5000*int32(ch4m1(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+6, length(markerPlotColors)) });
-            plot(5000*int32(ch4m2(plotIdx,:)), markerPlotColors{ 1+mod(markerColorIdx+7, length(markerPlotColors)) });
+            %Dump the pulse to a h5 file
+            tek2h5(fullfile(getpref('qlab', 'awgDir'), seqParams.basename, [basename '.h5']), extract_Tek_channel(awg));
         end
     else
         % export APS
@@ -247,19 +218,64 @@ for awg = awgs
         disp(['Moving APS ' awg ' file to destination']);
         pathAPS = fullfile(getpref('qlab', 'awgDir'), seqParams.basename, [basename '.h5']);
         movefile([tempdir basename '.h5'], pathAPS);
+        awgFiles{end+1} = pathAPS;
         
-        if makePlot
-            pg = patternDict([awg '_12']).pg;
-            [patx, paty] = pg.linkListToPattern(ch12seq, 1+mod(plotIdx-1, length(ch12seq.linkLists)));
-            plot(patx, plotColors{ 1+mod(colorIdx, length(plotColors)) });
-            plot(paty, plotColors{ 1+mod(colorIdx+1, length(plotColors)) });
-            pg = patternDict([awg '_34']).pg;
-            [patx, paty] = pg.linkListToPattern(ch34seq, 1+mod(plotIdx-1, length(ch34seq.linkLists)));
-            plot(patx, plotColors{ 1+mod(colorIdx+2, length(plotColors)) });
-            plot(paty, plotColors{ 1+mod(colorIdx+3, length(plotColors)) });
-            colorIdx = colorIdx + 4;
-        end
     end
 end
 
+%If we are plotting then call the Python plotter GUI
+if makePlot
+    if ispc
+        pythonLauncher = 'pythonw';
+    else
+        pythonLauncher = 'python';
+    end
+    system([pythonLauncher, ' "', fullfile(getpref('qlab', 'PyQLabDir'), 'PulseSequencer',...
+                    'PulseSequencePlotter.py'), '" --AWGFiles ', sprintf(' %s', awgFiles{:}), '" &']);
 end
+
+    %Helper function to extract a particular Tek's channels from the AWGChannel
+    function tmpAWGChannels = extract_Tek_channel(tekName)
+        tmpAWGChannels = struct();
+        tmpIQ = awgChannels([tekName '_12']);
+        tmpAWGChannels.('ch1') = tmpIQ{1};
+        tmpAWGChannels.('ch2') = tmpIQ{2};
+        tmpIQ = awgChannels([tekName '_34']);
+        tmpAWGChannels.('ch3') = tmpIQ{1};
+        tmpAWGChannels.('ch4') = tmpIQ{2};
+        
+        tmpAWGChannels.('ch1m1') = awgChannels([tekName '_1m1']);
+        tmpAWGChannels.('ch1m2') = awgChannels([tekName '_1m2']);
+        tmpAWGChannels.('ch2m1') = awgChannels([tekName '_2m1']);
+        tmpAWGChannels.('ch2m2') = awgChannels([tekName '_2m2']);
+        tmpAWGChannels.('ch3m1') = awgChannels([tekName '_3m1']);
+        tmpAWGChannels.('ch3m2') = awgChannels([tekName '_3m2']);
+        tmpAWGChannels.('ch4m1') = awgChannels([tekName '_4m1']);
+        tmpAWGChannels.('ch4m2') = awgChannels([tekName '_4m2']);
+    end
+
+    %Helper function to dump a set of TekAWG sequences to a H5 file
+    function tek2h5(fileName, tekChannelData)
+        %Create and overwrite the file
+        tmpFID = H5F.create(fileName,'H5F_ACC_TRUNC', H5P.create('H5P_FILE_CREATE'),H5P.create('H5P_FILE_ACCESS'));
+        H5F.close(tmpFID);
+
+        for tmpChannel = fieldnames(tekChannelData)'
+            tmpChannel = tmpChannel{1};
+            tmpData = tekChannelData.(tmpChannel)';
+            if tmpChannel(end-1) == 'm'
+                h5create(fileName, ['/' tmpChannel], size(tmpData), 'DataType', 'uint8');
+                h5write(fileName, ['/' tmpChannel], uint8(tmpData));
+            else
+                h5create(fileName, ['/' tmpChannel], size(tmpData), 'DataType', 'int16');
+                h5write(fileName, ['/' tmpChannel], int16(tmpData));
+            end
+                
+        end
+    end
+
+end
+
+
+
+
