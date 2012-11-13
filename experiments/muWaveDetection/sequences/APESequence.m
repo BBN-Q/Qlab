@@ -1,27 +1,18 @@
-function APESequence(qubit, deltaScan, makePlot, plotSeqNum)
+function APESequence(qubit, deltaScan, makePlot)
 %APESequence Calibrate the DRAG parameter through a flip-flop seuquence.
 % APESequence(qubit, deltaScan, makePlot, plotSeqNum)
 %   qubit - target qubit e.g. 'q1'
 %   deltaScan - delta parameter to scan over e.g. linspace(-1,1,11)
 %   makePlot - whether to plot a sequence or not (boolean)
-%   plotSeqNum (optional) - which sequence to plot (int)
 
 basename = 'APE';
 fixedPt = 6000;
 cycleLength = 8000;
 nbrRepeats = 1;
 
-% load config parameters from files
-params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.(qubit);
-qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
-IQkey = qubitMap.(qubit).IQkey;
-
 % if using SSB, set the frequency here
 SSBFreq = 0e6;
-
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
-
+pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
 
 angle = pi/2;
 numPsQId = 8; % number pseudoidentities
@@ -57,15 +48,16 @@ seqParams = struct(...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
     'measLength', 2000);
-patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
+
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
+
+patternDict = containers.Map();
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
+
 measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS'};
+awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
 
-if ~makePlot
-    plotSeqNum = 0;
-end
-
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, plotSeqNum);
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 end
