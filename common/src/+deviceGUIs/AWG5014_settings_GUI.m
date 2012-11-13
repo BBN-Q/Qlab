@@ -99,7 +99,7 @@ set_settings_fcn = @set_GUI_fields;
         
         tmpVBox2 =  uiextras.VBox('Parent', tmpHBox_top, 'Spacing', 5);
         [~, ~, handles.scaleMode] = uiextras.labeledPopUpMenu(tmpVBox2, 'Scale Mode:', 'scaleMode',  {'Amp/Off','Hi/Lo'});
-        [~, ~, handles.triggerSource] = uiextras.labeledPopUpMenu(tmpVBox2, 'Scale Mode:', 'triggerSource',  {'External','Internal'});
+        [~, ~, handles.triggerSource] = uiextras.labeledPopUpMenu(tmpVBox2, 'Trigger Source:', 'triggerSource',  {'External','Internal'});
         [~, ~, handles.samplingRate] = uiextras.labeledEditBox(tmpVBox2, 'Samp. Rate:', 'samplingRate', '1');
         [~, ~, handles.triggerInterval] = uiextras.labeledEditBox(tmpVBox2, 'Trigger Int. (s):', 'triggerInterval', '');
         [~, ~, handles.gpibAddress] = uiextras.labeledEditBox(tmpVBox2, 'GPIB:', 'gpibAddress', '');
