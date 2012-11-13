@@ -192,6 +192,21 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                 ExpParams.OffsetNorm = 2;
             end
         end
+        
+        function filenames = getAWGFileNames(obj, basename)
+            pathAWG = fullfile(getpref('qlab', 'awgDir'), basename);
+            awgs = cellfun(@(x) x.InstrName, obj.awgParams, 'UniformOutput',false);
+            for awgct = 1:length(awgs)
+                switch awgs{awgct}(1:6)
+                    case 'TekAWG'
+                        filenames{awgct} = fullfile(pathAWG, [basename '-' awgs{awgct}, '.awg']);
+                    case 'BBNAPS'
+                        filenames{awgct} = fullfile(pathAWG, [basename '-' awgs{awgct}, '.h5']);
+                    otherwise
+                        error('Unknown AWG type.');
+                end
+            end
+        end
     end
         
     methods (Static)

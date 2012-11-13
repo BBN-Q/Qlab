@@ -10,7 +10,6 @@ if ~exist('makePlot', 'var')
     makePlot = false;
 end
 
-pathAWG = 'U:\AWG\Pi2Cal\';
 basename = 'Pi2Cal';
 
 qubitMap = obj.channelMap.(qubit);
@@ -84,22 +83,11 @@ patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap);
 measChannels = {'M1'};
-%awgs = {'TekAWG', 'BBNAPS'};
 awgs = cellfun(@(x) x.InstrName, obj.awgParams, 'UniformOutput',false);
 
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 
-for awgct = 1:length(awgs)
-    switch awgs{awgct}(1:6)
-        case 'TekAWG'
-            filename{awgct} = [pathAWG basename '-' awgs{awgct}, '.awg'];
-        case 'BBNAPS'
-            filename{awgct} = [pathAWG basename '-', awgs{awgct}, '.h5'];
-        otherwise
-            error('Unknown AWG type.');
-    end
-end
-
+filename = obj.getAWGFileNames(basename);
 
 end
 
