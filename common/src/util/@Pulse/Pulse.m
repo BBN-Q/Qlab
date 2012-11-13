@@ -48,7 +48,7 @@ classdef Pulse < handle
                % pick out the nth element of parameters provided as
                % vectors
                elementParams = structfun(@(x) Pulse.getelement(x, n), params, 'UniformOutput', 0);
-               
+
                % It seems we shoud be able to do this with nargout but all
                % the pulse functions have vargout i.e. return -1 for
                % nargout
@@ -82,6 +82,7 @@ classdef Pulse < handle
                % precompute SSB modulation angles
                timeStep = 1/params.samplingRate;
                obj.modAngles{n} = - 2*pi*params.modFrequency*timeStep*(0:(length(obj.pulseShapes{n})-1))';
+               obj.angles(n) = elementParams.angle;
            end
            
            if linkListMode           
