@@ -24,7 +24,7 @@ pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 % angle = linspace(0, pi, numsteps);
 angle = 1.193;
 % amps = 3800:15:4985;
-amps = 4000;
+amps = 8000;
 
 
 channelParams = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
