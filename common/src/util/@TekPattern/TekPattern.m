@@ -18,13 +18,13 @@
 % limitations under the License.
 
 classdef TekPattern < handle
-	methods (Static)
-		function exportTekSequence(path, basename, seqData, options)
-
+    methods (Static)
+        function exportTekSequence(path, basename, seqData, options)
+            
             %Check that all channels have the same dimension
             dims = structfun(@size, seqData, 'UniformOutput', false);
             assert(all(TekPattern.range(cell2mat(struct2cell(dims))) == 0), 'All channels must have same dimensions');
-
+            
             %Default options structure
             if ~exist('options', 'var')
                 options = struct();
@@ -39,11 +39,11 @@ classdef TekPattern < handle
             if options.verbose
                 disp('Packing patterns');
             end
-			packedCh1 = self.packPattern(seqData.ch1, seqData.ch1m1, seqData.ch1m2);
-			packedCh2 = self.packPattern(seqData.ch2, seqData.ch2m1, seqData.ch2m2);
-			packedCh3 = self.packPattern(seqData.ch3, seqData.ch3m1, seqData.ch3m2);
-			packedCh4 = self.packPattern(seqData.ch4, seqData.ch4m1, seqData.ch4m2);
-
+            packedCh1 = self.packPattern(seqData.ch1, seqData.ch1m1, seqData.ch1m2);
+            packedCh2 = self.packPattern(seqData.ch2, seqData.ch2m1, seqData.ch2m2);
+            packedCh3 = self.packPattern(seqData.ch3, seqData.ch3m1, seqData.ch3m2);
+            packedCh4 = self.packPattern(seqData.ch4, seqData.ch4m1, seqData.ch4m2);
+            
             if options.verbose
                 disp('Done packing');
             end
@@ -56,14 +56,14 @@ classdef TekPattern < handle
             if ~exist(path, 'dir')
                 mkdir(path);
             end
-
-			fid = fopen(fullpath, 'w');
-
-			% write header information
+            
+            fid = fopen(fullpath, 'w');
+            
+            % write header information
             numsteps = dims.ch1(1);
-			self.writeTekHeader(fid, numsteps, basename, options);
-
-			% write patterns
+            self.writeTekHeader(fid, numsteps, basename, options);
+            
+            % write patterns
             for i = 1:numsteps
                 % by some weird Tektronix convention, waveform numbering
                 % starts at 21
@@ -153,7 +153,7 @@ classdef TekPattern < handle
             % AWG 7000 series binary data format
             % m2 m1 d8 d7 d6 d5 d4 d3 d2 d1
             % 8-bit format with markers occupying left 2 bits followed by the 8 bit
-            % analog channel value            
+            % analog channel value
             % clip patterns to 8-bits
             pattern = uint16(pattern);
             pattern( pattern > 2^8 - 1 ) = 2^8 - 1;
@@ -338,27 +338,27 @@ classdef TekPattern < handle
             
             % waveform type = 1 for integer format data
             self.writeField(fid, ['WAVEFORM_TYPE_', numstring], 1, 'int16');
-			
-			self.writeField(fid, ['WAVEFORM_LENGTH_', numstring], length(packedPattern), 'int32');
-			
-			self.writeField(fid, ['WAVEFORM_TIMESTAMP_', numstring], 0, 'uint128');
-			
-			fieldName = ['WAVEFORM_DATA_', numstring, 0];
-			dataSize = 2*length(packedPattern);
-			fwrite(fid, length(fieldName), 'uint32');
-			fwrite(fid, dataSize, 'uint32');
-			fwrite(fid, fieldName, 'char');
-			fwrite(fid, packedPattern, 'uint16');
-		end
-		
-		function writeTekSeqTable(fid, basename, numsteps, options)
-			self = TekPattern;
+            
+            self.writeField(fid, ['WAVEFORM_LENGTH_', numstring], length(packedPattern), 'int32');
+            
+            self.writeField(fid, ['WAVEFORM_TIMESTAMP_', numstring], 0, 'uint128');
+            
+            fieldName = ['WAVEFORM_DATA_', numstring, 0];
+            dataSize = 2*length(packedPattern);
+            fwrite(fid, length(fieldName), 'uint32');
+            fwrite(fid, dataSize, 'uint32');
+            fwrite(fid, fieldName, 'char');
+            fwrite(fid, packedPattern, 'uint16');
+        end
+        
+        function writeTekSeqTable(fid, basename, numsteps, options)
+            self = TekPattern;
             nbrRepeats = 1;
             if isfield(options, 'nbrRepeats')
                 nbrRepeats = options.nbrRepeats;
             end
             
-			for stepct = 1:numsteps
+            for stepct = 1:numsteps
                 for repeatct = 1:nbrRepeats
                     i_str = num2str((stepct-1)*nbrRepeats + repeatct);
                     % sequence wait: 1 = on, 0 = off
@@ -394,11 +394,11 @@ classdef TekPattern < handle
                     namestring = sprintf('%sCh4%03d', basename, stepct);
                     self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_4_', i_str], namestring, 'char');
                 end
-			end
-		end
-
-		function writeField(fid, name, data, type)
-			nameSize = length(name) + 1;
+            end
+        end
+        
+        function writeField(fid, name, data, type)
+            nameSize = length(name) + 1;
             typeSizes = struct(...
                 'int16', 2, ...
                 'int32', 4, ...
@@ -468,6 +468,30 @@ classdef TekPattern < handle
         % utility to replace range() in statistics toolbox
         function out = range(in)
             out = max(in) - min(in);
+        end
+        
+        %Helper function to dump waveforms to h5 file for plotting
+        %Helper function to dump a set of TekAWG sequences to a H5 file
+        function waveforms2h5(fileName, tekChannelData)
+            %Create and overwrite the file
+            tmpFID = H5F.create(fileName,'H5F_ACC_TRUNC', H5P.create('H5P_FILE_CREATE'),H5P.create('H5P_FILE_ACCESS'));
+            H5F.close(tmpFID);
+            
+            %Now loop over the channels and write/pack the data
+            %We'll efficiently pack the data in like is done on the Tek itself
+            %using the upper 2 bits for the marker data
+            for chanct = 1:4
+                chanStr = sprintf('ch%d',chanct);
+                marker1Str = sprintf('ch%dm1', chanct);
+                marker2Str = sprintf('ch%dm2', chanct);
+
+                tmpData = uint16(tekChannelData.(chanStr));
+                tmpData = bitset(tmpData, 15, tekChannelData.(marker1Str));
+                tmpData = bitset(tmpData, 16, tekChannelData.(marker2Str));
+                
+                h5create(fileName, ['/' chanStr], fliplr(size(tmpData)), 'DataType', 'uint16');
+                h5write(fileName, ['/' chanStr], tmpData');
+            end
         end
     end
 end

@@ -191,8 +191,8 @@ for awg = awgs
         awgFiles{end+1} = fullfile(getpref('qlab', 'awgDir'), seqParams.basename, [basename '.h5']);
         
         if makePlot
-            %Dump the pulse to a h5 file
-            tek2h5(fullfile(getpref('qlab', 'awgDir'), seqParams.basename, [basename '.h5']), extract_Tek_channel(awg));
+            %Dump the pulses to a h5 file
+            TekPattern.waveforms2h5(fullfile(getpref('qlab', 'awgDir'), seqParams.basename, [basename '.h5']), extract_Tek_channel(awg));
         end
     else
         % export APS
@@ -252,26 +252,6 @@ end
         tmpAWGChannels.('ch3m2') = awgChannels([tekName '_3m2']);
         tmpAWGChannels.('ch4m1') = awgChannels([tekName '_4m1']);
         tmpAWGChannels.('ch4m2') = awgChannels([tekName '_4m2']);
-    end
-
-    %Helper function to dump a set of TekAWG sequences to a H5 file
-    function tek2h5(fileName, tekChannelData)
-        %Create and overwrite the file
-        tmpFID = H5F.create(fileName,'H5F_ACC_TRUNC', H5P.create('H5P_FILE_CREATE'),H5P.create('H5P_FILE_ACCESS'));
-        H5F.close(tmpFID);
-
-        for tmpChannel = fieldnames(tekChannelData)'
-            tmpChannel = tmpChannel{1};
-            tmpData = tekChannelData.(tmpChannel)';
-            if tmpChannel(end-1) == 'm'
-                h5create(fileName, ['/' tmpChannel], size(tmpData), 'DataType', 'uint8');
-                h5write(fileName, ['/' tmpChannel], uint8(tmpData));
-            else
-                h5create(fileName, ['/' tmpChannel], size(tmpData), 'DataType', 'int16');
-                h5write(fileName, ['/' tmpChannel], int16(tmpData));
-            end
-                
-        end
     end
 
 end
