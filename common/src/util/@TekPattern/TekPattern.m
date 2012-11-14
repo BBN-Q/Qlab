@@ -23,7 +23,7 @@ classdef TekPattern < handle
 
             %Check that all channels have the same dimension
             dims = structfun(@size, seqData, 'UniformOutput', false);
-            assert(all(range(cell2mat(struct2cell(dims))) == 0), 'All channels must have same dimensions');
+            assert(all(TekPattern.range(cell2mat(struct2cell(dims))) == 0), 'All channels must have same dimensions');
 
             %Default options structure
             if ~exist('options', 'var')
@@ -463,6 +463,11 @@ classdef TekPattern < handle
                 self.writeField(fid, ['SEQUENCE_WAVEFORM_NAME_CH_2_', i_str], namestring, 'char');
                 
             end
-        end        
+        end
+        
+        % utility to replace range() in statistics toolbox
+        function out = range(in)
+            out = max(in) - min(in);
+        end
     end
 end
