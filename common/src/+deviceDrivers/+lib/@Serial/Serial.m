@@ -13,7 +13,6 @@ classdef Serial < deviceDrivers.lib.deviceDriverBase
     methods
         %%
         function connect(obj, address)
-        
             %Create a Serial object
             %Handle a double call on connect
             if ~isempty(obj.interface)
@@ -32,9 +31,7 @@ classdef Serial < deviceDrivers.lib.deviceDriverBase
             flushoutput(obj.interface);
             fclose(obj.interface);
         end
-        %%
-        % Destructor method
-        %
+
         function delete(obj)
             obj.disconnect();
         end
