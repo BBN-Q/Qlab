@@ -12,8 +12,6 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
     methods
         %%
         function connect(obj, address)
-            % determine whether to use GPIB or TCPIP by the form of the
-            % address
             if ischar(address)
                 address = str2double(address);
             end
@@ -38,10 +36,10 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
         % Destructor method
         %
         function delete(obj)
-            obj.disconnect;
+            obj.disconnect();
         end
         
-           function write(obj, string)
+        function write(obj, string)
             fprintf(obj.interface, string);
         end
         

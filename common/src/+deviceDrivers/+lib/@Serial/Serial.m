@@ -1,183 +1,77 @@
- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- % Module Name : SerialWrapper
- %
- % Author/Date : C.B. Lirakis / 7-Jul-09
- %
- % Description : Object to manage access to devices connected to a serial
- % port. This inherits the properties from DAObject. 
- %
- % Restrictions/Limitations :
- %
- % Change Descriptions :
- %
- % Classification : Unclassified
- %
- % References :
- %
- %
- %    Modified    By    Reason
- %    --------    --    ------
- %                CBL
- %
- % RCS header info.
- % ----------------
- % $RCSfile$
- % $Author$
- % $Date$
- % $Locker$
- % $Name$
- % $Revision$
- %
- % $Log: $
- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% First author/Date : C.B. Lirakis / 2009
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
 classdef Serial < deviceDrivers.lib.deviceDriverBase
-    properties 
-        % I/O through this.
-        FileDescriptor;
-        % Port name  - to be read/written in configuration file
-        PortName;
-        Initialized = false;
-        PauseTime = 0.05;
-        TimeOut = 3; % seconds
+    properties
+        interface = []
+        bufferSize = 64 
+        baudRate = 115200
     end
-
+  
     methods
         %%
-        % Constructor ---------------------------------
-        % must supply com port parameters such as name.
-        % We may need to specify baud rate etc later. 
-        function obj = Serial(ComPort)
-            obj = obj@deviceDrivers.lib.deviceDriverBase('SerialObject');
-            obj.Initialized = false;
-         end
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % Function Name : OpenDevice
-        %
-        % Description : Open the serial port. 
-        %
-        % Inputs : 
-        %
-        % Returns : 
-        %
-        % Error Conditions : 
-        %      0 SUCCESS!
-        %
-        % Unit Tested on: 
-        %
-        % Unit Tested by: CBL
-        % 
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function connect(obj, port)
-            obj.LastError = obj.NoError;
-            if obj.Initialized
-                fclose(obj.FileDescriptor);
-            end
-            if nargin>1
-                % use the port provided, otherwise assume
-                % it was initialized elsewhere.
-                obj.PortName = port;
-            end
-            obj.FileDescriptor = serial(obj.PortName);
-            fopen(obj.FileDescriptor);
-            if (strcmp(obj.FileDescriptor.status,'closed'))
-                LastError = obj.OpenFail;
-                if (obj.UseErrorDialog)
-                    errordlg('Error opening Com Port');
-                else
-                    warning('Error opening Com Port');
-                end
-            else
-                obj.Initialized = true;
-            end
-        end % Method OpenDevice
+        function connect(obj, address)
         
-        function close(obj)
-            if obj.Initialized
-                fclose(obj.FileDescriptor);
+            %Create a Serial object
+            %Handle a double call on connect
+            if ~isempty(obj.interface)
+                fclose(obj.interface);
+                delete(obj.interface);
             end
+                
+            obj.interface = serial(address);
+            obj.interface.InputBufferSize = obj.bufferSize;
+            obj.interface.OutputBufferSize = obj.bufferSize;
+            obj.interface.BaudRate = obj.baudRate;
+            fopen(obj.interface);
         end
-        
-        % alternative method for closing
+
         function disconnect(obj)
-            obj.close()
+            flushoutput(obj.interface);
+            fclose(obj.interface);
         end
-        
-        %
+        %%
         % Destructor method
         %
         function delete(obj)
-            % This function does not close correctly
-            if obj.Initialized
-                fclose(obj.FileDescriptor);
-            end
-        end
-        % 
-        % Write data to port. 
-        %
-        function Write(obj, string)
-            if obj.Initialized
-                fprintf(obj.FileDescriptor,'%s',string);
-            end
+            obj.disconnect();
         end
         
-        function val = Read(obj)
-            val = '';
-            if obj.Initialized
-                if (obj.FileDescriptor.BytesAvailable > 0)
-                    val = fscanf(obj.FileDescriptor,'%s');
-                else
-                    obj.LastError = obj.NoData;
-                    
+        function write(obj, string)
+            fprintf(obj.interface, string);
+        end
+        
+        function val = query(obj, string)
+            val = query(obj.interface, string);
+        end
+        
+        function val = read(obj)
+            val = fgetl(obj.interface);
+        end
+        
+        % binary read/write functions
+        function binblockwrite(obj, varargin)
+            binblockwrite(obj.interface, varargin{:});
+        end
+        
+        function val = binblockread(obj, varargin)
+            val = binblockread(obj.interface, varargin{:});
+        end
+        
+        % instrument meta-setter
+        function setAll(obj, settings)
+            fields = fieldnames(settings);
+            for j = 1:length(fields);
+                name = fields{j};
+                if ismember(name, methods(obj))
+                    feval(['obj.' name], settings.(name));
+                elseif ismember(name, properties(obj))
+                    obj.(name) = settings.(name);
                 end
             end
         end
-        
-        function val = ReadRetry(obj)
-           n = clock;
-           val = '';
-           while ((etime(clock,n) < obj.TimeOut) && (strcmp(val,'')))
-               pause(obj.PauseTime);
-                val = obj.Read();
-           end
-        end
-        
-        function val = WriteAndRead(obj,string)
-           obj.Write(string);
-           val = obj.ReadRetry();
-        end
-       %
-        % Dump the properties of the serial port. Debugging tool
-        %
-       function none = Dump(obj)
-            obj.Dump@DAObject;
-            fprintf('Port Name: %s \n', ...
-                obj.PortName);
-       end
-       %
-       % Dialog for configuring com port.
-       %
-       function Configure(obj)
-           % 
-           % Todo use instrfind to see which com ports are 
-           % available.
-           ans = SerialConfiguration();
-           if strcmp(ans.Answer,'Yes')
-               obj.PortName = ans.Port;
-               obj.OpenDevice;
-           end
-       end
-       %
-       % Write all parameters associated with com port to a config file
-       %
-       function SaveParameters(obj)
-           error('Not completed');
-       end
-       %
-       % Read back parameters from config file. 
-       %
-       function LoadParameters(obj)
-           error('Not completed');
-       end
     end
+    
 end
