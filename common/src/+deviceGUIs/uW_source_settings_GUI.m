@@ -49,11 +49,11 @@ setting_fcn = @get_settings;
     tmpVBox1 = uiextras.VBox('Parent', tmpHBox1, 'Spacing', 5);
 	handles.enable = uicontrol('Parent', tmpVBox1, 'Style', 'checkbox', 'FontSize', 10, 'String', 'Enable');
     
-    [~, ~, handles.gen_model] = uiextras.labeledPopUpMenu(tmpVBox1, 'Model:', 'gen_model', {'AgilentN5183A','AgilentE8267D','AnritsuMG3692B','HP8673B','HP8340B','Labbrick','BNC845'}, [120, 25]);
+    [~, ~, handles.gen_model] = uiextras.labeledPopUpMenu(tmpVBox1, 'Model:', 'gen_model', {'AgilentN5183A','AgilentE8267D','AnritsuMG3692B','HP8673B','HP8340B','Labbrick','BNC845', 'PhaseMatrix'}, [120, 25]);
     [~, ~, handles.freq] = uiextras.labeledEditBox(tmpVBox1, 'Freq. (GHz):', 'freq', '5');
     [~, ~, handles.power] = uiextras.labeledEditBox(tmpVBox1, 'Power (dBm):', 'power', '-110');
     [~, ~, handles.phase] = uiextras.labeledEditBox(tmpVBox1, 'Phase (deg.):', 'phase', '0');
-    [~, ~, handles.gpib_address ] = uiextras.labeledEditBox(tmpVBox1, 'GPIB Address:', 'gpib_address', '0');
+    [~, ~, handles.address ] = uiextras.labeledEditBox(tmpVBox1, 'Address:', 'address', '0');
     
     tmpVBox2 = uiextras.VBox('Parent', tmpHBox1, 'Spacing', 5);
     
@@ -102,7 +102,7 @@ setting_fcn = @get_settings;
 		
 		settings.enable = get(handles.enable, 'Value');
 		settings.deviceName = get_selected(handles.gen_model);
-		settings.Address = get(handles.gpib_address, 'String');
+		settings.Address = get(handles.address, 'String');
 		settings.frequency = get_numeric(handles.freq);
 		settings.power = get_numeric(handles.power);
 		settings.phase = get_numeric(handles.phase);
@@ -147,7 +147,7 @@ setting_fcn = @get_settings;
 		end
 		
 		set(handles.enable, 'Value', defaults.enable);
-		set(handles.gpib_address, 'String', num2str(defaults.Address));
+		set(handles.address, 'String', num2str(defaults.Address));
 		set_selected(handles.gen_model, defaults.deviceName);
 		set(handles.freq, 'String', num2str(defaults.frequency));
 		set(handles.power, 'String', num2str(defaults.power));
