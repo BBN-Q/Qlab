@@ -321,6 +321,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %Calculate the trigger delay in sample units
             trigDelayPts = round(horzSettings.delayTime*horzSettings.samplingRate);
             obj.call_API('AlazarSetTriggerDelay', obj.boardHandle, trigDelayPts);
+            obj.settings.horizontal = horzSettings;
         end
         
         function set.vertical(obj, vertSettings)
