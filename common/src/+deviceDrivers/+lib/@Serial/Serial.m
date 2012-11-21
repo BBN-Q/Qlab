@@ -28,8 +28,10 @@ classdef Serial < deviceDrivers.lib.deviceDriverBase
         end
 
         function disconnect(obj)
-            flushoutput(obj.interface);
-            fclose(obj.interface);
+            if ~isempty(obj.interface)
+                flushoutput(obj.interface);
+                fclose(obj.interface);
+            end
         end
 
         function delete(obj)
