@@ -16,6 +16,15 @@ classdef (Sealed) PhaseMatrix < deviceDrivers.lib.uWSource & deviceDrivers.lib.S
         function obj = PhaseMatrix()
             obj.baudRate = 115200;
         end
+        
+        function connect(obj, addr)
+            connect@deviceDrivers.lib.Serial(obj, addr);
+            
+            %Default to external reference and reference output off
+            obj.write('ROSC:SOUR EXT');
+            obj.write('OUTP:ROSC:STAT OFF');
+        end
+        
 		
 		% Instrument parameter accessors
         % getters
