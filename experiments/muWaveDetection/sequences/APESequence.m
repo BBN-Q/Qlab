@@ -1,6 +1,6 @@
 function APESequence(qubit, deltaScan, makePlot)
 %APESequence Calibrate the DRAG parameter through a flip-flop seuquence.
-% APESequence(qubit, deltaScan, makePlot, plotSeqNum)
+% APESequence(qubit, deltaScan, makePlot)
 %   qubit - target qubit e.g. 'q1'
 %   deltaScan - delta parameter to scan over e.g. linspace(-1,1,11)
 %   makePlot - whether to plot a sequence or not (boolean)

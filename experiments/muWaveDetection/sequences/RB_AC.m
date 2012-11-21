@@ -1,34 +1,14 @@
-function RB_AC(varargin)
+function RB_AC(qubit, makePlot)
 %Single qubit randomized benchmarking with Atomic Cliffords
 
-%varargin assumes qubit and then makePlot
-qubit = 'q1';
-makePlot = true;
-
-if length(varargin) == 1
-    qubit = varargin{1};
-elseif length(varargin) == 2
-    qubit = varargin{1};
-    makePlot = varargin{2};
-elseif length(varargin) > 2
-    error('Too many input arguments.')
-end
-
 basename = 'RB';
-fixedPt = 10000; %15000
-cycleLength = 13000; %19000
+fixedPt = 14000; %15000
+cycleLength = 16000; %19000
 nbrRepeats = 1;
-
-% load config parameters from file
-params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.(qubit);
-qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
-IQkey = qubitMap.(qubit).IQkey;
 
 % if using SSB, set the frequency here
 SSBFreq = 0e6;
-
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
+pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
 
 % load in random Clifford sequences from text file
 FID = fopen('RB_ISeqs_AC.txt');
@@ -49,13 +29,13 @@ for ct = 1:24
 end
 
 %Convert sequence strings into pulses
-patSeqs = cell(1,length(seqStrings));
+patseq = cell(1,length(seqStrings));
 for seqct = 1:length(seqStrings)
     currentSeq = cell(1,length(seqStrings{seqct})); 
     for pulsect = 1:length(seqStrings{seqct})
         currentSeq{pulsect} = CliffLibrary{seqStrings{seqct}(pulsect)+1};
     end
-    patSeqs{seqct} = currentSeq;
+    patseq{seqct} = currentSeq;
 end
 
 calseq = {{pg.pulse('QId')},{pg.pulse('QId')},{pg.pulse('Xp')},{pg.pulse('Xp')}};
@@ -68,13 +48,18 @@ seqParams = struct(...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
     'measLength', 2000);
-patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
-patternDict(IQkey) = struct('pg', pg, 'patseq', {patSeqs}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
-measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS'};
 
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
+
+patternDict = containers.Map();
+patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
+
+measChannels = {'M1'};
+awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
+
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 
 
     function outPulse = CliffPulse(cliffNum)
@@ -83,10 +68,10 @@ compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
         %Figure out the approximate nutation frequency calibration from the
         %X180 and the the samplingRate
         Xp = pg.pulse('Xp');
-        xpulse = Xp(1,0);
+        xpulse = Xp.getPulse(1,0);
         nutFreq = 0.5/(sum(xpulse)/pg.samplingRate);
         
-        defaultParams = {'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', -0.3};
+        defaultParams = {'pType', 'arbAxisDRAG', 'nutFreq', nutFreq};
         
         switch cliffNum
             case 1

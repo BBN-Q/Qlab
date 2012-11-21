@@ -1,7 +1,7 @@
 function SPAMSequence(qubit, angleShifts, makePlot)
 %SPAMSequence Calibrates angle between X and Y quadratures with repeated XY
 %blocks
-% SPAMSequence(qubit, angleShifts, makePlot, plotSeqNum)
+% SPAMSequence(qubit, angleShifts, makePlot)
 %   qubit - target qubit e.g. 'q1'
 %   angleShifts - phase shifts to scan over e.g. (pi/180)*(-2.5:0.5:2.5)
 %   makePlot - whether to plot a sequence or not (boolean)

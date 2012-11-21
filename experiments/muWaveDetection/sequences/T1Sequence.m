@@ -1,6 +1,6 @@
 function T1Sequence(qubit, pulseSpacings, makePlot)
 %T1Sequence T1 measurement by inversion-recovery.
-% T1Sequence(qubit, pulseSpacings, makePlot, plotSeqNum)
+% T1Sequence(qubit, pulseSpacings, makePlot)
 %   qubit - target qubit e.g. 'q1'
 %   pulseSpacings - pulse spacings to scan over e.g. 120*(1:150);
 %   makePlot - whether to plot a sequence or not (boolean)

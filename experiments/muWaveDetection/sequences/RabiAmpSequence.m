@@ -1,6 +1,6 @@
-function rabiAmpSequence(qubit, amps, makePlot)
-%rabiAmpSequence Rabi nutations by varying pulse amplitude.
-% rabiAmpSequence(qubit, amps, makePlot, plotSeqNum)
+function RabiAmpSequence(qubit, amps, makePlot)
+%RabiAmpSequence Rabi nutations by varying pulse amplitude.
+% RabiAmpSequence(qubit, amps, makePlot)
 %   qubit - target qubit e.g. 'q1'
 %   amps - pulse amplitudes to scan over e.g. -8000:200:8000
 %   makePlot - whether to plot a sequence or not (boolean)
@@ -13,7 +13,6 @@ nbrRepeats = 1;
 
 % if using SSB, set the frequency here
 SSBFreq = 0e6;
-% qParams.buffer = 0;
 pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
 
 patseq = {{pg.pulse('Xtheta', 'amp', amps)}};

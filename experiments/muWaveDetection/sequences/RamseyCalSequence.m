@@ -1,6 +1,6 @@
 function RamseyCalSequence(qubit, pulseSpacings, pulsePhases, makePlot)
 %RamseyCalSequence Ramsey fringes with variable pulse spacing: pi/2-tau-pi/2
-% RamseyCalSequence(qubit, pulseSpacings, pulsePhases, makePlot, plotSeqNum)
+% RamseyCalSequence(qubit, pulseSpacings, pulsePhases, makePlot)
 %   qubit - target qubit e.g. 'q1'
 %   pulseSpacings - array of pulse spacings to scan over e.g. 60*(1:200)
 %   pulsePhases - array or float of final pulse phases
