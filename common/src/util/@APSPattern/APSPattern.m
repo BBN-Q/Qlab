@@ -417,11 +417,12 @@ classdef APSPattern < handle
             TRIGGER_INCREMENT = 4;
             
             if entry.hasMarkerData
-                triggerVal1 = fix(entry.markerDelay / TRIGGER_INCREMENT);
+                triggerVal1 = fix(entry.markerDelay1 / TRIGGER_INCREMENT);
+                triggerVal2 = fix(entry.markerDelay2 / TRIGGER_INCREMENT);
             else
                 triggerVal1 = 0;
+                triggerVal2 = 0;
             end
-            triggerVal2 = 0;
         end
         
         function maxRepInterval = estimateRepInterval(linkLists)
