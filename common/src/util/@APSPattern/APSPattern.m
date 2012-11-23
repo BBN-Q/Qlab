@@ -417,6 +417,14 @@ classdef APSPattern < handle
             TRIGGER_INCREMENT = 4;
             
             if entry.hasMarkerData
+                %We use 0 as no trigger data so put in an extra delay for
+                %short trigger delays
+                if entry.markerDelay1 > 0 && entry.markerDelay1 < 4
+                    entry.markerDelay1 = 4;
+                end
+                if entry.markerDelay2 > 0 && entry.markerDelay2 < 4
+                    entry.markerDelay2 = 4;
+                end
                 triggerVal1 = fix(entry.markerDelay1 / TRIGGER_INCREMENT);
                 triggerVal2 = fix(entry.markerDelay2 / TRIGGER_INCREMENT);
             else

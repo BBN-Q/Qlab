@@ -171,13 +171,12 @@ for awgChannel = fieldnames(awgChannels)'
     end
 end
 
-
 % setup digitizer and slave AWG triggers 
 % these channels are hard-coded for now but should be moved out
-digitizerTrigChan = 'TekAWG_1m1';
-slaveTrigChan = 'TekAWG_4m2';
-% digitizerTrigChan = 'BBNAPS1_2m1';
-% slaveTrigChan = 'BBNAPS1_4m1';
+% digitizerTrigChan = 'TekAWG_1m1';
+% slaveTrigChan = 'TekAWG_4m2';
+digitizerTrigChan = 'BBNAPS1_2m1';
+slaveTrigChan = 'BBNAPS1_4m1';
 
 %Helper function to map out IQ channel and marker number for BBNAPS units
     function [markerIQkey, markerNum] = map_APS_digital(chanStr)
@@ -201,7 +200,7 @@ if (strncmp(slaveTrigChan,'TekAWG', 6))
     awgChannels.(slaveTrigChan) = repmat(uint8(pg.makePattern([], 5, ones(100,1), seqParams.cycleLength)), 1, numSegments)';
 elseif (strncmp(slaveTrigChan,'BBNAPS', 6))
     [tmpIQkey, tmpMarkerNum] = map_APS_digital(slaveTrigChan);
-    awgChannels.(tmpIQkey).linkLists = PatternGen.addTrigger(awgChannels.(tmpIQkey).linkLists, 0, 0, tmpMarkerNum);
+    awgChannels.(tmpIQkey).linkLists = PatternGen.addTrigger(awgChannels.(tmpIQkey).linkLists, 1, 0, tmpMarkerNum);
 end
 
 

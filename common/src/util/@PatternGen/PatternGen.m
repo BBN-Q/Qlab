@@ -663,12 +663,18 @@ classdef PatternGen < handle
                 error('Can only handle ch = 1 or 2');
             end
             
+            %We can't implement triggers at delay 0
+            assert(delay>0, 'Sorry! Triggers at delay=0 cannot be implemented yet.');
+            
             for miniLLct = 1:length(seqs)
                 %Find the cummulative length of each entry
-                timePts = cumsum(cellfun(@(tmpEntry) tmpEntry.length*tmpEntry.repeat, seqs{miniLLct}));
+                timePts = [0; cumsum(cellfun(@(tmpEntry) tmpEntry.length*tmpEntry.repeat, seqs{miniLLct}))];
                 
+                %Make sure the trigger falls in the sequence
+                assert(delay+width<timePts(end), 'Oops! You have asked for a trigger outside of the pulse sequence');
+
                 %Find where to put the go high blip
-                goHighEntry = find(delay<timePts, 1);
+                goHighEntry = find(delay<timePts, 1)-1;
                 
                 seqs{miniLLct}{goHighEntry}.hasMarkerData = 1;
                 seqs{miniLLct}{goHighEntry}.(markerStr) = delay-timePts(goHighEntry);
