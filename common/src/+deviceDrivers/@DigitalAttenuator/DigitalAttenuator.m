@@ -19,7 +19,6 @@
 
 classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
     properties
-        ComPortName = '';
         serial = 0; % ID of the device to distinguish multiple instances
     end
     properties (Constant = true)
@@ -32,10 +31,6 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
             % Initialize Super class
             obj = obj@deviceDrivers.lib.Serial();
             obj.baudRate = 9600;
-        end
-        
-        function setAll(obj,init_params)
-            % setAll is called as part of the Experiment initialize instruments
         end
         
         function out = readUntilEND(obj)
