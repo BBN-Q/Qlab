@@ -350,7 +350,6 @@ classdef PatternGen < handle
             %Time from end of previous LL entry that trigger needs to go
             %high to gate pulse
             startDelay = fix(obj.bufferPadding - obj.bufferDelay);
-            assert(startDelay > 0, 'PatternGen:addGatePulses Negative gate delays');
 
             LLlength = length(linkList);
             for ii = 1:LLlength-1
@@ -367,7 +366,7 @@ classdef PatternGen < handle
                 elseif state == 1 && linkList{ii+1}.isZero && linkList{ii+1}.length > obj.bufferReset
                     %Time from beginning of pulse LL entry that trigger needs to go
                     %low to end gate pulse
-                    endDelay = fix(entryWidth + obj.bufferPadding - obj.bufferDelay);
+                    endDelay = fix(entryWidth + obj.bufferPadding + obj.bufferDelay);
                     if endDelay < 0
                         endDelay = 0;
                         fprintf('addGatePulses warning: fixed buffer low pulse to start of pulse\n');
