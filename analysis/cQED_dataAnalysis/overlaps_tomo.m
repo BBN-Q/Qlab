@@ -24,7 +24,7 @@ expResults = (d^2-1)*expResults+1;
 choiSDP = sdpvar(4, 4, 'hermitian', 'complex');
 
 % the linearly independent set of cliffords we are comparing against
-li_cliffords = [1 2 4 6 7 8 9 11 14];
+li_cliffords = [1 3 6 9 17 18 19 20 21 22];
 
 %Shuffle matrix for Choi -> Liouville (cannonical column stack basis)
 shuffleMat = zeros(d^4,d^4);
@@ -77,7 +77,7 @@ set(gca, 'YTick', 1:4);
 set(gca, 'YTickLabel', pauliStrs);
 xlabel('Input Pauli Operator');
 ylabel('Output Pauli Operator');
-
+title('Raw inversion')
 
 % Call the solver, minimizing the distance between the vectors of predicted and actual
 % measurements
@@ -108,5 +108,6 @@ set(gca, 'YTick', 1:4);
 set(gca, 'YTickLabel', pauliStrs);
 xlabel('Input Pauli Operator');
 ylabel('Output Pauli Operator');
+title('MLE map')
 
 end

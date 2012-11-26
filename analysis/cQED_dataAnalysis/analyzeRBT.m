@@ -2,19 +2,19 @@ function scaledData = analyzeRBT(data)
 
 calRepeats = 2;
 %Number of overlaps
-nbrExpts = 9;
+nbrExpts = 10;
 
-%Number of twirl sequence realizations (array of length nbrExpts)
-nbrRepeats = [36, repmat(24^2, 1, nbrExpts-1)];
-% nbrRepeats = 24^2*ones(1, nbrExpts);
+%Number of twirl sequences at each length
+nbrTwirls = [12^2, 12^2, 12^3, 12^2, 12^2];
+twirlOffsets = 1 + [0, cumsum(nbrTwirls)];
 
 %Length of sequences (cell array (length nbrExpts) of arrays) 
-seqLengths = [{[2, 5, 8, 13, 16, 20, 25, 30, 32, 40, 49, 55, 64, 101, 126, 151]}, repmat({1:6}, 1, nbrExpts-1)];
-% seqLengths = repmat({1:6}, 1, nbrExpts);
+% seqLengths = [{[2, 5, 8, 13, 16, 20, 25, 30, 32, 40, 49, 55, 64, 101, 126, 151]}, repmat({1:6}, 1, nbrExpts-1)];
+seqLengths = repmat({1:5}, 1, nbrExpts);
 
 %Cell array or array of boolean whether we are exhaustively twirling or randomly sampling
-exhaustiveTwirl = [{false([1, 16])}, repmat({[true, true, false, false, false, false]}, 1, nbrExpts-1)];
-% exhaustiveTwirl = repmat({[true, true, false, false, false, false]}, 1, nbrExpts);
+% exhaustiveTwirl = [{false([1, 16])}, repmat({[true, true, true, false, false]}, 1, nbrExpts-1)];
+exhaustiveTwirl = repmat({[true, true, true, false, false]}, 1, nbrExpts);
 
 %Number of bootstrap replicates
 numReplicates = 200;
@@ -37,44 +37,49 @@ end
 %Restack experiments and pull out avgerage fidelities
 rowct = 1;
 for expct = 1:nbrExpts
-    if expct == 1, nbrRows = 2; else nbrRows = 12; end
-%     nbrRows = 12;
+    % pull out rows corresponding to a given overlap
+%     if expct == 1, nbrRows = 2; else nbrRows = 8; end
+    nbrRows = 8;
     tmpData = scaledData(rowct:rowct+nbrRows-1,:).';
     tmpData = tmpData(:);
     
     % calculate means and std deviations of each sequence length
-    avgFidelities{expct} = 0.5 * (1 + mean(reshape(tmpData, nbrRepeats(expct), length(seqLengths{expct}) )));
-    variances{expct} = zeros(size(avgFidelities{expct}));
-    errors{expct} = 0.5 * std(reshape(tmpData, nbrRepeats(expct), length(seqLengths{expct})))/sqrt(nbrRepeats(expct));
-    
-    %Reshape tmpData row vector into matrix numRepeats x numSeqLengths
-    t = reshape(tmpData, nbrRepeats(expct), length(seqLengths{expct}) );
-    
-    for lengthct = 1:size(t,2)
+    avgFidelities{expct} = zeros(length(nbrTwirls), 1);
+    variances{expct} = zeros(length(nbrTwirls), 1);
+    errors{expct} = zeros(length(nbrTwirls), 1);
+    for twirlct = 1:length(nbrTwirls)
+        twirlData = tmpData(twirlOffsets(twirlct):twirlOffsets(twirlct+1)-1);
+        avgFidelities{expct}(twirlct) = 0.5 * (1 + mean(twirlData));
+        errors{expct}(twirlct) = 0.5 * std(twirlData)/sqrt(nbrTwirls(twirlct));
+
         %If we have exhaustively twirled we have to be careful in
         %boostrapping to sample evenly from the twils to ensure there no
         %sequence variance contribution
-        if exhaustiveTwirl{expct}(lengthct)
-            if seqLengths{expct}(lengthct) == 1,
-                %For length 1 twirls there are 24 possiblilites which we
-                %repeat 24x.  To estimate the variance of the mean we
-                %resample each set of 24 repeats, numReplicate times and
+        if exhaustiveTwirl{expct}(twirlct)
+            if seqLengths{expct}(twirlct) == 1,
+                %For length 1 twirls there are 12 possiblilites which we
+                %repeat 12x.  To estimate the variance of the mean we
+                %resample each set of 12 twirls, numReplicate times and
                 %estimate the variance of the mean.
-                %We go through all possible sequences 24x so each column of
-                %t looks like 1,2,3,...24,1,2,3...,24
+                %We go through all possible sequences 12x so each column of
+                %twirlData looks like 1,2,3,...12,1,2,3...,12
                 %After reshaping constant twirls along each row
-                t2 = reshape(t(:,lengthct),24,24);
-                variances{expct}(lengthct) = var(arrayfun(@(n) mean(arrayfun(@(c) mean(resample(t2(c,:))),1:24)),zeros(numReplicates,1)));
-            elseif seqLengths{expct}(lengthct) == 2,
-                %For length 2 there are 24^2 possibilites but we only have
+                t = reshape(twirlData,12,12);
+                variances{expct}(twirlct) = var(arrayfun(@(n) mean(arrayfun(@(c) mean(resample(t(c,:))),1:12)),zeros(numReplicates,1)));
+            elseif seqLengths{expct}(twirlct) == 2,
+                %For length 2 there are 12^2 possibilites but we only have
                 %1 instance of each so boostrapping is impossible.
                 %However, we can assume the noise variance is the same as
                 %the length 1 case 
-                variances{expct}(lengthct) = variances{expct}(seqLengths{expct}==1);
+                variances{expct}(twirlct) = variances{expct}(seqLengths{expct}==1);
+            elseif seqLengths{expct}(twirlct) == 3,
+                %For length 3 there are 12^3 possibilities. Assume the
+                %variances is like the length 1 case over 12.
+                variances{expct}(twirlct) = variances{expct}(seqLengths{expct}==1) / 12;
             end
         else
             %Otherwise we apply standard boostrapping. 
-            variances{expct}(lengthct) = var(arrayfun(@(x) mean(resample(t(:,lengthct))), zeros(numReplicates,1)));
+            variances{expct}(twirlct) = var(arrayfun(@(x) mean(resample(twirlData)), zeros(numReplicates,1)));
         end
     end
     

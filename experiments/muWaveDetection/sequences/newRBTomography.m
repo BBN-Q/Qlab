@@ -4,20 +4,16 @@ basename = 'RBT';
 nbrRepeats = 1;
 
 expct = 1;
-for overlapct = 1:9
+for overlapct = 1:10
 %     if overlapct == 1
 %         numFiles = 2;
-%         fixedPt = 22000;
-%         cycleLength = 24100;
 %     else
-        numFiles = 12;
-        fixedPt = 2000;
-        cycleLength = 4100;
+        numFiles = 8;
 %     end;
 
     % if using SSB, set the frequency here
     SSBFreq = 0e6;
-    pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
+    pg = PatternGen(qubit, 'SSBFreq', SSBFreq);
 
     %Create the pulse library
     CliffLibrary = cell(1,25);
@@ -49,6 +45,16 @@ for overlapct = 1:9
         end
         
         calseq = {{pg.pulse('QId')},{pg.pulse('QId')},{pg.pulse('Xp')},{pg.pulse('Xp')}};
+        
+        % calculate an appropriate fixedPt and cycleLength
+        longestSeq = max(cellfun(@length, seqStrings));
+        % fixedPt should be at least 500 to accomodate the digitizer trigger
+        fixedPt = max(500, longestSeq*(pg.buffer + pg.pulseLength)+100);
+        % force fixedPt to be a multiple of 4
+        fixedPt = fixedPt + mod(-fixedPt, 4);
+        cycleLength = fixedPt + 2100;
+        % update the pg object
+        pg.cycleLength = cycleLength;
         
         seqParams = struct(...
             'basename', basename, ...
@@ -159,6 +165,8 @@ end
                 %-X+Y+Z -120 (equivalent to X-Y-Z 120
                 outPulse = pg.pulse('Utheta', 'rotAngle', 2*pi/3, 'polarAngle', pi-acos(1/sqrt(3)), 'aziAngle', -pi/4, defaultParams{:});
             case 25
+                % 25 is a placeholder for whatever gate we wish to
+                % interrogate
                 outPulse = CliffPulse(13);
             otherwise
                 error('Cliffords must be numbered between 1 and 24');
