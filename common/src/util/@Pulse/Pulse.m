@@ -39,7 +39,11 @@ classdef Pulse < handle
            obj.modAngles = cell(nbrPulses,1);
            obj.frameChanges = zeros(nbrPulses,1);
            % pull out the pulse function handle and T matrix
-           pf = params.pf;
+           if ismethod(obj, params.pType)
+               pf = eval(['@obj.' params.pType]);
+           else
+               error('Unknown pulse function %s', params.pType);
+           end
            obj.T = params.T;
            params = rmfield(params, 'T'); % getelement does not work on matrix elements
            
@@ -139,23 +143,48 @@ classdef Pulse < handle
    end
    
    methods (Static)
-      function h = hash(array)
-          persistent sha
-          if isempty(sha)
-              sha = java.security.MessageDigest.getInstance('SHA-1');
-          end
-          % uses java object to build hash string.
-          if isempty(array)
-              array = 0;
-          end
-          sha.reset();
-          %Salt the array to avoid collisions
-          sha.update([array(:); array(:)+10101]);
-          h = sha.digest();
-          % convert to hex string
-          h = sprintf('%02x',uint8(h));
-          % turn numbers into uppercase letters
-          h(h < 'A') = h(h < 'A') + 17;
+       % forward references to pulses defined in separate files
+       % basic shapes
+       [outx, outy] = square(params);
+       [outx, outy] = gaussian(params);
+       [outx, outy] = gaussOn(params);
+       [outx, outy] = gaussOff(params);
+       [outx, outy] = tanh(params);
+       % derivatives
+       [outx, outy] = derivGaussian(params);
+       [outx, outy] = derivGaussOn(params);
+       [outx, outy] = derivGaussOff(params);
+       [outx, outy] = derivGaussSquare(params)
+       % DRAG pulses
+       [outx, outy] = drag(params);
+       [outx, outy] = dragGaussOn(params);
+       [outx, outy] = dragGaussOff(params);
+       % composites
+       [outx, outy] = gaussSquare(params);
+       [outx, outy] = dragSquare(params);
+       % more complex shapes
+       [outx, outy] = hermite(params);
+       [outx, outy, frameChange] = arbAxisDRAG(params);
+       [outx, outy] = arbitrary(params);
+       
+
+       function h = hash(array)
+           persistent sha
+           if isempty(sha)
+               sha = java.security.MessageDigest.getInstance('SHA-1');
+           end
+           % uses java object to build hash string.
+           if isempty(array)
+               array = 0;
+           end
+           sha.reset();
+           %Salt the array to avoid collisions
+           sha.update([array(:); array(:)+10101]);
+           h = sha.digest();
+           % convert to hex string
+           h = sprintf('%02x',uint8(h));
+           % turn numbers into uppercase letters
+           h(h < 'A') = h(h < 'A') + 17;
        end
        
        % helper methods

@@ -200,12 +200,6 @@ classdef PatternGen < handle
                 case {'X45m','Y45m','U45m','Z45m'}
                     params.amp = -obj.pi4Amp;
                     params.rotAngle = pi/4;
-            end       
-            
-            if ismethod(obj, [params.pType 'Pulse'])
-                params.pf = eval(['@obj.' params.pType 'Pulse']);
-            else
-                error('%s is not a valid method', [params.pType 'Pulse'] )
             end
             
             % measurement pulses
@@ -438,177 +432,7 @@ classdef PatternGen < handle
             end
             out = self.padRight([self.padLeft(leftPat, fixedPt); rightPat], totalLength);
         end
-        
-        %%%% pulse shapes %%%%%
-        function [outx, outy] = squarePulse(params)
-            outx = params.amp * ones(params.width, 1);
-            outy = zeros(params.width, 1);
-        end
-        
-        function [outx, outy] = gaussianPulse(params)
-            midpoint = (params.width+1)/2;
-            t = 1:params.width;
-            baseLine = round(params.amp*exp(-midpoint^2/(2*params.sigma^2)));
-            outx = round(params.amp * exp(-(t - midpoint).^2./(2 * params.sigma^2))).'- baseLine;
-            outy = zeros(params.width, 1);
-        end
-        
-        function [outx, outy] = gaussOnPulse(params)
-            n = params.width;
-            t = 1:n;
-            baseLine = round(params.amp*exp(-n^2/(2*params.sigma^2)));
-            outx = round(params.amp * exp(-(t - n).^2./(2 * params.sigma^2))).'- baseLine;
-            outy = zeros(n, 1);
-        end
-        
-        function [outx, outy] = gaussOffPulse(params)
-            n = params.width;
-            t = 1:n;
-            baseLine = round(params.amp*exp(-n^2/(2*params.sigma^2)));
-            outx = round(params.amp * exp(-(t-1).^2./(2 * params.sigma^2))).'- baseLine;
-            outy = zeros(n, 1);
-        end
-        
-        function [outx, outy] = tanhPulse(params)
-            amp = params.amp;
-            n = params.width;
-            sigma = params.sigma;
-            if (n < 6*sigma)
-                warning('tanhPulse:params', 'Tanh pulse length is shorter than rise+fall time');
-            end
-            t0 = 3*sigma + 1;
-            t1 = n - 3*sigma;
-            t = 1:n;
-            outx = round(0.5*params.amp * (tanh((t-t0)./sigma) + tanh(-(t-t1)./sigma))).';
-            outy = zeros(n, 1);
-        end
-        
-        function [outx, outy] = derivGaussianPulse(params)
-            n = params.width;
-            midpoint = (n+1)/2;
-            t = 1:n;
-            outx = round(params.params.amp .* (t - midpoint)./params.sigma^2 .* exp(-(t - midpoint).^2./(2 * params.sigma^2))).';
-            outy = zeros(n, 1);
-        end
-        
-        function [outx, outy] = derivGaussOnPulse(params)
-           n = params.width;
-           t = 1:n;
-           outx = round(params.amp * (-(t-n)./params.sigma^2).*exp(-(t-n).^2./(2 * params.sigma^2))).';
-           outy = zeros(n, 1);
-        end
 
-        function [outx, outy] = derivGaussOffPulse(params)
-           t = 1:params.width;
-           outx = round(params.amp * (-(t-1)./params.sigma^2).*exp(-(t-1).^2./(2 * params.sigma^2))).';
-           outy = zeros(params.width, 1);
-        end
-        
-        function [outx, outy] = dragPulse(params)
-            self = PatternGen;
-            yparams = params;
-            yparams.params.amp = params.amp * params.delta;
-            
-            [outx, tmp] = self.gaussianPulse(params);
-            [outy, tmp] = self.derivGaussianPulse(yparams);
-        end
-        
-        function [outx, outy] = dragGaussOnPulse(params)
-            self = PatternGen;
-            derivParams = params;
-            derivParams.amp = params.amp*params.delta;
-            [outx, ~] = self.gaussOnPulse(params);
-            [outy, ~] = self.derivGaussOnPulse(derivParams);
-        end
-        
-        function [outx, outy] = dragGaussOffPulse(params)
-            self = PatternGen;
-            derivParams = params;
-            derivParams.amp = params.amp*params.delta;
-            [outx, ~] = self.gaussOffPulse(params);
-            [outy, ~] = self.derivGaussOffPulse(derivParams);
-        end
-        
-        function [outx, outy] = hermitePulse(params)
-            %Broadband excitation pulse based on Hermite polynomials. 
-            numPoints = params.width;
-            timePts = linspace(-numPoints/2,numPoints/2,numPoints)';
-            switch params.rotAngle
-                case pi/2
-                    A1 = -0.677;
-                case pi
-                    A1 = -0.956;
-                otherwise
-                    error('Unknown rotation angle for Hermite pulse.  Currently only handle pi/2 and pi.');
-            end
-            outx = params.amp*(1+A1*(timePts/params.sigma).^2).*exp(-((timePts/params.sigma).^2));
-            outy = zeros(numPoints,1);
-        end
-        
-        function [outx, outy, frameChange] = arbAxisDRAGPulse(params)
-            
-            rotAngle = params.rotAngle;
-            polarAngle = params.polarAngle;
-            aziAngle = params.aziAngle;
-            nutFreq = params.nutFreq; %nutation frequency for 1 unit of pulse amplitude
-            sampRate = params.samplingRate;
-            
-            n = params.width;
-            sigma = params.sigma;
-            
-            if n > 0
-                timePts = linspace(-0.5, 0.5, n)*(n/sigma); 
-                gaussPulse = exp(-0.5*(timePts.^2)) - exp(-2);
-
-                calScale = (rotAngle/2/pi)*sampRate/sum(gaussPulse);
-                % calculate phase steps given the polar angle
-                phaseSteps = -2*pi*cos(polarAngle)*calScale*gaussPulse/sampRate;
-                % calculate DRAG correction to phase steps
-                % need to convert XY DRAG parameter to Z DRAG parameter
-                beta = params.delta/sampRate;
-                instantaneousDetuning = beta*(2*pi*calScale*sin(polarAngle)*gaussPulse).^2;
-                phaseSteps = phaseSteps + instantaneousDetuning*(1/sampRate);
-                % center phase ramp around the middle of the pulse
-                phaseRamp = cumsum(phaseSteps) - phaseSteps/2;
-
-                frameChange = sum(phaseSteps);
-            
-                complexPulse = (1/nutFreq)*sin(polarAngle)*calScale*exp(1i*aziAngle)*gaussPulse.*exp(1i*phaseRamp);
-            
-                outx = real(complexPulse)';
-                outy = imag(complexPulse)';
-
-            elseif abs(polarAngle) < 10*eps
-                frameChange = -rotAngle;
-                outx = []; outy = [];
-            else
-                error('Non-zero transverse rotation with zero-length pulse.');
-            end
-                
-        end
-        
-        function [outx, outy] = arbitraryPulse(params)
-            persistent arbPulses;
-            if isempty(arbPulses)
-                arbPulses = containers.Map();
-            end
-            amp = params.amp;
-            fname = params.arbfname;
-            delta = params.delta;
-            
-            if ~arbPulse.isKey(fname)
-                % need to load the pulse from file
-                % TODO check for existence of file before loading it
-                arbPulses(fname) = load(fname);
-            end
-            pulseData = arbPulses(fname);
-            outx = round(amp*pulseData(:,1));
-            outy = round(delta*amp*pulseData(:,2));
-        end
-        
-        % pulses defined in external files
-        [outx, outy] = dragSqPulse(params);
-        
         % buffer pulse generator
 		function out = bufferPulse(patx, paty, zeroLevel, padding, reset, delay)
             % min reset = 1
@@ -646,7 +470,6 @@ classdef PatternGen < handle
 			% shift by delay # of points
             out = circshift(pat, delay);
         end
-        
         
         function seqs = addTrigger(seqs, delay, width, ch)
             % adds a trigger pulse to each sequence
