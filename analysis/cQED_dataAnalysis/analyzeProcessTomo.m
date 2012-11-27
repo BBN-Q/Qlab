@@ -10,8 +10,8 @@ function [gateFidelity, choiSDP] = analyzeProcessTomo(data, idealProcess, nbrQub
 %through each column and extract the calibration data and record a map of
 %which measurement operator each experiment corresponds to.
 
-numPreps = nbrReadoutPulses^nbrQubits;
-numMeas = nbrPrepPulses^nbrQubits;
+numPreps = nbrPrepPulses^nbrQubits;
+numMeas = nbrReadoutPulses^nbrQubits;
 
 measMap = zeros(numMeas, numPreps, 'uint8');
 measMat = zeros(numMeas, numPreps, 'double');
@@ -31,8 +31,8 @@ end
 
 
 %Setup the state preparation and measurement pulse sets
-U_preps = tomo_gate_set(nbrQubits, nbrReadoutPulses);
-U_meas  = tomo_gate_set(nbrQubits, nbrPrepPulses);
+U_preps = tomo_gate_set(nbrQubits, nbrPrepPulses);
+U_meas  = tomo_gate_set(nbrQubits, nbrReadoutPulses);
 
 %Call the SDP program to do the constrained optimization
 [choiSDP, choiLSQ] = QPT_SDP(measMat, measOps, measMap, U_preps, U_meas, nbrQubits);
