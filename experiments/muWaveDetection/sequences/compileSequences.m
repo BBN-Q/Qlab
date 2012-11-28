@@ -150,33 +150,12 @@ for IQkey = channelNames
     end
 end
 
-
-% check for empty channels and fill them
-for awgChannel = fieldnames(awgChannels)'
-    awgChannel = awgChannel{1};
-    
-    if isempty(awgChannels.(awgChannel))
-        % look for a marker channel
-        if (awgChannel(end-1) == 'm')
-            awgChannels.(awgChannel) = zeros(numSegments, seqParams.cycleLength, 'uint8');
-        elseif strcmpi(awgChannel(1:3), 'tek')
-            ChParams = params.(awgChannel);
-            awgChannels.(awgChannel) = repmat({ChParams.offset*ones(numSegments, seqParams.cycleLength, 'int16')}, 1, 2);
-        else
-            pg = PatternGen('linkListMode', 1, 'cycleLength', seqParams.cycleLength);
-            patternDict(awgChannel) = struct('pg', pg);
-            awgChannels.(awgChannel).linkLists = pg.build({pg.pulse('QId')}, 1, 0, seqParams.fixedPt, false);
-            awgChannels.(awgChannel).waveforms = pg.pulseCollection;
-        end
-    end
-end
-
 % setup digitizer and slave AWG triggers 
 % these channels are hard-coded for now but should be moved out
-% digitizerTrigChan = 'TekAWG_1m1';
-% slaveTrigChan = 'TekAWG_4m2';
-digitizerTrigChan = 'BBNAPS1_2m1';
-slaveTrigChan = 'BBNAPS1_4m1';
+digitizerTrigChan = 'TekAWG_1m1';
+slaveTrigChan = 'TekAWG_4m2';
+% digitizerTrigChan = 'BBNAPS1_2m1';
+% slaveTrigChan = 'BBNAPS1_4m1';
 
 %Helper function to map out IQ channel and marker number for BBNAPS units
     function [markerIQkey, markerNum] = map_APS_digital(chanStr)
@@ -202,6 +181,41 @@ elseif (strncmp(slaveTrigChan,'BBNAPS', 6))
     [tmpIQkey, tmpMarkerNum] = map_APS_digital(slaveTrigChan);
     awgChannels.(tmpIQkey).linkLists = PatternGen.addTrigger(awgChannels.(tmpIQkey).linkLists, 1, 0, tmpMarkerNum);
 end
+
+% check for empty channels and fill them
+%If the entire AWG is empty then drop it 
+removeAWGs = [];
+for awgct = 1:length(awgs)
+    allAWGChannelNames = fieldnames(awgChannels);
+    curAWGChannelNames = allAWGChannelNames(strncmp(allAWGChannelNames, awgs{awgct}, length(awgs{awgct})));
+    if all(cellfun(@(x) isempty(awgChannels.(x)), curAWGChannelNames));
+        for tmpChan = curAWGChannelNames
+            awgChannels = rmfield(awgChannels, tmpChan{1});
+        end
+        removeAWGs(end+1) = awgct;
+    end
+end
+awgs(removeAWGs) = [];    
+
+for awgChannel = fieldnames(awgChannels)'
+    awgChannel = awgChannel{1};
+    if isempty(awgChannels.(awgChannel))
+        % look for a marker channel
+        if (awgChannel(end-1) == 'm')
+            awgChannels.(awgChannel) = zeros(numSegments, seqParams.cycleLength, 'uint8');
+        elseif strcmpi(awgChannel(1:3), 'tek')
+            ChParams = params.(awgChannel);
+            awgChannels.(awgChannel) = repmat({ChParams.offset*ones(numSegments, seqParams.cycleLength, 'int16')}, 1, 2);
+        else
+            pg = PatternGen('linkListMode', 1, 'cycleLength', seqParams.cycleLength);
+            patternDict(awgChannel) = struct('pg', pg);
+            awgChannels.(awgChannel).linkLists = pg.build({pg.pulse('QId')}, 1, 0, seqParams.fixedPt, false);
+            awgChannels.(awgChannel).waveforms = pg.pulseCollection;
+        end
+    end
+end
+
+
 
 
 awgFiles = {};
