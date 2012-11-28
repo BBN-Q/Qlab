@@ -120,7 +120,7 @@ get_freqA_settings = sweepGUIs.FrequencySweepGUI(SweepTabPanel, 'A', prevSetting
 get_freqB_settings = sweepGUIs.FrequencySweepGUI(SweepTabPanel, 'B', prevSettings.SweepParams.frequencyB);
 get_power_settings = sweepGUIs.PowerSweepGUI(SweepTabPanel, '');
 get_phase_settings = sweepGUIs.PhaseSweepGUI(SweepTabPanel, '');
-get_AWGChannel_settings = sweepGUIs.AWGChannelSweepGUI(SweepTabPanel, '');
+get_AWGChannel_settings = sweepGUIs.AWGChannelSweepGUI(SweepTabPanel, '', AWGTabPanel.TabNames);
 
 SweepTabPanel.TabNames = {'Freq. A', 'Freq. B', 'Power', 'Phase', 'Channel'};
 SweepTabPanel.SelectedChild = 1;
