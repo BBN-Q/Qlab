@@ -10,14 +10,14 @@ twirlOffsets = 1 + [0, cumsum(nbrTwirls)];
 
 %Length of sequences (cell array (length nbrExpts) of arrays) 
 % seqLengths = [{[2, 5, 8, 13, 16, 20, 25, 30, 32, 40, 49, 55, 64, 101, 126, 151]}, repmat({1:6}, 1, nbrExpts-1)];
-seqLengths = repmat({1:5}, 1, nbrExpts);
+seqLengths = repmat({[1 2 3 4 10]}, 1, nbrExpts);
 
 %Cell array or array of boolean whether we are exhaustively twirling or randomly sampling
 % exhaustiveTwirl = [{false([1, 16])}, repmat({[true, true, true, false, false]}, 1, nbrExpts-1)];
-exhaustiveTwirl = repmat({[true, true, true, false, false]}, 1, nbrExpts);
+exhaustiveTwirl = repmat({[true, true, true, false, true]}, 1, nbrExpts);
 
-%Number of bootstrap replicates
-numReplicates = 200;
+%Number of bootstrap replicas
+numReplicas = 200;
 
 scaledData = zeros(size(data,1), size(data,2)-2*calRepeats);
 avgFidelities = cell(nbrExpts, 1);
@@ -44,9 +44,9 @@ for expct = 1:nbrExpts
     tmpData = tmpData(:);
     
     % calculate means and std deviations of each sequence length
-    avgFidelities{expct} = zeros(length(nbrTwirls), 1);
-    variances{expct} = zeros(length(nbrTwirls), 1);
-    errors{expct} = zeros(length(nbrTwirls), 1);
+    avgFidelities{expct} = zeros(1, length(nbrTwirls));
+    variances{expct} = zeros(1, length(nbrTwirls));
+    errors{expct} = zeros(1, length(nbrTwirls));
     for twirlct = 1:length(nbrTwirls)
         twirlData = tmpData(twirlOffsets(twirlct):twirlOffsets(twirlct+1)-1);
         avgFidelities{expct}(twirlct) = 0.5 * (1 + mean(twirlData));
@@ -56,7 +56,7 @@ for expct = 1:nbrExpts
         %boostrapping to sample evenly from the twils to ensure there no
         %sequence variance contribution
         if exhaustiveTwirl{expct}(twirlct)
-            if seqLengths{expct}(twirlct) == 1,
+            if seqLengths{expct}(twirlct) == 1 || seqLengths{expct}(twirlct) == 10,
                 %For length 1 twirls there are 12 possiblilites which we
                 %repeat 12x.  To estimate the variance of the mean we
                 %resample each set of 12 twirls, numReplicate times and
@@ -65,7 +65,7 @@ for expct = 1:nbrExpts
                 %twirlData looks like 1,2,3,...12,1,2,3...,12
                 %After reshaping constant twirls along each row
                 t = reshape(twirlData,12,12);
-                variances{expct}(twirlct) = var(arrayfun(@(n) mean(arrayfun(@(c) mean(resample(t(c,:))),1:12)),zeros(numReplicates,1)));
+                variances{expct}(twirlct) = var(arrayfun(@(n) mean(arrayfun(@(c) mean(resample(t(c,:))),1:12)),zeros(numReplicas,1)));
             elseif seqLengths{expct}(twirlct) == 2,
                 %For length 2 there are 12^2 possibilites but we only have
                 %1 instance of each so boostrapping is impossible.
@@ -75,11 +75,11 @@ for expct = 1:nbrExpts
             elseif seqLengths{expct}(twirlct) == 3,
                 %For length 3 there are 12^3 possibilities. Assume the
                 %variances is like the length 1 case over 12.
-                variances{expct}(twirlct) = variances{expct}(seqLengths{expct}==1) / 12;
+                variances{expct}(twirlct) = variances{expct}(seqLengths{expct}==1) / sqrt(12);
             end
         else
             %Otherwise we apply standard boostrapping. 
-            variances{expct}(twirlct) = var(arrayfun(@(x) mean(resample(twirlData)), zeros(numReplicates,1)));
+            variances{expct}(twirlct) = var(arrayfun(@(x) mean(resample(twirlData)), zeros(numReplicas,1)));
         end
     end
     
@@ -112,6 +112,7 @@ end
 % end
 
 betas = sillyFit2(seqLengths, avgFidelities, variances);
+
 fitFidelities = cellfun(@(x) x(1), betas);
 choiSDP = overlaps_tomo(fitFidelities);
 
