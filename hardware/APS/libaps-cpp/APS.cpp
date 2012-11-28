@@ -368,6 +368,16 @@ int APS::set_trigger_interval(const double & interval){
 	return write(ALL_FPGAS, FPGA_ADDR_TRIG_INTERVAL, {upperWord, lowerWord}, false);
 }
 
+int APS::get_trigger_interval() const{
+
+	//Trigger interval is 32bits wide so have to split up into two 16bit words reads
+	int upperWord = FPGA::read_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL, FPGA1);
+	int lowerWord = FPGA::read_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL+1, FPGA1);
+
+	//Put it back together and read
+	return (upperWord << 16) + lowerWord;
+}
+
 int APS::set_miniLL_repeat(const USHORT & miniLLRepeat){
 	return FPGA::write_FPGA(handle_, FPGA_ADDR_LL_REPEAT, miniLLRepeat, ALL_FPGAS);
 }

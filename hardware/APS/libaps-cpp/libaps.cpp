@@ -84,10 +84,6 @@ int get_sampleRate(int deviceID){
 	return APSRack_.get_sampleRate(deviceID);
 }
 
-int set_trigger_interval(int deviceID, double interval){
-	return APSRack_.set_trigger_interval(deviceID, interval);
-}
-
 //Load the waveform library as floats
 int set_waveform_float(int deviceID, int channelNum, float* data, int numPts){
 	return APSRack_.set_waveform(deviceID, channelNum, vector<float>(data, data+numPts));
@@ -155,6 +151,14 @@ int set_trigger_source(int deviceID, int triggerSource) {
 
 int get_trigger_source(int deviceID) {
 	return int(APSRack_.get_trigger_source(deviceID));
+}
+
+int set_trigger_interval(int deviceID, double interval){
+	return APSRack_.set_trigger_interval(deviceID, interval);
+}
+
+int get_trigger_interval(int deviceID){
+	return APSRack_.get_trigger_interval(deviceID);
 }
 
 int set_miniLL_repeat(int deviceID, unsigned short repeat){

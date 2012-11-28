@@ -135,10 +135,6 @@ int APSRack::get_running(const int & deviceID){
 	return 0;
 }
 
-int APSRack::set_trigger_interval(const int & deviceID, const double & interval){
-	return APSs_[deviceID].set_trigger_interval(interval);
-}
-
 int APSRack::set_log(FILE * pFile) {
 	if (pFile) {
 		//Close the current file
@@ -162,6 +158,14 @@ int APSRack::set_trigger_source(const int & deviceID, const TRIGGERSOURCE & trig
 
 TRIGGERSOURCE APSRack::get_trigger_source(const int & deviceID) const{
 	return APSs_[deviceID].get_trigger_source();
+}
+
+int APSRack::set_trigger_interval(const int & deviceID, const double & interval){
+	return APSs_[deviceID].set_trigger_interval(interval);
+}
+
+int APSRack::get_trigger_interval(const int & deviceID) const{
+	return APSs_[deviceID].get_trigger_interval();
 }
 
 int APSRack::set_miniLL_repeat(const int & deviceID, const USHORT & repeat){
