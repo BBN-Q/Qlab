@@ -285,7 +285,7 @@ classdef PatternGen < handle
                 entry.linkListRepeat = 0;
             end
             
-            LinkLists = cell(numsteps,1);
+            LinkLists = cell(1, numsteps);
             
             for n = 1:numsteps
                 % start with a padding pulse which we later expand to the
