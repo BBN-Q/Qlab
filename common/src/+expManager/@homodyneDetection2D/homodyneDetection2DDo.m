@@ -31,18 +31,18 @@ if isempty(scopeHandle) && displayScope
 end
 
 %Find the master AWG
+% masterIndex = find(cellfun(
 
 % stop the master and make sure it stopped
 
 masterAWG = obj.awg{1};
 masterAWG.stop();
-masterAWG.operationComplete();
 % start all the slave AWGs
-for i = 2:length(obj.awg)
-    awg = obj.awg{i};
+for ct = 2:length(obj.awg)
+    awg = obj.awg{ct};
     awg.run();
     [success_flag_AWG] = awg.waitForAWGtoStartRunning();
-    if success_flag_AWG ~= 1, error('AWG %d timed out', i), end
+    if success_flag_AWG ~= 1, error('AWG %d timed out', ct), end
 end
 
 % for each loop we use the function iterateLoop to set the relevent
@@ -133,7 +133,7 @@ for loop2_index = 1:obj.Loop.two.steps
 
             % set the Tek to run and wait and wait and wait for it to go
             masterAWG.run();
-            masterAWG.operationComplete();
+            masterAWG.waitForAWGtoStartRunning();
             
             %Poll the digitizer until it has all the data
             success = obj.scope.wait_for_acquisition(120);
@@ -215,13 +215,13 @@ for loop2_index = 1:obj.Loop.two.steps
             end
 
             masterAWG.stop();
+            pause(0.010);
             % restart the slave AWGs so we can resync
-            for i = 2:length(obj.awg)
-                awg = obj.awg{i};
+            for ct = 2:length(obj.awg)
+                awg = obj.awg{ct};
                 awg.stop();
                 awg.run();
             end
-            pause(0.2);
         end
 
         % write the data to file
