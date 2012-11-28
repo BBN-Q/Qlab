@@ -21,47 +21,36 @@ patseq = {{pg.pulse('QId')}, {pg.pulse('QId')},...
     {pg.pulse('Xtheta', 'pType', 'square', 'amp', 3400)}, {pg.pulse('Xtheta', 'pType', 'square', 'amp', 3400)}};
 calseq = [];
 
-% load config parameters from files
-params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+% prepare parameter structures for the pulse compiler
+seqParams = struct(...
+    'basename', basename, ...
+    'suffix', '', ...
+    'numSteps', 1, ...
+    'nbrRepeats', nbrRepeats, ...
+    'fixedPt', fixedPt, ...
+    'cycleLength', cycleLength, ...
+    'measLength', 2000);
 qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
-curBufferDelay = params.(IQkey).bufferDelay;
+if ~isempty(calseq), calseq = {calseq}; end
+measChannels = {'M1'};
+awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
 
+% load config parameters from files
 expct = 1;
+
 for bufferDelay = sweepPts
     
-    %Write the buffer delay to file
-    %     params.(IQkey).bufferDelay = bufferDelay;
-    params.(IQkey).bufferDelay = bufferDelay;
-    FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'wt'); %open in text mode
-    fprintf(FID, jsonlab.savejson('',params));
-    fclose(FID);
+    %Update the buffer delay to the pattern gen
+    pg.bufferDelay = bufferDelay;
     
-    % prepare parameter structures for the pulse compiler
-    seqParams = struct(...
-        'basename', basename, ...
-        'suffix', ['_', num2str(expct)], ...
-        'numSteps', 1, ...
-        'nbrRepeats', nbrRepeats, ...
-        'fixedPt', fixedPt, ...
-        'cycleLength', cycleLength, ...
-        'measLength', 2000);
+    %Update the expt number
+    seqParams.suffix = ['_', num2str(expct)];
+    
     patternDict = containers.Map();
-    if ~isempty(calseq), calseq = {calseq}; end
-    
     patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
-    measChannels = {'M1'};
-    awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
-    
     compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
     expct = expct+1;
 end
-
-
-%Write the original delay back to the file
-params.(IQkey).bufferDelay = curBufferDelay;
-FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'wt'); %open in text mode
-fprintf(FID, jsonlab.savejson('',params));
-fclose(FID);
 
 end

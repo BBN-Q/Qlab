@@ -152,10 +152,10 @@ end
 
 % setup digitizer and slave AWG triggers 
 % these channels are hard-coded for now but should be moved out
-digitizerTrigChan = 'TekAWG_1m1';
-slaveTrigChan = 'TekAWG_4m2';
-% digitizerTrigChan = 'BBNAPS1_2m1';
-% slaveTrigChan = 'BBNAPS1_4m1';
+% digitizerTrigChan = 'TekAWG_1m1';
+% slaveTrigChan = 'TekAWG_4m2';
+digitizerTrigChan = 'BBNAPS1_2m1';
+slaveTrigChan = 'BBNAPS1_4m1';
 
 %Helper function to map out IQ channel and marker number for BBNAPS units
     function [markerIQkey, markerNum] = map_APS_digital(chanStr)
@@ -172,6 +172,10 @@ if (strncmp(digitizerTrigChan,'TekAWG', 6))
     awgChannels.(digitizerTrigChan) = repmat(uint8(pg.makePattern([], seqParams.fixedPt-500, ones(100,1), seqParams.cycleLength)), 1, numSegments)';
 elseif (strncmp(digitizerTrigChan,'BBNAPS', 6))
     [tmpIQkey, tmpMarkerNum] = map_APS_digital(digitizerTrigChan);
+    %If there is nothing on the channel then we need to add something
+    if isempty(awgChannels.(tmpIQkey))
+        create_empty_APS_channel(tmpIQkey);
+    end
     awgChannels.(tmpIQkey).linkLists = PatternGen.addTrigger(awgChannels.(tmpIQkey).linkLists, seqParams.fixedPt-500, 0, tmpMarkerNum);
 end
 
@@ -207,10 +211,7 @@ for awgChannel = fieldnames(awgChannels)'
             ChParams = params.(awgChannel);
             awgChannels.(awgChannel) = repmat({ChParams.offset*ones(numSegments, seqParams.cycleLength, 'int16')}, 1, 2);
         else
-            pg = PatternGen('linkListMode', 1, 'cycleLength', seqParams.cycleLength);
-            patternDict(awgChannel) = struct('pg', pg);
-            awgChannels.(awgChannel).linkLists = pg.build({pg.pulse('QId')}, 1, 0, seqParams.fixedPt, false);
-            awgChannels.(awgChannel).waveforms = pg.pulseCollection;
+            create_empty_APS_channel(awgChannel)
         end
     end
 end
@@ -281,6 +282,14 @@ end
         tmpAWGChannels.('ch3m2') = awgChannels.([tekName '_3m2']);
         tmpAWGChannels.('ch4m1') = awgChannels.([tekName '_4m1']);
         tmpAWGChannels.('ch4m2') = awgChannels.([tekName '_4m2']);
+    end
+
+    %Helper function to create an empty APS channel
+    function create_empty_APS_channel(awgChannel)
+        pg = PatternGen('linkListMode', 1, 'cycleLength', seqParams.cycleLength);
+        patternDict(awgChannel) = struct('pg', pg);
+        awgChannels.(awgChannel).linkLists = pg.build({pg.pulse('QId')}, 1, 0, seqParams.fixedPt, false);
+        awgChannels.(awgChannel).waveforms = pg.pulseCollection;
     end
 
 end

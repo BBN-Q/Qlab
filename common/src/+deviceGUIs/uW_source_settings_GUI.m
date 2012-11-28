@@ -149,7 +149,7 @@ setting_fcn = @get_settings;
 		set(handles.enable, 'Value', defaults.enable);
 		set(handles.address, 'String', num2str(defaults.Address));
 		set_selected(handles.gen_model, defaults.deviceName);
-		set(handles.freq, 'String', num2str(defaults.frequency));
+		set(handles.freq, 'String', num2str(defaults.frequency,10));
 		set(handles.power, 'String', num2str(defaults.power));
 		set(handles.phase, 'String', num2str(defaults.phase));
 		set(handles.rf, 'Value', defaults.output);
