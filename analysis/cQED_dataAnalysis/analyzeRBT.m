@@ -122,3 +122,42 @@ function vr = resample( v )
   rindices = randi([1 length(v)],1,length(v));
   vr = v(rindices);
 end
+
+function betas = sillyFit2(seqLengths, avgFidelities, variances)
+
+    betas = cell(1, length(seqLengths));
+    % offsets = cellfun(@(x) x(5), avgFidelities);
+    % offset = mean(offsets);
+    % offsetStd = std(offsets);
+    % pGuess = [0, 1-offset, offset];
+    % pUpper = [1, 1-offset + offsetStd, offset+offsetStd];
+    % pLower = [-1/3, 1-offset - offsetStd, offset-offsetStd];
+    for exptct = 1:length(seqLengths)
+        % seed guess via polynomial solution from first 3 data points
+        x = avgFidelities{exptct}(1:5);
+        v = variances{exptct}(1:5);
+        offset = x(5);
+        p = (x(2) - offset)/(x(1) - offset);
+        scale = (x(1) - offset)/p;
+        % pGuess = [p, scale, offset];
+        % variances are estimated by uncertainty propagation
+        offsetvar = v(5);
+        pvar = ((x(2)-x(5))/(x(1)-x(5))^2)^2*v(1)+1/(x(1)-x(5))^2*v(2)+((x(2)-x(1))/(x(1)-x(5))^2)*v(5);
+        scalevar = 4*(x(1)-x(5))^2/(x(2)-x(5))^2*v(1)+...
+            ((x(1)-x(5))/(x(2)-x(5)))^4*v(2)+...
+            (x(1)-x(5))^2*(x(1)+x(5)-2*x(2))^2/(x(2)-x(5))^4*v(5);
+        % pUpper = [1, scale + sqrt(variances{exptct}(1)), offset + sqrt(variances{exptct}(1))];
+        % pLower = [-1/3, scale - sqrt(variances{exptct}(1)), offset - sqrt(variances{exptct}(1))];
+        pUpper = max(min([p + 3*sqrt(pvar), .5, offset + 3*sqrt(offsetvar)],[1,1,.6]),[-.2,1,.6]);
+        pLower = max([p - 3*sqrt(pvar), .5-sqrt(scalevar), offset - 3*sqrt(offsetvar)],[-1./3,-10,-10]);
+        % we pick a random initial guess within the uncertainty range
+        pPert  = randn(1,3).*sqrt([pvar, scalevar, offsetvar]);
+        pGuess = min(max([p, scale, offset], pLower), pUpper);
+
+        fitf = @(p,n) (p(2)*p(1).^n + p(3));
+        fitDiffFunc = @(p) (1./sqrt(variances{exptct})).*(fitf(p, seqLengths{exptct}) - avgFidelities{exptct});
+        betas{exptct} = lsqnonlin(fitDiffFunc, pGuess, pLower, pUpper);
+        %betas{exptct} = pGuess;
+    end
+
+end
