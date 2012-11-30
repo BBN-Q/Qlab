@@ -347,9 +347,9 @@ classdef APS < hgsetget
             source = valueMap(obj.libraryCall('get_trigger_source'));
         end
         
-        function aps = set.triggerInterval(aps, value)
+        function aps = set.triggerInterval(aps, interval)
             aps.libraryCall('set_trigger_interval', interval);
-            aps.triggerInterval = value;
+            aps.triggerInterval = interval;
         end
         
         function value = get.triggerInterval(aps)
