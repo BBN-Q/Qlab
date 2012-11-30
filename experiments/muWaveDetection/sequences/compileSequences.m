@@ -183,6 +183,10 @@ if (strncmp(slaveTrigChan,'TekAWG', 6))
     awgChannels.(slaveTrigChan) = repmat(uint8(pg.makePattern([], 5, ones(100,1), seqParams.cycleLength)), 1, numSegments)';
 elseif (strncmp(slaveTrigChan,'BBNAPS', 6))
     [tmpIQkey, tmpMarkerNum] = map_APS_digital(slaveTrigChan);
+    %If there is nothing on the channel then we need to add something
+    if isempty(awgChannels.(tmpIQkey))
+        create_empty_APS_channel(tmpIQkey);
+    end
     awgChannels.(tmpIQkey).linkLists = PatternGen.addTrigger(awgChannels.(tmpIQkey).linkLists, 1, 0, tmpMarkerNum);
 end
 

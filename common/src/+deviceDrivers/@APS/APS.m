@@ -30,6 +30,7 @@ classdef APS < hgsetget
 
         samplingRate = 1200;   % Global sampling rate in units of MHz (1200, 600, 300, 100, 40)
         triggerSource
+        triggerInterval
     end
     
     properties %(Access = 'private')
@@ -47,8 +48,7 @@ classdef APS < hgsetget
 
         ADDRESS_UNIT = 4;
         MAX_WAVEFORM_VALUE = 8191;        
-        MAX_WAVFORM_LENGTH = 8192;
-        MAX_LL_LENGTH = 512;
+        MAX_WAVFORM_LENGTH = 32768;
 
         % run modes
         RUN_SEQUENCE = 1;
@@ -244,6 +244,7 @@ classdef APS < hgsetget
             %   waveform - int16 format waveform data (-8192, 8191) or
             %       float data in the range (-1.0, 1.0)
             assert((ch>0) && (ch<5), 'Oops! The channel must be in the range 1 through 4');
+            assert(length(waveform)<=obj.MAX_WAVFORM_LENGTH, 'Oops! Your waveform must be less than %d points', obj.MAX_WAVFORM_LENGTH+1)
             switch(class(waveform))
                 case 'int16'
                     obj.libraryCall('set_waveform_int', ch-1, waveform, length(waveform));
@@ -280,7 +281,7 @@ classdef APS < hgsetget
             %run - Starts the aps 
             % APS.run() Will ready the APS to recieve external hardware triggers or
             % start the sequence/waveform playing if in internal trigger
-            % mode. 
+            % mode.
             aps.libraryCall('run');
         end
         
@@ -306,9 +307,9 @@ classdef APS < hgsetget
         function out = waitForAWGtoStartRunning(aps)
             %waitForAWGtoStartRunning - Wraps APS.isRunning for consistency with the Tek5014 driver. 
             % for compatibility with Tek driver
-            if ~aps.isRunning()
-                aps.run();
-            end
+%             if ~aps.isRunning()
+%                 aps.run();
+%             end
             out = true;
         end
         
@@ -344,6 +345,15 @@ classdef APS < hgsetget
             valueMap = containers.Map({obj.TRIGGER_INTERNAL, obj.TRIGGER_EXTERNAL},...
                 {'internal', 'external'});
             source = valueMap(obj.libraryCall('get_trigger_source'));
+        end
+        
+        function aps = set.triggerInterval(aps, value)
+            aps.libraryCall('set_trigger_interval', interval);
+            aps.triggerInterval = value;
+        end
+        
+        function value = get.triggerInterval(aps)
+            value = aps.libraryCall('get_trigger_interval');
         end
         
         function val = setOffset(aps, ch, offset)
@@ -413,11 +423,6 @@ classdef APS < hgsetget
             calllib(aps.library_name, 'set_logging_level', level);
         end
         
-        function setTriggerInterval(aps, interval)
-            %Sets the internal trigger interval
-            aps.libraryCall('set_trigger_interval', interval);
-        end
-
         function val = readRegister(aps, fpga, addr)
             val = aps.libraryCall('read_register', fpga, addr);
         end

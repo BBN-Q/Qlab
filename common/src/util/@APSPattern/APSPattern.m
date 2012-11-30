@@ -6,9 +6,9 @@ classdef APSPattern < handle
         MIN_PAD_SIZE = 4;
         MIN_LL_ENTRY_COUNT = 2;
         MAX_WAVEFORM_VALUE = 8191;
-        MAX_WAVEFORM_POINTS = 2^14;
+        MAX_WAVEFORM_POINTS = 32768;
         MAX_REPEAT_COUNT = 2^10-1;
-        MAX_LL_ENTRIES = 4096;
+        MAX_LL_ENTRIES = 8192;
         
         %APS bit masks
         START_MINILL_BIT = 16;
