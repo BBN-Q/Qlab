@@ -44,12 +44,13 @@ for overlapct = 1:10
             patseq{ii} = currentSeq(1:jj);
         end
         
+%         calseq = arrayfun(@(x) CliffLibrary(x), [1 3 6 9 17 18 19 20 21 22 1 1 3 3], 'UniformOutput', false);
         calseq = {{pg.pulse('QId')},{pg.pulse('QId')},{pg.pulse('Xp')},{pg.pulse('Xp')}};
         
         % calculate an appropriate fixedPt and cycleLength
         longestSeq = max(cellfun(@length, seqStrings));
         % fixedPt should be at least 500 to accomodate the digitizer trigger
-        fixedPt = max(500, longestSeq*(pg.buffer + pg.pulseLength)+100);
+        fixedPt = max(600, longestSeq*(pg.buffer + pg.pulseLength)+100);
         % force fixedPt to be a multiple of 4
         fixedPt = fixedPt + mod(-fixedPt, 4);
         cycleLength = fixedPt + 2100;

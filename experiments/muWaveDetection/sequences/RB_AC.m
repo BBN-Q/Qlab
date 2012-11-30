@@ -76,7 +76,7 @@ compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
         switch cliffNum
             case 1
                 %Identity gate
-                outPulse = pg.pulse('QId');
+                outPulse = pg.pulse('QId', 'width', 0);
             case 2
                 %X90
                 outPulse = pg.pulse('X90p');
@@ -97,13 +97,13 @@ compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
                 outPulse = pg.pulse('Y90m');
             case 8
                 %Z90
-                outPulse = pg.pulse('QId', 'rotAngle', pi/2, 'polarAngle', 0, 'aziAngle', 0, defaultParams{:});
+                outPulse = pg.pulse('QId', 'width', 0, 'rotAngle', pi/2, 'polarAngle', 0, 'aziAngle', 0, defaultParams{:});
             case 9
                 %Z180
-                outPulse = pg.pulse('QId', 'rotAngle', pi, 'polarAngle', 0, 'aziAngle', 0, defaultParams{:});
+                outPulse = pg.pulse('QId', 'width', 0, 'rotAngle', pi, 'polarAngle', 0, 'aziAngle', 0, defaultParams{:});
             case 10
                 %Z90m
-                outPulse = pg.pulse('QId', 'rotAngle', -pi/2, 'polarAngle', 0, 'aziAngle', 0, defaultParams{:});
+                outPulse = pg.pulse('QId', 'width', 0, 'rotAngle', -pi/2, 'polarAngle', 0, 'aziAngle', 0, defaultParams{:});
             case 11
                 %X+Y 180
                 outPulse = pg.pulse('Up', 'angle', pi/4);

@@ -6,9 +6,6 @@ end
 
 basename = 'Rabi';
 
-qubitMap = obj.channelMap.(qubit);
-IQkey = qubitMap.IQkey;
-
 fixedPt = 2000;
 cycleLength = 6000;
 numsteps = 40; %should be even
