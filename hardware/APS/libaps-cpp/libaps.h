@@ -5,8 +5,6 @@
  *      Author: qlab
  */
 
-#include "headings.h"
-
 #ifndef LIBAPS_H_
 #define LIBAPS_H_
 
@@ -57,7 +55,7 @@ EXPORT int get_channel_enabled(int, int);
 EXPORT int set_trigger_source(int, int);
 EXPORT int get_trigger_source(int);
 EXPORT int set_trigger_interval(int, double);
-EXPORT int get_trigger_interval(int);
+EXPORT double get_trigger_interval(int);
 
 EXPORT int set_miniLL_repeat(int, unsigned short);
 

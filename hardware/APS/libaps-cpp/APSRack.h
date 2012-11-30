@@ -41,7 +41,7 @@ public:
 	int set_trigger_source(const int &, const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source(const int &) const;
 	int set_trigger_interval(const int &, const double &);
-	int get_trigger_interval(const int &) const;
+	double get_trigger_interval(const int &) const;
 
 	int set_miniLL_repeat(const int &, const USHORT &);
 

@@ -16,10 +16,10 @@ static const int  APS_WAVEFORM_UNIT_LENGTH = 4;
 
 static const int  MAX_APS_DEVICES = 10;
 
-static const int MAX_WF_LENGTH = 16384;
+static const int MAX_WF_LENGTH = 32768;
 static const int MAX_WF_AMP = 8191;
 static const int WF_MODULUS = 4;
-static const size_t MAX_LL_LENGTH = 4096;
+static const size_t MAX_LL_LENGTH = 8192;
 
 static const int APS_READTIMEOUT = 1000;
 static const int APS_WRITETIMEOUT = 500;
@@ -114,7 +114,7 @@ static const int REFERENCE_PLL_LOCK_BIT = 10;
 static const int MAX_PHASE_TEST_CNT = 40;
 
 //Expected version
-static const int FIRMWARE_VERSION =  0x1;
+static const int FIRMWARE_VERSION =  0x2;
 
 //Each FPGA has a CHA/B CSR with some configuration bits
 static const int CSRMSK_CHA_SMRSTN = 0x1; // state machine reset

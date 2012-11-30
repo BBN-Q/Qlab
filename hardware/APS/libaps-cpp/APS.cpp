@@ -353,7 +353,7 @@ int APS::set_trigger_source(const TRIGGERSOURCE & triggerSource){
 
 TRIGGERSOURCE APS::get_trigger_source() const{
 	int regVal = FPGA::read_FPGA(handle_, FPGA_ADDR_CSR, FPGA1);
-	return TRIGGERSOURCE(regVal & CSRMSK_CHA_TRIGSRC);
+	return TRIGGERSOURCE((regVal & CSRMSK_CHA_TRIGSRC) == CSRMSK_CHA_TRIGSRC ? 1 : 0);
 }
 
 int APS::set_trigger_interval(const double & interval){
@@ -368,14 +368,14 @@ int APS::set_trigger_interval(const double & interval){
 	return write(ALL_FPGAS, FPGA_ADDR_TRIG_INTERVAL, {upperWord, lowerWord}, false);
 }
 
-int APS::get_trigger_interval() const{
+double APS::get_trigger_interval() const{
 
 	//Trigger interval is 32bits wide so have to split up into two 16bit words reads
 	int upperWord = FPGA::read_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL, FPGA1);
 	int lowerWord = FPGA::read_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL+1, FPGA1);
 
-	//Put it back together and read
-	return (upperWord << 16) + lowerWord;
+	//Put it back together and covert from clock cycles to time
+	return ((upperWord << 16) + lowerWord)/(0.25*samplingRate_*1e6);
 }
 
 int APS::set_miniLL_repeat(const USHORT & miniLLRepeat){

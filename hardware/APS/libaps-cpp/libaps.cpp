@@ -6,7 +6,9 @@
  *      Author: qlab
  */
 
+#include "headings.h"
 #include "libaps.h"
+
 
 APSRack APSRack_;
 
@@ -157,7 +159,7 @@ int set_trigger_interval(int deviceID, double interval){
 	return APSRack_.set_trigger_interval(deviceID, interval);
 }
 
-int get_trigger_interval(int deviceID){
+double get_trigger_interval(int deviceID){
 	return APSRack_.get_trigger_interval(deviceID);
 }
 

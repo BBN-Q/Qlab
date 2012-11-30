@@ -164,7 +164,7 @@ int APSRack::set_trigger_interval(const int & deviceID, const double & interval)
 	return APSs_[deviceID].set_trigger_interval(interval);
 }
 
-int APSRack::get_trigger_interval(const int & deviceID) const{
+double APSRack::get_trigger_interval(const int & deviceID) const{
 	return APSs_[deviceID].get_trigger_interval();
 }
 
