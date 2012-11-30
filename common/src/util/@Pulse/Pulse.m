@@ -9,15 +9,12 @@ classdef Pulse < handle
    
    properties
        label
-       pulseShapes = {}; % pre-computed complex pulse shapes
        pulseArray = {}; % pulse shapes after frame selection
-       angles % rotation axis for each pulse
-       modAngles
-       frameChanges
-       T % mixer correction matrix
-       
-       % for link list mode
+       pulsePtrs = []; % index into hashKeys
        hashKeys = [];
+       frameChanges = [];
+       T % mixer correction matrix
+
        isTimeAmplitude = 0;
        isZero = 0;
    end
@@ -34,9 +31,13 @@ classdef Pulse < handle
            % precompute the pulses
            % start by find longest parameter vector
            nbrPulses = max(structfun(@Pulse.getlength, params));
-           obj.pulseShapes = cell(nbrPulses,1);
-           obj.angles = zeros(nbrPulses, 1);
-           obj.modAngles = cell(nbrPulses,1);
+           %obj.pulseShapes = cell(nbrPulses,1);
+           %obj.angles = zeros(nbrPulses, 1);
+           %obj.modAngles = cell(nbrPulses,1);
+           %obj.frameChanges = zeros(nbrPulses,1);
+           obj.pulseArray = cell(nbrPulses,1);
+           obj.hashKeys = cell(nbrPulses,1);
+           obj.pulsePtrs = zeros(nbrPulses,1);
            obj.frameChanges = zeros(nbrPulses,1);
            % pull out the pulse function handle and T matrix
            if ismethod(obj, params.pType)
@@ -48,6 +49,7 @@ classdef Pulse < handle
            params = rmfield(params, 'T'); % getelement does not work on matrix elements
            
            % construct cell array of pulses for all parameter vectors
+           idx = 1;
            for n = 1:nbrPulses
                % pick out the nth element of parameters provided as
                % vectors
@@ -80,56 +82,47 @@ classdef Pulse < handle
                    ypulse = [zeros(padleft,1); ypulse; zeros(padright,1)];
                end
                
-               % store the pulse
-               obj.pulseShapes{n} = xpulse +1j*ypulse;
+               % lab frame pulse
+               pulseShape = xpulse +1j*ypulse;
                
                % precompute SSB modulation angles
                timeStep = 1/params.samplingRate;
-               obj.modAngles{n} = - 2*pi*params.modFrequency*timeStep*(0:(length(obj.pulseShapes{n})-1))';
-               obj.angles(n) = elementParams.angle;
-           end
-           
-           if linkListMode           
-               % how this should look
-                %retVal.pulseArray = arrayfun(@pulseFunction, 1:nbrPulses, 'UniformOutput', 0);
-                %retVal.hashKeys = cellfun(@obj.hashArray, retVal.pulseArray, 'UniformOutput', 0);
-                % some weird MATLAB bug causes this not to work, hence the
-                % following for loop
-                obj.pulseArray = cell(nbrPulses,1);
-                obj.hashKeys = cell(nbrPulses,1);
-                for ii = 1:nbrPulses
-                    [xpulse, ypulse] = obj.getPulse(ii, 0);
-                    obj.pulseArray{ii} = [xpulse, ypulse];
-                    obj.hashKeys{ii} = Pulse.hash(obj.pulseArray{ii});
-                end
-                if strcmp(params.pType, 'square')
-                    %Square pulses are time/amplitude pairs
+               modAngles = - 2*pi*params.modFrequency*timeStep*(0:(length(pulseShape)-1))';
+               
+               % the pulse in the rotated frame
+               [xpulse, ypulse] = obj.frameChange(pulseShape, modAngles, elementParams.angle);
+               
+               % square pulses and identity pulses are special
+               if strcmp(params.pType, 'square')
                     obj.isTimeAmplitude = 1;
-                    %We only want to hash the first point as only the
-                    %amplitude matters. 
-                    obj.hashKeys{ii} = Pulse.hash(obj.pulseArray{ii}(fix(end/2),:));
+                    %Only keep one representative (x,y) point
+                    xpulse = xpulse(fix(end/2));
+                    ypulse = ypulse(fix(end/2));
                 end
                 if ismember(label, obj.identityPulses)
                     obj.isZero = 1;
                 end
+               
+               % check to see if we already have this pulse
+               hash = Pulse.hash([xpulse, ypulse]);
+               if ~any(obj.hashKeys == hash)
+                   obj.pulseArray{idx} = [xpulse, ypulse];
+                   obj.hashKeys{idx} = hash;
+                   obj.pulsePtrs(n) = idx;
+                   idx = idx + 1;
+               else
+                   obj.pulsePtrs(n) = find(obj.hashKeys, hash, 'first');
+               end
            end
        end
        
-       function [xpulse, ypulse, frameChange] = getPulse(obj, n, accumulatedPhase)
-           % n - index into parameter arrays
-           % accumulatedPhase - allows dynamic updating of the basis
-           %   based upon the position in time of the pulse
-           angle = obj.angles(1+mod(n-1, length(obj.angles)));
-           complexPulse = obj.pulseShapes{1+mod(n-1, length(obj.pulseShapes))};
-           
-           % rotate and correct the pulse
-           tmpAngles = angle + accumulatedPhase + obj.modAngles{1+mod(n-1, length(obj.modAngles))};
+       function [xpulse, ypulse] = frameChange(obj, complexPulse, modAngles, angle)
+           % rotate a pulse into a frame determined by modAngles (length n
+           % vector of instantaneous frames) and angle (global frame)
+           tmpAngles = angle + modAngles;
            complexPulse = complexPulse.*exp(1j*tmpAngles);
-           xypairs = obj.T*[real(complexPulse) imag(complexPulse)].';
-           xpulse = xypairs(1,:).';
-           ypulse = xypairs(2,:).';
-           
-           frameChange = obj.frameChanges(1+mod(n-1, length(obj.frameChanges)));
+           xpulse = real(complexPulse);
+           ypulse = imag(complexPulse);
        end
        
        % pretty printer
