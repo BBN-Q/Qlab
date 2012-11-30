@@ -24,7 +24,8 @@ aps.connect(apsStr);
 aps.init();
 for ct = 1:4, aps.setEnabled(ct,1); end
 aps.setRunMode(1, aps.RUN_SEQUENCE); aps.setRunMode(3, aps.RUN_SEQUENCE);
-aps.setTriggerInterval(0.1);
+aps.triggerSource = 'int';
+aps.triggerInterval = 0.1;
 aps.loadConfig(fullfile(tempdir, 'SwitchMarker.h5'));
 aps.run();
 pause(0.15);
