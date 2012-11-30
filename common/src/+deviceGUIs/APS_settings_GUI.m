@@ -98,6 +98,7 @@ set_settings_fcn = @set_GUI_fields;
         
         tmpVBox2 =  uiextras.VBox('Parent', tmpHBox_top, 'Spacing', 5);
         [~, ~, handles.triggerSource] = uiextras.labeledPopUpMenu(tmpVBox2, 'Trigger Source:', 'triggerSource',  {'External','Internal'});
+        [~, ~, handles.triggerInterval] = uiextras.labeledEditBox(tmpVBox2, 'Trigger Int. (s):', 'triggerInterval', '');
         [~, ~, handles.samplingRate] = uiextras.labeledPopUpMenu(tmpVBox2, 'Samp. Rate:', 'samplingRate', {'1.2 GHz'; '600 MHz'; '300 MHz'; '100 MHz'; '40 MHz'});
         [~, ~, handles.devID] = uiextras.labeledEditBox(tmpVBox2, 'Device ID:', 'devID', '');
         
@@ -120,7 +121,7 @@ set_settings_fcn = @set_GUI_fields;
         uiextras.Empty('Parent', tmpVBox1);
         tmpVBox1.Sizes = [-0.5, -1, -1, -1, -2];
         uiextras.Empty('Parent', tmpVBox2);
-        tmpVBox2.Sizes = [-1, -1, -1, -2];
+        tmpVBox2.Sizes = [-1, -1, -1, -1, -2];
         tmpVBox_main.Sizes = [-1, -8, -1];
         
         
@@ -152,7 +153,7 @@ set_settings_fcn = @set_GUI_fields;
 
     function set_selected(hObject, val)
         menu = get(hObject, 'String');
-        index = find(strcmp(val, menu));
+        index = find(stricmp(val, menu));
         if ~isempty(index)
             set(hObject, 'Value', index);
         end
@@ -186,6 +187,7 @@ set_settings_fcn = @set_GUI_fields;
         settings.lastseqfile = previousConfigFile;
         settings.seqforce = get(handles.seqforce, 'Value');
         settings.triggerSource = trigSourceMap(get_selected(handles.triggerSource));
+        settings.triggerInterval = get_numeric(handles.triggerInterval);
         settings.samplingRate = pmval_to_sample_rate(get(handles.samplingRate, 'Value'));
         
         % save config file name
@@ -209,6 +211,7 @@ set_settings_fcn = @set_GUI_fields;
         defaults.seqfile = 'U:\APS\Trigger\Trigger.h5';
         defaults.seqforce = 0;
         defaults.triggerSource = 'Ext';
+        defaults.triggerInterval = 1e-4;
         defaults.samplingRate = 1200;
         
         if ~isempty(fieldnames(settings))
@@ -232,6 +235,7 @@ set_settings_fcn = @set_GUI_fields;
         set(handles.seqforce, 'Value', defaults.seqforce);
         update_seqfile_callback()
         set_selected(handles.triggerSource, defaults.triggerSource);
+        set(handles.triggerInterval, 'String', num2str(defaults.triggerInterval));
         index = find(pmval_to_sample_rate == defaults.samplingRate);
         if ~isempty(index)
             set(handles.samplingRate, 'Value', index);
