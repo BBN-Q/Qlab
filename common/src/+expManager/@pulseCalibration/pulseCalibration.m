@@ -232,14 +232,14 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             ExpParams.OffsetNorm = 1;
             
             cfg = struct('ExpParams', ExpParams, 'SoftwareDevelopmentMode', 1, 'InstrParams', struct());
-            cfg_path = [path '/unit_test.cfg'];
+            cfg_path = [path '/unit_test.json'];
             writeCfgFromStruct(cfg_path, cfg);
             
             % create object instance
             pulseCal = expManager.pulseCalibration(path, cfg_path, 'unit_test', 1);
             
             %pulseCal.pulseParams = struct('piAmp', 6000, 'pi2Amp', 2800, 'delta', -0.5, 'T', eye(2,2), 'pulseType', 'drag',...
-            %                         'i_offset', 0.110, 'q_offset', 0.138);
+            %                        'i_offset', 0.110, 'q_offset', 0.138, 'SSBFreq', 0);
             %pulseCal.rabiAmpChannelSequence('q1q2', true);
             %pulseCal.rabiAmpChannelSequence('q2', false);
             %pulseCal.Pi2CalChannelSequence('q1q2', 'X', true);
