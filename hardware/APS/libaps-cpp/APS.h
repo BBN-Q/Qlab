@@ -89,6 +89,7 @@ private:
 	map<FPGASELECT, CheckSum> checksums_;
 	int samplingRate_;
 	vector<UCHAR> writeQueue_;
+	vector<size_t> offsetQueue_;
 	vector<BankBouncerThread> myBankBouncerThreads_;
 	//Flag for whether streaming is up and running
 	std::atomic<bool> streaming_;

@@ -375,7 +375,7 @@ double APS::get_trigger_interval() const{
 	int lowerWord = FPGA::read_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL+1, FPGA1);
 
 	//Put it back together and covert from clock cycles to time
-	return ((upperWord << 16) + lowerWord)/(0.25*samplingRate_*1e6);
+	return static_cast<double>((upperWord << 16) + lowerWord)/(0.25*samplingRate_*1e6);
 }
 
 int APS::set_miniLL_repeat(const USHORT & miniLLRepeat){
@@ -573,13 +573,18 @@ int APS::write(const FPGASELECT & fpga, const unsigned int & addr, const vector<
 		checksums_[fpga].data += tmpData;
 
 	//Push into queue or write to FPGA
+	auto offsets = FPGA::computeCmdByteOffsets(data.size());
 	if (queue) {
+		//Calculate offsets of command bytes
+		for (auto tmpOffset : offsets){
+			offsetQueue_.push_back(tmpOffset + writeQueue_.size());
+		}
 		for (auto tmpByte : dataPacket){
 			writeQueue_.push_back(tmpByte);
 		}
 	}
 	else{
-		FPGA::write_block(handle_, dataPacket);
+		FPGA::write_block(handle_, dataPacket, offsets);
 	}
 
 	return 0;
@@ -589,9 +594,10 @@ int APS::write(const FPGASELECT & fpga, const unsigned int & addr, const vector<
 
 int APS::flush() {
 	// flush write queue to USB interface
-	int bytesWritten = FPGA::write_block(handle_, writeQueue_);
+	int bytesWritten = FPGA::write_block(handle_, writeQueue_, offsetQueue_);
 	FILE_LOG(logDEBUG1) << "Flushed " << bytesWritten << " bytes to device";
 	writeQueue_.clear();
+	offsetQueue_.clear();
 	return bytesWritten;
 }
 
@@ -1644,7 +1650,7 @@ void BankBouncerThread::run(){
 
 		//If there is something to write then do so
 		if (mymod(nextMiniLL - lastMiniLL, curLLBank->numMiniLLs) > 1){
-			USHORT startMiniLL = (lastMiniLL+1)%curLLBank->numMiniLLs;
+			size_t startMiniLL = (lastMiniLL+1)%curLLBank->numMiniLLs;
 			USHORT curWriteAddrHW = nextWriteAddrHW;
 			myAPS_->write_LL_data_IQ(fpga, USHORT(curWriteAddrHW), curLLBank->miniLLStartIdx[startMiniLL] , curLLBank->miniLLStartIdx[nextMiniLL], false);
 			nextWriteAddrHW = mymod(nextWriteAddrHW + mymod(curLLBank->miniLLStartIdx[nextMiniLL] - curLLBank->miniLLStartIdx[startMiniLL], curLLBank->length), MAX_LL_LENGTH);
