@@ -57,12 +57,15 @@ classdef APS < hgsetget
         % repeat modes
         CONTINUOUS = 1;
         TRIGGERED = 0;
+
+        % trigger modes
+        TRIGGER_INTERNAL = 0;
+        TRIGGER_EXTERNAL = 1;
         
         % for DEBUG methods
         LEDMODE_PLLSYNC = 1;
         LEDMODE_RUNNING = 2;
-        TRIGGER_INTERNAL = 0;
-        TRIGGER_EXTERNAL = 1;
+
         ALL_DACS = -1;
         
         DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV', 'A6001nBT', 'A6001nBS'};
@@ -276,7 +279,7 @@ classdef APS < hgsetget
             %  repeat - vector of repeats
             obj.libraryCall('set_LL_data_IQ', ch-1, length(addr), addr, count, trigger1, trigger2, repeat);
         end
-            
+
         function run(aps)
             %run - Starts the aps 
             % APS.run() Will ready the APS to recieve external hardware triggers or
@@ -380,24 +383,6 @@ classdef APS < hgsetget
             val = aps.libraryCall('set_channel_enabled', ch-1, enabled);
         end
 
-		function val = setTriggerDelay(aps, ch, delay)
-            %setTriggerDelay - sets delay of channel marker output with respect
-            % to the analog output in 4 sample increments (e.g. delay = 3 is a 
-            % 12 sample delay).
-            % APS.setTriggerDelay(ch, delay)
-            %   ch - channel (1-4)
-            %   delay - trigger delay in 4 sample units
-            val = aps.libraryCall('set_channel_trigDelay', ch-1, delay);
-        end
-        
-        function delay = getTriggerDelay(aps, ch)
-            %getTriggerDelay - Returns the current trigger delay (in four
-            %sample units for a channel.
-            % APS.getTriggerDelay(ch)
-            %   ch - channel (1-4)
-            delay = aps.libraryCall('get_channel_trigDelay',ch-1);
-        end
-
 		function val = setRunMode(aps, ch, mode)
             %setRunMode - Sets the APS in sequence or waveform mode.
             %Waveform mode will simply play the channel waveform memory.
@@ -413,7 +398,7 @@ classdef APS < hgsetget
             %loop continuously. 
             % APS.setRepeatMode(ch, mode)
             %   ch - channel (1-4)
-            %   mode - run mode (1 = one-shot, 0 = continous)
+            %   mode - run mode (1 = continuous, 0 = triggered)
             val = aps.libraryCall('set_repeat_mode', ch-1, mode);
         end
         
@@ -528,32 +513,23 @@ classdef APS < hgsetget
         %% Private Waveform/Link list methods
         function addLinkList(aps, ch, offsets, counts, repeat, trigger, length)
             %Adds a LL bank to a channel
-            val = aps.libraryCall('add_LL_bank',ch-1, length, offsets,counts,repeat,trigger);
-            if (val < 0)
-                error('addLinkList returned an error code of: %i\n', val);
-            end
-        end
-        
-        
-        %% Private Triggering/Stopping methods
-        function triggerFPGA_debug(aps, fpga)
-            aps.libraryCall('trigger_FPGA_debug',fpga);
-        end
-        
-        function disableFPGA_debug(aps, fpga)
-            aps.libraryCall('disable_FPGA_debug', fpga);
+            % val = aps.libraryCall('add_LL_bank',ch-1, length, offsets,counts,repeat,trigger);
+            % if (val < 0)
+            %     error('addLinkList returned an error code of: %i\n', val);
+            % end
+            %
+            % Not available in current firmware
         end
         
         %% Private mode methods
-        function val = setLinkListRepeat(aps,ch, repeat)
-            % TODO: TBD but will most likely set the number of times each
-            % miniLL will be looped
+        function val = setLinkListRepeat(aps, repeat)
+            % Set the number of times each miniLL will be looped (0 = no repeats)
+            aps.libraryCall('set_miniLL_repeat', repeat)
         end
         
         function val = testPllSync(aps, ch, numRetries)
             % TODO
-%             val = aps.libraryCall(sprintf('Test Pll Sync: DAC: %i',ch), ...
-%                 'APS_TestPllSync',ch, numRetries);
+%             val = aps.libraryCall('APS_TestPllSync',ch, numRetries);
 %             if val ~= 0
 %                 fprintf('Warning: APS::testPllSync returned %i\n', val);
 %             end
