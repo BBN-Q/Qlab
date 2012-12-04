@@ -319,7 +319,7 @@ class APS (object):
         '''
         with h5py.File(filename, 'r') as FID:
             self.loadWaveform(ch, FID['WFVec'].value)
-                
+
     def setAll(self, settings):
         '''
         Again mimicing the Matlab driver to load all the settings from a dictionary.
@@ -331,7 +331,7 @@ class APS (object):
             self.set_amplitude(ch+1, settings[channelName]['amplitude'])
             self.set_offset(ch+1, settings[channelName]['offset'])
             self.set_enabled(ch+1, settings[channelName]['enabled'])
-            self.setRepeatMode(ch+1, settings['repeatMode'])
+            self.setRunMode(ch+1, settings['runMode'])
             if 'seqfile' in settings[channelName] and settings[channelName]['seqfile']:
                 self.load_waveform_from_file(ch+1, settings[channelName]['seqfile'])
        
