@@ -1,4 +1,4 @@
-function out = overlaps_tomo(expResults)
+function [out,pauliMap,pauliMapPseudoInv] = overlaps_tomo(expResults)
 % Extract a Pauli map from a set of interleaved RB overlap experiments
 %Take-in:
 %  1. measured process fidelities for each overlap: expResults

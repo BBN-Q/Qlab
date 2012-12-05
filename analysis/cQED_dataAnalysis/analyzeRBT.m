@@ -9,15 +9,13 @@ nbrTwirls = [12^2, 12^2, 12^3, 12^2, 12^2];
 twirlOffsets = 1 + [0, cumsum(nbrTwirls)];
 
 %Length of sequences (cell array (length nbrExpts) of arrays) 
-% seqLengths = [{[2, 5, 8, 13, 16, 20, 25, 30, 32, 40, 49, 55, 64, 101, 126, 151]}, repmat({1:6}, 1, nbrExpts-1)];
 seqLengths = repmat({[1 2 3 4 10]}, 1, nbrExpts);
 
 %Cell array or array of boolean whether we are exhaustively twirling or randomly sampling
-% exhaustiveTwirl = [{false([1, 16])}, repmat({[true, true, true, false, false]}, 1, nbrExpts-1)];
 exhaustiveTwirl = repmat({[true, true, true, false, true]}, 1, nbrExpts);
 
 %Number of bootstrap replicas
-numReplicas = 200;
+numReplicas = 500;
 
 scaledData = zeros(size(data,1), size(data,2)-2*calRepeats);
 avgFidelities = cell(nbrExpts, 1);
@@ -111,10 +109,15 @@ end
 %     fitFidelities(rowct) = fitResult(1);
 % end
 
-betas = sillyFit2(seqLengths, avgFidelities, variances);
+% betas = sillyFit2(seqLengths, avgFidelities, variances);
+betas = forcedFit(seqLengths, avgFidelities, variances);
 
 fitFidelities = cellfun(@(x) x(1), betas);
-choiSDP = overlaps_tomo(fitFidelities);
+[choiSDP,pauliMap,pauliMapRaw] = overlaps_tomo(fitFidelities);
+
+hadPauliMap = [1 0 0 0; 0 0 0 1; 0 0 -1 0; 0 1 0 0];
+trace(hadPauliMap*pauliMap)/4
+trace(hadPauliMap*pauliMapRaw)/4
 
 end
 
@@ -123,41 +126,113 @@ function vr = resample( v )
   vr = v(rindices);
 end
 
-function betas = sillyFit2(seqLengths, avgFidelities, variances)
+function betas = forcedFit(seqLengths, avgFidelities, variances)
 
     betas = cell(1, length(seqLengths));
-    % offsets = cellfun(@(x) x(5), avgFidelities);
-    % offset = mean(offsets);
-    % offsetStd = std(offsets);
     % pGuess = [0, 1-offset, offset];
     % pUpper = [1, 1-offset + offsetStd, offset+offsetStd];
     % pLower = [-1/3, 1-offset - offsetStd, offset-offsetStd];
     for exptct = 1:length(seqLengths)
-        % seed guess via polynomial solution from first 3 data points
-        x = avgFidelities{exptct}(1:5);
-        v = variances{exptct}(1:5);
+        % seed guess via polynomial solution from first 3 data points 
+        % and offset (5th point)
+        x = avgFidelities{exptct};
+        v = variances{exptct};
+        stds = sqrt(v);
+
         offset = x(5);
         p = (x(2) - offset)/(x(1) - offset);
-        scale = (x(1) - offset)/p;
-        % pGuess = [p, scale, offset];
-        % variances are estimated by uncertainty propagation
-        offsetvar = v(5);
-        pvar = ((x(2)-x(5))/(x(1)-x(5))^2)^2*v(1)+1/(x(1)-x(5))^2*v(2)+((x(2)-x(1))/(x(1)-x(5))^2)*v(5);
-        scalevar = 4*(x(1)-x(5))^2/(x(2)-x(5))^2*v(1)+...
-            ((x(1)-x(5))/(x(2)-x(5)))^4*v(2)+...
-            (x(1)-x(5))^2*(x(1)+x(5)-2*x(2))^2/(x(2)-x(5))^4*v(5);
-        % pUpper = [1, scale + sqrt(variances{exptct}(1)), offset + sqrt(variances{exptct}(1))];
-        % pLower = [-1/3, scale - sqrt(variances{exptct}(1)), offset - sqrt(variances{exptct}(1))];
-        pUpper = max(min([p + 3*sqrt(pvar), .5, offset + 3*sqrt(offsetvar)],[1,1,.6]),[-.2,1,.6]);
-        pLower = max([p - 3*sqrt(pvar), .5-sqrt(scalevar), offset - 3*sqrt(offsetvar)],[-1./3,-10,-10]);
-        % we pick a random initial guess within the uncertainty range
-        pPert  = randn(1,3).*sqrt([pvar, scalevar, offsetvar]);
-        pGuess = min(max([p, scale, offset], pLower), pUpper);
+        % p = real(exp(expfit(1,1,1,x-x(5))));
+        % scale = (x(1) - offset)/p;
+        pGuess = [p, .5, offset];
+        pUpper = [1,    .5+.02, offset+2*stds(5)];
+        pLower = [-1/3, .5-.02, offset-2*stds(5)];
 
-        fitf = @(p,n) (p(2)*p(1).^n + p(3));
+        fitf = @(p,n) (p(2)*(p(1).^n) + p(3));
         fitDiffFunc = @(p) (1./sqrt(variances{exptct})).*(fitf(p, seqLengths{exptct}) - avgFidelities{exptct});
         betas{exptct} = lsqnonlin(fitDiffFunc, pGuess, pLower, pUpper);
-        %betas{exptct} = pGuess;
+%         badness = 1E8;
+%         for jj=1:100,
+%             fitf = @(p,n) (p(2)*(p(1).^n) + p(3));
+%             fitDiffFunc = @(p) (1./sqrt(variances{exptct})).*(fitf(p, seqLengths{exptct}) - avgFidelities{exptct});
+%             pGuess = [p, .5, offset] + randn(1,3).*[stds(5),.02,stds(5)];
+%             tmpBeta = lsqnonlin(fitDiffFunc, pGuess, pLower, pUpper);
+%             newBadness = norm(fitDiffFunc(tmpBeta))^2;
+%             if newBadness < badness,
+%                 betas{exptct} = tmpBeta;
+%                 badness = newBadness;
+%             end
+%         end
     end
+    pGuess;
+end
 
+function betas = sillyFit2(seqLengths, avgFidelities, variances)
+
+    % fake augmentation of seqLengths
+%     seqLengths=[seqLengths 10:5:20];
+
+    betas = cell(1, length(seqLengths));
+    % pGuess = [0, 1-offset, offset];
+    % pUpper = [1, 1-offset + offsetStd, offset+offsetStd];
+    % pLower = [-1/3, 1-offset - offsetStd, offset-offsetStd];
+    for exptct = 1:length(seqLengths)
+        % fake data
+%         avgFidelities{exptct} = [avgFidelities{exptct} avgFidelities{exptct}(5)*ones(1,3)];
+%         variances{exptct} = [variances{exptct} variances{exptct}(5)*ones(1,3)];
+
+        % seed guess via polynomial solution from first 3 data points
+        x = avgFidelities{exptct};
+        v = variances{exptct};
+        stds = 3*sqrt(v);
+        posx = abs(x-x(5))+x(5);
+        xU = posx + stds;
+        xL = posx - stds;
+        % makes guesses based on assumption of infinite samples
+        % pick lower and upper bounds 
+        p = (x(2) - x(5))/(x(1) - x(5));
+        pB = [(xU(2) - xL(5))/(xL(1) - xU(5)), (xL(2) - xU(5))/(xU(1) - xL(5))];
+        pB = pB.*(pB>0);
+        pB(pB==0) = .2;
+        scale = (x(1) - x(5))/p;
+        scaleB = [ (xU(1) - xL(5))/min(pB), (xL(1) - xU(5))/max(pB) ]; 
+        % we pick a fixed initial guess that depends only on the sign of
+        % the estimated p
+        pGuess = [p, .5, x(5)];
+        if p < 0,
+            pB = -pB;
+        end
+        pUpper = [max(min(max(pB),1),-1/3), min(max(scaleB),1), xU(5)];
+        pLower = [min(max(min(pB),-1/3),1), max(min(scaleB),.2), xL(5)];
+        if pUpper(1) == -1/3,
+            pUpper(1) = -1/3+stds(1);
+        elseif pLower == 1,
+            pLower = 1-stds(1);
+        end
+        
+        % pInit = p;
+        % fitf = @(p,n) (p(2)*((sign(pInit)*1/3).^n) + offset);
+        fitf = @(p,n) (p(2)*(p(1).^n) + p(3));
+        fitDiffFunc = @(p) (1./sqrt(variances{exptct})).*(fitf(p, seqLengths{exptct}) - avgFidelities{exptct});
+        betas{exptct} = lsqnonlin(fitDiffFunc, pGuess, pLower, pUpper);
+        badness = norm(fitDiffFunc(betas{exptct}))^2;
+        for ii=1:100,
+          pPert = rand(1,3).*(pUpper-pLower);
+          tempBeta = lsqnonlin(fitDiffFunc, pLower + pPert, pLower, pUpper);
+          if norm(fitDiffFunc(tempBeta))^2 < badness,
+              betas{exptct} = tempBeta;
+              badness = norm(fitDiffFunc(tempBeta))^2
+          end
+        end
+        pGuess;
+    end
+% forced
+%  -0.3333    0.2813   -0.3244    0.2592    0.3415    0.3115    0.3479    0.2788   -0.3115   -0.3167
+% silly
+% 1 stddev
+%  -0.3333    0.2233   -0.1752    0.2585    0.2607    0.3335    0.2997    0.2286   -0.3333   -0.2929
+% 2 stddev
+%  -0.3333    0.2245   -0.2483    0.2588    0.2714    0.3317    0.3003    0.2634   -0.3333   -0.2901
+% 3 stddev
+%  -0.3333   -0.0137   -0.3260   -0.0150    0.2713    0.3334    0.3020    0.2727   -0.3333   -0.2902
+%  -0.3333    0.2249   -0.2000    0.2586    0.2712    0.3333    0.2979    0.2623   -0.3333   -0.2904
 end
