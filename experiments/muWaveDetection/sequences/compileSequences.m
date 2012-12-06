@@ -151,11 +151,8 @@ for IQkey = channelNames
 end
 
 % setup digitizer and slave AWG triggers 
-% these channels are hard-coded for now but should be moved out
-% digitizerTrigChan = 'TekAWG_1m1';
-% slaveTrigChan = 'TekAWG_4m2';
-digitizerTrigChan = 'BBNAPS1_2m1';
-slaveTrigChan = 'BBNAPS1_4m1';
+digitizerTrigChan = qubitMap.digitizerTrig.channel;
+slaveTrigChan = qubitMap.slaveTrig.channel;
 
 %Helper function to map out IQ channel and marker number for BBNAPS units
     function [markerIQkey, markerNum] = map_APS_digital(chanStr)
@@ -197,7 +194,7 @@ for awgct = 1:length(awgs)
     allAWGChannelNames = fieldnames(awgChannels);
     curAWGChannelNames = allAWGChannelNames(strncmp(allAWGChannelNames, awgs{awgct}, length(awgs{awgct})));
     if all(cellfun(@(x) isempty(awgChannels.(x)), curAWGChannelNames));
-        for tmpChan = curAWGChannelNames
+        for tmpChan = curAWGChannelNames'
             awgChannels = rmfield(awgChannels, tmpChan{1});
         end
         removeAWGs(end+1) = awgct;
