@@ -31,6 +31,7 @@ classdef APS < hgsetget
         samplingRate = 1200;   % Global sampling rate in units of MHz (1200, 600, 300, 100, 40)
         triggerSource
         triggerInterval
+        miniLLRepeat
     end
     
     properties %(Access = 'private')
@@ -209,7 +210,9 @@ classdef APS < hgsetget
                 if ismember(name, methods(obj))
                     feval(['obj.' name], settings.(name));
                 elseif ismember(name, properties(obj))
-                    obj.(name) = settings.(name);
+                    if ~isempty(settings.(name))
+                        obj.(name) = settings.(name);
+                    end
                 end
             end
         end
@@ -359,12 +362,28 @@ classdef APS < hgsetget
             value = aps.libraryCall('get_trigger_interval');
         end
         
+        function aps = set.miniLLRepeat(aps, repeatValue)
+            aps.libraryCall('set_miniLL_repeat', repeatValue);
+            aps.miniLLRepeat = repeatValue;
+        end
+        
+        function value = get.miniLLRepeat(aps)
+            value =  aps.readRegister(1, 9);
+        end
+        
         function val = setOffset(aps, ch, offset)
             %setOffset - Sets the channel offset. 
             % APS.setOffset(ch, offset)
             %   ch - channel (1-4)
             %   offset - channel offset (-1,1)
             val = aps.libraryCall('set_channel_offset', ch-1, offset);
+        end
+        
+        function val = getOffset(aps, ch)
+            %getOffset - Gets the channel offset. 
+            % APS.getOffset(ch)
+            %   ch - channel (1-4)
+            val = aps.libraryCall('get_channel_offset', ch-1);
         end
 
 		function val = setAmplitude(aps, ch, amplitude)
@@ -374,13 +393,45 @@ classdef APS < hgsetget
             %   amplitude - channel amplitude (float, but waveform may be clipped)
 			val = aps.libraryCall('set_channel_scale', ch-1, amplitude);
         end
+
+		function val = getAmplitude(aps, ch)
+            %getAmplitude - Gets the channel amplitude scaling. 
+            %APS.setAmplitude(ch)
+            %   ch - channel (1-4)
+			val = aps.libraryCall('get_channel_scale', ch-1);
+        end
         
         function val = setEnabled(aps, ch, enabled)
-            %setOffset - Sets whether channel output is enabled or disabled 
-            % APS.setOffset(ch, enabled)
+            %setEnabled - Sets whether channel output is enabled or disabled 
+            % APS.setEnabled(ch, enabled)
             %   ch - channel (1-4)
             %   enabled - channel enabled (bool)
             val = aps.libraryCall('set_channel_enabled', ch-1, enabled);
+        end
+
+        function val = getEnabled(aps, ch)
+            %getEnabled - Sets whether channel output is enabled or disabled 
+            % APS.getEnabled(ch)
+            %   ch - channel (1-4)
+            val = aps.libraryCall('get_channel_enabled', ch-1);
+        end
+
+		function val = setTriggerDelay(aps, ch, delay)
+            %setTriggerDelay - sets delay of channel marker output with respect
+            % to the analog output in 4 sample increments (e.g. delay = 3 is a 
+            % 12 sample delay).
+            % APS.setTriggerDelay(ch, delay)
+            %   ch - channel (1-4)
+            %   delay - trigger delay in 4 sample units
+            val = aps.libraryCall('set_channel_trigDelay', ch-1, delay);
+        end
+        
+        function delay = getTriggerDelay(aps, ch)
+            %getTriggerDelay - Returns the current trigger delay (in four
+            %sample units for a channel.
+            % APS.getTriggerDelay(ch)
+            %   ch - channel (1-4)
+            delay = aps.libraryCall('get_channel_trigDelay',ch-1);
         end
 
 		function val = setRunMode(aps, ch, mode)
