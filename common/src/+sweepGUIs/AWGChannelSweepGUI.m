@@ -1,9 +1,8 @@
-function [get_settings_fcn, set_settings_fcn] = AWGChannelSweepGUI(parent, name)
+function [get_settings_fcn, set_settings_fcn] = AWGChannelSweepGUI(parent, name, AWGNameList)
 
 % Initialize handles structure
 handles = struct();
 
-AWGNameList = {'TekAWG','BBNAPS'};
 ChannelList = {'1', '2', '3', '4', '1&2', '3&4'};
 ModeList = {'Amp', 'Offset'};
 

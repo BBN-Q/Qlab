@@ -69,7 +69,7 @@ loadJSON();
         %Get the current Tek5104 settings
         TekSettings_fcn = GUIgetters('TekAWG');
         TekSettings = TekSettings_fcn();
-        TekSettings.seqfile = fullfile(expParams.networkDrive, 'AWG', expParams.(expName).baseName, [expParams.(expName).baseName '-TekAWG.awg']);
+        TekSettings.seqfile = fullfile(getpref('qlab', 'awgDir'), expParams.(expName).baseName, [expParams.(expName).baseName '-TekAWG.awg']);
         tmpSettings_fcn = GUIsetters('TekAWG');
         tmpSettings_fcn(TekSettings)
         
@@ -79,7 +79,7 @@ loadJSON();
             devName = sprintf('BBNAPS%d',APSct);
             APSSettings_fcn = GUIgetters(devName);
             APSSettings = APSSettings_fcn();
-            APSSettings.seqfile = fullfile(expParams.networkDrive, 'AWG', expParams.(expName).baseName, [expParams.(expName).baseName, '-' devName, '.h5']);
+            APSSettings.seqfile = fullfile(getpref('qlab', 'awgDir'), expParams.(expName).baseName, [expParams.(expName).baseName, '-' devName, '.h5']);
             tmpSettings_fcn = GUIsetters(devName);
             tmpSettings_fcn(APSSettings)
         end

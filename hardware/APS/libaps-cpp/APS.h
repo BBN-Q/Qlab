@@ -11,9 +11,15 @@
 #define APS_H_
 
 class APS {
+
+
 public:
+	//Constructors
 	APS();
 	APS(int, string);
+	//Move-ctor
+	APS(APS&&);
+
 	~APS();
 
 	int connect();
@@ -34,6 +40,9 @@ public:
 
 	int set_trigger_source(const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source() const;
+	int set_trigger_interval(const double &);
+	double get_trigger_interval() const;
+
 
 	int set_channel_enabled(const int &, const bool &);
 	bool get_channel_enabled(const int &) const;
@@ -42,8 +51,6 @@ public:
 	int set_channel_scale(const int &, const float &);
 	float get_channel_scale(const int &) const;
 	int set_offset_register(const int &, const float &);
-
-	int set_trigger_interval(const double &);
 
 	int set_miniLL_repeat(const USHORT &);
 
@@ -67,8 +74,14 @@ public:
 
 	//The owning APSRack needs access to some private members
 	friend class APSRack;
+	friend class BankBouncerThread;
 
 private:
+
+	//Since the APS contains non-copyable mutexs and atomic members then explicitly prevent copying
+	APS(const APS&) = delete;
+	APS& operator=(const APS&) = delete;
+
 	int deviceID_;
 	string deviceSerial_;
 	FT_HANDLE handle_;
@@ -76,12 +89,13 @@ private:
 	map<FPGASELECT, CheckSum> checksums_;
 	int samplingRate_;
 	vector<UCHAR> writeQueue_;
-	std::thread * bankBouncerThread_;
-	//Flag for whether are running so threads know when to die and return
-	bool running_;
+	vector<size_t> offsetQueue_;
+	vector<BankBouncerThread> myBankBouncerThreads_;
 	//Flag for whether streaming is up and running
-	bool streaming_;
-	std::mutex * mymutex_;
+	std::atomic<bool> streaming_;
+	//A mutex to control access to the APS unit during streaming
+	//Since mutexs are non-copyable and non-movable we use an unique_ptr
+	std::unique_ptr<std::mutex> mymutex_;
 
 	int write(const FPGASELECT & fpga, const unsigned int & addr, const USHORT & data, const bool & queue = false);
 	int write(const FPGASELECT & fpga, const unsigned int & addr, const vector<USHORT> & data, const bool & queue = false);
@@ -146,5 +160,6 @@ inline FPGASELECT dac2fpga(const int & dac)
 			return INVALID_FPGA;
 	}
 }
+
 
 #endif /* APS_H_ */

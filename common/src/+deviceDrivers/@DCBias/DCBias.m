@@ -1,46 +1,26 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Module Name : DCBias
+% Class DCBIAS manages access to BBN DC bias box. Inherits from
+% deviceDrivers.lib.Serial.
+
+% Author/Date : B.C Donovan 10/3/2010, based on untested driver from C. Lirakis
+
+% Copyright 2012 Raytheon BBN Technologies
 %
-% Author/Date : B.C Donovan 10/3/2010
+% Licensed under the Apache License, Version 2.0 (the "License");
+% you may not use this file except in compliance with the License.
+% You may obtain a copy of the License at
 %
-% Description : Object to manage access to DC bias box.
-%               Inherits from deviceDrivers.lib.Serial
-%               Based on untested driver from C. Lirakis
+%     http://www.apache.org/licenses/LICENSE-2.0
 %
-% Restrictions/Limitations :
-%
-% Change Descriptions :
-%
-% Classification : Unclassified
-%
-% References :
-%
-%
-%    Modified    By    Reason
-%    --------    --    ------
-%                BCD
-%
-% RCS header info.
-% ----------------
-% $RCSfile$
-% $Author$
-% $Date$
-% $Locker$
-% $Name$
-% $Revision$
-%
-% $Log: $
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
+% Unless required by applicable law or agreed to in writing, software
+% distributed under the License is distributed on an "AS IS" BASIS,
+% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+% See the License for the specific language governing permissions and
+% limitations under the License.
+
 classdef (Sealed) DCBias < deviceDrivers.lib.Serial
     properties
-        %
         % It is a good idea to record the board serial numbers.
         BoardSerialNumbers;
-        % Not sure what we need yet.
-        % Probably want to have a description of what is hooked up
-        % to each channel.
-        
         ComPortName = '';
     end
     properties (Constant = true)
@@ -51,65 +31,25 @@ classdef (Sealed) DCBias < deviceDrivers.lib.Serial
         MIN_VALUE = -1e-3; % firmware does not support negative current
     end
     methods
-        
-        %%
-        % Constructor ---------------------------------
-        % must supply com port parameters such as name.
-        % We may need to specify baud rate etc later.
         function obj = DCBias()
             % Initialize Super class
             obj = obj@deviceDrivers.lib.Serial();
-            obj.Name = 'DCBias';
-            % write and empty command at start to prevent
-            % first command "huh" response to valid command
+            obj.baudRate = 9600;
         end
-        
-        % setAll is called as part of the Experiment initialize instruments
+
         function setAll(obj,init_params)
-            %             fs = fields(init_params);
-            %             for i = 1:length(fs)
-            %                 initStr = sprintf('obj.%s = init_params.%s;',fs{i},fs{i});
-            %                 eval(initStr);
-            %             end
-            for i = 0:11
-                chName = ['ch' num2str(i)];
+            for ii = 0:11
+                chName = ['ch' num2str(ii)];
                 % if channel is 'on', set it
                 if isfield(init_params, chName) && isfield(init_params, [chName 'on']) && init_params.([chName 'on']) && isnumeric(init_params.(chName))
                     % for now, hard code to set the coarse pot until
                     % setting currents works
-                    obj.SetSinglePot(i, 0, init_params.(chName));
+                    obj.SetSinglePot(ii, 0, init_params.(chName));
                 end
             end
 			
 			% wait for channels to settle
 			pause(.5);
-        end
-        
-        %
-        % Dump the properties of the DC Bias port. Debugging tool
-        % Not needed for this class
-        %
-        % Dialog for configuring DC bias, including com port.
-        %
-        function Configure(obj)
-            error('Not completed');
-        end
-        %
-        % Write all parameters associated with com port to a config file
-        %
-        function SaveParameters(obj)
-            error('Not completed');
-        end
-        %
-        % Read back parameters from config file.
-        %
-        function LoadParameters(obj)
-            error('Not completed');
-        end
-        
-        function connect(obj,address)
-            obj.connect@deviceDrivers.lib.Serial(address);
-            obj.WriteAndRead(''); % clear input;
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -162,7 +102,7 @@ classdef (Sealed) DCBias < deviceDrivers.lib.Serial
             % Check to see if there is anything coming back at us.
             while (Repeat)
                 cmd = sprintf('S %d %d %d;', channel, pot, value);
-                ReturnString = obj.WriteAndRead(cmd);
+                ReturnString = obj.query(cmd);
                 
                 % Do some error checking here.
                 if (length(ReturnString) < 2)
@@ -222,7 +162,7 @@ classdef (Sealed) DCBias < deviceDrivers.lib.Serial
             end
             
             cmd = sprintf('A %d;', channel);
-            ADCValueString = obj.WriteAndRead(cmd);
+            ADCValueString = obj.query(cmd);
             
             % Should be followed by an OK.
             StatusString = obj.ReadRetry();
@@ -259,7 +199,7 @@ classdef (Sealed) DCBias < deviceDrivers.lib.Serial
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function ZeroAll(obj)
             obj.PendingArduino();   % Trash any read data in the buffer.
-            rv = obj.WriteAndRead('Z;');
+            rv = obj.query('Z;');
             if (obj.DebugLevel>0)
                 fprintf('DEBUG(ZeroAll): CMD: Z; Status: %s\n', cmd, rv);
             end
@@ -284,7 +224,7 @@ classdef (Sealed) DCBias < deviceDrivers.lib.Serial
         %
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function PendingArduino(obj)
-            if ( obj.FileDescriptor.BytesAvailable > 0)
+            if ( obj.interface.BytesAvailable > 0)
                 rv = obj.Read();
                 if (~isempty(rv))
                     warning('DCBias:PendingArduino:Data','%s\n', rv);
@@ -321,7 +261,7 @@ classdef (Sealed) DCBias < deviceDrivers.lib.Serial
             end
             obj.PendingArduino();
             cmd = sprintf('I %01d %g;', channel, value);
-            rc = obj.WriteAndRead(cmd);
+            rc = obj.query(cmd);
             if ~strcmp(rc,'OK')
                 fprintf('rc = %s',rc);
                 ret = -1;
@@ -341,7 +281,7 @@ classdef (Sealed) DCBias < deviceDrivers.lib.Serial
         
         function [val] = GetCurrent(obj,channel)
             cmd = sprintf('G %i\n', channel);
-            val = obj.WriteAndRead(cmd);
+            val = obj.query(cmd);
             if ~isempty(val)
                 val = str2num(val);
             else
@@ -377,9 +317,9 @@ classdef (Sealed) DCBias < deviceDrivers.lib.Serial
                 % note pot is ignore by ardunio but is still expected
                 % so we give it a bogus value
                 cmd = sprintf('CD %i 0 %g\n', channel, poly(1));
-                rc1 = obj.WriteAndRead(cmd);
+                rc1 = obj.query(cmd);
                 cmd = sprintf('CJ %i 0 %g\n', channel, poly(2));
-                rc2 = obj.WriteAndRead(cmd);
+                rc2 = obj.query(cmd);
             else
                 switch calType
                     case 'C'
@@ -392,15 +332,15 @@ classdef (Sealed) DCBias < deviceDrivers.lib.Serial
                         pot = 2;
                 end % switch
                 cmd = sprintf('CP %i %i %g\n', channel, pot, poly(1));
-                rc1 = obj.WriteAndRead(cmd);
+                rc1 = obj.query(cmd);
                 if pot == 0
                     cmd = sprintf('CI %i %i %g\n', channel, pot, poly(2));
-                    rc2 = obj.WriteAndRead(cmd);
+                    rc2 = obj.query(cmd);
                 end
                 cmd = sprintf('CA %i %i %g\n', channel, pot, pot_max_i);
-                rc3 = obj.WriteAndRead(cmd);
+                rc3 = obj.query(cmd);
                 cmd = sprintf('CB %i %i %g\n', channel, pot, pot_min_i);
-                rc4 = obj.WriteAndRead(cmd);
+                rc4 = obj.query(cmd);
             end % if
             % assume things worked
             rc = 0;
@@ -442,11 +382,11 @@ classdef (Sealed) DCBias < deviceDrivers.lib.Serial
                 % note pot is ignore by ardunio but is still expected
                 % so we give it a bogus value
                 cmd = sprintf('BD %i 0\n', channel);
-                poly.slope = str2double(obj.WriteAndRead(cmd));
+                poly.slope = str2double(obj.query(cmd));
                 
                 rc = obj.ReadRetry(); % get OK
                 cmd = sprintf('BJ %i 0\n', channel);
-                poly.intercept = str2double(obj.WriteAndRead(cmd));
+                poly.intercept = str2double(obj.query(cmd));
                 rc = obj.ReadRetry(); % get OK
             else
                 switch calType
@@ -460,18 +400,18 @@ classdef (Sealed) DCBias < deviceDrivers.lib.Serial
                 end % switch
                 % load course slope and overall current intercept
                 cmd = sprintf('BP %i %i\n', channel,pot);
-                poly.slope= str2double(obj.WriteAndRead(cmd));
+                poly.slope= str2double(obj.query(cmd));
                 rc = obj.ReadRetry(); % get OK
                 if pot == 0
                     cmd = sprintf('BI %i %i\n', channel,pot);
-                    poly.intercept = str2double(obj.WriteAndRead(cmd));
+                    poly.intercept = str2double(obj.query(cmd));
                     rc = obj.ReadRetry(); % get OK
                 end
                 cmd = sprintf('BA %i %i\n', channel,pot);
-                poly.max = str2double(obj.WriteAndRead(cmd));
+                poly.max = str2double(obj.query(cmd));
                 rc = obj.ReadRetry(); % get OK
                 cmd = sprintf('BB %i %i\n', channel,pot);
-                poly.min = str2double(obj.WriteAndRead(cmd));
+                poly.min = str2double(obj.query(cmd));
                 rc = obj.ReadRetry(); % get OK
             end
             % assume things worked

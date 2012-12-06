@@ -34,6 +34,7 @@ public:
 	int read_state_from_hdf5(H5::H5File & , const string & );
 
 	friend class APS;
+	friend class BankBouncerThread;
 
 private:
 	float offset_;

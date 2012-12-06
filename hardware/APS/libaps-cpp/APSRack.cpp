@@ -34,11 +34,9 @@ int APSRack::initAPS(const int & deviceID, const string & bitFile, const bool & 
 }
 
 int APSRack::get_num_devices() const {
-
 	int numDevices;
 	FT_ListDevices(&numDevices, NULL, FT_LIST_NUMBER_ONLY);
 	return numDevices;
-
 }
 
 string APSRack::get_deviceSerial(const int & deviceID) const{
@@ -54,8 +52,8 @@ void APSRack::enumerate_devices() {
 	APSs_.clear();
 	APSs_.reserve(numDevices_);
 
-	//Now setup the map between device serials and number and assign the APS units appropriately
-	//Also setup the FPGA checksums
+	//	Now setup the map between device serials and number and assign the APS units appropriately
+	//	Also setup the FPGA checksums
 	size_t devicect = 0;
 	for (string tmpSerial : deviceSerials_) {
 		serial2dev[tmpSerial] = devicect;
@@ -132,11 +130,9 @@ int APSRack::set_LL_data(const int & deviceID, const int & channelNum, const Wor
 }
 
 int APSRack::get_running(const int & deviceID){
-	return APSs_[deviceID].running_;
-}
-
-int APSRack::set_trigger_interval(const int & deviceID, const double & interval){
-	return APSs_[deviceID].set_trigger_interval(interval);
+	//TODO:
+//	return APSs_[deviceID].running_;
+	return 0;
 }
 
 int APSRack::set_log(FILE * pFile) {
@@ -162,6 +158,14 @@ int APSRack::set_trigger_source(const int & deviceID, const TRIGGERSOURCE & trig
 
 TRIGGERSOURCE APSRack::get_trigger_source(const int & deviceID) const{
 	return APSs_[deviceID].get_trigger_source();
+}
+
+int APSRack::set_trigger_interval(const int & deviceID, const double & interval){
+	return APSs_[deviceID].set_trigger_interval(interval);
+}
+
+double APSRack::get_trigger_interval(const int & deviceID) const{
+	return APSs_[deviceID].get_trigger_interval();
 }
 
 int APSRack::set_miniLL_repeat(const int & deviceID, const USHORT & repeat){

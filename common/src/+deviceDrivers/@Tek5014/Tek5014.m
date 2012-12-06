@@ -313,6 +313,8 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
 			%STOP ends the output of a waveform or sequence
 			gpib_string = 'AWGControl:STOP';
 			obj.write(gpib_string);
+            %Wait for it to actually stop. 
+            obj.operationComplete();
         end
         
         function sync(obj)

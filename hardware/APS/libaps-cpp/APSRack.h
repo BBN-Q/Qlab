@@ -41,6 +41,7 @@ public:
 	int set_trigger_source(const int &, const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source(const int &) const;
 	int set_trigger_interval(const int &, const double &);
+	double get_trigger_interval(const int &) const;
 
 	int set_miniLL_repeat(const int &, const USHORT &);
 
@@ -83,6 +84,8 @@ public:
 	int read_register(int, FPGASELECT, int);
 
 private:
+	APSRack(const APSRack&) = delete;
+	APSRack& operator=(const APSRack&) = delete;
 	int numDevices_;
 	vector<APS> APSs_;
 	vector<string> deviceSerials_;

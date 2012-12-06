@@ -6,9 +6,9 @@ classdef APSPattern < handle
         MIN_PAD_SIZE = 4;
         MIN_LL_ENTRY_COUNT = 2;
         MAX_WAVEFORM_VALUE = 8191;
-        MAX_WAVEFORM_POINTS = 2^14;
+        MAX_WAVEFORM_POINTS = 32768;
         MAX_REPEAT_COUNT = 2^10-1;
-        MAX_LL_ENTRIES = 4096;
+        MAX_LL_ENTRIES = 8192;
         
         %APS bit masks
         START_MINILL_BIT = 16;
@@ -417,11 +417,20 @@ classdef APSPattern < handle
             TRIGGER_INCREMENT = 4;
             
             if entry.hasMarkerData
-                triggerVal1 = fix(entry.markerDelay / TRIGGER_INCREMENT);
+                %We use 0 as no trigger data so put in an extra delay for
+                %short trigger delays
+                if entry.markerDelay1 > 0 && entry.markerDelay1 < 4
+                    entry.markerDelay1 = 4;
+                end
+                if entry.markerDelay2 > 0 && entry.markerDelay2 < 4
+                    entry.markerDelay2 = 4;
+                end
+                triggerVal1 = fix(entry.markerDelay1 / TRIGGER_INCREMENT);
+                triggerVal2 = fix(entry.markerDelay2 / TRIGGER_INCREMENT);
             else
                 triggerVal1 = 0;
+                triggerVal2 = 0;
             end
-            triggerVal2 = 0;
         end
         
         function maxRepInterval = estimateRepInterval(linkLists)

@@ -4,7 +4,7 @@ function [cost, J] = pi2ObjectiveFunction(obj, x, qubit, direction)
     fprintf('pi2Amp: %.1f, offset: %.4f\n', pi2Amp, offset);
     % create sequence
     obj.pulseParams.pi2Amp = pi2Amp;
-    [filenames nbrPatterns] = obj.Pi2CalChannelSequence(obj.ExpParams.Qubit, direction);
+    [filenames nbrPatterns] = obj.Pi2CalChannelSequence(obj.ExpParams.Qubit, direction, false);
     
     % set channel offset
     switch direction

@@ -378,13 +378,13 @@ int FPGA::write_FPGA(FT_HANDLE deviceHandle, const unsigned int & addr, const ve
 
 	//Format for the block write
 	vector<UCHAR> dataPacket = format(fpga, addr, data);
-
+	vector<size_t> offsets = computeCmdByteOffsets(data.size());
 	if (data.size() > 0) {
 		FILE_LOG(logDEBUG2) << "Writing " << data.size() << " words at starting address: " << myhex << addr << " with Data[0]: " << data[0];
 	}
 
 	//Write to device
-	return write_block(deviceHandle, dataPacket);
+	return write_block(deviceHandle, dataPacket, offsets);
 
 	return 0;
 }
@@ -425,11 +425,27 @@ int FPGA::write_FPGA(FT_HANDLE deviceHandle, const unsigned int & addr, const ve
 	return bytesWritten;
 }
 
-int FPGA::write_block(FT_HANDLE deviceHandle, vector<UCHAR> & dataPackets){
+int FPGA::write_block(FT_HANDLE deviceHandle, vector<UCHAR> & dataPackets, const vector<size_t> & offsets){
 
-	ULONG bytesWritten;
-	FT_Write(deviceHandle, &dataPackets.front(), dataPackets.size(), &bytesWritten);
-
+	// seems to break with writes longer than 64kB so split on that
+	ULONG bytesWritten=0, tmpBytesWritten=0;
+	auto curIdx = dataPackets.begin();
+	const int maxWriteLength = 65536;
+	while (std::distance(curIdx, dataPackets.end()) > 0){
+		if (std::distance(curIdx,dataPackets.end()) > maxWriteLength){
+			//Find the last command byte where the data packet will fit under 64kB.
+			auto breakPt = std::lower_bound(offsets.begin(), offsets.end(), std::distance(curIdx,dataPackets.begin()) + maxWriteLength);
+			DWORD ptsToWrite = *(breakPt-1) - std::distance(curIdx,dataPackets.begin());
+			FT_Write(deviceHandle, &(*curIdx), ptsToWrite, &tmpBytesWritten);
+			bytesWritten += tmpBytesWritten;
+			std::advance(curIdx, ptsToWrite);
+		}
+		else{
+			FT_Write(deviceHandle, &(*curIdx), std::distance(curIdx,dataPackets.end()), &tmpBytesWritten);
+			bytesWritten += tmpBytesWritten;
+			curIdx = dataPackets.end();
+		}
+	}
 	return(bytesWritten);
 }
 
@@ -450,7 +466,7 @@ vector<UCHAR> FPGA::format(const FPGASELECT & fpga, const unsigned int & addr, c
 	//We return a vector of bytes to write
 	vector<UCHAR> dataPacket(0);
 	if (data.size() > 0) {
-		dataPacket.reserve(5 + 3 + data.size()/3 + data.size()%3 );
+		dataPacket.reserve(5 + 3 + 2*data.size() + data.size()/3 + data.size()%3 );
 	}
 	else{
 		dataPacket.reserve(5);
@@ -504,6 +520,51 @@ vector<UCHAR> FPGA::format(const FPGASELECT & fpga, const unsigned int & addr, c
 		}
 	}
 	return dataPacket;
+}
+
+vector<size_t> FPGA::computeCmdByteOffsets(const size_t & dataLength){
+/* Helper function to find CMD byte offsets in a data vector formatted for sending to the FPGA. */
+
+
+	//We return a vector of bytes to write
+	vector<size_t> offsets(0);
+	if (dataLength > 0) {
+		offsets.reserve(2 + dataLength/3 + dataLength%3 );
+	}
+	else{
+		offsets.reserve(1);
+	}
+
+	// first byte is always a CMD byte
+	offsets.push_back(0);
+
+	if (dataLength > 0){
+		// data count CMD
+		offsets.push_back(5);
+
+		// current index starts after data count bytes
+		int currentIdx = 8;
+		int ptsRemaining = dataLength;
+		int ptsToWrite=0;
+		while (ptsRemaining > 0) {
+			switch (ptsRemaining) {
+			case 1:
+				ptsToWrite = 1;
+				break;
+			case 2:
+			case 3:
+				ptsToWrite = 2;
+				break;
+			default: // 4 or more
+				ptsToWrite = 4;
+				break;
+			}
+			offsets.push_back(currentIdx);
+			ptsRemaining -= ptsToWrite;
+			currentIdx += 1+2*ptsToWrite;
+		}
+	}
+	return offsets;
 }
 
 int FPGA::write_SPI

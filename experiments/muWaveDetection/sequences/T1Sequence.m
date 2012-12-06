@@ -1,25 +1,18 @@
-function T1Sequence(qubit, pulseSpacings, makePlot, plotSeqNum)
+function T1Sequence(qubit, pulseSpacings, makePlot)
 %T1Sequence T1 measurement by inversion-recovery.
-% T1Sequence(qubit, pulseSpacings, makePlot, plotSeqNum)
+% T1Sequence(qubit, pulseSpacings, makePlot)
 %   qubit - target qubit e.g. 'q1'
 %   pulseSpacings - pulse spacings to scan over e.g. 120*(1:150);
 %   makePlot - whether to plot a sequence or not (boolean)
-%   plotSeqNum (optional) - which sequence to plot (int)
 
 basename = 'T1';
 fixedPt = pulseSpacings(end)+1000;
 cycleLength = fixedPt+2000; 
 nbrRepeats = 1;
 
-% load config parameters from file
-params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.(qubit);
-qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
-IQkey = qubitMap.(qubit).IQkey;
-
 % if using SSB, set the frequency here
 SSBFreq = 0e6;
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T,'bufferDelay',params.(IQkey).bufferDelay,'bufferReset',params.(IQkey).bufferReset,'bufferPadding',params.(IQkey).bufferPadding, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
+pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
 
 patseq = {{...
     pg.pulse('Xp'), ...
@@ -43,14 +36,16 @@ seqParams = struct(...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
     'measLength', 2000);
-patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
-patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
-measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS'};
 
-if ~makePlot
-    plotSeqNum = 0;
-end
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, plotSeqNum);
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
+
+patternDict = containers.Map();
+patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
+
+measChannels = {'M1'};
+awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
+
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 end

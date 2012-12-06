@@ -46,6 +46,8 @@ end
 % drop-down menus.  Here we simply initialize empty maps and then a nested
 % function fills them out depending on the card choice.
 cardParams = struct();
+% available card types
+cardParams.cardTypes = containers.Map({'AgilentAP240', 'AlazarATS9870'}, {1, 2});
 %Whether the card performs on-board averaging
 cardParams.cardModes = containers.Map();
 %How the digitizer is clocked: internal, external, or 10MHz reference into
@@ -71,6 +73,7 @@ cardParams.samplingRates = containers.Map();
 %Setup a dictionary linking these parameters to UI tags for the pop-up
 %menus
 cardParamsUIDict = containers.Map();
+cardParamsUIDict('cardType') = 'cardTypes';
 cardParamsUIDict('acquire_mode') = 'cardModes';
 cardParamsUIDict('clockType') = 'clockTypes';
 cardParamsUIDict('verticalScale') = 'scales';
@@ -91,7 +94,7 @@ if nargin < 2 || isempty(fieldnames(settings))
     settings = struct();
 else
     %Set the card type
-    set_selected(handles.cardType, find(strcmp(settings.deviceName, get(handles.cardType,'String'))))
+    set_selected(handles.cardType, settings.deviceName)
 end
 
 
@@ -117,7 +120,7 @@ set_settings_fcn = @set_gui_elements;
         %Add the digitizer card and mode options
         tmpGrid1 = uiextras.Grid('Parent', handles.mainVBox, 'Spacing', 10, 'Padding', 5);
         
-        [~, ~, handles.cardType] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Type:', 'cardType', {'AgilentAP240', 'AlazarATS9870'});
+        [~, ~, handles.cardType] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Type:', 'cardType', cardParams.cardTypes.keys());
         set(handles.cardType, 'Callback', @card_switch);
         [~, ~, handles.acquire_mode] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Mode:', 'acquire_mode', {''});
         
@@ -187,6 +190,7 @@ set_settings_fcn = @set_gui_elements;
         
         scope_settings = struct();
         
+        scope_settings.cardType = get_selected(handles.cardType);
         scope_settings.deviceName = get_selected(handles.cardType);
         scope_settings.Address = 'PCI::INSTR0';
         
@@ -257,6 +261,7 @@ set_settings_fcn = @set_gui_elements;
                 %Update the settings structure
                 if isfield(settings, 'deviceName')
                     if strcmp(settings.deviceName ,'AlazarATS9870')
+                        settings.cardType = 'AgilentAP240';
                         settings.deviceName = 'AgilentAP240';
                         tmpMap = containers.Map({1, 5, 7}, {'int', 'ext', 'ref'});
                         settings.clockType = tmpMap(settings.clockType);
@@ -278,7 +283,7 @@ set_settings_fcn = @set_gui_elements;
             case 'AlazarATS9870'
                 cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {0, 2});
                 cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {1, 5, 7});
-                cardParams.scales = containers.Map({'40m','100m', '200m', '400m', '1', '2', '4'}, {2, 5, 6, 7, 10, 11, 12});
+                cardParams.scales = containers.Map({'40m','100m', '200m', '400m', '1', '2', '4'}, {.04, .1, .2, .4, 1, 2, 4});
                 cardParams.verticalCouplings = containers.Map({'AC, 50 Ohm','DC, 50 Ohm'}, {1, 2});
                 cardParams.bandwidths = containers.Map({'no limit','20 MHz'}, {0,1});
                 cardParams.trigChannels = containers.Map({'External','Ch A', 'Ch B'}, {2, 0, 1});
@@ -293,6 +298,7 @@ set_settings_fcn = @set_gui_elements;
                 %Update the settings structure
                 if isfield(settings, 'deviceName')
                     if strcmp(settings.deviceName ,'AgilentAP240')
+                        settings.cardType = 'AlazarATS9870';
                         settings.deviceName = 'AlazarATS9870';
                         tmpMap = containers.Map({'int', 'ext', 'ref'}, {1, 5, 7});
                         settings.clockType = tmpMap(settings.clockType);
@@ -323,6 +329,7 @@ set_settings_fcn = @set_gui_elements;
         % If given a settings structure, grab defaults from it'
         defaults = struct();
         if isempty(fieldnames(settings))
+            defaults.cardType = 'AgilentAP240';
             defaults.acquire_mode = 'Averager';
             defaults.clockType = 'Ext Ref (10 MHz)';
             defaults.horizontal.delayTime = 0;
@@ -357,6 +364,7 @@ set_settings_fcn = @set_gui_elements;
             end
             % scope settings are two layers deep, need to go into horizontal,
             % vertical, trigger, and averager
+            defaults.cardType = settings.cardType;
             defaults.acquire_mode = cardModesInv(settings.acquire_mode);
             defaults.clockType = clockTypesInv(settings.clockType);
             % horizontal

@@ -17,7 +17,6 @@ classdef AgilentAP240 < hgsetget
         instrID; %
         resourceName = 'PCI::INSTR0';
         model_number = 'AP120';
-        options = '';
         Address;
         channel_on; % sets or queries which channels are currently on
         triggerSource; % which channel supplies the trigger
@@ -178,15 +177,7 @@ classdef AgilentAP240 < hgsetget
             addpath([AqRoot,'\MATLAB\mex'],[AqRoot,'\MATLAB\mex\functions']);
             obj.channel_on = 1;
             obj.triggerSource = -1;
-            [status instrumentID] = Aq_InitWithOptions(obj.resourceName, 0, 0, obj.options);
-            assert(status == 0, 'Error in Aq_InitWithOptions: %d', status);
-                
-            
-            obj.instrID  = instrumentID;
-            
-            % Retrieve digitizer position
-            status = Aq_getInstrumentData(instrumentID);
-            assert(status == 0, 'Error in Aq_getInstrumentData: %d', status);
+            obj.reset();
         end % end constructor
         
         function connect(obj, Address)
@@ -200,8 +191,16 @@ classdef AgilentAP240 < hgsetget
         function obj = reset(obj)
             %initialization of the device, middle two args currently
             %ignored
-            [status instrumentID] = Aq_InitWithOptions(obj.resourceName, 0, 0, obj.options);
+            persistent AcquirisBeenCalibrated
+            if isempty(AcquirisBeenCalibrated) || ~AcquirisBeenCalibrated
+                options = 'CAL=TRUE';
+            else
+                options = 'CAL=FALSE';
+            end
+
+            [status instrumentID] = Aq_InitWithOptions(obj.resourceName, 0, 0, options);
             assert(status == 0, 'Error in Aq_InitWithOptions: %d', status);
+            AcquirisBeenCalibrated = true;
             
             obj.instrID  = instrumentID;
             

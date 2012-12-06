@@ -1,7 +1,7 @@
-function out = overlaps_tomo(expResults)
+function [out,pauliMap,pauliMapPseudoInv] = overlaps_tomo(expResults)
 % Extract a Pauli map from a set of interleaved RB overlap experiments
 %Take-in:
-%  1. measured process fidelities for each overlap: expResults (12 overlaps)
+%  1. measured process fidelities for each overlap: expResults
 
 %Plan:
 % 1. Work from Choi matrix
@@ -9,59 +9,44 @@ function out = overlaps_tomo(expResults)
 % 3. Form inner product of overlap Unitary super-super operator with
 % Liouville
 
-numOverlaps = 10;
-assert(length(expResults) == numOverlaps, 'Input does not have numOverlaps entries');
-
 % Default to quiet
 if ~exist('verbose', 'var')
     verbose = 0;
 end
 
+d = 2; % dimension
+
+%Transform expResults fidelities back to trace overlaps assuming positive
+%global phase
+expResults = (d^2-1)*expResults+1;
+
 %Choi matrix 
 choiSDP = sdpvar(4, 4, 'hermitian', 'complex');
 
-% Paulis
-X = [0, 1;1, 0];
-Y = [0, -1i;1i, 0];
-Z = [1, 0;0, -1];
-
-% overlap unitaries
-Uoverlaps = cell(numOverlaps,1);
-Uoverlaps{1} = eye(2);
-Uoverlaps{2} = expm(-1i*pi/4*X);
-Uoverlaps{3} = expm(-1i*pi/2*X);
-Uoverlaps{4} = expm(-1i*pi/4*Y);
-Uoverlaps{5} = expm(-1i*pi/2*Y);
-Uoverlaps{6} = expm(-1i*pi/4*Z);
-Uoverlaps{7} = expm(-1i*pi/2*Z);
-Uoverlaps{8} = expm(-1i*pi/2*(X+Y)/sqrt(2));
-Uoverlaps{9} = expm(-1i*pi/2*(X+Z)/sqrt(2));
-Uoverlaps{10} = expm(-1i*pi/2*(Y+Z)/sqrt(2));
+% the linearly independent set of cliffords we are comparing against
+li_cliffords = [1 3 6 9 17 18 19 20 21 22];
 
 %Shuffle matrix for Choi -> Liouville (cannonical column stack basis)
-shuffleMat = zeros(16,16);
+shuffleMat = zeros(d^4,d^4);
 for ct1 = 1:2
     for ct2 = 1:2
-        tmpMat = zeros(2,2);
+        tmpMat = zeros(d,d);
         tmpMat(ct1,ct2) = 1;
-        shuffleMat = shuffleMat + kron(kron(kron(eye(2), tmpMat.'), tmpMat), eye(2));
+        shuffleMat = shuffleMat + kron(kron(kron(eye(d), tmpMat.'), tmpMat), eye(d));
     end
 end
 
 %Normalization
 shuffleMat = 2*shuffleMat;
 
-predictorMat = zeros(numOverlaps, 16);
-
 %Construct the unitary super-super-operator
-UnitarySSOp = zeros(numOverlaps,16);
-for ct = 1:numOverlaps
-    UnitarySOp = kron(conj(Uoverlaps{ct}), Uoverlaps{ct});
+UnitarySSOp = zeros(length(li_cliffords),d^4);
+for ct = 1:length(li_cliffords)
+    UnitarySOp = kron(conj(local_clifford(li_cliffords(ct))), local_clifford(li_cliffords(ct)));
     UnitarySSOp(ct,:) = conj(UnitarySOp(:));
 end
 
-d = 2;
-predictorMat = 1/d^2 * UnitarySSOp * shuffleMat;
+predictorMat = UnitarySSOp * shuffleMat;
 
 fprintf('Rank of predictorMat is %d\n', rank(predictorMat));
 
@@ -76,34 +61,53 @@ constraint = [constraint, ...
               choiSDP(3,1)+choiSDP(4,2)==0, ...
               choiSDP(3,3)+choiSDP(4,4)==0.5];
 
-pinv(predictorMat)*expResults
+choiPseudoInv = pinv(predictorMat)*expResults(:);
+
+pauliMapPseudoInv = choi2pauliMap(reshape(choiPseudoInv,4,4));
+[~, pauliStrs] = paulis(1);
+cmap = [hot(50); 1-hot(50)];
+cmap = cmap(18:18+63,:); % make a 64-entry colormap
+figure()
+imagesc(pauliMapPseudoInv,[-1,1])
+colormap(cmap)
+colorbar()
+set(gca, 'XTick', 1:4);
+set(gca, 'XTickLabel', pauliStrs);
+set(gca, 'YTick', 1:4);
+set(gca, 'YTickLabel', pauliStrs);
+xlabel('Input Pauli Operator');
+ylabel('Output Pauli Operator');
+title('Raw inversion')
 
 % Call the solver, minimizing the distance between the vectors of predicted and actual
 % measurements
 sym = solvesdp(constraint, norm(predictorMat*choiSDP(:) - expResults(:), 2), sdpsettings('verbose',verbose));
 
+% then out of the set of maximum likelihood solutions, find the solution
+% that minimizes the purity
 ll = norm(predictorMat*double(choiSDP(:)) - expResults(:), 2);
+% constraint = [ constraint, norm(predictorMat*choiSDP(:) - expResults(:), 2) == ll ];
 
-constraint = [ constraint, norm(predictorMat*choiSDP(:) - expResults(:), 2) == ll ];
-
-solvesdp(constraint, 1-norm(choiSDP(:),2), sdpsettings('verbose',verbose));
+% solvesdp(constraint, norm(choiSDP(:),2), sdpsettings('verbose',verbose));
 
 out = double(choiSDP);
 
 % plot the result
 
-pauliMap = Choi2PauliMap_(double(choiSDP));
+pauliMap = choi2pauliMap(double(choiSDP));
+[~, pauliStrs] = paulis(1);
 cmap = [hot(50); 1-hot(50)];
 cmap = cmap(18:18+63,:); % make a 64-entry colormap
 figure()
-imagesc(real(pauliMap'),[-1,1])
+imagesc(pauliMap,[-1,1])
 colormap(cmap)
 colorbar()
 set(gca, 'XTick', 1:4);
-set(gca, 'XTickLabel', {'X','Y','Z','I'});
+set(gca, 'XTickLabel', pauliStrs);
 set(gca, 'YTick', 1:4);
-set(gca, 'YTickLabel', {'X','Y','Z','I'});
+set(gca, 'YTickLabel', pauliStrs);
 xlabel('Input Pauli Operator');
 ylabel('Output Pauli Operator');
+title('MLE map')
 
 end

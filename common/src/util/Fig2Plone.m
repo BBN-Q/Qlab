@@ -13,6 +13,19 @@ ploneSite = 'echelon.bbn.com:8080/QLab';
 
 %make sure saved file has same aspect ratio as shown on screen 
 set(figHandle, 'PaperPositionMode','auto');
+
+%Sort out whether we are getting a dataObj or just a path in
+%If we are getting a str in assume it is a path and mock up a dataObj
+if ischar(dataObj)
+    assert(exist(dataObj, 'dir') == 7, 'Oops! The path to put the figure files in does not exist.');
+    tmpPath = dataObj;
+    dataObj = struct();
+    dataObj.path = tmpPath;
+    %Use the image description plus date stamp as the filename
+    dataObj.filename = [strrep(imageDescrip, ' ', '_'), '_', datestr(now,1), '.h5'];
+end
+    
+
 saveas(figHandle, [dataObj.path strrep(dataObj.filename, '.h5', '.fig')]);
 imageFile = [dataObj.path strrep(dataObj.filename, '.h5', '.png')];
 saveas(figHandle, imageFile)

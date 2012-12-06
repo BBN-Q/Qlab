@@ -5,8 +5,12 @@ function [Loop, dimension] = populateLoopStructure(obj, sweepPtsOnly)
     end
     SweepParams  = obj.inputStructure.SweepParams;
 
-    SweepNames = fieldnames(SweepParams);
-    numSweepVariables = numel(SweepNames);
+    if ~isempty(SweepParams)
+        SweepNames = fieldnames(SweepParams);
+        numSweepVariables = numel(SweepNames);
+    else
+        numSweepVariables = 0;
+    end
     emptySweep = struct('type','sweeps.Nothing');
     Loop = struct('one',emptySweep,'two',emptySweep,'three',emptySweep);
     % error checking

@@ -1,0 +1,119 @@
+{
+	"Ramsey": {
+		"expName": "Ramsey",
+		"xaxis": {
+			"step": 100,
+			"start": 0
+		},
+		"baseName": "Ramsey",
+		"nbrSegments": 154
+	},
+	"Echo": {
+		"expName": "Echo",
+		"baseName": "Echo",
+		"xaxis": {
+			"step": 100,
+			"start": 0
+		},
+		"nbrSegments": 104
+	},
+	"Rabi": {
+		"nbrSegments": 81,
+		"baseName": "Rabi",
+		"expName": "Rabi",
+		"xaxis": {
+			"start": -8000,
+			"step": 200
+		}
+	},
+	"T1": {
+		"baseName": "T1",
+		"expName": "T1",
+		"xaxis": {
+			"start": 0,
+			"step": 250
+		},
+		"nbrSegments": 154
+	},
+	"Pi2Cal": {
+		"baseName": "Pi2Cal",
+		"expName": "Pi2Cal",
+		"xaxis": {
+			"start": 0,
+			"step": 1
+		},
+		"nbrSegments": 82
+	},
+	"PiCal": {
+		"baseName": "PiCal",
+		"expName": "PiCal",
+		"xaxis": {
+			"start": 0,
+			"step": 1
+		},
+		"nbrSegments": 50
+	},
+	"PiRabi": {
+		"baseName": "PiRabi",
+		"expName": "PiRabi",
+		"xaxis": {
+			"start": 0,
+			"step": 1
+		},
+		"nbrSegments": 162
+	},
+	"APE": {
+		"baseName": "APE",
+		"expName": "APE",
+		"xaxis": {
+			"start": 0,
+			"step": 1
+		},
+		"nbrSegments": 111
+	},
+	"SPAM": {
+		"baseName": "SPAM",
+		"expName": "SPAM",
+		"xaxis": {
+			"start": 0,
+			"step": 1
+		},
+		"nbrSegments": 110
+	},
+	"AllXY": {
+		"baseName": "AllXY",
+		"expName": "AllXY",
+		"xaxis": {
+			"start": 0,
+			"step": 1
+		},
+		"nbrSegments": 70
+	},
+	"RB": {
+		"baseName": "RB",
+		"expName": "RB",
+		"xaxis": {
+			"start": 0,
+			"step": 1
+		},
+		"nbrSegments": 356
+	},
+	"ProcessTomo": {
+		"baseName": "SingleQProcess",
+		"expName": "ProcessTomo",
+		"xaxis": {
+			"start": 0,
+			"step": 1
+		},
+		"nbrSegments": 76
+	},
+	"CrossResStateTomo": {
+		"baseName": "CrossRes",
+		"expName": "CrossRes",
+		"xaxis": {
+			"start": 0,
+			"step": 1
+		},
+		"nbrSegments": 40
+	}
+}
