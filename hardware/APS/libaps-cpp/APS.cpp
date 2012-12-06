@@ -1597,9 +1597,12 @@ void BankBouncerThread::run(){
 	//lastMiniLL is the last miniLL we have written (% #miniLL's)
 	//curAddrHW is the currently playing LL entry in hardware (% MAX_LL_LENGTH)
 	//nextWriteAddrHW is the next address we write to in hardware (% MAX_LL_LENGTH)
-	//boundaryLLEntry helps us map from hardware address back to software by keeping
-	//track of what entry is written to the first hardware address
 	int nextMiniLL, lastMiniLL, curAddrHW, nextWriteAddrHW, firstMiniLLAddr;
+	//boundaryLLEntry helps us map from hardware address back to software by keeping
+	//track of what entry is written to the first hardware address. We make this a queue
+	//because when we overwrite the beginning of LL memory, curAddr is related to the
+	//current LL entry by the *previous* boundaryLLEntry. Only once curAddr has wrapped
+	//around the end of LL memory can we throw out the old boundaryLLEntry.
 	std::queue<int> boundaryLLEntry;
 
 	//Get a pointer shortcut to the current bank
@@ -1612,11 +1615,13 @@ void BankBouncerThread::run(){
 		int entriesToWrite = 0;
 		//Find the currently playing miniLL by comparing the playing LL entry with the start points
 		int currentEntry;
-		// if we are between the first miniLL in memory and the last written address, we should update the boundaryLLEntry queue
+		// if we are between the first miniLL in memory and the last written address, we have
+		// wrapped around the end of LL memory. Update the boundaryLLEntry queue
 		if ((curAddrHW > firstMiniLLAddr) && (curAddrHW < nextWriteAddrHW) && (boundaryLLEntry.size() > 1)){
 			 boundaryLLEntry.pop();
 		}
-		// if curAddr is less than the first miniLL in memory, we are wrapping around the end of memory
+		// if curAddr is less than the first miniLL in memory, we are wrapping around the end of memory,
+		// but cannot throw out the old boundaryLLEntry yet
 		if (curAddrHW < firstMiniLLAddr){
 			currentEntry = mymod(curAddrHW + boundaryLLEntry.front() + MAX_LL_LENGTH, curLLBank->length);
 		}
@@ -1657,9 +1662,7 @@ void BankBouncerThread::run(){
 	nextMiniLL = std::distance(curLLBank->miniLLStartIdx.begin(), lastMiniLLIdxIt) - 1;
 	lastMiniLL = nextMiniLL - 1;
 
-	// We need to keep track of which LL entry is the first entry in sequence memory
-	// this allows us to compute the current LL entry from the current sequence memory address
-	// and hence the memory address of the first entry of the currently playing miniLL
+	// After initializing, the boundary entry and first miniLL addr are both index 0.
 	boundaryLLEntry.push(0);
 	firstMiniLLAddr = 0;
 
@@ -1692,7 +1695,7 @@ void BankBouncerThread::run(){
 			if (nextWriteAddrHW < curWriteAddrHW) {
 				boundaryLLEntry.push(MAX_LL_LENGTH - curWriteAddrHW + curLLBank->miniLLStartIdx[startMiniLL]);
 				firstMiniLLAddr = curWriteAddrHW;
-				while(firstMiniLLAddr < MAX_LL_LENGTH){
+				while (firstMiniLLAddr < MAX_LL_LENGTH) {
 					firstMiniLLAddr += curLLBank->miniLLLengths[startMiniLL];
 					startMiniLL = (startMiniLL+1)%curLLBank->numMiniLLs;
 				}
