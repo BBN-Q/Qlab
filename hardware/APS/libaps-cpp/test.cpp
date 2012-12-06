@@ -49,13 +49,20 @@ void test::loadSequenceFile() {
 }
 
 void test::streaming() {
-	set_trigger_interval(0, 0.0001);
+	set_trigger_interval(0, 0.001);
+//	set_trigger_source(0, 1);
 	load_sequence_file(0, "U:\\APS\\Ramsey-Streaming.h5");
 	set_channel_enabled(0, 0, 1);
 	set_run_mode(0, 0, 1);
 	run(0);
 	Sleep(10000);
 	stop(0);
+}
+
+void test::offsetScale() {
+	test::programSquareWaves();
+	set_channel_offset(0, 0, 0.1);
+	set_channel_scale(0, 0, 0.5);
 }
 
 void test::doBulkStateFileTest() {
@@ -211,6 +218,7 @@ void test::printHelp(){
 	cout << spacing << "-wf Program square wave" << endl;
 	cout << spacing << "-trig Get/Set trigger interval" << endl;
 	cout << spacing << "-seq Load sequence file" << endl;
+	cout << spacing << "-offset Set offset and scale" << endl;
 }
 
 // command options functions taken from:
@@ -319,6 +327,10 @@ int main(int argc, char** argv) {
 	if (cmdOptionExists(argv, argv + argc, "-seq")) {
 			test::loadSequenceFile();
 	}
+
+	if (cmdOptionExists(argv, argv + argc, "-offset")) {
+				test::offsetScale();
+		}
 
 	disconnect_by_ID(0);
 
