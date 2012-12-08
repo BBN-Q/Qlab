@@ -11,22 +11,17 @@ function decays = analyzeRBTdecays(data, seqsPerFile, nbrFiles, nbrExpts, seqLen
 
 % rearrange the idices so that they correspond to
 % sequence ct, overlap ct, file ct, trace rep ct, soft avg rep ct
-% reshaped_data = reshape(data',seqsPerFile+nbrCals*calRepeats,nbrSoftAvgs,nbrExpts,nbrFiles,ptraceRepeats);
-
-reshaped_data = reshape(data',seqsPerFile+nbrCals*calRepeats,nbrSoftAvgs,ptraceRepeats,nbrExpts,nbrFiles);
-% TODO: nbrFiles should come before nbrExpts
+reshaped_data = reshape(data',seqsPerFile+nbrCals*calRepeats,nbrSoftAvgs,ptraceRepeats,nbrFiles,nbrExpts);
 
 % now we need to extract the calibration for the data
 % we average over the soft average samples, 
 cal_data = tensor_mean(reshaped_data(seqsPerFile+1:end,:,:,:,:),2);
 
 % then average over the cal repeats
-%cal_data = tensor_mean(reshape(cal_data,calRepeats,nbrCals,nbrExpts,nbrFiles,ptraceRepeats),1);
-cal_data = tensor_mean(reshape(cal_data,calRepeats,nbrCals,ptraceRepeats,nbrExpts,nbrFiles),1);
+cal_data = tensor_mean(reshape(cal_data,calRepeats,nbrCals,ptraceRepeats,nbrFiles,nbrExpts),1);
 
 % we want to calibrate qubit data, so we set the upper and lower rails 
-% cal_data = tensor_mean(tensor_sum(reshape(cal_data,nbrCals/2,2,nbrExpts,nbrFiles,ptraceRepeats),1),4);
-cal_data = tensor_mean(tensor_sum(reshape(cal_data,nbrCals/2,2,ptraceRepeats,nbrExpts,nbrFiles),1),2);
+cal_data = tensor_mean(tensor_sum(reshape(cal_data,nbrCals/2,2,ptraceRepeats,nbrFiles,nbrExpts),1),2);
 
 % the result is one expectation for ground, one expectation value for
 % excited, which we then use to set the scale and shift for the rest of the
@@ -35,10 +30,6 @@ cal_scale = reshape(cal_data(2,:,:) - cal_data(1,:,:),1,nbrExpts*nbrFiles);
 cal_shift = reshape((cal_data(2,:,:) + cal_data(1,:,:))/2,1,nbrExpts*nbrFiles);
 
 % now we can rescale the unaveraged (but traced out) data (useful for bootstraping)
-% scaled_data = reshape(tensor_sum(reshaped_data(1:seqsPerFile,:,:,:,:),5),seqsPerFile*nbrSoftAvgs,nbrExpts*nbrFiles);
-% scaled_data = (scaled_data - repmat(cal_shift,[nbrSoftAvgs*seqsPerFile 1]))./repmat(cal_scale,[nbrSoftAvgs*seqsPerFile 1]);
-% scaled_data = reshape(scaled_data,seqsPerFile,nbrSoftAvgs*nbrExpts*nbrFiles);
-
 scaled_data = reshape(tensor_sum(reshaped_data(1:seqsPerFile,:,:,:,:),3),seqsPerFile*nbrSoftAvgs,nbrExpts*nbrFiles);
 scaled_data = (scaled_data - repmat(cal_shift,[nbrSoftAvgs*seqsPerFile 1]))./repmat(cal_scale,[nbrSoftAvgs*seqsPerFile 1]);
 scaled_data = reshape(scaled_data,seqsPerFile,nbrSoftAvgs*nbrExpts*nbrFiles);
@@ -46,9 +37,8 @@ scaled_data = reshape(scaled_data,seqsPerFile,nbrSoftAvgs*nbrExpts*nbrFiles);
 % stopped at this point, and data looks mangled. Indices must be incorrect.
 
 % now we can rescale the averaged, reshaped data
-reshaped_data = reshape(tensor_mean(tensor_sum(reshaped_data(1:seqsPerFile,:,:,:,:),5),2),seqsPerFile,nbrExpts*nbrFiles);
-%scaled_avg_data = (reshaped_data - repmat(cal_shift,[seqsPerFile 1]))./repmat(cal_scale,[seqsPerFile 1]);
-scaled_avg_data = reshaped_data;
+reshaped_data = reshape(tensor_mean(tensor_sum(reshaped_data(1:seqsPerFile,:,:,:,:),3),2),seqsPerFile,nbrExpts*nbrFiles);
+scaled_avg_data = (reshaped_data - repmat(cal_shift,[seqsPerFile 1]))./repmat(cal_scale,[seqsPerFile 1]);
 
 % we can now line up all experiments, and have each overlap experiment in a
 % different row
