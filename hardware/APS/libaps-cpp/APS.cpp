@@ -1597,7 +1597,13 @@ void BankBouncerThread::run(){
 	//lastMiniLL is the last miniLL we have written (% #miniLL's)
 	//curAddrHW is the currently playing LL entry in hardware (% MAX_LL_LENGTH)
 	//nextWriteAddrHW is the next address we write to in hardware (% MAX_LL_LENGTH)
-	int nextMiniLL, lastMiniLL, curAddrHW, nextWriteAddrHW, boundaryLLEntry;
+	int nextMiniLL, lastMiniLL, curAddrHW, nextWriteAddrHW, firstMiniLLAddr;
+	//boundaryLLEntry helps us map from hardware address back to software by keeping
+	//track of what entry is written to the first hardware address. We make this a queue
+	//because when we overwrite the beginning of LL memory, curAddr is related to the
+	//current LL entry by the *previous* boundaryLLEntry. Only once curAddr has wrapped
+	//around the end of LL memory can we throw out the old boundaryLLEntry.
+	std::queue<int> boundaryLLEntry;
 
 	//Get a pointer shortcut to the current bank
 	LLBank* curLLBank = &myAPS_->channels_[channel_].LLBank_;
@@ -1608,7 +1614,23 @@ void BankBouncerThread::run(){
 		int entriesOpen = mymod(curAddrHW-nextWriteAddrHW, MAX_LL_LENGTH);
 		int entriesToWrite = 0;
 		//Find the currently playing miniLL by comparing the playing LL entry with the start points
-		int currentEntry = mymod(curAddrHW + boundaryLLEntry, curLLBank->length);
+		int currentEntry;
+		// if we are between the first miniLL in memory and the last written address, we have
+		// wrapped around the end of LL memory. Update the boundaryLLEntry queue
+		if ((curAddrHW > firstMiniLLAddr) && (curAddrHW < nextWriteAddrHW) && (boundaryLLEntry.size() > 1)){
+			 boundaryLLEntry.pop();
+		}
+		// if curAddr is less than the first miniLL in memory, we are wrapping around the end of memory,
+		// but cannot throw out the old boundaryLLEntry yet
+		if (curAddrHW < firstMiniLLAddr){
+			currentEntry = mymod(curAddrHW + boundaryLLEntry.front() + MAX_LL_LENGTH, curLLBank->length);
+		}
+		else{
+			 currentEntry = mymod(curAddrHW + boundaryLLEntry.front(), curLLBank->length);
+		}
+
+		FILE_LOG(logDEBUG1) << "firstMiniLLAddr: " << firstMiniLLAddr << "; Current Entry: " << currentEntry;
+		FILE_LOG(logDEBUG1) << "curBoundaryLLEntry: " << boundaryLLEntry.front() << "; queue size: " << boundaryLLEntry.size();
 		//Subtract off the size of the currently playing miniLL
 		//If the currentEntry is in the last miniLL, then we immediately know the index of the LL start
 		if (currentEntry >= curLLBank->miniLLStartIdx.back()){
@@ -1618,6 +1640,7 @@ void BankBouncerThread::run(){
 		else{
 			WordVec::iterator nextMiniLLIt = std::upper_bound(curLLBank->miniLLStartIdx.begin(), curLLBank->miniLLStartIdx.end(), currentEntry);
 			entriesOpen -= (currentEntry-*(nextMiniLLIt-1));
+			FILE_LOG(logDEBUG1) << "Start of playing miniLL: " << *(nextMiniLLIt-1);
 		}
 		while ((entriesToWrite + curLLBank->miniLLLengths[nextMiniLL]) < entriesOpen){
 			entriesToWrite += curLLBank->miniLLLengths[nextMiniLL];
@@ -1639,10 +1662,9 @@ void BankBouncerThread::run(){
 	nextMiniLL = std::distance(curLLBank->miniLLStartIdx.begin(), lastMiniLLIdxIt) - 1;
 	lastMiniLL = nextMiniLL - 1;
 
-	// We need to keep track of which LL entry is the first entry in sequence memory
-	// this allows us to compute the current LL entry from the current sequence memory address
-	// and hence the memory address of the first entry of the currently playing miniLL
-	boundaryLLEntry = 0;
+	// After initializing, the boundary entry and first miniLL addr are both index 0.
+	boundaryLLEntry.push(0);
+	firstMiniLLAddr = 0;
 
 	nextWriteAddrHW = curLLBank->miniLLStartIdx[nextMiniLL];
 	curAddrHW = 0;
@@ -1659,8 +1681,9 @@ void BankBouncerThread::run(){
 		myAPS_->mymutex_->unlock();
 		FILE_LOG(logDEBUG1) << "Device ID: " << myAPS_->deviceID_ << " Current LL Addr: " << curAddrHW;
 
+
 		//See how many more miniLL's we can fit in
-		entries_can_write();
+       		entries_can_write();
 
 		//If there is something to write then do so
 		if (mymod(nextMiniLL - lastMiniLL, curLLBank->numMiniLLs) > 1){
@@ -1670,7 +1693,13 @@ void BankBouncerThread::run(){
 			nextWriteAddrHW = mymod(nextWriteAddrHW + mymod(curLLBank->miniLLStartIdx[nextMiniLL] - curLLBank->miniLLStartIdx[startMiniLL], curLLBank->length), MAX_LL_LENGTH);
 			// if we've wrapped around, need to update state information about the miniLL index and entry of the left-most edge
 			if (nextWriteAddrHW < curWriteAddrHW) {
-				boundaryLLEntry = (MAX_LL_LENGTH - curWriteAddrHW) + curLLBank->miniLLStartIdx[startMiniLL];
+				boundaryLLEntry.push(MAX_LL_LENGTH - curWriteAddrHW + curLLBank->miniLLStartIdx[startMiniLL]);
+				firstMiniLLAddr = curWriteAddrHW;
+				while (firstMiniLLAddr < MAX_LL_LENGTH) {
+					firstMiniLLAddr += curLLBank->miniLLLengths[startMiniLL];
+					startMiniLL = (startMiniLL+1)%curLLBank->numMiniLLs;
+				}
+				firstMiniLLAddr -= MAX_LL_LENGTH;
 			}
 			lastMiniLL = nextMiniLL-1;
 		}

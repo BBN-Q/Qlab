@@ -23,6 +23,7 @@
 #include <math.h>
 #include <stdexcept>
 #include <algorithm>
+#include <queue>
 using std::vector;
 using std::string;
 using std::cout;
