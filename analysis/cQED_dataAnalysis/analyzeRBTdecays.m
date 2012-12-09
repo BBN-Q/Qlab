@@ -7,8 +7,6 @@ function [decays, err_bars] = analyzeRBTdecays(data, seqsPerFile, nbrFiles, nbrE
 %
 % r=analyzeRBTdecays(data.abs_Data, 144*3, 5, 9, [1,2,3,0], [12^2, 12^2, 12^3, 12^2], [true, true, true, true], 10, 2, 4, 2);
 
-% overlap, file, trace, sequence, soft,
-
 % rearrange the idices so that they correspond to
 % sequence ct, overlap ct, file ct, trace rep ct, soft avg rep ct
 reshaped_data = reshape(data',seqsPerFile+nbrCals*calRepeats,nbrSoftAvgs,ptraceRepeats,nbrFiles,nbrExpts);
@@ -34,17 +32,10 @@ scaled_data = reshape(tensor_sum(reshaped_data(1:seqsPerFile,:,:,:,:),3),seqsPer
 scaled_data = (scaled_data - repmat(cal_shift,[nbrSoftAvgs*seqsPerFile 1]))./repmat(cal_scale,[nbrSoftAvgs*seqsPerFile 1]);
 scaled_data = reshape(scaled_data,seqsPerFile,nbrSoftAvgs*nbrExpts*nbrFiles);
 
-% and now we can rescale the averaged, reshaped data
-% reshaped_data = reshape(tensor_mean(tensor_sum(reshaped_data(1:seqsPerFile,:,:,:,:),3),2),seqsPerFile,nbrExpts*nbrFiles);
-% scaled_avg_data = (reshaped_data - repmat(cal_shift,[seqsPerFile 1]))./repmat(cal_scale,[seqsPerFile 1]);
-
 % we can now line up all experiments, and have each overlap experiment in a
 % different row
 scaled_data = permute(reshape(scaled_data,seqsPerFile,nbrSoftAvgs,nbrExpts,nbrFiles),[2,1,3,4]);
 scaled_data = reshape(scaled_data,nbrSoftAvgs,seqsPerFile*nbrExpts*nbrFiles);
-
-% scaled_avg_data = permute(reshape(scaled_avg_data,seqsPerFile,nbrExpts,nbrFiles),[1,3,2]);
-% scaled_avg_data = reshape(scaled_avg_data,seqsPerFile*nbrFiles,nbrExpts);
 
 decays = avg_and_twirl(scaled_data, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls);
 
