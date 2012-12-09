@@ -1,4 +1,4 @@
-function decays = analyzeRBTdecays(data, seqsPerFile, nbrFiles, nbrExpts, seqLengthsPerExpt, nbrTwirls, exhaustiveFlags, nbrSoftAvgs, ptraceRepeats, nbrCals, calRepeats)
+function [decays, err_bars] = analyzeRBTdecays(data, seqsPerFile, nbrFiles, nbrExpts, seqLengthsPerExpt, nbrTwirls, exhaustiveFlags, nbrSoftAvgs, ptraceRepeats, nbrCals, calRepeats)
 % analyzeRBTdecays(data,            seqsPerFile,       nbrFiles, 
 %                  nbrExpts,        seqLengthsPerExpt, nbrTwirls, 
 %                  exhaustiveFlags, nbrSoftAvgs,       ptraceRepeats, 
@@ -35,26 +35,22 @@ scaled_data = (scaled_data - repmat(cal_shift,[nbrSoftAvgs*seqsPerFile 1]))./rep
 scaled_data = reshape(scaled_data,seqsPerFile,nbrSoftAvgs*nbrExpts*nbrFiles);
 
 % and now we can rescale the averaged, reshaped data
-reshaped_data = reshape(tensor_mean(tensor_sum(reshaped_data(1:seqsPerFile,:,:,:,:),3),2),seqsPerFile,nbrExpts*nbrFiles);
-scaled_avg_data = (reshaped_data - repmat(cal_shift,[seqsPerFile 1]))./repmat(cal_scale,[seqsPerFile 1]);
+% reshaped_data = reshape(tensor_mean(tensor_sum(reshaped_data(1:seqsPerFile,:,:,:,:),3),2),seqsPerFile,nbrExpts*nbrFiles);
+% scaled_avg_data = (reshaped_data - repmat(cal_shift,[seqsPerFile 1]))./repmat(cal_scale,[seqsPerFile 1]);
 
 % we can now line up all experiments, and have each overlap experiment in a
 % different row
 scaled_data = permute(reshape(scaled_data,seqsPerFile,nbrSoftAvgs,nbrExpts,nbrFiles),[2,1,3,4]);
 scaled_data = reshape(scaled_data,nbrSoftAvgs,seqsPerFile*nbrExpts*nbrFiles);
 
-scaled_avg_data = permute(reshape(scaled_avg_data,seqsPerFile,nbrExpts,nbrFiles),[1,3,2]);
-scaled_avg_data = reshape(scaled_avg_data,seqsPerFile*nbrFiles,nbrExpts);
+% scaled_avg_data = permute(reshape(scaled_avg_data,seqsPerFile,nbrExpts,nbrFiles),[1,3,2]);
+% scaled_avg_data = reshape(scaled_avg_data,seqsPerFile*nbrFiles,nbrExpts);
 
-% now we sum over the twirls
-% bounds = cumsum([0 nbrTwirls]);
-% decays = zeros(length(nbrTwirls),nbrExpts);
-% for ii=1:length(bounds)-1,
-%     decays(ii,:) = sum(scaled_avg_data(bounds(ii)+1:bounds(ii)+1,:),2);
-% end
-% decays = decays;
 decays = avg_and_twirl(scaled_data, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls);
 
+% now we bootstrap to get errorbounds (upper and lower)
+stat = @(resampled_data) avg_and_twirl(resampled_data, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls);
+err_bars = bootci(500, stat, scaled_data);
 end
 
 function v = vec(M)
