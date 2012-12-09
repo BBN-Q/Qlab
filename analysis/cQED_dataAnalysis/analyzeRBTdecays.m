@@ -62,11 +62,11 @@ function v = vec(M)
 end
 
 function decays = avg_and_twirl( data, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls )
-    avg_data = reshape(tensor_mean(data,1),seqsPerFile*nbrExpts,nbrFiles);
+    avg_data = reshape(tensor_mean(data,1),seqsPerFile*nbrFiles,nbrExpts);
     bounds = cumsum([0 nbrTwirls]);
     decays = zeros(length(nbrTwirls),nbrExpts);
     for ii=1:length(bounds)-1,
-        decays(ii,:) = sum(avg_data(bounds(ii)+1:bounds(ii)+1,:),2);
+        decays(ii,:) = tensor_mean(avg_data(bounds(ii)+1:bounds(ii+1),:),1);
     end
 end
 
