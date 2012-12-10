@@ -37,10 +37,10 @@ scaled_data = reshape(scaled_data,seqsPerFile,nbrSoftAvgs*nbrExpts*nbrFiles);
 scaled_data = permute(reshape(scaled_data,seqsPerFile,nbrSoftAvgs,nbrExpts,nbrFiles),[2,1,3,4]);
 scaled_data = reshape(scaled_data,nbrSoftAvgs,seqsPerFile*nbrExpts*nbrFiles);
 
-decays = avg_and_twirl(scaled_data, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls);
+decays = avg_and_twirl(scaled_data, seqLengthsPerExpt, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls);
 
 % now we bootstrap to get errorbounds (upper and lower)
-stat = @(resampled_data) avg_and_twirl(resampled_data, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls);
+stat = @(resampled_data) avg_and_twirl(resampled_data, seqLengthsPerExpt, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls);
 err_bars = bootci(500, stat, scaled_data);
 end
 
@@ -48,13 +48,22 @@ function v = vec(M)
   v = reshape(M,prod(size(M)),1);
 end
 
-function decays = avg_and_twirl( data, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls )
+function decays = avg_and_twirl( data, seqLengths, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls )
+    % first we average over the random samples & reshape
     avg_data = reshape(tensor_mean(data,1),seqsPerFile*nbrFiles,nbrExpts);
+    % and then we sum over the different sequences in the twirl
     bounds = cumsum([0 nbrTwirls]);
-    decays = zeros(length(nbrTwirls),nbrExpts);
+%     decays = zeros(length(seqLengths)+2,nbrExpts);
+    decays = zeros(length(seqLengths),nbrExpts);
     for ii=1:length(bounds)-1,
-        decays(ii,:) = tensor_mean(avg_data(bounds(ii)+1:bounds(ii+1),:),1);
+        decays(ii,1:nbrExpts) = tensor_mean(avg_data(bounds(ii)+1:bounds(ii+1),:),1);
     end
+%     for jj=1:nbrExpts,
+%         % so now we can fit the exponential, by using the last point as the origin
+%         [alpha,c] = expfit(1,seqLengths(1),seqLengths(2)-seqLengths(1),...
+%             abs(decays(1:length(seqLengths)-1,jj)-decays(length(seqLengths),jj)));
+%         decays(length(seqLengths)+1:length(seqLengths)+2,jj)=real([sign(decays(1,jj)-decays(length(seqLengths),jj))*exp(alpha),c]');
+%     end    
 end
 
 function t = tensor_sum( M, v )
