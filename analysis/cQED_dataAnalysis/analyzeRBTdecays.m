@@ -37,10 +37,10 @@ scaled_data = reshape(scaled_data,seqsPerFile,nbrSoftAvgs*nbrExpts*nbrFiles);
 scaled_data = permute(reshape(scaled_data,seqsPerFile,nbrSoftAvgs,nbrExpts,nbrFiles),[2,1,3,4]);
 scaled_data = reshape(scaled_data,nbrSoftAvgs,seqsPerFile*nbrExpts*nbrFiles);
 
-decays = avg_and_twirl(scaled_data, seqLengthsPerExpt, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls, exhaustiveFlags);
+decays = avg_and_twirl(scaled_data, seqLengthsPerExpt, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls, exhaustiveFlags, false);
 
 % now we bootstrap to get errorbounds (upper and lower)
-stat = @(resampled_data) avg_and_twirl(resampled_data, seqLengthsPerExpt, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls, exhaustiveFlags);
+stat = @(resampled_data) avg_and_twirl(resampled_data, seqLengthsPerExpt, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls, exhaustiveFlags, true);
 err_bars = bootci(500, {stat, scaled_data}, 'alpha', .05); % 1-alpha confidense interval
 end
 
@@ -48,28 +48,21 @@ function v = vec(M)
   v = reshape(M,prod(size(M)),1);
 end
 
-function decays = avg_and_twirl( data, seqLengths, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls, exhaustive )
+function decays = avg_and_twirl( data, seqLengths, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls, exhaustive, boot )
     % first we average over the random samples & reshape
     avg_data = reshape(tensor_mean(data,1),seqsPerFile*nbrFiles,nbrExpts);
     % and then we bootstrap over the different sequences in the twirl (if not exhaustive), and
     % average over the resulting sequence, 
     bounds = cumsum([0 nbrTwirls]);
-%     decays = zeros(length(seqLengths)+2,nbrExpts);
     decays = zeros(length(seqLengths),nbrExpts);
     for ii=1:length(bounds)-1,
-        if not(exhaustive(ii)),
+        if not(exhaustive(ii)) & boot,
             boot_indices = randi([(bounds(ii)+1) bounds(ii+1)],1,bounds(ii+1)-bounds(ii));
             decays(ii,1:nbrExpts) = tensor_mean(avg_data(boot_indices,:),1);
         else
             decays(ii,1:nbrExpts) = tensor_mean(avg_data(bounds(ii)+1:bounds(ii+1),:),1);
         end
     end
-%     for jj=1:nbrExpts,
-%         % so now we can fit the exponential, by using the last point as the origin
-%         [alpha,c] = expfit(1,seqLengths(1),seqLengths(2)-seqLengths(1),...
-%             abs(decays(1:length(seqLengths)-1,jj)-decays(length(seqLengths),jj)));
-%         decays(length(seqLengths)+1:length(seqLengths)+2,jj)=real([sign(decays(1,jj)-decays(length(seqLengths),jj))*exp(alpha),c]');
-%     end    
 end
 
 
