@@ -41,7 +41,7 @@ decays = avg_and_twirl(scaled_data, seqLengthsPerExpt, seqsPerFile, nbrExpts, nb
 
 % now we bootstrap to get errorbounds (upper and lower)
 stat = @(resampled_data) avg_and_twirl(resampled_data, seqLengthsPerExpt, seqsPerFile, nbrExpts, nbrFiles, nbrTwirls, exhaustiveFlags);
-err_bars = bootci(500, stat, scaled_data);
+err_bars = bootci(500, {stat, scaled_data}, 'alpha', .05); % 1-alpha confidense interval
 end
 
 function v = vec(M)
