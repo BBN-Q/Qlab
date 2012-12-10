@@ -24,12 +24,12 @@ cal_data = tensor_mean(tensor_sum(reshape(cal_data,nbrCals/2,2,ptraceRepeats,nbr
 % the result is one expectation for ground, one expectation value for
 % excited, which we then use to set the scale and shift for the rest of the
 % data (each experiment in each file must be rescaled independently)
-cal_scale = reshape(cal_data(2,:,:) - cal_data(1,:,:),1,nbrExpts*nbrFiles);
+cal_scale = reshape(cal_data(1,:,:) - cal_data(2,:,:),1,nbrExpts*nbrFiles);
 cal_shift = reshape((cal_data(2,:,:) + cal_data(1,:,:))/2,1,nbrExpts*nbrFiles);
 
 % now we can rescale the unaveraged (but traced out) data (useful for bootstraping)
 scaled_data = reshape(tensor_sum(reshaped_data(1:seqsPerFile,:,:,:,:),3),seqsPerFile*nbrSoftAvgs,nbrExpts*nbrFiles);
-scaled_data = (scaled_data - repmat(cal_shift,[nbrSoftAvgs*seqsPerFile 1]))./repmat(cal_scale,[nbrSoftAvgs*seqsPerFile 1]);
+scaled_data = 2*(scaled_data - repmat(cal_shift,[nbrSoftAvgs*seqsPerFile 1]))./repmat(cal_scale,[nbrSoftAvgs*seqsPerFile 1]);
 scaled_data = reshape(scaled_data,seqsPerFile,nbrSoftAvgs*nbrExpts*nbrFiles);
 
 % we can now line up all experiments, and have each overlap experiment in a
