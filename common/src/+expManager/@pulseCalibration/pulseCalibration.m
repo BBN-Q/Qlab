@@ -96,25 +96,25 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         end
 
         function [cost, J] = Xpi2ObjectiveFnc(obj, x0)
-            [cost, Jtmp] = obj.pi2ObjectiveFunction(x0, obj.ExpParams.Qubit, 'X');
+            [cost, Jtmp] = obj.pi2ObjectiveFunction(x0, 'X');
             if nargout > 1
                 J = Jtmp;
             end
         end
         function [cost, J] = Ypi2ObjectiveFnc(obj, x0)
-            [cost, Jtmp] = obj.pi2ObjectiveFunction(x0, obj.ExpParams.Qubit, 'Y');
+            [cost, Jtmp] = obj.pi2ObjectiveFunction(x0, 'Y');
             if nargout > 1
                 J = Jtmp;
             end
         end
         function [cost, J] = XpiObjectiveFnc(obj, x0)
-            [cost, Jtmp] = obj.piObjectiveFunction(x0, obj.ExpParams.Qubit, 'X');
+            [cost, Jtmp] = obj.piObjectiveFunction(x0, 'X');
             if nargout > 1
                 J = Jtmp;
             end
         end
         function [cost, J] = YpiObjectiveFnc(obj, x0)
-            [cost, Jtmp] = obj.piObjectiveFunction(x0, obj.ExpParams.Qubit, 'Y');
+            [cost, Jtmp] = obj.piObjectiveFunction(x0, 'Y');
             if nargout > 1
                 J = Jtmp;
             end

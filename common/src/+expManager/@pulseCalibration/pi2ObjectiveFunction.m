@@ -1,4 +1,4 @@
-function [cost, J] = pi2ObjectiveFunction(obj, x, qubit, direction)
+function [cost, J] = pi2ObjectiveFunction(obj, x, direction)
     pi2Amp = real(x(1));
     offset = real(x(2));
     fprintf('pi2Amp: %.1f, offset: %.4f\n', pi2Amp, offset);
@@ -18,7 +18,7 @@ function [cost, J] = pi2ObjectiveFunction(obj, x, qubit, direction)
     if ~obj.testMode
         obj.pulseParams.(chan) = offset;
         % load sequence
-        obj.loadSequence(filenames, qubit);
+        obj.loadSequence(filenames, 2);
     end
     
     % measure

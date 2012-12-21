@@ -21,33 +21,18 @@ pg = PatternGen(qubit,...
     'SSBFreq', obj.pulseParams.SSBFreq,...
     'cycleLength', cycleLength);
 
+patseq = cell(19,1);
 patseq{1} = {pg.pulse('QId')};
 
 % +X/Y rotations
-X90p = pg.pulse([direction '90p']);
-Xp   = pg.pulse([direction 'p']);
-patseq{2}={X90p};
-patseq{3}={X90p, Xp};
-patseq{4}={X90p, Xp, Xp};
-patseq{5}={X90p, Xp, Xp, Xp};
-patseq{6}={X90p, Xp, Xp, Xp, Xp};
-patseq{7}={X90p, Xp, Xp, Xp, Xp, Xp};
-patseq{8}={X90p, Xp, Xp, Xp, Xp, Xp, Xp};
-patseq{9}={X90p, Xp, Xp, Xp, Xp, Xp, Xp, Xp};
-patseq{10}={X90p, Xp, Xp, Xp, Xp, Xp, Xp, Xp, Xp};
+pulse90p = pg.pulse([direction '90p']);
+pulse180p   = pg.pulse([direction 'p']);
+patseq(2:10) =  arrayfun(@(x) [{pulse90p}, repmat({pulse180p}, 1, x)], [0:8], 'UniformOutput', false);
 
 % -X/Y rotations
-X90m = pg.pulse([direction '90m']);
-Xm   = pg.pulse([direction 'm']);
-patseq{11}={X90m};
-patseq{12}={X90m, Xm};
-patseq{13}={X90m, Xm, Xm};
-patseq{14}={X90m, Xm, Xm, Xm};
-patseq{15}={X90m, Xm, Xm, Xm, Xm};
-patseq{16}={X90m, Xm, Xm, Xm, Xm, Xm};
-patseq{17}={X90m, Xm, Xm, Xm, Xm, Xm, Xm};
-patseq{18}={X90m, Xm, Xm, Xm, Xm, Xm, Xm, Xm};
-patseq{19}={X90m, Xm, Xm, Xm, Xm, Xm, Xm, Xm, Xm};
+pulse90m = pg.pulse([direction '90m']);
+pulse180m   = pg.pulse([direction 'm']);
+patseq(11:19) =  arrayfun(@(x) [{pulse90m}, repmat({pulse180m}, 1, x)], [0:8], 'UniformOutput', false);
 
 nbrRepeats = 2;
 nbrPatterns = nbrRepeats*length(patseq);
