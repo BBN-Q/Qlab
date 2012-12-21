@@ -8,12 +8,10 @@ function RamseyCalSequence(qubit, pulseSpacings, pulsePhases, makePlot)
 
 basename = 'Ramsey';
 fixedPt = pulseSpacings(end)+1000;
-cycleLength = fixedPt+2000; 
+cycleLength = fixedPt+2100; 
 nbrRepeats = 1;
 
-% if using SSB, set the frequency here
-SSBFreq = 0e6;
-pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
+pg = PatternGen(qubit);
 
 patseq = {{...
     pg.pulse('X90p'), ...

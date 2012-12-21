@@ -15,7 +15,7 @@ nbrRepeats = 1;
 SSBFreq = 0e6;
 pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
 
-patseq = {{pg.pulse('Xtheta', 'amp', amps)}};
+patseq = {{pg.pulse('Utheta', 'amp', amps)}};
 % patseq = {{pg.pulse('Xtheta', 'amp', amps), pg.pulse('QId', 'width', 120)}};
 calseq = [];
 
