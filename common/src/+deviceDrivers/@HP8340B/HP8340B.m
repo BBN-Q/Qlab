@@ -1,4 +1,4 @@
-classdef (Sealed) HP8340B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
+classdef (Sealed) HP8340B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBorEthernet
     %HP8340B
     %
     %
@@ -28,12 +28,12 @@ classdef (Sealed) HP8340B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
 		% Instrument parameter accessors
         function val = get.frequency(obj)
             gpib_string = 'OK';
-            temp = obj.Query([gpib_string]);
-            val = str2double(temp);
+            temp = obj.query([gpib_string]);
+            val = str2double(temp)*1e-9; % convert to GHz;
         end
         function val = get.power(obj)
             gpib_string = 'OR';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = str2double(temp);
         end
         function obj = set.frequency(obj, value)
@@ -46,7 +46,7 @@ classdef (Sealed) HP8340B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
                 error('Invalid input');
             end
             gpib_string = sprintf(gpib_string,value);
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.power(obj, value)
             gpib_string = 'PL %d DB';
@@ -59,8 +59,25 @@ classdef (Sealed) HP8340B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
             end
             
             gpib_string = sprintf(gpib_string,value);
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
+        function obj = set.pulse(obj, value)
+            gpib_string = 'PM%d';
+            if isnumeric(value)
+                value = num2str(value);
+            end
+            
+            % Validate input
+            checkMapObj = containers.Map({'on','1','off','0'},...
+                {1, 1, 0, 0});
+            if not (checkMapObj.isKey( lower(value) ))
+                error('Invalid input');
+            end
+            
+            gpib_string = sprintf(gpib_string, checkMapObj(value));
+            obj.write(gpib_string);
+        end
+      
         function obj = set.output(obj, value)
             gpib_string = 'RF%d';
             if isnumeric(value)
@@ -75,7 +92,7 @@ classdef (Sealed) HP8340B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
             end
             
             gpib_string = sprintf(gpib_string, checkMapObj(value));
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
     end % end instrument parameter accessors
     
