@@ -18,8 +18,17 @@ classdef (Sealed) BNC845 < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBor
         function obj = BNC845()
             obj.DEFAULT_PORT = 18;
         end
-		
-		% Instrument parameter accessors
+        
+        function connect(obj, address)
+            %Call the superclass connector
+            connect@deviceDrivers.lib.GPIBorEthernet(obj, address);
+            
+            %Setup the reference every time
+            obj.write('SOUR:ROSC:EXT:FREQ 10E6');
+            obj.write('SOUR:ROSC:SOUR EXT');
+        end
+        
+        % Instrument parameter accessors
         % getters
         function val = get.frequency(obj)
             val = str2double(obj.query('SOURCE:FREQUENCY?'));
