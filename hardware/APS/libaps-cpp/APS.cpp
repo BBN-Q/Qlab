@@ -1538,6 +1538,13 @@ int APS::read_LL_addr(const int & dac){
 }
 
 
+int APS::read_miniLL_startAddr(const FPGASELECT & fpga){
+	/*
+	 * Read the start of the currently playing miniLL
+	 */
+	return FPGA::read_FPGA(handle_, FPGA_ADDR_CHA_MINILLSTART, fpga);
+}
+
 int APS::save_state_file(string & stateFile){
 
 	if (stateFile.length() == 0) {
@@ -1609,15 +1616,9 @@ void BankBouncerThread::run(){
 	//The current addresses in hardware and software
 	//nextMiniLL is the final miniLL we would like to write (% #miniLL's)
 	//lastMiniLL is the last miniLL we have written (% #miniLL's)
-	//curAddrHW is the currently playing LL entry in hardware (% MAX_LL_LENGTH)
+	//curAddrHW is the hardware address of start of the currently playing miniLL (% MAX_LL_LENGTH)
 	//nextWriteAddrHW is the next address we write to in hardware (% MAX_LL_LENGTH)
-	int nextMiniLL, lastMiniLL, curAddrHW, nextWriteAddrHW, firstMiniLLAddr;
-	//boundaryLLEntry helps us map from hardware address back to software by keeping
-	//track of what entry is written to the first hardware address. We make this a queue
-	//because when we overwrite the beginning of LL memory, curAddr is related to the
-	//current LL entry by the *previous* boundaryLLEntry. Only once curAddr has wrapped
-	//around the end of LL memory can we throw out the old boundaryLLEntry.
-	std::queue<int> boundaryLLEntry;
+	int nextMiniLL, lastMiniLL, curAddrHW, nextWriteAddrHW;
 
 	//Get a pointer shortcut to the current bank
 	LLBank* curLLBank = &myAPS_->channels_[channel_].LLBank_;
@@ -1627,35 +1628,6 @@ void BankBouncerThread::run(){
 		//Check how many we can fit in
 		int entriesOpen = mymod(curAddrHW-nextWriteAddrHW, MAX_LL_LENGTH);
 		int entriesToWrite = 0;
-		//Find the currently playing miniLL by comparing the playing LL entry with the start points
-		int currentEntry;
-		// if we are between the first miniLL in memory and the last written address, we have
-		// wrapped around the end of LL memory. Update the boundaryLLEntry queue
-		if ((curAddrHW > firstMiniLLAddr) && (curAddrHW < nextWriteAddrHW) && (boundaryLLEntry.size() > 1)){
-			 boundaryLLEntry.pop();
-		}
-		// if curAddr is less than the first miniLL in memory, we are wrapping around the end of memory,
-		// but cannot throw out the old boundaryLLEntry yet
-		if (curAddrHW < firstMiniLLAddr){
-			currentEntry = mymod(curAddrHW + boundaryLLEntry.front() + MAX_LL_LENGTH, curLLBank->length);
-		}
-		else{
-			 currentEntry = mymod(curAddrHW + boundaryLLEntry.front(), curLLBank->length);
-		}
-
-		FILE_LOG(logDEBUG1) << "firstMiniLLAddr: " << firstMiniLLAddr << "; Current Entry: " << currentEntry;
-		FILE_LOG(logDEBUG1) << "curBoundaryLLEntry: " << boundaryLLEntry.front() << "; queue size: " << boundaryLLEntry.size();
-		//Subtract off the size of the currently playing miniLL
-		//If the currentEntry is in the last miniLL, then we immediately know the index of the LL start
-		if (currentEntry >= curLLBank->miniLLStartIdx.back()){
-			entriesOpen -= (currentEntry-curLLBank->miniLLStartIdx.back());
-		}
-		//Otherwise use (upper_bound - 1) to find the current start point
-		else{
-			WordVec::iterator nextMiniLLIt = std::upper_bound(curLLBank->miniLLStartIdx.begin(), curLLBank->miniLLStartIdx.end(), currentEntry);
-			entriesOpen -= (currentEntry-*(nextMiniLLIt-1));
-			FILE_LOG(logDEBUG1) << "Start of playing miniLL: " << *(nextMiniLLIt-1);
-		}
 		while ((entriesToWrite + curLLBank->miniLLLengths[nextMiniLL]) < entriesOpen){
 			entriesToWrite += curLLBank->miniLLLengths[nextMiniLL];
 			nextMiniLL = (nextMiniLL+1)%curLLBank->numMiniLLs;
@@ -1671,19 +1643,16 @@ void BankBouncerThread::run(){
 
 	// Fill sequence memory
 	myAPS_->write_LL_data_IQ(fpga, 0, 0, MAX_LL_LENGTH, false);
+
 	// find the index of the last full miniLL that fit in memory
 	WordVec::iterator lastMiniLLIdxIt = std::lower_bound(curLLBank->miniLLStartIdx.begin(), curLLBank->miniLLStartIdx.end(), MAX_LL_LENGTH);
 	nextMiniLL = std::distance(curLLBank->miniLLStartIdx.begin(), lastMiniLLIdxIt) - 1;
 	lastMiniLL = nextMiniLL - 1;
 
-	// After initializing, the boundary entry and first miniLL addr are both index 0.
-	boundaryLLEntry.push(0);
-	firstMiniLLAddr = 0;
-
 	nextWriteAddrHW = curLLBank->miniLLStartIdx[nextMiniLL];
 	curAddrHW = 0;
 
-	//Let the main thread know we are done
+	//Let the main thread know we are ready to roll
 	myAPS_->streaming_ = true;
 	myAPS_->mymutex_->unlock();
 
@@ -1691,30 +1660,22 @@ void BankBouncerThread::run(){
 	while(running_) {
 		//Poll for current hardware address
 		myAPS_->mymutex_->lock();
-		curAddrHW = myAPS_->read_LL_addr(fpga);
+		curAddrHW = myAPS_->read_miniLL_startAddr(fpga);
 		myAPS_->mymutex_->unlock();
 		FILE_LOG(logDEBUG1) << "Device ID: " << myAPS_->deviceID_ << " Current LL Addr: " << curAddrHW;
 
-
 		//See how many more miniLL's we can fit in
-       		entries_can_write();
+		entries_can_write();
 
 		//If there is something to write then do so
 		if (mymod(nextMiniLL - lastMiniLL, curLLBank->numMiniLLs) > 1){
 			size_t startMiniLL = (lastMiniLL+1)%curLLBank->numMiniLLs;
 			USHORT curWriteAddrHW = nextWriteAddrHW;
+			myAPS_->mymutex_->lock();
 			myAPS_->write_LL_data_IQ(fpga, USHORT(curWriteAddrHW), curLLBank->miniLLStartIdx[startMiniLL] , curLLBank->miniLLStartIdx[nextMiniLL], false);
+			myAPS_->mymutex_->unlock();
+			//Update where we want to write to next
 			nextWriteAddrHW = mymod(nextWriteAddrHW + mymod(curLLBank->miniLLStartIdx[nextMiniLL] - curLLBank->miniLLStartIdx[startMiniLL], curLLBank->length), MAX_LL_LENGTH);
-			// if we've wrapped around, need to update state information about the miniLL index and entry of the left-most edge
-			if (nextWriteAddrHW < curWriteAddrHW) {
-				boundaryLLEntry.push(MAX_LL_LENGTH - curWriteAddrHW + curLLBank->miniLLStartIdx[startMiniLL]);
-				firstMiniLLAddr = curWriteAddrHW;
-				while (firstMiniLLAddr < MAX_LL_LENGTH) {
-					firstMiniLLAddr += curLLBank->miniLLLengths[startMiniLL];
-					startMiniLL = (startMiniLL+1)%curLLBank->numMiniLLs;
-				}
-				firstMiniLLAddr -= MAX_LL_LENGTH;
-			}
 			lastMiniLL = nextMiniLL-1;
 		}
 
@@ -1722,5 +1683,6 @@ void BankBouncerThread::run(){
 		std::this_thread::sleep_for( std::chrono::milliseconds(10) );
 	}
 	
+
 
 }
