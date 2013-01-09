@@ -43,27 +43,31 @@ int APSRack::get_num_devices()  {
 }
 
 string APSRack::get_deviceSerial(const int & deviceID) {
+
+	// Get serials from FTDI layer to check for change in devices
 	vector<string> testSerials;
 	FTDI::get_device_serials(testSerials);
 
 	bool runUpdate = false;
 
+	// if the number of devices has changed re-enumerate
 	if (testSerials.size() != (unsigned int) numDevices_) {
 		runUpdate = true;
 	} else {
-		// match serials to make sure nothing has changed
+		// match serials for each device id to make sure nothing has changed
 		for(unsigned int cnt = 0; cnt < testSerials.size() && ! runUpdate; cnt++) {
 			if (testSerials[cnt].compare(deviceSerials_[cnt]) != 0) {
-				runUpdate = true;
+				runUpdate = true;  
 			}
 		}
 	}
 
+	// number or serials do not match so update enumeration
 	if (runUpdate) {
 		update_device_enumeration();
 	}
 
-	// test to make sure size is still valid
+	// test to make sure ID is still valid relative to vector size
 	if ((unsigned int) deviceID > deviceSerials_.size()) {
 		return "InvalidID";
 	}
@@ -92,29 +96,30 @@ void APSRack::enumerate_devices() {
 	}
 }
 
-// This will update enumerate of devices by matchin serial numbers
+// This will update enumerate of devices by matching serial numbers
 // If a device is missing it will be remove
 // New devices are added 
-// Old devices are left as is
+// Old devices are left as is (moved in place to new vector)
 void APSRack::update_device_enumeration() {
+
+	// get serial numbers from FTDI layer
 	vector<string> newSerials;
 	FTDI::get_device_serials(newSerials);
 
-	// construct new APS_ vector * new serial2dev map
+	// construct new APS_ vector & new serial2dev map
 	vector<APS> newAPS_;
 	map<string, int> newSerial2dev;
 
 	size_t devicect = 0;
 	for (string tmpSerial : newSerials) {
 
-		newSerial2dev[tmpSerial] = devicect;
-
 		// does the new serial number exist in the old list?
 		if ( serial2dev.count(tmpSerial) > 0) {
-			// copy from old APS_ vector to new
+			// move from old APSs_ vector to new
 			newAPS_.push_back(std::move(APSs_[serial2dev[tmpSerial]]));
 			FILE_LOG(logDEBUG) << "Old Device " << devicect << " [ " << tmpSerial << " ] Copied";
 		} else {
+			// does not exist so construct it in the new vector
 			newAPS_.emplace_back(devicect, tmpSerial);
 			FILE_LOG(logDEBUG) << "New Device " << devicect << " has serial number " << tmpSerial;
 		}
