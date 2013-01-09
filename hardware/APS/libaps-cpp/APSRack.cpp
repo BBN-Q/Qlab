@@ -33,13 +33,42 @@ int APSRack::initAPS(const int & deviceID, const string & bitFile, const bool & 
 	return APSs_[deviceID].init(bitFile, forceReload);
 }
 
-int APSRack::get_num_devices() const {
+int APSRack::get_num_devices()  {
 	int numDevices;
 	FT_ListDevices(&numDevices, NULL, FT_LIST_NUMBER_ONLY);
+	if (numDevices_ != numDevices) {
+		update_device_enumeration();
+	}
 	return numDevices;
 }
 
-string APSRack::get_deviceSerial(const int & deviceID) const{
+string APSRack::get_deviceSerial(const int & deviceID) {
+	vector<string> testSerials;
+	FTDI::get_device_serials(testSerials);
+
+	bool runUpdate = false;
+
+	if (testSerials.size() != (unsigned int) numDevices_) {
+		runUpdate = true;
+	} else {
+		// match serials to make sure nothing has changed
+		for(unsigned int cnt = 0; cnt < testSerials.size() && ! runUpdate; cnt++) {
+			if (testSerials[cnt].compare(deviceSerials_[cnt]) != 0) {
+				runUpdate = true;
+			}
+		}
+	}
+
+	if (runUpdate) {
+		update_device_enumeration();
+	}
+
+	// test to make sure size is still valid
+	if ((unsigned int) deviceID > deviceSerials_.size()) {
+		return "InvalidID";
+	}
+
+
 	return deviceSerials_[deviceID];
 }
 
@@ -62,6 +91,47 @@ void APSRack::enumerate_devices() {
 		devicect++;
 	}
 }
+
+// This will update enumerate of devices by matchin serial numbers
+// If a device is missing it will be remove
+// New devices are added 
+// Old devices are left as is
+void APSRack::update_device_enumeration() {
+	vector<string> newSerials;
+	FTDI::get_device_serials(newSerials);
+
+	// construct new APS_ vector * new serial2dev map
+	vector<APS> newAPS_;
+	map<string, int> newSerial2dev;
+
+	size_t devicect = 0;
+	for (string tmpSerial : newSerials) {
+
+		newSerial2dev[tmpSerial] = devicect;
+
+		// does the new serial number exist in the old list?
+		if ( serial2dev.count(tmpSerial) > 0) {
+			// copy from old APS_ vector to new
+			newAPS_.push_back(std::move(APSs_[serial2dev[tmpSerial]]));
+			FILE_LOG(logDEBUG) << "Old Device " << devicect << " [ " << tmpSerial << " ] Copied";
+		} else {
+			newAPS_.emplace_back(devicect, tmpSerial);
+			FILE_LOG(logDEBUG) << "New Device " << devicect << " has serial number " << tmpSerial;
+		}
+
+		newSerial2dev[tmpSerial] = devicect;
+		devicect++;
+	}
+
+	// update APSRack members with new lists
+
+	numDevices_ = deviceSerials_.size();  // number of devices
+	deviceSerials_ = newSerials;		  // device serial vector
+	APSs_ = std::move(newAPS_);           // APS vector
+	serial2dev = newSerial2dev;           // serial to device vector
+}
+
+
 
 int APSRack::read_bitfile_version(const int & deviceID) const {
 	return APSs_[deviceID].read_bitFile_version(ALL_FPGAS);
