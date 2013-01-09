@@ -1,9 +1,23 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% First author/Date : C.B. Lirakis / 17-Jul-09
+% CLASS GPIB - Simple wrapper for MATLAB's instrument control toolbox
+% gpib class
+
+% Original authors: Colm Ryan and Blake Johnson
+
+% Copyright 2012 Raytheon BBN Technologies
 %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Licensed under the Apache License, Version 2.0 (the "License");
+% you may not use this file except in compliance with the License.
+% You may obtain a copy of the License at
 %
-classdef GPIB < deviceDrivers.lib.deviceDriverBase
+%     http://www.apache.org/licenses/LICENSE-2.0
+%
+% Unless required by applicable law or agreed to in writing, software
+% distributed under the License is distributed on an "AS IS" BASIS,
+% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+% See the License for the specific language governing permissions and
+% limitations under the License.
+%
+classdef GPIB < hgsetget
     properties
         interface = []
         buffer_size = 1048576 % 1 MB buffer
@@ -32,9 +46,7 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
             flushoutput(obj.interface);
             fclose(obj.interface);
         end
-        %%
-        % Destructor method
-        %
+
         function delete(obj)
             obj.disconnect();
         end
@@ -58,19 +70,6 @@ classdef GPIB < deviceDrivers.lib.deviceDriverBase
         
         function val = binblockread(obj, varargin)
             val = binblockread(obj.interface, varargin{:});
-        end
-        
-        % instrument meta-setter
-        function setAll(obj, settings)
-            fields = fieldnames(settings);
-            for j = 1:length(fields);
-                name = fields{j};
-                if ismember(name, methods(obj))
-                    feval(['obj.' name], settings.(name));
-                elseif ismember(name, properties(obj))
-                    obj.(name) = settings.(name);
-                end
-            end
         end
     end
     

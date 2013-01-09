@@ -1,4 +1,4 @@
-classdef (Sealed) HP8673B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
+classdef (Sealed) HP8673B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBorEthernet
     %HP8673B
     %
     %
@@ -26,7 +26,7 @@ classdef (Sealed) HP8673B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIB
         function val = get.frequency(obj)
             gpib_string = 'FR';
             temp = obj.query([gpib_string '?']);
-			expr = 'FR(\d+)HZ';
+			expr = 'CF(\d+)HZ';
             tokens = regexp(temp, expr, 'tokens');
             val = str2double(tokens{1})/1e9;
         end

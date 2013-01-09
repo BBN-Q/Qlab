@@ -3,7 +3,7 @@ function RandomizedBenchmarking(qubit, makePlot)
 basename = 'RB';
 fixedPt = 27000;
 cycleLength = 30000;
-nbrRepeats = 1;
+nbrRepeats = 100;
 introduceError = 0;
 errorAmp = 0.2;
 

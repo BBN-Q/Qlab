@@ -34,7 +34,7 @@ end
 if ExpParams.DoRabiAmp
    [filenames, nbrSegments] = obj.rabiAmpChannelSequence(ExpParams.Qubit);
    if ~obj.testMode
-       obj.loadSequence(filenames);
+       obj.loadSequence(filenames, 1);
    end
    
    piAmpGuesses = zeros([3,1]);
@@ -143,7 +143,7 @@ if ExpParams.DoDRAGCal
         deltas = linspace(-2,0,11)';
     end
     [filenames, nbrSegments] = obj.APEChannelSequence(ExpParams.Qubit, deltas);
-    obj.loadSequence(filenames);
+    obj.loadSequence(filenames, 1);
 
     % measure
     data = obj.homodyneMeasurement(nbrSegments);
@@ -163,7 +163,7 @@ end
 if ExpParams.DoSPAMCal
     % generate DRAG calibration sequence
     [filenames, nbrSegments] = obj.SPAMChannelSequence(ExpParams.Qubit);
-    obj.loadSequence(filenames);
+    obj.loadSequence(filenames, 1);
 
     % measure
     data = obj.homodyneMeasurement(nbrSegments);

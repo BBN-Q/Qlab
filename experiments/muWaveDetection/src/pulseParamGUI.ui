@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>473</width>
-    <height>351</height>
+    <width>516</width>
+    <height>446</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -134,6 +134,16 @@
            </item>
            <item row="7" column="1">
             <widget class="QLineEdit" name="buffer"/>
+           </item>
+           <item row="8" column="1">
+            <widget class="QLineEdit" name="SSBFreq"/>
+           </item>
+           <item row="8" column="0">
+            <widget class="QLabel" name="label_18">
+             <property name="text">
+              <string>SSBFreq</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </item>
@@ -346,8 +356,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>473</width>
-     <height>20</height>
+     <width>516</width>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

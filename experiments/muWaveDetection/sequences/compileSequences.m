@@ -68,6 +68,8 @@ for IQkey = channelNames
     bufferIQkey = channelMap.marker;
     ChParams = params.(IQkey);
     pg = patternDict(IQkey).pg;
+    %Update to have uniform cycleLength's
+    pg.cycleLength = seqParams.cycleLength;
     patseq = patternDict(IQkey).patseq;
     calseq = patternDict(IQkey).calseq;
     

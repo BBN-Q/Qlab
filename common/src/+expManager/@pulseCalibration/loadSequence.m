@@ -1,4 +1,4 @@
-function loadSequence(obj, paths, qubit)
+function loadSequence(obj, paths, numRepeats)
     % loadSequence(paths)
     % Load a set of pattern files onto one or more AWGs
     
@@ -18,6 +18,7 @@ function loadSequence(obj, paths, qubit)
         awg = obj.awg{i};
         params.seqfile = paths{i};
         params.seqforce = 1;
+        params.miniLLRepeat = numRepeats-1;
         awg.setAll(params);
         obj.awgParams{i} = params;
     end

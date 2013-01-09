@@ -130,6 +130,8 @@ private:
 	int stream_LL_data(const int);
 	int read_LL_addr(const FPGASELECT &);
 	int read_LL_addr(const int &);
+	int read_miniLL_startAddr(const FPGASELECT &);
+
 
 
 
