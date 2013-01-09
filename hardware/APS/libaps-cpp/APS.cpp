@@ -425,6 +425,7 @@ int APS::run() {
 }
 
 int APS::stop() {
+
 	// stop all channels
 	for (int chanct = 0; chanct < 4; ++chanct) {
 		if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH){
@@ -432,8 +433,21 @@ int APS::stop() {
 		}
 	}
 
+	//Try to stop in a wait for trigger state by making the trigger interval long
+	//This leaves the flip-flops in a known state
+	auto curTriggerInt = get_trigger_interval();
+	auto curTriggerSource = get_trigger_source();
+	set_trigger_interval(1);
+	set_trigger_source(INTERNAL);
+	usleep(1000);
+
 	//Put the state machines back in reset
-	FPGA::clear_bit(handle_, ALL_FPGAS, 0, CSRMSK_CHA_SMRSTN);
+	FPGA::clear_bit(handle_, FPGA1, 0, CSRMSK_CHA_SMRSTN);
+	FPGA::clear_bit(handle_, FPGA2, 0, CSRMSK_CHA_SMRSTN);
+
+	// restore trigger state
+	set_trigger_interval(curTriggerInt);
+	set_trigger_source(curTriggerSource);
 
 	return 0;
 
