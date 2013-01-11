@@ -44,9 +44,23 @@ int APSRack::get_num_devices()  {
 
 string APSRack::get_deviceSerial(const int & deviceID) {
 
-	// Call get_num_devices to update if enumeration if the number of devices has changed.
-	// We would like to check serials but if we are already connected we can't.
+	// get current number of devices
 	get_num_devices();
+
+	// Get serials from FTDI layer to check for change in devices
+	vector<string> testSerials;
+	FTDI::get_device_serials(testSerials);
+
+	// match serials for each device id to make sure mapping of device count to serial
+	// number is still correct
+	// if serial number is different re-enumerate
+	for(unsigned int cnt = 0; cnt < testSerials.size(); cnt++) {
+		if (testSerials[cnt].compare(deviceSerials_[cnt]) != 0) {
+			FILE_LOG(logDEBUG) << testSerials[cnt] << " does not match " << deviceSerials_[cnt] << " re-enumerating.";
+			update_device_enumeration();
+			break;
+		}
+	}
 
 	// test to make sure ID is valid relative to vector size
 	if (static_cast<size_t>(deviceID) > deviceSerials_.size()) {
@@ -86,11 +100,6 @@ void APSRack::enumerate_devices() {
 // Old devices are left as is (moved in place to new vector)
 void APSRack::update_device_enumeration() {
 
-	// get serial numbers from FTDI layer
-	//Have to disconnect everything first
-	for (auto & aps : APSs_){
-		aps.disconnect();
-	}
 	vector<string> newSerials;
 	FTDI::get_device_serials(newSerials);
 
@@ -100,7 +109,13 @@ void APSRack::update_device_enumeration() {
 
 	size_t devicect = 0;
 	for (string tmpSerial : newSerials) {
-		// does the new serial number exist in the old list?
+		
+		// example test to see if FTDI thinks device is open
+		if (FTDI::isOpen(devicect)) {
+			FILE_LOG(logDEBUG) << "Device " << devicect << " [ " << tmpSerial << " ] is open";
+		}
+
+		// does the new serial number exist in the old list? 
 		if ( serial2dev.count(tmpSerial) > 0) {
 			// move from old APSs_ vector to new
 			newAPS_.push_back(std::move(APSs_[serial2dev[tmpSerial]]));
@@ -108,7 +123,7 @@ void APSRack::update_device_enumeration() {
 		} else {
 			// does not exist so construct it in the new vector
 			newAPS_.emplace_back(devicect, tmpSerial);
-			FILE_LOG(logDEBUG) << "New Device " << devicect << " has serial number " << tmpSerial;
+			FILE_LOG(logDEBUG) << "New Device " << devicect << " [ " << tmpSerial << " ]";
 		}
 
 		newSerial2dev[tmpSerial] = devicect;
@@ -116,7 +131,7 @@ void APSRack::update_device_enumeration() {
 	}
 
 	// update APSRack members with new lists
-	numDevices_ = deviceSerials_.size();  // number of devices
+	numDevices_ = newSerials.size();  // number of devices
 	deviceSerials_ = newSerials;		  // device serial vector
 	APSs_ = std::move(newAPS_);           // APS vector
 	serial2dev = newSerial2dev;           // serial to device map
