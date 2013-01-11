@@ -55,6 +55,11 @@ int disconnect_by_serial(char * deviceSerial){
 }
 
 int serial2ID(char * deviceSerial){
+	if ( !APSRack_.serial2dev.count(deviceSerial)) {
+		// serial number not in map of known devices
+		return -1;
+	} 
+
 	return APSRack_.serial2dev[string(deviceSerial)];
 }
 

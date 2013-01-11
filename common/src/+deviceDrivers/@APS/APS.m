@@ -471,7 +471,7 @@ classdef APS < hgsetget
     %
     % These methods are subject to change.
     
-    methods (Access = private) 
+    methods (Access = public) 
         function load_library(obj)
             %Helper functtion to load the platform dependent library
             switch computer()
@@ -540,9 +540,15 @@ classdef APS < hgsetget
         end
         
         function val = openBySerialNum(aps,serial)
+            % re-enumerate to make sure cached serials are correct
+            [numDevices, deviceSerials] = aps.enumerate();
             %Open by device serial number
             id = calllib(aps.library_name, 'serial2ID', serial);
-            val = aps.open(id);
+            if (id >= 0) 
+               val = aps.open(id);
+            else
+                error('Device serial %s not found.', serial);
+            end
         end
         
         function val = readBitFileVersion(aps)
