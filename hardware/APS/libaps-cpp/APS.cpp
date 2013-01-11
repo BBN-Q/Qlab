@@ -7,9 +7,10 @@
 
 #include "APS.h"
 
-APS::APS() :  deviceID_{-1}, handle_{nullptr}, channels_(4), samplingRate_{-1}, writeQueue_(0), streaming_{false}, mymutex_{std::unique_ptr<std::mutex>(new std::mutex())} {}
+APS::APS() :  isOpen{false}, deviceID_{-1}, handle_{nullptr}, channels_(4), samplingRate_{-1}, writeQueue_(0),
+				streaming_{false}, mymutex_{std::unique_ptr<std::mutex>(new std::mutex())} {}
 
-APS::APS(int deviceID, string deviceSerial) :  deviceID_{deviceID}, deviceSerial_{deviceSerial},
+APS::APS(int deviceID, string deviceSerial) :  isOpen{false}, deviceID_{deviceID}, deviceSerial_{deviceSerial},
 		handle_{nullptr}, samplingRate_{-1}, writeQueue_(0), streaming_{false}, mymutex_{std::unique_ptr<std::mutex>(new std::mutex())} {
 			channels_.reserve(4);
 			myBankBouncerThreads_.reserve(4);
@@ -21,8 +22,8 @@ APS::APS(int deviceID, string deviceSerial) :  deviceID_{deviceID}, deviceSerial
 			checksums_[FPGA2] = CheckSum();
 };
 
-APS::APS(APS && other) : deviceID_{other.deviceID_}, handle_{other.handle_}, samplingRate_{other.samplingRate_}, writeQueue_{std::move(other.writeQueue_)},
-		streaming_{other.streaming_.load()}, mymutex_{std::move(other.mymutex_)} {
+APS::APS(APS && other) : isOpen{other.isOpen}, deviceID_{other.deviceID_}, handle_{other.handle_}, samplingRate_{other.samplingRate_},
+		writeQueue_{std::move(other.writeQueue_)}, streaming_{other.streaming_.load()}, mymutex_{std::move(other.mymutex_)} {
 	channels_.reserve(4);
 	myBankBouncerThreads_.reserve(4);
 	for(size_t ct=0; ct<4; ct++){
@@ -37,25 +38,36 @@ APS::APS(APS && other) : deviceID_{other.deviceID_}, handle_{other.handle_}, sam
 APS::~APS() = default;
 
 int APS::connect(){
-	int success = 0;
-	success = FTDI::connect(deviceID_, handle_);
-	if (success == 0) {
-		FILE_LOG(logINFO) << "Opened connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
+	if (!isOpen) {
+		int success = 0;
+		success = FTDI::connect(deviceID_, handle_);
+		if (success == 0) {
+			FILE_LOG(logINFO) << "Opened connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
+			isOpen = true;
+		}
+		// TODO: restore state information from file
+		return success;
 	}
-
-	// TODO: restore state information from file
-	return success;
+	else {
+		return 0;
+	}
 }
 
 int APS::disconnect(){
-	int success = 0;
-	success = FTDI::disconnect(handle_);
-	if (success == 0) {
-		FILE_LOG(logINFO) << "Closed connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
-	}
+	if (isOpen){
+		int success = 0;
+		success = FTDI::disconnect(handle_);
+		if (success == 0) {
+			FILE_LOG(logINFO) << "Closed connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
+			isOpen = false;
+		}
 
-	// TODO: save state information to file
-	return success;
+		// TODO: save state information to file
+		return success;
+	}
+	else{
+		return 0;
+	}
 }
 
 int APS::init(const string & bitFile, const bool & forceReload){

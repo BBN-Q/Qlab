@@ -76,6 +76,9 @@ public:
 	friend class APSRack;
 	friend class BankBouncerThread;
 
+	//Whether the FTDI connection is open
+	bool isOpen;
+
 private:
 
 	//Since the APS contains non-copyable mutexs and atomic members then explicitly prevent copying
