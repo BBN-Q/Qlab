@@ -471,7 +471,7 @@ classdef APS < hgsetget
     %
     % These methods are subject to change.
     
-    methods (Access = public) 
+    methods (Access = private) 
         function load_library(obj)
             %Helper functtion to load the platform dependent library
             switch computer()
