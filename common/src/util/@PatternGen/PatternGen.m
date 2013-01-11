@@ -363,7 +363,7 @@ classdef PatternGen < handle
                     linkList{ii}.(markerStr) = entryWidth - startDelay;
                     linkList{ii}.markerMode = 0;
                     state = 1;
-                elseif state == 1 && linkList{ii+1}.isZero && linkList{ii+1}.length > obj.bufferReset
+                elseif state == 1 && ((linkList{ii+1}.isZero && linkList{ii+1}.length > obj.bufferReset) || ii+1 == LLlength)
                     %Time from beginning of pulse LL entry that trigger needs to go
                     %low to end gate pulse
                     endDelay = fix(entryWidth + obj.bufferPadding + obj.bufferDelay);
