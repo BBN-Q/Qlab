@@ -13,7 +13,7 @@ end
 basename = 'Pi2Cal';
 
 fixedPt = 6000;
-cycleLength = 15000;
+cycleLength = 9000;
 numPi2s = 9; % number of odd numbered pi/2 sequences for each rotation direction
 
 pg = PatternGen(qubit, 'pi2Amp', obj.pulseParams.pi2Amp, 'SSBFreq', obj.pulseParams.SSBFreq, 'cycleLength', cycleLength);

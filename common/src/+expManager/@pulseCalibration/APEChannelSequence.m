@@ -7,7 +7,7 @@ end
 basename = 'APE';
 
 fixedPt = 6000;
-cycleLength = 8000;
+cycleLength = 9000;
 nbrRepeats = 1;
 
 pg = PatternGen(qubit,...

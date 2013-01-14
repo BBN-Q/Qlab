@@ -10,7 +10,7 @@ errorAmp = 0.2;
 % if using SSB, set the frequency here
 SSBFreq = 0e6;
 
-pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
+pg = PatternGen(qubit);
 
 % load in random Clifford sequences from text file
 % FID = fopen('RBsequences-long.txt');

@@ -10,9 +10,7 @@ fixedPt = pulseSpacings(end)+1000;
 cycleLength = fixedPt+2000; 
 nbrRepeats = 1;
 
-% if using SSB, set the frequency here
-SSBFreq = 0e6;
-pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
+pg = PatternGen(qubit);
 
 patseq = {{...
     pg.pulse('Xp'), ...
@@ -21,13 +19,6 @@ patseq = {{...
 
 calseq = {{pg.pulse('QId')}, {pg.pulse('QId')}, {pg.pulse('Xp')}, {pg.pulse('Xp')}};
 
-% compiler = ['compileSequence' IQkey];
-% compileArgs = {basename, pg, patseq, calseq, numsteps, nbrRepeats, fixedPt, cycleLength, makePlot};
-% if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-%     feval(compiler, compileArgs{:});
-% else
-%     error('Unable to find compiler for IQkey: %s',IQkey) 
-% end
 seqParams = struct(...
     'basename', basename, ...
     'suffix', '', ...

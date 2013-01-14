@@ -11,7 +11,7 @@ nbrRepeats = 1;
 
 pg = PatternGen(qubit);
 
-patseq = {{pg.pulse('Xtheta', 'amp', 4000, 'width', widths, 'pType', 'square')}};
+patseq = {{pg.pulse('Utheta', 'amp', 8000, 'width', widths, 'pType', 'square', 'angle', pi/4)}};
 calseq = [];
 
 % prepare parameter structures for the pulse compiler
@@ -31,7 +31,7 @@ IQkey = qubitMap.(qubit).IQkey;
 
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
 measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS'};
+awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 
