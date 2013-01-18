@@ -104,6 +104,9 @@ static const int FPGA_ADDR_CHA_LL_CURADDR = FPGA_BANKSEL_CSR | 0x12;
 static const int FPGA_ADDR_CHB_LL_CURADDR = FPGA_BANKSEL_CSR | 0x13;
 static const int FPGA_ADDR_CHA_MINILLSTART = FPGA_BANKSEL_CSR | 0x14;
 
+static const int FPGA_ADDR_A_PHASE = FPGA_BANKSEL_CSR | 0x15;
+static const int FPGA_ADDR_B_PHASE = FPGA_BANKSEL_CSR | 0x16;
+
 
 //PLL bits
 static const int PLL_GLOBAL_XOR_BIT = 15;

@@ -20,7 +20,8 @@
 #include <iomanip>
 #include <stdio.h>
 #include <map>
-#include <math.h>
+//#include <math.h>
+#include <cmath>
 #include <stdexcept>
 #include <algorithm>
 #include <queue>
