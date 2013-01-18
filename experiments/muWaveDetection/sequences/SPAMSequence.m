@@ -13,9 +13,7 @@ fixedPt = 6000;
 cycleLength = 9000;
 nbrRepeats = 1;
 
-% if using SSB, set the frequency here
-SSBFreq = 0e6;
-pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
+pg = PatternGen(qubit);
 
 patseq = {};
 for angleShift = angleShifts
