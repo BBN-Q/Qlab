@@ -23,8 +23,8 @@ classdef APS < hgsetget
     properties
         library_path; %path to the shared library 
         library_name; %name of the dll
-        device_ID; %FTDI device ID
-        device_serial; %FTDI device serial number for identification
+        deviceID; %FTDI device ID
+        deviceSerial; %FTDI device serial number for identification
 
         bit_file_path; %path to the FPGA bit file
 
@@ -111,8 +111,7 @@ classdef APS < hgsetget
             end
         end
 
-        
-        function connect(obj,address)
+        function connect(aps,address)
             %connect - Connect to an APS unit by deviceID or serial number.
             % APS.connect(address) opens the USB connection to a particular
             % device.  The device can be specified as an integer or device
@@ -122,21 +121,42 @@ classdef APS < hgsetget
             %   aps.connect(0);
             %   aps.connect('A6UQZB7Z')
         
-            deviceID_re = '^\d+';
-            if isnumeric(address)
-                obj.open(address);
-            elseif ~isempty(regexp(address, deviceID_re))
-                obj.open(str2double(address));
-            else
-                obj.openBySerialNum(address);
+            if (aps.is_open)
+                aps.disconnect();
             end
             
+            %Rennumerate to catch any changes in devices plugged in
+            [numDevices, deviceSerials] = aps.enumerate();
+            
+            deviceID_re = '^\d+';
+            if ~isempty(regexp(address, deviceID_re, 'once'))
+                address = str2double(address);
+            end
+            if isnumeric(address)
+                if address > numDevices
+                    error('Oops! There are not that many APS units connected.');
+                end
+                aps.deviceID = address;
+                aps.deviceSerial = deviceSerials{address+1};
+                val = calllib(aps.library_name, 'connect_by_ID', aps.deviceID);
+            else
+                aps.deviceSerial = address;
+                aps.deviceID = calllib(aps.library_name, 'serial2ID', address);
+                val = calllib(aps.library_name, 'connect_by_serial', address);
+            end
+            
+            if (val == 0)
+                aps.is_open = 1;
+            else
+                error('Unable to open APS device.');
+            end
+
         end
         
         function disconnect(obj)
             %disconnect Close the USB connection.
             try
-                val = calllib(obj.library_name, 'disconnect_by_ID', obj.device_ID);
+                val = calllib(obj.library_name, 'disconnect_by_ID', obj.deviceID);
             catch
                 val = 0;
             end
@@ -508,41 +528,10 @@ classdef APS < hgsetget
             end
                         
             if size(varargin,2) == 0
-                val = calllib(aps.library_name, func, aps.device_ID);
+                val = calllib(aps.library_name, func, aps.deviceID);
             else
-                val = calllib(aps.library_name, func, aps.device_ID, varargin{:});
+                val = calllib(aps.library_name, func, aps.deviceID, varargin{:});
             end
-        end
-        
-                
-        function val = open(aps, id)
-            %Open the APS USB connection by device ID
-            if (aps.is_open)
-                if (aps.device_ID ~= id)
-                    aps.disconnect();
-                else
-                    val = 0;
-                    return;
-                end
-            end
-            [numDevices, deviceSerials] = aps.enumerate();
-            if id + 1 > numDevices;
-                error('Device id %i not found.', id);
-            end
-            aps.device_ID = id;
-            aps.device_serial = deviceSerials{id+1};
-            val = calllib(aps.library_name, 'connect_by_ID', aps.device_ID);
-            if (val == 0)
-                aps.is_open = 1;
-            else
-                error('Unable to open APS device.');
-            end
-        end
-        
-        function val = openBySerialNum(aps,serial)
-            %Open by device serial number
-            id = calllib(aps.library_name, 'serial2ID', serial);
-            val = aps.open(id);
         end
         
         function val = readBitFileVersion(aps)
@@ -552,9 +541,9 @@ classdef APS < hgsetget
         function fname = defaultBitFileName(obj)
             %The older model DACII's have different bit files than the
             %newer model APS units so we have to switch appropriately. 
-            % current device's serial number is at index device_ID + 1 in
-            % device_serials cell array
-            if ismember(obj.device_serial, obj.DAC2_SERIALS)
+            % current device's serial number is at index deviceID + 1 in
+            % deviceSerials cell array
+            if ismember(obj.deviceSerial, obj.DAC2_SERIALS)
                 fname = 'mqco_dac2_latest';
             else
                 fname = 'mqco_aps_latest';

@@ -12,29 +12,46 @@ void FTDI::get_device_serials(vector<string> & deviceSerials) {
 	deviceSerials.clear();
 
 	//Use the FTDI driver to get serial numbers (from "Simple" example)
-	char * pBufSerials[MAX_APS_DEVICES+1];
-	char bufSerials[MAX_APS_DEVICES][64];
-	int numDevices = 0;
+
 	FT_STATUS ftStatus;
+	FT_DEVICE_LIST_INFO_NODE *devInfo; 
+	DWORD numDevices;
 
-	for(int devicect = 0; devicect < MAX_APS_DEVICES; devicect++) {
-		pBufSerials[devicect] = bufSerials[devicect];
-		}
-	pBufSerials[MAX_APS_DEVICES] = NULL;
-
-	ftStatus = FT_ListDevices(pBufSerials, &numDevices, FT_LIST_ALL | FT_OPEN_BY_SERIAL_NUMBER);
+	// create the device information list 
+	ftStatus = FT_CreateDeviceInfoList(&numDevices);
 
 	if(!FT_SUCCESS(ftStatus)) {
-		FILE_LOG(logERROR) << "Unable to run FT_ListDevices with error code" << static_cast<int>(ftStatus);
-		}
+		FILE_LOG(logERROR) << "Unable to run FT_CreateDeviceInfoList with error code " << static_cast<int>(ftStatus);
+		return;
+	}
 
 	FILE_LOG(logDEBUG) << "Found " << numDevices << " devices attached";
 
-	//Copy over the char buffers to the vector of strings
-	for(int devicect=0; (devicect<numDevices) && (devicect<MAX_APS_DEVICES); devicect++){
-		deviceSerials.push_back(string(bufSerials[devicect]));
-	}
+	if (numDevices > 0) { 
+		// allocate storage for list based on numDevs 
+		devInfo = static_cast<FT_DEVICE_LIST_INFO_NODE*>( malloc(sizeof(FT_DEVICE_LIST_INFO_NODE)*numDevices) ); 
+		// get the device information list 
+		ftStatus = FT_GetDeviceInfoList(devInfo,&numDevices); 
 
+		if (!FT_SUCCESS(ftStatus)) {
+			FILE_LOG(logERROR) << "Unable to run FT_GetDeviceInfoList with error code " << static_cast<int>(ftStatus);
+			return;
+		}
+
+		// available members in devInfo
+		// devInfo[i].Flags 
+		// devInfo[i].Type
+		// devInfo[i].ID
+		// devInfo[i].LocId
+		// devInfo[i].SerialNumber
+		// devInfo[i].Description
+		// devInfo[i].ftHandle); 
+
+		//Copy over the char buffers to the vector of strings
+		for(int devicect=0; (devicect < static_cast<int>(numDevices)) && (devicect<MAX_APS_DEVICES); devicect++){
+			deviceSerials.push_back(string(devInfo[devicect].SerialNumber));
+		}
+	}
 }
 
 int FTDI::connect(const int & deviceID, FT_HANDLE & deviceHandle) {
@@ -72,4 +89,41 @@ int FTDI::disconnect(FT_HANDLE & deviceHandle) {
 		return -1;
 	}
 	return 0;
+}
+
+int FTDI::isOpen(const int & deviceID) {
+
+	// test to see if FTDI driver thinks that a device is open
+	// test assumes that ftHandle is set to 0 is device is not open
+	// this assumption determined to be true via experimentation not documentation
+
+	FT_STATUS ftStatus; 
+	FT_HANDLE ftHandleTemp; 
+	DWORD numDevices; 
+	DWORD Flags; 
+	DWORD ID; 
+	DWORD Type; 
+	DWORD LocId; 
+	char SerialNumber[16]; 
+	char Description[64];
+
+	// create the device information list 
+	ftStatus = FT_CreateDeviceInfoList(&numDevices);
+
+	if(!FT_SUCCESS(ftStatus)) {
+		FILE_LOG(logERROR) << "Unable to run FT_CreateDeviceInfoList with error code " << static_cast<int>(ftStatus);
+		return -1;
+	}
+
+	if ((numDevices > 0) && (deviceID < static_cast<int>(numDevices))) { 
+
+		ftStatus = FT_GetDeviceInfoDetail(deviceID, &Flags, &Type, &ID, &LocId, SerialNumber, Description, &ftHandleTemp);		
+		if (!FT_SUCCESS(ftStatus)) {
+			FILE_LOG(logERROR) << "Unable to run FT_GetDeviceInfoDetail with error code " << static_cast<int>(ftStatus);
+			return -2;
+		}
+
+		return ( ftHandleTemp != 0);
+	}
+	return -3;
 }
