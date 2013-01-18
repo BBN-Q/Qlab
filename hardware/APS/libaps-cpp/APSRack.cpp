@@ -119,6 +119,7 @@ void APSRack::update_device_enumeration() {
 		if ( serial2dev.count(tmpSerial) > 0) {
 			// move from old APSs_ vector to new
 			newAPS_.push_back(std::move(APSs_[serial2dev[tmpSerial]]));
+			newAPS_.back().deviceID_ = devicect;
 			FILE_LOG(logDEBUG) << "Old Device " << devicect << " [ " << tmpSerial << " ] moved";
 		} else {
 			// does not exist so construct it in the new vector
