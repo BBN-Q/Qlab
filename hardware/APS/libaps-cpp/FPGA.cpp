@@ -722,10 +722,10 @@ int FPGA::clear_bit(FT_HANDLE deviceHandle, const FPGASELECT & fpga, const int &
 	//Use a lambda because we'll need the same call below
 	auto check_cur_state = [&] () {
 		if (fpga != ALL_FPGAS) {
-			currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, fpga);
+			currentState = FPGA::read_FPGA(deviceHandle, addr, fpga);
 		} else{ // read the two FPGAs serially
-			currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, FPGA1);
-			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, FPGA2);
+			currentState = FPGA::read_FPGA(deviceHandle, addr, FPGA1);
+			currentState2 = FPGA::read_FPGA(deviceHandle, addr, FPGA2);
 			if (currentState != currentState2) {
 				// note the mismatch in the log file but continue on using FPGA1's data
 				FILE_LOG(logERROR) << "FPGA::clear_bit: FPGA registers don't match. Addr: " << myhex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
@@ -736,7 +736,7 @@ int FPGA::clear_bit(FT_HANDLE deviceHandle, const FPGASELECT & fpga, const int &
 	check_cur_state();
 	FILE_LOG(logDEBUG2) << "Addr: " << myhex << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
 
-	FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | addr, currentState & ~mask, fpga);
+	FPGA::write_FPGA(deviceHandle, addr, currentState & ~mask, fpga);
 
 	if (FILELog::ReportingLevel() >= logDEBUG2) {
 		// verify write
@@ -760,10 +760,10 @@ int FPGA::set_bit(FT_HANDLE deviceHandle, const FPGASELECT & fpga, const int & a
 	//Use a lambda because we'll need the same call below
 	auto check_cur_state = [&] () {
 		if (fpga != ALL_FPGAS) {
-			currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, fpga);
+			currentState = FPGA::read_FPGA(deviceHandle, addr, fpga);
 		} else{ // read the two FPGAs serially
-			currentState = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, FPGA1);
-			currentState2 = FPGA::read_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, FPGA2);
+			currentState = FPGA::read_FPGA(deviceHandle, addr, FPGA1);
+			currentState2 = FPGA::read_FPGA(deviceHandle, addr, FPGA2);
 			if (currentState != currentState2) {
 				// note the mismatch in the log file but continue on using FPGA1's data
 				FILE_LOG(logERROR) << "FPGA::set_bit: FPGA registers don't match. Addr: " << myhex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
@@ -774,7 +774,7 @@ int FPGA::set_bit(FT_HANDLE deviceHandle, const FPGASELECT & fpga, const int & a
 	check_cur_state();
 	FILE_LOG(logDEBUG2) << "Addr: " <<  myhex << addr << " Current State: " << currentState << " Mask: " << mask << " Writing: " << (currentState | mask);
 
-	FPGA::write_FPGA(deviceHandle, FPGA_ADDR_REGWRITE | addr, currentState | mask, fpga);
+	FPGA::write_FPGA(deviceHandle, addr, currentState | mask, fpga);
 
 	if (FILELog::ReportingLevel() >= logDEBUG2) {
 		// verify write

@@ -180,15 +180,15 @@ int APS::read_bitFile_version(const FPGASELECT & chipSelect) const {
 	switch (chipSelect) {
 	case FPGA1:
 	case FPGA2:
-		version = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_ADDR_VERSION, chipSelect);
+		version = FPGA::read_FPGA(handle_, FPGA_ADDR_VERSION, chipSelect);
 		version &= 0x1FF; // First 9 bits hold version
 		FILE_LOG(logDEBUG2) << "Bitfile version for FPGA " << chipSelect << " is "  << myhex << version;
 		break;
 	case ALL_FPGAS:
-		version = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_ADDR_VERSION, FPGA1);
+		version = FPGA::read_FPGA(handle_, FPGA_ADDR_VERSION, FPGA1);
 		version &= 0x1FF; // First 9 bits hold version
 		FILE_LOG(logDEBUG2) << "Bitfile version for FPGA 1 is "  << myhex << version;
-		version2 = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_ADDR_VERSION, FPGA2);
+		version2 = FPGA::read_FPGA(handle_, FPGA_ADDR_VERSION, FPGA2);
 		version2 &= 0x1FF; // First 9 bits hold version
 		FILE_LOG(logDEBUG2) << "Bitfile version for FPGA 2 is "  << myhex << version2;
 			if (version != version2) {
@@ -987,7 +987,7 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 
 				// wait for lock
 				FILE_LOG(logDEBUG2) << "Waiting for relock of PLL " << ch << " by looking at bit " << PLL_LOCK_TEST[ch];
-				inSync = wait_PLL_relock(false, FPGA_ADDR_REGREAD | FPGA_ADDR_PLL_STATUS, {PLL_LOCK_TEST[ch]});
+				inSync = wait_PLL_relock(false, FPGA_ADDR_PLL_STATUS, {PLL_LOCK_TEST[ch]});
 				if (!inSync) {
 					FILE_LOG(logERROR) << "PLL " << chStrs[ch] << " did not re-sync after reset";
 					return -10;
@@ -1323,7 +1323,7 @@ int APS::set_offset_register(const int & dac, const float & offset) {
 	scaledOffset = WORD(offset * MAX_WF_AMP);
 	FILE_LOG(logINFO) << "Setting DAC " << dac << "  zero register to " << scaledOffset;
 
-	FPGA::write_FPGA(handle_, FPGA_ADDR_REGWRITE | zeroRegisterAddr, scaledOffset, fpga);
+	FPGA::write_FPGA(handle_, zeroRegisterAddr, scaledOffset, fpga);
 
 	return 0;
 }
@@ -1363,11 +1363,11 @@ int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 	FILE_LOG(logINFO) << "Loading Waveform length " << wfData.size() << " (FPGA count = " << wfLength << " ) into FPGA  " << fpga << " DAC " << dac;
 
 	//Write the waveform parameters
-	FPGA::write_FPGA(handle_, FPGA_ADDR_REGWRITE | sizeReg, wfLength, fpga);
+	FPGA::write_FPGA(handle_, sizeReg, wfLength, fpga);
 
 	if (FILELog::ReportingLevel() >= logDEBUG2) {
 		//Double check it took
-		tmpData = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | sizeReg, fpga);
+		tmpData = FPGA::read_FPGA(handle_, sizeReg, fpga);
 		FILE_LOG(logDEBUG2) << "Size set to: " << tmpData;
 		FILE_LOG(logDEBUG2) << "Loading waveform at " << myhex << startAddr;
 	}
