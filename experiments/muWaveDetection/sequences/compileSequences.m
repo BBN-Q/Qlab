@@ -258,13 +258,14 @@ end
 
 %If we are plotting then call the Python plotter GUI
 if makePlot
+    pythonPathCmd = sprintf('set PYTHONPATH=%s & ',getpref('qlab', 'PyQLabDir'));
     if ispc
         pythonLauncher = 'pythonw';
     else
         pythonLauncher = 'python';
     end
-    system([pythonLauncher, ' "', fullfile(getpref('qlab', 'PyQLabDir'), 'PulseSequencer',...
-                    'PulseSequencePlotter.py'), '" --AWGFiles ', sprintf(' %s', awgFiles{:}), '" &']);
+    [status, result] = system([pythonPathCmd,  pythonLauncher, ' "', fullfile(getpref('qlab', 'PyQLabDir'), 'QGL',...
+                    'PulseSequencePlotter.py'), '" --AWGFiles "', sprintf('%s', awgFiles{:}), '" & exit &']);
 end
 
     %Helper function to extract a particular Tek's channels from the AWGChannel
