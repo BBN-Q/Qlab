@@ -10,6 +10,8 @@ fitFcn = @(a,x)(10*log10(a(1)*(x-a(2)).^2+a(3)));
 aFit = nlinfit(xPts, measPowers, fitFcn, [1, xPts(minIndex), 10^(minValue/10)]);
 
 bestOffset = real(aFit(2));
+bestOffset = min(bestOffset, xPts(end));
+bestOffset = max(bestOffset, xPts(1));
 fitPts = real(fitFcn(aFit, xPts));
 
 end

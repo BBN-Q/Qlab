@@ -156,7 +156,7 @@ classdef APSPattern < handle
             end
             
             if idx > self.MAX_WAVEFORM_POINTS
-                throw(MException('APS:OutOfMemory',sprintf('Waveform memory %i exceeds APS maximum of %i', idx, aps.max_waveform_points)));
+                throw(MException('APS:OutOfMemory',sprintf('Waveform memory %i exceeds APS maximum of %i', idx, self.max_waveform_points)));
             end
             
             % trim data to only points used

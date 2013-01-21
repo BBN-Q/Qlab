@@ -3,12 +3,9 @@ function RandomizedBenchmarking(qubit, makePlot)
 basename = 'RB';
 fixedPt = 27000;
 cycleLength = 30000;
-nbrRepeats = 100;
+nbrRepeats = 1;
 introduceError = 0;
 errorAmp = 0.2;
-
-% if using SSB, set the frequency here
-SSBFreq = 0e6;
 
 pg = PatternGen(qubit);
 
