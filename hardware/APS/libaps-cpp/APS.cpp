@@ -637,8 +637,14 @@ int APS::reset_status_ctrl() {
 
 int APS::clear_status_ctrl() {
 	// clears Status/CTRL register. This is the required state to program the VCXO and PLL
-	UCHAR WriteByte = APS_OSCEN_BIT;
+	UCHAR WriteByte = 0;
 	return FPGA::write_register(handle_, APS_STATUS_CTRL, 0, INVALID_FPGA, &WriteByte);
+}
+
+UCHAR APS::read_status_ctrl() {
+	UCHAR ReadByte = 0xBADD;
+	FPGA::read_register(handle_, APS_STATUS_CTRL, 0, INVALID_FPGA, &ReadByte);
+	return ReadByte;
 }
 
 
@@ -778,8 +784,8 @@ int APS::set_PLL_freq(const FPGASELECT & fpga, const int & freq) {
 	// Enable DDRs
 	FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
 	// Enable DAC FIFOs
-	for (int dac = 0; dac < 4; dac++)
-		enable_DAC_FIFO(dac);
+	// for (int dac = 0; dac < 4; dac++)
+	// 	enable_DAC_FIFO(dac);
 
 	return 0;
 }
