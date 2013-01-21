@@ -371,7 +371,10 @@ TRIGGERSOURCE APS::get_trigger_source() const{
 int APS::set_trigger_interval(const double & interval){
 
 	//SM clock is 1/4 of samplingRate so the trigger interval in SM clock periods is
-	int clockCycles = interval*0.25*samplingRate_*1e6;
+	//note: clockCycles is zero-indexed and has a dead state (so subtract 2)
+	int clockCycles = interval*0.25*samplingRate_*1e6 - 2;
+
+	FILE_LOG(logDEBUG) << "Setting trigger interval to " << interval << "s (" << clockCycles << " cycles)";
 
 	//Trigger interval is 32bits wide so have to split up into two 16bit words
 	USHORT upperWord = clockCycles >> 16;
@@ -386,8 +389,8 @@ double APS::get_trigger_interval() const{
 	int upperWord = FPGA::read_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL, FPGA1);
 	int lowerWord = FPGA::read_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL+1, FPGA1);
 
-	//Put it back together and covert from clock cycles to time
-	return static_cast<double>((upperWord << 16) + lowerWord)/(0.25*samplingRate_*1e6);
+	//Put it back together and covert from clock cycles to time (note: trigger interval is zero indexed and has a dead state)
+	return static_cast<double>((upperWord << 16) + lowerWord + 2)/(0.25*samplingRate_*1e6);
 }
 
 int APS::set_miniLL_repeat(const USHORT & miniLLRepeat){
