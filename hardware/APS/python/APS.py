@@ -29,7 +29,6 @@ class APS (object):
     device_id = 0
     device_serial = ''
 
-    expected_bit_file_ver = 0x2
     Address = 0
 
     is_open = False
@@ -47,10 +46,8 @@ class APS (object):
     TRIGGER_INTERNAL = 0
     TRIGGER_EXTERNAL = 1
     
-    ALL_DACS = -1    
     VALID_FREQUENCIES = [1200,600,300,100,40]
 
-    
     lastSeqFile = ''
     
     #DAC2 devices use a different bit file
@@ -77,14 +74,19 @@ class APS (object):
         
             
         print 'Loading', libPath  + libName
-        #Add the library folder to the path so we can load all the dependencies
-        os.environ['PATH'] += ';'+libPath
-        self.lib = ctypes.cdll.LoadLibrary(libPath  + libName)
+        #Move into the library folder to load it otherwise python can't find all the dependent DLL's
+        curDir = os.getcwd()
+        os.chdir(libPath)
+        self.lib = ctypes.cdll.LoadLibrary(libName)
+        # restore the path
+        os.chdir(curDir)
         # set up argtypes and restype for functions with arguments that aren't ints or strings
         self.lib.set_channel_scale.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float]
         self.lib.get_channel_scale.restype = ctypes.c_float
         self.lib.set_channel_offset.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float]
         self.lib.get_channel_offset.restype = ctypes.c_float
+        self.lib.set_trigger_interval.argtypes = [ctypes.c_int, ctypes.c_float]
+        self.lib.get_trigger_interval.restype = ctypes.c_float
 
         # initialize DLL
         self.lib.init()
@@ -111,57 +113,43 @@ class APS (object):
         
     def connect(self, address):
         # Experiment framework function for connecting to an APS
+        if self.is_open:
+            self.disconnect()
+
+        numDevices, deviceSerials = self.enumerate()
+
         if type(address) is int:
-            self.open(address)
+            if address + 1 > numDevices:
+                print 'APS Device: ', ID, 'not found'
+                return 2
+            self.device_id = address
+            self.device_serial = deviceSerials[address]
+            val = self.lib.connect_by_ID(self.device_id)
         else:
-            self.openBySerialNum(address)
+            assert address in deviceSerials, 'Ooops!  I cannot find that device.'
+            self.device_id = deviceSerials.index(address);
+            self.device_serial = address
+            val = self.lib.connect_by_serial(address)
+        
+        if val == 0:
+            self.is_open = True
+
+        return val
             
     def disconnect(self):
         self.lib.disconnect_by_ID(self.device_id)
         self.is_open = 0
         
-    def open(self, ID):
-        # populate list of device id's and serials
-        numDevices, deviceSerials = self.enumerate()
-        if ID + 1 > numDevices:
-            print 'APS Device: ', ID, 'not found'
-            return 2
-
-        if self.is_open:
-            if self.device_id != ID:
-                self.disconnect()
-            else:
-                return 0
-
-        self.device_id = ID
-        self.device_serial = deviceSerials[ID]
-        
-        val = self.lib.connect_by_ID(self.device_id)
-        if val == 0:
-            self.is_open = 1
-            print 'Opened device:', ID
-        elif val == -1 or val == 1:
-            print 'Could not open device:', ID
-            print 'Device may be open in a different process'
-        elif val == 2:
-            print 'APS Device: ', ID, 'not found'
-        else:
-            print 'Unknown return value', val
-        return val
             
-    def openBySerialNum(self,serialNum):
-        ID = self.lib.serial2ID(serialNum);
-        return self.open(ID)
-        
     def readBitFileVersion(self):
         return self.librarycall('read_bitfile_version')
 
     def getDefaultBitFileName(self):
         #Check whether we have a DACII or APS device
         if self.device_serial in self.DAC2Serials:
-            return os.path.abspath(self.APS_ROOT + 'bitfiles/mqco_dac2_latest.bit')
+            return os.path.abspath(self.APS_ROOT + 'bitfiles/mqco_dac2_latest')
         else:
-            return os.path.abspath(self.APS_ROOT + 'bitfiles/mqco_aps_latest.bit')        
+            return os.path.abspath(self.APS_ROOT + 'bitfiles/mqco_aps_latest')
 
     def init(self, force = False, filename = None):
         if not self.is_open:
