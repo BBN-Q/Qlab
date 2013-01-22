@@ -193,16 +193,17 @@ class APScontrol(object):
             settings['runMode'] = self.aps.RUN_SEQUENCE
 
         #Check to see how to trigger
-        if self.ui.triggerType.currentIndex() == 0:  # Internal (aka Software Trigger)
+        if self.ui.triggerType.currentIndex() == 0:  # Internal 
             settings['triggerSource'] = 'internal'
-            self.printMessage('Sofware trigger.')
-        else: # External (aka Software Trigger):
-            self.printMessage('Hardware trigger.')
+            self.printMessage('Internal trigger.')
+        else: # External:
+            self.printMessage('External trigger.')
             settings['triggerSource'] = 'external'
 
         # get trigger interval (only if internally triggered)
+        settings['triggerInterval'] = float(self.ui.triggerInterval.text())
         if settings['triggerSource'] == 'internal':
-            settings['triggerInterval'] = float(self.ui.triggerInterval.text())
+            self.printMessage('Setting trigger interval to {0}'.format(settings['triggerInterval']))
         
         #Get the four channel mode stuff
         settings['fourChannelMode'] = bool(self.ui.chAllOnOff.isChecked())

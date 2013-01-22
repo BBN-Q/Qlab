@@ -85,8 +85,8 @@ class APS (object):
         self.lib.get_channel_scale.restype = ctypes.c_float
         self.lib.set_channel_offset.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float]
         self.lib.get_channel_offset.restype = ctypes.c_float
-        self.lib.set_trigger_interval.argtypes = [ctypes.c_int, ctypes.c_float]
-        self.lib.get_trigger_interval.restype = ctypes.c_float
+        self.lib.set_trigger_interval.argtypes = [ctypes.c_int, ctypes.c_double]
+        self.lib.get_trigger_interval.restype = ctypes.c_double
 
         # initialize DLL
         self.lib.init()
@@ -328,6 +328,7 @@ class APS (object):
             self.load_config(settings['chAll']['seqfile'])
         self.samplingRate = settings['frequency']
         self.triggerSource = settings['triggerSource']
+        self.triggerInterval = settings['triggerInterval']
     
     def set_log_level(self, level):
         '''
@@ -351,6 +352,9 @@ class APS (object):
         ## functions return 0 on success
         #return val1 and val2
         pass
+
+    def read_register(self, fpga, address):
+        return self.librarycall('read_register', fpga, address)
 
     def unitTestBasic(self):
         self.connect(0)
