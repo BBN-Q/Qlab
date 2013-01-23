@@ -4,32 +4,17 @@ if ~exist('makePlot', 'var')
     makePlot = false;
 end
 
-pathAWG = 'U:\AWG\APE\';
 basename = 'APE';
+
 fixedPt = 6000;
-cycleLength = 8000;
+cycleLength = 9000;
 nbrRepeats = 1;
 
-% load config parameters from files
-params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.(qubit);
-
-qubitMap = obj.channelMap.(qubit);
-IQkey = qubitMap.IQkey;
-
-pg = PatternGen(...
-    'dPiAmp', obj.pulseParams.piAmp, ...
-    'dPiOn2Amp', obj.pulseParams.pi2Amp, ...
-    'dSigma', qParams.sigma, ...
-    'dPulseType', obj.pulseParams.pulseType, ...
-    'dDelta', obj.pulseParams.delta, ...
-    'correctionT', obj.pulseParams.T, ...
-    'dBuffer', qParams.buffer, ...
-    'dPulseLength', qParams.pulseLength, ...
-    'cycleLength', cycleLength, ...
-    'linkList', params.(IQkey).linkListMode, ...
-    'dmodFrequency', obj.pulseParams.SSBFreq ...
-    );
+pg = PatternGen(qubit,...
+    'pi2Amp', obj.pulseParams.pi2Amp,...
+    'piAmp', obj.pulseParams.piAmp,...
+    'SSBFreq', obj.pulseParams.SSBFreq,...
+    'cycleLength', cycleLength);
 
 angle = pi/2;
 numPsQId = 8; % number pseudoidentities
@@ -66,24 +51,17 @@ seqParams = struct(...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
     'measLength', 2000);
-patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
+qubitMap = obj.channelMap.(qubit);
+
+IQkey = qubitMap.IQkey;
+patternDict = containers.Map();
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap);
 measChannels = {'M1'};
 awgs = cellfun(@(x) x.InstrName, obj.awgParams, 'UniformOutput',false);
 
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 
-for awgct = 1:length(awgs)
-    switch awgs{awgct}(1:6)
-        case 'TekAWG'
-            filename{awgct} = [pathAWG basename '-' awgs{awgct}, '.awg'];
-        case 'BBNAPS'
-            filename{awgct} = [pathAWG basename '-', awgs{awgct}, '.h5'];
-        otherwise
-            error('Unknown AWG type.');
-    end
-end
-
+filename = obj.getAWGFileNames(basename);
 
 end

@@ -9,6 +9,7 @@
 #include "headings.h"
 #include "libaps.h"
 
+
 APSRack APSRack_;
 
 #ifdef __cplusplus
@@ -17,7 +18,6 @@ extern "C" {
 
 int init(){
 
-	APSRack_ = APSRack();
 	APSRack_.init();
 
 	return APS_OK;
@@ -55,6 +55,11 @@ int disconnect_by_serial(char * deviceSerial){
 }
 
 int serial2ID(char * deviceSerial){
+	if ( !APSRack_.serial2dev.count(deviceSerial)) {
+		// serial number not in map of known devices
+		return -1;
+	} 
+
 	return APSRack_.serial2dev[string(deviceSerial)];
 }
 
@@ -84,10 +89,6 @@ int set_sampleRate(int deviceID, int freq){
 
 int get_sampleRate(int deviceID){
 	return APSRack_.get_sampleRate(deviceID);
-}
-
-int set_trigger_interval(int deviceID, double interval){
-	return APSRack_.set_trigger_interval(deviceID, interval);
 }
 
 //Load the waveform library as floats
@@ -157,6 +158,14 @@ int set_trigger_source(int deviceID, int triggerSource) {
 
 int get_trigger_source(int deviceID) {
 	return int(APSRack_.get_trigger_source(deviceID));
+}
+
+int set_trigger_interval(int deviceID, double interval){
+	return APSRack_.set_trigger_interval(deviceID, interval);
+}
+
+double get_trigger_interval(int deviceID){
+	return APSRack_.get_trigger_interval(deviceID);
 }
 
 int set_miniLL_repeat(int deviceID, unsigned short repeat){

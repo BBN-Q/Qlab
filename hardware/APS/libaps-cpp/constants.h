@@ -10,16 +10,15 @@
 
 //Some maximum sizes of things we can fit
 static const int  MAX_APS_CHANNELS = 4;
-static const int  MAX_APS_BANKS = 2;
 
 static const int  APS_WAVEFORM_UNIT_LENGTH = 4;
 
 static const int  MAX_APS_DEVICES = 10;
 
-static const int MAX_WF_LENGTH = 16384;
+static const int MAX_WF_LENGTH = 32768;
 static const int MAX_WF_AMP = 8191;
 static const int WF_MODULUS = 4;
-static const size_t MAX_LL_LENGTH = 4096;
+static const size_t MAX_LL_LENGTH = 8192;
 
 static const int APS_READTIMEOUT = 1000;
 static const int APS_WRITETIMEOUT = 500;
@@ -74,7 +73,6 @@ static const int FPGA2_PLL_ADDR = 0xF3;
 
 // configRegister Locations
 //read-write is signified by the most highest bit in the address
-static const int FPGA_ADDR_REGWRITE = 0;
 static const int FPGA_ADDR_REGREAD =  (1 << 31);
 
 //The next three highest bits signify the bank selection
@@ -98,10 +96,16 @@ static const int FPGA_ADDR_LL_REPEAT = FPGA_BANKSEL_CSR | 0x9;
 
 //Registers we read from
 static const int  FPGA_ADDR_VERSION  =   FPGA_BANKSEL_CSR | 0x10;
+//Expected version
+static const int FIRMWARE_VERSION =  0x3;
 
 static const int FPGA_ADDR_PLL_STATUS = FPGA_BANKSEL_CSR | 0x11;
 static const int FPGA_ADDR_CHA_LL_CURADDR = FPGA_BANKSEL_CSR | 0x12;
 static const int FPGA_ADDR_CHB_LL_CURADDR = FPGA_BANKSEL_CSR | 0x13;
+static const int FPGA_ADDR_CHA_MINILLSTART = FPGA_BANKSEL_CSR | 0x14;
+
+static const int FPGA_ADDR_A_PHASE = FPGA_BANKSEL_CSR | 0x15;
+static const int FPGA_ADDR_B_PHASE = FPGA_BANKSEL_CSR | 0x16;
 
 
 //PLL bits
@@ -113,8 +117,6 @@ static const int PLL_13_LOCK_BIT = 11;
 static const int REFERENCE_PLL_LOCK_BIT = 10;
 static const int MAX_PHASE_TEST_CNT = 40;
 
-//Expected version
-static const int FIRMWARE_VERSION =  0x1;
 
 //Each FPGA has a CHA/B CSR with some configuration bits
 static const int CSRMSK_CHA_SMRSTN = 0x1; // state machine reset

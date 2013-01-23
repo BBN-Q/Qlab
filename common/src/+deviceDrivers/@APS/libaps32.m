@@ -49,6 +49,8 @@ fcns.name{fcnNum}='set_trigger_source'; fcns.calltype{fcnNum}='cdecl'; fcns.LHS{
 fcns.name{fcnNum}='get_trigger_source'; fcns.calltype{fcnNum}='cdecl'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32'};fcnNum=fcnNum+1;
 %  int set_trigger_interval ( int , double ); 
 fcns.name{fcnNum}='set_trigger_interval'; fcns.calltype{fcnNum}='cdecl'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'double'};fcnNum=fcnNum+1;
+%  double get_trigger_interval ( int ); 
+fcns.name{fcnNum}='get_trigger_interval'; fcns.calltype{fcnNum}='cdecl'; fcns.LHS{fcnNum}='double'; fcns.RHS{fcnNum}={'int32'};fcnNum=fcnNum+1;
 %  int set_miniLL_repeat ( int , unsigned short ); 
 fcns.name{fcnNum}='set_miniLL_repeat'; fcns.calltype{fcnNum}='cdecl'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'uint16'};fcnNum=fcnNum+1;
 %  int set_waveform_float ( int , int , float *, int ); 
@@ -61,7 +63,7 @@ fcns.name{fcnNum}='set_LL_data_IQ'; fcns.calltype{fcnNum}='cdecl'; fcns.LHS{fcnN
 fcns.name{fcnNum}='set_run_mode'; fcns.calltype{fcnNum}='cdecl'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'int32', 'int32'};fcnNum=fcnNum+1;
 %  int set_repeat_mode ( int , int , int ); 
 fcns.name{fcnNum}='set_repeat_mode'; fcns.calltype{fcnNum}='cdecl'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'int32', 'int32'};fcnNum=fcnNum+1;
-%  int load_sequence_file ( int , char *); 
+%  int load_sequence_file ( int , const char *); 
 fcns.name{fcnNum}='load_sequence_file'; fcns.calltype{fcnNum}='cdecl'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32', 'cstring'};fcnNum=fcnNum+1;
 %  int clear_channel_data ( int ); 
 fcns.name{fcnNum}='clear_channel_data'; fcns.calltype{fcnNum}='cdecl'; fcns.LHS{fcnNum}='int32'; fcns.RHS{fcnNum}={'int32'};fcnNum=fcnNum+1;

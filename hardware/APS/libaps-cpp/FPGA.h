@@ -33,8 +33,9 @@ int write_FPGA(FT_HANDLE, const unsigned int &, const USHORT &, const FPGASELECT
 int write_FPGA(FT_HANDLE, const unsigned int &, const WordVec &, const FPGASELECT &);
 int write_FPGA(FT_HANDLE, const unsigned int &, const WordVec &, const FPGASELECT &, map<FPGASELECT, CheckSum> &);
 
-int write_block(FT_HANDLE, vector<UCHAR> &);
+int write_block(FT_HANDLE, vector<UCHAR> &, const vector<size_t> &);
 vector<UCHAR> format(const FPGASELECT &, const unsigned int &, const WordVec &);
+vector<size_t> computeCmdByteOffsets(const size_t &);
 
 } //end namespace FPGA
 

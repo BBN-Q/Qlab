@@ -6,7 +6,7 @@ function [choiSDP, choiLSQ] = QPT_SDP(expResults, measOps, measMap, U_preps, U_m
 % easy to enforce. It also return the direct unconstrained inversion result. 
 %
 % [choiSDP, choiLSQ] = QPT_SDP(expResults, measOps, measMap, U_preps, U_meas, nbrQubits)
-%	expResults: matrix of experimental results (numPrep x numMeas)
+%	expResults: matrix of experimental results (numMeas x numPrep)
 %   measOps: measurement operators in real units e.g. measuring 1V for the ground state and 1.23V for the excited state gives [[1, 0],[0,1.23]] 
 %   measMap: matrix mapping of each experiment to associated measurement operator
 %   U_preps: cell array of the preparation unitaries 
@@ -25,8 +25,8 @@ yalmip('clear')
 d = 2^nbrQubits;
 d2 = 4^nbrQubits;
 d4 = 16^nbrQubits;
-numMeas = length(U_preps);
-numPrep = length(U_meas);
+numPrep = length(U_preps);
+numMeas = length(U_meas);
 
 %Assume perfect preparation in the ground state
 rhoIn = zeros(d,d);

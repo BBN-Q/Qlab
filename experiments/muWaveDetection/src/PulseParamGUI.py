@@ -60,7 +60,7 @@ class DeleteChannelDialog(QtGui.QDialog):
 class PulseParamGUI(object):
     _paramPath = ''
     _params = {}
-    _emptyQubitParams = {'channelType':'logical', 'piAmp': 0, 'pi2Amp': 0, 'sigma': 0, 'delta': 0, 'pulseLength': 0, 'pulseType': 'drag', 'buffer': 4}
+    _emptyQubitParams = {'channelType':'logical', 'piAmp': 0, 'pi2Amp': 0, 'sigma': 0, 'delta': 0, 'pulseLength': 0, 'pulseType': 'drag', 'buffer': 4, 'SSBFreq': 0}
     _emptyChannelParams = {'channelType':'physical', 'bufferPadding': 0, 'bufferReset': 0, 'bufferDelay': 0, 'offset': 0, 'delay': 0, 'T': [[1,0],[0,1]], 'linkListMode': 1}
     _currentQubit = None
     _currentChannel = None
@@ -82,12 +82,13 @@ class PulseParamGUI(object):
         self.ui.sigma.setValidator(QtGui.QIntValidator())
         self.ui.delta.setValidator(QtGui.QDoubleValidator())
         self.ui.buffer.setValidator(QtGui.QIntValidator())
+        self.ui.SSBFreq.setValidator(QtGui.QDoubleValidator())
 
         self.ui.bufferPadding.setValidator(QtGui.QIntValidator())
         self.ui.bufferReset.setValidator(QtGui.QIntValidator())
         self.ui.bufferDelay.setValidator(QtGui.QIntValidator())
         self.ui.offset.setValidator(QtGui.QIntValidator())
-        self.ui.piAmp.setValidator(QtGui.QIntValidator())
+        self.ui.delay.setValidator(QtGui.QIntValidator())
         self.ui.ampFactor.setValidator(QtGui.QDoubleValidator(0, 2, 4, None))
         self.ui.phaseSkew.setValidator(QtGui.QDoubleValidator(-180, 180, 4, None))
     
@@ -224,6 +225,7 @@ class PulseParamGUI(object):
             self.ui.pulseLength.setText(str(self._params[qubit]['pulseLength']))
             self.ui.pulseType.setText(self._params[qubit]['pulseType'])
             self.ui.buffer.setText(str(self._params[qubit]['buffer']))
+            self.ui.SSBFreq.setText(str(self._params[qubit]['SSBFreq']))
             self._currentQubit = qubit
     
     def updateChannelParameters(self, saveBeforeSwitch=True):
@@ -258,6 +260,7 @@ class PulseParamGUI(object):
             self._params[self._currentQubit]['pulseLength'] = int(self.ui.pulseLength.text())
             self._params[self._currentQubit]['pulseType'] = self.ui.pulseType.text()
             self._params[self._currentQubit]['buffer'] = int(self.ui.buffer.text())
+            self._params[self._currentQubit]['SSBFreq'] = float(self.ui.SSBFreq.text())
         
     def saveChannelParameters(self):
         if self._currentChannel is not None:

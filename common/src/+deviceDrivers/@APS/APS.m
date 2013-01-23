@@ -23,13 +23,15 @@ classdef APS < hgsetget
     properties
         library_path; %path to the shared library 
         library_name; %name of the dll
-        device_ID; %FTDI device ID
-        device_serial; %FTDI device serial number for identification
+        deviceID; %FTDI device ID
+        deviceSerial; %FTDI device serial number for identification
 
         bit_file_path; %path to the FPGA bit file
 
         samplingRate = 1200;   % Global sampling rate in units of MHz (1200, 600, 300, 100, 40)
         triggerSource
+        triggerInterval
+        miniLLRepeat
     end
     
     properties %(Access = 'private')
@@ -47,8 +49,7 @@ classdef APS < hgsetget
 
         ADDRESS_UNIT = 4;
         MAX_WAVEFORM_VALUE = 8191;        
-        MAX_WAVFORM_LENGTH = 8192;
-        MAX_LL_LENGTH = 512;
+        MAX_WAVFORM_LENGTH = 32768;
 
         % run modes
         RUN_SEQUENCE = 1;
@@ -57,12 +58,15 @@ classdef APS < hgsetget
         % repeat modes
         CONTINUOUS = 1;
         TRIGGERED = 0;
+
+        % trigger modes
+        TRIGGER_INTERNAL = 0;
+        TRIGGER_EXTERNAL = 1;
         
         % for DEBUG methods
         LEDMODE_PLLSYNC = 1;
         LEDMODE_RUNNING = 2;
-        TRIGGER_INTERNAL = 0;
-        TRIGGER_EXTERNAL = 1;
+
         ALL_DACS = -1;
         
         DAC2_SERIALS = {'A6UQZB7Z','A6001nBU','A6001ixV', 'A6001nBT', 'A6001nBS'};
@@ -107,8 +111,7 @@ classdef APS < hgsetget
             end
         end
 
-        
-        function connect(obj,address)
+        function connect(aps,address)
             %connect - Connect to an APS unit by deviceID or serial number.
             % APS.connect(address) opens the USB connection to a particular
             % device.  The device can be specified as an integer or device
@@ -118,21 +121,42 @@ classdef APS < hgsetget
             %   aps.connect(0);
             %   aps.connect('A6UQZB7Z')
         
-            deviceID_re = '^\d+';
-            if isnumeric(address)
-                obj.open(address);
-            elseif ~isempty(regexp(address, deviceID_re))
-                obj.open(str2double(address));
-            else
-                obj.openBySerialNum(address);
+            if (aps.is_open)
+                aps.disconnect();
             end
             
+            %Rennumerate to catch any changes in devices plugged in
+            [numDevices, deviceSerials] = aps.enumerate();
+            
+            deviceID_re = '^\d+';
+            if ~isempty(regexp(address, deviceID_re, 'once'))
+                address = str2double(address);
+            end
+            if isnumeric(address)
+                if address > numDevices
+                    error('Oops! There are not that many APS units connected.');
+                end
+                aps.deviceID = address;
+                aps.deviceSerial = deviceSerials{address+1};
+                val = calllib(aps.library_name, 'connect_by_ID', aps.deviceID);
+            else
+                aps.deviceSerial = address;
+                aps.deviceID = calllib(aps.library_name, 'serial2ID', address);
+                val = calllib(aps.library_name, 'connect_by_serial', address);
+            end
+            
+            if (val == 0)
+                aps.is_open = 1;
+            else
+                error('Unable to open APS device.');
+            end
+
         end
         
         function disconnect(obj)
             %disconnect Close the USB connection.
             try
-                val = calllib(obj.library_name, 'disconnect_by_ID', obj.device_ID);
+                val = calllib(obj.library_name, 'disconnect_by_ID', obj.deviceID);
             catch
                 val = 0;
             end
@@ -206,7 +230,9 @@ classdef APS < hgsetget
                 if ismember(name, methods(obj))
                     feval(['obj.' name], settings.(name));
                 elseif ismember(name, properties(obj))
-                    obj.(name) = settings.(name);
+                    if ~isempty(settings.(name))
+                        obj.(name) = settings.(name);
+                    end
                 end
             end
         end
@@ -244,6 +270,7 @@ classdef APS < hgsetget
             %   waveform - int16 format waveform data (-8192, 8191) or
             %       float data in the range (-1.0, 1.0)
             assert((ch>0) && (ch<5), 'Oops! The channel must be in the range 1 through 4');
+            assert(length(waveform)<=obj.MAX_WAVFORM_LENGTH, 'Oops! Your waveform must be less than %d points', obj.MAX_WAVFORM_LENGTH+1)
             switch(class(waveform))
                 case 'int16'
                     obj.libraryCall('set_waveform_int', ch-1, waveform, length(waveform));
@@ -275,12 +302,12 @@ classdef APS < hgsetget
             %  repeat - vector of repeats
             obj.libraryCall('set_LL_data_IQ', ch-1, length(addr), addr, count, trigger1, trigger2, repeat);
         end
-            
+
         function run(aps)
             %run - Starts the aps 
             % APS.run() Will ready the APS to recieve external hardware triggers or
             % start the sequence/waveform playing if in internal trigger
-            % mode. 
+            % mode.
             aps.libraryCall('run');
         end
         
@@ -306,9 +333,9 @@ classdef APS < hgsetget
         function out = waitForAWGtoStartRunning(aps)
             %waitForAWGtoStartRunning - Wraps APS.isRunning for consistency with the Tek5014 driver. 
             % for compatibility with Tek driver
-            if ~aps.isRunning()
-                aps.run();
-            end
+%             if ~aps.isRunning()
+%                 aps.run();
+%             end
             out = true;
         end
         
@@ -346,12 +373,37 @@ classdef APS < hgsetget
             source = valueMap(obj.libraryCall('get_trigger_source'));
         end
         
+        function aps = set.triggerInterval(aps, interval)
+            aps.libraryCall('set_trigger_interval', interval);
+            aps.triggerInterval = interval;
+        end
+        
+        function value = get.triggerInterval(aps)
+            value = aps.libraryCall('get_trigger_interval');
+        end
+        
+        function aps = set.miniLLRepeat(aps, repeatValue)
+            aps.libraryCall('set_miniLL_repeat', repeatValue);
+            aps.miniLLRepeat = repeatValue;
+        end
+        
+        function value = get.miniLLRepeat(aps)
+            value =  aps.readRegister(1, 9);
+        end
+        
         function val = setOffset(aps, ch, offset)
             %setOffset - Sets the channel offset. 
             % APS.setOffset(ch, offset)
             %   ch - channel (1-4)
             %   offset - channel offset (-1,1)
             val = aps.libraryCall('set_channel_offset', ch-1, offset);
+        end
+        
+        function val = getOffset(aps, ch)
+            %getOffset - Gets the channel offset. 
+            % APS.getOffset(ch)
+            %   ch - channel (1-4)
+            val = aps.libraryCall('get_channel_offset', ch-1);
         end
 
 		function val = setAmplitude(aps, ch, amplitude)
@@ -361,13 +413,27 @@ classdef APS < hgsetget
             %   amplitude - channel amplitude (float, but waveform may be clipped)
 			val = aps.libraryCall('set_channel_scale', ch-1, amplitude);
         end
+
+		function val = getAmplitude(aps, ch)
+            %getAmplitude - Gets the channel amplitude scaling. 
+            %APS.setAmplitude(ch)
+            %   ch - channel (1-4)
+			val = aps.libraryCall('get_channel_scale', ch-1);
+        end
         
         function val = setEnabled(aps, ch, enabled)
-            %setOffset - Sets whether channel output is enabled or disabled 
-            % APS.setOffset(ch, enabled)
+            %setEnabled - Sets whether channel output is enabled or disabled 
+            % APS.setEnabled(ch, enabled)
             %   ch - channel (1-4)
             %   enabled - channel enabled (bool)
             val = aps.libraryCall('set_channel_enabled', ch-1, enabled);
+        end
+
+        function val = getEnabled(aps, ch)
+            %getEnabled - Sets whether channel output is enabled or disabled 
+            % APS.getEnabled(ch)
+            %   ch - channel (1-4)
+            val = aps.libraryCall('get_channel_enabled', ch-1);
         end
 
 		function val = setTriggerDelay(aps, ch, delay)
@@ -403,7 +469,7 @@ classdef APS < hgsetget
             %loop continuously. 
             % APS.setRepeatMode(ch, mode)
             %   ch - channel (1-4)
-            %   mode - run mode (1 = one-shot, 0 = continous)
+            %   mode - run mode (1 = continuous, 0 = triggered)
             val = aps.libraryCall('set_repeat_mode', ch-1, mode);
         end
         
@@ -413,11 +479,6 @@ classdef APS < hgsetget
             calllib(aps.library_name, 'set_logging_level', level);
         end
         
-        function setTriggerInterval(aps, interval)
-            %Sets the internal trigger interval
-            aps.libraryCall('set_trigger_interval', interval);
-        end
-
         function val = readRegister(aps, fpga, addr)
             val = aps.libraryCall('read_register', fpga, addr);
         end
@@ -467,41 +528,10 @@ classdef APS < hgsetget
             end
                         
             if size(varargin,2) == 0
-                val = calllib(aps.library_name, func, aps.device_ID);
+                val = calllib(aps.library_name, func, aps.deviceID);
             else
-                val = calllib(aps.library_name, func, aps.device_ID, varargin{:});
+                val = calllib(aps.library_name, func, aps.deviceID, varargin{:});
             end
-        end
-        
-                
-        function val = open(aps, id)
-            %Open the APS USB connection by device ID
-            if (aps.is_open)
-                if (aps.device_ID ~= id)
-                    aps.disconnect();
-                else
-                    val = 0;
-                    return;
-                end
-            end
-            [numDevices, deviceSerials] = aps.enumerate();
-            if id + 1 > numDevices;
-                error('Device id %i not found.', id);
-            end
-            aps.device_ID = id;
-            aps.device_serial = deviceSerials{id+1};
-            val = calllib(aps.library_name, 'connect_by_ID', aps.device_ID);
-            if (val == 0)
-                aps.is_open = 1;
-            else
-                error('Unable to open APS device.');
-            end
-        end
-        
-        function val = openBySerialNum(aps,serial)
-            %Open by device serial number
-            id = calllib(aps.library_name, 'serial2ID', serial);
-            val = aps.open(id);
         end
         
         function val = readBitFileVersion(aps)
@@ -511,9 +541,9 @@ classdef APS < hgsetget
         function fname = defaultBitFileName(obj)
             %The older model DACII's have different bit files than the
             %newer model APS units so we have to switch appropriately. 
-            % current device's serial number is at index device_ID + 1 in
-            % device_serials cell array
-            if ismember(obj.device_serial, obj.DAC2_SERIALS)
+            % current device's serial number is at index deviceID + 1 in
+            % deviceSerials cell array
+            if ismember(obj.deviceSerial, obj.DAC2_SERIALS)
                 fname = 'mqco_dac2_latest';
             else
                 fname = 'mqco_aps_latest';
@@ -523,32 +553,23 @@ classdef APS < hgsetget
         %% Private Waveform/Link list methods
         function addLinkList(aps, ch, offsets, counts, repeat, trigger, length)
             %Adds a LL bank to a channel
-            val = aps.libraryCall('add_LL_bank',ch-1, length, offsets,counts,repeat,trigger);
-            if (val < 0)
-                error('addLinkList returned an error code of: %i\n', val);
-            end
-        end
-        
-        
-        %% Private Triggering/Stopping methods
-        function triggerFPGA_debug(aps, fpga)
-            aps.libraryCall('trigger_FPGA_debug',fpga);
-        end
-        
-        function disableFPGA_debug(aps, fpga)
-            aps.libraryCall('disable_FPGA_debug', fpga);
+            % val = aps.libraryCall('add_LL_bank',ch-1, length, offsets,counts,repeat,trigger);
+            % if (val < 0)
+            %     error('addLinkList returned an error code of: %i\n', val);
+            % end
+            %
+            % Not available in current firmware
         end
         
         %% Private mode methods
-        function val = setLinkListRepeat(aps,ch, repeat)
-            % TODO: TBD but will most likely set the number of times each
-            % miniLL will be looped
+        function val = setLinkListRepeat(aps, repeat)
+            % Set the number of times each miniLL will be looped (0 = no repeats)
+            aps.libraryCall('set_miniLL_repeat', repeat)
         end
         
         function val = testPllSync(aps, ch, numRetries)
             % TODO
-%             val = aps.libraryCall(sprintf('Test Pll Sync: DAC: %i',ch), ...
-%                 'APS_TestPllSync',ch, numRetries);
+%             val = aps.libraryCall('APS_TestPllSync',ch, numRetries);
 %             if val ~= 0
 %                 fprintf('Warning: APS::testPllSync returned %i\n', val);
 %             end

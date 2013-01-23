@@ -18,13 +18,13 @@ end
 ExpParams = struct();
 ExpParams.Qubit = qubit;
 ExpParams.DoMixerCal = 0;
-ExpParams.DoRabiAmp = 1;
+ExpParams.DoRabiAmp = 0;
 ExpParams.DoRamsey = 0;
 ExpParams.DoPi2Cal = 1;
 ExpParams.DoPiCal = 1;
-ExpParams.DoDRAGCal = 0;
-ExpParams.DRAGparams = linspace(-2,0,11);
-ExpParams.DoSPAMCal = 0;
+ExpParams.DoDRAGCal = 1;
+ExpParams.DRAGparams = linspace(-1,1,11);
+ExpParams.DoSPAMCal = 1;
 ExpParams.OffsetNorm = 6;
 ExpParams.offset2amp = 8192/2; % divisor should be the max output voltage of the AWG
 ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;

@@ -25,9 +25,10 @@ public:
 	int disconnect(const int &);
 	int disconnect(const string &);
 
-	int get_num_devices() const;
-	string get_deviceSerial(const int &) const;
+	int get_num_devices() ;
+	string get_deviceSerial(const int &) ;
 	void enumerate_devices();
+	void update_device_enumeration();
 	int read_bitfile_version(const int &) const;
 
 	int program_FPGA(const int &, const string &, const FPGASELECT &, const int &);
@@ -41,6 +42,7 @@ public:
 	int set_trigger_source(const int &, const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source(const int &) const;
 	int set_trigger_interval(const int &, const double &);
+	double get_trigger_interval(const int &) const;
 
 	int set_miniLL_repeat(const int &, const USHORT &);
 
@@ -83,6 +85,8 @@ public:
 	int read_register(int, FPGASELECT, int);
 
 private:
+	APSRack(const APSRack&) = delete;
+	APSRack& operator=(const APSRack&) = delete;
 	int numDevices_;
 	vector<APS> APSs_;
 	vector<string> deviceSerials_;

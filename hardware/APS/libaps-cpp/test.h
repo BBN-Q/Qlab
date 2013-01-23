@@ -9,9 +9,12 @@ namespace test {
 	void doToggleTest();
 
 	void programSquareWaves();
+	void loadSequenceFile();
 	void streaming();
+	void offsetScale();
 	void doBulkStateFileTest();
 	void doStateFilesTest();
+	void getSetTriggerInterval();
 
 	void printHelp();
 

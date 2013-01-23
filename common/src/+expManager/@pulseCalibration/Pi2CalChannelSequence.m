@@ -10,33 +10,13 @@ if ~exist('makePlot', 'var')
     makePlot = false;
 end
 
-pathAWG = 'U:\AWG\Pi2Cal\';
 basename = 'Pi2Cal';
 
-qubitMap = obj.channelMap.(qubit);
-IQkey = qubitMap.IQkey;
-
 fixedPt = 6000;
-cycleLength = 15000;
+cycleLength = 9000;
 numPi2s = 9; % number of odd numbered pi/2 sequences for each rotation direction
 
-% load config parameters from file
-params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.(qubit); % choose target qubit here
-
-pg = PatternGen(...
-    'dPiAmp', obj.pulseParams.piAmp, ...
-    'dPiOn2Amp', obj.pulseParams.pi2Amp, ...
-    'dSigma', qParams.sigma, ...
-    'dPulseType', obj.pulseParams.pulseType, ...
-    'dDelta', obj.pulseParams.delta, ...
-    'correctionT', obj.pulseParams.T, ...
-    'dBuffer', qParams.buffer, ...
-    'dPulseLength', qParams.pulseLength, ...
-    'cycleLength', cycleLength, ...
-    'linkList', params.(IQkey).linkListMode, ...
-    'dmodFrequency', obj.pulseParams.SSBFreq ...
-    );
+pg = PatternGen(qubit, 'pi2Amp', obj.pulseParams.pi2Amp, 'SSBFreq', obj.pulseParams.SSBFreq, 'cycleLength', cycleLength);
 
 pulseLib = containers.Map();
 pulses = {'QId', 'X90p', 'X90m', 'Y90p', 'Y90m'};
@@ -80,26 +60,19 @@ seqParams = struct(...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
     'measLength', 2000);
-patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
+
+qubitMap = obj.channelMap.(qubit);
+IQkey = qubitMap.IQkey;
+
+patternDict = containers.Map();
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap);
 measChannels = {'M1'};
-%awgs = {'TekAWG', 'BBNAPS'};
 awgs = cellfun(@(x) x.InstrName, obj.awgParams, 'UniformOutput',false);
 
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 
-for awgct = 1:length(awgs)
-    switch awgs{awgct}(1:6)
-        case 'TekAWG'
-            filename{awgct} = [pathAWG basename '-' awgs{awgct}, '.awg'];
-        case 'BBNAPS'
-            filename{awgct} = [pathAWG basename '-', awgs{awgct}, '.h5'];
-        otherwise
-            error('Unknown AWG type.');
-    end
-end
-
+filename = obj.getAWGFileNames(basename);
 
 end
 

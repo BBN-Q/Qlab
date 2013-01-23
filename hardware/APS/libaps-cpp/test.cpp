@@ -38,14 +38,31 @@ void test::programSquareWaves() {
 	if (pulseMem) free(pulseMem);
 }
 
+void test::loadSequenceFile() {
+	set_trigger_interval(0, 0.001);
+	load_sequence_file(0, "U:\\AWG-Edison\\Ramsey\\Ramsey-BBNAPS1.h5");
+	for (int ch = 0; ch < 4; ch++ ) {
+		set_channel_enabled(0, ch, 1);
+	}
+	set_run_mode(0, 0, 1);
+	set_run_mode(0, 2, 1);
+}
+
 void test::streaming() {
-	set_trigger_interval(0, 0.0001);
+	set_trigger_interval(0, 0.001);
+//	set_trigger_source(0, 1);
 	load_sequence_file(0, "U:\\APS\\Ramsey-Streaming.h5");
 	set_channel_enabled(0, 0, 1);
 	set_run_mode(0, 0, 1);
 	run(0);
 	Sleep(10000);
 	stop(0);
+}
+
+void test::offsetScale() {
+	test::programSquareWaves();
+	set_channel_offset(0, 0, 0.1);
+	set_channel_scale(0, 0, 0.5);
 }
 
 void test::doBulkStateFileTest() {
@@ -180,6 +197,12 @@ void test::doStoreLoadTest() {
 
 }
 
+void test::getSetTriggerInterval(){
+	set_trigger_interval(0, 10e-3);
+	double interval = get_trigger_interval(0);
+	printf("Set trigger interval to 10e-3. Read back: %f\n", interval);
+}
+
 void test::printHelp(){
 	string spacing = "   ";
 	cout << "BBN APS C++ Test Bench" << endl;
@@ -193,6 +216,9 @@ void test::printHelp(){
 	cout << spacing << "-0  Redirect log to stdout" << endl;
 	cout << spacing << "-h  Print This Help Message" << endl;
 	cout << spacing << "-wf Program square wave" << endl;
+	cout << spacing << "-trig Get/Set trigger interval" << endl;
+	cout << spacing << "-seq Load sequence file" << endl;
+	cout << spacing << "-offset Set offset and scale" << endl;
 }
 
 // command options functions taken from:
@@ -293,6 +319,18 @@ int main(int argc, char** argv) {
 	if (cmdOptionExists(argv, argv + argc, "-sf")) {
 		test::doStateFilesTest();
 	}
+
+	if (cmdOptionExists(argv, argv + argc, "-trig")) {
+		test::getSetTriggerInterval();
+	}
+
+	if (cmdOptionExists(argv, argv + argc, "-seq")) {
+			test::loadSequenceFile();
+	}
+
+	if (cmdOptionExists(argv, argv + argc, "-offset")) {
+				test::offsetScale();
+		}
 
 	disconnect_by_ID(0);
 

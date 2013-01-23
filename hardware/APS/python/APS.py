@@ -1,5 +1,19 @@
 #!/usr/bin/env python
 
+# Copyright 2010 Raytheon BBN Technologies
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import ctypes
 import platform
 import sys
@@ -15,26 +29,25 @@ class APS (object):
     device_id = 0
     device_serial = ''
 
-    expected_bit_file_ver = 0x10
     Address = 0
 
     is_open = False
-    #bit_file_programmed = False
     
-    # constants 
+    ## constants
+    # run modes
     RUN_SEQUENCE = 1
     RUN_WAVEFORM = 0
     
+    # repeat modes
     CONTINUOUS = 0
-    ONESHOT = 1
+    TRIGGERED = 1
     
-    TRIGGER_SOFTWARE = 1
-    TRIGGER_HARDWARE = 2
+    # trigger modes
+    TRIGGER_INTERNAL = 0
+    TRIGGER_EXTERNAL = 1
     
-    ALL_DACS = -1    
     VALID_FREQUENCIES = [1200,600,300,100,40]
 
-    
     lastSeqFile = ''
     
     #DAC2 devices use a different bit file
@@ -61,14 +74,19 @@ class APS (object):
         
             
         print 'Loading', libPath  + libName
-        #Add the library folder to the path so we can load all the dependencies
-        os.environ['PATH'] += ';'+libPath
-        self.lib = ctypes.cdll.LoadLibrary(libPath  + libName)
+        #Move into the library folder to load it otherwise python can't find all the dependent DLL's
+        curDir = os.getcwd()
+        os.chdir(libPath)
+        self.lib = ctypes.cdll.LoadLibrary(libName)
+        # restore the path
+        os.chdir(curDir)
         # set up argtypes and restype for functions with arguments that aren't ints or strings
         self.lib.set_channel_scale.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float]
         self.lib.get_channel_scale.restype = ctypes.c_float
         self.lib.set_channel_offset.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_float]
         self.lib.get_channel_offset.restype = ctypes.c_float
+        self.lib.set_trigger_interval.argtypes = [ctypes.c_int, ctypes.c_double]
+        self.lib.get_trigger_interval.restype = ctypes.c_double
 
         # initialize DLL
         self.lib.init()
@@ -95,57 +113,43 @@ class APS (object):
         
     def connect(self, address):
         # Experiment framework function for connecting to an APS
+        if self.is_open:
+            self.disconnect()
+
+        numDevices, deviceSerials = self.enumerate()
+
         if type(address) is int:
-            self.open(address)
+            if address + 1 > numDevices:
+                print 'APS Device: ', ID, 'not found'
+                return 2
+            self.device_id = address
+            self.device_serial = deviceSerials[address]
+            val = self.lib.connect_by_ID(self.device_id)
         else:
-            self.openBySerialNum(address)
+            assert address in deviceSerials, 'Ooops!  I cannot find that device.'
+            self.device_id = deviceSerials.index(address);
+            self.device_serial = address
+            val = self.lib.connect_by_serial(address)
+        
+        if val == 0:
+            self.is_open = True
+
+        return val
             
     def disconnect(self):
         self.lib.disconnect_by_ID(self.device_id)
         self.is_open = 0
         
-    def open(self, ID):
-        # populate list of device id's and serials
-        numDevices, deviceSerials = self.enumerate()
-        if ID + 1 > numDevices:
-            print 'APS Device: ', ID, 'not found'
-            return 2
-
-        if self.is_open:
-            if self.device_id != ID:
-                self.disconnect()
-            else:
-                return 0
-
-        self.device_id = ID
-        self.device_serial = deviceSerials[ID]
-        
-        val = self.lib.connect_by_ID(self.device_id)
-        if val == 0:
-            self.is_open = 1
-            print 'Opened device:', ID
-        elif val == -1 or val == 1:
-            print 'Could not open device:', ID
-            print 'Device may be open in a different process'
-        elif val == 2:
-            print 'APS Device: ', ID, 'not found'
-        else:
-            print 'Unknown return value', val
-        return val
             
-    def openBySerialNum(self,serialNum):
-        ID = self.lib.serial2ID(serialNum);
-        return self.open(ID)
-        
     def readBitFileVersion(self):
         return self.librarycall('read_bitfile_version')
 
     def getDefaultBitFileName(self):
         #Check whether we have a DACII or APS device
         if self.device_serial in self.DAC2Serials:
-            return os.path.abspath(self.APS_ROOT + 'bitfiles/mqco_dac2_latest.bit')
+            return os.path.abspath(self.APS_ROOT + 'bitfiles/mqco_dac2_latest')
         else:
-            return os.path.abspath(self.APS_ROOT + 'bitfiles/mqco_aps_latest.bit')        
+            return os.path.abspath(self.APS_ROOT + 'bitfiles/mqco_aps_latest')
 
     def init(self, force = False, filename = None):
         if not self.is_open:
@@ -185,8 +189,25 @@ class APS (object):
         if val < 0:
             print 'loadWaveform returned an error code of:', val
         return val
+
+    def load_config(self, filename):
+        '''
+        Load a complete 4 channel configuration file
+        '''
+
+        #Pass through to C
+        self.librarycall('load_sequence_file', str(filename))
         
-    def add_LL_bank(self, ch, offsets, counts, repeat, trigger, length):
+    def load_LL(self, ch, addr, count, trigger1, trigger2, repeat):
+        '''
+        Directly loads link list data into memory
+            ch - channel to load (1-4)
+            addr - vector of addresses
+            count - vector of counts
+            trigger1 - vector of I channel triggers
+            trigger2 - vector of Q channel triggers
+            repeat - vector of repeats
+        '''
         if not self.is_open:
             print 'APS unit is not open'
             return -1
@@ -196,35 +217,35 @@ class APS (object):
         # convert each array to uint16 pointer
         c_uint16_p = ctypes.POINTER(ctypes.c_uint16)
         
-        offsets = offsets.astype(np.uint16)
-        offsets_p = offsets.ctypes.data_as(c_uint16_p)
+        addr = offsets.astype(np.uint16)
+        addr_p = offsets.ctypes.data_as(c_uint16_p)
         
-        counts = counts.astype(np.uint16)
-        counts_p = counts.ctypes.data_as(c_uint16_p)
+        count = counts.astype(np.uint16)
+        count_p = counts.ctypes.data_as(c_uint16_p)
+
+        trigger1 = trigger.astype(np.uint16)
+        trigger1_p = trigger.ctypes.data_as(c_uint16_p)
         
+        trigger2 = trigger.astype(np.uint16)
+        trigger2_p = trigger.ctypes.data_as(c_uint16_p)
+
         repeat = repeat.astype(np.uint16)
         repeat_p = repeat.ctypes.data_as(c_uint16_p)
         
-        trigger = trigger.astype(np.uint16)
-        trigger_p = trigger.ctypes.data_as(c_uint16_p)
-        
-        val = self.librarycall('add_LL_bank', ch-1, length, offsets_p, counts_p, repeat_p, trigger_p)
+        val = self.librarycall('set_LL_data_IQ', ch-1, length(addr), addr_p, count_p, trigger1_p, trigger2_p, repeat_p)
         
         if val < 0:
-            print 'add_LL_bank returned an error code of:', val
-        
-    def librarycall(self, functionName,  *args):
-        if not self.is_open:
-            print 'APS unit is not open'
-            return -1
-        methodCall = getattr(self.lib, functionName)
-        return methodCall(self.device_id, *args)
-        
-    def triggerFpga_debug(self, fpga, trigger_type):
-        return self.librarycall('trigger_fpga_debug', fpga, trigger_type)
-        
-    def disableFpga_debug(self, fpga):                           
-        return self.librarycall('disable_fpga_debug', fpga)
+            print 'set_LL_data_IQ returned an error code of:', val
+
+    def run(self):
+        '''
+        Set the trigger and start things going.
+        '''
+        self.librarycall('run')
+
+    def stop(self):
+        ''' Stop everything '''
+        self.librarycall('stop')
 
     def setRunMode(self, ch, mode):
         # ch : DAC channel (1-4)
@@ -233,14 +254,12 @@ class APS (object):
 
     def setRepeatMode(self, ch, mode):
         # ch : DAC channel (1-4)
-        # mode : 1 = one-shot, 0 = continous
+        # mode : 1 = continuous, 0 = triggered
         self.librarycall('set_repeat_mode', ch-1, mode)
         
-    def setLinkListRepeat(self, ID, repeat):
-        # TODO
-        pass
-        #self.librarycall('Dac: %i Link List Repeat: %i' % (ID, repeat),
-        #                       'APS_SetLinkListRepeat',repeat,ID)
+    def setLinkListRepeat(self, repeat):
+        # repeat : number of times to loop each miniLL (0 = no repeats)
+        self.librarycall('set_miniLL_repeat', repeat)
     
     @property
     def samplingRate(self):
@@ -252,25 +271,23 @@ class APS (object):
     
     @property
     def triggerSource(self):
-        valueMap = {self.TRIGGER_SOFTWARE: 'internal', self.TRIGGER_HARDWARE: 'external'}
+        valueMap = {self.TRIGGER_INTERNAL: 'internal', self.TRIGGER_EXTERNAL: 'external'}
         return valueMap[self.librarycall('get_trigger_source')]
     
     @triggerSource.setter
     def triggerSource(self, source):
-        allowedValues = {'internal': self.TRIGGER_SOFTWARE, 'external': self.TRIGGER_HARDWARE}
+        allowedValues = {'internal': self.TRIGGER_INTERNAL, 'external': self.TRIGGER_EXTERNAL}
         assert source in allowedValues, 'Unrecognized trigger source.'
         self.librarycall('set_trigger_source', allowedValues[source])
+
+    @property
+    def triggerInterval(self):
+        return self.librarycall('get_trigger_interval')
     
-    def read_PLL_status(self):
-        # TODO
-        ##Read FPGA1
-        #val1 = self.librarycall('Read PLL Sync FPGA1','APS_ReadPllStatus', 1)
-        ##Read FPGA2
-        #val2 = self.librarycall('Read PLL Sync FPGA2','APS_ReadPllStatus', 2)
-        ## functions return 0 on success
-        #return val1 and val2
-        pass
-        
+    @triggerInterval.setter
+    def triggerInterval(self, interval):
+        self.librarycall('set_trigger_interval', interval)
+    
     def set_offset(self, ch, offset):
         return self.librarycall('set_channel_offset', ch-1, offset)
 
@@ -282,14 +299,6 @@ class APS (object):
         
     def set_trigger_delay(self, ch, delay):
         return self.librarycall('set_channel_trigDelay', ch-1, delay)
-        
-    def load_config(self, filename):
-        '''
-        Load a complete 4 channel configuration file
-        '''
-
-        #Pass through to C
-        self.librarycall('load_sequence_file', str(filename));
 
     def load_waveform_from_file(self, ch, filename):
         '''
@@ -298,7 +307,7 @@ class APS (object):
         '''
         with h5py.File(filename, 'r') as FID:
             self.loadWaveform(ch, FID['WFVec'].value)
-                
+
     def setAll(self, settings):
         '''
         Again mimicing the Matlab driver to load all the settings from a dictionary.
@@ -310,7 +319,7 @@ class APS (object):
             self.set_amplitude(ch+1, settings[channelName]['amplitude'])
             self.set_offset(ch+1, settings[channelName]['offset'])
             self.set_enabled(ch+1, settings[channelName]['enabled'])
-            self.setRepeatMode(ch+1, settings['repeatMode'])
+            self.setRunMode(ch+1, settings['runMode'])
             if 'seqfile' in settings[channelName] and settings[channelName]['seqfile']:
                 self.load_waveform_from_file(ch+1, settings[channelName]['seqfile'])
        
@@ -319,24 +328,34 @@ class APS (object):
             self.load_config(settings['chAll']['seqfile'])
         self.samplingRate = settings['frequency']
         self.triggerSource = settings['triggerSource']
- 
-    def run(self):
-        '''
-        Set the trigger and start things going.
-        '''
-        self.librarycall('run')
-
-    def stop(self):
-        ''' Stop everything '''
-        self.librarycall('stop')
+        self.triggerInterval = settings['triggerInterval']
     
     def set_log_level(self, level):
         '''
         set logging level (info = 2, debug = 3, debug1 = 4, debug2 = 5)
         '''
         self.lib.set_logging_level(level)
+    
+    def librarycall(self, functionName,  *args):
+        if not self.is_open:
+            print 'APS unit is not open'
+            return -1
+        methodCall = getattr(self.lib, functionName)
+        return methodCall(self.device_id, *args)
 
-        
+    def read_PLL_status(self):
+        # TODO
+        ##Read FPGA1
+        #val1 = self.librarycall('Read PLL Sync FPGA1','APS_ReadPllStatus', 1)
+        ##Read FPGA2
+        #val2 = self.librarycall('Read PLL Sync FPGA2','APS_ReadPllStatus', 2)
+        ## functions return 0 on success
+        #return val1 and val2
+        pass
+
+    def read_register(self, fpga, address):
+        return self.librarycall('read_register', fpga, address)
+
     def unitTestBasic(self):
         self.connect(0)
         print "Initializing"

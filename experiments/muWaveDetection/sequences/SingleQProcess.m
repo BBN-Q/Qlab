@@ -1,34 +1,14 @@
-function SingleQProcess(varargin)
-
-%varargin assumes qubit and then makePlot
-qubit = 'q1';
-makePlot = true;
-
-if length(varargin) == 1
-    qubit = varargin{1};
-elseif length(varargin) == 2
-    qubit = varargin{1};
-    makePlot = varargin{2};
-elseif length(varargin) > 2
-    error('Too many input arguments.')
-end
+function SingleQProcess(qubit, makePlot)
 
 basename = 'SingleQProcess';
 fixedPt = 1000;
 cycleLength = 5000;
-nbrRepeats = 2;
-
-% load config parameters from file
-params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.(qubit);
-qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
-IQkey = qubitMap.(qubit).IQkey;
+nbrRepeats = 1;
 
 % if using SSB, set the frequency here
 SSBFreq = 0e6;
-
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
-
+pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
+pg2 = PatternGen('q2', 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
 patseq = {};
 
 pulses = {'QId', 'Xp', 'X90p', 'Y90p', 'X90m', 'Y90m'};
@@ -47,22 +27,51 @@ end
 % % process = pg.pulse('Utheta', 'rotAngle', -2*pi/3, 'polarAngle', acos(1/sqrt(3)) , 'aziAngle', pi/4, 'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', 0);
 % process = pg.pulse('QId', 'rotAngle', pi/2, 'polarAngle', 0, 'aziAngle', 0,'pType', 'arbAxisDRAG', 'nutFreq', nutFreq, 'sampRate', pg.samplingRate, 'delta', 0);
 %process = pg.pulse('Xtheta', 'amp', qParams.pi2Amp*(1.2));
-process = pg.pulse('X90p');
+process = pg.pulse('QId');
 for ii = 1:6
     for jj = 1:6
-        patseq{end+1} = { pulseLib.(pulses{ii}), process, pulseLib.(pulses{jj}) };
+        patseq{end+1} = { pulseLib.(pulses{ii}), process, pulseLib.(pulses{jj}), pg.pulse('QId') };
+        patseq{end+1} = { pulseLib.(pulses{ii}), process, pulseLib.(pulses{jj}), pg.pulse('QId') };
     end
 end
-                
+               
+patseq2 = repmat({{pg2.pulse('Xp'), pg2.pulse('QId'), pg2.pulse('QId')}, {pg2.pulse('Xp'), pg2.pulse('QId'), pg2.pulse('Xp')}}, 1, 36);
 
 calseq = {};
 calseq{end+1} = {pg.pulse('QId')};
+calseq{end+1} = {pg.pulse('QId')};
+calseq{end+1} = {pg.pulse('Xp')};
 calseq{end+1} = {pg.pulse('Xp')};
 
-compiler = ['compileSequence' IQkey];
-compileArgs = {basename, pg, patseq, calseq, 1, nbrRepeats, fixedPt, cycleLength, makePlot, 31};
-if exist(compiler, 'file') == 2 % check that the pulse compiler is on the path
-    feval(compiler, compileArgs{:});
-end
+calseq2 = {};
+calseq2{end+1} = {pg2.pulse('QId')};
+calseq2{end+1} = {pg2.pulse('Xp')};
+calseq2{end+1} = {pg2.pulse('QId')};
+calseq2{end+1} = {pg2.pulse('Xp')};
+
+% prepare parameter structures for the pulse compiler
+seqParams = struct(...
+    'basename', basename, ...
+    'suffix', '', ...
+    'numSteps', 1, ...
+    'nbrRepeats', nbrRepeats, ...
+    'fixedPt', fixedPt, ...
+    'cycleLength', cycleLength, ...
+    'measLength', 2000);
+patternDict = containers.Map();
+if ~isempty(calseq), calseq = {calseq}; end
+if ~isempty(calseq2), calseq2 = {calseq2}; end
+
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
+IQkey2 = qubitMap.('q2').IQkey;
+
+patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
+patternDict(IQkey2) = struct('pg', pg2, 'patseq', {patseq2}, 'calseq', calseq2, 'channelMap', qubitMap.('q2'));
+
+measChannels = {'M1'};
+awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
+
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 
 end

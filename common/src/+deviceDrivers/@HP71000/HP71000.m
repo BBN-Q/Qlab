@@ -34,28 +34,28 @@ classdef HP71000 < deviceDrivers.lib.GPIB
        end
        
        function sweep(obj)
-           obj.Write('TS;');
+           obj.write('TS;');
        end
        
        % reset instrument to default state
        function reset(obj)
-           obj.Write('IP;');
+           obj.write('IP;');
        end
        
        function val = peakAmplitude(obj)
-           obj.Write('MKPK HI;'); % move marker to peak
-           tmp = obj.Query('MKA?;'); % get marker amplitude
+           obj.write('MKPK HI;'); % move marker to peak
+           tmp = obj.query('MKA?;'); % get marker amplitude
            val = str2double(tmp);
        end
        
        function val = peakFrequency(obj)
-           obj.Write('MKPK HI;'); % move marker to peak
-           tmp = obj.Query('MKF?;'); % get marker frequency
+           obj.write('MKPK HI;'); % move marker to peak
+           tmp = obj.query('MKF?;'); % get marker frequency
            val = str2double(tmp);
        end
        
        function [xpts, ypts] = downloadTrace(obj)
-           tmp = obj.Query('TRA?;');
+           tmp = obj.query('TRA?;');
 		   ypts = strread(tmp, '%f', 'delimiter', ',');
 		   
 		   center_freq = obj.center_frequency;
@@ -79,22 +79,22 @@ classdef HP71000 < deviceDrivers.lib.GPIB
         % property accessors
         
         function val = get.center_frequency(obj)
-            temp = obj.Query('CF?;');
+            temp = obj.query('CF?;');
             val = str2double(temp);
         end
         
         function val = get.span(obj)
-            temp = obj.Query('SP?;');
+            temp = obj.query('SP?;');
             val = str2double(temp);
         end
         
         function val = get.resolution_bw(obj)
-            temp = obj.Query('RB?;');
+            temp = obj.query('RB?;');
             val = str2double(temp);
         end
         
         function val = get.video_bw(obj)
-            temp = obj.Query('VB?;');
+            temp = obj.query('VB?;');
             val = str2double(temp);
         end
         
@@ -103,15 +103,15 @@ classdef HP71000 < deviceDrivers.lib.GPIB
         end
         
         function val = get.video_averaging(obj)
-            val = str2double(obj.Query('VAVG?;'));
+            val = str2double(obj.query('VAVG?;'));
         end
         
         function val = get.number_averages(obj)
-            val = str2double(obj.Query('VAVG?;'));
+            val = str2double(obj.query('VAVG?;'));
         end
         
         function val = get.sweep_points(obj)
-            val = str2double(obj.Query('TRDEF TRA?;'));
+            val = str2double(obj.query('TRDEF TRA?;'));
         end
         
         % property settors
@@ -119,13 +119,13 @@ classdef HP71000 < deviceDrivers.lib.GPIB
         function set.center_frequency(obj, value)
             % Validate input
             assert(isnumeric(value), 'Invalid input');
-            obj.Write(sprintf('CF %E;',value));
+            obj.write(sprintf('CF %E;',value));
         end
         
         function set.span(obj, value)
             % Validate input
             assert(isnumeric(value), 'Invalid input');
-            obj.Write(sprintf('SP %E;',value));
+            obj.write(sprintf('SP %E;',value));
         end
         
         function set.resolution_bw(obj, value)
@@ -140,7 +140,7 @@ classdef HP71000 < deviceDrivers.lib.GPIB
                 error('Invalid input');
             end
             
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         
         function set.video_bw(obj, value)
@@ -155,7 +155,7 @@ classdef HP71000 < deviceDrivers.lib.GPIB
                 error('Invalid input');
             end
 
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         
         function set.sweep_mode(obj, value)
@@ -167,7 +167,7 @@ classdef HP71000 < deviceDrivers.lib.GPIB
             end
             
             gpib_string =[checkMapObj(value) ';'];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         
         function set.video_averaging(obj, value)
@@ -184,7 +184,7 @@ classdef HP71000 < deviceDrivers.lib.GPIB
             end
             
             gpib_string =[gpib_string checkMapObj(value) ';'];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         
         function set.number_averages(obj, value)
@@ -192,7 +192,7 @@ classdef HP71000 < deviceDrivers.lib.GPIB
             if ~isnumeric(value)
                 error('Invalid input');
             end
-            obj.Write([gpib_string num2str(value) ';']);
+            obj.write([gpib_string num2str(value) ';']);
         end
         
         function set.sweep_points(obj, value)
@@ -206,7 +206,7 @@ classdef HP71000 < deviceDrivers.lib.GPIB
             if value < 3, value = 3; end
             
             gpib_string = sprintf(gpib_string, uint32(value));
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
    end
 end

@@ -20,9 +20,11 @@
 #include <iomanip>
 #include <stdio.h>
 #include <map>
-#include <math.h>
+//#include <math.h>
+#include <cmath>
 #include <stdexcept>
 #include <algorithm>
+#include <queue>
 using std::vector;
 using std::string;
 using std::cout;
@@ -32,6 +34,8 @@ using std::runtime_error;
 
 #include <thread>
 #include <mutex>
+#include <atomic>
+#include <utility>
 #include <chrono>
 
 
@@ -91,6 +95,7 @@ typedef vector<unsigned short> WordVec;
 
 #include "LLBank.h"
 #include "Channel.h"
+#include "BankBouncerThread.h"
 #include "APS.h"
 #include "APSRack.h"
 

@@ -102,6 +102,7 @@ classdef homodyneDetection2D < expManager.expBase
             % find AWG instrument(s) and digitizer
             numAWGs = 0;
             InstrumentNames = fieldnames(obj.Instr);
+            masterAWGIndex = [];
             for Instr_index = 1:numel(InstrumentNames)
                 InstrName = InstrumentNames{Instr_index};
                 DriverName = class(obj.Instr.(InstrName));
@@ -109,11 +110,17 @@ classdef homodyneDetection2D < expManager.expBase
                     case {'deviceDrivers.Tek5014', 'deviceDrivers.APS'}
                         numAWGs = numAWGs + 1;
                         obj.awg{numAWGs} = obj.Instr.(InstrName);
+                        if obj.inputStructure.InstrParams.(InstrName).isMaster
+                            masterAWGIndex = numAWGs;
+                        end
                     case {'deviceDrivers.AgilentAP240', 'deviceDrivers.AlazarATS9870'}
                         obj.scope = obj.Instr.(InstrName);
                 end
             end
 
+            %Rearrange the AWG list to put the Master first
+            obj.awg([1, masterAWGIndex]) = obj.awg([masterAWGIndex, 1]);
+            
             % construct loop object and file header
             [obj.Loop, dimension] = obj.populateLoopStructure();
             header = obj.inputStructure;

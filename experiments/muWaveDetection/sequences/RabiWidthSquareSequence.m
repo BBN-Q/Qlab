@@ -1,58 +1,38 @@
-function RabiWidthSquareSequence(varargin)
-
-%varargin assumes qubit and then makePlot
-qubit = 'q1';
-makePlot = true;
-
-if length(varargin) == 1
-    qubit = varargin{1};
-elseif length(varargin) == 2
-    qubit = varargin{1};
-    makePlot = varargin{2};
-elseif length(varargin) > 2
-    error('Too many input arguments.')
-end
+function RabiWidthSquareSequence(qubit, widths, makePlot)
+%RabiWidthSquareSequence Rabi nutations by varying pulse width.
+% RabiWidthSquareSequence(qubit, widths, makePlot)
+%   qubit - target qubit e.g. 'q1'
+%   widths - pulse widths to scan over e.g. 0:5:250
 
 basename = 'RabiWidth';
-fixedPt = 6000;
-cycleLength = 10000;
+fixedPt = max(widths) + 500;
+cycleLength = fixedPt + 2100;
 nbrRepeats = 1;
 
-% load config parameters from files
-params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.(qubit);
-qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
-IQkey = qubitMap.(qubit).IQkey;
+pg = PatternGen(qubit);
 
-% if using SSB, set the frequency here
-SSBFreq = 0e6;
-
-pg = PatternGen('dPiAmp', qParams.piAmp, 'dPiOn2Amp', qParams.pi2Amp, 'dSigma', qParams.sigma, 'dPulseType', qParams.pulseType, 'dDelta', qParams.delta, 'correctionT', params.(IQkey).T, 'dBuffer', qParams.buffer, 'dPulseLength', qParams.pulseLength, 'cycleLength', cycleLength, 'linkList', params.(IQkey).linkListMode, 'dmodFrequency',SSBFreq);
-
-numsteps = 101;
-minWidth = 24;
-stepsize = 12; % 12
-pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
-%pulseLength = minWidth*ones([numsteps,1]);
-patseq = {{pg.pulse('Xtheta', 'amp', 2000, 'width', pulseLength, 'pType', 'square')}};
-
+patseq = {{pg.pulse('Utheta', 'amp', 8000, 'width', widths, 'pType', 'square', 'angle', pi/4)}};
 calseq = [];
 
 % prepare parameter structures for the pulse compiler
 seqParams = struct(...
     'basename', basename, ...
     'suffix', '', ...
-    'numSteps', numsteps, ...
+    'numSteps', length(widths), ...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
     'measLength', 2000);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
+
+qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+IQkey = qubitMap.(qubit).IQkey;
+
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
 measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS'};
+awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
 
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 
 end

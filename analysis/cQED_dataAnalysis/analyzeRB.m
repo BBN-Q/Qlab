@@ -1,6 +1,9 @@
 function gerror = analyzeRB(ypts)
-%[xpts ypts] = calScale;
-% if no input arguments, try to get the data from the current figure
+%analyzeRB Analyzes a randomized benchmarking experiment
+% gerror = analyzeRB(ypts)
+%   ypts - (optional) <sigma_z> for each experiment, if no arguments provided
+%          will grab this data from the current figure
+
 if nargin < 1
     h = gcf;
     line = findall(h, 'Type', 'Line');

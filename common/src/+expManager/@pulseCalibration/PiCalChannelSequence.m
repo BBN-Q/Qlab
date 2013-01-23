@@ -10,60 +10,29 @@ if ~exist('makePlot', 'var')
     makePlot = false;
 end
 
-pathAWG = 'U:\AWG\PiCal\';
 basename = 'PiCal';
 
-qubitMap = obj.channelMap.(qubit);
-IQkey = qubitMap.IQkey;
-
 fixedPt = 6000;
-cycleLength = 15000;
+cycleLength = 9000;
 
-% load config parameters from file
-params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-qParams = params.(qubit); % choose target qubit here
+pg = PatternGen(qubit,...
+    'pi2Amp', obj.pulseParams.pi2Amp,...
+    'piAmp', obj.pulseParams.piAmp,...
+    'SSBFreq', obj.pulseParams.SSBFreq,...
+    'cycleLength', cycleLength);
 
-pg = PatternGen(...
-    'dPiAmp', obj.pulseParams.piAmp, ...
-    'dPiOn2Amp', obj.pulseParams.pi2Amp, ...
-    'dSigma', qParams.sigma, ...
-    'dPulseType', obj.pulseParams.pulseType, ...
-    'dDelta', obj.pulseParams.delta, ...
-    'correctionT', obj.pulseParams.T, ...
-    'dBuffer', qParams.buffer, ...
-    'dPulseLength', qParams.pulseLength, ...
-    'cycleLength', cycleLength, ...
-    'linkList', params.(IQkey).linkListMode, ...
-    'dmodFrequency', obj.pulseParams.SSBFreq ...
-    );
-
+patseq = cell(19,1);
 patseq{1} = {pg.pulse('QId')};
 
 % +X/Y rotations
-X90p = pg.pulse([direction '90p']);
-Xp   = pg.pulse([direction 'p']);
-patseq{2}={X90p};
-patseq{3}={X90p, Xp};
-patseq{4}={X90p, Xp, Xp};
-patseq{5}={X90p, Xp, Xp, Xp};
-patseq{6}={X90p, Xp, Xp, Xp, Xp};
-patseq{7}={X90p, Xp, Xp, Xp, Xp, Xp};
-patseq{8}={X90p, Xp, Xp, Xp, Xp, Xp, Xp};
-patseq{9}={X90p, Xp, Xp, Xp, Xp, Xp, Xp, Xp};
-patseq{10}={X90p, Xp, Xp, Xp, Xp, Xp, Xp, Xp, Xp};
+pulse90p = pg.pulse([direction '90p']);
+pulse180p   = pg.pulse([direction 'p']);
+patseq(2:10) =  arrayfun(@(x) [{pulse90p}, repmat({pulse180p}, 1, x)], [0:8], 'UniformOutput', false);
 
 % -X/Y rotations
-X90m = pg.pulse([direction '90m']);
-Xm   = pg.pulse([direction 'm']);
-patseq{11}={X90m};
-patseq{12}={X90m, Xm};
-patseq{13}={X90m, Xm, Xm};
-patseq{14}={X90m, Xm, Xm, Xm};
-patseq{15}={X90m, Xm, Xm, Xm, Xm};
-patseq{16}={X90m, Xm, Xm, Xm, Xm, Xm};
-patseq{17}={X90m, Xm, Xm, Xm, Xm, Xm, Xm};
-patseq{18}={X90m, Xm, Xm, Xm, Xm, Xm, Xm, Xm};
-patseq{19}={X90m, Xm, Xm, Xm, Xm, Xm, Xm, Xm, Xm};
+pulse90m = pg.pulse([direction '90m']);
+pulse180m   = pg.pulse([direction 'm']);
+patseq(11:19) =  arrayfun(@(x) [{pulse90m}, repmat({pulse180m}, 1, x)], [0:8], 'UniformOutput', false);
 
 nbrRepeats = 2;
 nbrPatterns = nbrRepeats*length(patseq);
@@ -82,22 +51,16 @@ seqParams = struct(...
     'measLength', 2000);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
+
+qubitMap = obj.channelMap.(qubit);
+IQkey = qubitMap.IQkey;
+
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap);
 measChannels = {'M1'};
 awgs = cellfun(@(x) x.InstrName, obj.awgParams, 'UniformOutput',false);
 
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, 20);
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 
-for awgct = 1:length(awgs)
-    switch awgs{awgct}(1:6)
-        case 'TekAWG'
-            filename{awgct} = [pathAWG basename '-' awgs{awgct}, '.awg'];
-        case 'BBNAPS'
-            filename{awgct} = [pathAWG basename '-', awgs{awgct}, '.h5'];
-        otherwise
-            error('Unknown AWG type.');
-    end
-end
-
+filename = obj.getAWGFileNames(basename);
 
 end

@@ -96,25 +96,25 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         end
 
         function [cost, J] = Xpi2ObjectiveFnc(obj, x0)
-            [cost, Jtmp] = obj.pi2ObjectiveFunction(x0, obj.ExpParams.Qubit, 'X');
+            [cost, Jtmp] = obj.pi2ObjectiveFunction(x0, 'X');
             if nargout > 1
                 J = Jtmp;
             end
         end
         function [cost, J] = Ypi2ObjectiveFnc(obj, x0)
-            [cost, Jtmp] = obj.pi2ObjectiveFunction(x0, obj.ExpParams.Qubit, 'Y');
+            [cost, Jtmp] = obj.pi2ObjectiveFunction(x0, 'Y');
             if nargout > 1
                 J = Jtmp;
             end
         end
         function [cost, J] = XpiObjectiveFnc(obj, x0)
-            [cost, Jtmp] = obj.piObjectiveFunction(x0, obj.ExpParams.Qubit, 'X');
+            [cost, Jtmp] = obj.piObjectiveFunction(x0, 'X');
             if nargout > 1
                 J = Jtmp;
             end
         end
         function [cost, J] = YpiObjectiveFnc(obj, x0)
-            [cost, Jtmp] = obj.piObjectiveFunction(x0, obj.ExpParams.Qubit, 'Y');
+            [cost, Jtmp] = obj.piObjectiveFunction(x0, 'Y');
             if nargout > 1
                 J = Jtmp;
             end
@@ -159,7 +159,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                         if strcmp(InstrName, IQchannels.awg)
                             obj.targetAWGIdx = numAWGs;
                         end
-                    case 'deviceDrivers.AgilentAP240'
+                    case {'deviceDrivers.AgilentAP240', 'deviceDrivers.AlazarATS9870'}
                         obj.scopeParams = obj.inputStructure.InstrParams.(InstrName);
                 end
             end
@@ -192,6 +192,21 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                 ExpParams.OffsetNorm = 2;
             end
         end
+        
+        function filenames = getAWGFileNames(obj, basename)
+            pathAWG = fullfile(getpref('qlab', 'awgDir'), basename);
+            awgs = cellfun(@(x) x.InstrName, obj.awgParams, 'UniformOutput',false);
+            for awgct = 1:length(awgs)
+                switch awgs{awgct}(1:6)
+                    case 'TekAWG'
+                        filenames{awgct} = fullfile(pathAWG, [basename '-' awgs{awgct}, '.awg']);
+                    case 'BBNAPS'
+                        filenames{awgct} = fullfile(pathAWG, [basename '-' awgs{awgct}, '.h5']);
+                    otherwise
+                        error('Unknown AWG type.');
+                end
+            end
+        end
     end
         
     methods (Static)
@@ -217,14 +232,14 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             ExpParams.OffsetNorm = 1;
             
             cfg = struct('ExpParams', ExpParams, 'SoftwareDevelopmentMode', 1, 'InstrParams', struct());
-            cfg_path = [path '/unit_test.cfg'];
+            cfg_path = [path '/unit_test.json'];
             writeCfgFromStruct(cfg_path, cfg);
             
             % create object instance
             pulseCal = expManager.pulseCalibration(path, cfg_path, 'unit_test', 1);
             
             %pulseCal.pulseParams = struct('piAmp', 6000, 'pi2Amp', 2800, 'delta', -0.5, 'T', eye(2,2), 'pulseType', 'drag',...
-            %                         'i_offset', 0.110, 'q_offset', 0.138);
+            %                        'i_offset', 0.110, 'q_offset', 0.138, 'SSBFreq', 0);
             %pulseCal.rabiAmpChannelSequence('q1q2', true);
             %pulseCal.rabiAmpChannelSequence('q2', false);
             %pulseCal.Pi2CalChannelSequence('q1q2', 'X', true);

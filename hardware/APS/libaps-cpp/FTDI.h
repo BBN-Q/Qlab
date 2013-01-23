@@ -20,6 +20,7 @@ namespace FTDI {
 	int connect(const int &, FT_HANDLE &);
 	int disconnect(FT_HANDLE &);
 
+	int isOpen(const int &);
 }
 
 
