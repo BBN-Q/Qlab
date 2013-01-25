@@ -206,13 +206,14 @@ void test::getSetTriggerInterval(){
 void test::printHelp(){
 	string spacing = "   ";
 	cout << "BBN APS C++ Test Bench" << endl;
+	cout << "Usage: test device_id <options>" << endl;
+	cout << "Where <options> can be any of the following:" << endl;
 	cout << spacing << "-b  <bitfile> Path to bit file" << endl;
 	cout << spacing << "-t  Toggle Test" << endl;
 	cout << spacing << "-w  Run Waveform StoreLoad Tests" << endl;
 	cout << spacing << "-stream LL Streaming Test" << endl;
 	cout << spacing << "-bf Run Bulk State File Test" << endl;
 	cout << spacing << "-sf Run  State File Test" << endl;
-	cout << spacing << "-d  Used default DACII bitfile" << endl;
 	cout << spacing << "-0  Redirect log to stdout" << endl;
 	cout << spacing << "-h  Print This Help Message" << endl;
 	cout << spacing << "-wf Program square wave" << endl;
@@ -245,23 +246,20 @@ int main(int argc, char** argv) {
 
 	set_logging_level(logDEBUG1);
 
-	if (cmdOptionExists(argv, argv + argc, "-h")) {
+	if (argc < 2 || cmdOptionExists(argv, argv + argc, "-h")) {
 		test::printHelp();
 		return 0;
 	}
 
+	int device_id = atoi(argv[1]);
+
 	string bitFile = getCmdOption(argv, argv + argc, "-b");
 
-	if (cmdOptionExists(argv, argv + argc, "-d")) {
-		bitFile = "../bitfiles/mqco_dac2_latest";
-	}
-
-
 	if (bitFile.length() == 0) {
-		bitFile = "../bitfiles/mqco_aps_latest";
+		bitFile = "../../bitfiles/mqco_aps_latest";
 	}
 
-	cout << "Programming using: " << string(bitFile) << endl;
+	cout << "Programming device " << device_id << " using: " << string(bitFile) << endl;
 
 	//Initialize the APSRack from the DLL
 	init();
@@ -272,9 +270,9 @@ int main(int argc, char** argv) {
 	}
 
 	//Connect to device
-	connect_by_ID(0);
+	connect_by_ID(device_id);
 
-	err = initAPS(0, const_cast<char*>(bitFile.c_str()), true);
+	err = initAPS(device_id, const_cast<char*>(bitFile.c_str()), true);
 
 	if (err != APS_OK) {
 		cout << "Error initializing APS Rack: " << err << endl;
@@ -332,7 +330,7 @@ int main(int argc, char** argv) {
 				test::offsetScale();
 		}
 
-	disconnect_by_ID(0);
+	disconnect_by_ID(device_id);
 
 	cout << "Made it through!" << endl;
 
