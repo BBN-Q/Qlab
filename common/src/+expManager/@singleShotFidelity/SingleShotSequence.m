@@ -6,8 +6,7 @@ cycleLength = 7100;
 nbrRepeats = 1;
 
 % if using SSB, set the frequency here
-SSBFreq = -100e6;
-pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
+pg = PatternGen(qubit);
 
 patseq = {{pg.pulse('QId')}, {pg.pulse('Xp')}};
 calseq  = [];
@@ -20,7 +19,7 @@ seqParams = struct(...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
-    'measLength', 5000);
+    'measLength', 2000);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 
@@ -28,8 +27,8 @@ qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
-measChannels = {'M1'};
-awgs = {'TekAWG'};
+measChannels = {'M2'};
+awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
 
 compileSequences(seqParams, patternDict, measChannels, awgs, false);
 

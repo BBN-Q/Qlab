@@ -7,7 +7,6 @@ ExpParams = obj.inputStructure.ExpParams;
 % stop the master and make sure it stopped
 masterAWG = obj.awg{1};
 masterAWG.stop();
-masterAWG.operationComplete();
 % start all the slave AWGs
 for i = 2:length(obj.awg)
     awg = obj.awg{i};
@@ -55,7 +54,7 @@ for loopct1 = 1:obj.Loop.one.steps
             
             % set the Tek to run
             masterAWG.run();
-            masterAWG.operationComplete();
+            masterAWG.waitForAWGtoStartRunning();
             
             %Poll the digitizer until it has all the data
             success = obj.scope.wait_for_acquisition(60);
@@ -79,7 +78,6 @@ for loopct1 = 1:obj.Loop.one.steps
             
             
             masterAWG.stop();
-            masterAWG.operationComplete();
 
             % restart the slave AWGs so we can resync
             for i = 2:length(obj.awg)

@@ -16,9 +16,10 @@ end
 %Update some relevant parameters
 channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 if ~exist('qubit2','var')
-    commonSettings.InstrParams.TekAWG.seqfile = ['U:\AWG\SingleShot\SingleShot-', channelMap.(qubit1).awg, '.awg'];
+    commonSettings.InstrParams.(channelMap.(qubit1).awg).seqfile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-', channelMap.(qubit1).awg, '.h5']);
 else
-    commonSettings.InstrParams.TekAWG.seqfile = ['U:\AWG\SingleShot\SingleShot.awg'];
+    error('TODO: Make work!')
+    commonSettings.InstrParams.(channelMap.(qubit1).awg).seqfile = ['U:\AWG\SingleShot\SingleShot.h5'];
 end    
 commonSettings.InstrParams.TekAWG.seqforce = 1;
 commonSettings.InstrParams.scope.averager.nbrSegments = 8000;
@@ -26,11 +27,13 @@ commonSettings.InstrParams.scope.averager.nbrRoundRobins = 1;
 
 % construct minimal cfg file
 ExpParams = struct();
-ExpParams.softAvgs = 10;
+ExpParams.softAvgs = 5;
 ExpParams.digitalHomodyne = commonSettings.ExpParams.digitalHomodyne;
 ExpParams.filter = commonSettings.ExpParams.filter;
 
-Sweeps.frequency = struct('type','sweeps.Frequency', 'start', 6.552, 'stop', 6.552, 'step', 50e-6, 'genID', 'RFgen', 'lockLOtoRF', false, 'number', 1);
+% Sweeps = struct();
+Sweeps.AWGChannel = struct('type', 'sweeps.AWGChannel', 'AWGName', 'BBNAPS2', 'channel', '3&4', 'mode', 'amp', 'start', 0.025, 'stop', 0.6, 'step', 0.025, 'number', 1);
+% Sweeps.frequency = struct('type','sweeps.Frequency', 'start', 6.552, 'stop', 6.552, 'step', 50e-6, 'genID', 'RFgen', 'lockLOtoRF', false, 'number', 1);
 % Sweeps.power = struct('type','sweeps.Power', 'start', -10, 'stop', 6, 'step', 0.5, 'units', 'dBm', 'genID', 'RFgen', 'number', 2);
 
 cfg = struct('ExpParams', ExpParams, ...
