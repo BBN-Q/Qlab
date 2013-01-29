@@ -33,11 +33,10 @@ fprintf('Number of sequences: %i\n', numSegments*seqParams.nbrRepeats);
 for measCh = measChannels
     measCh = measCh{1};
     IQkey = qubitMap.(measCh).IQkey;
-    SSBFreq = +10e6;
     ChParams = params.(IQkey);
     % shift the delay to include the measurement length
     params.(IQkey).delay = ChParams.delay + seqParams.measLength;
-    pgM = PatternGen(measCh, 'cycleLength', seqParams.cycleLength, 'SSBFreq', SSBFreq);    
+    pgM = PatternGen(measCh, 'cycleLength', seqParams.cycleLength);    
     measSeq = {{pgM.pulse('Xtheta', 'pType', 'tanh', 'sigma', 1, 'buffer', 0, 'amp', 4000, 'width', seqParams.measLength)}};
     patternDict(IQkey) = struct('pg', pgM, 'patseq', {repmat(measSeq, 1, nbrPatterns)}, 'calseq', {repmat(measSeq,1,calPatterns)}, 'channelMap', qubitMap.(measCh));
 end
