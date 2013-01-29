@@ -314,6 +314,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             %Assume for now that we are using a 10MHz external clock
             %TODO: handle internal/external clock rates
+            % values for (int, ext, ref) are (1, 5, 7)
             %Calculate the decimation factor
             decimationFac = round(1e9/horzSettings.samplingRate);
             obj.call_API('AlazarSetCaptureClock', obj.boardHandle, obj.defs('EXTERNAL_CLOCK_10MHz_REF'),1e9,obj.defs('CLOCK_EDGE_RISING'),decimationFac);
@@ -348,16 +349,19 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             %If the trigger channel is external then we also need to setup
             %that channel
+            trigSourceMap = containers.Map({'1', 'a', '2', 'b', 'ext', 'external'}, {0, 0, 1, 1, 2, 2});
+            if isnumeric(trigSettings.triggerSource)
+                trigSource = num2str(trigSettings.triggerSource);
+            else
+                trigSource = lower(trigSettings.triggerSource);
+            end
+            trigSettings.triggerSource = trigSourceMap(trigSource);
             if(trigSettings.triggerSource == 2)
-                %We can only choose 1V or 5V range and triggerLevel comes
+                %We can only choose 5V range and triggerLevel comes
                 %in mV
-                if trigSettings.triggerLevel/1000 < 0.5
-                    extTrigLevel = obj.defs('ETR_1V');
-                    trigChannelRange = 1;
-                else
-                    extTrigLevel = obj.defs('ETR_5V');
-                    trigChannelRange = 5;
-                end
+                extTrigLevel = obj.defs('ETR_5V');
+                trigChannelRange = 5;
+
                 obj.call_API('AlazarSetExternalTrigger',obj.boardHandle, trigSettings.triggerCoupling, extTrigLevel);
                 
                 %Otherwise setup the channel

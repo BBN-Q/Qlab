@@ -192,6 +192,7 @@ classdef AgilentAP240 < hgsetget
             %initialization of the device, middle two args currently
             %ignored
             persistent AcquirisBeenCalibrated
+            AcquirisBeenCalibrated = false;
             if isempty(AcquirisBeenCalibrated) || ~AcquirisBeenCalibrated
                 options = 'CAL=TRUE';
             else
@@ -200,7 +201,7 @@ classdef AgilentAP240 < hgsetget
 
             [status instrumentID] = Aq_InitWithOptions(obj.resourceName, 0, 0, options);
             assert(status == 0, 'Error in Aq_InitWithOptions: %d', status);
-            AcquirisBeenCalibrated = true;
+            AcquirisBeenCalibrated = false;
             
             obj.instrID  = instrumentID;
             
