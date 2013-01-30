@@ -136,15 +136,13 @@ classdef ExpManager < handle
             %Apply measurment filters in turn
             for measct = 1:length(obj.measurements)
                 apply(obj.measurements{measct}, data);
+                figure(measct);
+                subplot(2,1,1)
+                plot(abs(obj.measurements{measct}.get_data()));
+                subplot(2,1,2);
+                plot(angle(obj.measurements{measct}.get_data()));
+                drawnow()
             end
-            
-            fprintf('Got here\n');
-            figure(1);
-            subplot(2,1,1)
-            plot(abs(obj.measurements{1}.get_data()));
-            subplot(2,1,2);
-            plot(angle(obj.measurements{1}.get_data()));
-            drawnow()
             
         end
         
