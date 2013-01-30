@@ -24,11 +24,12 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
 
             %Box car filter the demodulated signal (as a column vector, for
             %no good reason)
+            obj.latestData = 2*mean(demodSignal(obj.integrationStart:obj.integrationStart+obj.integrationPts-1,:))';
             %The first time we just assign
             if isempty(obj.accumulatedData)
-                obj.accumulatedData = 2*mean(demodSignal(obj.integrationStart:obj.integrationStart+obj.integrationPts-1,:))';
+                obj.accumulatedData = obj.latestData;
             else
-                obj.accumulatedData = obj.accumulatedData + 2*mean(demodSignal(obj.integrationStart:obj.integrationStart+obj.integrationPts-1,:))';
+                obj.accumulatedData = obj.accumulatedData + obj.latestData;
             end
             obj.avgct = obj.avgct + 1;
             out = obj.accumulatedData / obj.avgct;

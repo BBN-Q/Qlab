@@ -2,6 +2,7 @@ classdef MeasFilter < handle
     
     properties
         channel
+        latestData
         accumulatedData
         avgct = 0
         childFilter

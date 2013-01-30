@@ -136,6 +136,7 @@ classdef ExpManager < handle
             %Apply measurment filters in turn
             for measct = 1:length(obj.measurements)
                 apply(obj.measurements{measct}, data);
+                
                 figure(measct);
                 subplot(2,1,1)
                 plot(abs(obj.measurements{measct}.get_data()));
