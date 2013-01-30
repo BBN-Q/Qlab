@@ -17,6 +17,7 @@ classdef Sweep < handle
 		name = 'Sweep'
 		plotRange
 		points
+        numSteps
 		Instr
 	end
 	

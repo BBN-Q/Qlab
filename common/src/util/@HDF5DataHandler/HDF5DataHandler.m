@@ -2,7 +2,7 @@ classdef HDF5DataHandler < handle
     properties
         FID
         fileName
-        fileOpen
+        fileOpen = 0
         idx
         rowSize
         dimension
@@ -11,19 +11,23 @@ classdef HDF5DataHandler < handle
         bufferIdx
     end
     methods
-        function obj = HDF5DataHandler(fileName, dimension, headerStruct, nbrDataSets)
+        function obj = HDF5DataHandler(fileName, dimension, nbrDataSets)
             if ~exist('nbrDataSets', 'var')
                 nbrDataSets = 1;
             end
+            obj.fileName = fileName;
             obj.nbrDataSets = nbrDataSets;
             obj.dimension = dimension;
-            switch (dimension)
+        end
+        
+        function open(obj, headerStruct)
+            switch (obj.dimension)
                 case 1
-                    obj.open1dDataFile(fileName, headerStruct);
+                    obj.open1dDataFile(obj.fileName, headerStruct);
                 case 2
-                    obj.open2dDataFile(fileName, headerStruct);
+                    obj.open2dDataFile(obj.fileName, headerStruct);
                 otherwise
-                    error('HDF5DataHandler does not support dimension = %d', dimension);
+                    error('HDF5DataHandler does not support dimension = %d', obj.dimension);
             end
         end
         
@@ -170,11 +174,16 @@ classdef HDF5DataHandler < handle
             obj.idx = obj.idx + 1;
         end
         
-        function closeDataFile(obj)
+        function close(obj)
             % all functions should close the FID, so don't need to do
             % anything
             %H5F.close(obj.FID);
             obj.fileOpen = 0;
+        end
+        
+        function markAsIncomplete(obj)
+            [path, name, ~] = fileparts(obj.fileName);
+            movefile(fullname, fullfile(path, [name '.incomplete']));
         end
         
         % helper functions for reading and writing header data
@@ -218,7 +227,8 @@ classdef HDF5DataHandler < handle
             data = [1, -1i, 2];
             data = data(:);
             header = struct('xpoints', [5 10 15], 'xlabel', 'Frequency (GHz)');
-            dataHandler = HDF5DataHandler('unit_test.h5', 1, header);
+            dataHandler = HDF5DataHandler('unit_test.h5', 1);
+            dataHandler.open(header);
             for ct = 1:3
                 dataHandler.write({data(ct)});
             end
@@ -237,7 +247,8 @@ classdef HDF5DataHandler < handle
             data = [1, 0, 1; 0, 1i, 0; 1, 0, 1];
             header = struct('xpoints', [5 10 15], 'xlabel', 'Frequency (GHz)',...
                 'ypoints', [1 2 3], 'ylabel', 'Time (us)');
-            dataHandler = HDF5DataHandler('unit_test.h5', 2, header);
+            dataHandler = HDF5DataHandler('unit_test.h5', 2);
+            dataHandler.open(header);
             for ct = 1:3
                 dataHandler.write({data(ct,:)});
             end
@@ -256,7 +267,8 @@ classdef HDF5DataHandler < handle
             data = [1, 0, 2; 0, 1i, 0; 1, 0, 1];
             header = struct('xpoints', [5 10 15], 'xlabel', 'Frequency (GHz)',...
                 'ypoints', [1 2 3], 'ylabel', 'Time (us)');
-            dataHandler = HDF5DataHandler('unit_test.h5', 2, header);
+            dataHandler = HDF5DataHandler('unit_test.h5', 2);
+            dataHandler.open(header);
             for rowct = 1:3
                 for columnct = 1:3
                     dataHandler.write({data(rowct,columnct)});

@@ -30,5 +30,13 @@
                  end
              end
          end
+         
+         % destructor
+         function delete(obj)
+             try
+                obj.disconnect();
+             catch %#ok<CTCH>
+             end
+         end
      end
  end % classdef

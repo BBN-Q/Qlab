@@ -14,17 +14,13 @@
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 classdef Frequency < sweeps.Sweep
 	properties
-		LOInstr
-		IFfreq
-		lockLO = false
-        longSettle = 0
 	end
 	
 	methods
 		% constructor
-		function obj = Frequency(SweepParams, Instr, params, sweepPtsOnly)
-			if nargin < 3
-				error('Usage: Frequency(SweepParams, Instr, ExpParams)');
+		function obj = Frequency(SweepParams, Instr)
+			if nargin < 2
+				error('Usage: Frequency(SweepParams, Instr)');
 			end
 			obj.name = 'Frequency (GHz)';
 			start = SweepParams.start;
@@ -34,36 +30,16 @@ classdef Frequency < sweeps.Sweep
 				step = -abs(step);
             end
 			
-            if ~sweepPtsOnly
-                % look for an instrument with the name 'genID'
-                if isfield(Instr, SweepParams.genID)
-                    obj.Instr = Instr.(SweepParams.genID);
-                else
-                    error(['Could not find instrument with name ' SweepParams.genID]);
-                end
-
-                % if we are sweeping RFgen, find LOgen and the IF frequency
-                % if we want to lock them
-                if strcmp(SweepParams.genID, 'RFgen') && SweepParams.lockLOtoRF
-                    ExpParams = params.ExpParams;
-                    if isfield(Instr, 'LOgen') && isfield(ExpParams, 'digitalHomodyne') && ~strcmp(ExpParams.digitalHomodyne.DHmode, 'OFF')
-                        obj.LOInstr = Instr.LOgen;
-                        % IF frequency is in MHz: convert to GHz
-                        obj.IFfreq = ExpParams.digitalHomodyne.IFfreq/(1e3);
-                        obj.lockLO = true;
-                    else
-                        warning('Could not find Instr.LOgen and IF frequency. Just sweeping RF.');
-                    end
-                end
-                
-                % if pulse mode is enabled, wait longer to settle
-                if obj.Instr.pulse
-                    obj.longSettle = 1;
-                end
+            % look for an instrument with the name 'genID'
+            if isfield(Instr, SweepParams.genID)
+                obj.Instr = Instr.(SweepParams.genID);
+            else
+                error(['Could not find instrument with name ' SweepParams.genID]);
             end
 			
 			% generate frequency points
 			obj.points = start:step:stop;
+            obj.numSteps = length(obj.points);
 			
 			obj.plotRange.start = start;
 			obj.plotRange.end = stop;
@@ -72,15 +48,6 @@ classdef Frequency < sweeps.Sweep
 		% frequency stepper
 		function step(obj, index)
 			obj.Instr.frequency = obj.points(index);
-			if obj.lockLO
-				obj.LOInstr.frequency = obj.points(index) + obj.IFfreq;
-			end
-			% wait for the instrument to settle
-            if obj.longSettle
-                pause(0.2)
-            else
-                pause(.05);
-            end
 		end
 	end
 end

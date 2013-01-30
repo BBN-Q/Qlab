@@ -73,6 +73,10 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         
     end
     
+    events
+        DataReady
+    end
+    
     methods (Access = public)
         %Constuctor which loads definitions and dll
         function obj = AlazarATS9870()
@@ -295,6 +299,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 obj.buffers.bufferPtrs{ct} = libpointer('uint8Ptr', zeros(obj.buffers.bufferSize,1));
             end
             
+            notify(obj, 'DataReady');
         end
         
         %Dummy function for consistency with Acqiris card where average
