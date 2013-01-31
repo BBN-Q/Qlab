@@ -49,10 +49,10 @@ cardParams = struct();
 % available card types
 cardParams.cardTypes = containers.Map({'AgilentAP240', 'AlazarATS9870'}, {1, 2});
 %Whether the card performs on-board averaging
-cardParams.cardModes = containers.Map();
+cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {'digitizer', 'averager'});
 %How the digitizer is clocked: internal, external, or 10MHz reference into
 %PLL
-cardParams.clockTypes = containers.Map();
+cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {'int', 'ext', 'ref'});
 %Vertical scaling
 cardParams.scales = containers.Map();
 %AC/DC coupling and impedence
@@ -74,7 +74,7 @@ cardParams.samplingRates = containers.Map();
 %menus
 cardParamsUIDict = containers.Map();
 cardParamsUIDict('cardType') = 'cardTypes';
-cardParamsUIDict('acquire_mode') = 'cardModes';
+cardParamsUIDict('acquireMode') = 'cardModes';
 cardParamsUIDict('clockType') = 'clockTypes';
 cardParamsUIDict('verticalScale') = 'scales';
 cardParamsUIDict('verticalCoupling') = 'verticalCouplings';
@@ -122,7 +122,7 @@ set_settings_fcn = @set_gui_elements;
         
         [~, ~, handles.cardType] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Type:', 'cardType', cardParams.cardTypes.keys());
         set(handles.cardType, 'Callback', @card_switch);
-        [~, ~, handles.acquire_mode] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Mode:', 'acquire_mode', {''});
+        [~, ~, handles.acquireMode] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Mode:', 'acquireMode', {''});
         
         set(tmpGrid1, 'RowSizes', [-1], 'ColumnSizes', [-1, -1]);
         
@@ -195,7 +195,7 @@ set_settings_fcn = @set_gui_elements;
         scope_settings.Address = 'PCI::INSTR0';
         
         % set card mode
-        scope_settings.acquire_mode = cardParams.cardModes(get_selected(handles.acquire_mode));
+        scope_settings.acquireMode = cardParams.cardModes(get_selected(handles.acquireMode));
         scope_settings.clockType = cardParams.clockTypes(get_selected(handles.clockType));
         
         % set horizontal settings
@@ -242,8 +242,7 @@ set_settings_fcn = @set_gui_elements;
         %Now set the allowed parameters
         switch curCard
             case 'AgilentAP240'
-                cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {0, 2});
-                cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {'int', 'ext', 'ref'});
+                cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {'digitizer', 'averager'});
                 cardParams.scales = containers.Map({'50m','100m', '200m', '500m', '1', '2', '5'}, {.05, .1, .2, .5, 1, 2, 5});
                 cardParams.verticalCouplings = containers.Map({'Ground','DC, 1 MOhm','AC, 1 MOhm','DC, 50 Ohm','AC, 50 Ohm'}, ...
                     {0,1,2,3,4});
@@ -278,7 +277,6 @@ set_settings_fcn = @set_gui_elements;
                 
             case 'AlazarATS9870'
                 cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {0, 2});
-                cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {'int', 'ext', 'ref'});
                 cardParams.scales = containers.Map({'40m','100m', '200m', '400m', '1', '2', '4'}, {.04, .1, .2, .4, 1, 2, 4});
                 cardParams.verticalCouplings = containers.Map({'AC, 50 Ohm','DC, 50 Ohm'}, {1, 2});
                 cardParams.bandwidths = containers.Map({'no limit','20 MHz'}, {0,1});
@@ -324,7 +322,7 @@ set_settings_fcn = @set_gui_elements;
         defaults = struct();
         if isempty(fieldnames(settings))
             defaults.cardType = 'AgilentAP240';
-            defaults.acquire_mode = 'Averager';
+            defaults.acquireMode = 'Averager';
             defaults.clockType = 'Ext Ref (10 MHz)';
             defaults.horizontal.delayTime = 0;
             defaults.horizontal.samplingRate = 1e9;
@@ -360,7 +358,7 @@ set_settings_fcn = @set_gui_elements;
             % scope settings are two layers deep, need to go into horizontal,
             % vertical, trigger, and averager
             defaults.cardType = settings.cardType;
-            defaults.acquire_mode = cardModesInv(settings.acquire_mode);
+            defaults.acquireMode = cardModesInv(settings.acquireMode);
             defaults.clockType = clockTypesInv(settings.clockType);
             % horizontal
             defaults.horizontal.delayTime = settings.horizontal.delayTime;

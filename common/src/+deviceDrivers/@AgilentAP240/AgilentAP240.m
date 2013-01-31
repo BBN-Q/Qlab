@@ -20,7 +20,7 @@ classdef AgilentAP240 < hgsetget
         Address;
         channel_on; % sets or queries which channels are currently on
         triggerSource; % which channel supplies the trigger
-        acquire_mode;  %fieldnames of value and flags
+        acquireMode;  %fieldnames of value and flags
         clockType; % internal, external, or external reference
         
         memory;  %fields of recordLength and nbrSegments
@@ -353,7 +353,7 @@ classdef AgilentAP240 < hgsetget
     
     methods % Instrument parameter accessors
         %% get - gets query the card - no parameters really stored in the object
-        function val = get.acquire_mode(obj)
+        function val = get.acquireMode(obj)
             [status mode , ~, flags] = AqD1_getMode(obj.instrID);
             if (status ~= 0)
                 fprintf('Error in AqD1_getMode: %d', status);
@@ -488,23 +488,12 @@ classdef AgilentAP240 < hgsetget
         %% set - sets parameters on the card almost instantaneously -
         % no parameters really stored in the object
         
-        function obj = set.acquire_mode(obj, modeP)
-            % to do, also accept a non-struct input
-            if isstruct(modeP) && isfield(modeP, 'value')
-                
-                % use default value for flags if it is not specified
-                if (~isfield(modeP, 'flags'))
-                    modeP.flags = 0;
-                end
-                
-                status = AqD1_configMode(obj.instrID, modeP.value, 0, modeP.flags);
-                assert(status == 0, 'Error in AqD1_configMode: %d', status);
-            elseif isnumeric(modeP)
-                status = AqD1_configMode(obj.instrID, modeP, 0, 0);
-                assert(status == 0, 'Error in AqD1_configMode: %d', status);
-            else
-                error('Error in set acquire_mode - modeP should be struct with fields of value and flags');
-            end
+        function obj = set.acquireMode(obj, mode)
+            assert(isa(mode, 'char'), 'mode must be "digitizer" or "averager"');
+            modeMap = containers.Map({'digitizer', 'averager'}, {0, 2});
+            status = AqD1_configMode(obj.instrID, modeMap(lower(mode)), 0, 0);
+            assert(status == 0, 'Error in AqD1_configMode: %d', status);
+            obj.acquireMode = mode;
         end
         
         % set clock type

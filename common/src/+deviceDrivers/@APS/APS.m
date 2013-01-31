@@ -155,14 +155,9 @@ classdef APS < hgsetget
         
         function disconnect(obj)
             %disconnect Close the USB connection.
-            try
-                val = calllib(obj.library_name, 'disconnect_by_ID', obj.deviceID);
-            catch
-                val = 0;
-            end
-            if (val == 0)
-                fprintf('APS USB Connection Closed\n');
-            else
+            val = calllib(obj.library_name, 'disconnect_by_ID', obj.deviceID);
+
+            if val ~= 0
                 fprintf('Error closing APS USB Connection: %i\n', val);
             end
             obj.is_open = 0;

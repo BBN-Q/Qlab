@@ -12,8 +12,11 @@ function demodSignal = digitalDemod(data, IFfreq, samplingRate)
 
 %Create the weighted reference signal
 refSignal = exp(1i*2*pi*IFfreq*1/samplingRate*(1:1:size(data,1)))';
-
-demodSignal = filter(b,a, data.*repmat(refSignal,[1,size(data,2)]));
+% efficiently compute the data .* refSignal (with singleton dimension
+% expansion)
+prodSignal = bsxfun(@times, data, refSignal);
+% low-pass filter
+demodSignal = filter(b,a, prodSignal);
 
 end
 

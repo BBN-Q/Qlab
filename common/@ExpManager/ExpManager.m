@@ -144,7 +144,6 @@ classdef ExpManager < handle
                 plot(angle(obj.measurements{measct}.get_data()));
                 drawnow()
             end
-            
         end
         
         %Helpers to flesh out properties

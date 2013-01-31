@@ -8,10 +8,6 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         
         model_number = 'ATS9870';
         
-        %Not sure what this is for (probably just compatibility with other
-        %instruments)
-        Address
-        
         %Location of the Matlab include files with the SDK
         includeDir = 'C:\AlazarTech\ATS-SDK\6.0.3\Samples_MATLAB\Include'
         
@@ -21,7 +17,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         %Assume for now we have only one board in the computer so hardcode
         %the system and board identifiers
         systemId = 1
-        boardId = 1
+        address = 1
         
         %Handle to the board for the C API
         boardHandle
@@ -42,8 +38,12 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         buffers = struct('guessBufferSize',4e6, 'bufferSize', 0, 'maxBufferSize', 0, 'recordsPerBuffer', 0,...
             'roundRobinsPerBuffer', 0, 'numBuffers', 0, 'bufferPtrs',cell(1));
         
-        %The averaged data
-        averagedData
+        %The single-shot or averaged data (depending on the acquireMode)
+        data
+        
+        %Acquire mode controls whether we return single-shot results or
+        %averaged data
+        acquireMode
         
         %The size of the memory of the card
         onBoardMemory = 256e6;
@@ -94,11 +94,8 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 error('ATSApi.dll is not loaded\n');
             end
             
-            %Get the handle to the board
-            obj.boardHandle = calllib('ATSApi','AlazarGetBoardBySystemID', obj.systemId, obj.boardId);
-            
-            %Assert that we want to be able to use at least four buffers
-            obj.buffers.maxBufferSize = obj.onBoardMemory/4;
+            %Assert that we want to be able to use at least two buffers
+            obj.buffers.maxBufferSize = obj.onBoardMemory/2;
         end
         
         %Destructor
@@ -109,6 +106,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             for ct = 1:obj.buffers.numBuffers
                 clear obj.buffers.bufferPtrs{ct}
             end
+            obj.disconnect();
         end
         
         function load_defs(obj)
@@ -128,16 +126,17 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
         end
         
-        %Dummy function to connect
-        function connect(obj, Address)
-            %If we specify an new address, use it (although it's not clear
-            %what for.
-            obj.Address = Address;
+        function connect(obj, address)
+            %Get the handle to the board
+            %If only one board is installed, address = 1
+            if ~isnumeric(address)
+                address = str2double(address);
+            end
+            obj.boardHandle = calllib('ATSApi','AlazarGetBoardBySystemID', obj.systemId, address);
         end
-        
-        %Dummy function to disconnect
+
         function disconnect(obj)
-            obj.flash_LED(0,0);
+            delete(obj.boardHandle);
         end
         
         %Helper function to make an API call and error check
@@ -191,9 +190,14 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         %Setup and start an acquisition
         function acquire(obj)
             %Zero the stored data
-            obj.averagedData = cell(2);
-            obj.averagedData{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
-            obj.averagedData{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
+            obj.data = cell(2);
+            if strcmp(obj.acquireMode, 'averager')
+                obj.data{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
+                obj.data{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
+            else
+                obj.data{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrRoundRobins, obj.buffers.roundRobinsPerBuffer]);
+                obj.data{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrRoundRobins, obj.buffers.roundRobinsPerBuffer]);
+            end
             
             %Setup the dual-port asynchronous AutoDMA with NPT mode
             %The acquisition starts automatically because I don't set the
@@ -223,8 +227,8 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             bufferct = 0;
             totNumBuffers = round(obj.settings.averager.nbrRoundRobins/obj.buffers.roundRobinsPerBuffer);
             
-            sumDataA = zeros(size(obj.averagedData{1}));
-            sumDataB = zeros(size(obj.averagedData{2}));
+            sumDataA = zeros(size(obj.data{1}));
+            sumDataB = zeros(size(obj.data{2}));
             
             %Loop until all are processed
             while bufferct < totNumBuffers
@@ -257,18 +261,22 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 setdatatype(bufferOut, 'uint8Ptr', 1, obj.buffers.bufferSize);
                 
                 %Extract and reshape the data
-                tmpData = reshape(bufferOut.Value(1:obj.buffers.bufferSize/2), [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
-                
-                %Sum over repeats and cast to double precision so we don't
-                %overflow
-                sumDataA = sumDataA + squeeze(sum(sum(tmpData,4,'double'),2));
+                tmpDataA = reshape(bufferOut.Value(1:obj.buffers.bufferSize/2), [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
                 
                 %Extract and reshape the data
-                tmpData = reshape(bufferOut.Value(obj.buffers.bufferSize/2+1:obj.buffers.bufferSize), [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
+                tmpDataB = reshape(bufferOut.Value(obj.buffers.bufferSize/2+1:obj.buffers.bufferSize), [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
                 
-                %Sum over repeats and cast to double precision so we don't
-                %overflow
-                sumDataB = sumDataB + squeeze(sum(sum(tmpData,4,'double'),2));
+                if strcmp(obj.acquireMode, 'averager')
+                    %Sum over repeats and cast to double precision so we don't
+                    %overflow
+                    sumDataA = sumDataA + squeeze(sum(sum(tmpDataA,4,'double'),2));
+                    sumDataB = sumDataB + squeeze(sum(sum(tmpDataB,4,'double'),2));
+                else
+                    %Rescale data to appropriate scale, i.e. map (0,255) to (-Vs,Vs)
+                    obj.data{1} = tmpDataA * 2*obj.verticalScale/255 - obj.verticalScale;
+                    obj.data{2} = tmpDataB * 2*obj.verticalScale/255 - obj.verticalScale;
+                    notify(obj, 'DataReady');
+                end
                 
                 % Make the buffer available to be filled again by the board
                 obj.call_API('AlazarPostAsyncBuffer', obj.boardHandle, obj.buffers.bufferPtrs{bufferNum}, obj.buffers.bufferSize);
@@ -278,14 +286,18 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 
             end
             
-            %Average the summed data
-            numRepeats = obj.settings.averager.nbrWaveforms*obj.settings.averager.nbrRoundRobins;
-            obj.averagedData{1} = sumDataA/numRepeats;
-            obj.averagedData{2} = sumDataB/numRepeats;
-            
-            %Rescale data to appropriate scale, i.e. map (0,255) to (-Vs,Vs)
-            obj.averagedData{1} = obj.averagedData{1} * 2*obj.verticalScale/255 - obj.verticalScale;
-            obj.averagedData{2} = obj.averagedData{2} * 2*obj.verticalScale/255 - obj.verticalScale;
+            if strcmp(obj.acquireMode, 'averager')
+                %Average the summed data
+                numRepeats = obj.settings.averager.nbrWaveforms*obj.settings.averager.nbrRoundRobins;
+                obj.data{1} = sumDataA/numRepeats;
+                obj.data{2} = sumDataB/numRepeats;
+                
+                %Rescale data to appropriate scale, i.e. map (0,255) to (-Vs,Vs)
+                obj.data{1} = obj.data{1} * 2*obj.verticalScale/255 - obj.verticalScale;
+                obj.data{2} = obj.data{2} * 2*obj.verticalScale/255 - obj.verticalScale;
+                
+                notify(obj, 'DataReady');
+            end
 
             %Clear and reallocate the buffer ptrs
             %Try to abort any in progress acquisitions and transfers
@@ -298,14 +310,13 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             for ct = 1:obj.buffers.numBuffers
                 obj.buffers.bufferPtrs{ct} = libpointer('uint8Ptr', zeros(obj.buffers.bufferSize,1));
             end
-            
-            notify(obj, 'DataReady');
+
         end
         
         %Dummy function for consistency with Acqiris card where average
         %data is stored on card
         function [avgWaveform, times] = transfer_waveform(obj, channel)
-            avgWaveform = obj.averagedData{channel};
+            avgWaveform = obj.data{channel};
             times = (1/obj.horizontal.samplingRate)*(0:obj.averager.recordLength-1);
         end
         
