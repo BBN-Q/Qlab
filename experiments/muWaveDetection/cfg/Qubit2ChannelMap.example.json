@@ -46,6 +46,12 @@
 		"marker": "TekAWG_2m2",
 		"IQkey": "BBNAPS_12",
 		"source": "Logen"
+	},
+	"digitizerTrig": {
+		"channel": "BBNAPS1_2m1"
+	},
+	"slaveTrig": {
+		"channel": "BBNAPS1_4m1"
 	}
 
 }
