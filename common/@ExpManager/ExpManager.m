@@ -11,8 +11,8 @@ classdef ExpManager < handle
         listeners = {}
         plotTimer
     end
-   
-   methods
+    
+    methods
         %Constructor
         function obj = expManager(name)
             obj.name = name;
@@ -36,35 +36,35 @@ classdef ExpManager < handle
         %Initialize
         function init(obj)
             
-           %For initialize each instrument via setAll()
-           instrNames = fieldnames(obj.instruments);
-           for instr = instrNames'
-               instrName= instr{1};
-               instrHandle = obj.instruments.(instrName);
-               instrHandle.setAll(obj.instrSettings.(instrName));
-               % keep track of digitizers and AWGs
-               if obj.is_scope(instrHandle)
-                   obj.scopes{end+1} = instrHandle;
-               end
-               if obj.is_AWG(instrHandle)
-                   obj.AWGs{end+1} = instrHandle;
-                   if obj.instrSettings.(instrName).isMaster
-                       masterAWGIndex = length(obj.AWGs);
-                   end
-               end
-           end
-           
-           %Rearrange the AWG list to put the Master first
-           obj.AWGs([1, masterAWGIndex]) = obj.AWGs([masterAWGIndex, 1]);
-
-           %Open data file
-           % FIX ME
-%            header = struct();
-%            obj.dataFileHandler.open(header);
-           
-           %Connect measurment data to processing callback
-           obj.listeners{1} = addlistener(obj.scopes{1}, 'DataReady', @obj.process_data);
-           obj.plotTimer = timer('TimerFcn', @obj.plot_callback, 'Period', 2.0, 'ExecutionMode', 'fixedSpacing');
+            %For initialize each instrument via setAll()
+            instrNames = fieldnames(obj.instruments);
+            for instr = instrNames'
+                instrName= instr{1};
+                instrHandle = obj.instruments.(instrName);
+                instrHandle.setAll(obj.instrSettings.(instrName));
+                % keep track of digitizers and AWGs
+                if obj.is_scope(instrHandle)
+                    obj.scopes{end+1} = instrHandle;
+                end
+                if obj.is_AWG(instrHandle)
+                    obj.AWGs{end+1} = instrHandle;
+                    if obj.instrSettings.(instrName).isMaster
+                        masterAWGIndex = length(obj.AWGs);
+                    end
+                end
+            end
+            
+            %Rearrange the AWG list to put the Master first
+            obj.AWGs([1, masterAWGIndex]) = obj.AWGs([masterAWGIndex, 1]);
+            
+            %Open data file
+            % FIX ME
+            %            header = struct();
+            %            obj.dataFileHandler.open(header);
+            
+            %Connect measurment data to processing callback
+            obj.listeners{1} = addlistener(obj.scopes{1}, 'DataReady', @obj.process_data);
+            obj.plotTimer = timer('TimerFcn', @obj.plot_callback, 'Period', 2.0, 'ExecutionMode', 'fixedSpacing');
         end
         
         %Runner
@@ -72,7 +72,7 @@ classdef ExpManager < handle
             
             %Set the cleanup function so that even if we ctrl-c out we
             %correctly cleanup
-            c = onCleanup(@() obj.cleanUp()); 
+            c = onCleanup(@() obj.cleanUp());
             
             %Start the plot timer
             start(obj.plotTimer);
@@ -81,7 +81,7 @@ classdef ExpManager < handle
             idx = 1;
             ct = zeros(length(obj.sweeps));
             stops = cellfun(@(x) x.numSteps, obj.sweeps);
-
+            
             while idx > 0 && ct(1) <= stops(1)
                 if ct(idx) < stops(idx)
                     ct(idx) = ct(idx) + 1;
@@ -112,7 +112,7 @@ classdef ExpManager < handle
             % close data file
             obj.dataFileHandler.close();
         end
-   
+        
         %Helper function to take data (basically, start/stop AWGs and
         %digitizers)
         function take_data(obj)
@@ -126,7 +126,7 @@ classdef ExpManager < handle
             for awg = obj.AWGs
                 stop(awg{1});
             end
-
+            
             %Ready the digitizers
             for scope = obj.scopes
                 acquire(scope{1});
@@ -143,9 +143,9 @@ classdef ExpManager < handle
             
             %Wait for data taking to finish
             obj.scopes{1}.wait_for_acquisition(120);
-           
+            
         end
-
+        
         %Helper function to apply measurement filters and store data
         function process_data(obj, src, ~)
             % download data from src
@@ -180,13 +180,13 @@ classdef ExpManager < handle
         function add_sweep(obj, sweep)
             obj.sweeps{end+1} = sweep;
         end
-
-   end
-   
-   methods (Static)
-       %forward reference static methods
-       out = is_scope(instr)
-       out = is_AWG(instr)
-   end
+        
+    end
+    
+    methods (Static)
+        %forward reference static methods
+        out = is_scope(instr)
+        out = is_AWG(instr)
+    end
     
 end
