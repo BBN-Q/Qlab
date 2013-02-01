@@ -273,8 +273,8 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                     sumDataB = sumDataB + squeeze(sum(sum(tmpDataB,4,'double'),2));
                 else
                     %Rescale data to appropriate scale, i.e. map (0,255) to (-Vs,Vs)
-                    obj.data{1} = tmpDataA * 2*obj.verticalScale/255 - obj.verticalScale;
-                    obj.data{2} = tmpDataB * 2*obj.verticalScale/255 - obj.verticalScale;
+                    obj.data{1} = double(tmpDataA) * 2*obj.verticalScale/255 - obj.verticalScale;
+                    obj.data{2} = double(tmpDataB) * 2*obj.verticalScale/255 - obj.verticalScale;
                     notify(obj, 'DataReady');
                 end
                 

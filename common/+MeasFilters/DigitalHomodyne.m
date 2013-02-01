@@ -21,22 +21,18 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             data = apply@MeasFilters.MeasFilter(obj, data);
             
             demodSignal = digitalDemod(data, obj.IFfreq, obj.samplingRate);
-
-            %Box car filter the demodulated signal (as a column vector, for
-            %no good reason)
-            obj.latestData = 2*mean(demodSignal(obj.integrationStart:obj.integrationStart+obj.integrationPts-1,:))';
-            %The first time we just assign
-            if isempty(obj.accumulatedData)
-                obj.accumulatedData = obj.latestData;
+            
+            %Box car filter the demodulated signal
+            if ndims(demodSignal) == 2
+                obj.latestData = 2*mean(demodSignal(obj.integrationStart:obj.integrationStart+obj.integrationPts-1,:));
+            elseif ndims(demodSignal) == 4
+                obj.latestData = 2*mean(demodSignal(obj.integrationStart:obj.integrationStart+obj.integrationPts-1,:,:,:));
             else
-                obj.accumulatedData = obj.accumulatedData + obj.latestData;
+                error('Only able to handle 2 and 4 dimensional data.');
             end
-            obj.avgct = obj.avgct + 1;
-            out = obj.accumulatedData / obj.avgct;
-        end
-        
-        function out = get_data(obj)
-            out = obj.accumulatedData / obj.avgct;
+                
+            obj.accumulate();
+            out = obj.get_data();
         end
     end
     

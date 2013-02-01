@@ -12,24 +12,13 @@ classdef Correlator < MeasFilters.MeasFilter
         
         function out = apply(obj, ~)
             filterData = cellfun(@(x) x.latestData, obj.filters, 'UniformOutput', false);
-            filterData = cell2mat(filterData);
-            
+            % stack latestData's and convert to array
+            filterData = cat(ndims(filterData{1})+1, filterData{:});
+            % take the product along the stacked dimension
             obj.latestData = prod(filterData, ndims(filterData));
 
-            %The first time we just assign
-            if isempty(obj.accumulatedData)
-                obj.accumulatedData = obj.latestData;
-            else
-                obj.accumulatedData = obj.accumulatedData + obj.latestData;
-            end
-            obj.avgct = obj.avgct + 1;
-            out = obj.accumulatedData / obj.avgct;
-        end
-        
-        function out = get_data(obj)
-            out = obj.accumulatedData / obj.avgct;
+            obj.accumulate();
+            out = obj.get_data();
         end
     end
-    
-    
 end

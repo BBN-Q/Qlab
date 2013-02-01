@@ -38,13 +38,27 @@ classdef MeasFilter < handle
             obj.accumulatedData = [];
         end
         
-    end
-    
-    methods (Abstract = true)
+        function accumulate(obj)
+            % data comes back from the scope as either 2D (time x segment)
+            % or 4D (time x waveforms x segment x roundRobinsPerBuffer)
+            % in the 4D case, we want to average over waveforms and round
+            % robins
+            if ndims(obj.latestData) > 2
+                tmpData = squeeze(mean(mean(obj.latestData, 4), 2));
+            else
+                tmpData = obj.latestData;
+            end
+            if isempty(obj.accumulatedData)
+                obj.accumulatedData = tmpData;
+            else
+                obj.accumulatedData = obj.accumulatedData + tmpData;
+            end
+            obj.avgct = obj.avgct + 1;
+        end
         
-        %Return averaged data
-        get_data(obj)
+        function out = get_data(obj)
+            out = obj.accumulatedData / obj.avgct;
+        end
     end
-    
     
 end

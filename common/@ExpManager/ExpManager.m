@@ -9,6 +9,7 @@ classdef ExpManager < handle
         scopes
         AWGs
         listeners = {}
+        plotTimer
     end
    
    methods
@@ -25,10 +26,11 @@ classdef ExpManager < handle
                 obj.dataFileHandler.markAsIncomplete();
             end
             
-            %clean up DataReady listeners
+            %clean up DataReady listeners and plot timer
             for listener = obj.listeners
                 delete(listener{1});
             end
+            delete(obj.plotTimer);
         end
         
         %Initialize
@@ -62,11 +64,19 @@ classdef ExpManager < handle
            
            %Connect measurment data to processing callback
            obj.listeners{1} = addlistener(obj.scopes{1}, 'DataReady', @obj.process_data);
-            
+           obj.plotTimer = timer('TimerFcn', @obj.plot_callback, 'Period', 2.0, 'ExecutionMode', 'fixedSpacing');
         end
         
         %Runner
         function run(obj)
+            
+            %Set the cleanup function so that even if we ctrl-c out we
+            %correctly cleanup
+            c = onCleanup(@() obj.cleanUp()); 
+            
+            %Start the plot timer
+            start(obj.plotTimer);
+            
             %Loop over all the sweeps
             idx = 1;
             ct = zeros(length(obj.sweeps));
@@ -75,6 +85,7 @@ classdef ExpManager < handle
             while idx > 0 && ct(1) <= stops(1)
                 if ct(idx) < stops(idx)
                     ct(idx) = ct(idx) + 1;
+                    fprintf('Stepping sweep %d: %d of %d\n', idx, ct(idx), stops(idx));
                     obj.sweeps{idx}.step(ct(idx));
                     if idx < length(ct)
                         idx = idx + 1;
@@ -87,12 +98,18 @@ classdef ExpManager < handle
                 end
             end
             
-            obj.cleanUp();
         end
         
         function cleanUp(obj)
             % perform any task necessary to clean up (e.g. stop AWGs, turn
             % of uW sources, etc.)
+            stop(obj.plotTimer);
+            delete(obj.plotTimer);
+            %clean up DataReady listeners and plot timer
+            for listener = obj.listeners
+                delete(listener{1});
+            end
+            % close data file
             obj.dataFileHandler.close();
         end
    
@@ -136,14 +153,18 @@ classdef ExpManager < handle
             %Apply measurment filters in turn
             for measct = 1:length(obj.measurements)
                 apply(obj.measurements{measct}, data);
-                
-                figure(measct);
+            end
+        end
+        
+        function plot_callback(obj, ~, ~)
+            for measct = 1:length(obj.measurements)
+                figure(measct)
                 subplot(2,1,1)
                 plot(abs(obj.measurements{measct}.get_data()));
-                subplot(2,1,2);
+                subplot(2,1,2)
                 plot(angle(obj.measurements{measct}.get_data()));
-                drawnow()
             end
+            drawnow()
         end
         
         %Helpers to flesh out properties
