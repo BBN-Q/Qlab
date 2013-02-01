@@ -11,16 +11,13 @@ classdef HDF5DataHandler < handle
         bufferIdx
     end
     methods
-        function obj = HDF5DataHandler(fileName, dimension, nbrDataSets)
-            if ~exist('nbrDataSets', 'var')
-                nbrDataSets = 1;
-            end
+        function obj = HDF5DataHandler(fileName)
             obj.fileName = fileName;
-            obj.nbrDataSets = nbrDataSets;
-            obj.dimension = dimension;
         end
         
-        function open(obj, headerStruct)
+        function open(obj, headerStruct, dimension, nbrDataSets)
+            obj.dimension = dimension;
+            obj.nbrDataSets = nbrDataSets;
             switch (obj.dimension)
                 case 1
                     obj.open1dDataFile(obj.fileName, headerStruct);

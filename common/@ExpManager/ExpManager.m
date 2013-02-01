@@ -55,9 +55,17 @@ classdef ExpManager < handle
             obj.AWGs([1, masterAWGIndex]) = obj.AWGs([masterAWGIndex, 1]);
             
             %Open data file
-            % FIX ME
-            %            header = struct();
-            %            obj.dataFileHandler.open(header);
+            header = struct();
+            labels = cellfun(@(s) s.label, obj.sweeps, 'UniformOutput', false);
+            xyz = {'x', 'y', 'z'};
+            points = cellfun(@(s) s.points, obj.sweeps, 'UniformOutput', false);
+            for ct = 1:length(obj.sweeps)
+                header.([xyz{ct}, 'label']) = labels{ct};
+                header.([xyz{ct}, 'points']) = points{ct};
+            end
+            header.instrSettings = obj.instrSettings;
+            obj.dataFileHandler.open(header, length(obj.sweeps), length(obj.measurements));
+            
         end
         
         %Runner
@@ -75,14 +83,17 @@ classdef ExpManager < handle
             
             %Loop over all the sweeps
             idx = 1;
-            ct = zeros(length(obj.sweeps));
+            ct = zeros(1, length(obj.sweeps));
             stops = cellfun(@(x) x.numSteps, obj.sweeps);
+            sizes = cellfun(@(x) length(x.points), obj.sweeps);
             
             % generic nested loop sweeper through "stack"
             while idx > 0 && ct(1) <= stops(1)
                 if ct(idx) < stops(idx)
                     ct(idx) = ct(idx) + 1;
-                    fprintf('Stepping sweep %d: %d of %d\n', idx, ct(idx), stops(idx));
+                    if stops(idx) > 1
+                        fprintf('Stepping sweep %d: %d of %d\n', idx, ct(idx), stops(idx));
+                    end
                     obj.sweeps{idx}.step(ct(idx));
                     if idx < length(ct)
                         idx = idx + 1;
@@ -95,16 +106,19 @@ classdef ExpManager < handle
                             % obj.data.(measNames{ct})(ct(1), ct(2), ..., ct(n), :) = stepData{ct};
                             % lacking an idiomatic way to build the generic
                             % assignment, we manually call subsasgn
-                            indexer = struct('type', '()', 'subs', {[num2cell(ct), ':']});
+                            %We assume the segment sweep is last
+                            indexer = struct('type', '()', 'subs', {[num2cell(ct(1:end-1)), ':']});
                             if ~isfield(obj.data, measName{1})
-                                obj.data.(measName{1}) = nan([stops, length(stepData.(measName{1}))]);
+                                obj.data.(measName{1}) = nan(sizes);
                             end
                             obj.data.(measName{1}) = subsasgn(obj.data.(measName{1}), indexer, stepData.(measName{1}));
                         end
                         obj.plot_data()
                     end
                 else
-                    ct(idx) = 1;
+                    %We've rolled over so reset this sweeps counter and
+                    %step back to the next sweep
+                    ct(idx) = 0;
                     idx = idx - 1;
                 end
             end
@@ -114,6 +128,14 @@ classdef ExpManager < handle
         function cleanUp(obj)
             % perform any task necessary to clean up (e.g. stop AWGs, turn
             % of uW sources, etc.)
+            cellfun(@(awg) stop(awg), obj.AWGs);
+            function turn_uwave_off(instr)
+                if isa(instr, 'deviceDrivers.lib.uWSource')
+                        instr.output = 0;
+                end
+            end
+            structfun(@turn_uwave_off, obj.instruments); 
+            
             stop(obj.plotScopeTimer);
             delete(obj.plotScopeTimer);
             %clean up DataReady listeners and plot timer
@@ -154,10 +176,10 @@ classdef ExpManager < handle
         end
         
         function plot_data(obj)
-           %Plot the accumulated swept data
+            %Plot the accumulated swept data
             %We keep track of figure handles to not pop new ones up all the
             %time
-            persistent figHandles axesHandles plotHandles 
+            persistent figHandles axesHandles plotHandles
             if isempty(figHandles)
                 figHandles = struct();
                 axesHandles = struct();
@@ -169,10 +191,10 @@ classdef ExpManager < handle
                 
                 if ~isempty(measData)
                     if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
-                        figHandles.(measName{1}) = figure('HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Data']);
+                        figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Data']);
                     end
                     figHandle = figHandles.(measName{1});
-
+                    
                     if ~isfield(axesHandles, [measName{1} '_abs']) || ~isfield(plotHandles, [measName{1} '_abs'])
                         axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
                         axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
@@ -200,7 +222,7 @@ classdef ExpManager < handle
         function plot_scope_callback(obj, ~, ~)
             %We keep track of figure handles to not pop new ones up all the
             %time
-            persistent figHandles axesHandles plotHandles 
+            persistent figHandles axesHandles plotHandles
             if isempty(figHandles)
                 figHandles = struct();
                 axesHandles = struct();
@@ -212,10 +234,10 @@ classdef ExpManager < handle
                 
                 if ~isempty(data)
                     if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
-                        figHandles.(measName{1}) = figure('HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Scope']);
+                        figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Scope']);
                     end
                     figHandle = figHandles.(measName{1});
-
+                    
                     if ~isfield(axesHandles, [measName{1} '_abs']) || ~isfield(plotHandles, [measName{1} '_abs'])
                         axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
                         plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), abs(data));

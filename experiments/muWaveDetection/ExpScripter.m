@@ -5,7 +5,7 @@ import MeasFilters.*
 
 exp = ExpManager();
 
-exp.dataFileHandler = HDF5DataHandler('silly.h5', 1);
+exp.dataFileHandler = HDF5DataHandler('silly.h5');
 
 expSettings = jsonlab.loadjson('scripter.json');
 instrSettings = expSettings.instruments;
