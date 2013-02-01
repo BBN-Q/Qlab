@@ -3,7 +3,7 @@ classdef ExpManager < handle
         dataFileHandler
         instruments = struct();
         instrSettings = struct();
-        measurements = {}
+        measurements = struct();
         sweeps = {}
         name
         scopes
@@ -64,7 +64,7 @@ classdef ExpManager < handle
             
             %Connect measurment data to processing callback
             obj.listeners{1} = addlistener(obj.scopes{1}, 'DataReady', @obj.process_data);
-            obj.plotTimer = timer('TimerFcn', @obj.plot_callback, 'Period', 2.0, 'ExecutionMode', 'fixedSpacing');
+            obj.plotTimer = timer('TimerFcn', @obj.plot_callback, 'Period', 0.5, 'ExecutionMode', 'fixedSpacing');
         end
         
         %Runner
@@ -82,6 +82,7 @@ classdef ExpManager < handle
             ct = zeros(length(obj.sweeps));
             stops = cellfun(@(x) x.numSteps, obj.sweeps);
             
+            % generic nested loop sweeper through "stack"
             while idx > 0 && ct(1) <= stops(1)
                 if ct(idx) < stops(idx)
                     ct(idx) = ct(idx) + 1;
@@ -118,26 +119,16 @@ classdef ExpManager < handle
         function take_data(obj)
             
             %Clear all the measurement filters
-            for filter = obj.measurements
-                reset(filter{1});
-            end
+            structfun(@(m) reset(m), obj.measurements);
             
             %Stop all the AWGs
-            for awg = obj.AWGs
-                stop(awg{1});
-            end
+            cellfun(@(awg) stop(awg), obj.AWGs);
             
             %Ready the digitizers
-            for scope = obj.scopes
-                acquire(scope{1});
-            end
+            cellfun(@(scope) acquire(scope), obj.scopes);
             
             %Start the slaves up again
-            if length(obj.AWGs) > 1
-                for slaveAWG = obj.AWGs{2:end}
-                    run(slaveAWG);
-                end
-            end
+            cellfun(@(awg) run(awg), obj.AWGs(2:end))
             %And the master
             run(obj.AWGs{1});
             
@@ -151,18 +142,38 @@ classdef ExpManager < handle
             % download data from src
             data = struct('ch1', src.transfer_waveform(1), 'ch2', src.transfer_waveform(2));
             %Apply measurment filters in turn
-            for measct = 1:length(obj.measurements)
-                apply(obj.measurements{measct}, data);
-            end
+            structfun(@(m) apply(m, data), obj.measurements, 'UniformOutput', false);
         end
         
         function plot_callback(obj, ~, ~)
-            for measct = 1:length(obj.measurements)
-                figure(measct)
-                subplot(2,1,1)
-                plot(abs(obj.measurements{measct}.get_data()));
-                subplot(2,1,2)
-                plot(angle(obj.measurements{measct}.get_data()));
+            %We keep track of figure handles to not pop new ones up all the
+            %time
+            persistent figHandles axesHandles plotHandles 
+            if isempty(figHandles)
+                figHandles = struct();
+                axesHandles = struct();
+                plotHandles = struct();
+            end
+            
+            for measName = fieldnames(obj.measurements)'
+                data = obj.measurements.(measName{1}).get_data();
+                
+                if ~isempty(data)
+                    if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
+                        figHandles.(measName{1}) = figure('HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Scope']);
+                    end
+                    figHandle = figHandles.(measName{1});
+
+                    if ~isfield(axesHandles, [measName{1} '_abs']) || ~isfield(plotHandles, [measName{1} '_abs'])
+                        axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
+                        plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), abs(data));
+                        axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
+                        plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), (180/pi)*angle(data));
+                    else
+                        set(plotHandles.([measName{1} '_abs']), 'YData', abs(data));
+                        set(plotHandles.([measName{1} '_phase']), 'YData', (180/pi)*angle(data));
+                    end
+                end
             end
             drawnow()
         end
@@ -173,8 +184,8 @@ classdef ExpManager < handle
             obj.instrSettings.(name) = settings;
         end
         
-        function add_measurement(obj, meas)
-            obj.measurements{end+1} = meas;
+        function add_measurement(obj, name, meas)
+            obj.measurements.(name) = meas;
         end
         
         function add_sweep(obj, sweep)

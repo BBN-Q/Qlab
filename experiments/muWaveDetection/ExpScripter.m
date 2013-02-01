@@ -22,11 +22,11 @@ for sweep = fieldnames(sweepSettings)'
 end
 
 dh1 = DigitalHomodyne(measSettings.meas1);
-add_measurement(exp, dh1);
+add_measurement(exp, 'M1', dh1);
 dh2 = DigitalHomodyne(measSettings.meas2);
-add_measurement(exp, dh2);
+add_measurement(exp, 'M2', dh2);
 
-add_measurement(exp, Correlator(dh1, dh2));
+add_measurement(exp, 'M12', Correlator(dh1, dh2));
 
 exp.init();
 exp.run();
