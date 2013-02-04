@@ -54,17 +54,27 @@ classdef ExpManager < handle
             %Rearrange the AWG list to put the Master first
             obj.AWGs([1, masterAWGIndex]) = obj.AWGs([masterAWGIndex, 1]);
             
-            %Open data file
-            header = struct();
+            %Construct data file header and info structs
             labels = cellfun(@(s) s.label, obj.sweeps, 'UniformOutput', false);
             xyz = {'x', 'y', 'z'};
             points = cellfun(@(s) s.points, obj.sweeps, 'UniformOutput', false);
+            dataInfo = struct();
             for ct = 1:length(obj.sweeps)
-                header.([xyz{ct}, 'label']) = labels{ct};
-                header.([xyz{ct}, 'points']) = points{ct};
+                xyzIdx = length(obj.sweeps)-ct+1;
+                dataInfo.([xyz{xyzIdx}, 'label']) = labels{ct};
+                dataInfo.([xyz{xyzIdx}, 'points']) = points{ct};
             end
+            dataInfo.dimension = length(obj.sweeps);
+            header = struct();
             header.instrSettings = obj.instrSettings;
-            obj.dataFileHandler.open(header, length(obj.sweeps), length(obj.measurements));
+            dataInfos = repmat({dataInfo}, 1, length(fieldnames(obj.measurements)));
+            % add measurement names to dataInfo structs
+            measNames = fieldnames(obj.measurements);
+            for ct = 1:length(measNames)
+                dataInfos{ct}.name = measNames{ct};
+            end
+            %Open data file
+            obj.dataFileHandler.open(header, dataInfos);
             
         end
         
@@ -113,7 +123,8 @@ classdef ExpManager < handle
                             end
                             obj.data.(measName{1}) = subsasgn(obj.data.(measName{1}), indexer, stepData.(measName{1}));
                         end
-                        obj.plot_data()
+                        obj.plot_data();
+                        obj.save_data(stepData);
                     end
                 else
                     %We've rolled over so reset this sweeps counter and
@@ -173,6 +184,14 @@ classdef ExpManager < handle
             data = struct('ch1', src.transfer_waveform(1), 'ch2', src.transfer_waveform(2));
             %Apply measurment filters in turn
             structfun(@(m) apply(m, data), obj.measurements, 'UniformOutput', false);
+        end
+        
+        function save_data(obj, stepData)
+            measNames = fieldnames(stepData)';
+            for ct = 1:length(measNames)
+                measData = squeeze(stepData.(measNames{ct}));
+                obj.dataFileHandler.write(measData, ct);
+            end
         end
         
         function plot_data(obj)
