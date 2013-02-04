@@ -14,7 +14,7 @@
  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 classdef Sweep < handle
 	properties
-		name = 'Sweep'
+		label = 'Sweep'
 		plotRange
 		points
         numSteps
