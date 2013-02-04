@@ -129,7 +129,7 @@ classdef APS < hgsetget
             [numDevices, deviceSerials] = aps.enumerate();
             
             deviceID_re = '^\d+';
-            if ~isempty(regexp(address, deviceID_re, 'once'))
+            if ischar(address) && ~isempty(regexp(address, deviceID_re, 'once'))
                 address = str2double(address);
             end
             if isnumeric(address)
