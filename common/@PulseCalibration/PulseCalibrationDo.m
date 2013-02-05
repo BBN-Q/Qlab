@@ -1,6 +1,4 @@
-function [errorMsg] = pulseCalibrationDo(obj)
-% USAGE: [errorMsg] = pulseCalibrationDo(obj)
-%
+function PulseCalibrationDo(obj)
 % Does the following:
 % - find initial pulse amplitudes with a Rabi amplitude experiment
 % - zeroes the detuning by measuring it with a Ramsey experiment
@@ -11,12 +9,12 @@ function [errorMsg] = pulseCalibrationDo(obj)
 %
 % v1.0 Aug 24, 2011 Blake Johnson
 
-ExpParams = obj.ExpParams;
+settings = obj.settings;
 
 %% MixerCal
-if ExpParams.DoMixerCal
+if settings.DoMixerCal
     % TODO update parameter passing to optimize_mixers
-    QubitNum = str2double(ExpParams.Qubit(end:end));
+    QubitNum = str2double(settings.Qubit(end:end));
     if ~obj.testMode
         obj.closeInstruments();
         optimize_mixers(QubitNum);
@@ -31,8 +29,8 @@ if ExpParams.DoMixerCal
 end
 
 %% Rabi
-if ExpParams.DoRabiAmp
-   [filenames, nbrSegments] = obj.rabiAmpChannelSequence(ExpParams.Qubit);
+if settings.DoRabiAmp
+   [filenames, nbrSegments] = obj.rabiAmpChannelSequence(settings.Qubit);
    if ~obj.testMode
        obj.loadSequence(filenames, 1);
    end
@@ -59,14 +57,14 @@ if ExpParams.DoRabiAmp
 end
 
 %% Ramsey
-if ExpParams.DoRamsey
+if settings.DoRamsey
     % generate Ramsey sequence (TODO)
-    [filenames, nbrSegments] = obj.RamseyChannelSequence(ExpParams.Qubit);
+    [filenames, nbrSegments] = obj.RamseyChannelSequence(settings.Qubit);
     obj.loadSequence(filenames);
     
     % adjust drive frequency
-    freq = QubitSpec.frequency + ExpParams.RamseyDetuning;
-    QubitSpec = obj.Instr.(ExpParams.QubitSpec);
+    freq = QubitSpec.frequency + settings.RamseyDetuning;
+    QubitSpec = obj.Instr.(settings.QubitSpec);
     QubitSpec.frequency = freq;
 
     % measure
@@ -81,7 +79,7 @@ if ExpParams.DoRamsey
 end
 
 %% Pi/2 Calibration
-if ExpParams.DoPi2Cal
+if settings.DoPi2Cal
     % calibrate amplitude and offset for +/- X90
     x0 = [obj.pulseParams.pi2Amp, obj.pulseParams.i_offset];
 
@@ -117,7 +115,7 @@ if ExpParams.DoPi2Cal
 end
 
 %% Pi Calibration
-if ExpParams.DoPiCal
+if settings.DoPiCal
     % calibrate amplitude and offset for +/- X180
     x0 = [obj.pulseParams.piAmp, obj.pulseParams.i_offset];
     
@@ -135,14 +133,14 @@ if ExpParams.DoPiCal
 end
 
 %% DRAG calibration    
-if ExpParams.DoDRAGCal
+if settings.DoDRAGCal
     % generate DRAG calibration sequence
-    if isfield(ExpParams,'DRAGparams')
-        deltas = ExpParams.DRAGparams(:);
+    if isfield(settings,'DRAGparams')
+        deltas = settings.DRAGparams(:);
     else
         deltas = linspace(-2,0,11)';
     end
-    [filenames, nbrSegments] = obj.APEChannelSequence(ExpParams.Qubit, deltas);
+    [filenames, nbrSegments] = obj.APEChannelSequence(settings.Qubit, deltas);
     obj.loadSequence(filenames, 1);
 
     % measure
@@ -160,9 +158,9 @@ if ExpParams.DoDRAGCal
 end
 
 %% SPAM calibration    
-if ExpParams.DoSPAMCal
+if settings.DoSPAMCal
     % generate DRAG calibration sequence
-    [filenames, nbrSegments] = obj.SPAMChannelSequence(ExpParams.Qubit);
+    [filenames, nbrSegments] = obj.SPAMChannelSequence(settings.Qubit);
     obj.loadSequence(filenames, 1);
 
     % measure
@@ -191,9 +189,9 @@ end
 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
 
 % Update the relevant variables
-params.(ExpParams.Qubit).piAmp = obj.pulseParams.piAmp;
-params.(ExpParams.Qubit).pi2Amp = obj.pulseParams.pi2Amp;
-params.(ExpParams.Qubit).delta = obj.pulseParams.delta;
+params.(settings.Qubit).piAmp = obj.pulseParams.piAmp;
+params.(settings.Qubit).pi2Amp = obj.pulseParams.pi2Amp;
+params.(settings.Qubit).delta = obj.pulseParams.delta;
 
 channelMap = obj.channelMap.(obj.ExpParams.Qubit);
 IQkey = channelMap.IQkey;

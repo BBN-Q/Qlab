@@ -1,24 +1,9 @@
-% Module Name :  pulseCalibration.m
-%
-% Author/Date : Blake Johnson / Aug 24, 2011
-%
-% Description : Loops over a set of homodyneDetection2D experiments to
-% optimize qubit operations
+% The PulseCalibration class uses repeated pulse experiments to optimize
+% qubit control parameters, including: amplitude, phase, and DRAG
+% parameter. It does this using an efficient Levenberg-Marquardt search.
 
-% Restrictions/Limitations : UNRESTRICTED
-%
-% Change Descriptions :
-%
-% Classification : Unclassified
-%
-% References :
-%
-%
-%    Modified    By    Reason
-%    --------    --    ------
-%
-%
-% Copyright 2010 Raytheon BBN Technologies
+% Author/Date : Blake Johnson / Aug 24, 2011
+% Copyright 2010-13 Raytheon BBN Technologies
 %
 % Licensed under the Apache License, Version 2.0 (the "License");
 % you may not use this file except in compliance with the License.
@@ -32,64 +17,47 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
-classdef pulseCalibration < expManager.homodyneDetection2D
+classdef PulseCalibration < handle
     properties
+        experiment % an instance of the ExpManager class
+        settings
         pulseParams
-        pulseParamPath
         channelMap
-        ExpParams
         awgParams
         targetAWGIdx = 1
-        scopeParams
         testMode = false;
         costFunctionGoal = 0.075; % tweak experimentally
     end
     methods
-        %% Class constructor
-        function obj = pulseCalibration(data_path, cfgFileName, basename, filenumber)
-            if ~exist('filenumber', 'var')
-                filenumber = 1;
-            end
-            if ~exist('basename', 'var')
-                basename = 'pulseCalibration';
-            end
-			% superclass constructor
-            obj = obj@expManager.homodyneDetection2D(data_path, cfgFileName, basename, filenumber);
-            
-            obj.pulseParamPath = getpref('qlab', 'pulseParamsBundleFile');
-            obj.channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+        % Class constructor
+        function obj = PulseCalibration()
         end
 
         function out = homodyneMeasurement(obj, nbrSegments)
-            % homodyneMeasurement calls homodyneDetection2DDo and returns
-            % the amplitude data
+            % run the pulse sequence and return the data
             
             % set digitizer with the appropriate number of segments
-            obj.scopeParams.averager.nbrSegments = nbrSegments;
-            obj.scope.averager = obj.scopeParams.averager;
-
-            % create tmp file
-            header = struct('xpoints', 1:nbrSegments, 'xlabel', 'Segment');
-            obj.openDataFile(1, header);
-
-            obj.Loop.one.sweep.points = 1:nbrSegments;
-            obj.Loop.one.steps = nbrSegments;
-            obj.homodyneDetection2DDo();
-            % finish and close file
-            obj.finalizeData();
-
-            data = loadData(false, fullfile(obj.DataPath, obj.DataFileName));
+            averagerSettings = obj.experiment.scopes{1}.averager;
+            averagerSettings.nbrSegments = nbrSegments;
+            obj.experiment.scopes{1}.averager = averagerSettings;
             
-            % delete the file
-            delete(fullfile(obj.DataPath, obj.DataFileName));
+            obj.experiment.run();
             
-            % return the amplitude data
-            switch obj.ExpParams.dataType
+            % pull out data from the first measurement
+            % TODO: allow specifying which measurement to use in the
+            % settings struct
+            measNames = fieldnames(obj.experiment.measurements);
+            data = obj.experiment.data.(measNames{1});
+            abs_Data = abs(data);
+            phase_Data = 180/pi * unwrap(angle(data));
+            
+            % return amplitude or phase data
+            switch obj.settings.dataType
                 case 'amp'
-                    out = data.abs_Data;
+                    out = abs_Data;
                 case 'phase'
                     % unwrap assume phase data in radians
-                    out = 180/pi * unwrap(pi/180 * data.phase_Data);
+                    out = phase_Data;
                 otherwise
                     error('Unknown dataType can only be "amp" or "phase"');
             end
@@ -128,17 +96,37 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             end
         end
         
-        function Init(obj)
-            obj.parseExpcfgFile();
-            obj.ExpParams = obj.inputStructure.ExpParams;
-            if isfield(obj.inputStructure, 'SoftwareDevelopmentMode') && obj.inputStructure.SoftwareDevelopmentMode
+        function Init(obj, settings)
+            obj.settings = settings;
+            obj.channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+            
+            if isfield(obj.settings, 'SoftwareDevelopmentMode') && obj.settomgs.SoftwareDevelopmentMode
                 obj.testMode = true;
             end
-            % create a generic 'time' sweep
-            timeSweep = struct('type', 'sweeps.Time', 'number', 1, 'start', 0, 'step', 1);
-            obj.inputStructure.SweepParams = struct('time', timeSweep);
             
-            Init@expManager.homodyneDetection2D(obj);
+            % create an ExpManager object
+            obj.experiment = ExpManager();
+            
+            % load ExpManager settings
+            expSettings = jsonlab.loadjson(obj.settings.cfgFile);
+            instrSettings = expSettings.instruments;
+            
+            % add instruments
+            for instrument = fieldnames(instrSettings)'
+                instr = InstrumentFactory(instrument{1});
+                add_instrument(obj.experiment, instrument{1}, instr, instrSettings.(instrument{1}));
+            end
+            
+            % create a generic SegmentNum sweep
+            add_sweep(obj.experiment, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 2)));
+            
+            % add measurement M1
+            measSettings = expSettings.measurements;
+            dh1 = DigitalHomodyne(measSettings.meas1);
+            add_measurement(obj.experiment, 'M1', dh1);
+            
+            % intialize the ExpManager
+            init(obj.experiment);
             
             IQchannels = obj.channelMap.(obj.ExpParams.Qubit);
             IQkey = IQchannels.IQkey;
@@ -154,25 +142,27 @@ classdef pulseCalibration < expManager.homodyneDetection2D
                 switch DriverName
                     case {'deviceDrivers.Tek5014', 'deviceDrivers.APS'}
                         numAWGs = numAWGs + 1;
+                        %% FIX ME
                         obj.awgParams{numAWGs} = obj.inputStructure.InstrParams.(InstrName);
                         obj.awgParams{numAWGs}.InstrName = InstrName;
                         if strcmp(InstrName, IQchannels.awg)
                             obj.targetAWGIdx = numAWGs;
                         end
                     case {'deviceDrivers.AgilentAP240', 'deviceDrivers.AlazarATS9870'}
+                        %% FIX ME
                         obj.scopeParams = obj.inputStructure.InstrParams.(InstrName);
                 end
             end
 
             if ~obj.testMode
                 % load pulse parameters for the relevant qubit
-                params = jsonlab.loadjson(obj.pulseParamPath);
-                obj.pulseParams = params.(obj.ExpParams.Qubit);
+                params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+                obj.pulseParams = params.(obj.settings.Qubit);
                 obj.pulseParams.T = params.(IQkey).T;
+                %% FIX ME
                 channelParams = obj.inputStructure.InstrParams.(IQchannels.awg);
                 obj.pulseParams.i_offset = channelParams.(['chan_' num2str(IQchannels.i)]).offset;
                 obj.pulseParams.q_offset = channelParams.(['chan_' num2str(IQchannels.q)]).offset;
-                obj.pulseParams.SSBFreq = obj.ExpParams.SSBFreq;
             else
                 obj.pulseParams = struct('piAmp', 6560, 'pi2Amp', 3280, 'delta', -0.5, 'T', eye(2,2),...
                     'pulseType', 'drag', 'i_offset', 0.119, 'q_offset', 0.130);
@@ -180,17 +170,7 @@ classdef pulseCalibration < expManager.homodyneDetection2D
         end
         
         function Do(obj)
-            obj.pulseCalibrationDo();
-        end
-        
-        function errorCheckExpParams(obj)
-            % call super class method
-            errorCheckExpParams@expManager.homodyneDetection2D(obj);
-
-            ExpParams = obj.inputStructure.ExpParams;
-            if ~isfield(ExpParams, 'OffsetNorm')
-                ExpParams.OffsetNorm = 2;
-            end
+            obj.PulseCalibrationDo();
         end
         
         function filenames = getAWGFileNames(obj, basename)
@@ -271,7 +251,6 @@ classdef pulseCalibration < expManager.homodyneDetection2D
             
             pulseCal.Init();
             pulseCal.Do();
-            pulseCal.CleanUp();
         end
     end
 end

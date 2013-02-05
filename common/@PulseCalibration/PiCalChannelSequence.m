@@ -1,4 +1,4 @@
-function [filename, nbrPatterns] = Pi2CalChannelSequence(obj, qubit, direction, makePlot)
+function [filename, nbrPatterns] = PiCalChannelSequence(obj, qubit, direction, makePlot)
 
 if ~exist('direction', 'var')
     direction = 'X';
@@ -10,45 +10,32 @@ if ~exist('makePlot', 'var')
     makePlot = false;
 end
 
-basename = 'Pi2Cal';
+basename = 'PiCal';
 
 fixedPt = 6000;
 cycleLength = 9000;
-numPi2s = 9; % number of odd numbered pi/2 sequences for each rotation direction
 
-pg = PatternGen(qubit, 'pi2Amp', obj.pulseParams.pi2Amp, 'SSBFreq', obj.pulseParams.SSBFreq, 'cycleLength', cycleLength);
+pg = PatternGen(qubit,...
+    'pi2Amp', obj.pulseParams.pi2Amp,...
+    'piAmp', obj.pulseParams.piAmp);
 
-pulseLib = containers.Map();
-pulses = {'QId', 'X90p', 'X90m', 'Y90p', 'Y90m'};
-for p = pulses
-    pname = cell2mat(p);
-    pulseLib(pname) = pg.pulse(pname);
-end
+patseq = cell(19,1);
+patseq{1} = {pg.pulse('QId')};
 
-patseq{1} = {pulseLib('QId')};
+% +X/Y rotations
+pulse90p = pg.pulse([direction '90p']);
+pulse180p   = pg.pulse([direction 'p']);
+patseq(2:10) =  arrayfun(@(x) [{pulse90p}, repmat({pulse180p}, 1, x)], [0:8], 'UniformOutput', false);
 
-sindex = 1;
+% -X/Y rotations
+pulse90m = pg.pulse([direction '90m']);
+pulse180m   = pg.pulse([direction 'm']);
+patseq(11:19) =  arrayfun(@(x) [{pulse90m}, repmat({pulse180m}, 1, x)], [0:8], 'UniformOutput', false);
 
-% +X rotations
-% (1, 3, 5, 7, 9, 11, 13, 15, 17) x X90p
-for j = 1:numPi2s
-    for k = 1:(1+2*(j-1))
-        patseq{sindex + j}{k} = pulseLib([direction '90p']);
-    end
-end
-sindex = sindex + numPi2s;
-
-% -X rotations
-% (1, 3, 5, 7, 9, 11, ...) x X90m
-for j = 1:numPi2s
-    for k = 1:(1+2*(j-1))
-        patseq{sindex + j}{k} = pulseLib([direction '90m']);
-    end
-end
-
-numsteps = 1;
 nbrRepeats = 2;
 nbrPatterns = nbrRepeats*length(patseq);
+numsteps = 1;
+
 calseq = [];
 
 % prepare parameter structures for the pulse compiler
@@ -60,12 +47,12 @@ seqParams = struct(...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
     'measLength', 2000);
+patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 
 qubitMap = obj.channelMap.(qubit);
 IQkey = qubitMap.IQkey;
 
-patternDict = containers.Map();
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap);
 measChannels = {'M1'};
 awgs = cellfun(@(x) x.InstrName, obj.awgParams, 'UniformOutput',false);
@@ -75,4 +62,3 @@ compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 filename = obj.getAWGFileNames(basename);
 
 end
-
