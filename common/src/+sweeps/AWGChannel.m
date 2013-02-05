@@ -1,17 +1,20 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Module Name :  TekChannel.m
-%
+% An AWG channel sweep
+
 % Author/Date : Blake Johnson / November 9, 2010
+
+% Copyright 2013 Raytheon BBN Technologies
 %
-% Description : A Tek channel sweep class.
+% Licensed under the Apache License, Version 2.0 (the "License");
+% you may not use this file except in compliance with the License.
+% You may obtain a copy of the License at
 %
-% Version: 1.0
+%     http://www.apache.org/licenses/LICENSE-2.0
 %
-%    Modified    By    Reason
-%    --------    --    ------
-%
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Unless required by applicable law or agreed to in writing, software
+% distributed under the License is distributed on an "AS IS" BASIS,
+% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+% See the License for the specific language governing permissions and
+% limitations under the License.
 classdef AWGChannel < sweeps.Sweep
     properties
         AWGType
@@ -21,19 +24,14 @@ classdef AWGChannel < sweeps.Sweep
     
     methods
         % constructor
-        function obj = AWGChannel(SweepParams, Instr, ~, sweepPtsOnly)
-            if nargin < 3
-                error('Usage: AWGChannel(SweepParams, Instr, ExpParams)');
-            end
-            obj.name = ['AWG Channel(s) ' SweepParams.channel ' ' SweepParams.mode ' (V)'];
+        function obj = AWGChannel(sweepParams, Instr)
+            obj.label = ['AWG Channel(s) ' sweepParams.channel ' ' sweepParams.mode ' (V)'];
             
-            if ~sweepPtsOnly
-                % look for the AWG instrument object
-                assert(isfield(Instr, SweepParams.AWGName), 'Could not find AWG instrument');
-                obj.Instr = Instr.(SweepParams.AWGName);
-            end
+            % look for the AWG instrument object
+            assert(isfield(Instr, sweepParams.AWGName), 'Could not find AWG instrument');
+            obj.Instr = Instr.(sweepParams.AWGName);
             
-            switch SweepParams.AWGName(1:6)
+            switch sweepParams.AWGName(1:6)
                 case 'TekAWG'
                     obj.AWGType = 'Tek';
                 case 'BBNAPS'
@@ -42,12 +40,12 @@ classdef AWGChannel < sweeps.Sweep
                     error('Unrecognized AWG type');
             end
             
-            obj.mode = SweepParams.mode;
+            obj.mode = sweepParams.mode;
             
             % construct channel list
-            switch SweepParams.channel
+            switch sweepParams.channel
                 case {'1', '2', '3', '4'}
-                    obj.channelList = str2double(SweepParams.channel);
+                    obj.channelList = str2double(sweepParams.channel);
                 case '1&2'
                     obj.channelList = [1, 2];
                 case '3&4'
@@ -57,13 +55,14 @@ classdef AWGChannel < sweeps.Sweep
             end
             
             % generate channel points
-            start = SweepParams.start;
-            stop = SweepParams.stop;
-            step = SweepParams.step;
+            start = sweepParams.start;
+            stop = sweepParams.stop;
+            step = sweepParams.step;
             if start > stop
                 step = -abs(step);
             end
             obj.points = start:step:stop;
+            obj.numSteps = length(obj.points);
             
             obj.plotRange.start = start;
             obj.plotRange.end = stop;

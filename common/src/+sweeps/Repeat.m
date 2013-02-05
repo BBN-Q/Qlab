@@ -1,6 +1,6 @@
-% A segment number virtual-sweep.
+% A dummy class for repeating.
 
-% Author/Date : Colm Ryan / February 4, 2013
+% Author/Date : Blake Johnson
 
 % Copyright 2013 Raytheon BBN Technologies
 %
@@ -15,30 +15,31 @@
 % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 % See the License for the specific language governing permissions and
 % limitations under the License.
- classdef SegmentNum < sweeps.Sweep
+classdef Repeat < sweeps.Sweep
 	properties
+        numSegments
 	end
 	
 	methods
 		% constructor
-		function obj = SegmentNum(sweepParams, ~)
-			obj.label = sweepParams.label;
-			start = sweepParams.start;
-			step = sweepParams.step;
-            stop = start+step*(sweepParams.numPoints-1);
+		function obj = Repeat(sweepParams, ~)
+			obj.label = 'Repeat';
 			
-			% Generate inferred sweep points
+			% generate time points
+			start = 1;
+			step = 1;
+            stop = sweepParams.stop;
+
 			obj.points = start:step:stop;
-            
-            %Since this is done on the AWG the number of steps is actually
-            %1
-            obj.numSteps = 1;
+            obj.numSteps = length(obj.points);
+			
 			obj.plotRange.start = start;
 			obj.plotRange.end = stop;
 		end
 		
-		% frequency stepper
+		% repeat stepper
 		function step(obj, ~)
+            % do nothing
 		end
 	end
 end

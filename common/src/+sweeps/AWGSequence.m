@@ -1,17 +1,20 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Module Name :  AWGSequence.m
+% Sweep for AWG sequence name.
+
+% Author/Date : Blake Johnson and Colm Ryan
+
+% Copyright 2013 Raytheon BBN Technologies
 %
-% Author/Date : Blake Johnson / November 9, 2010
+% Licensed under the Apache License, Version 2.0 (the "License");
+% you may not use this file except in compliance with the License.
+% You may obtain a copy of the License at
 %
-% Description : A Tek channel sweep class.
+%     http://www.apache.org/licenses/LICENSE-2.0
 %
-% Version: 1.0
-%
-%    Modified    By    Reason
-%    --------    --    ------
-%
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Unless required by applicable law or agreed to in writing, software
+% distributed under the License is distributed on an "AS IS" BASIS,
+% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+% See the License for the specific language governing permissions and
+% limitations under the License.
 classdef AWGSequence < sweeps.Sweep
     properties
         sequenceFile
@@ -20,39 +23,35 @@ classdef AWGSequence < sweeps.Sweep
     
     methods
         % constructor
-        function obj = AWGSequence(SweepParams, Instr, params, sweepPtsOnly)
-            if nargin < 3
-                error('Usage: AWGSequence(SweepParams, Instr, params, sweepPtsOnly)');
-            end
-            obj.name = 'AWG sequence number';
+        function obj = AWGSequence(sweepParams, Instr)
+            obj.label = 'AWG sequence number';
             
             obj.awgs = struct();
-            obj.sequenceFile = SweepParams.sequenceFile;
+            obj.sequenceFile = sweepParams.sequenceFile;
 
-            if ~sweepPtsOnly
-                %Load the enabled AWGs
-                %Go through the instrument list and pull out enabled AWG's
-                for tmp = fieldnames(Instr)'
-                    curName = tmp{1};
-                    if isa(Instr.(curName), 'deviceDrivers.Tek5014') || isa(Instr.(curName), 'deviceDrivers.APS')
-                        if params.InstrParams.(curName).enable
-                            obj.awgs.(curName)= struct();
-                            obj.awgs.(curName).driver = Instr.(curName);
-                            obj.awgs.(curName).params = params.InstrParams.(curName);
-                            obj.awgs.(curName).params.seqforce = 1;
-                        end
+            %Construct a list of AWGs
+            for tmp = fieldnames(Instr)'
+                curName = tmp{1};
+                if isa(Instr.(curName), 'deviceDrivers.Tek5014') || isa(Instr.(curName), 'deviceDrivers.APS')
+                    if params.InstrParams.(curName).enable
+                        obj.awgs.(curName)= struct();
+                        obj.awgs.(curName).driver = Instr.(curName);
+                        % TODO: fix me (following two lines do not work)
+                        obj.awgs.(curName).params = params.InstrParams.(curName);
+                        obj.awgs.(curName).params.seqforce = 1;
                     end
                 end
             end
                         
             % generate sweep points
-            start = SweepParams.start;
-            stop = SweepParams.stop;
-            step = SweepParams.step;
+            start = sweepParams.start;
+            stop = sweepParams.stop;
+            step = sweepParams.step;
             if start > stop
                 step = -abs(step);
             end
             obj.points = start:step:stop;
+            obj.numSteps = length(obj.points);
             
             obj.plotRange.start = start;
             obj.plotRange.end = stop;

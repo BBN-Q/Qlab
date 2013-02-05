@@ -1,6 +1,6 @@
-% A segment number virtual-sweep.
+% A phase sweep class.
 
-% Author/Date : Colm Ryan / February 4, 2013
+% Author/Date : Blake Johnson
 
 % Copyright 2013 Raytheon BBN Technologies
 %
@@ -15,30 +15,46 @@
 % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 % See the License for the specific language governing permissions and
 % limitations under the License.
- classdef SegmentNum < sweeps.Sweep
+classdef Power < sweeps.Sweep
 	properties
+		units
 	end
 	
 	methods
 		% constructor
-		function obj = SegmentNum(sweepParams, ~)
-			obj.label = sweepParams.label;
-			start = sweepParams.start;
-			step = sweepParams.step;
-            stop = start+step*(sweepParams.numPoints-1);
+		function obj = Power(sweepParams, Instr)
+			obj.label = 'Power';
 			
-			% Generate inferred sweep points
+            % look for an instrument with the name 'genID'
+            obj.Instr = Instr.(sweepParams.genID);
+			
+			obj.units = sweepParams.units;
+			
+			% generate power points
+			start = sweepParams.start;
+			stop = sweepParams.stop;
+			step = sweepParams.step;
+			if start > stop
+				step = -abs(step);
+			end
 			obj.points = start:step:stop;
-            
-            %Since this is done on the AWG the number of steps is actually
-            %1
-            obj.numSteps = 1;
+            obj.numSteps = length(obj.points);
+			
 			obj.plotRange.start = start;
 			obj.plotRange.end = stop;
 		end
 		
-		% frequency stepper
-		function step(obj, ~)
+		% power stepper
+		function step(obj, index)
+			switch obj.units
+				case 'dBm'
+					obj.Instr.power = obj.points(index);
+				case 'mW'
+					% convert mWatts to dBm
+					obj.Instr.power = 10*log10( obj.points(index) );
+				otherwise
+					error('Unknown power units');
+			end
 		end
 	end
 end

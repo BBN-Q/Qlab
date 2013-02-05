@@ -1,6 +1,6 @@
-% A segment number virtual-sweep.
+% A phase sweep class.
 
-% Author/Date : Colm Ryan / February 4, 2013
+% Author/Date : Blake Johnson
 
 % Copyright 2013 Raytheon BBN Technologies
 %
@@ -15,30 +15,39 @@
 % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 % See the License for the specific language governing permissions and
 % limitations under the License.
- classdef SegmentNum < sweeps.Sweep
+classdef Phase < sweeps.Sweep
 	properties
 	end
 	
 	methods
 		% constructor
-		function obj = SegmentNum(sweepParams, ~)
-			obj.label = sweepParams.label;
-			start = sweepParams.start;
-			step = sweepParams.step;
-            stop = start+step*(sweepParams.numPoints-1);
+		function obj = Phase(sweepParams, Instr)
+			obj.label = 'Phase';
 			
-			% Generate inferred sweep points
+            % look for an instrument with the name 'genID'
+            if isfield(Instr, sweepParams.genID)
+                obj.Instr = Instr.(sweepParams.genID);
+            else
+                error(['Could not find instrument with name ' sweepParams.genID]);
+            end
+			
+			% generate phase points
+			start = sweepParams.start;
+			stop = sweepParams.stop;
+			step = sweepParams.step;
+			if start > stop
+				step = -abs(step);
+			end
 			obj.points = start:step:stop;
-            
-            %Since this is done on the AWG the number of steps is actually
-            %1
-            obj.numSteps = 1;
+            obj.numSteps = length(obj.points);
+			
 			obj.plotRange.start = start;
 			obj.plotRange.end = stop;
 		end
 		
-		% frequency stepper
-		function step(obj, ~)
+		% phase stepper
+		function step(obj, index)
+			obj.Instr.phase = obj.points(index);
 		end
 	end
 end
