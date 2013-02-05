@@ -95,27 +95,29 @@ classdef ExpManager < handle
             %Rearrange the AWG list to put the Master first
             obj.AWGs([1, masterAWGIndex]) = obj.AWGs([masterAWGIndex, 1]);
             
-            %Construct data file header and info structs
-            labels = cellfun(@(s) s.label, obj.sweeps, 'UniformOutput', false);
-            xyz = {'x', 'y', 'z'};
-            points = cellfun(@(s) s.points, obj.sweeps, 'UniformOutput', false);
-            dataInfo = struct();
-            for ct = 1:length(obj.sweeps)
-                xyzIdx = length(obj.sweeps)-ct+1;
-                dataInfo.([xyz{xyzIdx}, 'label']) = labels{ct};
-                dataInfo.([xyz{xyzIdx}, 'points']) = points{ct};
+            if ~isempty(obj.dataFileHandler)
+                %Construct data file header and info structs
+                labels = cellfun(@(s) s.label, obj.sweeps, 'UniformOutput', false);
+                xyz = {'x', 'y', 'z'};
+                points = cellfun(@(s) s.points, obj.sweeps, 'UniformOutput', false);
+                dataInfo = struct();
+                for ct = 1:length(obj.sweeps)
+                    xyzIdx = length(obj.sweeps)-ct+1;
+                    dataInfo.([xyz{xyzIdx}, 'label']) = labels{ct};
+                    dataInfo.([xyz{xyzIdx}, 'points']) = points{ct};
+                end
+                dataInfo.dimension = length(obj.sweeps);
+                header = struct();
+                header.instrSettings = obj.instrSettings;
+                dataInfos = repmat({dataInfo}, 1, length(fieldnames(obj.measurements)));
+                % add measurement names to dataInfo structs
+                measNames = fieldnames(obj.measurements);
+                for ct = 1:length(measNames)
+                    dataInfos{ct}.name = measNames{ct};
+                end
+                %Open data file
+                obj.dataFileHandler.open(header, dataInfos);
             end
-            dataInfo.dimension = length(obj.sweeps);
-            header = struct();
-            header.instrSettings = obj.instrSettings;
-            dataInfos = repmat({dataInfo}, 1, length(fieldnames(obj.measurements)));
-            % add measurement names to dataInfo structs
-            measNames = fieldnames(obj.measurements);
-            for ct = 1:length(measNames)
-                dataInfos{ct}.name = measNames{ct};
-            end
-            %Open data file
-            obj.dataFileHandler.open(header, dataInfos);
             
         end
         
