@@ -1,3 +1,44 @@
+% The ExpManager is a fairly generic framework for experiments involving
+% swept parameters and digitizing scopes. It creates an asynchronous event
+% loop such that data acquisition can happen in a separate thread, and we
+% only process the data when it becomes available.
+%
+% Example usage:
+%   exp = ExpManager();
+%   exp.dataFileHandler = HDF5DataFileHandler('outfile.h5');
+%   % need to add at least one scope
+%   exp.add_instrument(InstrumentFactory('scope'));
+%   % need to add at least one AWG
+%   exp.add_instrument(InstrumentFactory('awg'));
+%   % need to add at least one sweep
+%   exp.add_sweep(SweepFactory('segmentNum', exp.instruments));
+%   % need to add at least one measurement
+%   import MeasFilters.*
+%   exp.add_measurement(
+%       DigitalHomodyne(struct('IFfreq', 10e6, 'channel', 'ch1',
+%       'integrationStart', 100, 'integrationPts', 300, 'samplingRate',
+%       100e6)));
+%
+%   % then initialize everything and run
+%   exp.init();
+%   exp.run();
+
+% Author/Date : Blake Johnson and Colm Ryan / February 4, 2013
+
+% Copyright 2013 Raytheon BBN Technologies
+%
+% Licensed under the Apache License, Version 2.0 (the "License");
+% you may not use this file except in compliance with the License.
+% You may obtain a copy of the License at
+%
+%     http://www.apache.org/licenses/LICENSE-2.0
+%
+% Unless required by applicable law or agreed to in writing, software
+% distributed under the License is distributed on an "AS IS" BASIS,
+% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+% See the License for the specific language governing permissions and
+% limitations under the License.
+
 classdef ExpManager < handle
     properties
         dataFileHandler
@@ -187,6 +228,9 @@ classdef ExpManager < handle
         end
         
         function save_data(obj, stepData)
+            if isempty(obj.dataFileHandler) || obj.dataFileHandler.fileOpen == 0
+                return
+            end
             measNames = fieldnames(stepData)';
             for ct = 1:length(measNames)
                 measData = squeeze(stepData.(measNames{ct}));
