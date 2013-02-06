@@ -60,6 +60,14 @@ classdef ExpManager < handle
         
         %Destructor
         function delete(obj)
+            % turn off uW sources
+            function turn_uwave_off(instr)
+                if isa(instr, 'deviceDrivers.lib.uWSource')
+                        instr.output = 0;
+                end
+            end
+            structfun(@turn_uwave_off, obj.instruments); 
+            
             %Clean up the output file
             if isa(obj.dataFileHandler, 'HDF5DataHandler') && obj.dataFileHandler.fileOpen == 1
                 obj.dataFileHandler.close();
@@ -178,27 +186,21 @@ classdef ExpManager < handle
                 end
             end
             
-        end
-        
-        function cleanUp(obj)
-            % perform any task necessary to clean up (e.g. stop AWGs, turn
-            % of uW sources, etc.)
-            cellfun(@(awg) stop(awg), obj.AWGs);
-            function turn_uwave_off(instr)
-                if isa(instr, 'deviceDrivers.lib.uWSource')
-                        instr.output = 0;
-                end
-            end
-            structfun(@turn_uwave_off, obj.instruments); 
-            
-            stop(obj.plotScopeTimer);
-            delete(obj.plotScopeTimer);
-            %clean up DataReady listeners and plot timer
-            cellfun(@delete, obj.listeners);
             % close data file
             if ~isempty(obj.dataFileHandler)
                 obj.dataFileHandler.close();
             end
+            
+        end
+        
+        function cleanUp(obj)
+            % stop AWGs
+            cellfun(@(awg) stop(awg), obj.AWGs);
+            % stop plot timer and clear it
+            stop(obj.plotScopeTimer);
+            delete(obj.plotScopeTimer);
+            %clean up DataReady listeners
+            cellfun(@delete, obj.listeners);
         end
         
         %Helper function to take data (basically, start/stop AWGs and
