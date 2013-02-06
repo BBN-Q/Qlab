@@ -2,24 +2,25 @@ function loadSequence(obj, paths, numRepeats)
     % loadSequence(paths)
     % Load a set of pattern files onto one or more AWGs
     
-    if length(paths) < length(obj.awg)
+    if length(paths) < length(fieldnames(obj.AWGs))
         error('Must provide a sequence path for each AWG');
     end
     
-    IQchannels = obj.channelMap.(obj.ExpParams.Qubit);
+    IQchannels = obj.channelMap.(obj.settings.Qubit);
     
-    % update offsets on target AWG
-    obj.awgParams{obj.targetAWGIdx}.(['chan_' num2str(IQchannels.i)]).offset = obj.pulseParams.i_offset;
-    obj.awgParams{obj.targetAWGIdx}.(['chan_' num2str(IQchannels.q)]).offset = obj.pulseParams.q_offset;
+    % update offsets on control AWG
+    params = obj.AWGSettings.(obj.controlAWG);
+    params.(['chan_' num2str(IQchannels.i)]).offset = obj.pulseParams.i_offset;
+    params.(['chan_' num2str(IQchannels.q)]).offset = obj.pulseParams.q_offset;
+    obj.AWGSettings.(obj.controlAWG) = params;
     
-    for i = 1:length(obj.awg)
-        % load sequence
-        params = obj.awgParams{i};
-        awg = obj.awg{i};
-        params.seqfile = paths{i};
+    % load sequence on all AWGs
+    awgNames = fieldnames(AWGs)';
+    for ct = 1:length(awgNames)
+        params = obj.AWGSettings.(awgNames{ct});
+        params.seqfile = paths{ct};
         params.seqforce = 1;
         params.miniLLRepeat = numRepeats-1;
-        awg.setAll(params);
-        obj.awgParams{i} = params;
+        obj.AWGs.(awgNames{ct}).setAll(params);
     end
 end

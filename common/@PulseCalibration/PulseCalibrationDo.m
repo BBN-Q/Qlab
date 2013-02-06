@@ -63,9 +63,9 @@ if settings.DoRamsey
     obj.loadSequence(filenames);
     
     % adjust drive frequency
-    freq = QubitSpec.frequency + settings.RamseyDetuning;
-    QubitSpec = obj.Instr.(settings.QubitSpec);
-    QubitSpec.frequency = freq;
+    QubitSource = obj.experiment.instruments.(settings.QubitSpec);
+    freq = QubitSource.frequency + settings.RamseyDetuning;
+    QubitSource.frequency = freq;
 
     % measure
     data = obj.homodyneMeasurement(nbrSegments);
@@ -74,8 +74,8 @@ if settings.DoRamsey
     detuning = obj.analyzeRamsey(data);
 
     % adjust drive frequency
-    freq = QubitSpec.frequency - detuning;
-    QubitSpec.frequency = freq;
+    freq = QubitSource.frequency - detuning;
+    QubitSource.frequency = freq;
 end
 
 %% Pi/2 Calibration
@@ -203,10 +203,10 @@ fprintf(FID, '%s', jsonlab.savejson('',params));
 fclose(FID);
 
 %Now the offsets
-params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'));
-params.InstrParams.(channelMap.awg).(sprintf('chan_%d', channelMap.i)).offset = obj.pulseParams.i_offset;
-params.InstrParams.(channelMap.awg).(sprintf('chan_%d', channelMap.q)).offset = obj.pulseParams.q_offset;
-FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'),'wt'); %open in text mode
+params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'));
+params.instruments.(channelMap.awg).(sprintf('chan_%d', IQkey(end-1))).offset = obj.pulseParams.i_offset;
+params.instruments.(channelMap.awg).(sprintf('chan_%d', IQkey(end))).offset = obj.pulseParams.q_offset;
+FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'),'wt'); %open in text mode
 fprintf(FID, '%s', jsonlab.savejson('',params));
 fclose(FID);
 

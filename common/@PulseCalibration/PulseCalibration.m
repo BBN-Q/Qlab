@@ -23,8 +23,9 @@ classdef PulseCalibration < handle
         settings
         pulseParams
         channelMap
-        awgParams
-        targetAWGIdx = 1
+        controlAWG % name of control AWG
+        AWGs
+        AWGSettings
         testMode = false;
         costFunctionGoal = 0.075; % tweak experimentally
     end
@@ -34,7 +35,7 @@ classdef PulseCalibration < handle
         end
 
         function out = homodyneMeasurement(obj, nbrSegments)
-            % run the pulse sequence and return the data
+            % runs the pulse sequence and returns the data
             
             % set digitizer with the appropriate number of segments
             averagerSettings = obj.experiment.scopes{1}.averager;
@@ -48,16 +49,14 @@ classdef PulseCalibration < handle
             % settings struct
             measNames = fieldnames(obj.experiment.measurements);
             data = obj.experiment.data.(measNames{1});
-            abs_Data = abs(data);
-            phase_Data = 180/pi * unwrap(angle(data));
             
             % return amplitude or phase data
             switch obj.settings.dataType
                 case 'amp'
-                    out = abs_Data;
+                    out = abs(data);
                 case 'phase'
-                    % unwrap assume phase data in radians
-                    out = phase_Data;
+                    % unwrap phase jumps
+                    out = 180/pi * unwrap(angle(data));
                 otherwise
                     error('Unknown dataType can only be "amp" or "phase"');
             end
@@ -100,7 +99,7 @@ classdef PulseCalibration < handle
             obj.settings = settings;
             obj.channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
             
-            if isfield(obj.settings, 'SoftwareDevelopmentMode') && obj.settomgs.SoftwareDevelopmentMode
+            if isfield(obj.settings, 'SoftwareDevelopmentMode') && obj.settings.SoftwareDevelopmentMode
                 obj.testMode = true;
             end
             
@@ -128,41 +127,21 @@ classdef PulseCalibration < handle
             % intialize the ExpManager
             init(obj.experiment);
             
-            IQchannels = obj.channelMap.(obj.ExpParams.Qubit);
-            IQkey = IQchannels.IQkey;
+            IQchannels = obj.channelMap.(obj.settings.Qubit);
             
-            % find AWG instrument parameters(s) - traverse in the same way
-            % used to find the awg objects, to try to preserve the ordering
-            % at the same time, grab the digitizer object and parameters
-            numAWGs = 0;
-            InstrumentNames = fieldnames(obj.Instr);
-            for Instr_index = 1:numel(InstrumentNames)
-                InstrName = InstrumentNames{Instr_index};
-                DriverName = class(obj.Instr.(InstrName));
-                switch DriverName
-                    case {'deviceDrivers.Tek5014', 'deviceDrivers.APS'}
-                        numAWGs = numAWGs + 1;
-                        %% FIX ME
-                        obj.awgParams{numAWGs} = obj.inputStructure.InstrParams.(InstrName);
-                        obj.awgParams{numAWGs}.InstrName = InstrName;
-                        if strcmp(InstrName, IQchannels.awg)
-                            obj.targetAWGIdx = numAWGs;
-                        end
-                    case {'deviceDrivers.AgilentAP240', 'deviceDrivers.AlazarATS9870'}
-                        %% FIX ME
-                        obj.scopeParams = obj.inputStructure.InstrParams.(InstrName);
-                end
-            end
+            obj.AWGs = struct_reduce(@(x) ExpManager.is_AWG(x), obj.experiment.instruments);
+            obj.AWGSettings = cellfun(@(awg) obj.experiment.instrSettings.(awg), fieldnames(obj.AWGs)', 'UniformOutput', false);
+            obj.controlAWG = IQchannels.awg;
 
             if ~obj.testMode
-                % load pulse parameters for the relevant qubit
+                % load pulse parameters for the relevant qubit and
+                % control AWG
                 params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
                 obj.pulseParams = params.(obj.settings.Qubit);
-                obj.pulseParams.T = params.(IQkey).T;
-                %% FIX ME
-                channelParams = obj.inputStructure.InstrParams.(IQchannels.awg);
-                obj.pulseParams.i_offset = channelParams.(['chan_' num2str(IQchannels.i)]).offset;
-                obj.pulseParams.q_offset = channelParams.(['chan_' num2str(IQchannels.q)]).offset;
+                obj.pulseParams.T = params.(IQchannels.IQkey).T;
+                controlAWGsettings = obj.AWGSettings.(obj.controlAWG);
+                obj.pulseParams.i_offset = controlAWGsettings.(['chan_' num2str(IQchannels.i)]).offset;
+                obj.pulseParams.q_offset = controlAWGsettings.(['chan_' num2str(IQchannels.q)]).offset;
             else
                 obj.pulseParams = struct('piAmp', 6560, 'pi2Amp', 3280, 'delta', -0.5, 'T', eye(2,2),...
                     'pulseType', 'drag', 'i_offset', 0.119, 'q_offset', 0.130);
@@ -175,13 +154,13 @@ classdef PulseCalibration < handle
         
         function filenames = getAWGFileNames(obj, basename)
             pathAWG = fullfile(getpref('qlab', 'awgDir'), basename);
-            awgs = cellfun(@(x) x.InstrName, obj.awgParams, 'UniformOutput',false);
-            for awgct = 1:length(awgs)
-                switch awgs{awgct}(1:6)
-                    case 'TekAWG'
-                        filenames{awgct} = fullfile(pathAWG, [basename '-' awgs{awgct}, '.awg']);
-                    case 'BBNAPS'
-                        filenames{awgct} = fullfile(pathAWG, [basename '-' awgs{awgct}, '.h5']);
+            awgNames = fieldnames(obj.AWGs)';
+            for awgct = 1:length(awgNames)
+                switch class(obj.AWGs.(awgNames{awgct}))
+                    case 'deviceDrivers.Tek5014'
+                        filenames{awgct} = fullfile(pathAWG, [basename '-' awgNames{awgct}, '.awg']);
+                    case 'deviceDrivers.APS'
+                        filenames{awgct} = fullfile(pathAWG, [basename '-' awgNames{awgct}, '.h5']);
                     otherwise
                         error('Unknown AWG type.');
                 end
@@ -197,10 +176,7 @@ classdef PulseCalibration < handle
         bestParam = analyzeSlopes(data, numPsQIds, paramRange);
         
         function UnitTest()
-            script = java.io.File(mfilename('fullpath'));
-            path = char(script.getParent());
-            
-            % construct minimal cfg file
+            % construct settings struct
             ExpParams = struct();
             ExpParams.Qubit = 'q1';
             ExpParams.DoMixerCal = 0;
@@ -210,13 +186,13 @@ classdef PulseCalibration < handle
             ExpParams.DoPiCal = 1;
             ExpParams.DoDRAGCal = 0;
             ExpParams.OffsetNorm = 1;
-            
-            cfg = struct('ExpParams', ExpParams, 'SoftwareDevelopmentMode', 1, 'InstrParams', struct());
-            cfg_path = [path '/unit_test.json'];
-            writeCfgFromStruct(cfg_path, cfg);
+            ExpParams.offset2amp = 8192/2;
+            ExpParams.dataType = 'amp';
+            ExpParams.SoftwareDevelopmentMode = 1;
+            ExpParams.cfgFile = fullfile(getpref('qlab', 'cfgDir'), 'scripter.json');
             
             % create object instance
-            pulseCal = expManager.pulseCalibration(path, cfg_path, 'unit_test', 1);
+            pulseCal = PulseCalibration();
             
             %pulseCal.pulseParams = struct('piAmp', 6000, 'pi2Amp', 2800, 'delta', -0.5, 'T', eye(2,2), 'pulseType', 'drag',...
             %                        'i_offset', 0.110, 'q_offset', 0.138, 'SSBFreq', 0);
@@ -249,7 +225,7 @@ classdef PulseCalibration < handle
             %cost = pulseCal.PiCostFunction(data);
             %fprintf('PiCost for more realistic data: %f\n', cost);
             
-            pulseCal.Init();
+            pulseCal.Init(ExpParams);
             pulseCal.Do();
         end
     end
