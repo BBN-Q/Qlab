@@ -21,9 +21,9 @@ for sweep = fieldnames(sweepSettings)'
     add_sweep(exp, SweepFactory(sweepSettings.(sweep{1}), exp.instruments));
 end
 
-dh1 = DigitalHomodyne(measSettings.meas1);
+dh1 = DigitalHomodyne(measSettings.M1);
 add_measurement(exp, 'M1', dh1);
-dh2 = DigitalHomodyne(measSettings.meas2);
+dh2 = DigitalHomodyne(measSettings.M2);
 add_measurement(exp, 'M2', dh2);
 
 add_measurement(exp, 'M12', Correlator(dh1, dh2));

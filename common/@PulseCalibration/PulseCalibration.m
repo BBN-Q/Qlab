@@ -48,8 +48,6 @@ classdef PulseCalibration < handle
             obj.experiment.run();
             
             % pull out data from the first measurement
-            % TODO: allow specifying which measurement to use in the
-            % settings struct
             measNames = fieldnames(obj.experiment.measurements);
             data = obj.experiment.data.(measNames{1});
             
@@ -125,8 +123,8 @@ classdef PulseCalibration < handle
             % add measurement M1
             import MeasFilters.*
             measSettings = expSettings.measurements;
-            dh1 = DigitalHomodyne(measSettings.meas1);
-            add_measurement(obj.experiment, 'M1', dh1);
+            dh = DigitalHomodyne(measSettings.(obj.settings.measurement));
+            add_measurement(obj.experiment, obj.settings.measurement, dh);
             
             % intialize the ExpManager
             init(obj.experiment);

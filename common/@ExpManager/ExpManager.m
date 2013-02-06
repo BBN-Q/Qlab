@@ -148,7 +148,7 @@ classdef ExpManager < handle
             stops = cellfun(@(x) x.numSteps, obj.sweeps);
             sizes = cellfun(@(x) length(x.points), obj.sweeps);
             if length(sizes) == 1
-                sizes = [1 sizes];
+                sizes = [sizes 1];
             end
             % initialize data storage
             obj.data = structfun(@(x) nan(sizes), obj.measurements, 'UniformOutput', false);

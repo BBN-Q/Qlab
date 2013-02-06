@@ -55,7 +55,7 @@ qubitMap = obj.channelMap.(qubit);
 IQkey = qubitMap.IQkey;
 patternDict = containers.Map();
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap);
-measChannels = {'M1'};
+measChannels = {obj.settings.measurement};
 awgs = fieldnames(obj.AWGs)';
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
