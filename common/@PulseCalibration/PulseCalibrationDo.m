@@ -30,7 +30,7 @@ end
 
 %% Rabi
 if settings.DoRabiAmp
-   [filenames, nbrSegments] = obj.rabiAmpChannelSequence(settings.Qubit);
+   [filenames, segmentPoints] = obj.rabiAmpChannelSequence(settings.Qubit);
    if ~obj.testMode
        obj.loadSequence(filenames, 1);
    end
@@ -39,13 +39,13 @@ if settings.DoRabiAmp
    offsetPhases = zeros([3,1]);
    
    %Run a sequence and fit it
-   data = obj.homodyneMeasurement(nbrSegments);
+   data = obj.homodyneMeasurement(segmentPoints);
    % analyze X data
    [piAmpGuesses(1), offsetPhases(1)] = obj.analyzeRabiAmp(data(1:end/2));
    % analyze Y data
    [piAmpGuesses(2), offsetPhases(2)] = obj.analyzeRabiAmp(data(end/2+1:end));
    %Arbitary extra division by two so that it doesn't push the offset too far. 
-   amp2offset = 2.0/8192/obj.ExpParams.OffsetNorm/2;
+   amp2offset = 2.0/8192/obj.settings.OffsetNorm/2;
    
    obj.pulseParams.piAmp = piAmpGuesses(1);
    obj.pulseParams.pi2Amp = obj.pulseParams.piAmp/2;
@@ -59,8 +59,8 @@ end
 %% Ramsey
 if settings.DoRamsey
     % generate Ramsey sequence (TODO)
-    [filenames, nbrSegments] = obj.RamseyChannelSequence(settings.Qubit);
-    obj.loadSequence(filenames);
+    [filenames, segmentPoints] = obj.RamseyChannelSequence(settings.Qubit);
+    obj.loadSequence(filenames, 1);
     
     % adjust drive frequency
     QubitSource = obj.experiment.instruments.(settings.QubitSpec);
@@ -68,7 +68,7 @@ if settings.DoRamsey
     QubitSource.frequency = freq;
 
     % measure
-    data = obj.homodyneMeasurement(nbrSegments);
+    data = obj.homodyneMeasurement(segmentPoints);
 
     % analyze
     detuning = obj.analyzeRamsey(data);
@@ -140,11 +140,11 @@ if settings.DoDRAGCal
     else
         deltas = linspace(-2,0,11)';
     end
-    [filenames, nbrSegments] = obj.APEChannelSequence(settings.Qubit, deltas);
+    [filenames, segmentPoints] = obj.APEChannelSequence(settings.Qubit, deltas);
     obj.loadSequence(filenames, 1);
 
     % measure
-    data = obj.homodyneMeasurement(nbrSegments);
+    data = obj.homodyneMeasurement(segmentPoints);
 
     % analyze for the best value to two digits
     numPsQId = 8; % number pseudoidentities
@@ -160,11 +160,11 @@ end
 %% SPAM calibration    
 if settings.DoSPAMCal
     % generate DRAG calibration sequence
-    [filenames, nbrSegments] = obj.SPAMChannelSequence(settings.Qubit);
+    [filenames, segmentPoints] = obj.SPAMChannelSequence(settings.Qubit);
     obj.loadSequence(filenames, 1);
 
     % measure
-    data = obj.homodyneMeasurement(nbrSegments);
+    data = obj.homodyneMeasurement(segmentPoints);
     
     % analyze for the best value to two digits
     numPsQId = 10; % number pseudoidentities
@@ -193,7 +193,7 @@ params.(settings.Qubit).piAmp = obj.pulseParams.piAmp;
 params.(settings.Qubit).pi2Amp = obj.pulseParams.pi2Amp;
 params.(settings.Qubit).delta = obj.pulseParams.delta;
 
-channelMap = obj.channelMap.(obj.ExpParams.Qubit);
+channelMap = obj.channelMap.(obj.settings.Qubit);
 IQkey = channelMap.IQkey;
 
 params.(IQkey).T = obj.pulseParams.T;

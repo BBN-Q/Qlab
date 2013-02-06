@@ -1,4 +1,4 @@
-function [filename, nbrPatterns] = APEChannelSequence(obj, qubit, deltas, makePlot)
+function [filename, segmentPoints] = APEChannelSequence(obj, qubit, deltas, makePlot)
 
 if ~exist('makePlot', 'var')
     makePlot = false;
@@ -39,7 +39,7 @@ end
 % just a pi pulse for scaling
 calseq={{pg.pulse('Xp')}};
 
-nbrPatterns = nbrRepeats*(length(patseq) + length(calseq));
+segmentPoints = 1:nbrRepeats*(length(patseq) + length(calseq));
 
 seqParams = struct(...
     'basename', basename, ...
@@ -56,7 +56,7 @@ IQkey = qubitMap.IQkey;
 patternDict = containers.Map();
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap);
 measChannels = {'M1'};
-awgs = cellfun(@(x) x.InstrName, obj.awgParams, 'UniformOutput',false);
+awgs = fieldnames(obj.AWGs)';
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 

@@ -34,12 +34,15 @@ classdef PulseCalibration < handle
         function obj = PulseCalibration()
         end
 
-        function out = homodyneMeasurement(obj, nbrSegments)
+        function out = homodyneMeasurement(obj, segmentPoints)
             % runs the pulse sequence and returns the data
             
+            % set number of segments in the sweep
+            obj.experiment.sweeps{1}.points = segmentPoints;
+
             % set digitizer with the appropriate number of segments
             averagerSettings = obj.experiment.scopes{1}.averager;
-            averagerSettings.nbrSegments = nbrSegments;
+            averagerSettings.nbrSegments = length(segmentPoints);
             obj.experiment.scopes{1}.averager = averagerSettings;
             
             obj.experiment.run();
@@ -120,6 +123,7 @@ classdef PulseCalibration < handle
             add_sweep(obj.experiment, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 2)));
             
             % add measurement M1
+            import MeasFilters.*
             measSettings = expSettings.measurements;
             dh1 = DigitalHomodyne(measSettings.meas1);
             add_measurement(obj.experiment, 'M1', dh1);
@@ -131,6 +135,7 @@ classdef PulseCalibration < handle
             
             obj.AWGs = struct_reduce(@(x) ExpManager.is_AWG(x), obj.experiment.instruments);
             obj.AWGSettings = cellfun(@(awg) obj.experiment.instrSettings.(awg), fieldnames(obj.AWGs)', 'UniformOutput', false);
+            obj.AWGSettings = cell2struct(obj.AWGSettings, fieldnames(obj.AWGs)', 2);
             obj.controlAWG = IQchannels.awg;
 
             if ~obj.testMode

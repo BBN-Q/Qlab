@@ -139,6 +139,11 @@ classdef ExpManager < handle
             ct = zeros(1, length(obj.sweeps));
             stops = cellfun(@(x) x.numSteps, obj.sweeps);
             sizes = cellfun(@(x) length(x.points), obj.sweeps);
+            if length(sizes) == 1
+                sizes = [1 sizes];
+            end
+            % initialize data storage
+            obj.data = structfun(@(x) nan(sizes), obj.measurements, 'UniformOutput', false);
             
             % generic nested loop sweeper through "stack"
             while idx > 0 && ct(1) <= stops(1)
@@ -156,14 +161,10 @@ classdef ExpManager < handle
                         stepData = structfun(@(m) m.get_data(), obj.measurements, 'UniformOutput', false);
                         for measName = fieldnames(stepData)'
                             % what we want to do is:
-                            % obj.data.(measNames{ct})(ct(1), ct(2), ..., ct(n), :) = stepData{ct};
+                            % obj.data.(measNames{ct})(ct(1), ct(2), ..., ct(n-1), :) = stepData{ct};
                             % lacking an idiomatic way to build the generic
                             % assignment, we manually call subsasgn
-                            %We assume the segment sweep is last
                             indexer = struct('type', '()', 'subs', {[num2cell(ct(1:end-1)), ':']});
-                            if ~isfield(obj.data, measName{1})
-                                obj.data.(measName{1}) = nan(sizes);
-                            end
                             obj.data.(measName{1}) = subsasgn(obj.data.(measName{1}), indexer, stepData.(measName{1}));
                         end
                         obj.plot_data();
@@ -195,7 +196,9 @@ classdef ExpManager < handle
             %clean up DataReady listeners and plot timer
             cellfun(@delete, obj.listeners);
             % close data file
-            obj.dataFileHandler.close();
+            if ~isempty(obj.dataFileHandler)
+                obj.dataFileHandler.close();
+            end
         end
         
         %Helper function to take data (basically, start/stop AWGs and

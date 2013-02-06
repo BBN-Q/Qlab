@@ -1,4 +1,4 @@
-function [filename, nbrPatterns] = PiCalChannelSequence(obj, qubit, direction, makePlot)
+function [filename, segmentPoints] = PiCalChannelSequence(obj, qubit, direction, makePlot)
 
 if ~exist('direction', 'var')
     direction = 'X';
@@ -33,7 +33,7 @@ pulse180m   = pg.pulse([direction 'm']);
 patseq(11:19) =  arrayfun(@(x) [{pulse90m}, repmat({pulse180m}, 1, x)], [0:8], 'UniformOutput', false);
 
 nbrRepeats = 2;
-nbrPatterns = nbrRepeats*length(patseq);
+segmentPoints = 1:nbrRepeats*length(patseq);
 numsteps = 1;
 
 calseq = [];
@@ -55,7 +55,7 @@ IQkey = qubitMap.IQkey;
 
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap);
 measChannels = {'M1'};
-awgs = cellfun(@(x) x.InstrName, obj.awgParams, 'UniformOutput',false);
+awgs = fieldnames(obj.AWGs)';
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 

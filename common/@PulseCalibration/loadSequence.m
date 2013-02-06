@@ -15,7 +15,7 @@ function loadSequence(obj, paths, numRepeats)
     obj.AWGSettings.(obj.controlAWG) = params;
     
     % load sequence on all AWGs
-    awgNames = fieldnames(AWGs)';
+    awgNames = fieldnames(obj.AWGs)';
     for ct = 1:length(awgNames)
         params = obj.AWGSettings.(awgNames{ct});
         params.seqfile = paths{ct};

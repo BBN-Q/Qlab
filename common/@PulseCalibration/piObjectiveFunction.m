@@ -4,7 +4,7 @@ function [cost, J] = piObjectiveFunction(obj, x, direction)
     fprintf('piAmp: %.1f, offset: %.4f\n', piAmp, offset);
     % create sequence
     obj.pulseParams.piAmp = piAmp;
-    [filenames nbrPatterns] = obj.PiCalChannelSequence(obj.ExpParams.Qubit, direction);
+    [filenames segmentPoints] = obj.PiCalChannelSequence(obj.settings.Qubit, direction);
     
     % set channel offset
     switch direction
@@ -23,7 +23,7 @@ function [cost, J] = piObjectiveFunction(obj, x, direction)
     
     % measure
     if ~obj.testMode
-        data = obj.homodyneMeasurement(nbrPatterns);
+        data = obj.homodyneMeasurement(segmentPoints);
     else
         data = simulateMeasurement(x);
         plot(data);
@@ -36,8 +36,8 @@ function [cost, J] = piObjectiveFunction(obj, x, direction)
     % scale J rows by amplitude and offset->amplitude conversion factor and
     % turn on/off offset shifting if we are using SSB
     J(:,1) = J(:,1)/piAmp;
-    offset2amp = obj.ExpParams.offset2amp;
-    J(:,2) = (obj.ExpParams.SSBFreq == 0)*obj.ExpParams.OffsetNorm*J(:,2)*offset2amp/piAmp; % offset can have a different integral norm
+    offset2amp = obj.settings.offset2amp;
+    J(:,2) = (obj.pulseParams.SSBFreq == 0)*obj.settings.OffsetNorm*J(:,2)*offset2amp/piAmp; % offset can have a different integral norm
     fprintf('Cost: %.4f (%.4f) \n', sum(cost.^2), sum(cost.^2/length(cost)));
 end
 

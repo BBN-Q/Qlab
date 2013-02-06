@@ -1,4 +1,4 @@
-function [filename, nbrPatterns] = rabiAmpChannelSequence(obj, qubit, makePlot)
+function [filename, segmentPoints] = rabiAmpChannelSequence(obj, qubit, makePlot)
 
 if ~exist('makePlot', 'var')
     makePlot = false;
@@ -28,7 +28,7 @@ for n = 1:numsteps;
 end
 
 nbrRepeats = 1;
-nbrPatterns = nbrRepeats*length(patseq);
+segmentPoints = [amps amps];
 numsteps = 1;
 
 calseq = [];
@@ -50,7 +50,7 @@ IQkey = qubitMap.IQkey;
 
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap);
 measChannels = {'M1'};
-awgs = cellfun(@(x) x.InstrName, obj.awgParams, 'UniformOutput',false);
+awgs = fieldnames(obj.AWGs)';
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 

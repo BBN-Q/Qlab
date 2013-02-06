@@ -22,7 +22,7 @@ function [piAmp, offsetPhase] = analyzeRabiAmp(data)
     end
     
     p = [offset amp frabi phase];
-    [beta,~,~] = nlinfit(xpts, data, rabif, p);
+    [beta,~,~] = nlinfit(xpts, data(:), rabif, p);
     
     %The frequency tells us something about what a pi should calibrate to
     frabi = abs(beta(3));

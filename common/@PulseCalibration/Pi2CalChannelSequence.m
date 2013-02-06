@@ -1,4 +1,4 @@
-function [filename, nbrPatterns] = Pi2CalChannelSequence(obj, qubit, direction, makePlot)
+function [filename, segmentPoints] = Pi2CalChannelSequence(obj, qubit, direction, makePlot)
 
 if ~exist('direction', 'var')
     direction = 'X';
@@ -48,7 +48,7 @@ end
 
 numsteps = 1;
 nbrRepeats = 2;
-nbrPatterns = nbrRepeats*length(patseq);
+segmentPoints = 1:nbrRepeats*length(patseq);
 calseq = [];
 
 % prepare parameter structures for the pulse compiler
@@ -68,7 +68,7 @@ IQkey = qubitMap.IQkey;
 patternDict = containers.Map();
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap);
 measChannels = {'M1'};
-awgs = cellfun(@(x) x.InstrName, obj.awgParams, 'UniformOutput',false);
+awgs = fieldnames(obj.AWGs)';
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 
