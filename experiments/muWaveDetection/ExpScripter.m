@@ -7,7 +7,7 @@ exp = ExpManager();
 
 exp.dataFileHandler = HDF5DataHandler('silly.h5');
 
-expSettings = jsonlab.loadjson('scripter.json');
+expSettings = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'));
 instrSettings = expSettings.instruments;
 sweepSettings = expSettings.sweeps;
 measSettings = expSettings.measurements;
