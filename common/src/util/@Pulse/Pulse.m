@@ -179,7 +179,7 @@ classdef Pulse < handle
            end
            sha.reset();
            %Salt the array to avoid collisions
-           sha.update([array(:); array(:)+10101]);
+           sha.update([mod(array(:), 256); floor(array(:)/256)]);
            h = sha.digest();
            % convert to hex string
            h = sprintf('%02x',uint8(h));
