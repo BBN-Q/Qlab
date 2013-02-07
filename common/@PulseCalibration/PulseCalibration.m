@@ -131,7 +131,7 @@ classdef PulseCalibration < handle
             
             IQchannels = obj.channelMap.(obj.settings.Qubit);
             
-            obj.AWGs = struct_reduce(@(x) ExpManager.is_AWG(x), obj.experiment.instruments);
+            obj.AWGs = struct_filter(@(x) ExpManager.is_AWG(x), obj.experiment.instruments);
             obj.AWGSettings = cellfun(@(awg) obj.experiment.instrSettings.(awg), fieldnames(obj.AWGs)', 'UniformOutput', false);
             obj.AWGSettings = cell2struct(obj.AWGSettings, fieldnames(obj.AWGs)', 2);
             obj.controlAWG = IQchannels.awg;

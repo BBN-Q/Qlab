@@ -1,4 +1,4 @@
-function result = struct_reduce(fcn, input)
+function result = struct_filter(fcn, input)
     result = struct();
     fields = fieldnames(input)';
     

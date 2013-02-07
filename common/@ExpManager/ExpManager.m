@@ -311,8 +311,10 @@ classdef ExpManager < handle
                     if ~isfield(axesHandles, [measName{1} '_abs']) || ~isfield(plotHandles, [measName{1} '_abs'])
                         axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
                         plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), abs(data));
+                        title(axesHandles.([measName{1} '_abs']), 'Amplitude')
                         axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
                         plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), (180/pi)*angle(data));
+                        title(axesHandles.([measName{1} '_phase']), 'Phase')
                     else
                         set(plotHandles.([measName{1} '_abs']), 'YData', abs(data));
                         set(plotHandles.([measName{1} '_phase']), 'YData', (180/pi)*angle(data));
