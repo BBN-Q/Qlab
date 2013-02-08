@@ -77,6 +77,7 @@ classdef ExpManager < handle
             %clean up DataReady listeners and plot timer
             cellfun(@delete, obj.listeners);
             delete(obj.plotScopeTimer);
+            fprintf('ExpManager Finished!\n');
         end
         
         %Initialize
@@ -222,7 +223,7 @@ classdef ExpManager < handle
             run(obj.AWGs{1});
             
             %Wait for data taking to finish
-            obj.scopes{1}.wait_for_acquisition(120);
+            obj.scopes{1}.wait_for_acquisition(1000);
             
         end
         
@@ -249,6 +250,8 @@ classdef ExpManager < handle
             %Plot the accumulated swept data
             %We keep track of figure handles to not pop new ones up all the
             %time
+            
+            %TODO: Handle changes in data size 
             persistent figHandles axesHandles plotHandles
             if isempty(figHandles)
                 figHandles = struct();
@@ -260,7 +263,16 @@ classdef ExpManager < handle
                 measData = squeeze(obj.data.(measName{1}));
                 
                 if ~isempty(measData)
+                    %Check whether we have an open figure handle to plot to
                     if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
+                        %If we've closed the figure then we probably
+                        %need to reset the axes and plot handles too
+                        if isfield(figHandles, measName{1})
+                           axesHandles = rmfield(axesHandles, [measName{1} '_abs']); 
+                           axesHandles = rmfield(axesHandles, [measName{1} '_phase']); 
+                           plotHandles = rmfield(plotHandles, [measName{1} '_abs']); 
+                           plotHandles = rmfield(plotHandles, [measName{1} '_phase']); 
+                        end
                         figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Data']);
                     end
                     figHandle = figHandles.(measName{1});
