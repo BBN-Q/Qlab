@@ -194,9 +194,6 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             if strcmp(obj.acquireMode, 'averager')
                 obj.data{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
                 obj.data{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
-            else
-                obj.data{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrRoundRobins, obj.buffers.roundRobinsPerBuffer]);
-                obj.data{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrRoundRobins, obj.buffers.roundRobinsPerBuffer]);
             end
             
             %Setup the dual-port asynchronous AutoDMA with NPT mode
@@ -227,8 +224,10 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             bufferct = 0;
             totNumBuffers = round(obj.settings.averager.nbrRoundRobins/obj.buffers.roundRobinsPerBuffer);
             
-            sumDataA = zeros(size(obj.data{1}));
-            sumDataB = zeros(size(obj.data{2}));
+            if strcmp(obj.acquireMode, 'averager')
+                sumDataA = zeros(size(obj.data{1}));
+                sumDataB = zeros(size(obj.data{2}));
+            end
             
             %Loop until all are processed
             while bufferct < totNumBuffers
@@ -428,7 +427,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             recordsPerRoundRobin = avgSet.nbrSegments*avgSet.nbrWaveforms;
             bytesPerRoundRobin = bytesPerRecord*recordsPerRoundRobin;
             
-            %Make sure we can fit at least 4 buffers in the card memory
+            %Make sure we can fit at least 2 buffers in the card memory
             assert(bytesPerRoundRobin < obj.buffers.maxBufferSize, ['Oops! The memory required by one round robin ' , ...
                 'is too big. Try reducing the number of waveforms and increasing the number of round robins.']);
             
