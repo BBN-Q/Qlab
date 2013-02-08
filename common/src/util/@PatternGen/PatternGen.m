@@ -504,7 +504,7 @@ classdef PatternGen < handle
                 %Now if the length of the pulse is greater than one we need
                 %to put the go low blip
                 if (width > 1)
-                    goLowEntry = find((delay+width)<timePts, 1);
+                    goLowEntry = find((delay+width)<timePts, 1)-1;
                     
                     %If it is the same entry we should be doing something
                     %fancy like splitting or pushing the goHighBack one

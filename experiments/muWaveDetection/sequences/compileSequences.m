@@ -174,7 +174,7 @@ elseif (strncmp(digitizerTrigChan,'BBNAPS', 6))
     if isempty(awgChannels.(tmpIQkey))
         create_empty_APS_channel(tmpIQkey);
     end
-    awgChannels.(tmpIQkey).linkLists = PatternGen.addTrigger(awgChannels.(tmpIQkey).linkLists, seqParams.fixedPt-500, 0, tmpMarkerNum);
+    awgChannels.(tmpIQkey).linkLists = PatternGen.addTrigger(awgChannels.(tmpIQkey).linkLists, seqParams.fixedPt-500, 24, tmpMarkerNum);
 end
 
 if (strncmp(slaveTrigChan,'TekAWG', 6))
