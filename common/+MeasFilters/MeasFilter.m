@@ -27,6 +27,7 @@ classdef MeasFilter < handle
         accumulatedData
         avgct = 0
         childFilter
+        plotScope = false
     end
     
     methods
@@ -39,7 +40,9 @@ classdef MeasFilter < handle
                 [filter, settings] = varargin{:};
             end
             obj.channel = settings.channel;
-
+            if isfield(settings, 'plotScope')
+                obj.plotScope = settings.plotScope;
+            end
             if ~isempty(filter)
                 obj.childFilter = filter;
             end
@@ -47,6 +50,9 @@ classdef MeasFilter < handle
         
         function out = apply(obj, data)
             my_data = data.(obj.channel);
+            if obj.plotScope
+                obj.plot_scope(my_data);
+            end
             if ~isempty(obj.childFilter)
                 out = apply(obj.childFilter, my_data);
             else
@@ -64,7 +70,7 @@ classdef MeasFilter < handle
             % or 4D (time x waveforms x segment x roundRobinsPerBuffer)
             % in the 4D case, we want to average over waveforms and round
             % robins
-            if ndims(obj.latestData) > 2
+            if ndims(obj.latestData) == 4
                 tmpData = squeeze(mean(mean(obj.latestData, 4), 2));
             else
                 tmpData = obj.latestData;
@@ -79,6 +85,20 @@ classdef MeasFilter < handle
         
         function out = get_data(obj)
             out = obj.accumulatedData / obj.avgct;
+        end
+        
+        function plot_scope(obj, data)
+           %Helper function to plot raw data to check timing and what not
+           %For now we'll dump into a new figure every time
+           figure()
+           if ndims(obj.latestData) == 4
+               dims = size(data);
+               imagesc(reshape(data, dims(1), prod(dims(2:end))));
+           elseif ndims(obj.latestData) == 2
+               imagesc(data);
+           else
+               error('Unable to handle data with these dimensions.')
+           end
         end
     end
     
