@@ -104,6 +104,9 @@ classdef ExpManager < handle
             %Rearrange the AWG list to put the Master first
             obj.AWGs([1, masterAWGIndex]) = obj.AWGs([masterAWGIndex, 1]);
             
+            %Stop all the AWGs
+            cellfun(@(awg) stop(awg), obj.AWGs);
+
             if ~isempty(obj.dataFileHandler)
                 %Construct data file header and info structs
                 labels = cellfun(@(s) s.label, obj.sweeps, 'UniformOutput', false);
@@ -211,9 +214,6 @@ classdef ExpManager < handle
             %Clear all the measurement filters
             structfun(@(m) reset(m), obj.measurements);
             
-            %Stop all the AWGs
-            cellfun(@(awg) stop(awg), obj.AWGs);
-            
             %Ready the digitizers
             cellfun(@(scope) acquire(scope), obj.scopes);
             
@@ -225,6 +225,9 @@ classdef ExpManager < handle
             %Wait for data taking to finish
             obj.scopes{1}.wait_for_acquisition(1000);
             
+            %Stop all the AWGs
+            cellfun(@(awg) stop(awg), obj.AWGs);
+
         end
         
         %Helper function to apply measurement filters and store data
@@ -282,10 +285,14 @@ classdef ExpManager < handle
                         axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
                         if length(setdiff(size(measData), 1)) == 1
                             plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), abs(measData));
+                            ylabel(axesHandles.([measName{1} '_abs']), 'Amplitude')
                             plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), (180/pi)*angle(measData));
+                            ylabel(axesHandles.([measName{1} '_phase']), 'Phase')
                         elseif length(setdiff(size(measData), 1)) == 2
                             plotHandles.([measName{1} '_abs']) = imagesc(abs(measData), 'Parent', axesHandles.([measName{1} '_abs']));
+                            title(axesHandles.([measName{1} '_abs']), 'Amplitude')
                             plotHandles.([measName{1} '_phase']) = imagesc((180/pi)*angle(measData), 'Parent', axesHandles.([measName{1} '_phase']));
+                            title(axesHandles.([measName{1} '_phase']), 'Phase')
                         end
                     else
                         if length(setdiff(size(measData), 1)) == 1
@@ -323,10 +330,10 @@ classdef ExpManager < handle
                     if ~isfield(axesHandles, [measName{1} '_abs']) || ~isfield(plotHandles, [measName{1} '_abs'])
                         axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
                         plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), abs(data));
-                        title(axesHandles.([measName{1} '_abs']), 'Amplitude')
+                        ylabel(axesHandles.([measName{1} '_abs']), 'Amplitude')
                         axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
                         plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), (180/pi)*angle(data));
-                        title(axesHandles.([measName{1} '_phase']), 'Phase')
+                        ylabel(axesHandles.([measName{1} '_phase']), 'Phase')
                     else
                         set(plotHandles.([measName{1} '_abs']), 'YData', abs(data));
                         set(plotHandles.([measName{1} '_phase']), 'YData', (180/pi)*angle(data));

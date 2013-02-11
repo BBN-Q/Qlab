@@ -28,6 +28,7 @@ classdef MeasFilter < handle
         avgct = 0
         childFilter
         plotScope = false
+        scopeHandle
     end
     
     methods
@@ -89,13 +90,19 @@ classdef MeasFilter < handle
         
         function plot_scope(obj, data)
            %Helper function to plot raw data to check timing and what not
-           %For now we'll dump into a new figure every time
-           figure()
+           if isempty(obj.scopeHandle)
+               fh = figure();
+               obj.scopeHandle = axes('Parent', fh);
+           end
            if ndims(obj.latestData) == 4
                dims = size(data);
-               imagesc(reshape(data, dims(1), prod(dims(2:end))));
+               imagesc(reshape(data, dims(1), prod(dims(2:end))), 'Parent', obj.scopeHandle);
+               xlabel('Segment');
+               ylabel('Time');
            elseif ndims(obj.latestData) == 2
-               imagesc(data);
+               imagesc(data, 'Parent', obj.scopeHandle);
+               xlabel('Segment');
+               ylabel('Time');
            else
                error('Unable to handle data with these dimensions.')
            end
