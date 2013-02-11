@@ -5,7 +5,12 @@ import MeasFilters.*
 
 exp = ExpManager();
 
-exp.dataFileHandler = HDF5DataHandler('silly.h5');
+global dataNamer
+deviceName = 'Syracuse_V5.2';
+if ~isa(dataNamer, 'DataNamer')
+    dataNamer = DataNamer(getpref('qlab', 'dataDir'), deviceName);
+end
+exp.dataFileHandler = HDF5DataHandler(dataNamer.get_name());
 
 expSettings = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'));
 instrSettings = expSettings.instruments;
@@ -23,10 +28,10 @@ end
 
 dh1 = DigitalHomodyne(measSettings.M1);
 add_measurement(exp, 'M1', dh1);
-dh2 = DigitalHomodyne(measSettings.M2);
-add_measurement(exp, 'M2', dh2);
-
-add_measurement(exp, 'M12', Correlator(dh1, dh2));
+% dh2 = DigitalHomodyne(measSettings.M2);
+% add_measurement(exp, 'M2', dh2);
+% 
+% add_measurement(exp, 'M12', Correlator(dh1, dh2));
 
 exp.init();
 exp.run();
