@@ -18,30 +18,18 @@
 classdef AWGSequence < sweeps.Sweep
     properties
         sequenceFile
-        awgs
+        AWGs
     end
     
     methods
         % constructor
         function obj = AWGSequence(sweepParams, Instr)
-            obj.label = 'AWG sequence number';
+            obj.label = 'AWG Sequence Number';
             
-            obj.awgs = struct();
             obj.sequenceFile = sweepParams.sequenceFile;
 
             %Construct a list of AWGs
-            for tmp = fieldnames(Instr)'
-                curName = tmp{1};
-                if isa(Instr.(curName), 'deviceDrivers.Tek5014') || isa(Instr.(curName), 'deviceDrivers.APS')
-                    if params.InstrParams.(curName).enable
-                        obj.awgs.(curName)= struct();
-                        obj.awgs.(curName).driver = Instr.(curName);
-                        % TODO: fix me (following two lines do not work)
-                        obj.awgs.(curName).params = params.InstrParams.(curName);
-                        obj.awgs.(curName).params.seqforce = 1;
-                    end
-                end
-            end
+            obj.AWGs = struct_filter(@(x) ExpManager.is_AWG(x), Instr);
                         
             % generate sweep points
             start = sweepParams.start;
@@ -62,29 +50,21 @@ classdef AWGSequence < sweeps.Sweep
         function step(obj, index)
             
             %Loop over the AWGs
-            for tmp = fieldnames(obj.awgs)'
+            for tmp = fieldnames(obj.AWGs)'
                 curAWGName = tmp{1};
-                switch class(obj.awgs.(curAWGName).driver)
+                switch class(obj.AWGs.(curAWGName))
                     case 'deviceDrivers.Tek5014'
                         ext = '.awg';
+                        error('Have not written code for TekAWG yet.');
                     case 'deviceDrivers.APS'
                         ext = '.h5';
                 end
                 fileName = sprintf('%s-%s_%d%s',obj.sequenceFile, curAWGName, obj.points(index), ext);
                 assert(logical(exist(fileName, 'file')), 'AWGSequence ERROR: Could not find file %s\n', fileName)
                 
-                %Stop the AWG
-                obj.awgs.(curAWGName).driver.stop()
-                
                 %Load the new file
-                obj.awgs.(curAWGName).params.seqfile = fileName;
-                obj.awgs.(curAWGName).driver.setAll(obj.awgs.(curAWGName).params);
+                obj.AWGs.(curAWGName).loadConfig(fileName);
                 
-                %If it is not a master then start it up
-                if ~obj.awgs.(curAWGName).params.isMaster
-                    obj.awgs.(curAWGName).driver.run();
-                    assert(obj.awgs.(curAWGName).driver.waitForAWGtoStartRunning(), 'Oops! Could not get the APS running.')
-                end
             end
         end
     end
