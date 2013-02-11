@@ -15,7 +15,7 @@ import numpy as np
 aCoeffList = []
 bCoeffList = []
 for IFFreq in np.arange(0.01, 1, 0.01):
-    (b,a) = scipy.signal.iirdesign(IFFreq/2, IFFreq, 3, 30)
+    (b,a) = scipy.signal.iirdesign(IFFreq/2, IFFreq, 3, 30, ftype='cheby2')
     aCoeffList.append(a)
     bCoeffList.append(b)
 
