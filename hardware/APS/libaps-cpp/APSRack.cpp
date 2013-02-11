@@ -155,7 +155,11 @@ int APSRack::disconnect(const int & deviceID){
 
 int APSRack::connect(const string & deviceSerial){
 	//Look up the associated ID and call the next connect
-	return APSs_[serial2dev[deviceSerial]].connect();
+	if (serial2dev.count(deviceSerial) > 0) {
+		return APSs_[serial2dev[deviceSerial]].connect();
+	} else {
+		return -1;
+	}
 }
 
 int APSRack::disconnect(const string & deviceSerial){
