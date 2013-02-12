@@ -41,7 +41,7 @@ classdef APS < hgsetget
     
     properties (Constant)
         
-        APS_ROOT = '../../../../hardware/APS'; 
+        APS_ROOT = '../../../hardware/APS'; 
 
         NUM_CHANNELS = 4;
 
