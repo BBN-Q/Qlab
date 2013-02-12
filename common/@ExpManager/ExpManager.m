@@ -233,9 +233,9 @@ classdef ExpManager < handle
         %Helper function to apply measurement filters and store data
         function process_data(obj, src, ~)
             % download data from src
-            data = struct('ch1', src.transfer_waveform(1), 'ch2', src.transfer_waveform(2));
+            measData = struct('ch1', src.transfer_waveform(1), 'ch2', src.transfer_waveform(2));
             %Apply measurment filters in turn
-            structfun(@(m) apply(m, data), obj.measurements, 'UniformOutput', false);
+            structfun(@(m) apply(m, measData), obj.measurements, 'UniformOutput', false);
         end
         
         function save_data(obj, stepData)
@@ -319,9 +319,9 @@ classdef ExpManager < handle
             end
             
             for measName = fieldnames(obj.measurements)'
-                data = obj.measurements.(measName{1}).get_data();
+                measData = obj.measurements.(measName{1}).get_data();
                 
-                if ~isempty(data)
+                if ~isempty(measData)
                     if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
                         figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Scope']);
                     end
@@ -329,14 +329,14 @@ classdef ExpManager < handle
                     
                     if ~isfield(axesHandles, [measName{1} '_abs']) || ~isfield(plotHandles, [measName{1} '_abs'])
                         axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
-                        plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), abs(data));
+                        plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), abs(measData));
                         ylabel(axesHandles.([measName{1} '_abs']), 'Amplitude')
                         axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
-                        plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), (180/pi)*angle(data));
+                        plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), (180/pi)*angle(measData));
                         ylabel(axesHandles.([measName{1} '_phase']), 'Phase')
                     else
-                        set(plotHandles.([measName{1} '_abs']), 'YData', abs(data));
-                        set(plotHandles.([measName{1} '_phase']), 'YData', (180/pi)*angle(data));
+                        set(plotHandles.([measName{1} '_abs']), 'YData', abs(measData));
+                        set(plotHandles.([measName{1} '_phase']), 'YData', (180/pi)*angle(measData));
                     end
                 end
             end

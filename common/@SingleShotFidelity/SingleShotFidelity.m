@@ -67,6 +67,12 @@ classdef SingleShotFidelity < handle
             obj.experiment.instrSettings.scope.averager.nbrSegments = 2;
             obj.experiment.instrSettings.scope.averager.nbrRoundRobins = settings.numShots/2;
             
+            %Add the instrument sweeps
+            sweepSettings = settings.sweeps;
+            for sweep = fieldnames(sweepSettings)'
+                add_sweep(obj.experiment, SweepFactory(sweepSettings.(sweep{1}), obj.experiment.instruments));
+            end
+
             % create a generic SegmentNum sweep
             add_sweep(obj.experiment, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 2)));
             

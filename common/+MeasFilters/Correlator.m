@@ -40,7 +40,7 @@ classdef Correlator < MeasFilters.MeasFilter
             obj.latestData = prod(filterData, ndims(filterData));
 
             obj.accumulate();
-            out = obj.get_data();
+            out = obj.latestData;
         end
     end
 end

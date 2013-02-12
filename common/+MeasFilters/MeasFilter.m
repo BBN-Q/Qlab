@@ -36,11 +36,11 @@ classdef MeasFilter < handle
             % MeasFilter(filter, settings) or MeasFilter(settings)
             if nargin == 1
                 settings = varargin{1};
+                obj.channel = settings.channel;
                 filter = [];
             elseif nargin == 2
                 [filter, settings] = varargin{:};
             end
-            obj.channel = settings.channel;
             if isfield(settings, 'plotScope')
                 obj.plotScope = settings.plotScope;
             end
@@ -50,14 +50,13 @@ classdef MeasFilter < handle
         end
         
         function out = apply(obj, data)
-            my_data = data.(obj.channel);
             if obj.plotScope
                 obj.plot_scope(my_data);
             end
             if ~isempty(obj.childFilter)
-                out = apply(obj.childFilter, my_data);
+                out = apply(obj.childFilter, data);
             else
-                out = my_data;
+                out = data.(obj.channel);
             end
         end
         

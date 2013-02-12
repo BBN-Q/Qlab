@@ -49,7 +49,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             end
                 
             obj.accumulate();
-            out = obj.get_data();
+            out = obj.latestData;
         end
     end
     

@@ -18,30 +18,33 @@
 classdef SingleShot < MeasFilters.MeasFilter
    
     properties
-        filter
         groundData
         excitedData
         histData
     end
     
     methods
-        function obj = SingleShot(filter)
-            obj = obj@MeasFilters.MeasFilter(struct('channel', []));
-            obj.filter = filter;
+        function obj = SingleShot(childFilter)
+            obj = obj@MeasFilters.MeasFilter(childFilter, struct());
         end
         
         function out = apply(obj, data)
             % just grab (and sort) latest data from child filter
-            obj.filter.apply(data);
+            data = apply@MeasFilters.MeasFilter(obj, data);
             %Assume that the data is recordLength x 1 (waveforms) x 2
             %(segments ground/excited) x roundRobinsPerBuffer
-            obj.groundData = [obj.groundData; squeeze(obj.filter.latestData(1,1,1,:))];
-            obj.excitedData = [obj.excitedData; squeeze(obj.filter.latestData(1,1,2,:))];
-            
-            out = obj.get_data();
+            obj.groundData = [obj.groundData; squeeze(data(1,1,1,:))];
+            obj.excitedData = [obj.excitedData; squeeze(data(1,1,2,:))];
+            out = [];
         end
         
         function out = get_data(obj)
+            %If we don't have any data yet return empty
+            if isempty(obj.groundData)
+                out = [];
+                return
+            end
+            
             % return histogrammed data
             obj.histData = struct();
             %Phase to rotate by to get two blobs on either side of I axis
@@ -81,5 +84,12 @@ classdef SingleShot < MeasFilters.MeasFilter
 
             out = maxAmpFidelity + 1j*maxPhaseFidelity;
         end
+        
+        function reset(obj)
+            obj.groundData = [];
+            obj.excitedData = [];
+            obj.histData = struct();
+        end
+            
     end
 end

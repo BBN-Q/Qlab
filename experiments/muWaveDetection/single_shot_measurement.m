@@ -6,12 +6,11 @@ ExpParams.cfgFile = fullfile(getpref('qlab', 'cfgDir'), 'scripter.json');
 %Update some relevant parameters
 channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 ExpParams.seqFile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-', channelMap.(qubit).awg, '.h5']);
-ExpParams.numShots = 80000;
+ExpParams.numShots = 20000;
 
-Sweeps = struct();
-Sweeps.AWGChannel = struct('type', 'sweeps.AWGChannel', 'AWGName', 'BBNAPS2', 'channel', '3&4', 'mode', 'amp', 'start', 0.025, 'stop', 0.6, 'step', 0.025, 'number', 1);
-% Sweeps.frequency = struct('type','sweeps.Frequency', 'start', 6.552, 'stop', 6.552, 'step', 50e-6, 'genID', 'RFgen', 'lockLOtoRF', false, 'number', 1);
-% Sweeps.power = struct('type','sweeps.Power', 'start', -10, 'stop', 6, 'step', 0.5, 'units', 'dBm', 'genID', 'RFgen', 'number', 2);
+ExpParams.sweeps = struct();
+% Sweeps.AWGChannel = struct('type', 'AWGChannel', 'AWGName', 'BBNAPS2', 'channel', '3&4', 'mode', 'amp', 'start', 0.025, 'stop', 0.6, 'step', 0.025);
+ExpParams.sweeps.frequency = struct('type','Frequency', 'start', 6.8317, 'stop', 6.8320, 'step', 50e-6, 'genID', 'Source1');
 
 SSMeasurement = SingleShotFidelity();
 
