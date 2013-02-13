@@ -179,7 +179,8 @@ classdef ExpManager < handle
                             indexer = struct('type', '()', 'subs', {[num2cell(ct(1:end-1)), ':']});
                             obj.data.(measName{1}) = subsasgn(obj.data.(measName{1}), indexer, stepData.(measName{1}));
                         end
-                        obj.plot_data();
+                        plotResetFlag = all(ct == 1);
+                        obj.plot_data(plotResetFlag);
                         obj.save_data(stepData);
                     end
                 else
@@ -249,7 +250,7 @@ classdef ExpManager < handle
             end
         end
         
-        function plot_data(obj)
+        function plot_data(obj, reset)
             %Plot the accumulated swept data
             %We keep track of figure handles to not pop new ones up all the
             %time
@@ -280,7 +281,7 @@ classdef ExpManager < handle
                     end
                     figHandle = figHandles.(measName{1});
                     
-                    if ~isfield(axesHandles, [measName{1} '_abs']) || ~isfield(plotHandles, [measName{1} '_abs'])
+                    if reset || ~isfield(axesHandles, [measName{1} '_abs']) || ~isfield(plotHandles, [measName{1} '_abs']) || ~ishandle(axesHandles.([measName{1} '_abs']))
                         axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
                         axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
                         switch length(setdiff(size(measData), 1))
@@ -295,9 +296,9 @@ classdef ExpManager < handle
                                 plotHandles.([measName{1} '_phase']) = imagesc((180/pi)*angle(measData), 'Parent', axesHandles.([measName{1} '_phase']));
                                 title(axesHandles.([measName{1} '_phase']), 'Phase')
                             case 3
-                                plotHandles.([measName{1} '_abs']) = imagesc(abs(measData(1,:,:)), 'Parent', axesHandles.([measName{1} '_abs']));
+                                plotHandles.([measName{1} '_abs']) = imagesc(abs(squeeze(measData(1,:,:))), 'Parent', axesHandles.([measName{1} '_abs']));
                                 title(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                                plotHandles.([measName{1} '_phase']) = imagesc((180/pi)*angle(measData(1,:,:)), 'Parent', axesHandles.([measName{1} '_phase']));
+                                plotHandles.([measName{1} '_phase']) = imagesc((180/pi)*angle(squeeze(measData(1,:,:))), 'Parent', axesHandles.([measName{1} '_phase']));
                                 title(axesHandles.([measName{1} '_phase']), 'Phase')
                         end
                     else
@@ -313,8 +314,8 @@ classdef ExpManager < handle
                                 %slice
                                 curSliceIdx = find(~isnan(measData(:,1,1)), 1, 'last');
                                 curSlice = measData(curSliceIdx,:,:);
-                                set(plotHandles.([measName{1} '_abs']), 'CData', abs(curSlice));
-                                set(plotHandles.([measName{1} '_phase']), 'CData', (180/pi)*angle(curSlice));
+                                set(plotHandles.([measName{1} '_abs']), 'CData', abs(squeeze(curSlice)));
+                                set(plotHandles.([measName{1} '_phase']), 'CData', (180/pi)*angle(squeeze(curSlice)));
                         end
                     end
                 end
