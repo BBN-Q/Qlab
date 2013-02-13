@@ -293,13 +293,10 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             if strcmp(obj.acquireMode, 'averager')
                 %Average the summed data
-                numRepeats = obj.settings.averager.nbrWaveforms*obj.settings.averager.nbrRoundRobins;
-                obj.data{1} = sumDataA/numRepeats;
-                obj.data{2} = sumDataB/numRepeats;
-                
                 %Rescale data to appropriate scale, i.e. map (0,255) to (-Vs,Vs)
-                obj.data{1} = int8toVolts(obj.data{1});
-                obj.data{2} = int8toVolts(obj.data{2});
+                numRepeats = obj.settings.averager.nbrWaveforms*obj.settings.averager.nbrRoundRobins;
+                obj.data{1} = int8toVolts(sumDataA/numRepeats);
+                obj.data{2} = int8toVolts(sumDataB/numRepeats);
                 
                 notify(obj, 'DataReady');
             end
