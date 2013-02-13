@@ -84,7 +84,7 @@ function data = loadData(makePlot, fullpath)
                     set(gca,'FontSize',12)
                     title(sanitized_filedname);
                 otherwise
-                    error('Cannot plot for dimension = %d', dimension);
+                    fprintf('Cannot plot for dimension = %d\n', data.dimension{ii});
             end
         end
     end

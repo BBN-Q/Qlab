@@ -283,19 +283,25 @@ classdef ExpManager < handle
                     if ~isfield(axesHandles, [measName{1} '_abs']) || ~isfield(plotHandles, [measName{1} '_abs'])
                         axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
                         axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
-                        if length(setdiff(size(measData), 1)) == 1
-                            plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), abs(measData));
-                            ylabel(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                            plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), (180/pi)*angle(measData));
-                            ylabel(axesHandles.([measName{1} '_phase']), 'Phase')
-                        elseif length(setdiff(size(measData), 1)) == 2
-                            plotHandles.([measName{1} '_abs']) = imagesc(abs(measData), 'Parent', axesHandles.([measName{1} '_abs']));
-                            title(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                            plotHandles.([measName{1} '_phase']) = imagesc((180/pi)*angle(measData), 'Parent', axesHandles.([measName{1} '_phase']));
-                            title(axesHandles.([measName{1} '_phase']), 'Phase')
+                        switch length(setdiff(size(measData), 1))
+                            case 1
+                                plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), abs(measData));
+                                ylabel(axesHandles.([measName{1} '_abs']), 'Amplitude')
+                                plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), (180/pi)*angle(measData));
+                                ylabel(axesHandles.([measName{1} '_phase']), 'Phase')
+                            case 2
+                                plotHandles.([measName{1} '_abs']) = imagesc(abs(measData), 'Parent', axesHandles.([measName{1} '_abs']));
+                                title(axesHandles.([measName{1} '_abs']), 'Amplitude')
+                                plotHandles.([measName{1} '_phase']) = imagesc((180/pi)*angle(measData), 'Parent', axesHandles.([measName{1} '_phase']));
+                                title(axesHandles.([measName{1} '_phase']), 'Phase')
+                            case 3
+                                plotHandles.([measName{1} '_abs']) = imagesc(abs(measData(1,:,:)), 'Parent', axesHandles.([measName{1} '_abs']));
+                                title(axesHandles.([measName{1} '_abs']), 'Amplitude')
+                                plotHandles.([measName{1} '_phase']) = imagesc((180/pi)*angle(measData(1,:,:)), 'Parent', axesHandles.([measName{1} '_phase']));
+                                title(axesHandles.([measName{1} '_phase']), 'Phase')
                         end
                     else
-                        switch length(setdiff(size(measData), 1));
+                        switch length(setdiff(size(measData), 1))
                             case 1
                                 set(plotHandles.([measName{1} '_abs']), 'YData', abs(measData));
                                 set(plotHandles.([measName{1} '_phase']), 'YData', (180/pi)*angle(measData));
