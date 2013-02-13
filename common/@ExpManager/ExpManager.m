@@ -327,7 +327,7 @@ classdef ExpManager < handle
                     end
                     figHandle = figHandles.(measName{1});
                     
-                    if ~isfield(axesHandles, [measName{1} '_abs']) || ~isfield(plotHandles, [measName{1} '_abs'])
+                    if ~isfield(axesHandles, [measName{1} '_abs']) || ~ishandle(axesHandles.([measName{1} '_abs'])) || ~isfield(plotHandles, [measName{1} '_abs'])
                         axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
                         plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), abs(measData));
                         ylabel(axesHandles.([measName{1} '_abs']), 'Amplitude')
