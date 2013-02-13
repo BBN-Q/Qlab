@@ -50,14 +50,15 @@ classdef MeasFilter < handle
         end
         
         function out = apply(obj, data)
-            if obj.plotScope
-                obj.plot_scope(my_data);
-            end
             if ~isempty(obj.childFilter)
                 out = apply(obj.childFilter, data);
             else
                 out = data.(obj.channel);
             end
+            if obj.plotScope
+                obj.plot_scope(out);
+            end
+
         end
         
         function reset(obj)
