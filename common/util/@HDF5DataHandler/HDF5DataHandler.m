@@ -23,6 +23,7 @@ classdef HDF5DataHandler < handle
         fileOpen = 0
         idx % index into file
         rowSizes
+        columnSizes
         dimensions
         nbrDataSets
         buffers
@@ -55,11 +56,18 @@ classdef HDF5DataHandler < handle
             obj.nbrDataSets = length(dataSetInfo);
             obj.idx = ones(obj.nbrDataSets, 1);
             
-            %initialize row sizes
+            %initialize buffer row sizes
             obj.rowSizes = cellfun(@(s) length(s.xpoints), dataSetInfo);
+            %initialize buffer column sizes
+            obj.columnSizes = ones(1, length(dataSetInfo));
+            for ct = 1:length(dataSetInfo)
+                if dataSetInfo{ct}.dimension > 2
+                    obj.columnSizes(ct) = length(dataSetInfo{ct}.ypoints);
+                end
+            end
             
             %initilize buffers
-            obj.buffers = arrayfun(@(x) nan(1,x), obj.rowSizes, 'UniformOutput', false);
+            obj.buffers = arrayfun(@(x,y) nan(x,y), obj.columnSizes, obj.rowSizes, 'UniformOutput', false);
             obj.bufferIdx = ones(obj.nbrDataSets, 1);
             
             %write header info
@@ -70,6 +78,8 @@ classdef HDF5DataHandler < handle
                     obj.open1dDataSet(ct, dataSetInfo{ct});
                 elseif dataSetInfo{ct}.dimension == 2
                     obj.open2dDataSet(ct, dataSetInfo{ct});
+                elseif dataSetInfo{ct}.dimension == 3
+                    obj.open3dDataSet(ct, dataSetInfo{ct});
                 else
                     error('HDF5DataHandler does not support data sets of dimension %d', dataSetInfo{ct}.dimension);
                 end
@@ -110,6 +120,29 @@ classdef HDF5DataHandler < handle
             h5create(obj.fileName, ['/DataSet' num2str(setNumber) '/imag'], [Inf obj.rowSizes(setNumber)], 'ChunkSize', [10 obj.rowSizes(setNumber)]);
         end
         
+        function open3dDataSet(obj, setNumber, info)
+            %write xpoints and ypoints info
+            h5create(obj.fileName, ['/DataSet' num2str(setNumber) '/xpoints'], length(info.xpoints));
+            h5write(obj.fileName, ['/DataSet' num2str(setNumber) '/xpoints'], info.xpoints);
+            h5writeatt(obj.fileName, ['/DataSet' num2str(setNumber) '/xpoints'], 'label', info.xlabel);
+            
+            h5create(obj.fileName, ['/DataSet' num2str(setNumber) '/ypoints'], length(info.ypoints));
+            h5write(obj.fileName, ['/DataSet' num2str(setNumber) '/ypoints'], info.ypoints);
+            h5writeatt(obj.fileName, ['/DataSet' num2str(setNumber) '/ypoints'], 'label', info.ylabel);
+            
+            h5create(obj.fileName, ['/DataSet' num2str(setNumber) '/zpoints'], length(info.zpoints));
+            h5write(obj.fileName, ['/DataSet' num2str(setNumber) '/zpoints'], info.zpoints);
+            h5writeatt(obj.fileName, ['/DataSet' num2str(setNumber) '/zpoints'], 'label', info.zlabel);
+            
+            h5writeatt(obj.fileName, ['/DataSet' num2str(setNumber)], 'dimension', uint16(3));
+            % write data set name
+            h5writeatt(obj.fileName, ['/DataSet' num2str(setNumber)], 'name', info.name);
+            
+            %open data set
+            h5create(obj.fileName, ['/DataSet' num2str(setNumber) '/real'], [obj.columnSizes(setNumber) obj.rowSizes(setNumber) Inf], 'ChunkSize', [obj.columnSizes(setNumber) obj.rowSizes(setNumber) 10]);
+            h5create(obj.fileName, ['/DataSet' num2str(setNumber) '/imag'], [obj.columnSizes(setNumber) obj.rowSizes(setNumber) Inf], 'ChunkSize', [obj.columnSizes(setNumber) obj.rowSizes(setNumber) 10]);
+        end
+        
         function writeHeader(obj, headerStruct)
             assert(obj.fileOpen == 1, 'File must be open first');
             
@@ -137,9 +170,6 @@ classdef HDF5DataHandler < handle
                         obj.writeRow(val, dataSet);
                     end
                 case 2
-                    % TODO: allow writing an entire 2D data set at once (ie. add a
-                    % write array method)
-                    
                     % if it is a 2D data set and we are passed a single
                     % point, add it to the buffer until we have filled an
                     % entire row, then write the row.
@@ -152,8 +182,26 @@ classdef HDF5DataHandler < handle
                             obj.writeRow(obj.buffers{dataSet}, dataSet);
                             obj.bufferIdx(dataSet) = 1;
                         end
-                    else
+                    elseif length(setdiff(size(val), 1)) == 1 % 1D row/column
                         obj.writeRow(val, dataSet);
+                    else  % otherwise, we have a 2D page
+                        obj.writePage(val, dataSet);
+                    end
+                case 3
+                    % TODO: accept single points in a 3D data set
+                    if length(setdiff(size(val), 1)) == 1 % 1D row/column
+                        % put it in a buffer until we have an entire page
+                        obj.buffers{dataSet}(obj.bufferIdx(dataSet), :) = val;
+                        obj.bufferIdx(dataSet) = obj.bufferIdx(dataSet) + 1;
+                        % check if we need to flush the buffer
+                        if obj.bufferIdx(dataSet) > obj.columnSizes(dataSet)
+                            obj.writePage(obj.buffers{dataSet}, dataSet);
+                            obj.bufferIdx(dataSet) = 1;
+                        end
+                    elseif ndims == 2 % a 2D page
+                        obj.writePage(val, dataSet);
+                    else
+                        error('Writing 3D data sets at once not yet implemented\n');
                     end
                 otherwise
                     error('Unsupported dimension %d', obj.dimensions(dataSet));
@@ -180,6 +228,22 @@ classdef HDF5DataHandler < handle
                     h5write(obj.fileName, ['/DataSet' num2str(dataSet) '/imag'], imag(row), [obj.idx(dataSet) 1], [1 obj.rowSizes(dataSet)]);
                 case 3
                     error('Unsupported dimension %d\n', obj.dimensions(dataSet));
+            end
+            obj.idx(dataSet) = obj.idx(dataSet) + 1;
+        end
+        
+        function writePage(obj, page, dataSet)
+            assert(obj.fileOpen == 1, 'writePage ERROR: file is not open\n');
+            page = reshape(page, obj.columnSizes(dataSet), obj.rowSizes(dataSet));
+            switch obj.dimensions(dataSet)
+                case 1
+                    error('Whoops, cannot write a page to a 1D data set.\n')
+                case 2
+                    h5write(obj.fileName, ['/DataSet' num2str(dataSet) '/real'], real(page), [1 1], size(page));
+                    h5write(obj.fileName, ['/DataSet' num2str(dataSet) '/imag'], imag(page), [1 1], size(page));
+                case 3
+                    h5write(obj.fileName, ['/DataSet' num2str(dataSet) '/real'], real(page), [1 1 obj.idx(dataSet)], [obj.columnSizes(dataSet) obj.rowSizes(dataSet) 1]);
+                    h5write(obj.fileName, ['/DataSet' num2str(dataSet) '/imag'], imag(page), [1 1 obj.idx(dataSet)], [obj.columnSizes(dataSet) obj.rowSizes(dataSet) 1]);
             end
             obj.idx(dataSet) = obj.idx(dataSet) + 1;
         end
@@ -230,7 +294,7 @@ classdef HDF5DataHandler < handle
     end
     methods (Static)
         function out = UnitTest()
-            out = HDF5DataHandler.UnitTest1d(0) && HDF5DataHandler.UnitTest2d(0) && HDF5DataHandler.UnitTestBufferd2d(0) && HDF5DataHandler.UnitTestMultiBufferd2d(0);
+            out = HDF5DataHandler.UnitTest1d(0) && HDF5DataHandler.UnitTest2d(0) && HDF5DataHandler.UnitTestBufferd2d(0) && HDF5DataHandler.UnitTestMultiBufferd2d(0) && HDF5DataHandler.UnitTest3d(0);
         end
         
         function out = UnitTest1d(verbose)
@@ -324,6 +388,31 @@ classdef HDF5DataHandler < handle
             end
             
             out = all(all(data1 == readData),2) && all(all(data2 == readData2),2);
+        end
+        
+        function out = UnitTest3d(verbose)
+            data = zeros(3,3,2);
+            data(:,:,1) = [1, 0, 2; 0, 1i, 0; 1, 0, 1];
+            data(:,:,2) = magic(3);
+            header = struct('foo', 1, 'bar', 2);
+            dataInfo = struct('name', 'buffered3d', 'dimension', 3, 'xpoints', [5 10 15], 'xlabel', 'Frequency (GHz)',...
+                'ypoints', [1 2 3], 'ylabel', 'Time (us)', 'zpoints', [1 2], 'zlabel', 'Repeat');
+            dataHandler = HDF5DataHandler('unit_test.h5');
+            dataHandler.open(header, {dataInfo});
+            for pagect = 1:size(data,3)
+                for rowct = 1:size(data,1)
+                    dataHandler.write(data(rowct,:,pagect));
+                end
+            end
+            
+            disp(dataHandler.readHeader());
+            
+            readData = h5read('unit_test.h5', '/DataSet1/real') + 1i * h5read('unit_test.h5', '/DataSet1/imag');
+            if verbose
+                disp(readData);
+            end
+            
+            out = all(all(all(data == readData),3),2);
         end
     end
 end

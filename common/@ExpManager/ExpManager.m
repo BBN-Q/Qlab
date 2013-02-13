@@ -295,12 +295,20 @@ classdef ExpManager < handle
                             title(axesHandles.([measName{1} '_phase']), 'Phase')
                         end
                     else
-                        if length(setdiff(size(measData), 1)) == 1
-                            set(plotHandles.([measName{1} '_abs']), 'YData', abs(measData));
-                            set(plotHandles.([measName{1} '_phase']), 'YData', (180/pi)*angle(measData));
-                        elseif length(setdiff(size(measData), 1)) == 2
-                            set(plotHandles.([measName{1} '_abs']), 'CData', abs(measData));
-                            set(plotHandles.([measName{1} '_phase']), 'CData', (180/pi)*angle(measData));
+                        switch length(setdiff(size(measData), 1));
+                            case 1
+                                set(plotHandles.([measName{1} '_abs']), 'YData', abs(measData));
+                                set(plotHandles.([measName{1} '_phase']), 'YData', (180/pi)*angle(measData));
+                            case 2
+                                set(plotHandles.([measName{1} '_abs']), 'CData', abs(measData));
+                                set(plotHandles.([measName{1} '_phase']), 'CData', (180/pi)*angle(measData));
+                            case 3
+                                %Here we'll try to plot the last updated
+                                %slice
+                                curSliceIdx = find(~isnan(measData(:,1,1)), 1, 'last');
+                                curSlice = measData(curSliceIdx,:,:);
+                                set(plotHandles.([measName{1} '_abs']), 'CData', abs(curSlice));
+                                set(plotHandles.([measName{1} '_phase']), 'CData', (180/pi)*angle(curSlice));
                         end
                     end
                 end
