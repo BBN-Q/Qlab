@@ -21,8 +21,6 @@ classdef DataNamer < handle
             if isempty(folderList)
                 % make device folder
                 mkdir(fullfile(obj.dataDir, obj.deviceName));
-                % make a folder for today
-                mkdir(fullfile(obj.dataDir, obj.deviceName, datestr(now(), 'yymmdd')));
             else
                 % there are existing folders, descend into them to look for
                 % largest file number
@@ -50,7 +48,13 @@ classdef DataNamer < handle
         end
         
         function out = get_name(obj, expName)
-            out = fullfile(obj.dataDir, obj.deviceName, datestr(now(), 'yymmdd'), [num2str(obj.fileCount) '_' obj.deviceName '_' expName '.h5']);
+            %Check if we have a folder for today
+            todaysFolder = fullfile(obj.dataDir, obj.deviceName, datestr(now(), 'yymmdd'));
+            if ~exist(todaysFolder, 'dir')
+                % make a folder for today
+                mkdir(todaysFolder);
+            end
+            out = fullfile(todaysFolder, [num2str(obj.fileCount) '_' obj.deviceName '_' expName '.h5']);
             increment(obj);
         end
             
