@@ -17,33 +17,19 @@
 % Description: Searches for optimal amplitude and phase correction on an
 % I/Q mixer.
 
-function T = optimize_mixer_ampPhase_bySweep(obj, i_offset, q_offset)
+function T = optimize_mixer_ampPhase_bySweep(obj)
 
 % unpack constants from cfg file
-ExpParams = obj.inputStructure.ExpParams;
-InstrParams = obj.inputStructure.InstrParams;
-spec_analyzer_span = ExpParams.SpecAnalyzer.span;
-spec_resolution_bw = ExpParams.SpecAnalyzer.resolution_bw;
-spec_sweep_points = ExpParams.SpecAnalyzer.sweep_points;
+ExpParams = obj.expParams;
+awgAmp = obj.awgAmp;
 fssb = ExpParams.SSBFreq; % SSB modulation frequency (usually 10 MHz)
-awgAmp = InstrParams.AWG.(['chan_' num2str(ExpParams.Mixer.I_channel)]).amplitude;
 
 % initialize instruments
-% grab instrument objects
-sa = obj.sa;
-awg = obj.awg;
 
-awg.run();
-awg.waitForAWGtoStartRunning();
+obj.awg.run();
+obj.awg.waitForAWGtoStartRunning();
 
-sa.center_frequency = obj.specgen.frequency * 1e9 - fssb;
-sa.span = spec_analyzer_span;
-sa.sweep_mode = 'single';
-sa.resolution_bw = spec_resolution_bw;
-sa.sweep_points = spec_sweep_points;
-sa.video_averaging = 0;
-sa.sweep();
-sa.peakAmplitude();
+obj.sa.center_frequency = obj.uwsource.frequency * 1e9 - fssb;
 
 
 fprintf('\nStarting sweep search for optimal amp/phase\n');
@@ -118,8 +104,8 @@ T = [ampFactor ampFactor*tan(bestSkew); 0 sec(bestSkew)];
 obj.setInstrument(bestAmp, bestSkew);
 
     function power = readPower()
-        sa.sweep();
-        power = sa.peakAmplitude();
+        obj.sa.sweep();
+        power = obj.sa.peakAmplitude();
 %         %We try twice to overcome the flakey network analsyer
 %         sa.sweep();
 %         p1 = sa.peakAmplitude();

@@ -26,70 +26,65 @@ function data = loadData(makePlot, fullpath)
     % data at '/DataSetN/real' and '/DataSetN/imag'.
     info = h5info(fullpath, '/');
     attributeNames = {info.Attributes.Name};
-    if any(strcmp(attributeNames, 'nbrDataSets'))
-        data.nbrDataSets = h5readatt(fullpath, '/', 'nbrDataSets');
-        for ii = 1:data.nbrDataSets
-            rawData = h5read(fullpath, ['/DataSet' num2str(ii) '/real']) + 1i * h5read(fullpath, ['/DataSet' num2str(ii) '/imag']);
-            data.abs_Data{ii} = abs(rawData);
-            data.phase_Data{ii} = 180.0/pi * angle(rawData);
+    assert(any(strcmp(attributeNames, 'version')) && h5readatt(fullpath, '/', 'version') == 2, 'Please use an old file loader');
+    data.nbrDataSets = h5readatt(fullpath, '/', 'nbrDataSets');
+    for ii = 1:data.nbrDataSets
+        rawData = h5read(fullpath, ['/DataSet' num2str(ii) '/real']) + 1i * h5read(fullpath, ['/DataSet' num2str(ii) '/imag']);
+        data.abs_Data{ii} = abs(rawData);
+        data.phase_Data{ii} = 180.0/pi * angle(rawData);
+        data.dimension{ii} = h5readatt(fullpath, ['/DataSet' num2str(ii)], 'dimension');
+        data.xpoints{ii} = h5read(fullpath, ['/DataSet' num2str(ii) '/xpoints']);
+        data.xlabel{ii} = h5readatt(fullpath, ['/DataSet' num2str(ii) '/xpoints'], 'label');
+        if data.dimension{ii} > 1
+            data.ypoints{ii} = h5read(fullpath, ['/DataSet' num2str(ii) '/ypoints']);
+            data.ylabel{ii} = h5readatt(fullpath, ['/DataSet' num2str(ii) '/ypoints'], 'label');
         end
-    else
-        rawData = h5read(fullpath, '/idata') + 1i * h5read(fullpath, '/qdata');
-        data.abs_Data = {abs(rawData)};
-        data.phase_Data = {180.0/pi * angle(rawData)};
-        data.nbrDataSets = 1;
+        if data.dimension{ii} > 2
+            data.zpoints{ii} = h5read(fullpath, ['/DataSet' num2str(ii) '/zpoints']);
+            data.zlabel{ii} = h5readatt(fullpath, ['/DataSet' num2str(ii) '/zpoints'], 'label');
+        end
     end
     
-    dimension = h5readatt(fullpath, '/', 'dimension');
-    data.xpoints = h5read(fullpath, '/xpoints');
-    data.xlabel = h5readatt(fullpath, '/xpoints', 'label');
-    if dimension > 1
-        data.ypoints = h5read(fullpath, '/ypoints');
-        data.ylabel = h5readatt(fullpath, '/ypoints', 'label');
-    end
-    if dimension > 2
-        data.zpoints = h5read(fullpath, '/zpoints');
-        data.zlabel = h5readatt(fullpath, '/zpoints', 'label');
-    end
+    
     data.filename = filename;
     data.path = pathname;
 
     if (makePlot)
         sanitized_filedname = strrep(filename, '_', '\_');
         for ii = 1:data.nbrDataSets
-            switch dimension
+            switch data.dimension{ii}
                 case 1
                     h1 = figure();
                     subplot(2,1,1);
                     amplitude = data.abs_Data{ii}(:);
                     phase = data.phase_Data{ii}(:);
-                    plot(data.xpoints(1:length(amplitude)),amplitude,'linewidth',1.5);
-                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
+                    plot(data.xpoints{ii}(1:length(amplitude)),amplitude,'linewidth',1.5);
+                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel{ii}]);
                     ylabel('\fontname{Times}\fontsize{14}Amplitude');
                     set(gca,'FontSize',12);
                     subplot(2,1,2);
-                    plot(data.xpoints(1:length(phase)),phase,'linewidth',1.5);
-                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
+                    plot(data.xpoints{ii}(1:length(phase)),phase,'linewidth',1.5);
+                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel{ii}]);
                     ylabel('\fontname{Times}\fontsize{14}Phase');
                     set(gca,'FontSize',12);
                     subplot(2,1,1);
                     title(sanitized_filedname);
                 case 2
                     h1 = figure();
-                    imagesc(data.xpoints(1:size(data.abs_Data{ii},2)),data.ypoints(1:size(data.abs_Data{ii},1)),data.abs_Data{ii})
-                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
-                    ylabel(['\fontname{Times}\fontsize{14}' data.ylabel]);
+                    imagesc(data.xpoints{ii}(1:size(data.abs_Data{ii},2)),data.ypoints{ii}(1:size(data.abs_Data{ii},1)),data.abs_Data{ii})
+                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel{ii}]);
+                    ylabel(['\fontname{Times}\fontsize{14}' data.ylabel{ii}]);
                     set(gca,'FontSize',12)
                     title(sanitized_filedname);
 
                     h2 = figure();
-                    imagesc(data.xpoints(1:size(data.phase_Data{ii},2)),data.ypoints(1:size(data.phase_Data{ii},1)),data.phase_Data{ii})
-                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel]);
-                    ylabel(['\fontname{Times}\fontsize{14}' data.ylabel]);
+                    imagesc(data.xpoints{ii}(1:size(data.phase_Data{ii},2)),data.ypoints{ii}(1:size(data.phase_Data{ii},1)),data.phase_Data{ii})
+                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel{ii}]);
+                    ylabel(['\fontname{Times}\fontsize{14}' data.ylabel{ii}]);
                     set(gca,'FontSize',12)
                     title(sanitized_filedname);
                 otherwise
-                    error('Cannot plot for dimension = %d', dimension);
+                    fprintf('Cannot plot for dimension = %d\n', data.dimension{ii});
             end
         end
     end
