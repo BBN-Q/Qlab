@@ -1,20 +1,16 @@
+function APSTest3
+
 % get scope ready to measure
-clear settings
-script = java.io.File(mfilename('fullpath'));
-cfg_name = [char(script.getParent()) '\unit_test.cfg'];
-settings = parseParamFile(cfg_name);
+instrSettings = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'));
 
 fprintf('Initializing Acqiris card\n');
-scope = deviceDrivers.AgilentAP120();
-scope.setAll(settings.scope);
+scope = InstrumentFactory('scope');
+scope.setAll(instrSettings.scope);
 
 fprintf('Initializing TekAWG\n');
-TekAWG = deviceDrivers.Tek5014();
-TekAWG.connect(settings.TekAWG.Address);
-TekAWG.setAll(settings.TekAWG);
+TekAWG = InstrumentFactory('TekAWG')
+TekAWG.setAll(instrSettings.TekAWG);
 TekAWG.stop();
-
-clear settings;
 
 % initialize APS
 fprintf('Initializing APS\n');
@@ -33,19 +29,15 @@ settings.chan_4.amplitude = 1.0;
 settings.chan_4.offset = 0;
 settings.samplingRate = 1200;
 settings.triggerSource = 'external';
-settings.seqfile = 'C:\Qlab software\experiments\muWaveDetection\sequences\RabiWidthSquare56.mat';
+settings.seqfile = fullfile(getpref('qlab', 'awgDir'), 'RabiWidth', 'RabiWidth-BBNAPS.h5');
 %settings.seqfile = 'C:\Qlab software\experiments\muWaveDetection\sequences\EchoTest.mat';
 settings.seqforce = true;
 
-awg = deviceDrivers.APS();
-awg.open(0,1);
-if ~awg.is_open
-    error('Fail')
-end
-
-awg.init();
-awg.setAll(settings);
-awg.run();
+aps = deviceDrivers.APS();
+aps.connect(0);
+aps.init();
+aps.setAll(settings);
+aps.run();
 
 % acquire data
 scope.acquire();
@@ -75,8 +67,8 @@ ylabel('Segment');
 set(gca, 'YDir', 'normal');
 title('Ch 2 (Q)');
 
-awg.stop();
-awg.close();
+aps.stop();
+aps.disconnect();
 scope.disconnect();
+TekAWG.stop();
 TekAWG.disconnect();
-delete(awg); clear awg; delete(scope); clear scope; delete(TekAWG); clear TekAWG
