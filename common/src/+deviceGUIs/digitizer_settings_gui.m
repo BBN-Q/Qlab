@@ -272,6 +272,7 @@ set_settings_fcn = @set_gui_elements;
                         settings.trigger.triggerSource  = tmpMap(settings.trigger.triggerSource);
                         tmpMap = containers.Map({2,1}, {0,1});
                         settings.trigger.triggerCoupling  = tmpMap(settings.trigger.triggerCoupling);
+                        settings.trigger.triggerSlope = settings.trigger.triggerSlope-1;
                     end
                 end
                 
@@ -282,7 +283,7 @@ set_settings_fcn = @set_gui_elements;
                 cardParams.bandwidths = containers.Map({'no limit','20 MHz'}, {0,1});
                 cardParams.trigChannels = containers.Map({'External','Ch A', 'Ch B'}, {'ext', 'a', 'b'});
                 cardParams.trigCouplings = containers.Map({'DC','AC'},{2,1});
-                cardParams.trigSlopes = containers.Map({'Rising','Falling'},{0,1});
+                cardParams.trigSlopes = containers.Map({'Rising','Falling'},{1,2});
                 cardParams.resyncs = containers.Map();
                 cardParams.samplingRates = containers.Map({'1M','10M','100M','250M','500M','1G'},{1e6, 10e6, 100e6, 250e6, 500e6, 1e9});
                 
@@ -304,6 +305,7 @@ set_settings_fcn = @set_gui_elements;
                         settings.trigger.triggerSource  = tmpMap(settings.trigger.triggerSource);
                         tmpMap = containers.Map({0,1,3,4}, {2, 1, 2, 1});
                         settings.trigger.triggerCoupling  = tmpMap(settings.trigger.triggerCoupling);
+                        settings.trigger.triggerSlope = settings.trigger.triggerSlope+1;
                         tmpMap = containers.Map({1e6, 2e6, 2.5e6, 4e6, 5e6, 10e6, 20e6, 25e6, 40e6, 50e6, 100e6, 200e6, 250e6, 400e6, 500e6, 1e9, 2e9},...
                                                 {1e6, 1e6, 1e6,   1e6, 10e6,10e6, 10e6, 10e6, 10e6, 100e6,100e6, 250e6, 250e6, 500e6, 500e6, 1e9, 1e9});
                         settings.horizontal.samplingRate  = tmpMap(settings.horizontal.samplingRate);
