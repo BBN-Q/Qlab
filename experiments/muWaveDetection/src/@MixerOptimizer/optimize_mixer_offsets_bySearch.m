@@ -24,19 +24,16 @@
 
 function [i_offset, q_offset] = optimize_mixer_offsets_bySearch(obj)
     % unpack constants from cfg file
-    ExpParams = obj.inputStructure.ExpParams;
-    spec_analyzer_span = ExpParams.SpecAnalyzer.span;
-    spec_resolution_bw = ExpParams.SpecAnalyzer.resolution_bw;
-    spec_sweep_points = ExpParams.SpecAnalyzer.sweep_points;
-    awg_I_channel = ExpParams.Mixer.I_channel;
-    awg_Q_channel = ExpParams.Mixer.Q_channel;
+    ExpParams = obj.expParams;
+    awg_I_channel = str2double(obj.channelParams.IQkey(end-1));
+    awg_Q_channel = str2double(obj.channelParams.IQkey(end));
     max_offset = ExpParams.Search.max_offset; % max I/Q offset voltage
     max_steps = ExpParams.Search.max_steps;
     min_step_size = ExpParams.Search.min_step_size;
     pthreshold = ExpParams.Search.power_threshold;
     dthreshold = ExpParams.Search.distance_threshold;
-    verbose = obj.inputStructure.verbose;
-    simulate = obj.inputStructure.SoftwareDevelopmentMode;
+    verbose = ExpParams.verbose;
+    simulate = ExpParams.SoftwareDevelopmentMode;
     doLocalSearch = ExpParams.Search.local_search;
     simul_vertex.a = 0;
     simul_vertex.b = 0;
@@ -50,16 +47,6 @@ function [i_offset, q_offset] = optimize_mixer_offsets_bySearch(obj)
         % grab instrument objects
         sa = obj.sa;
         awg = obj.awg;
-        
-        % center on the current spec generator frequency
-        sa.center_frequency = obj.specgen.frequency * 1e9;
-        sa.span = spec_analyzer_span;
-        sa.sweep_mode = 'single';
-        sa.resolution_bw = spec_resolution_bw;
-        sa.sweep_points = spec_sweep_points;
-        sa.video_averaging = 0;
-        sa.sweep();
-        sa.peakAmplitude();
         
         awg.run();
         awg.waitForAWGtoStartRunning();
@@ -75,22 +62,12 @@ function [i_offset, q_offset] = optimize_mixer_offsets_bySearch(obj)
     % search for best I and Q values to minimize the peak amplitude
     [i_offset, q_offset] = optimize();
     
-    % restore spectrum analyzer to a normal state
-    if ~simulate
-        sa.sweep_mode = 'cont';
-        sa.resolution_bw = 'auto';
-        sa.sweep_points = 800;
-        sa.sweep();
-        sa.peakAmplitude();
-    end
-    
     % local functions
     
-    %% Optimizes DAC outputs on channels A and B to minimize the output
-     % voltage of the log amp.
-     %
-     % Uses the Nelder-Mead Simplex method in fminsearch
-    %%
+    % Optimizes DAC outputs on channels A and B to minimize the output
+    % voltage of the log amp.
+    %
+    % Uses the Nelder-Mead Simplex method in fminsearch
     function [i_offset, q_offset] = optimize()
 
       % initialize vertices and values

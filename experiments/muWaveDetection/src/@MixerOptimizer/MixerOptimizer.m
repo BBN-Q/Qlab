@@ -1,4 +1,8 @@
-% Copyright 2010 Raytheon BBN Technologies
+% Corrects for carrier leakage, amplitude imbalance, and phase
+% skew of an I/Q mixer.
+% 
+
+% Copyright 2010-13 Raytheon BBN Technologies
 %
 % Licensed under the Apache License, Version 2.0 (the "License");
 % you may not use this file except in compliance with the License.
@@ -12,93 +16,78 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 %
-% File: MixerOptimizer.m
-%
 % Author: Blake Johnson, BBN Technologies
 % Updated: Colm Ryan and Blake Johnson to handle sweeping and searching
 % optimization
 %
-% Description: Corrects for carrier leakage, amplitude imbalance, and phase
-% skew of an I/Q mixer.
-%
+% 
 
-classdef MixerOptimizer < expManager.expBase
+classdef MixerOptimizer < handle
     properties
         % instruments
         sa % spectrum analyzer
-        specgen % the LO source of the mixer to calibrate
+        uwsource % the LO source of the mixer to calibrate
         awg % the AWG driving the I/Q ports of the mixer
-        channelParams
-        qubit
+        awgAmp % amplitude of I/Q ports coming from the AWG
+        chan % the logical channel we are optimizing
+        channelParams %the Qubit2Channel params associated with logical channel
         costFunctionGoal = -70;
-        testMode = false
+        expParams
         optimMode = 'sweep' %optimize by naive sweeping ('sweep') or clever searching ('search')
     end
     
     methods
         % constructor
-        function obj = MixerOptimizer(cfg_file_path, qubit)
-            if ~exist('cfg_file_path', 'var')
-                cfg_file_path = fullfile(getpref('qlab', 'cfgDir'),'optimize_mixer.json');
-            end
-            % call super class
-            obj = obj@expManager.expBase('optimize_mixer', '', cfg_file_path, 1);
-            obj.qubit = qubit;
+        function obj = MixerOptimizer()
         end
         
         %% class methods
-        function Init(obj)
-            % load config
-            obj.parseExpcfgFile();
-            timeDomainCfg = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'),'TimeDomain.json'));
-            
-            % pull in more configuration data from TimeDomain.json based
-            % upon the requested logical channel in the Qubit2ChannelMap
+        function Init(obj, cfgFile, chan)
+
+            % pull in channel parameters from requested logical channel in the Qubit2ChannelMap
             channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
-            assert(isfield(channelMap, obj.qubit), 'Qubit %s not found in channel map', obj.qubit);
-            obj.channelParams = channelMap.(obj.qubit);
-            % grab the AWG
-            obj.inputStructure.InstrParams.AWG = timeDomainCfg.InstrParams.(obj.channelParams.awg);
-            % grab the uW source
-            obj.inputStructure.InstrParams.Specgen = timeDomainCfg.InstrParams.(obj.channelParams.source);
-            % grab AWG channels for mixer I and Q
-            obj.inputStructure.ExpParams.Mixer.I_channel = obj.channelParams.i;
-            obj.inputStructure.ExpParams.Mixer.Q_channel = obj.channelParams.q;
+            assert(isfield(channelMap, chan), 'Qubit %s not found in channel map', chan);
+            obj.chan = chan;
+            obj.channelParams = channelMap.(obj.chan);
             
-            obj.errorCheckExpParams();
-            obj.openInstruments();
-            obj.initializeInstruments();
+            % load any optimize mixer specific configurations
+            settings = jsonlab.loadjson(cfgFile);
+            obj.expParams = settings.ExpParams;
+            instrSettings = settings.InstrParams;
             
-            if isfield(obj.inputStructure, 'SoftwareDevelopmentMode') && obj.inputStructure.SoftwareDevelopmentMode
-                obj.testMode = true;
-            end
+            %Get references to the AWG, uW source, and spectrum analyzer
             
-            if ~obj.testMode
-                obj.sa = obj.Instr.spectrum_analyzer;
-                obj.specgen = obj.Instr.Specgen;
-                obj.awg = obj.Instr.AWG;
-                
-                % turn modulation off on Specgen
-                obj.specgen.mod = 0;
-                obj.specgen.pulse = 0;
-            end
+            obj.awg = InstrumentFactory(obj.channelParams.awg);
+            obj.uwsource = InstrumentFactory(obj.channelParams.source);
+            obj.sa = InstrumentFactory(obj.expParams.specAnalyzer);
+            
+            obj.sa.setAll(instrSettings.(obj.expParams.specAnalyzer));
+            obj.sa.center_frequency = obj.uwsource.frequency * 1e9;
+            
+            %Turn the uwave source on and turn modulation off
+            obj.uwsource.mod = 0;
+            obj.uwsource.pulse = 0;
+            obj.uwsource.output = 1;
         end
+        
         function Do(obj)
             switch obj.optimMode
                 case 'sweep'
                     obj.setup_SSB_AWG(0,0);
-                     [i_offset, q_offset] = obj.optimize_mixer_offsets_bySweep();
-                     obj.setup_SSB_AWG(i_offset,q_offset);
-                     T = obj.optimize_mixer_ampPhase_bySweep(i_offset, q_offset);
+                    [i_offset, q_offset] = obj.optimize_mixer_offsets_bySweep();
+                    obj.setup_SSB_AWG(i_offset,q_offset);
+                    T = obj.optimize_mixer_ampPhase_bySweep();
                 case 'search'
+                    obj.setup_SSB_AWG(0,0);
                     [i_offset, q_offset] = obj.optimize_mixer_offsets_bySearch();
-                    T = obj.optimize_mixer_ampPhase_bySearch(i_offset, q_offset);
+                    obj.setup_SSB_AWG(i_offset,q_offset);
+                    T = obj.optimize_mixer_ampPhase_bySearch();
                 otherwise
                     error('Unknown optimMode');
             end
 
             % restore instruments to a normal state
-            obj.sa.center_frequency = obj.specgen.frequency * 1e9;
+            obj.sa.center_frequency = obj.uwsource.frequency * 1e9;
             obj.sa.span = 25e6;
             obj.sa.sweep_mode = 'cont';
             obj.sa.resolution_bw = 'auto';
@@ -115,11 +104,13 @@ classdef MixerOptimizer < expManager.expBase
             fprintf(FID, '%s', jsonlab.savejson('',params));
             fclose(FID);
             
-            % update i and q offsets in TimeDomain
-            params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'));
-            params.InstrParams.(obj.channelParams.awg).(sprintf('chan_%d', obj.channelParams.i)).offset = i_offset;
-            params.InstrParams.(obj.channelParams.awg).(sprintf('chan_%d', obj.channelParams.q)).offset = q_offset;
-            FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'TimeDomain.json'),'wt'); %open in text mode
+            % update i and q offsets in ExpScripter cfg
+            params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'));
+            iChan = obj.channelParams.IQkey(end-1);
+            qChan = obj.channelParams.IQkey(end);
+            params.InstrParams.(obj.channelParams.awg).(['chan_' iChan]).offset = i_offset;
+            params.InstrParams.(obj.channelParams.awg).(['chan_' qChan]).offset = q_offset;
+            FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'),'wt'); %open in text mode
             fprintf(FID, '%s', jsonlab.savejson('',params));
             fclose(FID);
             
@@ -127,31 +118,8 @@ classdef MixerOptimizer < expManager.expBase
             fprintf('\nSummary:\n');
             fprintf('i_offset = %.4f; q_offset = %.4f; ampFactor = %.4f; phaseSkew = %.1f\n', i_offset, q_offset, T(1,1), atand(T(1,2)/T(1,1)))
         end
-        function CleanUp(obj)
-            %Close all instruments
-            obj.closeInstruments();
-        end
         
-        function errorCheckExpParams(obj)
-            ExpParams = obj.inputStructure.ExpParams;
-            if ~isfield(ExpParams, 'SpecAnalyzer')
-                error('Must provide ExpParams.SpecAnalyzer struct');
-            end
-            if ~isfield(ExpParams, 'Mixer')
-                error('Must provide ExpParams.Mixer struct');
-            end
-            if ~isfield(ExpParams, 'SSBFreq')
-                error('Must specify ExpParams.SSBFreq');
-            end
-        end
-        
-        function Run(obj)
-            obj.Init();
-            obj.Do();
-            obj.CleanUp();
-        end
-        
-        function stop = LMStoppingCondition(obj, x, optimValues, state)
+        function stop = LMStoppingCondition(obj, ~, optimValues, ~)
             if 10*log10(optimValues.resnorm) < obj.costFunctionGoal
                 stop = true;
             else
@@ -160,51 +128,51 @@ classdef MixerOptimizer < expManager.expBase
         end
         
         function setup_SSB_AWG(obj, i_offset, q_offset)
-            %Setup the SSB waveforms from the AWGs
-            ExpParams = obj.inputStructure.ExpParams;
-            awg_I_channel = ExpParams.Mixer.I_channel;
-            awg_Q_channel = ExpParams.Mixer.Q_channel;
-            fssb = ExpParams.SSBFreq; % SSB modulation frequency (usually 10 MHz)
-            awgfile = ExpParams.SSBAWGFile;
+            %Helper function to setup the SSB waveforms from the AWGs
+            awgfile = obj.expParams.SSBAWGFile;
+            iChan = obj.channelParams.IQkey(end-1);
+            qChan = obj.channelParams.IQkey(end);
             
             switch class(obj.awg)
                 case 'deviceDrivers.Tek5014'
-                    awg_amp = obj.awg.(['chan_' num2str(awg_I_channel)]).amplitude;
+                    %Here we just preload a custom special AWG file
+                    awg_amp = obj.awg.(['chan_' iChan]).amplitude;
                     obj.awg.openConfig(awgfile);
-                    obj.awg.(['chan_' num2str(awg_I_channel)]).offset = i_offset;
-                    obj.awg.(['chan_' num2str(awg_Q_channel)]).offset = q_offset;
+                    obj.awg.(['chan_' iChan]).offset = i_offset;
+                    obj.awg.(['chan_' qChan]).offset = q_offset;
                     obj.awg.runMode = 'CONT';
-                    obj.awg.(['chan_' num2str(awg_I_channel)]).amplitude = awg_amp;
-                    obj.awg.(['chan_' num2str(awg_Q_channel)]).amplitude = awg_amp;
-                    obj.awg.(['chan_' num2str(awg_I_channel)]).skew = 0;
-                    obj.awg.(['chan_' num2str(awg_Q_channel)]).skew = 0;
-                    obj.awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
-                    obj.awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
-                    
+                    obj.awg.(['chan_' iChan]).amplitude = awg_amp;
+                    obj.awg.(['chan_' qChan]).amplitude = awg_amp;
+                    obj.awg.(['chan_' iChan]).skew = 0;
+                    obj.awg.(['chan_' qChan]).skew = 0;
+                    obj.awg.(['chan_' iChan]).enabled = 1;
+                    obj.awg.(['chan_' qChan]).enabled = 1;
                     obj.awg.run();
-                    obj.awg.operationComplete();
-                case 'deviceDrivers.APS'
 
+                case 'deviceDrivers.APS'
+                    awg_amp = 1.0;
+                    % convert iChan and qChan
+                    iChan = str2double(iChan);
+                    qChan = str2double(qChan);
+                    %Here we use waveform mode to put out a continuous
+                    %sine wave
                     obj.awg.stop();
                     %Setup a SSB waveform with a 1200 pt sinusoid for both
                     %channels
-                    samplingRate = 1.2e9;
                     waveformLength = 1200;
-                    timeStep = 1/samplingRate;
-                    tpts = timeStep*(0:(waveformLength-1));
+                    % APS returns sampling rate in MHz, so convert to Hz
+                    tpts = (1e-6/obj.awg.samplingRate)*(0:(waveformLength-1));
                     
                     % i waveform
-                    iwf = 0.5 * cos(2*pi*fssb.*tpts);
-                    obj.awg.setOffset(awg_I_channel, i_offset);
-                    % TODO: update APS driver to accept normalized
+                    iwf = 0.5 * cos(2*pi*obj.expParams.SSBFreq*tpts);
+                    obj.awg.setOffset(iChan, i_offset);
                     % waveforms in the range (-1, 1)
-                    obj.awg.loadWaveform(awg_I_channel, iwf);
+                    obj.awg.loadWaveform(iChan, iwf);
  
                     % q waveform
-                    qwf = -0.5 * sin(2*pi*fssb.*tpts);
-                    obj.awg.setOffset(awg_Q_channel, q_offset);
-                    % same TODO item here as above
-                    obj.awg.loadWaveform(awg_Q_channel, qwf);
+                    qwf = -0.5 * sin(2*pi*obj.expParams.SSBFreq*tpts);
+                    obj.awg.setOffset(qChan, q_offset);
+                    obj.awg.loadWaveform(qChan, qwf);
                     
                     obj.awg.triggerSource = 'internal';
                     
@@ -215,19 +183,25 @@ classdef MixerOptimizer < expManager.expBase
                        obj.awg.setRunMode(ct, obj.awg.RUN_WAVEFORM);
                     end
                     
-                    unusedChannels = setdiff(1:4, [awg_I_channel, awg_Q_channel]);
-                    obj.awg.setEnabled(unusedChannels(1), 0);
-                    obj.awg.setEnabled(unusedChannels(2), 0);
+                    %Turn off the unused channels
+                    channelsOn = false(1,4);
+                    channelsOn([iChan, qChan]) = true;
+                    for ct = 1:4
+                        obj.awg.setEnabled(ct, channelsOn(ct));
+                    end
                     
+                    %Get the AWG going
                     obj.awg.run();
             end
-            
+            obj.awgAmp = awg_amp;
         end
         
         
     end
     
     methods(Static)
+        %Forward reference a static helper that fits the typical sweep
+        %curves
        [bestOffset, goodOffsetPts, measPowers] = find_null_offset(measPowers, xPts)
     end
 end

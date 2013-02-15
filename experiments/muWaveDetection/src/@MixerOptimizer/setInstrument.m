@@ -1,22 +1,21 @@
 function setInstrument(obj, amp, phase)
-    %Helper function to set the amplitude and phase be IQ calibration
+    %Helper function to set the amplitude and phase for IQ calibration
     
-    ExpParams = obj.inputStructure.ExpParams;
-    fssb = 2*pi*ExpParams.SSBFreq;
+    fssb = 2*pi*obj.expParams.SSBFreq;
     samplingRate = obj.awg.samplingRate;
-    I_channel = ExpParams.Mixer.I_channel;
-    Q_channel = ExpParams.Mixer.Q_channel;
+    I_channel = str2double(obj.channelParams.IQkey(end-1));
+    Q_channel = str2double(obj.channelParams.IQkey(end));
     % restrict phase to range [-pi, pi]
     phase = mod(phase, 2*pi);
     if phase > pi, phase = phase - 2*pi; end
     
     switch class(obj.awg)
         case 'deviceDrivers.Tek5014'
-            obj.awg.(['chan_' num2str(ExpParams.Mixer.I_channel)]).amplitude = amp;
+            obj.awg.(['chan_' num2str(I_channel)]).amplitude = amp;
             % on the Tek5014 we just update the channel skew to change the
             % phase
             skew = phase/fssb;
-            if obj.inputStructure.verbose
+            if obj.expParams.verbose
                 fprintf('Skew: %.3f ns\n', skew*1e9);
             end
             obj.awg.(['chan_' num2str(Q_channel)]).skew = skew;
