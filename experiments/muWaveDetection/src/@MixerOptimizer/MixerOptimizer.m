@@ -150,10 +150,11 @@ classdef MixerOptimizer < handle
                     obj.awg.run();
 
                 case 'deviceDrivers.APS'
-                    awg_amp = 1.0;
                     % convert iChan and qChan
                     iChan = str2double(iChan);
                     qChan = str2double(qChan);
+                    
+                    awg_amp = obj.awg.getAmplitude(iChan);
                     %Here we use waveform mode to put out a continuous
                     %sine wave
                     obj.awg.stop();
@@ -165,12 +166,14 @@ classdef MixerOptimizer < handle
                     
                     % i waveform
                     iwf = 0.5 * cos(2*pi*obj.expParams.SSBFreq*tpts);
+                    obj.awg.setAmplitude(iChan, awg_amp);
                     obj.awg.setOffset(iChan, i_offset);
                     % waveforms in the range (-1, 1)
                     obj.awg.loadWaveform(iChan, iwf);
  
                     % q waveform
                     qwf = -0.5 * sin(2*pi*obj.expParams.SSBFreq*tpts);
+                    obj.awg.setAmplitude(qChan, awg_amp);
                     obj.awg.setOffset(qChan, q_offset);
                     obj.awg.loadWaveform(qChan, qwf);
                     
