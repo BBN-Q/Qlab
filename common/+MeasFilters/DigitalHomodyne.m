@@ -37,16 +37,23 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             import MeasFilters.*
             data = apply@MeasFilters.MeasFilter(obj, data);
             
-            demodSignal = digitalDemod(data, obj.IFfreq, obj.samplingRate);
+            [demodSignal, decimFactor] = digitalDemod(data, obj.IFfreq, obj.samplingRate);
             
-            %Box car filter the demodulated signal
+%             save(['SSRecords_', datestr(now, 'yymmdd-HH-MM-SS'), '.mat'], 'demodSignal');
+            
+            %Box car the demodulated signal
             if ndims(demodSignal) == 2
-                obj.latestData = 2*mean(demodSignal(obj.integrationStart:obj.integrationStart+obj.integrationPts-1,:));
+                demodSignal = demodSignal(floor(obj.integrationStart/decimFactor):floor((obj.integrationStart+obj.integrationPts-1)/decimFactor),:);
             elseif ndims(demodSignal) == 4
-                obj.latestData = 2*mean(demodSignal(obj.integrationStart:obj.integrationStart+obj.integrationPts-1,:,:,:));
+                demodSignal = demodSignal(floor(obj.integrationStart/decimFactor):floor((obj.integrationStart+obj.integrationPts-1)/decimFactor),:,:,:);
             else
                 error('Only able to handle 2 and 4 dimensional data.');
             end
+            
+            
+            
+            %Integrate
+            obj.latestData = 2*mean(demodSignal,1);
                 
             obj.accumulate();
             out = obj.latestData;
