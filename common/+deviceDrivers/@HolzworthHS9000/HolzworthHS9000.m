@@ -28,7 +28,7 @@ classdef HolzworthHS9000 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.li
         alc = -1
         pulse = -1
         pulseSource = -1
-        ref % (internal 100MHz) 'int', (external) '10MHz', or (external) '100MHz'
+        ref = 'int' % (internal 100MHz) 'int', (external) '10MHz', or (external) '100MHz'
     end
     
     methods
@@ -137,7 +137,10 @@ classdef HolzworthHS9000 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.li
         end
         
         function out = get.frequency(obj)
-            out = obj.query(obj.channel, ':FREQ?');
+            % :FREQ? returns a string of the form XX.X MHz
+            % so, we convert it to a numeric value in Hz
+            freq = strtok(obj.query(obj.channel, ':FREQ?'));
+            out = str2double(freq)*1e6;
         end
         
         function set.power(obj, power)
@@ -146,7 +149,7 @@ classdef HolzworthHS9000 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.li
         end
         
         function out = get.power(obj)
-            out = obj.query(obj.channel, ':PWR?');
+            out = str2double(obj.query(obj.channel, ':PWR?'));
         end
         
         function set.phase(obj, phase)
@@ -155,7 +158,7 @@ classdef HolzworthHS9000 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.li
         end
         
         function out = get.phase(obj)
-            out = obj.query(obj.channel, ':PHASE?');
+            out = str2double(obj.query(obj.channel, ':PHASE?'));
         end
         
         function set.mod(obj, mod)
