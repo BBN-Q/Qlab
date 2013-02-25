@@ -57,8 +57,10 @@ classdef MixerOptimizer < handle
             instrSettings = settings.InstrParams;
             
             %Get references to the AWG, uW source, and spectrum analyzer
-            
             obj.awg = InstrumentFactory(obj.channelParams.awg);
+            %TODO: Update this to the instrument library instead.
+            instrLibParams = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'));
+            obj.awg.setAll(instrLibParams.instruments.(obj.channelParams.awg));
             obj.uwsource = InstrumentFactory(obj.channelParams.source);
             obj.sa = InstrumentFactory(obj.expParams.specAnalyzer);
             
