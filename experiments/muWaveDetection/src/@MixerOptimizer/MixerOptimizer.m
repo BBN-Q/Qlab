@@ -1,6 +1,6 @@
 % Corrects for carrier leakage, amplitude imbalance, and phase
 % skew of an I/Q mixer.
-% 
+%
 
 % Copyright 2010-13 Raytheon BBN Technologies
 %
@@ -20,7 +20,7 @@
 % Updated: Colm Ryan and Blake Johnson to handle sweeping and searching
 % optimization
 %
-% 
+%
 
 classdef MixerOptimizer < handle
     properties
@@ -34,6 +34,7 @@ classdef MixerOptimizer < handle
         costFunctionGoal = -70;
         expParams
         optimMode = 'sweep' %optimize by naive sweeping ('sweep') or clever searching ('search')
+        results = struct('iOffset',0, 'qOffset',0, 'T', eye(2))
     end
     
     methods
@@ -43,7 +44,7 @@ classdef MixerOptimizer < handle
         
         %% class methods
         function Init(obj, cfgFile, chan)
-
+            
             % pull in channel parameters from requested logical channel in the Qubit2ChannelMap
             channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
             assert(isfield(channelMap, chan), 'Qubit %s not found in channel map', chan);
@@ -71,52 +72,27 @@ classdef MixerOptimizer < handle
         end
         
         function Do(obj)
+            
+            %Set the cleanup function so that even if we ctrl-c out we
+            %correctly cleanup
+            c = onCleanup(@() obj.cleanUp());
+            
             switch obj.optimMode
                 case 'sweep'
                     obj.setup_SSB_AWG(0,0);
-                    [i_offset, q_offset] = obj.optimize_mixer_offsets_bySweep();
-                    obj.setup_SSB_AWG(i_offset,q_offset);
-                    T = obj.optimize_mixer_ampPhase_bySweep();
+                    [obj.results.iOffset, obj.results.qOffset] = obj.optimize_mixer_offsets_bySweep();
+                    obj.setup_SSB_AWG(obj.results.iOffset,obj.results.qOffset);
+                    obj.results.T = obj.optimize_mixer_ampPhase_bySweep();
                 case 'search'
                     obj.setup_SSB_AWG(0,0);
-                    [i_offset, q_offset] = obj.optimize_mixer_offsets_bySearch();
-                    obj.setup_SSB_AWG(i_offset,q_offset);
-                    T = obj.optimize_mixer_ampPhase_bySearch();
+                    [obj.results.iOffset, obj.results.qOffset] = obj.optimize_mixer_offsets_bySearch();
+                    obj.setup_SSB_AWG(obj.results.iOffset, obj.results.qOffset);
+                    obj.results.T = obj.optimize_mixer_ampPhase_bySearch();
                 otherwise
                     error('Unknown optimMode');
             end
-
-            % restore instruments to a normal state
-            obj.sa.center_frequency = obj.uwsource.frequency * 1e9;
-            obj.sa.span = 25e6;
-            obj.sa.sweep_mode = 'cont';
-            obj.sa.resolution_bw = 'auto';
-            obj.sa.sweep_points = 800;
-            obj.sa.number_averages = 10;
-            obj.sa.video_averaging = 1;
-            obj.sa.sweep();
-            obj.sa.peakAmplitude();
-
-            % update transformation matrix T in pulse param file
-            params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-            params.(obj.channelParams.IQkey).T = T;
-            FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'w'); 
-            fprintf(FID, '%s', jsonlab.savejson('',params));
-            fclose(FID);
             
-            % update i and q offsets in ExpScripter cfg
-            params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'));
-            iChan = obj.channelParams.IQkey(end-1);
-            qChan = obj.channelParams.IQkey(end);
-            params.InstrParams.(obj.channelParams.awg).(['chan_' iChan]).offset = i_offset;
-            params.InstrParams.(obj.channelParams.awg).(['chan_' qChan]).offset = q_offset;
-            FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'),'wt'); %open in text mode
-            fprintf(FID, '%s', jsonlab.savejson('',params));
-            fclose(FID);
             
-            %Print out a summary for the notebook
-            fprintf('\nSummary:\n');
-            fprintf('i_offset = %.4f; q_offset = %.4f; ampFactor = %.4f; phaseSkew = %.1f\n', i_offset, q_offset, T(1,1), atand(T(1,2)/T(1,1)))
         end
         
         function stop = LMStoppingCondition(obj, ~, optimValues, ~)
@@ -126,6 +102,57 @@ classdef MixerOptimizer < handle
                 stop = false;
             end
         end
+        
+        function cleanUp(obj)
+            
+            % restore instruments to a normal state
+            obj.sa.center_frequency = obj.uwsource.frequency * 1e9;
+            obj.sa.span = obj.expParams.SSBFreq * 2.1;
+            obj.sa.sweep_mode = 'cont';
+            obj.sa.resolution_bw = 'auto';
+            obj.sa.sweep_points = 800;
+            obj.sa.number_averages = 10;
+            obj.sa.video_averaging = 1;
+            obj.sa.sweep();
+            obj.sa.peakAmplitude();
+            
+            %Ask whether to write to file or not
+            happy = questdlg('Are you happy with the result?','Optimize Mixer Wrap-up');
+            switch happy
+                case 'Yes'
+            
+                % update transformation matrix T in pulse param file
+                params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+                params.(obj.channelParams.IQkey).T = obj.results.T;
+                FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'w');
+                fprintf(FID, '%s', jsonlab.savejson('',params));
+                fclose(FID);
+
+                % update i and q offsets in ExpScripter cfg
+                %TODO: Update this to the instrument library instead.
+                params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'));
+                iChan = obj.channelParams.IQkey(end-1);
+                qChan = obj.channelParams.IQkey(end);
+                params.instruments.(obj.channelParams.awg).(['chan_' iChan]).offset = obj.results.iOffset;
+                params.instruments.(obj.channelParams.awg).(['chan_' qChan]).offset = obj.results.qOffset;
+                FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'),'wt'); %open in text mode
+                fprintf(FID, '%s', jsonlab.savejson('',params));
+                fclose(FID);
+                
+                case {'No','Cancel'}
+                    fprintf('Not writing to file...');
+            end
+            
+            %Stop the AWG
+            obj.awg.stop()
+                    
+            %Print out a summary for the notebook
+            fprintf('\nSummary:\n');
+            fprintf('i_offset = %.4f; q_offset = %.4f; ampFactor = %.4f; phaseSkew = %.1f\n', ...
+                obj.results.iOffset, obj.results.qOffset, obj.results.T(1,1), atand(obj.results.T(1,2)/obj.results.T(1,1)))
+            
+        end
+        
         
         function setup_SSB_AWG(obj, i_offset, q_offset)
             %Helper function to setup the SSB waveforms from the AWGs
@@ -148,7 +175,7 @@ classdef MixerOptimizer < handle
                     obj.awg.(['chan_' iChan]).enabled = 1;
                     obj.awg.(['chan_' qChan]).enabled = 1;
                     obj.awg.run();
-
+                    
                 case 'deviceDrivers.APS'
                     % convert iChan and qChan
                     iChan = str2double(iChan);
@@ -170,7 +197,7 @@ classdef MixerOptimizer < handle
                     obj.awg.setOffset(iChan, i_offset);
                     % waveforms in the range (-1, 1)
                     obj.awg.loadWaveform(iChan, iwf);
- 
+                    
                     % q waveform
                     qwf = -0.5 * sin(2*pi*obj.expParams.SSBFreq*tpts);
                     obj.awg.setAmplitude(qChan, awg_amp);
@@ -182,8 +209,8 @@ classdef MixerOptimizer < handle
                     %Set all channels to continuous waveform to avoid a
                     %conflict betweent the two FPGAs
                     for ct = 1:4
-                       obj.awg.setRepeatMode(ct, obj.awg.CONTINUOUS);
-                       obj.awg.setRunMode(ct, obj.awg.RUN_WAVEFORM);
+                        obj.awg.setRepeatMode(ct, obj.awg.CONTINUOUS);
+                        obj.awg.setRunMode(ct, obj.awg.RUN_WAVEFORM);
                     end
                     
                     %Turn off the unused channels
@@ -205,6 +232,6 @@ classdef MixerOptimizer < handle
     methods(Static)
         %Forward reference a static helper that fits the typical sweep
         %curves
-       [bestOffset, goodOffsetPts, measPowers] = find_null_offset(measPowers, xPts)
+        [bestOffset, goodOffsetPts, measPowers] = find_null_offset(measPowers, xPts)
     end
 end
