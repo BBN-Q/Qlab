@@ -46,18 +46,17 @@ classdef SingleShotFidelity < handle
             % add instruments
             for instrument = fieldnames(instrSettings)'
                 instr = InstrumentFactory(instrument{1});
+                %If it is an AWG, point it at the correct file
+                if ExpManager.is_AWG(instr)
+                    if isa(instr, 'deviceDrivers.APS')
+                        ext = 'h5';
+                    else
+                        ext = 'awg';
+                    end
+                    instrSettings.(instrument{1}).seqfile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-' instrument{1} '.' ext]);
+                end
                 add_instrument(obj.experiment, instrument{1}, instr, instrSettings.(instrument{1}));
             end
-            
-            %Point the AWG to the right sequence file
-            channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
-            awgName = channelMap.(obj.qubit).awg;
-            if isa(obj.experiment.instruments.(awgName), 'deviceDrivers.APS')
-                ext = 'h5';
-            else
-                ext = 'awg';
-            end
-            obj.experiment.instrSettings.(awgName).seqfile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-' awgName '.' ext]);
             
             % set scope to digitizer mode
             obj.experiment.instrSettings.scope.acquireMode = 'digitizer';
@@ -93,10 +92,6 @@ classdef SingleShotFidelity < handle
             obj.SingleShotFidelityDo();
         end
         
-    end
-    
-    methods (Static)
-        SingleShotSequence(qubit)
     end
     
 end
