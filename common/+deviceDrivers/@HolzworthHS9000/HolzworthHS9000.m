@@ -132,15 +132,15 @@ classdef HolzworthHS9000 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.li
         end
         
         function set.frequency(obj, freq)
-            obj.write(obj.channel, [':FREQ:' num2str(freq) 'Hz']);
+            obj.write(obj.channel, [':FREQ:' num2str(freq) 'GHz']);
             obj.frequency = freq;
         end
         
         function out = get.frequency(obj)
             % :FREQ? returns a string of the form XX.X MHz
-            % so, we convert it to a numeric value in Hz
+            % so, we convert it to a numeric value in GHz
             freq = strtok(obj.query(obj.channel, ':FREQ?'));
-            out = str2double(freq)*1e6;
+            out = str2double(freq)/1e3;
         end
         
         function set.power(obj, power)
@@ -153,7 +153,7 @@ classdef HolzworthHS9000 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.li
         end
         
         function set.phase(obj, phase)
-            obj.write(obj.channel, [':PHASE:' num2str(freq) 'deg']);
+            obj.write(obj.channel, [':PHASE:' num2str(phase) 'deg']);
             obj.phase = phase;
         end
         
