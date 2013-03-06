@@ -16,50 +16,37 @@
 //  NOTE - these are often used in constructors so cannot depend on objects
 //         without due care taken
 //
+
 //   General Info
-inline std::string ModuleNameStr()
-            {  return  "X6-1000M PCIe Module";  }
+inline std::string ModuleNameStr()       {  return  "X6-1000M PCIe Module";  }
+ 
+//   Analog Out Info 
+ 
+inline int    AnalogOutChannels()        {  return 4;  }
+inline int    AnalogOutAlerts()          {  return 5;  }
+inline float  MaxOutRateMHz()            {  return 1000.0;  }     
 
-//
-//   Analog Out Info
 
-inline int    AnalogOutChannels()
-        {  return 4;  }
-inline int    AnalogOutAlerts()
-          {  return 5;  }
-inline float  MaxOutRateMHz()
-          {  return 1000.0;  }     // In MHz
-//
-//   Analog In Info
-inline int    AnalogInChannels()
-          {  return 2;  }
-inline int    AnalogInAlerts()
-          {  return 6;  }
-inline float  MaxInRateMHz()
-          {  return 1000.0;  }     // In MHz
+//   Analog In Info 
+inline int    AnalogInChannels()         {  return 2;  }
+inline int    AnalogInAlerts()           {  return 6;  }
+inline float  MaxInRateMHz()             {  return 1000.0;  }     
 
-//
+
 //   Application Feature Presence  -- used to hide GUI Portions
 
-inline bool   HasClockMux()
-        {  return true; }
-inline bool   HasProgrammableReference()
-        {  return true; }
-inline bool   HasTestModeControl()
-        {  return true; }
-inline bool   HasFiclSupport()
-        {  return true; }
-inline bool   HasLowSpeedAnalogIn()
-        {  return true; }
-inline bool   HasExtClockSrcSelectMux()
-        {  return true; }
-inline bool   HasExtTriggerSrcSelectMux()
-        {  return true; }
-inline bool   HasPulseTrigger()
-        {  return true; }
+inline bool   HasClockMux()              {  return true; }
+inline bool   HasProgrammableReference() {  return true; }
+inline bool   HasTestModeControl()       {  return true; }
+inline bool   HasFiclSupport()           {  return true; }
+inline bool   HasLowSpeedAnalogIn()      {  return true; }
+inline bool   HasExtClockSrcSelectMux()  {  return true; }
+inline bool   HasExtTriggerSrcSelectMux(){  return true; }
+inline bool   HasPulseTrigger()          {  return true; }
 
 
 typedef std::vector<std::string> StringArray;
+
 StringArray  ExtClockSrcSelectStrings();
 StringArray  ExtTriggerSrcSelectStrings();
 StringArray  TxTestModeStrings();
@@ -78,12 +65,9 @@ public:
     ~ModuleIo();
 
     //  Module Aliases
-    Innovative::X6_1000M & operator() ()
-        {  return Module;  }
-    Innovative::X6_1000M & Ref()
-        {  return Module;  }
-    Innovative::IFiclTarget *  FiclTarget()
-            {   return &Module;  }
+    Innovative::X6_1000M & operator() ()    {  return Module;  }
+    Innovative::X6_1000M & Ref()            {  return Module;  }
+    Innovative::IFiclTarget *  FiclTarget() {   return &Module;  }
 
     OpenWire::ThunkedEventHandler<Innovative::ProcessStatusEvent>  OnLog;
 
@@ -95,9 +79,6 @@ public:
     //
     //  Module Methods
     void  HookAlerts();
-
-    void  ConfigureGraphs(unsigned int idx,
-                          Innovative::DataLogger & logr, Innovative::BinView & bv);
 
     void  ConfigureAlerts(std::vector<char> & AlertEnable);
     void  SetInputPacketDataSize(unsigned int size);

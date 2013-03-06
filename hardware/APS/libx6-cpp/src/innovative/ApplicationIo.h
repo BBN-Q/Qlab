@@ -227,21 +227,18 @@ public:
     ApplicationIo(IUserInterface * gui);
     ~ApplicationIo();
 
-    ModuleIo &  ModIo()
-        {  return Module;  }
+    ModuleIo &  ModIo()   {  return Module;  }
 
     // Methods
     unsigned int    BoardCount();
 
     void            Open();
-    bool            IsOpen()
-    {  return FOpened;  }
+    bool            IsOpen()  {  return FOpened;  }
     void            Close();
 	void            StreamPreconfigure();
 	bool            StartStreaming();
     void            StopStreaming();
-    bool            IsStreaming()
-    {  return Timer.Enabled();  }
+    bool            IsStreaming()   {  return Timer.Enabled();  }
 
     void            WriteRom();
     void            ReadRom();
@@ -251,15 +248,11 @@ public:
     double          RxBlockRate() const;
     unsigned int    RxBlockCount() const;
 
-    unsigned int     OutputChannels() const
-        {  return AnalogOutChannels();  }
-    unsigned int     InputChannels() const
-        {  return AnalogInChannels();  }
+    unsigned int     OutputChannels() const        {  return AnalogOutChannels();  }
+    unsigned int     InputChannels() const         {  return AnalogInChannels();  }
 
-    void    DacTestStatus()
-                {  Module.DacTestStatus();   }
-    void    ClearDacTestStatus()
-                {  Module.ClearDacTestStatus();   }
+    void    DacTestStatus()                        {  Module.DacTestStatus();   }
+    void    ClearDacTestStatus()                   {  Module.ClearDacTestStatus();   }
 
     float   Temperature();
     bool    PllLocked();

@@ -35,7 +35,12 @@ int APSRack::initAPS(const int & deviceID, const string & bitFile, const bool & 
 
 int APSRack::get_num_devices()  {
 	int numDevices;
-	FT_ListDevices(&numDevices, NULL, FT_LIST_NUMBER_ONLY);
+	
+	numDevices = X6_.getBoardCount();
+
+	// Compare against current number of devices
+	// This should not change as devices are PCI based
+	// This is legacy code from the USB based APS devices may be kept if merged or removed
 	if (numDevices_ != numDevices) {
 		update_device_enumeration();
 	}
@@ -47,10 +52,11 @@ string APSRack::get_deviceSerial(const int & deviceID) {
 	// get current number of devices
 	get_num_devices();
 
-	// Get serials from FTDI layer to check for change in devices
+	// Get serials from Malibu layer to check for change in devices
 	vector<string> testSerials;
-	FTDI::get_device_serials(testSerials);
-
+	
+	X6_.get_device_serials(testSerials);
+	
 	// match serials for each device id to make sure mapping of device count to serial
 	// number is still correct
 	// if serial number is different re-enumerate
@@ -77,7 +83,9 @@ void APSRack::enumerate_devices() {
 	for (auto & aps : APSs_){
 		aps.disconnect();
 	}
-	FTDI::get_device_serials(deviceSerials_);
+	
+	X6_.get_device_serials(deviceSerials_);
+	
 	numDevices_ = deviceSerials_.size();
 
 	APSs_.clear();
@@ -101,7 +109,8 @@ void APSRack::enumerate_devices() {
 void APSRack::update_device_enumeration() {
 
 	vector<string> newSerials;
-	FTDI::get_device_serials(newSerials);
+
+	X6_.get_device_serials(newSerials);
 
 	// construct new APS_ vector & new serial2dev map
 	vector<APS> newAPS_;
@@ -110,8 +119,8 @@ void APSRack::update_device_enumeration() {
 	size_t devicect = 0;
 	for (string tmpSerial : newSerials) {
 		
-		// example test to see if FTDI thinks device is open
-		if (FTDI::isOpen(devicect)) {
+		// example test to see if Malibu thinks device is open
+		if (X6_.isOpen(devicect)) {
 			FILE_LOG(logDEBUG) << "Device " << devicect << " [ " << tmpSerial << " ] is open";
 		}
 
@@ -333,7 +342,7 @@ int APSRack::read_bulk_state_file(string & stateFile){
 
 int APSRack::raw_write(int deviceID, int numBytes, UCHAR* data){
 	DWORD bytesWritten;
-	FT_Write(APSs_[deviceID].handle_, data, numBytes, &bytesWritten);
+	//FT_Write(APSs_[deviceID].handle_, data, numBytes, &bytesWritten);
 	return int(bytesWritten);
 }
 
@@ -345,10 +354,10 @@ int APSRack::raw_read(int deviceID, FPGASELECT fpga) {
 
 	//Send the read command byte
 	UCHAR commandPacket = 0x80 | Command | (fpga<<2) | transferSize;
-    FT_Write(APSs_[deviceID].handle_, &commandPacket, 1, &bytesWritten);
+    //FT_Write(APSs_[deviceID].handle_, &commandPacket, 1, &bytesWritten);
 
 	//Look for the data
-	FT_Read(APSs_[deviceID].handle_, dataBuffer, 2, &bytesRead);
+	//FT_Read(APSs_[deviceID].handle_, dataBuffer, 2, &bytesRead);
 	FILE_LOG(logDEBUG2) << "Read " << bytesRead << " bytes with value" << myhex << ((dataBuffer[0] << 8) | dataBuffer[1]);
 	return int((dataBuffer[0] << 8) | dataBuffer[1]);
 }

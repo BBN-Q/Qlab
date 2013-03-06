@@ -100,7 +100,7 @@ vector<short> Channel::prep_waveform() const{
 }
 
 int Channel::clear_data() {
-	LLBank_.clear();
+	//LLBank_.clear(); // TODO: Remove Bank references
 	waveform_.clear();
 	return 0;
 }
@@ -164,6 +164,7 @@ int Channel::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootS
 	numBanks = h5element2element<USHORT>("numBanks",&tmpGroup, H5::PredType::NATIVE_UINT16);
   tmpGroup.close();
 
+/* TODO: Remove STALE references to LL Banks
 	std::ostringstream tmpStream;
 	//Now loop over the number of banks found and add the bank
 	for (USHORT bankct=0; bankct<numBanks; bankct++){
@@ -174,5 +175,6 @@ int Channel::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootS
 		bank.read_state_from_hdf5( H5StateFile, tmpStream.str());
 //		banks_.push_back(bank);
 	}
+*/
 	return 0;
 }

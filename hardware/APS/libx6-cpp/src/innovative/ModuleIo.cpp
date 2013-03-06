@@ -131,63 +131,6 @@ std::string ModuleIo::Help() const
 }
 
 //---------------------------------------------------------------------------
-//  ModuleIo::ConfigureGraphs() --  Configure Loggers and Graphs
-//---------------------------------------------------------------------------
-
-void  ModuleIo::ConfigureGraphs(unsigned int /*idx*/, Innovative::DataLogger & /*logr*/,
-                                   Innovative::BinView & graph)
-{
-
-    graph.SampleRate(static_cast<float>(Module.Clock().FrequencyActual() / 1.0e3f));
-
-	const int bits = Module.Input().Info().Bits();
-
-	const int limit = 1 << (bits-1);
-
-	graph.Time().LowerLimit(-limit);
-	graph.Time().UpperLimit(limit);
-	graph.Time().Break(1);
-
-	graph.Time().SeamSize(1024);           // seams don't mean much
-    graph.Time().AnnotateSeams(false);
-
-    graph.Fft().LowerLimit(-150);
-    graph.Fft().ScaleYType(BinViewOptions::FftOptions::sLog);
-    graph.Fft().ScaleXType(BinViewOptions::FftOptions::sLog);
-    graph.Fft().CriteriaThreshold(75);
-
-    graph.Fft().Points( BinViewOptions::FftOptions::p16384);
-
-    graph.Fft().Window(BinViewOptions::FftOptions::wBlackmann);
-    graph.Fft().Average(1);
-    graph.Text().DataFormat("%11.3f");
-    graph.System().UpdateRate(BinViewOptions::SystemOptions::ms1000);
-
-    graph.Leap(1024);
-    graph.SignificantBits(bits);
-
-    graph.Polarity(BinView::pSigned);
-
-    graph.DataSpan(300);
-    graph.DataType(BinView::tInt);
-    graph.Units("mV");
-    graph.Samples(1000);
-
-    // One channel per file
-    graph.Channels(1);
-    graph.Devices(1);
-
-    graph.System().Source(BinViewOptions::SystemOptions::sPacketFile);
-    graph.NullDataValue(.12345e-19f);
-
-    SpanInfo span = Module.Input().Info().Span();
-    graph.InputSpan(2000);
-    graph.ScalingEnabled(true);
-
-
-}
-
-//---------------------------------------------------------------------------
 //  ModuleIo::SetInputSoftwareTrigger() --  Set or Clear Software Trigger
 //---------------------------------------------------------------------------
 
@@ -214,6 +157,7 @@ void  ModuleIo::SetOutputTestConfiguration( bool enable, int mode_idx )
     // Optionally enable test mode generator
     Module.Output().TestModeEnabled(enable, mode_idx);
 }
+
 //---------------------------------------------------------------------------
 //  ModuleIo::SetInputTestConfiguration() --  Configure Test Setup
 //---------------------------------------------------------------------------

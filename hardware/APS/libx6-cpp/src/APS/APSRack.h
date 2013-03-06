@@ -88,6 +88,7 @@ private:
 	APSRack(const APSRack&) = delete;
 	APSRack& operator=(const APSRack&) = delete;
 	int numDevices_;
+	X6_1000 X6_;
 	vector<APS> APSs_;
 	vector<string> deviceSerials_;
 };

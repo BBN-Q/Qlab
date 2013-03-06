@@ -26,14 +26,14 @@ public:
 	int disconnect();
 
 	int init(const string &, const bool &);
-	int reset(const FPGASELECT &) const;
+	int reset() const;
 
 	int setup_VCXO() const;
 	int setup_PLL() const;
 	int setup_DACs() const;
 
-	int program_FPGA(const string &, const FPGASELECT &, const int &) const;
-	int read_bitFile_version(const FPGASELECT &) const;
+	int program_FPGA(const string &, const int &) const;
+	int read_bitFile_version() const;
 
 	int set_sampleRate(const int &);
 	int get_sampleRate() const;
@@ -64,7 +64,7 @@ public:
 	int set_run_mode(const int &, const RUN_MODE &);
 	int set_repeat_mode(const int &, const bool &);
 
-	int set_LLData_IQ(const FPGASELECT &, const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
+	int set_LLData_IQ(const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 	int clear_channel_data();
 
 	int load_sequence_file(const string &);
@@ -80,6 +80,8 @@ public:
 	bool isOpen;
 
 private:
+	const unsigned int numFPGAs = 1;
+	const unsigned int numChannels = 2;
 
 	//Since the APS contains non-copyable mutexs and atomic members then explicitly prevent copying
 	APS(const APS&) = delete;
@@ -87,21 +89,21 @@ private:
 
 	int deviceID_;
 	string deviceSerial_;
-	FT_HANDLE handle_;
+	ModuleIo handle_; // consider changing to Innovative::X6_1000M 
 	vector<Channel> channels_;
-	map<FPGASELECT, CheckSum> checksums_;
+	CheckSum checksum_;
 	int samplingRate_;
 	vector<UCHAR> writeQueue_;
 	vector<size_t> offsetQueue_;
-	vector<BankBouncerThread> myBankBouncerThreads_;
+	//vector<BankBouncerThread> myBankBouncerThreads_;  // TODO: Remove Stale Reference
 	//Flag for whether streaming is up and running
 	std::atomic<bool> streaming_;
 	//A mutex to control access to the APS unit during streaming
 	//Since mutexs are non-copyable and non-movable we use an unique_ptr
 	std::unique_ptr<std::mutex> mymutex_;
 
-	int write(const FPGASELECT & fpga, const unsigned int & addr, const USHORT & data, const bool & queue = false);
-	int write(const FPGASELECT & fpga, const unsigned int & addr, const vector<USHORT> & data, const bool & queue = false);
+	int write(const unsigned int & addr, const USHORT & data, const bool & queue = false);
+	int write(const unsigned int & addr, const vector<USHORT> & data, const bool & queue = false);
 
 	int flush();
 	int reset_status_ctrl();
@@ -109,10 +111,10 @@ private:
 	UCHAR read_status_ctrl();
 
 	int setup_PLL();
-	int set_PLL_freq(const FPGASELECT &, const int &);
-	int test_PLL_sync(const FPGASELECT & fpga, const int & numRetries = 2);
-	int read_PLL_status(const FPGASELECT & fpga, const int & regAddr = FPGA_ADDR_REGREAD | FPGA_ADDR_PLL_STATUS, const vector<int> & pllLockBits = std::initializer_list<int>({PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT}));
-	int get_PLL_freq(const FPGASELECT &) const;
+	int set_PLL_freq(const int &);
+	int test_PLL_sync(const int & numRetries = 2);
+	int read_PLL_status(const int & regAddr = FPGA_ADDR_REGREAD | FPGA_ADDR_PLL_STATUS, const vector<int> & pllLockBits = std::initializer_list<int>({PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT}));
+	int get_PLL_freq() const;
 
 	int setup_VCXO();
 
@@ -121,20 +123,20 @@ private:
 	int disable_DAC_FIFO(const int &) const;
 
 
-	int trigger(const FPGASELECT &);
-	int disable(const FPGASELECT &);
+	int trigger();
+	int disable();
 
-	int reset_checksums(const FPGASELECT &);
-	bool verify_checksums(const FPGASELECT &);
+	int reset_checksums();
+	bool verify_checksums();
 
 	int write_waveform(const int &, const vector<short> &);
 
-	int write_LL_data_IQ(const FPGASELECT &, const ULONG &, const size_t &, const size_t &, const bool &);
-	int set_LL_data_IQ(const FPGASELECT &, const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
+	int write_LL_data_IQ(const ULONG &, const size_t &, const size_t &, const bool &);
+	int set_LL_data_IQ( const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 	int stream_LL_data(const int);
-	int read_LL_addr(const FPGASELECT &);
+	int read_LL_addr();
 	int read_LL_addr(const int &);
-	int read_miniLL_startAddr(const FPGASELECT &);
+	int read_miniLL_startAddr();
 
 
 
