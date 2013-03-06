@@ -26,6 +26,9 @@ APS::APS(int deviceID, string deviceSerial) :  isOpen{false}, deviceID_{deviceID
 				//myBankBouncerThreads_.emplace_back(ct, this);
 			}
 			checksum_ = CheckSum();
+
+			// set X6 device ID
+			handle_.set_deviceID(deviceID);
 };
 
 APS::APS(APS && other) : isOpen{other.isOpen}, deviceID_{other.deviceID_}, samplingRate_{other.samplingRate_},
@@ -46,7 +49,7 @@ int APS::connect(){
 	if (!isOpen) {
 		int success = 0;
 		
-		// TODO: Connect to module
+		success = handle_.Open();
 		
 		if (success == 0) {
 			FILE_LOG(logINFO) << "Opened connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
@@ -64,7 +67,7 @@ int APS::disconnect(){
 	if (isOpen){
 		int success = 0;
 		
-		// TODO: Disconnect from module
+		success = handle_.Close();
 
 		if (success == 0) {
 			FILE_LOG(logINFO) << "Closed connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";

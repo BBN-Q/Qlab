@@ -92,7 +92,7 @@ private:
 
 	int deviceID_;
 	string deviceSerial_;
-	ModuleIo handle_; // consider changing to Innovative::X6_1000M 
+	X6_1000 handle_; 
 	vector<Channel> channels_;
 	CheckSum checksum_;
 	int samplingRate_;

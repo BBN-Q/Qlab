@@ -7,27 +7,27 @@
 PROJECT( libx6 )
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-SET (  INNOVATIVEPATH "C:\\Apps\\Innovative" )
+SET (  INNOVATIVEPATH "C:\\Innovative" )
 SET (  MALIBUPATH   ${INNOVATIVEPATH}/Malibu )
 
 INCLUDE_DIRECTORIES(${MALIBUPATH})
-INCLUDE_DIRECTORIES("c:/Apps/msys/local/hdf5/include/cpp")
-INCLUDE_DIRECTORIES("c:/Apps/msys/local/hdf5/include")
+INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\include\\cpp")
+INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\include")
 INCLUDE_DIRECTORIES("./innovative/")
 INCLUDE_DIRECTORIES("./APS/")
 
 LINK_DIRECTORIES( ${LINK_DIRECTORIES} 
-	"C:\\Apps\\Innovative\\Lib\\Gcc"
+	"C:\\Innovative\\Lib\\Gcc"
 )
 
 # following links against Innovative release libraries
 LINK_DIRECTORIES( ${LINK_DIRECTORIES} 
-	"C:\\Apps\\Innovative\\Lib\\Gcc\\Release"
+	"C:\\Innovative\\Lib\\Gcc\\Release"
 )
 
 # following links against Innovative release libraries
 LINK_DIRECTORIES( ${LINK_DIRECTORIES} 
-	"c:/Apps/msys/local/hdf5/lib"
+	"C:\\MinGW\\msys\\1.0\\local\\lib"
 )
 
 ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-DGCC")

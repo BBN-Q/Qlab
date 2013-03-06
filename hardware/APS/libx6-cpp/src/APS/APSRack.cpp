@@ -118,11 +118,6 @@ void APSRack::update_device_enumeration() {
 
 	size_t devicect = 0;
 	for (string tmpSerial : newSerials) {
-		
-		// example test to see if Malibu thinks device is open
-		if (X6_.isOpen(devicect)) {
-			FILE_LOG(logDEBUG) << "Device " << devicect << " [ " << tmpSerial << " ] is open";
-		}
 
 		// does the new serial number exist in the old list? 
 		if ( serial2dev.count(tmpSerial) > 0) {
@@ -155,11 +150,11 @@ int APSRack::read_bitfile_version(const int & deviceID) const {
 
 int APSRack::connect(const int & deviceID){
 	//Connect to a instrument specified by deviceID
-	//return APSs_[deviceID].connect();
+	return APSs_[deviceID].connect();
 }
 
 int APSRack::disconnect(const int & deviceID){
-	//return APSs_[deviceID].disconnect();
+	return APSs_[deviceID].disconnect();
 }
 
 int APSRack::connect(const string & deviceSerial){
@@ -363,5 +358,5 @@ int APSRack::raw_read(int deviceID, FPGASELECT fpga) {
 }
 
 int APSRack::read_register(int deviceID, FPGASELECT fpga, int addr){
-	return FPGA::read_FPGA(APSs_[deviceID].handle_, addr, fpga);
+	//return FPGA::read_FPGA(APSs_[deviceID].handle_, addr, fpga);
 }

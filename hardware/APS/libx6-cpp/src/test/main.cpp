@@ -11,7 +11,30 @@ int main ()
   int numDevices;
   numDevices = get_numDevices();
 
-  cout << numDevices << " X6 devices found" << endl;
+  cout << numDevices << " X6 device" << (numDevices > 1 ? "s": "")  << " found" << endl;
+
+  if (numDevices < 1)
+  	return 0;
+
+  cout << "Attempting to initialize libaps" << endl;
+
+  init();
+
+  char serialBuffer[100];
+
+  for (int cnt; cnt < numDevices; cnt++) {
+  	get_deviceSerial(cnt, serialBuffer);
+  	cout << "Device " << cnt << " serial #: " << serialBuffer << endl;
+  }
+
+  int rc;
+  rc = connect_by_ID(0);
+
+  cout << "connect_by_ID(0) returned " << rc << endl;
+
+  rc = disconnect_by_ID(0);
+
+  cout << "disconnect_by_ID(0) returned " << rc << endl;
 
   return 0;
 }
