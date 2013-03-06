@@ -14,6 +14,7 @@ INCLUDE_DIRECTORIES(${MALIBUPATH})
 INCLUDE_DIRECTORIES("c:/Apps/msys/local/hdf5/include/cpp")
 INCLUDE_DIRECTORIES("c:/Apps/msys/local/hdf5/include")
 INCLUDE_DIRECTORIES("./innovative/")
+INCLUDE_DIRECTORIES("./APS/")
 
 LINK_DIRECTORIES( ${LINK_DIRECTORIES} 
 	"C:\\Apps\\Innovative\\Lib\\Gcc"
@@ -48,12 +49,41 @@ SET ( DLL_SRC
 
 #	./innovative/ApplicationIO.cpp
 
-
-
-
 SET_SOURCE_FILES_PROPERTIES( ${DLL_SRC} PROPERTIES LANGUAGE CXX )
 
+SET ( TEST_SRC
+	./test/main.cpp
+)
+
+SET_SOURCE_FILES_PROPERTIES( ${TEST_SRC} PROPERTIES LANGUAGE CXX )
+
+
 ADD_LIBRARY( x6 SHARED ${DLL_SRC} )
+ADD_EXECUTABLE(x6test ${TEST_SRC} ${DLL_SRC})
+
+TARGET_LINK_LIBRARIES(x6test 
+	Application_Mb
+	Pci_Mb
+	Hardware_Mb
+	Analysis_Mb
+	Utility_Mb
+	Os_Mb
+	Ficl_Mb
+	Framework_Mb 
+	ipps-7.0  # in Intel IPP directory listed above
+	wdapi # WinDriver library in Innovative\lib\gcc
+
+	hdf5_cpp
+	hdf5
+	
+	# The following libraries are supplied with Malibu
+	# But not currently required
+	#Framework_Win 
+	#Framework_Con ##
+	#Poco_Foundation_Mb ##
+	#Poco_Net_Mb ##
+	#Vpx_Mb  ##
+)
 
 
 

@@ -25,9 +25,11 @@ public:
 	int connect();
 	int disconnect();
 
+
 	int init(const string &, const bool &);
 	int reset() const;
 
+/*
 	int setup_VCXO() const;
 	int setup_PLL() const;
 	int setup_DACs() const;
@@ -71,10 +73,11 @@ public:
 
 	int run();
 	int stop();
-
+*/
 	//The owning APSRack needs access to some private members
 	friend class APSRack;
 	friend class BankBouncerThread;
+
 
 	//Whether the FTDI connection is open
 	bool isOpen;
@@ -102,6 +105,7 @@ private:
 	//Since mutexs are non-copyable and non-movable we use an unique_ptr
 	std::unique_ptr<std::mutex> mymutex_;
 
+/*
 	int write(const unsigned int & addr, const USHORT & data, const bool & queue = false);
 	int write(const unsigned int & addr, const vector<USHORT> & data, const bool & queue = false);
 
@@ -145,6 +149,7 @@ private:
 	int read_state_file(string &);
 	int write_state_to_hdf5(  H5::H5File & , const string & );
 	int read_state_from_hdf5( H5::H5File & , const string & );
+	*/
 };
 
 inline FPGASELECT dac2fpga(const int & dac)
