@@ -360,3 +360,11 @@ int APSRack::raw_read(int deviceID, FPGASELECT fpga) {
 int APSRack::read_register(int deviceID, FPGASELECT fpga, int addr){
 	//return FPGA::read_FPGA(APSs_[deviceID].handle_, addr, fpga);
 }
+
+float APSRack::get_logic_temperature(int deviceID) {
+	if (APSs_.size() > deviceID)
+		return APSs_[deviceID].get_logic_temperature();
+	else {
+		return -1;
+	}
+}

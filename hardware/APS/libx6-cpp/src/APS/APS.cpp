@@ -1681,3 +1681,7 @@ void BankBouncerThread::run(){
 
 }
 */
+
+float APS::get_logic_temperature() {
+	return handle_.get_logic_temperature();
+}

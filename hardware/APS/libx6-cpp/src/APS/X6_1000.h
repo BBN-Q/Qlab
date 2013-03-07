@@ -25,6 +25,8 @@ public:
 	void get_device_serials(vector<string> &);
 
 	int set_deviceID(unsigned int deviceID);
+
+	float get_logic_temperature();
 	
 	int            Open();
     bool           isOpen();

@@ -74,6 +74,9 @@ public:
 	int run();
 	int stop();
 */
+
+	float get_logic_temperature();
+
 	//The owning APSRack needs access to some private members
 	friend class APSRack;
 	friend class BankBouncerThread;

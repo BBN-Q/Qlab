@@ -32,6 +32,8 @@ int main ()
 
   cout << "connect_by_ID(0) returned " << rc << endl;
 
+  cout << "current logic temperature = " << get_logic_temperature(0) << endl;
+
   rc = disconnect_by_ID(0);
 
   cout << "disconnect_by_ID(0) returned " << rc << endl;

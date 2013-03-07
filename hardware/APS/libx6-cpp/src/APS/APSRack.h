@@ -84,6 +84,8 @@ public:
 	int raw_read(int, FPGASELECT);
 	int read_register(int, FPGASELECT, int);
 
+	float get_logic_temperature(int);
+
 private:
 	APSRack(const APSRack&) = delete;
 	APSRack& operator=(const APSRack&) = delete;

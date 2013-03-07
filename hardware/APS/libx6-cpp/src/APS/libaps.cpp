@@ -240,6 +240,10 @@ int program_FPGA(int deviceID, char* bitFile, int chipSelect, int expectedVersio
 	return APSRack_.program_FPGA(deviceID, string(bitFile), FPGASELECT(chipSelect), expectedVersion);
 }
 
+float get_logic_temperature(int deviceID) {
+	return APSRack_.get_logic_temperature(deviceID);
+}
+
 #ifdef __cplusplus
 }
 #endif

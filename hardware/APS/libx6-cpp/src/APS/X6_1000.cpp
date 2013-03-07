@@ -135,14 +135,18 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
  }
 
  
-  int X6_1000::Close() {
-  
-  	//Stream.Disconnect();
-    module_.Close();
-    
-    isOpened_ = true;
-  
-    FILE_LOG(logINFO) << "Stream Disconnected...";
+int X6_1000::Close() {
 
-  	return SUCCESS;
-  }
+	//Stream.Disconnect();
+module_.Close();
+
+isOpened_ = true;
+
+FILE_LOG(logINFO) << "Stream Disconnected...";
+
+	return SUCCESS;
+}
+
+float X6_1000::get_logic_temperature() {
+    return static_cast<float>(module_.Thermal().LogicTemperature());
+}

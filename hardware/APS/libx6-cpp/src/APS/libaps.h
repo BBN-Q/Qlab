@@ -90,6 +90,8 @@ EXPORT int raw_read(int, int);
 EXPORT int read_register(int, int, int);
 EXPORT int program_FPGA(int, char*, int, int);
 
+EXPORT float get_logic_temperature(int);
+
 
 #ifdef __cplusplus
 }
