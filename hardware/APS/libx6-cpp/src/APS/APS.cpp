@@ -202,27 +202,25 @@ int APS::init(const string & bitFile, const bool & forceReload){
 // 	return version;
 // }
 
-// int APS::set_sampleRate(const int & freq){
-// 	if (samplingRate_ != freq){
-// 		//Set PLL frequency for each fpga
-// 		APS::set_PLL_freq(FPGA1, freq);
-// 		APS::set_PLL_freq(FPGA2, freq);
+int APS::set_sampleRate(const float & freq){
+	if (samplingRate_ != freq){
+		
+		handle_.set_clock(X6_1000::INTERNAL, freq);
 
-// 		samplingRate_ = freq;
+		samplingRate_ = freq;
 
-// 		//Test the sync
-// 		return APS::test_PLL_sync(FPGA1) || APS::test_PLL_sync(FPGA2);
-// 	}
-// 	else{
-// 		return 0;
-// 	}
-// }
+		
+		return 1;
+	}
+	else{
+		return 0;
+	}
+}
 
-// int APS::get_sampleRate() const{
-// 	//Pass through to FPGA code
-// 	int freq1 = APS::get_PLL_freq();
-// 	return freq1;
-// }
+double APS::get_sampleRate() const{
+	//Pass through to X6 code
+	return APS::get_PLL_freq();
+}
 
 // int APS::clear_channel_data() {
 // 	FILE_LOG(logINFO) << "Clearing all channel data for APS " << deviceID_;
@@ -1043,52 +1041,20 @@ int APS::init(const string & bitFile, const bool & forceReload){
 // 	return pllStatus;
 // }
 
-// int APS::get_PLL_freq() const {
-// 	// Poll APS PLL chip to determine current frequency
+double APS::get_PLL_freq() const  {
+	double freq;
 
-// 	ULONG pll_cycles_addr, pll_bypass_addr;
-// 	UCHAR pll_cycles_val, pll_bypass_val;
+	// work around for const conversion issues
+	X6_1000 *h;
 
-// 	int freq;
+	h = const_cast<X6_1000*>(&handle_);
 
-// 	FILE_LOG(logDEBUG2) << "Getting PLL frequency for FGPA " << fpga;
+	freq = h->get_pll_frequency();
 
-// 	switch(fpga) {
-// 	case FPGA1:
-// 		pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
-// 		pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
-// 		break;
-// 	case FPGA2:
-// 		pll_cycles_addr = FPGA2_PLL_CYCLES_ADDR;
-// 		pll_bypass_addr = FPGA2_PLL_BYPASS_ADDR;
-// 		break;
-// 	default:
-// 		return -1;
-// 	}
+	FILE_LOG(logDEBUG2) << "PLL frequency for X6: " << freq;
 
-// 	FPGA::read_SPI(handle_, APS_PLL_SPI, pll_cycles_addr, &pll_cycles_val);
-// 	FPGA::read_SPI(handle_, APS_PLL_SPI, pll_bypass_addr, &pll_bypass_val);
-
-// 	// select frequency based on pll cycles setting
-// 	// the values here should match the reverse lookup in FGPA::set_PLL_freq
-
-// 	if (pll_bypass_val == 0x80 && pll_cycles_val == 0x00)
-// 		return 1200;
-// 	switch(pll_cycles_val) {
-// 		case 0xEE: freq = 40;  break;
-// 		case 0xBB: freq = 50;  break;
-// 		case 0x55: freq = 100; break;
-// 		case 0x22: freq = 200; break;
-// 		case 0x11: freq = 300; break;
-// 		case 0x00: freq = 600; break;
-// 		default:
-// 			return -2;
-// 	}
-
-// 	FILE_LOG(logDEBUG2) << "PLL frequency for FPGA: " << fpga << " Freq: " << freq;
-
-// 	return freq;
-// }
+	return freq;
+}
 
 
 // int APS::setup_VCXO() {

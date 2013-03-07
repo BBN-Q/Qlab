@@ -34,6 +34,8 @@ int main ()
 
   cout << "current logic temperature = " << get_logic_temperature(0) << endl;
 
+  cout << "current PLL frequency = " << get_sampleRate(0) << " MHz" << endl;
+
   rc = disconnect_by_ID(0);
 
   cout << "disconnect_by_ID(0) returned " << rc << endl;

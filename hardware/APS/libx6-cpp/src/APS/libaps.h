@@ -43,7 +43,7 @@ EXPORT int initAPS(int, char*, int);
 EXPORT int read_bitfile_version(int);
 
 EXPORT int set_sampleRate(int, int);
-EXPORT int get_sampleRate(int);
+EXPORT double get_sampleRate(int);
 
 EXPORT int set_channel_offset(int, int, float);
 EXPORT float get_channel_offset(int, int);

@@ -36,10 +36,11 @@ public:
 
 	int program_FPGA(const string &, const int &) const;
 	int read_bitFile_version() const;
+*/
+	int set_sampleRate(const float &);
+	double get_sampleRate() const;
 
-	int set_sampleRate(const int &);
-	int get_sampleRate() const;
-
+/*
 	int set_trigger_source(const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source() const;
 	int set_trigger_interval(const double &);
@@ -121,8 +122,10 @@ private:
 	int set_PLL_freq(const int &);
 	int test_PLL_sync(const int & numRetries = 2);
 	int read_PLL_status(const int & regAddr = FPGA_ADDR_REGREAD | FPGA_ADDR_PLL_STATUS, const vector<int> & pllLockBits = std::initializer_list<int>({PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT}));
-	int get_PLL_freq() const;
+*/
+	double get_PLL_freq() const;
 
+/*
 	int setup_VCXO();
 
 	int setup_DAC(const int &) const;
@@ -154,28 +157,6 @@ private:
 	int read_state_from_hdf5( H5::H5File & , const string & );
 	*/
 };
-
-inline FPGASELECT dac2fpga(const int & dac)
-{
-	/* select FPGA based on DAC id number
-	    DAC0 & DAC1 -> FPGA 0
-	    DAC2 & DAC3 -> FPGA 1
-	    Added a special case: sending dac = -1 will trigger both FPGAs
-	    at the same time.
-	 */
-	switch(dac) {
-		case -1:
-			return ALL_FPGAS;
-		case 0:
-		case 1:
-			return FPGA1;
-		case 2:
-		case 3:
-			return FPGA2;
-		default:
-			return INVALID_FPGA;
-	}
-}
 
 
 #endif /* APS_H_ */

@@ -176,11 +176,17 @@ int APSRack::setup_DACs(const int & deviceID) const{
 }
 
 int APSRack::set_sampleRate(const int & deviceID, const int & freq) {
-	//return APSs_[deviceID].set_sampleRate(freq);
+	if (APSs_.size() > deviceID)
+		return APSs_[deviceID].set_sampleRate(freq);
+	else
+		return -1;
 }
 
-int APSRack::get_sampleRate(const int & deviceID) const{
-	//return APSs_[deviceID].get_sampleRate();
+double APSRack::get_sampleRate(const int & deviceID) const{
+	if (APSs_.size() > deviceID)
+		return APSs_[deviceID].get_sampleRate();
+	else
+		return -1;
 }
 
 int APSRack::set_run_mode(const int & deviceID, const int & dac, const RUN_MODE & mode){

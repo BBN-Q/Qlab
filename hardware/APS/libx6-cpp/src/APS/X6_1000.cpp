@@ -1,25 +1,32 @@
 #include "X6_1000.h"
 
+using namespace Innovative;
+
 // default constructor
 X6_1000::X6_1000() {
-	int numBoards = getBoardCount();
+	X6_1000(0);
+}
 
-	deviceID_ = 0;
+X6_1000::X6_1000(unsigned int target) {
+    numBoards_ = getBoardCount();
 
-	isOpened_ = false;
-	
+    deviceID_ = target;
+
+    isOpened_ = false;
+    
 }
 
 X6_1000::~X6_1000()
 {
-	if (isOpened_)	Close();   
+	if (isOpened_) Close();   
 }
 
-int X6_1000::set_deviceID(unsigned int deviceID) {
-	if (!isOpened_)
+X6_1000::ErrorCodes X6_1000::set_deviceID(unsigned int deviceID) {
+	if (!isOpened_ && deviceID < numBoards_)
 		deviceID_ = deviceID;
 	else
 		return MODULE_ERROR;
+    return SUCCESS;
 }
 
 
@@ -47,7 +54,7 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
  	return isOpened_;
  }
 
- int X6_1000::Open() {
+ X6_1000::ErrorCodes X6_1000::Open() {
  	// open function based on Innovative Stream Example ApplicationIO.cpp
 
 
@@ -92,19 +99,19 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
     const int TxBmSize = std::max(BusmasterSize/4, 1) * 4;
     module_.IncomingBusMasterSize(RxBmSize * Meg);
     module_.OutgoingBusMasterSize(TxBmSize * Meg);
-    //module_.Target(Settings.Target);
+    module_.Target(deviceID_);
 
    try
         {
 
         module_.Open();
-
-        //FILE_LOG(logINFO) << << "Bus master size: Input => " << RxBmSize << " MB" << " Output => " << TxBmSize << " MB";
+        FILE_LOG(logINFO) << "Opened Device " << deviceID_;
+        FILE_LOG(logINFO) << "Bus master size: Input => " << RxBmSize << " MB" << " Output => " << TxBmSize << " MB";
         }
     //catch (Innovative::MalibuException & exception)
     //    {
     //    FILE_LOG(logINFO) << "Open Failure:" << exception.what();
-    //    return;
+    //    return MODULE_ERROR;
     //    }
     catch(...)
         {
@@ -116,6 +123,7 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
     FILE_LOG(logINFO) << "Module Device Opened Successfully...";
     isOpened_ = true;
 
+    set_defaults();
     //
     //  Connect Stream
     //Stream.ConnectTo(&(Module.Ref()));
@@ -135,18 +143,113 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
  }
 
  
-int X6_1000::Close() {
+X6_1000::ErrorCodes X6_1000::Close() {
 
-	//Stream.Disconnect();
-module_.Close();
+    	//Stream.Disconnect();
+    module_.Close();
 
-isOpened_ = true;
+    isOpened_ = true;
 
-FILE_LOG(logINFO) << "Stream Disconnected...";
+    FILE_LOG(logINFO) << "Closed X6 Board " << deviceID_;
 
 	return SUCCESS;
 }
 
 float X6_1000::get_logic_temperature() {
     return static_cast<float>(module_.Thermal().LogicTemperature());
+}
+
+X6_1000::ErrorCodes X6_1000::set_reference(X6_1000::ExtInt ref, float frequency) {
+    IX6ClockIo::IIReferenceSource x6ref; // reference source
+
+    if (frequency < 0) return INVALID_FREQUENCY;
+
+    x6ref = (ref == EXTERNAL) ? IX6ClockIo::rsExternal : IX6ClockIo::rsInternal;
+
+    module_.Clock().Reference(x6ref);
+    module_.Clock().ReferenceFrequency(frequency * MHz);
+    return SUCCESS;
+}
+
+X6_1000::ErrorCodes X6_1000::set_clock(X6_1000::ExtInt src , 
+                                       float frequency,
+                                       ExtSource extSrc) {
+
+    IX6ClockIo::IIClockSource x6clksrc; // clock source
+    IX6ClockIo::IIClockSelect x6extsrc; // external clock source
+
+    if (frequency < 0) return INVALID_FREQUENCY;
+
+    x6clksrc = (src ==  EXTERNAL) ? IX6ClockIo::csExternal : IX6ClockIo::csInternal;
+    x6extsrc = (extSrc == FRONT_PANEL) ? IX6ClockIo::cslFrontPanel : IX6ClockIo::cslP16;
+
+    module_.Clock().ExternalClkSelect(x6extsrc);
+    module_.Clock().Source(x6clksrc);
+    module_.Clock().Frequency(frequency * MHz);
+    return SUCCESS;
+}
+
+X6_1000::ErrorCodes X6_1000::set_ext_trigger_src(X6_1000::ExtSource extSrc) {
+    IX6IoDevice::AfeExtSyncOptions syncsel;
+    syncsel = (extSrc == FRONT_PANEL) ? IX6IoDevice::essFrontPanel: IX6IoDevice::essP16;
+    module_.Output().Trigger().ExternalSyncSource( syncsel );
+    module_.Input().Trigger().ExternalSyncSource( syncsel );
+    return SUCCESS;
+}
+
+X6_1000::ErrorCodes X6_1000::set_trigger_src(
+                                TriggerSource trgSrc,
+                                bool framed,
+                                bool edgeTrigger,
+                                unsigned int frameSize) {
+    trig_.DelayedTriggerPeriod(triggerDelayPeriod_);
+    trig_.ExternalTrigger( (trgSrc == EXTERNAL_TRIGGER) ? true : false);
+    trig_.AtConfigure();
+
+    module_.Output().Trigger().FramedMode(framed);
+    module_.Output().Trigger().Edge(edgeTrigger);
+    module_.Output().Trigger().FrameSize(frameSize); 
+    return SUCCESS;
+}
+
+X6_1000::ErrorCodes X6_1000::set_decimation(bool enabled, int factor) {
+    module_.Output().Decimation( (enabled ) ? factor : 0);
+    module_.Input().Decimation((enabled ) ? factor : 0); 
+    return SUCCESS;
+}
+
+X6_1000::ErrorCodes X6_1000::set_active_channels(vector<int> activeChannels) {
+    ErrorCodes status = SUCCESS;
+    unsigned int numChannels;
+
+    module_.Output().ChannelDisableAll();
+    module_.Input().ChannelDisableAll();
+
+    numChannels = module_.Output().Channels();
+    for (vector<int>::iterator channel = activeChannels.begin();
+         channel != activeChannels.end();
+         ++channel) {
+         if (*channel < numChannels && *channel >= 0) {
+             module_.Output().ChannelEnabled(*channel, true);
+             FILE_LOG(logINFO) << "Activating channel " << *channel;
+        } else {
+             FILE_LOG(logINFO) << "Error activating channel " << *channel << "invalid channel number";
+             status = INVALID_CHANNEL;
+        }
+    }
+    return status;
+}
+
+double X6_1000::get_pll_frequency() {
+    double freq = module_.Clock().FrequencyActual();
+    return (freq / MHz);
+}
+
+void X6_1000::set_defaults() {
+    set_clock();
+    set_reference();
+    set_ext_trigger_src();
+    set_trigger_src();
+    set_decimation();
+    set_active_channels();
 }

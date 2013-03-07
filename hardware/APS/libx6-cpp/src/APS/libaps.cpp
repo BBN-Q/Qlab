@@ -87,7 +87,7 @@ int set_sampleRate(int deviceID, int freq){
 	return APSRack_.set_sampleRate(deviceID, freq);
 }
 
-int get_sampleRate(int deviceID){
+double get_sampleRate(int deviceID){
 	return APSRack_.get_sampleRate(deviceID);
 }
 

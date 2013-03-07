@@ -46,7 +46,7 @@ public:
 
 	int set_miniLL_repeat(const int &, const USHORT &);
 
-	int get_sampleRate(const int &) const;
+	double get_sampleRate(const int &) const;
 	int set_sampleRate(const int &, const int &);
 
 	int set_channel_offset(const int &, const int &, const float &);
