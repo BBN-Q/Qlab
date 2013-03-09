@@ -117,6 +117,8 @@ public:
 							   bool edgeTrigger = false,
 							   unsigned int frameSize = 0x4000);
 
+	TriggerSource get_trigger_src();
+
 	/** Set Decimation Factor (current for both Tx and Rx)
 	 * \params enabled set to true to enable
 	 * \params factor Decimaton factor
@@ -124,7 +126,9 @@ public:
 	 */
 	ErrorCodes set_decimation(bool enabled = false, int factor = 1);
 
-	ErrorCodes set_active_channels(vector<int> activeChannels = {0});
+	ErrorCodes set_channel_enable(int channel, bool enabled);
+	bool get_channel_enable(int channel);
+	
 
 	/** retrieve PLL frequnecy
 	 *  \returns Actual PLL frequnecy (in MHz) returned from board
@@ -146,10 +150,13 @@ private:
 	unsigned int deviceID_;       /**< board ID (aka target number) */
 
 	double triggerDelayPeriod_ = 0;	  /**< Trigger Delay */
+	TriggerSource triggerSource_ = SOFTWARE_TRIGGER; /**< cached trigger source */
+	map<int,bool> activeChannels_;
 
 	// State Variables
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
 
+	ErrorCodes set_active_channels();
 	void set_defaults();
 };
 

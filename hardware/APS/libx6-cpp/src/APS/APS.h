@@ -40,15 +40,18 @@ public:
 	int set_sampleRate(const float &);
 	double get_sampleRate() const;
 
-/*
+
 	int set_trigger_source(const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source() const;
+
+/*
 	int set_trigger_interval(const double &);
 	double get_trigger_interval() const;
-
+*/
 
 	int set_channel_enabled(const int &, const bool &);
 	bool get_channel_enabled(const int &) const;
+/*
 	int set_channel_offset(const int &, const float &);
 	float get_channel_offset(const int &) const;
 	int set_channel_scale(const int &, const float &);

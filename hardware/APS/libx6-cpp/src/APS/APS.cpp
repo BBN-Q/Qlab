@@ -299,13 +299,14 @@ double APS::get_sampleRate() const{
 // 	return 0;
 // }
 
-// int APS::set_channel_enabled(const int & dac, const bool & enable){
-// 	return channels_[dac].set_enabled(enable);
-// }
+int APS::set_channel_enabled(const int & dac, const bool & enable){
+	return handle_.set_channel_enable(dac,enable);
+}
 
-// bool APS::get_channel_enabled(const int & dac) const{
-// 	return channels_[dac].get_enabled();
-// }
+bool APS::get_channel_enabled(const int & dac) const{
+	X6_1000 *h = const_cast<X6_1000*>(&handle_);
+ 	return h->get_channel_enable(dac);
+}
 
 // int APS::set_channel_offset(const int & dac, const float & offset){
 // 	//Update the waveform in driver
@@ -337,27 +338,34 @@ double APS::get_sampleRate() const{
 // 	return channels_[dac].get_scale();
 // }
 
-// int APS::set_trigger_source(const TRIGGERSOURCE & triggerSource){
+int APS::set_trigger_source(const TRIGGERSOURCE & triggerSource){
 
-// 	int returnVal;
-// 	switch (triggerSource){
-// 	case INTERNAL:
-// 		returnVal = FPGA::clear_bit(handle_, ALL_FPGAS, FPGA_ADDR_CSR, CSRMSK_CHA_TRIGSRC);
-// 		break;
-// 	case EXTERNAL:
-// 		returnVal = FPGA::set_bit(handle_, ALL_FPGAS, FPGA_ADDR_CSR, CSRMSK_CHA_TRIGSRC);
-// 		break;
-// 	default:
-// 		returnVal = -1;
-// 		break;
-// 	}
-// 	return returnVal;
-// }
+	int returnVal;
+	switch (triggerSource){
+	case INTERNAL:
+		returnVal = handle_.set_trigger_src(X6_1000::SOFTWARE_TRIGGER);
+		break;
+	case EXTERNAL:
+		returnVal = handle_.set_trigger_src(X6_1000::EXTERNAL_TRIGGER);
+		break;
+	default:
+		returnVal = -1;
+		break;
+	}
+	return returnVal;
+}
 
-// TRIGGERSOURCE APS::get_trigger_source() const{
-// 	int regVal = FPGA::read_FPGA(handle_, FPGA_ADDR_CSR, FPGA1);
-// 	return TRIGGERSOURCE((regVal & CSRMSK_CHA_TRIGSRC) == CSRMSK_CHA_TRIGSRC ? 1 : 0);
-// }
+TRIGGERSOURCE APS::get_trigger_source() const{
+
+		// work around for const conversion issues
+	X6_1000 *h = const_cast<X6_1000*>(&handle_);
+
+	X6_1000::TriggerSource src = h->get_trigger_src();
+	if (src == X6_1000::EXTERNAL_TRIGGER)
+		return EXTERNAL;
+	else
+		return INTERNAL;
+}
 
 // int APS::set_trigger_interval(const double & interval){
 
@@ -1045,9 +1053,7 @@ double APS::get_PLL_freq() const  {
 	double freq;
 
 	// work around for const conversion issues
-	X6_1000 *h;
-
-	h = const_cast<X6_1000*>(&handle_);
+	X6_1000 *h = const_cast<X6_1000*>(&handle_);
 
 	freq = h->get_pll_frequency();
 

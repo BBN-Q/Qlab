@@ -13,7 +13,11 @@ X6_1000::X6_1000(unsigned int target) {
     deviceID_ = target;
 
     isOpened_ = false;
-    
+
+    /* set active channels map */
+    unsigned int numChannels = module_.Output().Channels();
+    for(int cnt = 0; cnt < numChannels; cnt++)
+        activeChannels_[cnt] = false;
 }
 
 X6_1000::~X6_1000()
@@ -202,6 +206,11 @@ X6_1000::ErrorCodes X6_1000::set_trigger_src(
                                 bool framed,
                                 bool edgeTrigger,
                                 unsigned int frameSize) {
+    // cache trigger source
+    triggerSource_ = trgSrc;
+
+    FILE_LOG(logINFO) << "Trigger Source set to " << trgSrc;
+
     trig_.DelayedTriggerPeriod(triggerDelayPeriod_);
     trig_.ExternalTrigger( (trgSrc == EXTERNAL_TRIGGER) ? true : false);
     trig_.AtConfigure();
@@ -212,30 +221,46 @@ X6_1000::ErrorCodes X6_1000::set_trigger_src(
     return SUCCESS;
 }
 
+X6_1000::TriggerSource X6_1000::get_trigger_src() {
+    // return cached trigger source until 
+    // TODO: identify method for getting source from card
+    if (triggerSource_) 
+        return EXTERNAL_TRIGGER;
+    else
+        return SOFTWARE_TRIGGER;
+}
+
 X6_1000::ErrorCodes X6_1000::set_decimation(bool enabled, int factor) {
     module_.Output().Decimation( (enabled ) ? factor : 0);
     module_.Input().Decimation((enabled ) ? factor : 0); 
     return SUCCESS;
 }
 
-X6_1000::ErrorCodes X6_1000::set_active_channels(vector<int> activeChannels) {
+X6_1000::ErrorCodes X6_1000::set_channel_enable(int channel, bool enabled) {
+    unsigned int numChannels = module_.Output().Channels();
+    if (channel >= numChannels) return INVALID_CHANNEL;
+
+    activeChannels_[channel] = enabled;
+    return SUCCESS;
+}
+
+bool X6_1000::get_channel_enable(int channel) {
+    // TODO get active channel status from board
+    unsigned int numChannels = module_.Output().Channels();
+    if (channel >= numChannels) return false;
+    else return activeChannels_[channel];
+}
+
+
+X6_1000::ErrorCodes X6_1000::set_active_channels() {
     ErrorCodes status = SUCCESS;
-    unsigned int numChannels;
+    unsigned int numChannels = module_.Output().Channels();
 
     module_.Output().ChannelDisableAll();
     module_.Input().ChannelDisableAll();
 
-    numChannels = module_.Output().Channels();
-    for (vector<int>::iterator channel = activeChannels.begin();
-         channel != activeChannels.end();
-         ++channel) {
-         if (*channel < numChannels && *channel >= 0) {
-             module_.Output().ChannelEnabled(*channel, true);
-             FILE_LOG(logINFO) << "Activating channel " << *channel;
-        } else {
-             FILE_LOG(logINFO) << "Error activating channel " << *channel << "invalid channel number";
-             status = INVALID_CHANNEL;
-        }
+    for (int cnt = 0; cnt < numChannels; cnt++) { 
+        module_.Output().ChannelEnabled(cnt, activeChannels_[cnt]);
     }
     return status;
 }

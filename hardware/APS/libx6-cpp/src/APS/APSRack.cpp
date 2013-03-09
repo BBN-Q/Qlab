@@ -240,11 +240,11 @@ int APSRack::set_logging_level(const int & logLevel){
 }
 
 int APSRack::set_trigger_source(const int & deviceID, const TRIGGERSOURCE & triggerSource) {
-	//return APSs_[deviceID].set_trigger_source(triggerSource);
+	return APSs_[deviceID].set_trigger_source(triggerSource);
 }
 
 TRIGGERSOURCE APSRack::get_trigger_source(const int & deviceID) const{
-	//return APSs_[deviceID].get_trigger_source();
+	return APSs_[deviceID].get_trigger_source();
 }
 
 int APSRack::set_trigger_interval(const int & deviceID, const double & interval){
@@ -260,11 +260,11 @@ int APSRack::set_miniLL_repeat(const int & deviceID, const USHORT & repeat){
 }
 
 int APSRack::set_channel_enabled(const int & deviceID, const int & channelNum, const bool & enable){
-	//return APSs_[deviceID].set_channel_enabled(channelNum, enable);
+	return APSs_[deviceID].set_channel_enabled(channelNum, enable);
 }
 
 bool APSRack::get_channel_enabled(const int & deviceID, const int & channelNum) const{
-	//return APSs_[deviceID].get_channel_enabled(channelNum);
+	return APSs_[deviceID].get_channel_enabled(channelNum);
 }
 
 int APSRack::set_channel_offset(const int & deviceID, const int & channelNum, const float & offset){

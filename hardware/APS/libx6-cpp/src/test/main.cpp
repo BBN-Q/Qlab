@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "libaps.h"
+#include "constants.h"
 
 using namespace std;
 
@@ -35,6 +36,26 @@ int main ()
   cout << "current logic temperature = " << get_logic_temperature(0) << endl;
 
   cout << "current PLL frequency = " << get_sampleRate(0) << " MHz" << endl;
+
+  cout << "setting trigger source = EXTERNAL" << endl;
+
+  set_trigger_source(0, EXTERNAL);
+
+  cout << "get trigger source returns " << ((get_trigger_source(0) == INTERNAL) ? "INTERNAL" : "EXTERNAL") << endl;
+
+  cout << "setting trigger source = INTERNAL" << endl;
+
+  set_trigger_source(0, INTERNAL);
+
+  cout << "get trigger source returns " << ((get_trigger_source(0) == INTERNAL) ? "INTERNAL" : "EXTERNAL") << endl;
+
+  cout << "get channel(0) enable: " << get_channel_enabled(0,0) << endl;
+
+  cout << "set channel(0) enabled = 1" << endl;
+
+  set_channel_enabled(0,0,true);
+
+  cout << "get channel(0) enable: " << get_channel_enabled(0,0) << endl;
 
   rc = disconnect_by_ID(0);
 
