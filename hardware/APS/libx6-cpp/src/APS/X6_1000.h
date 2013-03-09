@@ -158,6 +158,10 @@ private:
 
 	ErrorCodes set_active_channels();
 	void set_defaults();
+	void log_card_info();
+
+	/* Waveform mode demo */
+	//Innovative::VitaWaveBuilder     Builder;
 };
 
 #endif

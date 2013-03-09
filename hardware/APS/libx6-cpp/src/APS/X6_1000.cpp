@@ -18,6 +18,7 @@ X6_1000::X6_1000(unsigned int target) {
     unsigned int numChannels = module_.Output().Channels();
     for(int cnt = 0; cnt < numChannels; cnt++)
         activeChannels_[cnt] = false;
+
 }
 
 X6_1000::~X6_1000()
@@ -126,6 +127,9 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
     module_.Reset();
     FILE_LOG(logINFO) << "Module Device Opened Successfully...";
     isOpened_ = true;
+
+    
+    log_card_info();
 
     set_defaults();
     //
@@ -277,4 +281,34 @@ void X6_1000::set_defaults() {
     set_trigger_src();
     set_decimation();
     set_active_channels();
+}
+
+/**************************************************************
+* Waveform source demo code
+* This code is to demo access to default II FGPA wavform source
+* from library.
+***************************************************************/
+
+// X6_1000::ErrorCodes X6_1000::set_waveform_generator(bool enabled/*, type */) {
+//     Builder.Settings.WaveType = 1;
+//     Builder.Settings.WaveformFrequency = 1.0f;
+//     Builder.Settings.WaveformAmplitude = 95.04f;
+//     Builder.Settings.TwoToneMode = false;
+//     Builder.Settings.TwoToneFrequency = 1.01f;
+//     Builder.Settings.SingleChannelMode = true;
+//     Builder.Settings.SingleChannelChannel = 0;
+// }
+
+void X6_1000::log_card_info() {
+    FILE_LOG(logINFO) << std::hex << "Logic Version: " << module_.Info().FpgaLogicVersion()
+        << ", Hdw Variant: " << module_.Info().FpgaHardwareVariant()
+        << ", Revision: " << module_.Info().PciLogicRevision()
+        << ", Subrevision: " << module_.Info().FpgaLogicSubrevision();
+
+    FILE_LOG(logINFO)  << std::hex << "Board Family: " << module_.Info().PciLogicFamily()
+        << ", Type: " << module_.Info().PciLogicType()
+        << ", Board Revision: " << module_.Info().PciLogicPcb()
+        << ", Chip: " << module_.Info().FpgaChipType();
+
+    FILE_LOG(logINFO)  << "PCI Express Lanes: " << module_.Debug()->LaneCount();
 }
