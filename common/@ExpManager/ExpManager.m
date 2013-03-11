@@ -68,7 +68,8 @@ classdef ExpManager < handle
             end
             structfun(@turn_uwave_off, obj.instruments); 
             
-            %Clean up the output file
+            %If we botched something and ctrl-c'd out then mark the file as
+            %incomplete
             if isa(obj.dataFileHandler, 'HDF5DataHandler') && obj.dataFileHandler.fileOpen == 1
                 obj.dataFileHandler.close();
                 obj.dataFileHandler.markAsIncomplete();
@@ -206,6 +207,7 @@ classdef ExpManager < handle
             delete(obj.plotScopeTimer);
             %clean up DataReady listeners
             cellfun(@delete, obj.listeners);
+            
         end
         
         %Helper function to take data (basically, start/stop AWGs and
@@ -284,22 +286,42 @@ classdef ExpManager < handle
                     if reset || ~isfield(axesHandles, [measName{1} '_abs']) || ~isfield(plotHandles, [measName{1} '_abs']) || ~ishandle(axesHandles.([measName{1} '_abs']))
                         axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
                         axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
+                        sizes = cellfun(@(x) length(x.points), obj.sweeps);
                         switch length(setdiff(size(measData), 1))
                             case 1
-                                plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), abs(measData));
+                                %Find non-singleton sweep dimension
+                                goodSweepIdx = find(sizes ~= 1, 1);
+                                plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx}.plotPoints, abs(measData));
+                                xlabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx}.label);
                                 ylabel(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                                plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), (180/pi)*angle(measData));
+                                plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx}.plotPoints, (180/pi)*angle(measData));
                                 ylabel(axesHandles.([measName{1} '_phase']), 'Phase')
+                                xlabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx}.label);
+                                
                             case 2
-                                plotHandles.([measName{1} '_abs']) = imagesc(abs(measData), 'Parent', axesHandles.([measName{1} '_abs']));
+                                goodSweepIdx = find(sizes ~= 1, 2);
+                                xPoints = obj.sweeps{goodSweepIdx(2)}.plotPoints;
+                                yPoints = obj.sweeps{goodSweepIdx(1)}.plotPoints;
+                                plotHandles.([measName{1} '_abs']) = imagesc(xPoints, yPoints, abs(measData), 'Parent', axesHandles.([measName{1} '_abs']));
                                 title(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                                plotHandles.([measName{1} '_phase']) = imagesc((180/pi)*angle(measData), 'Parent', axesHandles.([measName{1} '_phase']));
+                                xlabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx(2)}.label);
+                                ylabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx(1)}.label);
+                                plotHandles.([measName{1} '_phase']) = imagesc(xPoints, yPoints, (180/pi)*angle(measData), 'Parent', axesHandles.([measName{1} '_phase']));
                                 title(axesHandles.([measName{1} '_phase']), 'Phase')
+                                xlabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx(2)}.label);
+                                ylabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx(1)}.label);
                             case 3
-                                plotHandles.([measName{1} '_abs']) = imagesc(abs(squeeze(measData(1,:,:))), 'Parent', axesHandles.([measName{1} '_abs']));
+                                goodSweepIdx = find(sizes ~= 1, 2);
+                                xPoints = obj.sweeps{goodSweepIdx(2)}.plotPoints;
+                                yPoints = obj.sweeps{goodSweepIdx(1)}.plotPoints;
+                                plotHandles.([measName{1} '_abs']) = imagesc(xPoints, yPoints, abs(squeeze(measData(1,:,:))), 'Parent', axesHandles.([measName{1} '_abs']));
                                 title(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                                plotHandles.([measName{1} '_phase']) = imagesc((180/pi)*angle(squeeze(measData(1,:,:))), 'Parent', axesHandles.([measName{1} '_phase']));
+                                xlabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx(2)}.label);
+                                ylabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx(1)}.label);
+                                plotHandles.([measName{1} '_phase']) = imagesc(xPoints, yPoints, (180/pi)*angle(squeeze(measData(1,:,:))), 'Parent', axesHandles.([measName{1} '_phase']));
                                 title(axesHandles.([measName{1} '_phase']), 'Phase')
+                                xlabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx(2)}.label);
+                                ylabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx(1)}.label);
                         end
                     else
                         switch length(setdiff(size(measData), 1))
