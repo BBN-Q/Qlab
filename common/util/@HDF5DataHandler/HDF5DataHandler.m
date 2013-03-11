@@ -251,13 +251,12 @@ classdef HDF5DataHandler < handle
         function close(obj)
             % all functions should close the FID, so don't need to do
             % anything
-            %H5F.close(obj.FID);
             obj.fileOpen = 0;
         end
         
         function markAsIncomplete(obj)
             [path, name, ~] = fileparts(obj.fileName);
-            movefile(fullname, fullfile(path, [name '.incomplete']));
+            movefile(obj.fileName, fullfile(path, [name '.incomplete']));
         end
         
         % helper functions for reading and writing header data
