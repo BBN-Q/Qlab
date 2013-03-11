@@ -109,6 +109,9 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             %mode_string = ':freq:mode fixed'; %set to fixed
             %obj.write(mode_string);
             obj.write(gpib_string);
+
+            %Wait for frequency to settle
+            pause(0.02);
         end
         function obj = set.power(obj, value)
             gpib_string = ':power %ddbm;';
