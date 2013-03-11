@@ -94,6 +94,13 @@ function data = loadData(makePlot, fullpath)
     if data.nbrDataSets == 1
         data.abs_Data = data.abs_Data{1};
         data.phase_Data = data.phase_Data{1};
+        data.xpoints = data.xpoints{1};
+        if isfield(data, 'ypoints')
+            data.ypoints = data.ypoints{1};
+        end
+        if isfield(data, 'zpoints')
+            data.zpoints = data.zpoints{1};
+        end
     end
 
     % helper function to find the nth parent of directory given in 'path'
