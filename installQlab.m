@@ -7,6 +7,7 @@ function installQlab()
     setpref('qlab', 'pulseParamsBundleFile', fullfile(answer{1}, 'pulseParams.json'));
     setpref('qlab', 'Qubit2ChannelMap', fullfile(answer{1}, 'Qubit2ChannelMap.json'));
     setpref('qlab', 'ExpQuickPickFile', fullfile(answer{1}, 'ExpQuickPick.json'));
+    setpref('qlab', 'instrument_library', fullfile(answer{1}, 'instrument_library.json'));
     
     % copy example files if param file and channel map don't exist
     srcCfgPath = fullfile(fileparts(mfilename('fullpath')), 'experiments/muWaveDetection/cfg/');
