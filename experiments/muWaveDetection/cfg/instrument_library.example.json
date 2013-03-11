@@ -1,0 +1,34 @@
+{
+	"scope": {
+		"type": "AlazarATS9870",
+		"address": "1"
+		},
+	"BBNAPS1": {
+		"type": "APS",
+		"address": "AHUT90VI"
+	},
+	"BBNAPS2": {
+		"type": "APS",
+		"address": "AHUT94GX"
+	},
+	"Source1": {
+		"type": "AgilentN5183A",
+		"address": "10"
+	},
+	"Source2": {
+		"type": "AgilentN5183A",
+		"address": "11"
+	},
+	"Source3": {
+		"type": "AgilentN5183A",
+		"address": "12"
+	},
+	"Source4": {
+		"type": "HolzworthHS9000",
+		"address": "HS9004A-238-1"
+	},
+	"SpecAnalyzer1": {
+		"type": "HP71000",
+		"address": 18
+	}
+}
