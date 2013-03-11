@@ -36,8 +36,6 @@ classdef Frequency < sweeps.Sweep
             % generate frequency points
             obj.points = start:step:stop;
             obj.numSteps = length(obj.points);
-            obj.plotRange.start = start;
-            obj.plotRange.end = stop;
         end
         
         % frequency stepper

@@ -17,7 +17,7 @@
 classdef Sweep < handle
 	properties
 		label = 'Sweep'
-		plotRange
+		plotPoints
 		points
         numSteps
 		Instr
@@ -25,5 +25,11 @@ classdef Sweep < handle
 	
 	methods (Abstract)
 		step(obj, index)
-	end
+    end
+    
+    methods
+        function val = get.plotPoints(obj)
+            val = obj.points;
+        end
+    end
 end

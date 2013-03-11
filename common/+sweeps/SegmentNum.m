@@ -33,8 +33,6 @@
             %Since this is done on the AWG the number of steps is actually
             %1
             obj.numSteps = 1;
-			obj.plotRange.start = start;
-			obj.plotRange.end = stop;
 		end
 		
 		% frequency stepper

@@ -64,8 +64,6 @@ classdef AWGChannel < sweeps.Sweep
             obj.points = start:step:stop;
             obj.numSteps = length(obj.points);
             
-            obj.plotRange.start = start;
-            obj.plotRange.end = stop;
         end
         
         function stepAmplitude(obj, index)
