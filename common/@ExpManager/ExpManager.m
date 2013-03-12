@@ -173,12 +173,20 @@ classdef ExpManager < handle
                         % pull data out of measurements
                         stepData = structfun(@(m) m.get_data(), obj.measurements, 'UniformOutput', false);
                         for measName = fieldnames(stepData)'
-                            % what we want to do is:
-                            % obj.data.(measNames{ct})(ct(1), ct(2), ..., ct(n-1), :) = stepData{ct};
-                            % lacking an idiomatic way to build the generic
-                            % assignment, we manually call subsasgn
-                            indexer = struct('type', '()', 'subs', {[num2cell(ct(1:end-1)), ':']});
-                            obj.data.(measName{1}) = subsasgn(obj.data.(measName{1}), indexer, stepData.(measName{1}));
+                            if isa(obj.sweeps{end}, 'sweeps.SegmentNum')
+                                % we are sweeping segment number, so we
+                                % have an entire row of data
+                                % what we want to do is:
+                                % obj.data.(measNames{ct})(ct(1), ct(2), ..., ct(n-1), :) = stepData{ct};
+                                % lacking an idiomatic way to build the generic
+                                % assignment, we manually call subsasgn
+                                indexer = struct('type', '()', 'subs', {[num2cell(ct(1:end-1)), ':']});
+                                obj.data.(measName{1}) = subsasgn(obj.data.(measName{1}), indexer, stepData.(measName{1}));
+                            else
+                                % we have a single point
+                                indexer = struct('type', '()', 'subs', {num2cell(ct)});
+                                obj.data.(measName{1}) = subsasgn(obj.data.(measName{1}), indexer, stepData.(measName{1}));
+                            end
                         end
                         plotResetFlag = all(ct == 1);
                         obj.plot_data(plotResetFlag);
