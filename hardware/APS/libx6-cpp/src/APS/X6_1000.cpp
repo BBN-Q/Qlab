@@ -86,14 +86,14 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
     //
     //  Configure Stream Event Handlers
     // Stream.OnVeloDataRequired.SetEvent(this, &ApplicationIo::HandleDataRequired);
-    // Stream.DirectDataMode(false);
+    stream_.DirectDataMode(false);
     // Stream.OnVeloDataAvailable.SetEvent(this, &ApplicationIo::HandleDataAvailable);
 
     // Stream.OnAfterStop.SetEvent(this, &ApplicationIo::HandleAfterStop);
     // Stream.OnAfterStop.Synchronize();
 
-    //Stream.RxLoadBalancing(false);
-    //Stream.TxLoadBalancing(false);
+    stream_.RxLoadBalancing(false);
+    stream_.TxLoadBalancing(false);
 
     // Timer.OnElapsed.SetEvent(this, &ApplicationIo::HandleTimer);
     // Timer.OnElapsed.Thunk();
@@ -132,13 +132,12 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
     log_card_info();
 
     set_defaults();
-    //
+    
     //  Connect Stream
-    //Stream.ConnectTo(&(Module.Ref()));
-    //FStreamConnected = true;
-    //FILE_LOG(logINFO) << "Stream Connected..." << endl;
+    stream_.ConnectTo(&module_);
+    
+    FILE_LOG(logINFO) << "Stream Connected..." << endl;
 
-    //PrefillPacketCount = Stream.PrefillPacketCount();
     
     //
     //  Initialize VeloMergeParse
@@ -325,15 +324,21 @@ X6_1000::ErrorCodes X6_1000::enable_test_generator(X6_1000::FPGAWaveformType wfT
     module_.Output().TestModeEnabled( true, wfType_ );  // enable , mode
     module_.Output().TestFrequency( frequencyMHz * 1e6 ); // frequency in Hz
 
+    // enable software trigger
+    module_.Output().SoftwareTrigger(true);
+
     // disable prefill
-    //Stream.PrefillPacketCount(0);
-    //Trig.AtStreamStart();
+    stream_.PrefillPacketCount(0);
+    trig_.AtStreamStart();
     //  Start Streaming
-    //Stream.Start();
+    stream_.Start();
     return SUCCESS;
 }
 
 X6_1000::ErrorCodes X6_1000::disable_test_generator() {
     module_.Output().TestModeEnabled( false, wfType_);
+    stream_.Stop();
+    trig_.AtStreamStop();
+    module_.Output().SoftwareTrigger(false);
     return SUCCESS;
 }
