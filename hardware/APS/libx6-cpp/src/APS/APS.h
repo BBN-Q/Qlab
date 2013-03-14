@@ -80,6 +80,8 @@ public:
 */
 
 	float get_logic_temperature();
+	int enable_test_generator(int,float);
+	int disable_test_generator();
 
 	//The owning APSRack needs access to some private members
 	friend class APSRack;

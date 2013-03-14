@@ -2,6 +2,7 @@
 
 #include "libaps.h"
 #include "constants.h"
+#include <thread>
 
 using namespace std;
 
@@ -53,6 +54,23 @@ int main ()
 
   cout << "set channel(0) enabled = 1" << endl;
 
+  set_channel_enabled(0,0,true);
+
+  cout << "enable ramp output" << endl;
+  
+  enable_test_generator(0,0,0.001);
+
+  std::this_thread::sleep_for(std::chrono::seconds(5));
+
+  cout << "enable sine wave output" << endl;
+
+  disable_test_generator(0);
+  enable_test_generator(0,1,0.001);
+
+  std::this_thread::sleep_for(std::chrono::seconds(5));
+
+  cout << "disabling channel" << endl;
+  disable_test_generator(0);
   set_channel_enabled(0,0,true);
 
   cout << "get channel(0) enable: " << get_channel_enabled(0,0) << endl;

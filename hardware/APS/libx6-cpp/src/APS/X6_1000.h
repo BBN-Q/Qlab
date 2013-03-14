@@ -51,6 +51,11 @@ public:
 		EXTERNAL_TRIGGER         /**< External trigger */
 	};
 
+	enum FPGAWaveformType {
+		WAVEFORM_RAMP = 0,    
+		WAVEFORM_SINE         
+	};
+
 	/** Default constructor targets board 0
 	 *
 	 */
@@ -134,6 +139,11 @@ public:
 	 *  \returns Actual PLL frequnecy (in MHz) returned from board
 	 */
 	double get_pll_frequency();
+
+	/** debug example uses FPGA streamer 
+	 */
+	ErrorCodes enable_test_generator(FPGAWaveformType wfType, float frequencyMHz);
+	ErrorCodes disable_test_generator();
 	
 	ErrorCodes   Open();
     bool  isOpen();
@@ -159,6 +169,8 @@ private:
 	ErrorCodes set_active_channels();
 	void set_defaults();
 	void log_card_info();
+
+	FPGAWaveformType wfType_;	 /**< cached test waveform generator */
 
 	/* Waveform mode demo */
 	//Innovative::VitaWaveBuilder     Builder;

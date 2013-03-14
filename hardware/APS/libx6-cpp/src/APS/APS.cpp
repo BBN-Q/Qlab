@@ -1657,3 +1657,14 @@ void BankBouncerThread::run(){
 float APS::get_logic_temperature() {
 	return handle_.get_logic_temperature();
 }
+
+int APS::enable_test_generator(int mode, float frequency) {
+	X6_1000::FPGAWaveformType wfType;
+
+	wfType = (mode == X6_1000::WAVEFORM_RAMP) ? X6_1000::WAVEFORM_RAMP : X6_1000::WAVEFORM_SINE;
+	return handle_.enable_test_generator(wfType,frequency);
+}
+
+int APS::disable_test_generator() {
+	return handle_.disable_test_generator();
+}

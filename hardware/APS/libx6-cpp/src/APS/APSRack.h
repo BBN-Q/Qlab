@@ -84,7 +84,10 @@ public:
 	int raw_read(int, FPGASELECT);
 	int read_register(int, FPGASELECT, int);
 
+	// X6-1000M Test interface
 	float get_logic_temperature(int);
+	int enable_test_generator(int, int, float);
+	int disable_test_generator(int);
 
 private:
 	APSRack(const APSRack&) = delete;

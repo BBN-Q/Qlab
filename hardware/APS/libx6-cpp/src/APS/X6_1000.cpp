@@ -312,3 +312,28 @@ void X6_1000::log_card_info() {
 
     FILE_LOG(logINFO)  << "PCI Express Lanes: " << module_.Debug()->LaneCount();
 }
+
+X6_1000::ErrorCodes X6_1000::enable_test_generator(X6_1000::FPGAWaveformType wfType, float frequencyMHz) {
+    // Mimic Test Generater Mode from Stream Example
+
+
+    wfType_ = wfType;
+
+    //StreamPreconfigure();
+    
+    //  Output Test Generator Setup
+    module_.Output().TestModeEnabled( true, wfType_ );  // enable , mode
+    module_.Output().TestFrequency( frequencyMHz * 1e6 ); // frequency in Hz
+
+    // disable prefill
+    //Stream.PrefillPacketCount(0);
+    //Trig.AtStreamStart();
+    //  Start Streaming
+    //Stream.Start();
+    return SUCCESS;
+}
+
+X6_1000::ErrorCodes X6_1000::disable_test_generator() {
+    module_.Output().TestModeEnabled( false, wfType_);
+    return SUCCESS;
+}

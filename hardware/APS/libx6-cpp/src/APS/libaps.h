@@ -90,7 +90,11 @@ EXPORT int raw_read(int, int);
 EXPORT int read_register(int, int, int);
 EXPORT int program_FPGA(int, char*, int, int);
 
+// II X6-1000M Test Interface
 EXPORT float get_logic_temperature(int);
+EXPORT int enable_test_generator(int,int,float);
+EXPORT int disable_test_generator(int);
+
 
 
 #ifdef __cplusplus

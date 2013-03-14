@@ -244,6 +244,14 @@ float get_logic_temperature(int deviceID) {
 	return APSRack_.get_logic_temperature(deviceID);
 }
 
+int enable_test_generator(int deviceID, int mode, float frequency) {
+	return APSRack_.enable_test_generator(deviceID, mode, frequency);
+}
+
+int disable_test_generator(int deviceID) {
+	return APSRack_.disable_test_generator(deviceID);
+}
+
 #ifdef __cplusplus
 }
 #endif
