@@ -300,7 +300,7 @@ classdef ExpManager < handle
                         axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
                         axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
                         sizes = cellfun(@(x) length(x.points), obj.sweeps);
-                        switch length(setdiff(size(measData), 1))
+                        switch nsdims(measData)
                             case 1
                                 %Find non-singleton sweep dimension
                                 goodSweepIdx = find(sizes ~= 1, 1);
