@@ -60,18 +60,18 @@ int main ()
   
   enable_test_generator(0,0,0.001);
 
-  std::this_thread::sleep_for(std::chrono::seconds(5));
+  std::this_thread::sleep_for(std::chrono::seconds(30));
 
   cout << "enable sine wave output" << endl;
 
   disable_test_generator(0);
   enable_test_generator(0,1,0.001);
 
-  std::this_thread::sleep_for(std::chrono::seconds(5));
+  std::this_thread::sleep_for(std::chrono::seconds(30));
 
   cout << "disabling channel" << endl;
   disable_test_generator(0);
-  set_channel_enabled(0,0,true);
+  set_channel_enabled(0,0,false);
 
   cout << "get channel(0) enable: " << get_channel_enabled(0,0) << endl;
 
