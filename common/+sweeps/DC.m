@@ -16,10 +16,6 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 classdef DC < sweeps.Sweep
-	properties
-		channel
-	end
-	
 	methods
 		% constructor
 		function obj = DC(sweepParams, Instr)
@@ -27,8 +23,6 @@ classdef DC < sweeps.Sweep
 			
             % look for an instrument with the name 'sourceID'
             obj.Instr = Instr.(sweepParams.sourceID);
-			% grab the instrument channel
-			obj.channel = sweepParams.channel;
 			
 			% generate power points
 			start = sweepParams.start;
@@ -43,13 +37,7 @@ classdef DC < sweeps.Sweep
 		
 		% DC stepper
 		function step(obj, index)
-			% hard coded to set coarse pot on BBN DC source. Make this more
-			% flexible in the future.
-			% loop through channels in case an array of channels is
-			% specified
-			for i = obj.channel
-				obj.Instr.SetSinglePot(i, 0, obj.points(index));
-			end
+			obj.Instr.value = obj.points(index);
 			pause(0.5); % pause 500 ms for settling
 		end
 	end
