@@ -6,6 +6,7 @@
 
 #include <X6_1000M_Mb.h>
 #include <VitaPacketStream_Mb.h>
+#include <SoftwareTimer_Mb.h>
 #include <Application/TriggerManager_App.h>
 
 #ifndef X6_1000_H_
@@ -152,11 +153,13 @@ public:
 
     const int BusmasterSize = 4; /**< Rx & Tx BusMaster size in MB */
     const int MHz = 1e6;         /**< Constant for converting MHz */
+    const int Meg = 1024 * 1024;
  
 private:
 	Innovative::X6_1000M            module_; /**< Malibu module */
-	Innovative::TriggerManager      trig_;   /**< Malibu trigger manager */
+	Innovative::TriggerManager      trigger_;   /**< Malibu trigger manager */
 	Innovative::VitaPacketStream    stream_;
+	Innovative::SoftwareTimer       timer_;
 
 	unsigned int numBoards_;      /**< cached number of boards */
 	unsigned int deviceID_;       /**< board ID (aka target number) */
@@ -171,6 +174,23 @@ private:
 	ErrorCodes set_active_channels();
 	void set_defaults();
 	void log_card_info();
+
+	// Malibu Event handlers
+	
+	void  HandleDisableTrigger(OpenWire::NotifyEvent & Event);
+	void  HandleExternalTrigger(OpenWire::NotifyEvent & Event);
+    void  HandleSoftwareTrigger(OpenWire::NotifyEvent & Event);
+
+	void  HandleBeforeStreamStart(OpenWire::NotifyEvent & Event);
+    void  HandleAfterStreamStart(OpenWire::NotifyEvent & Event);
+    void  HandleAfterStreamStop(OpenWire::NotifyEvent & Event);
+
+	void  HandleDataRequired(Innovative::VitaPacketStreamDataEvent & Event);
+    void  HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event);
+
+	void  HandleTimer(OpenWire::NotifyEvent & Event);
+
+	void  VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event);
 
 	FPGAWaveformType wfType_;	 /**< cached test waveform generator */
 
