@@ -18,6 +18,9 @@ int main ()
   if (numDevices < 1)
   	return 0;
 
+  char s[] = "stdout";
+  set_log(s);
+
   cout << "Attempting to initialize libaps" << endl;
 
   init();
