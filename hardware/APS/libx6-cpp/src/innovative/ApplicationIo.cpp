@@ -18,6 +18,7 @@
 #include <BufferHeader_Mb.h>
 #include <Application/StaticWaveform_App.h>
 #include <Exception_Mb.h>
+#include <iostream>
 
 using namespace Innovative;
 //using namespace InnovativeKernel;
@@ -30,8 +31,8 @@ using namespace std;
 //  constructor for class ApplicationIo
 //---------------------------------------------------------------------------
 
-ApplicationIo::ApplicationIo(IUserInterface * ui)
-    :  FiclIo(ui), Settings(this), UI(ui),
+ApplicationIo::ApplicationIo()
+    :  Settings(this), 
        FOpened(false), FStreamConnected(false), 
        Stopped(true),
        RxTime(6), RxBytesPerBlock(6),
@@ -51,17 +52,17 @@ ApplicationIo::ApplicationIo(IUserInterface * ui)
     //  Set up Loggers and graphs
     {
     std::stringstream ss;
-    ss << Settings.Root() << "Data.bin";
-    Logger.FileName(ss.str());
-    Graph.BinFile(Logger.FileName());
-    Graph.System().ServerSlotName("Stream");
+//    ss << Settings.Root() << "Data.bin";
+//   Logger.FileName(ss.str());
+//   Graph.BinFile(Logger.FileName());
+//   Graph.System().ServerSlotName("Stream");
     }
     {
     std::stringstream ss;
-    ss << Settings.Root() << "VeloData.bin";
-    VMPLogger.FileName(ss.str());
-    VMPGraph.BinFile(VMPLogger.FileName());
-    VMPGraph.System().ServerSlotName("VMPStream");
+  //  ss << Settings.Root() << "VeloData.bin";
+    // VMPLogger.FileName(ss.str());
+    // VMPGraph.BinFile(VMPLogger.FileName());
+    // VMPGraph.System().ServerSlotName("VMPStream");
     }
 
     Timer.Interval(1000);
@@ -96,7 +97,7 @@ unsigned int ApplicationIo::BoardCount()
 
 void ApplicationIo::Open()
 {
-    UI->GetSettings();
+    //UI->GetSettings();
     //
     //  Configure Trigger Manager Event Handlers
     Trig.OnDisableTrigger.SetEvent(this, &ApplicationIo::HandleDisableTrigger);
@@ -106,11 +107,11 @@ void ApplicationIo::Open()
     //
     //  Configure Module Event Handlers
     Module().OnBeforeStreamStart.SetEvent(this, &ApplicationIo::HandleBeforeStreamStart);
-    Module().OnBeforeStreamStart.Synchronize();
+    Module().OnBeforeStreamStart.Unsynchronize();
     Module().OnAfterStreamStart.SetEvent(this, &ApplicationIo::HandleAfterStreamStart);
-    Module().OnAfterStreamStart.Synchronize();
+    Module().OnAfterStreamStart.Unsynchronize();
     Module().OnAfterStreamStop.SetEvent(this, &ApplicationIo::HandleAfterStreamStop);
-    Module().OnAfterStreamStop.Synchronize();
+    Module().OnAfterStreamStop.Unsynchronize();
 
     //
     //  Alerts
@@ -123,13 +124,13 @@ void ApplicationIo::Open()
     Stream.OnVeloDataAvailable.SetEvent(this, &ApplicationIo::HandleDataAvailable);
 
     Stream.OnAfterStop.SetEvent(this, &ApplicationIo::HandleAfterStop);
-    Stream.OnAfterStop.Synchronize();
+    Stream.OnAfterStop.Unsynchronize();
 
     Stream.RxLoadBalancing(false);
     Stream.TxLoadBalancing(false);
 
     Timer.OnElapsed.SetEvent(this, &ApplicationIo::HandleTimer);
-    Timer.OnElapsed.Thunk();
+    Timer.OnElapsed.Unsynchronize();
 
     // Insure BM size is a multiple of four MB
     const int Meg = 1024 * 1024;
@@ -175,9 +176,9 @@ void ApplicationIo::Open()
     
     //
     //  Initialize VeloMergeParse
-    VMP.OnDataAvailable.SetEvent(this, &ApplicationIo::VMPDataAvailable);
-    std::vector<int> sids = Module.AllInputVitaStreamIdVector();
-    VMP.Init( sids );
+ //  VMP.OnDataAvailable.SetEvent(this, &ApplicationIo::VMPDataAvailable);
+ //  std::vector<int> sids = Module.AllInputVitaStreamIdVector();
+ //  VMP.Init( sids );
 
     DisplayLogicVersion();
 }
@@ -226,6 +227,7 @@ void ApplicationIo::StreamPreconfigure()
         {
         bool active = Settings.Tx.ActiveChannels[i] ? true : false;
         if (active==true)
+            cout << "Enabling Output channel " << i << endl;
             Module().Output().ChannelEnabled(i, true);
         }
     //  Channel Enables
@@ -273,7 +275,7 @@ bool ApplicationIo::StartStreaming()
     //
     //  Set up Parameters for Data Streaming
     //  ...First have UI get settings into our settings store
-    UI->GetSettings();
+//    UI->GetSettings();
 
     //  if auto-preconfiging, call preconfig here.
     if (Settings.AutoPreconfig)
@@ -294,7 +296,7 @@ bool ApplicationIo::StartStreaming()
             std::stringstream msg;
             msg << "Error: Ouput frame count must be a multiple of " << framesize;
             Log(msg.str());
-            UI->AfterStreamStop();
+//            UI->AfterStreamStop();
             return false;
             }
         }
@@ -308,7 +310,7 @@ bool ApplicationIo::StartStreaming()
             std::stringstream msg;
             msg << "Error: Input frame count must be a multiple of " << framesize;
             Log(msg.str());
-            UI->AfterStreamStop();
+  //          UI->AfterStreamStop();
             return false;
             }
         }
@@ -318,8 +320,8 @@ bool ApplicationIo::StartStreaming()
     WordsToLog = Settings.Rx.SamplesToLog / SamplesPerWord;
     //
     //  Configure Merge Parser
-    VMP.Resize(Settings.Rx.MergePacketSize);
-    VMP.Clear();
+//    VMP.Resize(Settings.Rx.MergePacketSize);
+//    VMP.Clear();
     // Configure Trigger Mananger
     Trig.DelayedTriggerPeriod(Settings.Tx.TriggerDelayPeriod);
 	Trig.ExternalTrigger(Settings.Rx.ExternalTrigger ? true : false || Settings.Tx.ExternalTrigger ? true : false);
@@ -334,7 +336,7 @@ bool ApplicationIo::StartStreaming()
     if (!Module().Output().ActiveChannels() && !Module().Input().ActiveChannels())
         {
         Log("Error: Must enable at least one channel");
-        UI->AfterStreamStop();
+    //    UI->AfterStreamStop();
         return false;
         }
 
@@ -388,8 +390,10 @@ bool ApplicationIo::StartStreaming()
     Module().Velo().ForceVeloPacketSize(Settings.Rx.ForceSize);
     //
     //  Output Test Generator Setup
+    cout << "Output Test config" << Settings.Tx.TestGenEnable <<  " " << Settings.Tx.TestGenMode << endl;
     Module.SetOutputTestConfiguration( Settings.Tx.TestGenEnable, Settings.Tx.TestGenMode );
     Module.SetInputTestConfiguration( Settings.Rx.TestCounterEnable, Settings.Rx.TestGenMode );
+    cout << "Output Test Freq" << Settings.Tx.TestFrequencyMHz <<  endl;
     Module().Output().TestFrequency( Settings.Tx.TestFrequencyMHz * 1e6 );
     Module().Input().TestFrequency( Settings.Tx.TestFrequencyMHz * 1e6 );
 
@@ -414,29 +418,29 @@ bool ApplicationIo::StartStreaming()
     //  Start Player if in use
     if (Settings.Tx.PlayFromFile.Enable)
         {
-        Player.FileName(Settings.Tx.PlayFromFile.Filename);
-        bool player_opened = Player.Start();
-        if (player_opened==false)
-            Log("PlayFromFile Open Error.");
+     //   Player.FileName(Settings.Tx.PlayFromFile.Filename);
+//        bool player_opened = Player.Start();
+//        if (player_opened==false)
+//            Log("PlayFromFile Open Error.");
         }
     //
     //  Start Loggers on active channels
 	if (Settings.Rx.PlotEnable)
 		{
-		Graph.Quit();
-		VMPGraph.Quit();
+		// Graph.Quit();
+		// VMPGraph.Quit();
 		}
 
 	if (Settings.Rx.LoggerEnable || Settings.Rx.PlotEnable)
 		{
-		Logger.Start();     // we will use one or the other...
-		VMPLogger.Start();
+		// Logger.Start();     // we will use one or the other...
+		// VMPLogger.Start();
 		}
     Trig.AtStreamStart();
     //  Start Streaming
     Stopped = false;
     Stream.Start();
-    RunTimeSW.Start();
+//    RunTimeSW.Start();
     Log("Stream Mode started");
 
     return true;
@@ -500,14 +504,14 @@ void  ApplicationIo::HandleDataAvailable(VitaPacketStreamDataEvent & Event)
         if (Settings.Rx.LoggerEnable)
             if (FWordCount < WordsToLog)
                 {
-                Logger.LogWithHeader(Packet);
+//                Logger.LogWithHeader(Packet);
                 }
         }
     else
         {
         //  merge parse processing
-        VMP.Append(Packet);
-        VMP.Parse();
+//        VMP.Append(Packet);
+//        VMP.Parse();
         }
  
 
@@ -538,7 +542,7 @@ void  ApplicationIo::TallyBlock(size_t bytes)
     if (Settings.Rx.AutoStop && IsDataLoggingCompleted() && !Stopped)
         {
         // Stop counter and display it
-		double elapsed = RunTimeSW.Stop();
+		double elapsed = 0;//RunTimeSW.Stop();
 
         StopStreaming();
         Log("Stream Mode Stopped automatically");
@@ -578,14 +582,14 @@ void ApplicationIo::SendOneBlock(VitaPacketStream * PS)
     //    to send here
     if (Settings.Tx.PlayFromFile.Enable)
         {
-        if (Player.Percent()<100)
-            {
-            VeloBuffer VB;
-            Player.PlayWithHeader(VB);
-            PS->Send(0, VB);
-            ++FTxBlockCount;
-            }
-        }
+        // if (Player.Percent()<100)
+        //     {
+        //     VeloBuffer VB;
+        //     Player.PlayWithHeader(VB);
+        //     PS->Send(0, VB);
+        //     ++FTxBlockCount;
+        //     }
+         }
     else
         {
         //  Send the single WF packet
@@ -607,7 +611,7 @@ void  ApplicationIo::VMPDataAvailable(VeloMergeParserDataAvailable & Event)
         if (FWordCount < WordsToLog)
             {
             //  Log Data To VMP file - oops, use ceiling?
-            VMPLogger.LogWithHeader(Event.Data);
+   //         VMPLogger.LogWithHeader(Event.Data);
             }
                 
 }
@@ -925,8 +929,9 @@ bool ApplicationIo::DacInternalCal()
 
 void  ApplicationIo::Log(const std::string & msg)
 {
-    ProcessStatusEvent e(msg);
-    OnLog.Execute(e);
+    cout << msg << endl;
+    // ProcessStatusEvent e(msg);
+    // OnLog.Execute(e);
 }
 
 //---------------------------------------------------------------------------
@@ -984,29 +989,29 @@ void ApplicationIo::HandleAfterStop(OpenWire::NotifyEvent & /*Event*/)
     //  Stop Loggers on active Channels
     if (Settings.Rx.LoggerEnable || Settings.Rx.PlotEnable)
         {
-        Logger.Stop();
-        InitBddFile(Graph);
+    //    Logger.Stop();
+    //    InitBddFile(Graph);
         //
         //  Output Remaining Data
-        VMP.Flush();
-        VMPLogger.Stop();
-        InitVMPBddFile(VMPGraph);
+    //    VMP.Flush();
+    //    VMPLogger.Stop();
+    //    InitVMPBddFile(VMPGraph);
         
         if (Settings.Rx.MergeParseEnable==false)
             {
-            if (Logger.Logged() && Settings.Rx.PlotEnable)
-                Graph.Plot();
+     //       if (Logger.Logged() && Settings.Rx.PlotEnable)
+     //           Graph.Plot();
             }
         else
             {
-            if (VMPLogger.Logged() && Settings.Rx.PlotEnable)
-                VMPGraph.Plot();
+      //      if (VMPLogger.Logged() && Settings.Rx.PlotEnable)
+     //           VMPGraph.Plot();
             }
          }
 
-    Player.Stop();
+   // Player.Stop();
 
-    UI->AfterStreamStop();
+   // UI->AfterStreamStop();
 
     Log(std::string("Analog I/O Stopped"));
 }
@@ -1017,7 +1022,7 @@ void ApplicationIo::HandleAfterStop(OpenWire::NotifyEvent & /*Event*/)
 
 void ApplicationIo::HandleOnLog(Innovative::ProcessStatusEvent & Event)
 {
-    UI->Log(Event.Message);
+   // UI->Log(Event.Message);
 }
 
 //---------------------------------------------------------------------------
@@ -1027,7 +1032,7 @@ void ApplicationIo::HandleOnLog(Innovative::ProcessStatusEvent & Event)
 void ApplicationIo::HandleTimer(OpenWire::NotifyEvent & /*Event*/)
 {
     // Display status
-    UI->PeriodicStatus();
+    //UI->PeriodicStatus();
 
     Trig.AtTimerTick();
 }
@@ -1112,90 +1117,90 @@ ApplicationSettings::ApplicationSettings( ApplicationIo * owner )
       Owner(owner)
 {
     //  Board Settings
-    Install( ToIni("Target",                    Target,          0)  );
-    Install( ToIni("Rx.BMSize",                 Rx.BusmasterSize,   4)  );
-    Install( ToIni("Tx.BMSize",                 Tx.BusmasterSize,   4)  );
-    //Install( ToIni("LogicFailureTemperature",   LogicFailureTemperature,   85.0f)  );
+    Target=          0;
+    Rx.BusmasterSize=   4;
+    Tx.BusmasterSize=   4;
+    //Install( ToIni("LogicFailureTemperature"=   LogicFailureTemperature=   85.0f;
 
     //  Config Data
     //  ..Clock
-    Install( ToIni("ExtClockSrcSelection", ExtClockSrcSelection, 0)  );
-    Install( ToIni("ReferenceClockSource", ReferenceClockSource, 1)  );
-    Install( ToIni("ReferenceRate",        ReferenceRate,       10.0f)  );
-    Install( ToIni("SampleClockSource",    SampleClockSource, 1)  );
-    Install( ToIni("SampleRate",           SampleRate,  static_cast<float>(MaxOutRateMHz()))  );
+    ExtClockSrcSelection= 0;
+    ReferenceClockSource= 1;
+    ReferenceRate=       10.0f;
+    SampleClockSource= 1;
+    SampleRate=  static_cast<float>(MaxOutRateMHz());
     //  ..Trigger
-    Install( ToIni("ExternalTrigger",        Tx.ExternalTrigger,     0)  );
-    Install( ToIni("EdgeTrigger",            Tx.EdgeTrigger,         0)  );
-    Install( ToIni("Framed",                 Tx.Framed,              0)  );
-    Install( ToIni("FrameSize",              Tx.FrameSize,           0x4000)  );
-    Install( ToIni("ExtTriggerSrcSelection", ExtTriggerSrcSelection, 0)  );
-    Install( ToIni("Trigger Delay",          Tx.TriggerDelayPeriod,  1)  );
+    Tx.ExternalTrigger=     0;
+    Tx.EdgeTrigger=         0;
+    Tx.Framed=              0;
+    Tx.FrameSize=           0x4000;
+    ExtTriggerSrcSelection= 0;
+    Tx.TriggerDelayPeriod=  1;
     //  ..Analog
-    Install( ToIni("ActiveChannels", "Ch", Tx.ActiveChannels,    char(0) ));
-    Install( ToIni("TestGenEnable",        Tx.TestGenEnable,   false)  );
-    Install( ToIni("TestGenMode",          Tx.TestGenMode,         0)  );
-    Install( ToIni("TestFrequency",        Tx.TestFrequencyMHz,    10.0) );
-    Install( ToIni("AlertEnable", "Alert", AlertEnable,         char(0) ));
-    Install( ToIni("DecimationEnable",     Tx.DecimationEnable,    false)  );
-    Install( ToIni("DecimationFactor",     Tx.DecimationFactor,    1)  );
-    Install( ToIni("Tx.PulseEnable",       Tx.Pulse.Enable,      false)  );
-    Install( ToIni("Tx.PulsePeriod",       Tx.Pulse.Period,      10.0e6f)  );
-    Install( ToIni("Tx.PulseDelay",        Tx.Pulse.Delay,       0.0f)  );
-    Install( ToIni("Tx.PulseWidth",        Tx.Pulse.Width,       1.0e6f)  );
-    Install( ToIni("Tx.Pulse2Delay",       Tx.Pulse.Delay2,      0.0f)  );
-    Install( ToIni("Tx.Pulse2Width",       Tx.Pulse.Width2,      1.0e6f)  );
+    Tx.ActiveChannels= {1,1,1};
+    Tx.TestGenEnable=   true;
+    Tx.TestGenMode=         0;
+    Tx.TestFrequencyMHz=    10.0;
+    AlertEnable=  {1}      ;
+    Tx.DecimationEnable=    false;
+    Tx.DecimationFactor=    1;
+    Tx.Pulse.Enable=      false;
+    Tx.Pulse.Period=      10.0e6f;
+    Tx.Pulse.Delay=       0.0f;
+    Tx.Pulse.Width=       1.0e6f;
+    Tx.Pulse.Delay2=      0.0f;
+    Tx.Pulse.Width2=      1.0e6f;
     //  ..PlayFromFile
-    Install( ToIni("Tx.PlayFromFile.Enable",    Tx.PlayFromFile.Enable,     false)  );
-    Install( ToIni("Tx.PlayFromFile.Filename",  Tx.PlayFromFile.Filename,   std::string("WaveFileIn.bin"))  );
+    Tx.PlayFromFile.Enable=     false;
+    Tx.PlayFromFile.Filename=   std::string("WaveFileIn.bin");
 
     //  ..Streaming
-    Install( ToIni("PacketSize",           Tx.PacketSize,        0x10000)  );
-    Install( ToIni("AutoPreconfig",        AutoPreconfig,     true)  );
+    Tx.PacketSize=        0x10000;
+    AutoPreconfig=     true;
 
-    //  ..Wave Generator
-    Install( ToIni("WaveType",             Owner->Builder.Settings.WaveType,             1) );
-    Install( ToIni("WaveformFrequency",    Owner->Builder.Settings.WaveformFrequency,    1.0f) );
-    Install( ToIni("WaveformAmplitude",    Owner->Builder.Settings.WaveformAmplitude,    95.0f) );
-    Install( ToIni("WaveFile",             Owner->Builder.Settings.WaveFile,             std::string("")) );
-    Install( ToIni("TwoToneMode",          Owner->Builder.Settings.TwoToneMode,          false) );
-    Install( ToIni("TwoToneFrequency",     Owner->Builder.Settings.TwoToneFrequency,     1.01f) );
-    Install( ToIni("SingleChannelMode",    Owner->Builder.Settings.SingleChannelMode,    false) );
-    Install( ToIni("SingleChannelChannel", Owner->Builder.Settings.SingleChannelChannel, 0) );
+    //  ..Wave Generator1
+    Owner->Builder.Settings.WaveType=             1;
+    Owner->Builder.Settings.WaveformFrequency=    1.0f;
+    Owner->Builder.Settings.WaveformAmplitude=    95.0f;
+    Owner->Builder.Settings.WaveFile=             std::string("");
+    Owner->Builder.Settings.TwoToneMode=          false;
+    Owner->Builder.Settings.TwoToneFrequency=     1.01f;
+    Owner->Builder.Settings.SingleChannelMode=    false;
+    Owner->Builder.Settings.SingleChannelChannel= 0;
     //  ..Other
-    Install( ToIni("Debug Script",         DebugScript,  std::string("")) );
-    Install( ToIni("DebugVerbosity",       DebugVerbosity,  5) );   // vNormal
+    DebugScript=  std::string("");
+    DebugVerbosity=  5;   // vNormal
 
     // Rx
-    Install( ToIni("Rx.ExternalTrigger",        Rx.ExternalTrigger,             0)  );
-    Install( ToIni("Rx.EdgeTrigger",            Rx.EdgeTrigger,                 0)  );
-    Install( ToIni("Rx.Framed",                 Rx.Framed,                      0)  );
-    Install( ToIni("Rx.FrameSize",              Rx.FrameSize,                   0x4000)  );
-    Install( ToIni("Rx.PulseEnable",            Rx.Pulse.Enable,                false)  );
-    Install( ToIni("Rx.PulsePeriod",            Rx.Pulse.Period,                10.0e6f)  );
-    Install( ToIni("Rx.PulseDelay",             Rx.Pulse.Delay,                 0.0f)  );
-    Install( ToIni("Rx.PulseWidth",             Rx.Pulse.Width,                 1.0e6f)  );
-    Install( ToIni("Rx.Pulse2Delay",            Rx.Pulse.Delay2,                0.0f)  );
-    Install( ToIni("Rx.Pulse2Width",            Rx.Pulse.Width2,                1.0e6f)  );
-    Install( ToIni("Rx.TriggerDelay",           Rx.TriggerDelayPeriod,          1)  );
-    Install( ToIni("Rx.DecimationEnable",       Rx.DecimationEnable,            false)  );
-    Install( ToIni("Rx.DecimationFactor",       Rx.DecimationFactor,            1)  );
-    Install( ToIni("Rx.ActiveChannels", "Ch",   Rx.ActiveChannels,              char(0) ));
-    Install( ToIni("Rx.PacketSize",             Rx.PacketSize,                  0x10000)  );
-    Install( ToIni("Rx.ForceSize",              Rx.ForceSize,                   false)  );
-    Install( ToIni("Rx.TestGenEnable",          Rx.TestCounterEnable,           false)  );
-    Install( ToIni("Rx.TestGenMode",            Rx.TestGenMode,                 0)  );
-    Install( ToIni("Rx.MergeParseEnable",       Rx.MergeParseEnable,            false)  );
-    Install( ToIni("Rx.MergePacketSize",        Rx.MergePacketSize,             0x10000u)  );
+    Rx.ExternalTrigger=             0;
+    Rx.EdgeTrigger=                 0;
+    Rx.Framed=                      0;
+    Rx.FrameSize=                   0x4000;
+    Rx.Pulse.Enable=                false;
+    Rx.Pulse.Period=                10.0e6f;
+    Rx.Pulse.Delay=                 0.0f;
+    Rx.Pulse.Width=                 1.0e6f;
+    Rx.Pulse.Delay2=                0.0f;
+    Rx.Pulse.Width2=                1.0e6f;
+    Rx.TriggerDelayPeriod=          1;
+    Rx.DecimationEnable=            false;
+    Rx.DecimationFactor=            1;
+    Rx.ActiveChannels=     {0}       ;
+    Rx.PacketSize=                  0x10000;
+    Rx.ForceSize=                   false;
+    Rx.TestCounterEnable=           false;
+    Rx.TestGenMode=                 0;
+    Rx.MergeParseEnable=            false;
+    Rx.MergePacketSize=             0x10000u;
 
 	//  Streaming
-    Install( ToIni("Rx.LoggerEnable",           Rx.LoggerEnable,                true)  );
-    Install( ToIni("Rx.PlotEnable",             Rx.PlotEnable,                  true)  );
-    Install( ToIni("Rx.OverwriteBdd",           Rx.OverwriteBdd,                true)  );
-    Install( ToIni("Rx.SamplesToLog",           Rx.SamplesToLog,                100000u)  );
-    Install( ToIni("Rx.AutoStop",               Rx.AutoStop,                    true)  );
+    Rx.LoggerEnable=                false;
+    Rx.PlotEnable=                  false;
+    Rx.OverwriteBdd=                true;
+    Rx.SamplesToLog=                100000u;
+    Rx.AutoStop=                    true;
 
-    Load();
+    //Load();
     //
     //  Sanity Check on Target
     if (Target < 0)
@@ -1204,7 +1209,7 @@ ApplicationSettings::ApplicationSettings( ApplicationIo * owner )
 }
 
 //------------------------------------------------------------------------
-//  ApplicationSettings::~ApplicationSettings() --  Dtor, save to INI file
+//  ApplicationSettings::~ApplicationSettings() --  Dtor= save to INI file
 //------------------------------------------------------------------------
 
 ApplicationSettings::~ApplicationSettings()
@@ -1214,5 +1219,5 @@ ApplicationSettings::~ApplicationSettings()
     if (Target < 0)
         Target = 0;
 
-    Save();
+    //Save();
 }

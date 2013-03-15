@@ -63,14 +63,14 @@ int main ()
   
   enable_test_generator(0,0,0.001);
 
-  std::this_thread::sleep_for(std::chrono::seconds(30));
+  std::this_thread::sleep_for(std::chrono::seconds(5));
 
   cout << "enable sine wave output" << endl;
 
   disable_test_generator(0);
   enable_test_generator(0,1,0.001);
 
-  std::this_thread::sleep_for(std::chrono::seconds(30));
+  std::this_thread::sleep_for(std::chrono::seconds(5));
 
   cout << "disabling channel" << endl;
   disable_test_generator(0);

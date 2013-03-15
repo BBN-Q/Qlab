@@ -75,11 +75,11 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
     trigger_.DelayedTrigger(true); // trigger delayed after start
         
     module_.OnBeforeStreamStart.SetEvent(this, &X6_1000::HandleBeforeStreamStart);
-    module_.OnBeforeStreamStart.Synchronize();
+    module_.OnBeforeStreamStart.Unsynchronize();
     module_.OnAfterStreamStart.SetEvent(this, &X6_1000::HandleAfterStreamStart);
-    module_.OnAfterStreamStart.Synchronize();
+    module_.OnAfterStreamStart.Unsynchronize();
     module_.OnAfterStreamStop.SetEvent(this, &X6_1000::HandleAfterStreamStop);
-    module_.OnAfterStreamStop.Synchronize();
+    module_.OnAfterStreamStop.Unsynchronize();
 
     //  Alerts
     //module_.HookAlerts();
@@ -94,7 +94,7 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
     stream_.TxLoadBalancing(false);
 
     timer_.OnElapsed.SetEvent(this, &X6_1000::HandleTimer);
-    timer_.OnElapsed.Thunk();
+    timer_.OnElapsed.Unsynchronize();
 
     // Insure BM size is a multiple of four MB
     const int RxBmSize = std::max(BusmasterSize/4, 1) * 4;

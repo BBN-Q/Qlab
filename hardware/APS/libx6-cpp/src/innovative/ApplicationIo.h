@@ -134,7 +134,7 @@ struct TxSettings
 //  CLASS ApplicationSettings
 //==============================================================================
 
-class ApplicationSettings : public Innovative::IniSaver
+class ApplicationSettings //: public Innovative::IniSaver
 {
 public:
 
@@ -220,11 +220,11 @@ public:
 //  CLASS ApplicationIo  -- Hardware Access and Application Io Class
 //===========================================================================
 
-class ApplicationIo : public FiclIo
+class ApplicationIo 
 {
 public:
     // Ctor
-    ApplicationIo(IUserInterface * gui);
+    ApplicationIo();
     ~ApplicationIo();
 
     ModuleIo &  ModIo()   {  return Module;  }
@@ -261,11 +261,11 @@ public:
     //  ...Debug page
     void    SoftwareAlert(unsigned int value);
     float SampleRate() const
-        {  return static_cast<float>(Settings.SampleRate*1.e6);  }
+        {  /*return static_cast<float>(Settings.SampleRate*1.e6);*/  }
     void    ExecuteDebugScript(const std::string & cmd)
-        {  Execute(std::string("load ") + cmd);  }
+        {  /*Execute(std::string("load ") + cmd); */ }
     void    Help()
-        {  Execute(Module.Help());  }
+        {  /* Execute(Module.Help()); */  }
 
     void    ClockInfo();
     void    FillLogs();
@@ -283,18 +283,18 @@ private:
     //
     //  Member Data
 	ModuleIo                        Module;
-	IUserInterface *                UI;
+// IUserInterface *                UI;
     Innovative::VitaPacketStream    Stream;
 	Innovative::TriggerManager      Trig;
 	Innovative::SoftwareTimer       Timer;
-    Innovative::DataLogger          Logger;
-    Innovative::BinView             Graph;
-    Innovative::StopWatch           RunTimeSW;
-    Innovative::VeloMergeParser     VMP;       // coalesce VITA packets
-    Innovative::DataLogger          VMPLogger;
-    Innovative::BinView             VMPGraph;
+//    Innovative::DataLogger          Logger;
+//    Innovative::BinView             Graph;
+//    Innovative::StopWatch           RunTimeSW;
+//    Innovative::VeloMergeParser     VMP;       // coalesce VITA packets
+//    Innovative::DataLogger          VMPLogger;
+//  Innovative::BinView             VMPGraph;
 
-    Innovative::DataPlayer          Player;   // for "Play From File" mode
+//    Innovative::DataPlayer          Player;   // for "Play From File" mode
  
     // App State Variables
 	bool                            FOpened;
