@@ -111,6 +111,10 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
             obj.DEFAULT_PORT = 4000;
         end
         
+        function delete(obj)
+            obj.disconnect();
+        end
+        
         function obj = connect(obj, address)
 		% connect(address) initiates a connection to the AWG over TCPIP or GPIB
         % depending on the form of the address
@@ -626,8 +630,8 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
 			check_val = value;
             optionString = 'Source';
 	        checkMapObj = containers.Map({...
-	            'Internal','External',...
-                'Int', 'Ext'
+	            'internal','external',...
+                'int', 'ext'
 	            },{'INTernal','EXTernal','INTernal','EXTernal'});
 
             if not(checkMapObj.isKey(check_val))
