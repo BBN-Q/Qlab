@@ -1,4 +1,4 @@
-% Module Name : DigitalAttenuator
+% Module Name : SpectrumAnalyzer
 %
 % Author/Date : Blake R. Johnson
 %
@@ -22,6 +22,8 @@
 classdef (Sealed) SpectrumAnalyzer < deviceDrivers.lib.Serial
     properties
         serial = 0; % ID of the device to distinguish multiple instances
+        LOsource 
+        centerFreq 
     end
     
     methods
@@ -29,33 +31,56 @@ classdef (Sealed) SpectrumAnalyzer < deviceDrivers.lib.Serial
         function obj = SpectrumAnalyzer()
             % Initialize Super class
             obj = obj@deviceDrivers.lib.Serial();
-            obj.baudRate = 9600;
         end
         
-        function out = readUntilEND(obj)
-            %readUntilEND - Reads from the Arduino until it receives 'END'
-            out = '';
-            val = obj.read();
-            while (strcmp(val, 'END') == 0)
-                out = [out val];
-                val = obj.read();
+        %Override the connect method to set a shorter timeout becaues the
+        %Arduino flakes out sometimes
+        function connect(obj, address)
+            connect@deviceDrivers.lib.Serial(obj, address)
+            obj.interface.Timeout = 0.1;
+        end
+        
+%         function val = get.serial(obj)
+%             % poll device for its serial number
+%             obj.write('ID?');
+%             val = obj.readUntilEND();
+%             val = str2double(val);
+%             obj.serial = val;
+%         end
+
+        function out = get_voltage(obj)
+            tryct = 0;
+            while tryct < 10
+                out = str2double(obj.query('READ '));
+                if ~isempty(out)
+                    break
+                else
+                    tryct = tryct+1;
+                end
             end
         end
         
-        function val = get.serial(obj)
-            % poll device for its serial number
-            obj.write('ID?');
-            val = obj.readUntilEND();
-            val = str2double(val);
-            obj.serial = val;
+        function set.LOsource(obj, sourceName)
+            obj.LOsource= InstrumentFactory(sourceName);
+        end 
+        
+        function set.centerFreq(obj, value)
+            obj.LOsource.frequency = value-0.0107;
         end
-
-        function out = getVoltage(obj)
-            % error check inputs
-            obj.write('READ');
-            out = obj.readUntilEND();
+        
+        function value = get.centerFreq(obj)
+            value = obj.LOsource.frequency + 0.0107;
         end
-
+        
+        function sweep(obj)
+        end
+        
+        function value = peakAmplitude(obj)
+            adcValue = obj.get_voltage();
+            %linear interpolation
+            value = interp1([75, 525], [-100, -20], adcValue);
+        end
+        
     end % Methods
     
 end % Class
