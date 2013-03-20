@@ -53,7 +53,7 @@ void setup() {
     val = readStoredChannelValue(ch);
     setAttenuator(ch, val);
   }
-  Serial.begin(9600);
+  Serial.begin(115200);
 }
 
 void loop() {
