@@ -164,8 +164,15 @@ classdef ExpManager < handle
                     ct(idx) = ct(idx) + 1;
                     if stops(idx) > 1
                         % print one status message on the inner sweep
-                        if idx == length(stops) && ct(idx) == 1
-                            fprintf('Stepping sweep %d: %d points\n', idx, stops(idx));
+                        if idx == length(stops)
+                            if ct(idx) == 1
+                              fprintf('Stepping sweep %d: %d points       ', idx, stops(idx));
+                            else
+                              fprintf('\b\b\b\b\b\b(%3d%%)',round(100*ct(idx)/stops(idx)));
+                            end
+                            if ct(idx) == stops(idx)
+                                fprintf('\n');
+                            end
                         elseif idx < length(stops)
                             fprintf('Stepping sweep %d: %d of %d\n', idx, ct(idx), stops(idx));
                         end
