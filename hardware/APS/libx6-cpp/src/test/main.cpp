@@ -12,6 +12,8 @@ int main ()
 
   set_malibu_threading_enable(false);
 
+  set_logging_level(5);
+
   int numDevices;
   numDevices = get_numDevices();
 
@@ -66,6 +68,7 @@ int main ()
   enable_test_generator(0,0,0.001);
 
   std::this_thread::sleep_for(std::chrono::seconds(5));
+
 
   cout << "enable sine wave output" << endl;
 
