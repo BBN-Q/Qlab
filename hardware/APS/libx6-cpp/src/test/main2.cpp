@@ -10,6 +10,8 @@ int main ()
 {
   ApplicationIo *AppIo = new ApplicationIo();
 
+  set_malibu_threading_enable(false);
+
   cout << "Openning" << endl;
 
   AppIo->Open();

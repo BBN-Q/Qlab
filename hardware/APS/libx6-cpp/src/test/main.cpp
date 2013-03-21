@@ -10,6 +10,8 @@ int main ()
 {
   cout << "BBN X6-1000 Test Executable" << endl;
 
+  set_malibu_threading_enable(false);
+
   int numDevices;
   numDevices = get_numDevices();
 
