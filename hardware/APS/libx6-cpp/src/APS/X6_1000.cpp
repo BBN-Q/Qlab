@@ -266,7 +266,7 @@ X6_1000::ErrorCodes X6_1000::set_decimation(bool enabled, int factor) {
 X6_1000::ErrorCodes X6_1000::set_channel_enable(int channel, bool enabled) {
     unsigned int numChannels = module_.Output().Channels();
     if (channel >= numChannels) return INVALID_CHANNEL;
-
+    FILE_LOG(logINFO) << "Set Channel " << channel << " Enable =" << enabled;
     activeChannels_[channel] = enabled;
     return SUCCESS;
 }
@@ -287,6 +287,7 @@ X6_1000::ErrorCodes X6_1000::set_active_channels() {
     module_.Input().ChannelDisableAll();
 
     for (int cnt = 0; cnt < numChannels; cnt++) { 
+        FILE_LOG(logINFO) << "Channel " << cnt << " Enable =" << activeChannels_[cnt];
         module_.Output().ChannelEnabled(cnt, activeChannels_[cnt]);
     }
     return status;
@@ -341,6 +342,8 @@ X6_1000::ErrorCodes X6_1000::enable_test_generator(X6_1000::FPGAWaveformType wfT
 
     wfType_ = wfType;
 
+    set_active_channels();
+
     stream_.Preconfigure();
     
     //  Output Test Generator Setup
@@ -350,6 +353,10 @@ X6_1000::ErrorCodes X6_1000::enable_test_generator(X6_1000::FPGAWaveformType wfT
     // enable software trigger
     module_.Output().SoftwareTrigger(true);
 
+    module_.Output().Pulse().Reset();
+    module_.Output().Pulse().Enabled(false);
+
+    
     // disable prefill
     stream_.PrefillPacketCount(0);
     trigger_.AtStreamStart();
@@ -460,7 +467,7 @@ void  X6_1000::HandleDataAvailable(VitaPacketStreamDataEvent & Event) {
 }
 
 void X6_1000::HandleTimer(OpenWire::NotifyEvent & /*Event*/) {
-    FILE_LOG(logDEBUG) << "X6_1000::HandleDataRequired";
+    FILE_LOG(logDEBUG) << "X6_1000::HandleTimer";
     trigger_.AtTimerTick();
 }
 
