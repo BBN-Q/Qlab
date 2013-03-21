@@ -95,7 +95,7 @@ EXPORT float get_logic_temperature(int);
 EXPORT int enable_test_generator(int,int,float);
 EXPORT int disable_test_generator(int);
 
-
+EXPORT void set_malibu_threading_enable(bool);
 
 #ifdef __cplusplus
 }

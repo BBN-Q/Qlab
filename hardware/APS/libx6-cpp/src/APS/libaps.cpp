@@ -252,6 +252,10 @@ int disable_test_generator(int deviceID) {
 	return APSRack_.disable_test_generator(deviceID);
 }
 
+void set_malibu_threading_enable(bool enable) {
+	X6_1000::set_threading_enable(enable);
+}
+
 #ifdef __cplusplus
 }
 #endif
