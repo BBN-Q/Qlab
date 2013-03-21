@@ -5,17 +5,17 @@
 
 using namespace Innovative;
 
+bool X6_1000::enableThreading_ = true;
+
 // default constructor
 X6_1000::X6_1000() {
 	X6_1000(0);
 }
 
-X6_1000::X6_1000(unsigned int target) {
+X6_1000::X6_1000(unsigned int target) :
+    deviceID_(target), isOpened_(false)
+{
     numBoards_ = getBoardCount();
-
-    deviceID_ = target;
-
-    isOpened_ = false;
 
     /* set active channels map */
     unsigned int numChannels = module_.Output().Channels();
@@ -25,7 +25,8 @@ X6_1000::X6_1000(unsigned int target) {
     // Use IPP performance memory functions.    
     Init::UsePerformanceMemoryFunctions();
 
-    timer_.Interval(1000);
+    // Timer Interval in milleseconds
+    timer_.Interval(1000); 
 }
 
 X6_1000::~X6_1000()
@@ -62,11 +63,28 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
 	}
 }
 
- bool X6_1000::isOpen() {
- 	return isOpened_;
- }
+bool X6_1000::isOpen() {
+	return isOpened_;
+}
 
- X6_1000::ErrorCodes X6_1000::Open() {
+void X6_1000::setHandler(OpenWire::EventHandler<OpenWire::NotifyEvent> & event, 
+    void (X6_1000:: *CallBackFunction)(OpenWire::NotifyEvent & Event),
+    bool useSyncronizer) {
+
+    event.SetEvent(this, CallBackFunction );
+    if (~enableThreading_)
+        event.Unsynchronize();
+    else {
+        if (useSyncronizer) {
+            event.Synchronize();
+        } else {
+            event.Thunk();
+        }
+    }
+}
+
+
+X6_1000::ErrorCodes X6_1000::Open() {
  	// open function based on Innovative Stream Example ApplicationIO.cpp
 
  	trigger_.OnDisableTrigger.SetEvent(this, &X6_1000::HandleDisableTrigger);
@@ -74,14 +92,30 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
     trigger_.OnSoftwareTrigger.SetEvent(this, &X6_1000::HandleSoftwareTrigger);
     trigger_.DelayedTrigger(true); // trigger delayed after start
         
+#if 0    
     module_.OnBeforeStreamStart.SetEvent(this, &X6_1000::HandleBeforeStreamStart);
     module_.OnBeforeStreamStart.Unsynchronize();
     module_.OnAfterStreamStart.SetEvent(this, &X6_1000::HandleAfterStreamStart);
     module_.OnAfterStreamStart.Unsynchronize();
     module_.OnAfterStreamStop.SetEvent(this, &X6_1000::HandleAfterStreamStop);
     module_.OnAfterStreamStop.Unsynchronize();
+#else
+    setHandler(module_.OnBeforeStreamStart,  &X6_1000::HandleBeforeStreamStart);
+    setHandler(module_.OnAfterStreamStart,  &X6_1000::HandleAfterStreamStart);
+    setHandler(module_.OnAfterStreamStop,  &X6_1000::HandleAfterStreamStop);
+#endif
 
     //  Alerts
+    module_.Alerts().OnTimeStampRolloverAlert.SetEvent(this, &X6_1000::HandleTimestampRolloverAlert);
+    module_.Alerts().OnSoftwareAlert.SetEvent(         this, &X6_1000::HandleSoftwareAlert);
+    module_.Alerts().OnWarningTemperature.SetEvent(    this, &X6_1000::HandleWarningTempAlert);
+    module_.Alerts().OnOutputUnderflow.SetEvent(       this, &X6_1000::HandleOutputFifoUnderflowAlert);
+    module_.Alerts().OnTrigger.SetEvent(               this, &X6_1000::HandleTriggerAlert);
+    module_.Alerts().OnOutputOverrange.SetEvent(       this, &X6_1000::HandleOutputOverrangeAlert);
+    // Input 
+    module_.Alerts().OnInputOverflow.SetEvent(         this, &X6_1000::HandleInputFifoOverrunAlert);
+    module_.Alerts().OnInputOverrange.SetEvent(        this, &X6_1000::HandleInputOverrangeAlert);
+
     //module_.HookAlerts();
 
 
@@ -90,11 +124,15 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
     stream_.DirectDataMode(false);
     stream_.OnVeloDataAvailable.SetEvent(this, &X6_1000::HandleDataAvailable);
 
-    stream_.RxLoadBalancing(false);
-    stream_.TxLoadBalancing(false);
+    stream_.RxLoadBalancing(true);
+    stream_.TxLoadBalancing(true);
 
+#if 0
     timer_.OnElapsed.SetEvent(this, &X6_1000::HandleTimer);
     timer_.OnElapsed.Unsynchronize();
+#else
+    setHandler(timer_.OnElapsed,  &X6_1000::HandleTimer, false);
+#endif
 
     // Insure BM size is a multiple of four MB
     const int RxBmSize = std::max(BusmasterSize/4, 1) * 4;
@@ -108,11 +146,6 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
         FILE_LOG(logINFO) << "Opened Device " << deviceID_;
         FILE_LOG(logINFO) << "Bus master size: Input => " << RxBmSize << " MB" << " Output => " << TxBmSize << " MB";
     }
-    //catch (Innovative::MalibuException & exception)
-    //    {
-    //    FILE_LOG(logINFO) << "Open Failure:" << exception.what();
-    //    return MODULE_ERROR;
-    //    }
     catch(...) {
         FILE_LOG(logINFO) << "Module Device Open Failure!";
         return MODULE_ERROR;
@@ -373,8 +406,8 @@ void X6_1000::HandleAfterStreamStart(OpenWire::NotifyEvent & /*Event*/) {
 void X6_1000::HandleAfterStreamStop(OpenWire::NotifyEvent & /*Event*/) {
     FILE_LOG(logDEBUG) << "X6_1000::HandleAfterStreamStop";
     // Disable external triggering initially
-    //module_.Input.SoftwareTrigger(false);
-    //module_.Input().Trigger().External(false);
+    module_.Input().SoftwareTrigger(false);
+    module_.Input().Trigger().External(false);
 
     //  Output Remaining Data
     // VMP.Flush();
@@ -442,4 +475,43 @@ void  X6_1000::VMPDataAvailable(VeloMergeParserDataAvailable & Event) {
     //         VMPLogger.LogWithHeader(Event.Data);
     //         }
                 
+}
+
+
+
+void X6_1000::HandleTimestampRolloverAlert(Innovative::AlertSignalEvent & event) {
+    LogHandler("HandleTimestampRolloverAlert");
+}
+
+void X6_1000::HandleSoftwareAlert(Innovative::AlertSignalEvent & event) {
+    LogHandler("HandleSoftwareAlert");
+}
+
+void X6_1000::HandleWarningTempAlert(Innovative::AlertSignalEvent & event) {
+    LogHandler("HandleWarningTempAlert");
+}
+
+void X6_1000::HandleInputFifoOverrunAlert(Innovative::AlertSignalEvent & event) {
+    LogHandler("HandleInputFifoOverrunAlert");
+}
+
+void X6_1000::HandleInputOverrangeAlert(Innovative::AlertSignalEvent & event) {
+    LogHandler("HandleInputOverrangeAlert");
+}
+
+void X6_1000::HandleOutputFifoUnderflowAlert(Innovative::AlertSignalEvent & event) {
+    LogHandler("HandleOutputFifoUnderflowAlert");
+}
+
+void X6_1000::HandleTriggerAlert(Innovative::AlertSignalEvent & event) {
+    LogHandler("HandleTriggerAlert");
+}
+
+void X6_1000::HandleOutputOverrangeAlert(Innovative::AlertSignalEvent & event) {
+    LogHandler("HandleOutputOverrangeAlert");
+}
+
+
+void X6_1000::LogHandler(string handlerName) {
+    FILE_LOG(logINFO) << "Alert:" << handlerName;
 }

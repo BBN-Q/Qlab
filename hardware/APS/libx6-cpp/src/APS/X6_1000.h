@@ -151,6 +151,8 @@ public:
     bool  isOpen();
     ErrorCodes   Close();
 
+    static void set_threading_enable(bool enable) {enableThreading_ = enable;}
+
     const int BusmasterSize = 4; /**< Rx & Tx BusMaster size in MB */
     const int MHz = 1e6;         /**< Constant for converting MHz */
     const int Meg = 1024 * 1024;
@@ -170,25 +172,43 @@ private:
 
 	// State Variables
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
+	static bool enableThreading_;		  /**< enabled threading support */
 
 	ErrorCodes set_active_channels();
 	void set_defaults();
 	void log_card_info();
 
+
+	void setHandler(OpenWire::EventHandler<OpenWire::NotifyEvent> &event, 
+    				void (X6_1000:: *CallBackFunction)(OpenWire::NotifyEvent & Event),
+    				bool useSyncronizer = true);
+
 	// Malibu Event handlers
 	
-	void  HandleDisableTrigger(OpenWire::NotifyEvent & Event);
-	void  HandleExternalTrigger(OpenWire::NotifyEvent & Event);
-    void  HandleSoftwareTrigger(OpenWire::NotifyEvent & Event);
+	void HandleDisableTrigger(OpenWire::NotifyEvent & Event);
+	void HandleExternalTrigger(OpenWire::NotifyEvent & Event);
+    void HandleSoftwareTrigger(OpenWire::NotifyEvent & Event);
 
-	void  HandleBeforeStreamStart(OpenWire::NotifyEvent & Event);
-    void  HandleAfterStreamStart(OpenWire::NotifyEvent & Event);
-    void  HandleAfterStreamStop(OpenWire::NotifyEvent & Event);
+	void HandleBeforeStreamStart(OpenWire::NotifyEvent & Event);
+    void HandleAfterStreamStart(OpenWire::NotifyEvent & Event);
+    void HandleAfterStreamStop(OpenWire::NotifyEvent & Event);
 
-	void  HandleDataRequired(Innovative::VitaPacketStreamDataEvent & Event);
-    void  HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event);
+	void HandleDataRequired(Innovative::VitaPacketStreamDataEvent & Event);
+    void HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event);
 
-	void  HandleTimer(OpenWire::NotifyEvent & Event);
+	void HandleTimer(OpenWire::NotifyEvent & Event);
+
+	// Module Alerts
+	void HandleTimestampRolloverAlert(Innovative::AlertSignalEvent & event);
+    void HandleSoftwareAlert(Innovative::AlertSignalEvent & event);
+    void HandleWarningTempAlert(Innovative::AlertSignalEvent & event);
+    void HandleInputFifoOverrunAlert(Innovative::AlertSignalEvent & event);
+    void HandleInputOverrangeAlert(Innovative::AlertSignalEvent & event);
+    void HandleOutputFifoUnderflowAlert(Innovative::AlertSignalEvent & event);
+    void HandleTriggerAlert(Innovative::AlertSignalEvent & event);
+    void HandleOutputOverrangeAlert(Innovative::AlertSignalEvent & event);
+
+    void LogHandler(string handlerName);
 
 	void  VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event);
 
