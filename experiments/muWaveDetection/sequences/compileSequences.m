@@ -264,7 +264,7 @@ if makePlot
         pythonLauncher = 'python';
     end
     [status, result] = system([pythonPathCmd,  pythonLauncher, ' "', fullfile(getpref('qlab', 'PyQLabDir'), 'QGL',...
-                    'PulseSequencePlotter.py'), '" --AWGFiles "', sprintf('%s', awgFiles{:}), '" & exit &']);
+                    'PulseSequencePlotter.py'), '" --AWGFiles ', sprintf('"%s" ', awgFiles{:}), ' & exit &']);
 end
 
     %Helper function to extract a particular Tek's channels from the AWGChannel
