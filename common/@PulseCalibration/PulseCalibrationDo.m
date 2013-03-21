@@ -62,20 +62,39 @@ if settings.DoRamsey
     [filenames, segmentPoints] = obj.RamseyChannelSequence(settings.Qubit);
     obj.loadSequence(filenames, 1);
     
+    %Approach is to take one point, move half-way there and then see if
+    %frequency moves in desired direction
+    qubitSource = obj.experiment.instruments.(obj.channelMap.(settings.Qubit).source);
+    
+    %Deliberately shift off by 1MHz
+    origFreq = qubitSource.frequency;
+    qubitSource.frequency = origFreq - 0.001;
+
+    % measure
+    data = obj.homodyneMeasurement(segmentPoints);
+
+    quick_scale = @(d) 2*(d-mean(d))/(max(d)-min(d));
+    
+    % analyze
+    [~, detuningA] = fitramsey(segmentPoints, quick_scale(data));
+
     % adjust drive frequency
-    QubitSource = obj.experiment.instruments.(settings.QubitSpec);
-    freq = QubitSource.frequency + settings.RamseyDetuning;
-    QubitSource.frequency = freq;
+    qubitSource.frequency = origFreq - 0.001 + detuningA/2;
 
     % measure
     data = obj.homodyneMeasurement(segmentPoints);
 
     % analyze
-    detuning = obj.analyzeRamsey(data);
-
-    % adjust drive frequency
-    freq = QubitSource.frequency - detuning;
-    QubitSource.frequency = freq;
+    [~, detuningB] = fitramsey(segmentPoints, quick_scale(data));
+    
+    %If we have gotten smaller we are moving in the right direction
+    %Average the two fits
+    if detuningB < detuningA
+        qubitSource.frequency = origFreq - 0.001 + 0.5*(detuningA + detuningA/2+detuningB);
+    else
+        qubitSource.frequency = origFreq - 0.001 - 0.5*(detuningA - detuningA/2+detuningB);
+    end
+        
 end
 
 %% Pi/2 Calibration
@@ -202,14 +221,22 @@ FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'w');
 fprintf(FID, '%s', jsonlab.savejson('',params));
 fclose(FID);
 
-%Now the offsets
+%Now the instrument parameters
 params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'));
+
+%Now the offsets
 params.instruments.(channelMap.awg).(sprintf('chan_%s', IQkey(end-1))).offset = obj.pulseParams.i_offset;
 params.instruments.(channelMap.awg).(sprintf('chan_%s', IQkey(end))).offset = obj.pulseParams.q_offset;
+
+%Drive frequency from Ramsey
+if settings.DoRamsey
+    params.instruments.(channelMap.source).frequency = qubitSource.frequency;
+end
+
+%Write back to file
 FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'),'wt'); %open in text mode
 fprintf(FID, '%s', jsonlab.savejson('',params));
 fclose(FID);
-
 
 % Display the final results
 obj.pulseParams

@@ -1,6 +1,6 @@
-function [t3, t3error,amp] = fitramsey(xdata, ydata)
-% Fits rabi data in time range (x-axis) from start to end using a decaying
-% sine.
+function [t2, detuning] = fitramsey(xdata, ydata)
+% Fits ramsey data in time range (x-axis) from start to end using a decaying
+% sinusoid.
 
 % if no input arguments, try to get the data from the current figure
 if nargin < 2
@@ -72,3 +72,4 @@ axis tight
 % if you want confidence bands, use something like:
 % ci = nlparci(beta,r,j);
 % [ypred,delta] = nlpredci(rabif,x,beta,r,j);
+
