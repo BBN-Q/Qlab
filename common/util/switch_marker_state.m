@@ -66,8 +66,6 @@ switch class(awg)
 		                            struct('waveforms', pg.pulseCollection, 'linkLists', {IQ_seqs34}));
 
 
-		awg = deviceDrivers.awg();
-		awg.connect(awgStr);
 		awg.init();
 		for ct = 1:4, awg.setEnabled(ct,1); end
 		awg.setRunMode(1, awg.RUN_SEQUENCE); awg.setRunMode(3, awg.RUN_SEQUENCE);
