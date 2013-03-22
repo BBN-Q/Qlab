@@ -1,18 +1,18 @@
 function scaledData = analyzeRBT(data)
 
-calRepeats = 2;
+calRepeats = 1;
 %Number of overlaps
 nbrExpts = 10;
 
 %Number of twirl sequences at each length
-nbrTwirls = [12^2, 12^2, 12^3, 12^2, 12^2];
+nbrTwirls = [12, 12^2, 12^3, 12];
 twirlOffsets = 1 + [0, cumsum(nbrTwirls)];
 
 %Length of sequences (cell array (length nbrExpts) of arrays) 
-seqLengths = repmat({[1 2 3 4 10]}, 1, nbrExpts);
+seqLengths = repmat({[1 2 3 10]}, 1, nbrExpts);
 
 %Cell array or array of boolean whether we are exhaustively twirling or randomly sampling
-exhaustiveTwirl = repmat({[true, true, true, false, true]}, 1, nbrExpts);
+exhaustiveTwirl = repmat({[true, true, true, true]}, 1, nbrExpts);
 
 %Number of bootstrap replicas
 numReplicas = 500;
@@ -23,14 +23,12 @@ variances  = cell(nbrExpts, 1);
 errors = cell(nbrExpts, 1);
 fitFidelities = zeros(nbrExpts, 1);
 
-for rowct = 1:size(data,1)
-    % calScale each row
-    zeroCal = mean(data(rowct, end-2*calRepeats+1:end-calRepeats));
-    piCal = mean(data(rowct, end-calRepeats+1:end));
-    scaleFactor = (zeroCal - piCal)/2;
-    
-    scaledData(rowct, :) = (data(rowct, 1:end-2*calRepeats) - piCal)./scaleFactor - 1;
-end
+% calScale each row
+zeroCal = mean(data(:, end-2*calRepeats+1:end-calRepeats),2);
+piCal = mean(data(:, end-calRepeats+1:end),2);
+scaleFactor = (zeroCal - piCal)/2;
+
+scaledData = bsxfun(@rdivide, bsxfun(@minus, data(:,1:end-2*calRepeats), zeroCal), scaleFactor) - 1;
 
 %Restack experiments and pull out avgerage fidelities
 rowct = 1;

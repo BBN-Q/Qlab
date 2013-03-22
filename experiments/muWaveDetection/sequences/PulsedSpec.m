@@ -8,8 +8,7 @@ cycleLength = 13100;
 nbrRepeats = 1;
 
 % if using SSB, set the frequency here
-SSBFreq = -150e6;
-pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
+pg = PatternGen(qubit);
 
 patseq = {{pg.pulse('Xtheta', 'amp', 8000, 'width', pulseLength, 'pType', 'square')}};
 calseq = [];

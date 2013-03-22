@@ -22,6 +22,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
         samplingRate
         integrationStart
         integrationPts
+        affine
     end
     
     methods
@@ -31,6 +32,8 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             obj.samplingRate = settings.samplingRate;
             obj.integrationStart = settings.integrationStart;
             obj.integrationPts = settings.integrationPts;
+            measAffines = getpref('qlab','MeasAffines');
+            obj.affine = measAffines.M1;
         end
         
         function out = apply(obj, data)
@@ -41,6 +44,11 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             
 %             save(['SSRecords_', datestr(now, 'yymmdd-HH-MM-SS'), '.mat'], 'demodSignal');
             
+            %Apply the affine transformation to unwind things
+            if ~isempty(obj.affine)
+                demodSignal = bsxfun(@times, bsxfun(@minus, demodSignal, obj.affine.centres), exp(-1j*obj.affine.angles));
+            end
+
             %Box car the demodulated signal
             if ndims(demodSignal) == 2
                 demodSignal = demodSignal(floor(obj.integrationStart/decimFactor):floor((obj.integrationStart+obj.integrationPts-1)/decimFactor),:);
@@ -50,7 +58,12 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
                 error('Only able to handle 2 and 4 dimensional data.');
             end
             
-            
+%             figure()
+%             gData = squeeze(mean(demodSignal(:,:,1,:),4));
+%             eData = squeeze(mean(demodSignal(:,:,2,:),4));
+%             plot((gData));
+%             hold on
+%             plot((eData),'r');
             
             %Integrate
             obj.latestData = 2*mean(demodSignal,1);

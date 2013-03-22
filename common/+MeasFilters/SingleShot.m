@@ -47,14 +47,12 @@ classdef SingleShot < MeasFilters.MeasFilter
             
             % return histogrammed data
             obj.histData = struct();
-            %Phase to rotate by to get two blobs on either side of I axis
-            phaseRot = 0.5*( angle(mean(obj.groundData)) +  angle(mean(obj.excitedData)));
             
-            groundAmpData = real(exp(-1i*phaseRot)*obj.groundData);
-            excitedAmpData = real(exp(-1i*phaseRot)*obj.excitedData);
+            groundAmpData = real(obj.groundData);
+            excitedAmpData = real(obj.excitedData);
             
-            groundPhaseData = imag(exp(-1i*phaseRot)*obj.groundData);
-            excitedPhaseData = imag(exp(-1i*phaseRot)*obj.excitedData);
+            groundPhaseData = imag(obj.groundData);
+            excitedPhaseData = imag(obj.excitedData);
             
             %Setup bins from the minimum to maximum measured voltage
             bins = linspace(min([groundAmpData; excitedAmpData]), max([groundAmpData; excitedAmpData]));

@@ -8,7 +8,7 @@ function RabiAmpSequence(qubit, amps, makePlot)
 
 basename = 'Rabi';
 fixedPt = 1000;
-cycleLength = 3100;
+cycleLength = 6100;
 nbrRepeats = 1;
 
 pg = PatternGen(qubit);
@@ -25,7 +25,7 @@ seqParams = struct(...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
-    'measLength', 2000);
+    'measLength', 4000);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 

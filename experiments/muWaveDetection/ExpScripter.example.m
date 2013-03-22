@@ -6,7 +6,7 @@ import MeasFilters.*
 exp = ExpManager();
 
 global dataNamer
-deviceName = 'Syracuse_V5.2';
+deviceName = 'IBM_PhaseII';
 if ~isa(dataNamer, 'DataNamer')
     dataNamer = DataNamer(getpref('qlab', 'dataDir'), deviceName);
 end
@@ -14,6 +14,7 @@ if ~strcmp(dataNamer.deviceName, deviceName)
     dataNamer.deviceName = deviceName;
     reset(dataNamer);
 end
+
 exp.dataFileHandler = HDF5DataHandler(dataNamer.get_name(expName));
 
 expSettings = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'));

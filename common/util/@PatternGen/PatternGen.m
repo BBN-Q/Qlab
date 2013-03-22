@@ -1,3 +1,4 @@
+
 % Class PATTERNGEN is a utility class for defining time-domain experiments.
 %
 % Example usage (spin echo experiment):
@@ -360,15 +361,20 @@ classdef PatternGen < handle
                 %in this one (but check bufferReset)
                 if state == 0 && ~linkList{ii+1}.isZero
                     linkList{ii}.hasMarkerData = 1;
-                    linkList{ii}.(markerStr) = entryWidth - startDelay;
+                    markerDelay = entryWidth - startDelay;
+                    if markerDelay < 1
+                        markerDelay = 1;
+                        fprintf('addGatePulses warning: fixed buffer high pulse to start of pulse\n');
+                    end
+                    linkList{ii}.(markerStr) = markerDelay;
                     linkList{ii}.markerMode = 0;
                     state = 1;
                 elseif state == 1 && ((linkList{ii+1}.isZero && linkList{ii+1}.length > obj.bufferReset) || ii+1 == LLlength)
                     %Time from beginning of pulse LL entry that trigger needs to go
                     %low to end gate pulse
                     endDelay = fix(entryWidth + obj.bufferPadding + obj.bufferDelay);
-                    if endDelay < 0
-                        endDelay = 0;
+                    if endDelay < 1
+                        endDelay = 1;
                         fprintf('addGatePulses warning: fixed buffer low pulse to start of pulse\n');
                     end
                     linkList{ii}.hasMarkerData = 1;
@@ -514,7 +520,12 @@ classdef PatternGen < handle
                         seqs{miniLLct}{goLowEntry+1}.(markerStr) = 1;
                     else
                         seqs{miniLLct}{goLowEntry}.hasMarkerData = 1;
-                        seqs{miniLLct}{goLowEntry}.(markerStr) = delay+width-timePts(goLowEntry);
+                        markerDelay = delay+width-timePts(goLowEntry);
+                        %The firmware can't handle 0 delays
+                        if markerDelay == 0
+                            markerDelay = markerDelay+1;
+                        end
+                        seqs{miniLLct}{goLowEntry}.(markerStr) = markerDelay;
                     end
                 end
             end
