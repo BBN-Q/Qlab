@@ -16,27 +16,28 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
- classdef deviceDriverBase < hgsetget
-     methods
-         % instrument meta-setter
-         function setAll(obj, settings)
-             fields = fieldnames(settings);
-             for j = 1:length(fields);
-                 name = fields{j};
-                 if ismember(name, methods(obj))
-                     feval(['obj.' name], settings.(name));
-                 elseif ismember(name, properties(obj))
-                     obj.(name) = settings.(name);
-                 end
-             end
-         end
-         
-         % destructor
-         function delete(obj)
-             try
-                obj.disconnect();
-             catch %#ok<CTCH>
-             end
-         end
-     end
- end % classdef
+classdef deviceDriverBase < hgsetget
+    methods
+        % instrument meta-setter
+        function setAll(obj, settings)
+            fields = fieldnames(settings);
+            for j = 1:length(fields);
+                name = fields{j};
+                if ismember(name, methods(obj))
+                    args = settings.(name)
+                    feval(['obj.' name], args{:});
+                elseif ismember(name, properties(obj))
+                    obj.(name) = settings.(name);
+                end
+            end
+        end
+        
+        % destructor
+        function delete(obj)
+            try
+               obj.disconnect();
+            catch %#ok<CTCH>
+            end
+        end
+    end
+end % classdef
