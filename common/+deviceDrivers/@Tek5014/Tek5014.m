@@ -312,6 +312,8 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
             % 'awg_channel.Enabled'.).
             gpib_string = 'AWGControl:RUN';
             obj.write(gpib_string);
+            %Wait for it to actually start
+            obj.operationComplete()
         end
 
 		function stop(obj)

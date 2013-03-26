@@ -29,7 +29,7 @@ fssb = ExpParams.SSBFreq; % SSB modulation frequency (usually 10 MHz)
 obj.awg.run();
 obj.awg.waitForAWGtoStartRunning();
 
-obj.sa.center_frequency = obj.uwsource.frequency * 1e9 - fssb;
+obj.sa.centerFreq = obj.uwsource.frequency - fssb/1e9;
 
 
 fprintf('\nStarting sweep search for optimal amp/phase\n');

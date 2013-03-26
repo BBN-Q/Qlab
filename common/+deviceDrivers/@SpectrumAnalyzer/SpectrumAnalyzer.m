@@ -23,9 +23,17 @@ classdef (Sealed) SpectrumAnalyzer < deviceDrivers.lib.Serial
     properties
         serial = 0; % ID of the device to distinguish multiple instances
         LOsource 
-        centerFreq 
+        centerFreq
+        span
+        numSweepPts
+        sweepPts
+        sweepData
     end
     
+    properties ( Access=private)
+        IFfreq = 0.0107; % 10.7 MHz notch filter
+        notchWidth = 0.0001;
+    end
     methods
         
         function obj = SpectrumAnalyzer()
@@ -65,14 +73,32 @@ classdef (Sealed) SpectrumAnalyzer < deviceDrivers.lib.Serial
         end 
         
         function set.centerFreq(obj, value)
-            obj.LOsource.frequency = value-0.0107;
+            obj.LOsource.frequency = value-obj.IFfreq;
         end
         
         function value = get.centerFreq(obj)
-            value = obj.LOsource.frequency + 0.0107;
+            value = obj.LOsource.frequency + obj.IFfreq;
         end
         
         function sweep(obj)
+%             %Work out the frequencies 
+%             obj.sweepPts = linspace(obj.centerFreq-obj.span/2,  obj.centerFreq+obj.span/2, obj.numSweepPts);
+%             obj.sweepData = nan(1, obj.numSweepPts);
+%             rawData = nan(1,obj.numSweepPts);
+%             h = waitbar(0, 'Taking sweep data....');
+%             for ct = 1:obj.numSweepPts
+%                 waitbar(ct/obj.numSweepPts);
+%                 obj.LOsource.frequency = obj.sweepPts(ct)-obj.IFfreq;
+%                 rawData(ct) = obj.peakAmplitude();
+%             end
+%             close(h);
+%             
+%             %Now deconvolve the filter function
+%             freqStep = obj.sweepPts(2) - obj.sweepPts(1);
+%             freqPts = -1.5*obj.IFfreq:freqStep:1.5*obj.IFfreq;
+%             lorentzian = @(xpts, x0) (1/pi)*0.5*obj.notchWidth/((xpts-x0).^2 - (0.5*obj.notchWidth)^2);
+%             notchFilter = lorentzian(freqPts, -obj.IFfreq) + lorentzian(freqPts, obj.IFfreq);
+%             deconvData = deconv(rawData, notchFilter);
         end
         
         function value = peakAmplitude(obj)

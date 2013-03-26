@@ -19,7 +19,7 @@
 
 classdef HP71000 < deviceDrivers.lib.GPIB
    properties
-       center_frequency
+       centerFreq
        span
        resolution_bw
        video_bw
@@ -58,7 +58,7 @@ classdef HP71000 < deviceDrivers.lib.GPIB
            tmp = obj.query('TRA?;');
 		   ypts = strread(tmp, '%f', 'delimiter', ',');
 		   
-		   center_freq = obj.center_frequency;
+		   center_freq = obj.centerFreq;
 		   span = obj.span;
 		   xpts = linspace(center_freq - span/2, center_freq + span/2, length(ypts));
        end
@@ -78,9 +78,9 @@ classdef HP71000 < deviceDrivers.lib.GPIB
         
         % property accessors
         
-        function val = get.center_frequency(obj)
+        function val = get.centerFreq(obj)
             temp = obj.query('CF?;');
-            val = str2double(temp);
+            val = str2double(temp)/1e9;
         end
         
         function val = get.span(obj)
@@ -116,10 +116,10 @@ classdef HP71000 < deviceDrivers.lib.GPIB
         
         % property settors
         
-        function set.center_frequency(obj, value)
+        function set.centerFreq(obj, value)
             % Validate input
             assert(isnumeric(value), 'Invalid input');
-            obj.write(sprintf('CF %E;',value));
+            obj.write(sprintf('CF %E;',1e9*value));
         end
         
         function set.span(obj, value)

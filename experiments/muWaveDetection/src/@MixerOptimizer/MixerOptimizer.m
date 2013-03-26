@@ -65,7 +65,7 @@ classdef MixerOptimizer < handle
             obj.sa = InstrumentFactory(obj.expParams.specAnalyzer);
             
             obj.sa.setAll(instrSettings.(obj.expParams.specAnalyzer));
-            obj.sa.center_frequency = obj.uwsource.frequency * 1e9;
+            obj.sa.centerFreq = obj.uwsource.frequency;
             
             %Turn the uwave source on and turn modulation off
             obj.uwsource.mod = 0;
@@ -108,7 +108,7 @@ classdef MixerOptimizer < handle
         function cleanUp(obj)
             
             % restore instruments to a normal state
-            obj.sa.center_frequency = obj.uwsource.frequency * 1e9;
+            obj.sa.centerFreq = obj.uwsource.frequency;
             obj.sa.span = obj.expParams.SSBFreq * 2.1;
             obj.sa.sweep_mode = 'cont';
             obj.sa.resolution_bw = 'auto';
