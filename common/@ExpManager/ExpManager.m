@@ -51,6 +51,7 @@ classdef ExpManager < handle
         AWGs
         listeners = {}
         plotScopeTimer
+        CWMode = false
     end
     
     methods
@@ -106,7 +107,9 @@ classdef ExpManager < handle
             obj.AWGs([1, masterAWGIndex]) = obj.AWGs([masterAWGIndex, 1]);
             
             %Stop all the AWGs
-            cellfun(@(awg) stop(awg), obj.AWGs);
+            if(~obj.CWMode)
+                cellfun(@(awg) stop(awg), obj.AWGs);
+            end
 
             if ~isempty(obj.dataFileHandler)
                 %Construct data file header and info structs
@@ -240,17 +243,20 @@ classdef ExpManager < handle
             %Ready the digitizers
             cellfun(@(scope) acquire(scope), obj.scopes);
             
-            %Start the slaves up again
-            cellfun(@(awg) run(awg), obj.AWGs(2:end))
-            %And the master
-            run(obj.AWGs{1});
+            if(~obj.CWMode)
+                %Start the slaves up again
+                cellfun(@(awg) run(awg), obj.AWGs(2:end))
+                %And the master
+                run(obj.AWGs{1});
+            end
             
             %Wait for data taking to finish
             obj.scopes{1}.wait_for_acquisition(1000);
             
-            %Stop all the AWGs
-            cellfun(@(awg) stop(awg), obj.AWGs);
-
+            if(~obj.CWMode)
+                %Stop all the AWGs
+                cellfun(@(awg) stop(awg), obj.AWGs);
+            end
         end
         
         %Helper function to apply measurement filters and store data
