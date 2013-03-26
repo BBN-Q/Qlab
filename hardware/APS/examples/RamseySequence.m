@@ -1,5 +1,6 @@
 function RamseySequence()
 
+%The right-alignment point
 fixedPt = 40000;
 
 % setup PatternGen object with defaults
@@ -30,8 +31,12 @@ patseq = {...
 
 % build the link lists
 delay = -12; % relative analog I/Q channel delay (for aligning channels on various hardware platforms)
-addGatePulses = true;
-IQ_seq = pg.build(patseq, numsteps, delay, fixedPt, addGatePulses);
+addGatePulses = true; %whether we're going to add blanking pulses: by default comes out on the ch1m1 for 1&2 and ch3m1 for 3&4
+IQ12 = pg.build(patseq, numsteps, delay, fixedPt, addGatePulses);
+
+%Add a digitizer trigger to ch2m1
+% addTrigger(seqs, delay, width, ch)
+IQ12 = PatternGen.addTrigger(IQ12, fixedPt-500, 0, 2);
 
 %put empty output on channels 3/4
 pg2 = PatternGen('linkListMode', 1, 'cycleLength', fixedPt+1000);
@@ -41,7 +46,7 @@ IQ34.waveforms = pg2.pulseCollection;
 
 % plot sequence
 figure
-[ch1, ch2] = pg.linkListToPattern(IQ_seq{20}); % look at the 20th sequence
+[ch1, ch2] = pg.linkListToPattern(IQ12{20}); % look at the 20th sequence
 plot(ch1)
 hold on
 plot(ch2, 'r')
@@ -50,6 +55,6 @@ plot(ch2, 'r')
 relpath = './';
 basename = 'Ramsey';
 nbrRepeats = 1;
-APSPattern.exportAPSConfig(relpath, basename, nbrRepeats, struct('waveforms', pg.pulseCollection, 'linkLists', {IQ_seq}), IQ34);
+APSPattern.exportAPSConfig(relpath, basename, nbrRepeats, struct('waveforms', pg.pulseCollection, 'linkLists', {IQ12}), IQ34);
 
 end

@@ -34,6 +34,8 @@ switch strIn
         Uout = expm(-1i*(pi/2)*(1/sqrt(2))*(X+Z));
     case '1QZ90'
         Uout = expm(-1i*(pi/4)*Z);
+    case '1QT'
+        Uout = expm(-1i*(pi/8)*Z);
     case 'Id'
         Uout = eye(4);
     case 'XI'

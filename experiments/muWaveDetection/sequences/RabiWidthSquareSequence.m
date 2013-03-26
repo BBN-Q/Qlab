@@ -11,7 +11,7 @@ nbrRepeats = 1;
 
 pg = PatternGen(qubit);
 
-patseq = {{pg.pulse('Utheta', 'amp', 8000, 'width', widths, 'pType', 'square', 'angle', pi/4)}};
+patseq = {{pg.pulse('Utheta', 'amp', 4000, 'width', widths, 'pType', 'square', 'angle', pi/4)}};
 calseq = [];
 
 % prepare parameter structures for the pulse compiler

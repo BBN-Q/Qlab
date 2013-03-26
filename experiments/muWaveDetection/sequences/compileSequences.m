@@ -33,11 +33,10 @@ fprintf('Number of sequences: %i\n', numSegments*seqParams.nbrRepeats);
 for measCh = measChannels
     measCh = measCh{1};
     IQkey = qubitMap.(measCh).IQkey;
-    SSBFreq = +10e6;
     ChParams = params.(IQkey);
     % shift the delay to include the measurement length
     params.(IQkey).delay = ChParams.delay + seqParams.measLength;
-    pgM = PatternGen(measCh, 'cycleLength', seqParams.cycleLength, 'SSBFreq', SSBFreq);    
+    pgM = PatternGen(measCh, 'cycleLength', seqParams.cycleLength);    
     measSeq = {{pgM.pulse('Xtheta', 'pType', 'tanh', 'sigma', 1, 'buffer', 0, 'amp', 4000, 'width', seqParams.measLength)}};
     patternDict(IQkey) = struct('pg', pgM, 'patseq', {repmat(measSeq, 1, nbrPatterns)}, 'calseq', {repmat(measSeq,1,calPatterns)}, 'channelMap', qubitMap.(measCh));
 end
@@ -175,7 +174,7 @@ elseif (strncmp(digitizerTrigChan,'BBNAPS', 6))
     if isempty(awgChannels.(tmpIQkey))
         create_empty_APS_channel(tmpIQkey);
     end
-    awgChannels.(tmpIQkey).linkLists = PatternGen.addTrigger(awgChannels.(tmpIQkey).linkLists, seqParams.fixedPt-500, 0, tmpMarkerNum);
+    awgChannels.(tmpIQkey).linkLists = PatternGen.addTrigger(awgChannels.(tmpIQkey).linkLists, seqParams.fixedPt-500, 1200, tmpMarkerNum);
 end
 
 if (strncmp(slaveTrigChan,'TekAWG', 6))
@@ -265,7 +264,7 @@ if makePlot
         pythonLauncher = 'python';
     end
     [status, result] = system([pythonPathCmd,  pythonLauncher, ' "', fullfile(getpref('qlab', 'PyQLabDir'), 'QGL',...
-                    'PulseSequencePlotter.py'), '" --AWGFiles "', sprintf('%s', awgFiles{:}), '" & exit &']);
+                    'PulseSequencePlotter.py'), '" --AWGFiles ', sprintf('"%s" ', awgFiles{:}), ' & exit &']);
 end
 
     %Helper function to extract a particular Tek's channels from the AWGChannel

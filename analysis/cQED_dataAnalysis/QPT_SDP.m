@@ -85,4 +85,5 @@ choiSDP = double(choiSDP_yalmip);
 
 if (nargout == 2)
     choiLSQ = predictorMat\expResults(:);
+    choiLSQ = reshape(choiLSQ,4,4);
 end

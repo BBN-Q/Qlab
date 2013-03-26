@@ -17,21 +17,18 @@
 % Description: Searches for optimal amplitude and phase correction on an
 % I/Q mixer.
 
-function T = optimize_mixer_ampPhase_bySearch(obj, i_offset, q_offset)
+function T = optimize_mixer_ampPhase_bySearch(obj)
     % unpack constants from cfg file
-    ExpParams = obj.inputStructure.ExpParams;
-    spec_analyzer_span = ExpParams.SpecAnalyzer.span;
-    spec_resolution_bw = ExpParams.SpecAnalyzer.resolution_bw;
-    spec_sweep_points = ExpParams.SpecAnalyzer.sweep_points;
-    awg_I_channel = ExpParams.Mixer.I_channel;
-    awg_Q_channel = ExpParams.Mixer.Q_channel;
+    ExpParams = obj.expParams;
+    awg_amp = obj.awgAmp;
+
     fssb = ExpParams.SSBFreq; % SSB modulation frequency (usually 10 MHz)
 
     simul_amp = 1.0;
     simul_phase = 0.0;
 
-    verbose = obj.inputStructure.verbose;
-    simulate = obj.testMode;
+    verbose = ExpParams.verbose;
+    simulate = simulate = ExpParams.SoftwareDevelopmentMode;
     
     % initialize instruments
     if ~simulate
@@ -40,67 +37,7 @@ function T = optimize_mixer_ampPhase_bySearch(obj, i_offset, q_offset)
         awg = obj.awg;
         
         sa.center_frequency = obj.specgen.frequency * 1e9 - fssb;
-        sa.span = spec_analyzer_span;
-        sa.sweep_mode = 'single';
-        sa.resolution_bw = spec_resolution_bw;
-        sa.sweep_points = spec_sweep_points;
-        sa.video_averaging = 0;
-        sa.sweep();
-        sa.peakAmplitude();
 
-        awgfile = ExpParams.SSBAWGFile;
-
-        switch class(awg)
-            case 'deviceDrivers.Tek5014'
-                awg_amp = awg.(['chan_' num2str(awg_I_channel)]).Amplitude;
-                awg.openConfig(awgfile);
-                awg.(['chan_' num2str(awg_I_channel)]).offset = i_offset;
-                awg.(['chan_' num2str(awg_Q_channel)]).offset = q_offset;
-                awg.runMode = 'CONT';
-                awg.(['chan_' num2str(awg_I_channel)]).Amplitude = awg_amp;
-                awg.(['chan_' num2str(awg_Q_channel)]).Amplitude = awg_amp;
-                awg.(['chan_' num2str(awg_I_channel)]).Skew = 0;
-                awg.(['chan_' num2str(awg_Q_channel)]).Skew = 0;
-                awg.(['chan_' num2str(awg_I_channel)]).Enabled = 1;
-                awg.(['chan_' num2str(awg_Q_channel)]).Enabled = 1;
-            case 'deviceDrivers.APS'
-                awg_amp = awg.(['chan_' num2str(awg_I_channel)]).amplitude;
-
-                samplingRate = 1.2e9;
-                waveform_length = 1200;
-                timeStep = 1/samplingRate;
-                tpts = timeStep*(0:(waveform_length-1));
-                % i waveform
-                iwf = awg.(['chan_' num2str(awg_I_channel)]).waveform;
-                iwf.dataMode = iwf.REAL_DATA;
-                iwf.data = 0.5 * cos(2*pi*fssb.*tpts);
-                iwf.set_offset(i_offset);
-                awg.loadWaveform(awg_I_channel-1, iwf.prep_vector());
-                awg.setOffset(awg_I_channel, i_offset);
-                awg.(['chan_' num2str(awg_I_channel)]).waveform = iwf;
-                % q waveform
-                qwf = awg.(['chan_' num2str(awg_Q_channel)]).waveform;
-                qwf.dataMode = qwf.REAL_DATA;
-                qwf.data = -0.5 * sin(2*pi*fssb.*tpts);
-                qwf.set_offset(q_offset);
-                awg.loadWaveform(awg_Q_channel-1, qwf.prep_vector());
-                awg.setOffset(awg_Q_channel, q_offset);
-                awg.(['chan_' num2str(awg_Q_channel)]).waveform = qwf;
-                
-                % copy onto outputs 3 and 4 for testing
-                awg.loadWaveform(2, iwf.prep_vector());
-                awg.loadWaveform(3, qwf.prep_vector());
-                awg.setLinkListMode(2, awg.LL_DISABLE, awg.LL_CONTINUOUS);
-                awg.setLinkListMode(3, awg.LL_DISABLE, awg.LL_CONTINUOUS);
-                awg.chan_3.enabled = 1;
-                awg.chan_4.enabled = 1;
-            
-                awg.triggerSource = 'internal';
-                awg.setLinkListMode(awg_I_channel-1, awg.LL_DISABLE, awg.LL_CONTINUOUS);
-                awg.setLinkListMode(awg_Q_channel-1, awg.LL_DISABLE, awg.LL_CONTINUOUS);
-                awg.(['chan_' num2str(awg_I_channel)]).enabled = 1;
-                awg.(['chan_' num2str(awg_Q_channel)]).enabled = 1;
-        end
         awg.run();
         awg.waitForAWGtoStartRunning();
     else
@@ -162,18 +99,7 @@ function T = optimize_mixer_ampPhase_bySearch(obj, i_offset, q_offset)
     
     % restore instruments to a normal state
     if ~simulate
-        sa.center_frequency = obj.specgen.frequency * 1e9;
-        sa.span = 25e6;
-        sa.sweep_mode = 'cont';
-        sa.resolution_bw = 'auto';
-        sa.sweep_points = 800;
-        sa.video_averaging = 1;
-        sa.sweep();
-        sa.peakAmplitude();
-        
         obj.setInstrument(x0(1), skew);
-        %awg.(['chan_' num2str(awg_I_channel)]).offset = i_offset;
-        %awg.(['chan_' num2str(awg_Q_channel)]).offset = q_offset;
     end
     
     % local functions

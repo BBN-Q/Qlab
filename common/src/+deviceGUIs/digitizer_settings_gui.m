@@ -49,10 +49,10 @@ cardParams = struct();
 % available card types
 cardParams.cardTypes = containers.Map({'AgilentAP240', 'AlazarATS9870'}, {1, 2});
 %Whether the card performs on-board averaging
-cardParams.cardModes = containers.Map();
+cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {'digitizer', 'averager'});
 %How the digitizer is clocked: internal, external, or 10MHz reference into
 %PLL
-cardParams.clockTypes = containers.Map();
+cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {'int', 'ext', 'ref'});
 %Vertical scaling
 cardParams.scales = containers.Map();
 %AC/DC coupling and impedence
@@ -74,7 +74,7 @@ cardParams.samplingRates = containers.Map();
 %menus
 cardParamsUIDict = containers.Map();
 cardParamsUIDict('cardType') = 'cardTypes';
-cardParamsUIDict('acquire_mode') = 'cardModes';
+cardParamsUIDict('acquireMode') = 'cardModes';
 cardParamsUIDict('clockType') = 'clockTypes';
 cardParamsUIDict('verticalScale') = 'scales';
 cardParamsUIDict('verticalCoupling') = 'verticalCouplings';
@@ -122,7 +122,7 @@ set_settings_fcn = @set_gui_elements;
         
         [~, ~, handles.cardType] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Type:', 'cardType', cardParams.cardTypes.keys());
         set(handles.cardType, 'Callback', @card_switch);
-        [~, ~, handles.acquire_mode] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Mode:', 'acquire_mode', {''});
+        [~, ~, handles.acquireMode] = uiextras.labeledPopUpMenu(tmpGrid1, 'Card Mode:', 'acquireMode', {''});
         
         set(tmpGrid1, 'RowSizes', [-1], 'ColumnSizes', [-1, -1]);
         
@@ -195,7 +195,7 @@ set_settings_fcn = @set_gui_elements;
         scope_settings.Address = 'PCI::INSTR0';
         
         % set card mode
-        scope_settings.acquire_mode = cardParams.cardModes(get_selected(handles.acquire_mode));
+        scope_settings.acquireMode = cardParams.cardModes(get_selected(handles.acquireMode));
         scope_settings.clockType = cardParams.clockTypes(get_selected(handles.clockType));
         
         % set horizontal settings
@@ -242,8 +242,7 @@ set_settings_fcn = @set_gui_elements;
         %Now set the allowed parameters
         switch curCard
             case 'AgilentAP240'
-                cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {0, 2});
-                cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {'int', 'ext', 'ref'});
+                cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {'digitizer', 'averager'});
                 cardParams.scales = containers.Map({'50m','100m', '200m', '500m', '1', '2', '5'}, {.05, .1, .2, .5, 1, 2, 5});
                 cardParams.verticalCouplings = containers.Map({'Ground','DC, 1 MOhm','AC, 1 MOhm','DC, 50 Ohm','AC, 50 Ohm'}, ...
                     {0,1,2,3,4});
@@ -263,32 +262,28 @@ set_settings_fcn = @set_gui_elements;
                     if strcmp(settings.deviceName ,'AlazarATS9870')
                         settings.cardType = 'AgilentAP240';
                         settings.deviceName = 'AgilentAP240';
-                        tmpMap = containers.Map({1, 5, 7}, {'int', 'ext', 'ref'});
-                        settings.clockType = tmpMap(settings.clockType);
-                        tmpMap = containers.Map({2, 5, 6, 7, 10, 11, 12}, {.05, .1, .2, .5, 1, 2, 5});
+                        tmpMap = containers.Map({.04, .1, .2, .4, 1, 2, 4}, {.05, .1, .2, .5, 1, 2, 5});
                         settings.vertical.verticalScale  = tmpMap(settings.vertical.verticalScale);
                         tmpMap = containers.Map({1, 2}, {4, 3});
                         settings.vertical.verticalCoupling  = tmpMap(settings.vertical.verticalCoupling);
                         tmpMap = containers.Map({0,1}, {0, 4});
                         settings.vertical.bandwidth  = tmpMap(settings.vertical.bandwidth);
-                        tmpMap = containers.Map({2, 0, 1}, {-1, 1, 2});
+                        tmpMap = containers.Map({'ext', 'a', 'b'}, {-1, 1, 2});
                         settings.trigger.triggerSource  = tmpMap(settings.trigger.triggerSource);
                         tmpMap = containers.Map({2,1}, {0,1});
                         settings.trigger.triggerCoupling  = tmpMap(settings.trigger.triggerCoupling);
-                        tmpMap = containers.Map({1e6, 10e6, 100e6, 250e6, 500e6, 1e9},{1e6, 10e6, 100e6, 250e6, 500e6, 1e9});
-                        settings.horizontal.samplingRate  = tmpMap(settings.horizontal.samplingRate);
+                        settings.trigger.triggerSlope = settings.trigger.triggerSlope-1;
                     end
                 end
                 
             case 'AlazarATS9870'
                 cardParams.cardModes = containers.Map({'Digitizer', 'Averager'}, {0, 2});
-                cardParams.clockTypes = containers.Map({'Internal','External', 'Ext Ref (10 MHz)'}, {1, 5, 7});
                 cardParams.scales = containers.Map({'40m','100m', '200m', '400m', '1', '2', '4'}, {.04, .1, .2, .4, 1, 2, 4});
                 cardParams.verticalCouplings = containers.Map({'AC, 50 Ohm','DC, 50 Ohm'}, {1, 2});
                 cardParams.bandwidths = containers.Map({'no limit','20 MHz'}, {0,1});
-                cardParams.trigChannels = containers.Map({'External','Ch A', 'Ch B'}, {2, 0, 1});
+                cardParams.trigChannels = containers.Map({'External','Ch A', 'Ch B'}, {'ext', 'a', 'b'});
                 cardParams.trigCouplings = containers.Map({'DC','AC'},{2,1});
-                cardParams.trigSlopes = containers.Map({'Rising','Falling'},{0,1});
+                cardParams.trigSlopes = containers.Map({'Rising','Falling'},{1,2});
                 cardParams.resyncs = containers.Map();
                 cardParams.samplingRates = containers.Map({'1M','10M','100M','250M','500M','1G'},{1e6, 10e6, 100e6, 250e6, 500e6, 1e9});
                 
@@ -300,18 +295,17 @@ set_settings_fcn = @set_gui_elements;
                     if strcmp(settings.deviceName ,'AgilentAP240')
                         settings.cardType = 'AlazarATS9870';
                         settings.deviceName = 'AlazarATS9870';
-                        tmpMap = containers.Map({'int', 'ext', 'ref'}, {1, 5, 7});
-                        settings.clockType = tmpMap(settings.clockType);
-                        tmpMap = containers.Map({.05, .1, .2, .5, 1, 2, 5}, {2, 5, 6, 7, 10, 11, 12});
+                        tmpMap = containers.Map({.05, .1, .2, .5, 1, 2, 5}, {.04, .1, .2, .4, 1, 2, 4});
                         settings.vertical.verticalScale  = tmpMap(settings.vertical.verticalScale);
                         tmpMap = containers.Map({0,1,2,3,4}, {2, 2, 1, 2, 1}); 
                         settings.vertical.verticalCoupling  = tmpMap(settings.vertical.verticalCoupling);
                         tmpMap = containers.Map({0,2,3,5,1,4}, {0, 1, 1, 1, 1, 1});  
                         settings.vertical.bandwidth  = tmpMap(settings.vertical.bandwidth);
-                        tmpMap = containers.Map({-1, 1, 2}, {2, 0, 1});
+                        tmpMap = containers.Map({-1, 1, 2}, {'ext', 'a', 'b'});
                         settings.trigger.triggerSource  = tmpMap(settings.trigger.triggerSource);
                         tmpMap = containers.Map({0,1,3,4}, {2, 1, 2, 1});
                         settings.trigger.triggerCoupling  = tmpMap(settings.trigger.triggerCoupling);
+                        settings.trigger.triggerSlope = settings.trigger.triggerSlope+1;
                         tmpMap = containers.Map({1e6, 2e6, 2.5e6, 4e6, 5e6, 10e6, 20e6, 25e6, 40e6, 50e6, 100e6, 200e6, 250e6, 400e6, 500e6, 1e9, 2e9},...
                                                 {1e6, 1e6, 1e6,   1e6, 10e6,10e6, 10e6, 10e6, 10e6, 100e6,100e6, 250e6, 250e6, 500e6, 500e6, 1e9, 1e9});
                         settings.horizontal.samplingRate  = tmpMap(settings.horizontal.samplingRate);
@@ -330,10 +324,10 @@ set_settings_fcn = @set_gui_elements;
         defaults = struct();
         if isempty(fieldnames(settings))
             defaults.cardType = 'AgilentAP240';
-            defaults.acquire_mode = 'Averager';
+            defaults.acquireMode = 'Averager';
             defaults.clockType = 'Ext Ref (10 MHz)';
             defaults.horizontal.delayTime = 0;
-            defaults.horizontal.samplingRate = 10e9;
+            defaults.horizontal.samplingRate = 1e9;
             defaults.vertical.verticalScale = '500m';
             defaults.vertical.verticalOffset = 0;
             defaults.vertical.verticalCoupling = 'DC, 50 Ohm';
@@ -356,6 +350,7 @@ set_settings_fcn = @set_gui_elements;
             scalesInv = invertMap(cardParams.scales);
             verticalCouplingsInv = invertMap(cardParams.verticalCouplings);
             bandwidthsInv = invertMap(cardParams.bandwidths);
+            samplingRatesInv = invertMap(cardParams.samplingRates);
             trigChannelsInv = invertMap(cardParams.trigChannels);
             trigCouplingsInv = invertMap(cardParams.trigCouplings);
             trigSlopesInv = invertMap(cardParams.trigSlopes);
@@ -365,11 +360,11 @@ set_settings_fcn = @set_gui_elements;
             % scope settings are two layers deep, need to go into horizontal,
             % vertical, trigger, and averager
             defaults.cardType = settings.cardType;
-            defaults.acquire_mode = cardModesInv(settings.acquire_mode);
+            defaults.acquireMode = cardModesInv(settings.acquireMode);
             defaults.clockType = clockTypesInv(settings.clockType);
             % horizontal
             defaults.horizontal.delayTime = settings.horizontal.delayTime;
-            defaults.horizontal.samplingRate = settings.horizontal.samplingRate;
+            defaults.horizontal.samplingRate = samplingRatesInv(settings.horizontal.samplingRate);
             % vertical
             defaults.vertical.verticalScale = scalesInv(settings.vertical.verticalScale);
             defaults.vertical.verticalOffset = settings.vertical.verticalOffset;
@@ -418,10 +413,12 @@ set_settings_fcn = @set_gui_elements;
                         %Some of the pop-up menus we want to order based on
                         %their numeric values
                         tmpKeys = keys(cardParams.(cardParamsUIDict(name)));
-                        if(any(strcmp(name, {'verticalScale', 'bandwidth'})))
+                        if(any(strcmp(name, {'verticalScale', 'bandwidth', 'samplingRate'})))
                             tmpValues = keys(cardParams.(cardParamsUIDict(name)));
                             tmpValues = strrep(tmpValues, 'm','e-3');
                             tmpValues = strrep(tmpValues, 'MHz','e6');
+                            tmpValues = strrep(tmpValues, 'M','e6');
+                            tmpValues = strrep(tmpValues, 'G','e9');
                             [~, sortOrder] = sort(str2double(tmpValues));
                             tmpKeys = tmpKeys(sortOrder);
                         end

@@ -1,18 +1,15 @@
 {
-	"cfg_file_name": "optimize_mixer.json",
 	"InstrParams": {
-		"spectrum_analyzer": {
-			"enable": 1,
-			"deviceName": "HP71000",
-			"Address": 18
+		"SpecAnalyzer1": {
+			"span": 100000,
+			"resolution_bw": 10000,
+			"sweep_points": 20,
+			"sweep_mode": "single",
+			"video_averaging": 0
 		}
 	},
 	"ExpParams": {
-		"SpecAnalyzer": {
-			"span": 100000,
-			"resolution_bw": 10000,
-			"sweep_points": 20
-		},
+		"specAnalyzer": "SpecAnalyzer1",
 		"Search": {
 			"max_offset": 0.5,
 			"max_steps": 50,
@@ -39,8 +36,8 @@
 				"stop": 10,
 				"numPoints": 50
 			}
-		}
-	},
-	"verbose": 0,
-	"SoftwareDevelopmentMode": 0
+		},
+		"verbose": 0,
+		"SoftwareDevelopmentMode": 0
+	}
 }
