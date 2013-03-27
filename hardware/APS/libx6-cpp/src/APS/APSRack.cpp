@@ -159,12 +159,12 @@ int APSRack::disconnect(const int & deviceID){
 
 int APSRack::connect(const string & deviceSerial){
 	//Look up the associated ID and call the next connect
-	//return APSs_[serial2dev[deviceSerial]].connect();
+	return APSs_[serial2dev[deviceSerial]].connect();
 }
 
 int APSRack::disconnect(const string & deviceSerial){
 	//Look up the associated ID and call the next connect
-	//return APSs_[serial2dev[deviceSerial]].disconnect();
+	return APSs_[serial2dev[deviceSerial]].disconnect();
 }
 
 int APSRack::program_FPGA(const int & deviceID, const string &bitFile, const FPGASELECT & chipSelect, const int & expectedVersion){
@@ -198,14 +198,14 @@ int APSRack::set_repeat_mode(const int & deviceID, const int & dac, const bool &
 }
 
 int APSRack::clear_channel_data(const int & deviceID) {
-	//return APSs_[deviceID].clear_channel_data();
+	return APSs_[deviceID].clear_channel_data();
 }
 
 int APSRack::run(const int & deviceID) {
-	//return APSs_[deviceID].run();
+	return APSs_[deviceID].run();
 }
 int APSRack::stop(const int & deviceID) {
-	//return APSs_[deviceID].stop();
+	return APSs_[deviceID].stop();
 }
 
 int APSRack::load_sequence_file(const int & deviceID, const string & seqFile){
@@ -217,8 +217,7 @@ int APSRack::set_LL_data(const int & deviceID, const int & channelNum, const Wor
 }
 
 int APSRack::get_running(const int & deviceID){
-	//TODO:
-//	return APSs_[deviceID].running_;
+	//return APSs_[deviceID].running_;
 	return 0;
 }
 
@@ -248,11 +247,11 @@ TRIGGERSOURCE APSRack::get_trigger_source(const int & deviceID) const{
 }
 
 int APSRack::set_trigger_interval(const int & deviceID, const double & interval){
-	//return APSs_[deviceID].set_trigger_interval(interval);
+	return APSs_[deviceID].set_trigger_interval(interval);
 }
 
 double APSRack::get_trigger_interval(const int & deviceID) const{
-	//return APSs_[deviceID].get_trigger_interval();
+	return APSs_[deviceID].get_trigger_interval();
 }
 
 int APSRack::set_miniLL_repeat(const int & deviceID, const USHORT & repeat){
@@ -268,19 +267,19 @@ bool APSRack::get_channel_enabled(const int & deviceID, const int & channelNum) 
 }
 
 int APSRack::set_channel_offset(const int & deviceID, const int & channelNum, const float & offset){
-	//return APSs_[deviceID].set_channel_offset(channelNum, offset);
+	return APSs_[deviceID].set_channel_offset(channelNum, offset);
 }
 
 float APSRack::get_channel_offset(const int & deviceID, const int & channelNum) const{
-	//return APSs_[deviceID].get_channel_offset(channelNum);
+	return APSs_[deviceID].get_channel_offset(channelNum);
 }
 
 int APSRack::set_channel_scale(const int & deviceID, const int & channelNum, const float & scale){
-	//return APSs_[deviceID].set_channel_scale(channelNum, scale);
+	return APSs_[deviceID].set_channel_scale(channelNum, scale);
 }
 
 float APSRack::get_channel_scale(const int & deviceID, const int & channelNum) const{
-	//return APSs_[deviceID].get_channel_scale(channelNum);
+	return APSs_[deviceID].get_channel_scale(channelNum);
 }
 
 int APSRack::save_state_files(){

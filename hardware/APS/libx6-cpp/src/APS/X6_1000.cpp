@@ -1,6 +1,8 @@
 #include "X6_1000.h"
 
-#include <IppMemoryUtils_Mb.h> // for Init::UsePerformanceMemoryFunctions
+#include <IppMemoryUtils_Mb.h>  // for Init::UsePerformanceMemoryFunctions
+#include <BufferDatagrams_Mb.h> // for ShortDG
+#include <algorithm>            // std::max
 
 /* Provides Main Loop to distribute thunked messages */
 /* Current unncessary as of 3/27/2013 */
@@ -27,26 +29,31 @@ X6_1000::X6_1000() {
 }
 
 X6_1000::X6_1000(unsigned int target) :
-    deviceID_(target), isOpened_(false)
+    deviceID_(target), isOpened_(false), triggerInterval_(1000.0)
 {
     numBoards_ = getBoardCount();
 
-    /* set active channels map */
-    unsigned int numChannels = module_.Output().Channels();
-    for(int cnt = 0; cnt < numChannels; cnt++)
+    for(int cnt = 0; cnt < get_num_channels(); cnt++) {
         activeChannels_[cnt] = false;
+        chData_[cnt].clear(); // initalize vector
+    }
 
     // Use IPP performance memory functions.    
     Init::UsePerformanceMemoryFunctions();
 
     // Timer Interval in milleseconds
-    timer_.Interval(1000); 
+    set_trigger_interval(triggerInterval_);
 }
 
 X6_1000::~X6_1000()
 {
 	if (isOpened_) Close();   
 }
+
+unsigned int X6_1000::get_num_channels() {
+    return module_.Output().Channels();
+}
+
 
 X6_1000::ErrorCodes X6_1000::set_deviceID(unsigned int deviceID) {
 	if (!isOpened_ && deviceID < numBoards_)
@@ -259,6 +266,15 @@ X6_1000::TriggerSource X6_1000::get_trigger_src() {
         return SOFTWARE_TRIGGER;
 }
 
+X6_1000::ErrorCodes X6_1000::set_trigger_interval(const double & interval) {
+    if (interval <= 0) return INVALID_INTERVAL; 
+    FILE_LOG(logDEBUG) << "Setting Trigger Interval to: " << interval;
+    triggerInterval_ = interval;
+    timer_.Interval(triggerInterval_); 
+}
+
+double X6_1000::get_trigger_interval() const {return triggerInterval_; }
+
 X6_1000::ErrorCodes X6_1000::set_decimation(bool enabled, int factor) {
     module_.Output().Decimation( (enabled ) ? factor : 0);
     module_.Input().Decimation((enabled ) ? factor : 0); 
@@ -266,9 +282,7 @@ X6_1000::ErrorCodes X6_1000::set_decimation(bool enabled, int factor) {
 }
 
 X6_1000::ErrorCodes X6_1000::set_channel_enable(int channel, bool enabled) {
-    unsigned int numChannels = module_.Output().Channels();
-
-    if (channel >= numChannels) return INVALID_CHANNEL;
+    if (channel >= get_num_channels()) return INVALID_CHANNEL;
     FILE_LOG(logINFO) << "Set Channel " << channel << " Enable = " << enabled;
     activeChannels_[channel] = enabled;
     return SUCCESS;
@@ -276,20 +290,18 @@ X6_1000::ErrorCodes X6_1000::set_channel_enable(int channel, bool enabled) {
 
 bool X6_1000::get_channel_enable(int channel) {
     // TODO get active channel status from board
-    unsigned int numChannels = module_.Output().Channels();
-    if (channel >= numChannels) return false;
+    if (channel >= get_num_channels()) return false;
     else return activeChannels_[channel];
 }
 
 
 X6_1000::ErrorCodes X6_1000::set_active_channels() {
     ErrorCodes status = SUCCESS;
-    unsigned int numChannels = module_.Output().Channels();
 
     module_.Output().ChannelDisableAll();
     module_.Input().ChannelDisableAll();
 
-    for (int cnt = 0; cnt < numChannels; cnt++) { 
+    for (int cnt = 0; cnt < get_num_channels(); cnt++) { 
         FILE_LOG(logINFO) << "Channel " << cnt << " Enable = " << activeChannels_[cnt];
         module_.Output().ChannelEnabled(cnt, activeChannels_[cnt]);
     }
@@ -308,6 +320,17 @@ void X6_1000::set_defaults() {
     set_trigger_src();
     set_decimation();
     set_active_channels();
+
+    // disable test mode 
+    module_.Input().TestModeEnabled( false, wfType_);
+    module_.Output().TestModeEnabled( false, wfType_);
+}
+
+X6_1000::ErrorCodes X6_1000::write_waveform(const int & channel, const vector<short> & wfData) {
+    if (channel >= get_num_channels()) return INVALID_CHANNEL;
+    // copy data replacing existing data
+    chData_[channel] = wfData;
+    return SUCCESS;
 }
 
 /**************************************************************
@@ -315,16 +338,6 @@ void X6_1000::set_defaults() {
 * This code is to demo access to default II FGPA wavform source
 * from library.
 ***************************************************************/
-
-// X6_1000::ErrorCodes X6_1000::set_waveform_generator(bool enabled/*, type */) {
-//     Builder.Settings.WaveType = 1;
-//     Builder.Settings.WaveformFrequency = 1.0f;
-//     Builder.Settings.WaveformAmplitude = 95.04f;
-//     Builder.Settings.TwoToneMode = false;
-//     Builder.Settings.TwoToneFrequency = 1.01f;
-//     Builder.Settings.SingleChannelMode = true;
-//     Builder.Settings.SingleChannelChannel = 0;
-// }
 
 void X6_1000::log_card_info() {
 
@@ -346,20 +359,24 @@ X6_1000::ErrorCodes X6_1000::enable_test_generator(X6_1000::FPGAWaveformType wfT
 
     wfType_ = wfType;
 
+    //  Output Test Generator Setup
+    module_.Output().TestModeEnabled( true, wfType_ );  // enable , mode
+    module_.Output().TestFrequency( frequencyMHz * 1e6 ); // frequency in Hz
+    return Start();
+}
+
+X6_1000::ErrorCodes X6_1000::Start() {
+    // Mimic Test Generater Mode from Stream Example
+
     set_active_channels();
     FILE_LOG(logINFO) << "stream_.Preconfigure();";
     stream_.Preconfigure();
     
-    //  Output Test Generator Setup
-    module_.Output().TestModeEnabled( true, wfType_ );  // enable , mode
-    module_.Output().TestFrequency( frequencyMHz * 1e6 ); // frequency in Hz
-
     // enable software trigger
     module_.Output().SoftwareTrigger(true);
 
     module_.Output().Pulse().Reset();
     module_.Output().Pulse().Enabled(false);
-
     
     // disable prefill
     stream_.PrefillPacketCount(0);
@@ -382,6 +399,10 @@ X6_1000::ErrorCodes X6_1000::enable_test_generator(X6_1000::FPGAWaveformType wfT
 
 X6_1000::ErrorCodes X6_1000::disable_test_generator() {
     module_.Output().TestModeEnabled( false, wfType_);
+    return Stop();
+}
+
+X6_1000::ErrorCodes X6_1000::Stop() {
     stream_.Stop();
     timer_.Enabled(false);
     trigger_.AtStreamStop();
@@ -438,9 +459,88 @@ void X6_1000::HandleAfterStreamStop(OpenWire::NotifyEvent & /*Event*/) {
     //Player.Stop();
 }
 
+void X6_1000::HandlePackedDataAvailable(Innovative::VitaPacketPackerDataAvailable & Event) { 
+    outputPacket_ = Event.Data; 
+}
+
 void X6_1000::HandleDataRequired(VitaPacketStreamDataEvent & Event) {
     FILE_LOG(logINFO) << "X6_1000::HandleDataRequired";
-    //SendOneBlock(Event.Sender);
+    
+    // the total VITA packet size is limited by 2^16-1 words (32bit), out of which 8
+    // are used for header and trailer
+    const size_t MAX_VITA_PACKET_DATA_SIZE = ( 0xffff - 8 ) * 4;
+
+
+    Innovative::VitaBuffer vitaPacket;
+    Innovative::ShortDG DG(vitaPacket);
+
+    size_t leftToWrite = 0;
+    
+    // get channel 0 / 1 stream ID
+    int streamID = module_.VitaOut().VitaStreamId(0);
+
+    Innovative::VitaPacketPacker VPPk(leftToWrite/4+100);
+    VPPk.OnDataAvailable.SetEvent(this, &X6_1000::HandlePackedDataAvailable);
+
+    unsigned int numActiveChannels = 0;
+    size_t maxSampleNum = 0;
+
+    // determine number of active channels and max sample
+    for (int ch = 0; ch < get_num_channels(); ch++) {
+        if (activeChannels_[ch]) {
+            maxSampleNum = max(maxSampleNum, chData_[ch].size());
+        }
+    }
+
+    leftToWrite = numActiveChannels * maxSampleNum;
+
+    unsigned int waveformIndex = 0;
+    unsigned int numChannels = get_num_channels();
+    
+    size_t packet = 0;
+    // send data for each channel
+    
+    while (leftToWrite > 0)
+    {
+        ClearHeader(vitaPacket);
+        ClearTrailer(vitaPacket);
+
+        size_t writeNow = min(leftToWrite,MAX_VITA_PACKET_DATA_SIZE);
+        DG.Resize(writeNow);
+
+        unsigned int numSamples = writeNow / numActiveChannels;
+
+        for(int sample = 0; sample < numSamples; sample++) {
+            for(int ch = 0; ch < numChannels; ch++) {
+                int idx = sample*get_num_channels()+ch;
+                DG[idx] = (waveformIndex < chData_[ch].size() && activeChannels_[ch]) ? chData_[ch][waveformIndex] : 0;
+            }
+            waveformIndex++;
+        }
+            
+        InitHeader(vitaPacket);
+        InitTrailer(vitaPacket);
+
+        Innovative::VitaHeaderDatagram VitaH( vitaPacket );
+
+        VitaH.StreamId(streamID);
+        VitaH.PacketCount(static_cast<int>(packet));
+
+        //  Shove in the new VITA packet
+        VPPk.Pack( vitaPacket );
+
+        leftToWrite -= writeNow;
+        packet++;
+    }
+
+    VPPk.Flush();   // outputs the one waveform buffer into outputPacket_
+
+    Innovative::ClearHeader(outputPacket_);
+    Innovative::InitHeader(outputPacket_);   // make sure header packet size is valid...
+
+    Innovative::VeloHeaderDatagram headerDG(outputPacket_);
+
+    stream_.Send(0,outputPacket_); // send to peripheral ID 0
 }
 
 void  X6_1000::HandleDataAvailable(VitaPacketStreamDataEvent & Event) {

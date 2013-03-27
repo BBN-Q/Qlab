@@ -36,7 +36,8 @@ public:
     	MODULE_ERROR = -1,
     	NOT_IMPLEMENTED = -2,
     	INVALID_FREQUENCY = -3,
-    	INVALID_CHANNEL = -4
+    	INVALID_CHANNEL = -4,
+    	INVALID_INTERVAL = -5
 	};
 
 	enum ExtInt {
@@ -127,6 +128,10 @@ public:
 
 	TriggerSource get_trigger_src();
 
+	ErrorCodes set_trigger_interval(const double & interval);
+
+	double get_trigger_interval() const; 
+
 	/** Set Decimation Factor (current for both Tx and Rx)
 	 * \params enabled set to true to enable
 	 * \params factor Decimaton factor
@@ -148,9 +153,16 @@ public:
 	ErrorCodes enable_test_generator(FPGAWaveformType wfType, float frequencyMHz);
 	ErrorCodes disable_test_generator();
 	
+	ErrorCodes write_waveform(const int & channel, const vector<short> & wfData);\
+
+	unsigned int get_num_channels();
+
 	ErrorCodes   Open();
     bool  isOpen();
     ErrorCodes   Close();
+
+    ErrorCodes 	 Start();
+    ErrorCodes	 Stop();
 
     static void set_threading_enable(bool enable) {/*enableThreading_ = enable;*/}
 
@@ -163,6 +175,8 @@ private:
 	Innovative::TriggerManager      trigger_;   /**< Malibu trigger manager */
 	Innovative::VitaPacketStream    stream_;
 	Innovative::SoftwareTimer       timer_;
+	Innovative::VeloBuffer       	outputPacket_;
+
 
 	unsigned int numBoards_;      /**< cached number of boards */
 	unsigned int deviceID_;       /**< board ID (aka target number) */
@@ -174,6 +188,8 @@ private:
 	// State Variables
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
 	static bool enableThreading_;		  /**< enabled threading support */
+
+	double triggerInterval_; 	  /**< trigger inverval in milliseconds */
 
 	ErrorCodes set_active_channels();
 	void set_defaults();
@@ -196,6 +212,7 @@ private:
 
 	void HandleDataRequired(Innovative::VitaPacketStreamDataEvent & Event);
     void HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event);
+    void HandlePackedDataAvailable(Innovative::VitaPacketPackerDataAvailable & Event);
 
 	void HandleTimer(OpenWire::NotifyEvent & Event);
 
@@ -216,6 +233,8 @@ private:
 	void  VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event);
 
 	FPGAWaveformType wfType_;	 /**< cached test waveform generator */
+
+	map<int, vector<short>> chData_;
 
 };
 

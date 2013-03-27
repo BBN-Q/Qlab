@@ -22,7 +22,9 @@ extern "C" {
 enum APSErrorCode {
 	APS_OK,
 	APS_UNKNOWN_ERROR = -1,
-	APS_FILE_ERROR = -2
+	APS_FILE_ERROR = -2,
+	APS_NOT_IMPLEMENTED_ERROR = -3,
+	APS_INVALID_CHANNEL = -4
 };
 
 

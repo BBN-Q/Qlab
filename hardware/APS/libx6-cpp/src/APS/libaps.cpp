@@ -93,12 +93,12 @@ double get_sampleRate(int deviceID){
 
 //Load the waveform library as floats
 int set_waveform_float(int deviceID, int channelNum, float* data, int numPts){
-	//return APSRack_.set_waveform(deviceID, channelNum, vector<float>(data, data+numPts));   // TODO: Re-enable set waveform
+	return APSRack_.set_waveform(deviceID, channelNum, vector<float>(data, data+numPts));   
 }
 
 //Load the waveform library as int16
 int set_waveform_int(int deviceID, int channelNum, short* data, int numPts){
-	//return APSRack_.set_waveform(deviceID, channelNum, vector<short>(data, data+numPts));  // TODO: Re-enable set waveform
+	return APSRack_.set_waveform(deviceID, channelNum, vector<short>(data, data+numPts));  
 }
 
 int load_sequence_file(int deviceID, const char * seqFile){
@@ -195,8 +195,9 @@ int get_channel_enabled(int deviceID, int channelNum){
 int set_LL_data_IQ(int deviceID, int channelNum, int length, unsigned short* addr, unsigned short* count,
 					unsigned short* trigger1, unsigned short * trigger2, unsigned short* repeat){
 	//Convert data pointers to vectors and passed through
-	return APSRack_.set_LL_data(deviceID, channelNum, WordVec(addr, addr+length), WordVec(count, count+length),
-			WordVec(trigger1, trigger1+length), WordVec(trigger2, trigger2+length), WordVec(repeat, repeat+length));
+	return APS_NOT_IMPLEMENTED_ERROR;
+	//return APSRack_.set_LL_data(deviceID, channelNum, WordVec(addr, addr+length), WordVec(count, count+length),
+	//		WordVec(trigger1, trigger1+length), WordVec(trigger2, trigger2+length), WordVec(repeat, repeat+length));
 }
 
 int set_run_mode(int deviceID, int channelNum, int mode) {
@@ -237,7 +238,8 @@ int read_register(int deviceID, int fpga, int addr){
 }
 
 int program_FPGA(int deviceID, char* bitFile, int chipSelect, int expectedVersion) {
-	return APSRack_.program_FPGA(deviceID, string(bitFile), FPGASELECT(chipSelect), expectedVersion);
+	return APS_NOT_IMPLEMENTED_ERROR;
+	//return APSRack_.program_FPGA(deviceID, string(bitFile), FPGASELECT(chipSelect), expectedVersion);
 }
 
 float get_logic_temperature(int deviceID) {

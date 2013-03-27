@@ -120,12 +120,12 @@ int APS::init(const string & bitFile, const bool & forceReload){
 	// 	// align DAC data clock boundaries
 	// 	setup_DACs();
 
-	// 	// clear channel data
-	// 	clear_channel_data();
+	// clear channel data
+	clear_channel_data();
 
 	// 	return 0;
 	// }
-	// samplingRate_ = get_sampleRate();
+	samplingRate_ = get_sampleRate();
 
 	return 0;
 }
@@ -222,22 +222,16 @@ double APS::get_sampleRate() const{
 	return APS::get_PLL_freq();
 }
 
-// int APS::clear_channel_data() {
-// 	FILE_LOG(logINFO) << "Clearing all channel data for APS " << deviceID_;
-// 	for (auto & ch : channels_) {
-// 		ch.clear_data();
-// 	}
-// 	// clear waveform length registers
-// 	write(FPGA_ADDR_CHA_WF_LENGTH, 0, true);
-// 	write(FPGA_ADDR_CHB_WF_LENGTH, 0, true);
-
-// 	// clear LL length registers
-// 	write(FPGA_ADDR_CHA_LL_LENGTH, 0, true);
-// 	write(FPGA_ADDR_CHB_LL_LENGTH, 0, true);
-// 	flush();
-
-// 	return 0;
-// }
+int APS::clear_channel_data() {
+	FILE_LOG(logINFO) << "Clearing all channel data for APS " << deviceID_;
+	for (auto & ch : channels_) {
+		ch.clear_data();
+	}
+	// clear waveform length registers
+	 
+	// TODO: clear X6_1000 data
+	return 0;
+}
 
 // int APS::load_sequence_file(const string & seqFile){
 // 	/*
@@ -300,43 +294,46 @@ double APS::get_sampleRate() const{
 // }
 
 int APS::set_channel_enabled(const int & dac, const bool & enable){
+	if (dac >= channels_.size()) return APS_INVALID_CHANNEL;
 	return handle_.set_channel_enable(dac,enable);
 }
 
 bool APS::get_channel_enabled(const int & dac) const{
+	if (dac >= channels_.size()) return APS_INVALID_CHANNEL;
 	X6_1000 *h = const_cast<X6_1000*>(&handle_);
  	return h->get_channel_enable(dac);
 }
 
-// int APS::set_channel_offset(const int & dac, const float & offset){
-// 	//Update the waveform in driver
-// 	channels_[dac].set_offset(offset);
-// 	//Write to device if necessary
-// 	if (!channels_[dac].waveform_.empty()){
-// 		write_waveform(dac, channels_[dac].prep_waveform());
-// 	}
+int APS::set_channel_offset(const int & dac, const float & offset){
+	if (dac >= channels_.size()) return APS_INVALID_CHANNEL;
+ 	//Update the waveform in driver
+ 	channels_[dac].set_offset(offset);
+ 	//Write to device if necessary
+ 	if (!channels_[dac].waveform_.empty()){
+ 		write_waveform(dac, channels_[dac].prep_waveform());
+	}
 
-// 	//Update TAZ register
-// 	set_offset_register(dac, channels_[dac].get_offset());
+ 	return 0;
+}
 
-// 	return 0;
-// }
+float APS::get_channel_offset(const int & dac) const {
+	if (dac >= channels_.size()) return APS_INVALID_CHANNEL;
+ 	return channels_[dac].get_offset();
+}
 
-// float APS::get_channel_offset(const int & dac) const{
-// 	return channels_[dac].get_offset();
-// }
+int APS::set_channel_scale(const int & dac, const float & scale){
+	if (dac >= channels_.size()) return APS_INVALID_CHANNEL;
+	channels_[dac].set_scale(scale);
+	if (!channels_[dac].waveform_.empty()){
+		write_waveform(dac, channels_[dac].prep_waveform());
+	}
+	return 0;
+}
 
-// int APS::set_channel_scale(const int & dac, const float & scale){
-// 	channels_[dac].set_scale(scale);
-// 	if (!channels_[dac].waveform_.empty()){
-// 		write_waveform(dac, channels_[dac].prep_waveform());
-// 	}
-// 	return 0;
-// }
-
-// float APS::get_channel_scale(const int & dac) const{
-// 	return channels_[dac].get_scale();
-// }
+float APS::get_channel_scale(const int & dac) const{
+	if (dac >= channels_.size()) return APS_INVALID_CHANNEL;
+	return channels_[dac].get_scale();
+}
 
 int APS::set_trigger_source(const TRIGGERSOURCE & triggerSource){
 
@@ -367,108 +364,99 @@ TRIGGERSOURCE APS::get_trigger_source() const{
 		return INTERNAL;
 }
 
-// int APS::set_trigger_interval(const double & interval){
+int APS::set_trigger_interval(const double & interval){
 
-// 	//SM clock is 1/4 of samplingRate so the trigger interval in SM clock periods is
-// 	//note: clockCycles is zero-indexed and has a dead state (so subtract 2)
-// 	int clockCycles = interval*0.25*samplingRate_*1e6 - 2;
+	FILE_LOG(logDEBUG) << "Setting trigger interval to " << interval ;
 
-// 	FILE_LOG(logDEBUG) << "Setting trigger interval to " << interval << "s (" << clockCycles << " cycles)";
+	return handle_.set_trigger_interval(interval);
+}
 
-// 	//Trigger interval is 32bits wide so have to split up into two 16bit words
-// 	USHORT upperWord = clockCycles >> 16;
-// 	USHORT lowerWord = 0xFFFF  & clockCycles;
-
-// 	return write(ALL_FPGAS, FPGA_ADDR_TRIG_INTERVAL, {upperWord, lowerWord}, false);
-// }
-
-// double APS::get_trigger_interval() const{
-
-// 	//Trigger interval is 32bits wide so have to split up into two 16bit words reads
-// 	int upperWord = FPGA::read_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL, FPGA1);
-// 	int lowerWord = FPGA::read_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL+1, FPGA1);
-
-// 	//Put it back together and covert from clock cycles to time (note: trigger interval is zero indexed and has a dead state)
-// 	return static_cast<double>((upperWord << 16) + lowerWord + 2)/(0.25*samplingRate_*1e6);
-// }
+double APS::get_trigger_interval() const{
+ 	return handle_.get_trigger_interval();
+}
 
 // int APS::set_miniLL_repeat(const USHORT & miniLLRepeat){
 // 	return FPGA::write_FPGA(handle_, FPGA_ADDR_LL_REPEAT, miniLLRepeat, ALL_FPGAS);
 // }
 
 
-// int APS::run() {
-// 	//Depending on how the channels are enabled, trigger the appropriate FPGA's
-// 	vector<bool> channelsEnabled;
-// 	bool allChannels = true;
-// 	for (const auto tmpChannel : channels_){
-// 		channelsEnabled.push_back(tmpChannel.enabled_);
-// 		allChannels &= tmpChannel.enabled_;
-// 	}
+int APS::run() {
+	//Depending on how the channels are enabled, trigger the appropriate FPGA's
+	vector<bool> channelsEnabled;
+	bool allChannels = true;
+	for (const auto tmpChannel : channels_){
+		channelsEnabled.push_back(tmpChannel.enabled_);
+		allChannels &= tmpChannel.enabled_;
+	}
 
-// // TODO: Remove BankBouncerThreads reference
-// //	//If we have more LL entries than we can handle then we need to stream
-// //	for (int chanct = 0; chanct < 4; ++chanct) {
-// //		if (channelsEnabled[chanct]){
-// //			if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH && !myBankBouncerThreads_[chanct].isRunning()){
-// //				streaming_ = false;
-// //				myBankBouncerThreads_[chanct].start();
-// //				while(!streaming_){
-// //					usleep(10000);
-// //				}
-// //			}
-// //		}
-// //	}
+// TODO: Remove BankBouncerThreads reference
+//	//If we have more LL entries than we can handle then we need to stream
+//	for (int chanct = 0; chanct < 4; ++chanct) {
+//		if (channelsEnabled[chanct]){
+//			if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH && !myBankBouncerThreads_[chanct].isRunning()){
+//				streaming_ = false;
+//				myBankBouncerThreads_[chanct].start();
+//				while(!streaming_){
+//					usleep(10000);
+//				}
+//			}
+//		}
+//	}
 
-// 	//Grab a lock to pause the streaming threads while writing to the CSR
-// 	mymutex_->lock();
-// 	FILE_LOG(logDEBUG1) << "Releasing state machine....";
-// 	//If all channels are enabled then trigger together
-// 	if (allChannels) {
-// 		FPGA::set_bit(handle_, ALL_FPGAS, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
-// 	}
-// 	else {
-// 		if (channelsEnabled[0] || channelsEnabled[1]) {
-// 			FPGA::set_bit(handle_, FPGA1, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
-// 		}
-// 		if (channelsEnabled[2] || channelsEnabled[3]) {
-// 			FPGA::set_bit(handle_, FPGA2, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
-// 		}
-// 	}
-// 	FILE_LOG(logDEBUG2) << "Current CSR: " << FPGA::read_FPGA(handle_, 0, FPGA1);
-// 	mymutex_->unlock();
-// 	return 0;
-// }
+	// //Grab a lock to pause the streaming threads while writing to the CSR
+	// mymutex_->lock();
+	// FILE_LOG(logDEBUG1) << "Releasing state machine....";
+	// //If all channels are enabled then trigger together
+	// if (allChannels) {
+	// 	FPGA::set_bit(handle_, ALL_FPGAS, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
+	// }
+	// else {
+	// 	if (channelsEnabled[0] || channelsEnabled[1]) {
+	// 		FPGA::set_bit(handle_, FPGA1, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
+	// 	}
+	// 	if (channelsEnabled[2] || channelsEnabled[3]) {
+	// 		FPGA::set_bit(handle_, FPGA2, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
+	// 	}
+	// }
+	// FILE_LOG(logDEBUG2) << "Current CSR: " << FPGA::read_FPGA(handle_, 0, FPGA1);
+	// mymutex_->unlock();
+	
+	handle_.Start();
 
-// int APS::stop() {
+	return 0;
+}
 
-// // TODO: Remove Bank Bouncer Reference
-// 	// stop all channels
-// //	for (int chanct = 0; chanct < 4; ++chanct) {
-// //		if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH){
-// //			myBankBouncerThreads_[chanct].stop();
-// //		}
-// //	}
+int APS::stop() {
 
-// 	//Try to stop in a wait for trigger state by making the trigger interval long
-// 	//This leaves the flip-flops in a known state
-// 	auto curTriggerInt = get_trigger_interval();
-// 	auto curTriggerSource = get_trigger_source();
-// 	set_trigger_interval(1);
-// 	set_trigger_source(INTERNAL);
-// 	usleep(1000);
+// TODO: Remove Bank Bouncer Reference
+	// stop all channels
+//	for (int chanct = 0; chanct < 4; ++chanct) {
+//		if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH){
+//			myBankBouncerThreads_[chanct].stop();
+//		}
+//	}
 
-// 	//Put the state machines back in reset
-// 	FPGA::clear_bit(handle_, FPGA1, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
-// 	FPGA::clear_bit(handle_, FPGA2, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
+	// //Try to stop in a wait for trigger state by making the trigger interval long
+	// //This leaves the flip-flops in a known state
+	// auto curTriggerInt = get_trigger_interval();
+	// auto curTriggerSource = get_trigger_source();
+	// set_trigger_interval(1);
+	// set_trigger_source(INTERNAL);
+	// usleep(1000);
 
-// 	// restore trigger state
-// 	set_trigger_interval(curTriggerInt);
-// 	set_trigger_source(curTriggerSource);
+	// //Put the state machines back in reset
+	// FPGA::clear_bit(handle_, FPGA1, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
+	// FPGA::clear_bit(handle_, FPGA2, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
 
-// 	return 0;
+	// // restore trigger state
+	// set_trigger_interval(curTriggerInt);
+	// set_trigger_source(curTriggerSource);
+	
+	handle_.Stop();
 
-// }
+	return 0;
+
+}
 
 // int APS::set_run_mode(const int & dac, const RUN_MODE & mode) {
 // /********************************************************************
@@ -1282,68 +1270,16 @@ double APS::get_PLL_freq() const  {
 // 	return 0;
 // }
 
-// int APS::write_waveform(const int & dac, const vector<short> & wfData) {
-// 	/*Write waveform data to FPGA memory
-// 	 * dac = channel (0-3)
-// 	 * wfData = signed short waveform data
-// 	 */
+int APS::write_waveform(const int & dac, const vector<short> & wfData) {
+	/*Write waveform data to Driver memory for streaming to X6
+	 * dac = channel (0-1)
+	 * wfData = signed short waveform data
+	 */
 
-// 	ULONG tmpData, wfLength;
-// 	int sizeReg, startAddr;
-// 	//We assume the Channel object has properly formated the waveform
-// 	// setup register addressing based on DAC
-// 	switch(dac) {
-// 		case 0:
-// 		case 2:
-// 			sizeReg   = FPGA_ADDR_CHA_WF_LENGTH;
-// 			startAddr =  FPGA_BANKSEL_WF_CHA;
-// 			break;
-// 		case 1:
-// 		case 3:
-// 			sizeReg   = FPGA_ADDR_CHB_WF_LENGTH;
-// 			startAddr =  FPGA_BANKSEL_WF_CHB;
-// 			break;
-// 		default:
-// 			return -2;
-// 	}
+	 handle_.write_waveform(dac, wfData);
 
-// 	auto fpga = dac2fpga(dac);
-// 	if (fpga == INVALID_FPGA) {
-// 		return -1;
-// 	}
-
-// 	//Waveform length used by FPGA must be an integer multiple of WF_MODULUS and is 0 counted
-// 	wfLength = wfData.size() / WF_MODULUS - 1;
-// 	FILE_LOG(logINFO) << "Loading Waveform length " << wfData.size() << " (FPGA count = " << wfLength << " ) into FPGA  " << fpga << " DAC " << dac;
-
-// 	//Write the waveform parameters
-// 	FPGA::write_FPGA(handle_, sizeReg, wfLength, fpga);
-
-// 	if (FILELog::ReportingLevel() >= logDEBUG2) {
-// 		//Double check it took
-// 		tmpData = FPGA::read_FPGA(handle_, sizeReg, fpga);
-// 		FILE_LOG(logDEBUG2) << "Size set to: " << tmpData;
-// 		FILE_LOG(logDEBUG2) << "Loading waveform at " << myhex << startAddr;
-// 	}
-
-// 	//Reset the checksums
-// 	if (FILELog::ReportingLevel() >= logDEBUG) {
-// 		reset_checksums(fpga);
-// 	}
-
-// 	//Format the data and add to write queue
-// 	write(fpga, startAddr, vector<USHORT>(wfData.begin(), wfData.end()), true);
-// 	flush();
-
-// 	//Verify the checksums
-// 	if (FILELog::ReportingLevel() >= logDEBUG) {
-// 		if (!verify_checksums(fpga)){
-// 			FILE_LOG(logERROR) << "Checksums didn't match after writing waveform data";
-// 			return -2;
-// 		}
-// 	}
-// 	return 0;
-// }
+	return 0;
+}
 
 
 // int APS::write_LL_data_IQ( const ULONG & startAddr, const size_t & startIdx, const size_t & stopIdx, const bool & writeLengthFlag ){

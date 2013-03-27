@@ -12,6 +12,15 @@
 
 class APS {
 
+// TODO find correct location for error codes and consolidate
+enum APSErrorCode {
+	APS_OK,
+	APS_UNKNOWN_ERROR = -1,
+	APS_FILE_ERROR = -2,
+	APS_NOT_IMPLEMENTED_ERROR = -3,
+	APS_INVALID_CHANNEL = -4
+};
+
 
 public:
 	//Constructors
@@ -44,21 +53,21 @@ public:
 	int set_trigger_source(const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source() const;
 
-/*
+
 	int set_trigger_interval(const double &);
 	double get_trigger_interval() const;
-*/
+
 
 	int set_channel_enabled(const int &, const bool &);
 	bool get_channel_enabled(const int &) const;
-/*
+
 	int set_channel_offset(const int &, const float &);
 	float get_channel_offset(const int &) const;
 	int set_channel_scale(const int &, const float &);
 	float get_channel_scale(const int &) const;
-	int set_offset_register(const int &, const float &);
+//	int set_offset_register(const int &, const float &);
 
-	int set_miniLL_repeat(const USHORT &);
+//	int set_miniLL_repeat(const USHORT &);
 
 
 	template <typename T>
@@ -70,14 +79,14 @@ public:
 	int set_run_mode(const int &, const RUN_MODE &);
 	int set_repeat_mode(const int &, const bool &);
 
-	int set_LLData_IQ(const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
+//	int set_LLData_IQ(const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 	int clear_channel_data();
 
-	int load_sequence_file(const string &);
+//	int load_sequence_file(const string &);
 
 	int run();
 	int stop();
-*/
+
 
 	float get_logic_temperature();
 	int enable_test_generator(int,float);
@@ -136,16 +145,20 @@ private:
 	int setup_DAC(const int &) const;
 	int enable_DAC_FIFO(const int &) const;
 	int disable_DAC_FIFO(const int &) const;
+*/
 
 
 	int trigger();
 	int disable();
-
+/*
 	int reset_checksums();
 	bool verify_checksums();
+*/
+
 
 	int write_waveform(const int &, const vector<short> &);
 
+/*
 	int write_LL_data_IQ(const ULONG &, const size_t &, const size_t &, const bool &);
 	int set_LL_data_IQ( const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 	int stream_LL_data(const int);
