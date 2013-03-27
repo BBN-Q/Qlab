@@ -1,8 +1,8 @@
 classdef libx6 < handle
     
     properties (Constant)
-        EXTERNAL = 0;
-        INTERNAL = 1;
+        INTERNAL = 0;
+        EXTERNAL = 1;
     end
     
     methods (Static)
@@ -47,16 +47,15 @@ classdef libx6 < handle
             val = calllib('libx6', 'set_channel_enabled', id, channel, val);
         end
         
-        function val = enable_test_generator(id,channel , mode,rate)
-            val = calllib('libx6', 'enable_test_generator', id, channel, mode,rate);
+        function val = enable_test_generator(id, mode,rate)
+            val = calllib('libx6', 'enable_test_generator', id, mode,rate);
         end
         
         function val = disable_test_generator(id)
             val = calllib('libx6', 'disable_test_generator', id);
         end
         
-        
-        function test()
+        function loadLibrary()
             if libisloaded('libx6')
                 unloadlibrary('libx6')
             end
@@ -64,61 +63,68 @@ classdef libx6 < handle
             loadlibrary( ...
                 ['../../build/libx6.dll'], ...
                 ['../APS/libaps.h']);
+        end
+        
+        function test()
+            
+            libx6.loadLibrary();
             
             fprintf('BBN X6-1000 Test Executable\n')
             
-            numDevics = libx6.numDevices();
+            numDevices = libx6.numDevices();
             fprintf('%i X6 device found\n', numDevices);
             
-            if (numDevices < 1) return;
-                
-                fprintf('Attempting to initialize libaps\n');
-                
-                libx6.init();
-                
-                fprintf('connect_by_ID(0) returned %i\n', libx6.connect_by_ID(0));
-                
-                fprintf('current logic temperature = %.2f\n', libx6.get_logic_temperature(0));
-                
-                fprintf('current PLL frequency = %.2f\n', libx6.get_sampleRate(0));
-                
-                fprintf('setting trigger source = EXTERNAL\n');
-                
-                libx6.set_trigger_source(0, EXTERNAL);
-                
-                fprintf('get trigger source returns %i\n', libx6.get_trigger_source(0));
-                
-                ibx6.set_trigger_source(0, INTERNAL);
-                
-                fprintf('get trigger source returns %i\n', libx6.get_trigger_source(0));
-                
-                fprintf('get channel(0) enable: %i\n', libx6.get_channel_enabled(0,0));
-                
-                fprintf('set channel(0) enabled = 1\n');
-                
-                libx6.set_channel_enabled(0,0,1);
-                
-                fprintf('enable ramp output\n');
-                
-                libx6.enable_test_generator(0,0,0.001);
-                
-                pause(5);
-                
-                fprintf('enable sine wave output\n');
-                
-                libx6.disable_test_generator(0);
-                libx6.enable_test_generator(0,1,0.001);
-                
-                pause(5);
-                
-                fprintf('disabling channel\n');
-                libx6.disable_test_generator(0);
-                libx6.set_channel_enabled(0,0,false);
-                
-                libx6.disconnect_by_ID(0);
+            if (numDevices < 1)
+                return;
             end
             
+            fprintf('Attempting to initialize libaps\n');
+            
+            libx6.init();
+            
+            fprintf('connect_by_ID(0) returned %i\n', libx6.connect_by_ID(0));
+            
+            fprintf('current logic temperature = %.2f\n', libx6.get_logic_temperature(0));
+            
+            fprintf('current PLL frequency = %.2f\n', libx6.get_sampleRate(0));
+            
+            fprintf('setting trigger source = EXTERNAL\n');
+            
+            libx6.set_trigger_source(0, libx6.EXTERNAL);
+            
+            fprintf('get trigger source returns %i\n', libx6.get_trigger_source(0));
+            
+            libx6.set_trigger_source(0, libx6.INTERNAL);
+            
+            fprintf('get trigger source returns %i\n', libx6.get_trigger_source(0));
+            
+            fprintf('get channel(0) enable: %i\n', libx6.get_channel_enabled(0,0));
+            
+            fprintf('set channel(0) enabled = 1\n');
+            
+            libx6.set_channel_enabled(0,0,1);
+            
+            fprintf('enable ramp output\n');
+            
+            libx6.enable_test_generator(0,0,0.001);
+            
+            pause(5);
+            
+            fprintf('enable sine wave output\n');
+            
+            libx6.disable_test_generator(0);
+            libx6.enable_test_generator(0,1,0.001);
+            
+            pause(5);
+            
+            fprintf('disabling channel\n');
+            libx6.disable_test_generator(0);
+            libx6.set_channel_enabled(0,0,false);
+            
+            libx6.disconnect_by_ID(0);
+            unloadlibrary('libx6')
         end
         
     end
+    
 end
