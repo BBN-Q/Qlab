@@ -359,10 +359,37 @@ X6_1000::ErrorCodes X6_1000::enable_test_generator(X6_1000::FPGAWaveformType wfT
 
     wfType_ = wfType;
 
-    //  Output Test Generator Setup
+    set_active_channels();
+    FILE_LOG(logINFO) << "stream_.Preconfigure();";
+    stream_.Preconfigure();
+    
+   //  Output Test Generator Setup
     module_.Output().TestModeEnabled( true, wfType_ );  // enable , mode
     module_.Output().TestFrequency( frequencyMHz * 1e6 ); // frequency in Hz
-    return Start();
+
+    // enable software trigger
+    module_.Output().SoftwareTrigger(true);
+
+    module_.Output().Pulse().Reset();
+    module_.Output().Pulse().Enabled(false);
+    
+    // disable prefill
+    stream_.PrefillPacketCount(0);
+    FILE_LOG(logINFO) << "trigger_.AtStreamStart();";
+    trigger_.AtStreamStart();
+    //  Start Streaming
+    FILE_LOG(logINFO) << "stream_.Start();";
+    
+    // start threadlooper
+    if (enableThreading_) {
+        threadHandle = new thread(thunkLooper);
+    }
+    stream_.Start();
+    timer_.Enabled(true);
+
+
+    FILE_LOG(logINFO) << "SUCCESS";
+    return SUCCESS;
 }
 
 X6_1000::ErrorCodes X6_1000::Start() {
@@ -372,6 +399,9 @@ X6_1000::ErrorCodes X6_1000::Start() {
     FILE_LOG(logINFO) << "stream_.Preconfigure();";
     stream_.Preconfigure();
     
+   //  Output Test Generator Setup
+    module_.Output().TestModeEnabled( false, wfType_ );  // enable , mode
+
     // enable software trigger
     module_.Output().SoftwareTrigger(true);
 
@@ -465,6 +495,7 @@ void X6_1000::HandlePackedDataAvailable(Innovative::VitaPacketPackerDataAvailabl
 
 void X6_1000::HandleDataRequired(VitaPacketStreamDataEvent & Event) {
     FILE_LOG(logINFO) << "X6_1000::HandleDataRequired";
+    return;
     
     // the total VITA packet size is limited by 2^16-1 words (32bit), out of which 8
     // are used for header and trailer
