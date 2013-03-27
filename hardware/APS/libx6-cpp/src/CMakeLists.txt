@@ -7,20 +7,18 @@
 PROJECT( libx6 )
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-SITE_NAME(hostname)
-
 SET (  INNOVATIVEPATH "C:\\Innovative" )
 SET (  MALIBUPATH   ${INNOVATIVEPATH}/Malibu )
 
 
 # devel machine path may be removeed if FIND_PACKAGE HDF5 works
-#	INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\include\\cpp")
-#	INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\include")	
-#	LINK_DIRECTORIES( ${LINK_DIRECTORIES} "C:\\MinGW\\msys\\1.0\\local\\lib")
+	INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\include\\cpp")
+	INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\include")	
+	LINK_DIRECTORIES( ${LINK_DIRECTORIES} "C:\\MinGW\\msys\\1.0\\local\\lib")
 
-FIND_PACKAGE(HDF5)
-INCLUDE_DIRECTORIES( ${HDF5_INCLUDE_DIR} )
-INCLUDE_DIRECTORIES( ${HDF5_INCLUDE_DIR}/cpp )
+#FIND_PACKAGE(HDF5)
+#INCLUDE_DIRECTORIES( ${HDF5_INCLUDE_DIR} )
+#INCLUDE_DIRECTORIES( ${HDF5_INCLUDE_DIR}/cpp )
 
 
 INCLUDE_DIRECTORIES(${MALIBUPATH})
@@ -33,7 +31,7 @@ LINK_DIRECTORIES( ${LINK_DIRECTORIES}
 
 # following links against Innovative release libraries
 LINK_DIRECTORIES( ${LINK_DIRECTORIES} 
-	"C:\\Innovative\\Lib\\Gcc\\Release"
+	"C:\\Innovative\\Lib\\Gcc\\Debug"
 )
 
 
@@ -48,25 +46,20 @@ SET ( DLL_SRC
 	./APS/APSRack.cpp
 	./APS/LLBank.cpp
 	./APS/X6_1000.cpp
-
-	./innovative/ModuleIo.cpp 
-	./innovative/Thunker.cpp 
-
+	./innovative/Thunker_Con.cpp	
+	./innovative/CommandLine_Con.cpp	
 )
 
 #	./innovative/ApplicationIO.cpp
 
-SET_SOURCE_FILES_PROPERTIES( ${DLL_SRC} PROPERTIES LANGUAGE CXX )
 
-SET ( TEST_SRC
-	./test/main.cpp
-)
+SET_SOURCE_FILES_PROPERTIES( ${DLL_SRC} PROPERTIES LANGUAGE CXX )
 
 SET_SOURCE_FILES_PROPERTIES( ${TEST_SRC} PROPERTIES LANGUAGE CXX )
 
 
 ADD_LIBRARY( x6 SHARED ${DLL_SRC} )
-ADD_EXECUTABLE(x6test ${TEST_SRC} ${DLL_SRC})
+ADD_EXECUTABLE(x6test ./test/main.cpp ${DLL_SRC})
 
 TARGET_LINK_LIBRARIES(x6test 
 	Application_Mb
@@ -92,8 +85,6 @@ TARGET_LINK_LIBRARIES(x6test
 	#Vpx_Mb  ##
 )
 
-
-
 TARGET_LINK_LIBRARIES(x6 
 	Application_Mb
 	Pci_Mb
@@ -102,7 +93,7 @@ TARGET_LINK_LIBRARIES(x6
 	Utility_Mb
 	Os_Mb
 	Ficl_Mb
-	Framework_Mb 
+	
 	ipps-7.0  # in Intel IPP directory listed above
 	wdapi # WinDriver library in Innovative\lib\gcc
 
