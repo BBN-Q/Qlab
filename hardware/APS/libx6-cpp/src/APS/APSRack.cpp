@@ -36,7 +36,7 @@ int APSRack::initAPS(const int & deviceID, const string & bitFile, const bool & 
 int APSRack::get_num_devices()  {
 	int numDevices;
 	
-	numDevices = X6_.getBoardCount();
+	numDevices = X6_1000::getBoardCount();
 
 	// Compare against current number of devices
 	// This should not change as devices are PCI based
@@ -55,7 +55,7 @@ string APSRack::get_deviceSerial(const int & deviceID) {
 	// Get serials from Malibu layer to check for change in devices
 	vector<string> testSerials;
 	
-	X6_.get_device_serials(testSerials);
+	X6_1000::get_device_serials(testSerials);
 	
 	// match serials for each device id to make sure mapping of device count to serial
 	// number is still correct
@@ -84,7 +84,7 @@ void APSRack::enumerate_devices() {
 		aps.disconnect();
 	}
 	
-	X6_.get_device_serials(deviceSerials_);
+	X6_1000::get_device_serials(deviceSerials_);
 	
 	numDevices_ = deviceSerials_.size();
 
@@ -110,7 +110,7 @@ void APSRack::update_device_enumeration() {
 
 	vector<string> newSerials;
 
-	X6_.get_device_serials(newSerials);
+	X6_1000::get_device_serials(newSerials);
 
 	// construct new APS_ vector & new serial2dev map
 	vector<APS> newAPS_;

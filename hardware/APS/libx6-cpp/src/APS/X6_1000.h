@@ -8,6 +8,7 @@
 #include <VitaPacketStream_Mb.h>
 #include <SoftwareTimer_Mb.h>
 #include <Application/TriggerManager_App.h>
+#include "Thunker_Con.h"
 
 #ifndef X6_1000_H_
 #define X6_1000_H_
@@ -76,13 +77,13 @@ public:
 	/** getBoardCount()
 	 *  \return Number of boards reported by Malibu driver
 	 */
-	unsigned int    getBoardCount();
+	static unsigned int    getBoardCount();
 
 	/** retrives device serial number
 	 *  currently generates a fake serial number S# where # is the device number
 	 *  \returns device serial numbers
 	 */
-	void get_device_serials(vector<string> &);
+	static void get_device_serials(vector<string> &);
 
 
 	/** Sets device ID number for class to work with.
@@ -151,7 +152,7 @@ public:
     bool  isOpen();
     ErrorCodes   Close();
 
-    static void set_threading_enable(bool enable) {enableThreading_ = enable;}
+    static void set_threading_enable(bool enable) {/*enableThreading_ = enable;*/}
 
     const int BusmasterSize = 4; /**< Rx & Tx BusMaster size in MB */
     const int MHz = 1e6;         /**< Constant for converting MHz */
@@ -209,6 +210,8 @@ private:
     void HandleOutputOverrangeAlert(Innovative::AlertSignalEvent & event);
 
     void LogHandler(string handlerName);
+
+    thread *threadHandle;
 
 	void  VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event);
 

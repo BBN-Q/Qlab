@@ -2,10 +2,24 @@
 
 #include <IppMemoryUtils_Mb.h> // for Init::UsePerformanceMemoryFunctions
 
+/* Provides Main Loop to distribute thunked messages */
+/* Current unncessary as of 3/27/2013 */
+void thunkLooper() {
+while (true) { 
+   Innovative::Thunker::MainLoopEvent.WaitFor(); 
+   while (!Innovative::Thunker::MainLoopQueue.empty()) { 
+     Innovative::Thunker *thnk = Innovative::Thunker::MainLoopQueue.front(); 
+     Innovative::Thunker::MainLoopQueue.pop(); 
+     thnk->Dispatch(); 
+   } 
+  }
+}
 
 using namespace Innovative;
 
-bool X6_1000::enableThreading_ = true;
+// flag to enable threaded Malibu opperation with Syncronize and Thunk
+// threaded operation current not needed
+bool X6_1000::enableThreading_ = false;
 
 // default constructor
 X6_1000::X6_1000() {
@@ -44,7 +58,9 @@ X6_1000::ErrorCodes X6_1000::set_deviceID(unsigned int deviceID) {
 
 
 unsigned int  X6_1000::getBoardCount() {
-	return static_cast<unsigned int>(module_.BoardCount());
+    static Innovative::X6_1000M  x6;
+    return static_cast<unsigned int>(x6.BoardCount());
+
 }
 
 void X6_1000::get_device_serials(vector<string> & deviceSerials) {
@@ -52,7 +68,7 @@ void X6_1000::get_device_serials(vector<string> & deviceSerials) {
 
 	int numBoards = getBoardCount();
 
-	// TODO: Identify a way to get serial number from X6 board if possible otherwise get slot id etc
+  	// TODO: Identify a way to get serial number from X6 board if possible otherwise get slot id etc
 	for (int cnt = 0; cnt < numBoards; cnt++) {
 
 		// SNAFU work around for compiler on MQCO11 reporting that to_string is not part of std
@@ -72,12 +88,16 @@ void X6_1000::setHandler(OpenWire::EventHandler<OpenWire::NotifyEvent> & event,
     bool useSyncronizer) {
 
     event.SetEvent(this, CallBackFunction );
-    if (~enableThreading_)
+    if (!enableThreading_) {
+        FILE_LOG(logINFO) << "Using event.Unsynchronize";
         event.Unsynchronize();
-    else {
+    } else {
+       
         if (useSyncronizer) {
+            FILE_LOG(logINFO) << "Using event.Synchronize";
             event.Synchronize();
         } else {
+            FILE_LOG(logINFO) << "Using event.Thunk";
             event.Thunk();
         }
     }
@@ -85,25 +105,19 @@ void X6_1000::setHandler(OpenWire::EventHandler<OpenWire::NotifyEvent> & event,
 
 
 X6_1000::ErrorCodes X6_1000::Open() {
- 	// open function based on Innovative Stream Example ApplicationIO.cpp
 
+    setHandler(timer_.OnElapsed,  &X6_1000::HandleTimer, false);
+
+ 	// open function based on Innovative Stream Example ApplicationIO.cpp
  	trigger_.OnDisableTrigger.SetEvent(this, &X6_1000::HandleDisableTrigger);
     trigger_.OnExternalTrigger.SetEvent(this, &X6_1000::HandleExternalTrigger);
     trigger_.OnSoftwareTrigger.SetEvent(this, &X6_1000::HandleSoftwareTrigger);
     trigger_.DelayedTrigger(true); // trigger delayed after start
         
-#if 0    
-    module_.OnBeforeStreamStart.SetEvent(this, &X6_1000::HandleBeforeStreamStart);
-    module_.OnBeforeStreamStart.Unsynchronize();
-    module_.OnAfterStreamStart.SetEvent(this, &X6_1000::HandleAfterStreamStart);
-    module_.OnAfterStreamStart.Unsynchronize();
-    module_.OnAfterStreamStop.SetEvent(this, &X6_1000::HandleAfterStreamStop);
-    module_.OnAfterStreamStop.Unsynchronize();
-#else
-    setHandler(module_.OnBeforeStreamStart,  &X6_1000::HandleBeforeStreamStart);
-    setHandler(module_.OnAfterStreamStart,  &X6_1000::HandleAfterStreamStart);
+    setHandler(module_.OnBeforeStreamStart, &X6_1000::HandleBeforeStreamStart);
+    setHandler(module_.OnAfterStreamStart, &X6_1000::HandleAfterStreamStart);
     setHandler(module_.OnAfterStreamStop,  &X6_1000::HandleAfterStreamStop);
-#endif
+
 
     //  Alerts
     module_.Alerts().OnTimeStampRolloverAlert.SetEvent(this, &X6_1000::HandleTimestampRolloverAlert);
@@ -116,9 +130,6 @@ X6_1000::ErrorCodes X6_1000::Open() {
     module_.Alerts().OnInputOverflow.SetEvent(         this, &X6_1000::HandleInputFifoOverrunAlert);
     module_.Alerts().OnInputOverrange.SetEvent(        this, &X6_1000::HandleInputOverrangeAlert);
 
-    //module_.HookAlerts();
-
-
     //  Configure Stream Event Handlers
     stream_.OnVeloDataRequired.SetEvent(this, &X6_1000::HandleDataRequired);
     stream_.DirectDataMode(false);
@@ -127,12 +138,6 @@ X6_1000::ErrorCodes X6_1000::Open() {
     stream_.RxLoadBalancing(true);
     stream_.TxLoadBalancing(true);
 
-#if 0
-    timer_.OnElapsed.SetEvent(this, &X6_1000::HandleTimer);
-    timer_.OnElapsed.Unsynchronize();
-#else
-    setHandler(timer_.OnElapsed,  &X6_1000::HandleTimer, false);
-#endif
 
     // Insure BM size is a multiple of four MB
     const int RxBmSize = std::max(BusmasterSize/4, 1) * 4;
@@ -171,12 +176,11 @@ X6_1000::ErrorCodes X6_1000::Open() {
     //VMP.Init( sids );
     //
     return SUCCESS;
- }
+  }
 
  
 X6_1000::ErrorCodes X6_1000::Close() {
-
-    	//Stream.Disconnect();
+    stream_.Disconnect();
     module_.Close();
 
     isOpened_ = true;
@@ -192,7 +196,6 @@ float X6_1000::get_logic_temperature() {
 
 X6_1000::ErrorCodes X6_1000::set_reference(X6_1000::ExtInt ref, float frequency) {
     IX6ClockIo::IIReferenceSource x6ref; // reference source
-
     if (frequency < 0) return INVALID_FREQUENCY;
 
     x6ref = (ref == EXTERNAL) ? IX6ClockIo::rsExternal : IX6ClockIo::rsInternal;
@@ -208,7 +211,6 @@ X6_1000::ErrorCodes X6_1000::set_clock(X6_1000::ExtInt src ,
 
     IX6ClockIo::IIClockSource x6clksrc; // clock source
     IX6ClockIo::IIClockSelect x6extsrc; // external clock source
-
     if (frequency < 0) return INVALID_FREQUENCY;
 
     x6clksrc = (src ==  EXTERNAL) ? IX6ClockIo::csExternal : IX6ClockIo::csInternal;
@@ -236,7 +238,7 @@ X6_1000::ErrorCodes X6_1000::set_trigger_src(
     // cache trigger source
     triggerSource_ = trgSrc;
 
-    FILE_LOG(logINFO) << "Trigger Source set to " << trgSrc;
+    FILE_LOG(logINFO) << "Trigger Source set to " << (trgSrc == EXTERNAL_TRIGGER) ? "External" : "Internal";
 
     trigger_.DelayedTriggerPeriod(triggerDelayPeriod_);
     trigger_.ExternalTrigger( (trgSrc == EXTERNAL_TRIGGER) ? true : false);
@@ -265,8 +267,9 @@ X6_1000::ErrorCodes X6_1000::set_decimation(bool enabled, int factor) {
 
 X6_1000::ErrorCodes X6_1000::set_channel_enable(int channel, bool enabled) {
     unsigned int numChannels = module_.Output().Channels();
+
     if (channel >= numChannels) return INVALID_CHANNEL;
-    FILE_LOG(logINFO) << "Set Channel " << channel << " Enable =" << enabled;
+    FILE_LOG(logINFO) << "Set Channel " << channel << " Enable = " << enabled;
     activeChannels_[channel] = enabled;
     return SUCCESS;
 }
@@ -287,7 +290,7 @@ X6_1000::ErrorCodes X6_1000::set_active_channels() {
     module_.Input().ChannelDisableAll();
 
     for (int cnt = 0; cnt < numChannels; cnt++) { 
-        FILE_LOG(logINFO) << "Channel " << cnt << " Enable =" << activeChannels_[cnt];
+        FILE_LOG(logINFO) << "Channel " << cnt << " Enable = " << activeChannels_[cnt];
         module_.Output().ChannelEnabled(cnt, activeChannels_[cnt]);
     }
     return status;
@@ -324,6 +327,7 @@ void X6_1000::set_defaults() {
 // }
 
 void X6_1000::log_card_info() {
+
     FILE_LOG(logINFO) << std::hex << "Logic Version: " << module_.Info().FpgaLogicVersion()
         << ", Hdw Variant: " << module_.Info().FpgaHardwareVariant()
         << ", Revision: " << module_.Info().PciLogicRevision()
@@ -343,7 +347,7 @@ X6_1000::ErrorCodes X6_1000::enable_test_generator(X6_1000::FPGAWaveformType wfT
     wfType_ = wfType;
 
     set_active_channels();
-
+    FILE_LOG(logINFO) << "stream_.Preconfigure();";
     stream_.Preconfigure();
     
     //  Output Test Generator Setup
@@ -359,15 +363,27 @@ X6_1000::ErrorCodes X6_1000::enable_test_generator(X6_1000::FPGAWaveformType wfT
     
     // disable prefill
     stream_.PrefillPacketCount(0);
+    FILE_LOG(logINFO) << "trigger_.AtStreamStart();";
     trigger_.AtStreamStart();
     //  Start Streaming
+    FILE_LOG(logINFO) << "stream_.Start();";
+    
+    // start threadlooper
+    if (enableThreading_) {
+        threadHandle = new thread(thunkLooper);
+    }
     stream_.Start();
+    timer_.Enabled(true);
+
+
+    FILE_LOG(logINFO) << "SUCCESS";
     return SUCCESS;
 }
 
 X6_1000::ErrorCodes X6_1000::disable_test_generator() {
     module_.Output().TestModeEnabled( false, wfType_);
     stream_.Stop();
+    timer_.Enabled(false);
     trigger_.AtStreamStop();
     module_.Output().SoftwareTrigger(false);
     return SUCCESS;
@@ -378,14 +394,14 @@ X6_1000::ErrorCodes X6_1000::disable_test_generator() {
  ****************************************************************************/
 
  void  X6_1000::HandleDisableTrigger(OpenWire::NotifyEvent & /*Event*/) {
-    FILE_LOG(logDEBUG) << "X6_1000::HandleDisableTrigger";
+    FILE_LOG(logINFO) << "X6_1000::HandleDisableTrigger";
     module_.Output().Trigger().External(false);
     module_.Input().Trigger().External(false);
 }
 
 
 void  X6_1000::HandleExternalTrigger(OpenWire::NotifyEvent & /*Event*/) {
-    FILE_LOG(logDEBUG) << "X6_1000::HandleExternalTrigger";
+    FILE_LOG(logINFO) << "X6_1000::HandleExternalTrigger";
     //if (Settings.Rx.ExternalTrigger == 1) 
     // module_.Input().Trigger().External(true);
     if (triggerSource_ == EXTERNAL_TRIGGER)
@@ -394,7 +410,7 @@ void  X6_1000::HandleExternalTrigger(OpenWire::NotifyEvent & /*Event*/) {
 
 
 void  X6_1000::HandleSoftwareTrigger(OpenWire::NotifyEvent & /*Event*/) {
-    FILE_LOG(logDEBUG) << "X6_1000::HandleSoftwareTrigger";
+    FILE_LOG(logINFO) << "X6_1000::HandleSoftwareTrigger";
     //if (Settings.Rx.ExternalTrigger == 0) 
     //    module_.Input().SoftwareTrigger(true);
     if (triggerSource_ == SOFTWARE_TRIGGER) 
@@ -402,20 +418,19 @@ void  X6_1000::HandleSoftwareTrigger(OpenWire::NotifyEvent & /*Event*/) {
 }
 
 void X6_1000::HandleBeforeStreamStart(OpenWire::NotifyEvent & /*Event*/) {
-    FILE_LOG(logDEBUG) << "X6_1000::HandleBeforeStreamStart";
+    FILE_LOG(logINFO) << "X6_1000::HandleBeforeStreamStart";
 }
 
 void X6_1000::HandleAfterStreamStart(OpenWire::NotifyEvent & /*Event*/) {
-    FILE_LOG(logDEBUG) << "X6_1000::HandleAfterStreamStart";
+    FILE_LOG(logINFO) << "X6_1000::HandleAfterStreamStart";
     timer_.Enabled(true);
 }
 
 void X6_1000::HandleAfterStreamStop(OpenWire::NotifyEvent & /*Event*/) {
-    FILE_LOG(logDEBUG) << "X6_1000::HandleAfterStreamStop";
+    FILE_LOG(logINFO) << "X6_1000::HandleAfterStreamStop";
     // Disable external triggering initially
     module_.Input().SoftwareTrigger(false);
     module_.Input().Trigger().External(false);
-
     //  Output Remaining Data
     // VMP.Flush();
     // VMPLogger.Stop();
@@ -424,12 +439,12 @@ void X6_1000::HandleAfterStreamStop(OpenWire::NotifyEvent & /*Event*/) {
 }
 
 void X6_1000::HandleDataRequired(VitaPacketStreamDataEvent & Event) {
-    FILE_LOG(logDEBUG) << "X6_1000::HandleDataRequired";
+    FILE_LOG(logINFO) << "X6_1000::HandleDataRequired";
     //SendOneBlock(Event.Sender);
 }
 
 void  X6_1000::HandleDataAvailable(VitaPacketStreamDataEvent & Event) {
-    FILE_LOG(logDEBUG) << "X6_1000::HandleDataRequired";
+    FILE_LOG(logINFO) << "X6_1000::HandleDataRequired";
 
     // if (Stopped)
     //     return;
@@ -467,12 +482,12 @@ void  X6_1000::HandleDataAvailable(VitaPacketStreamDataEvent & Event) {
 }
 
 void X6_1000::HandleTimer(OpenWire::NotifyEvent & /*Event*/) {
-    FILE_LOG(logDEBUG) << "X6_1000::HandleTimer";
+    FILE_LOG(logINFO) << "X6_1000::HandleTimer";
     trigger_.AtTimerTick();
 }
 
 void  X6_1000::VMPDataAvailable(VeloMergeParserDataAvailable & Event) {
-    FILE_LOG(logDEBUG) << "X6_1000::VMPDataAvailable";
+    FILE_LOG(logINFO) << "X6_1000::VMPDataAvailable";
     // VMP_VeloCount++;
 
     // if (Settings.Rx.LoggerEnable)
@@ -522,3 +537,4 @@ void X6_1000::HandleOutputOverrangeAlert(Innovative::AlertSignalEvent & event) {
 void X6_1000::LogHandler(string handlerName) {
     FILE_LOG(logINFO) << "Alert:" << handlerName;
 }
+
