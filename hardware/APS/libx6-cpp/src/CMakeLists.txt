@@ -59,30 +59,11 @@ SET_SOURCE_FILES_PROPERTIES( ${TEST_SRC} PROPERTIES LANGUAGE CXX )
 
 
 ADD_LIBRARY( x6 SHARED ${DLL_SRC} )
-ADD_EXECUTABLE(x6test ./test/main.cpp ${DLL_SRC})
+ADD_EXECUTABLE(x6test ./test/main.cpp )
 
 TARGET_LINK_LIBRARIES(x6test 
-	Application_Mb
-	Pci_Mb
-	Hardware_Mb
-	Analysis_Mb
-	Utility_Mb
-	Os_Mb
-	Ficl_Mb
-	Framework_Mb 
-	ipps-7.0  # in Intel IPP directory listed above
-	wdapi # WinDriver library in Innovative\lib\gcc
+	x6
 
-	hdf5_cpp
-	hdf5
-	
-	# The following libraries are supplied with Malibu
-	# But not currently required
-	#Framework_Win 
-	#Framework_Con ##
-	#Poco_Foundation_Mb ##
-	#Poco_Net_Mb ##
-	#Vpx_Mb  ##
 )
 
 TARGET_LINK_LIBRARIES(x6 
