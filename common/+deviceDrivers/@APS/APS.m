@@ -223,7 +223,8 @@ classdef APS < hgsetget
             for j = 1:length(fields);
 				name = fields{j};
                 if ismember(name, methods(obj))
-                    feval(['obj.' name], settings.(name));
+                    args = eval(settings.(name));
+                    feval(name, obj, args{:});
                 elseif ismember(name, properties(obj))
                     if ~isempty(settings.(name))
                         obj.(name) = settings.(name);

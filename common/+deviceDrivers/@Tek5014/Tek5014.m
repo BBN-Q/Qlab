@@ -170,8 +170,8 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
 						obj.samplingRate = settings.samplingRate;
 					otherwise
 						if ismember(name, methods(obj))
-							args = settings.(name)
-							feval(['obj.' name], args{:});
+							args = eval(settings.(name));
+							feval(name, obj, args{:});
 						elseif ismember(name, properties(obj))
 							obj.(name) = settings.(name);
 						end
