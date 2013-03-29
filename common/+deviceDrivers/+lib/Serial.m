@@ -58,19 +58,6 @@ classdef Serial < deviceDrivers.lib.deviceDriverBase
         function val = binblockread(obj, varargin)
             val = binblockread(obj.interface, varargin{:});
         end
-        
-        % instrument meta-setter
-        function setAll(obj, settings)
-            fields = fieldnames(settings);
-            for j = 1:length(fields);
-                name = fields{j};
-                if ismember(name, methods(obj))
-                    feval(['obj.' name], settings.(name));
-                elseif ismember(name, properties(obj))
-                    obj.(name) = settings.(name);
-                end
-            end
-        end
     end
     
 end

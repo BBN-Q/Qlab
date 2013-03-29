@@ -30,7 +30,6 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
         function obj = DigitalAttenuator()
             % Initialize Super class
             obj = obj@deviceDrivers.lib.Serial();
-            obj.baudRate = 9600;
         end
         
         function out = readUntilEND(obj)
@@ -38,7 +37,7 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
             % Reads from the Arduino until it receives 'END'
             out = '';
             val = obj.read();
-            while (strcmp(val, 'END') == 0)
+            while (strcmp(strtrim(val), 'END') == 0)
                 out = [out val];
                 val = obj.read();
             end
@@ -46,7 +45,7 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
         
         function val = get.serial(obj)
             % poll device for its serial number
-            obj.write('ID?;');
+            obj.write('ID?');
             val = obj.readUntilEND();
             val = str2double(val);
             obj.serial = val;
