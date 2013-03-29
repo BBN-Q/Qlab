@@ -10,8 +10,10 @@ function loadSequence(obj, paths, numRepeats)
     
     % update offsets on control AWG
     params = obj.AWGSettings.(obj.controlAWG);
-    params.(['chan_' num2str(IQchannels.i)]).offset = obj.pulseParams.i_offset;
-    params.(['chan_' num2str(IQchannels.q)]).offset = obj.pulseParams.q_offset;
+    iChan = IQchannels.IQkey(end-1);
+    qChan = IQchannels.IQkey(end);
+    params.(['chan_' iChan]).offset = obj.pulseParams.i_offset;
+    params.(['chan_' qChan]).offset = obj.pulseParams.q_offset;
     obj.AWGSettings.(obj.controlAWG) = params;
     
     % load sequence on all AWGs
