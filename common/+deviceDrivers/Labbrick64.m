@@ -23,11 +23,6 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         open = 0;
         serialNum = 1;
         model = 'LMS-103';
-        max_power = 10; % dBm
-        min_power = -40; % dBm
-        max_freq = 10; % GHz
-        min_freq = 5; % GHz
-        pulseModeEnabled = 0;
     end
     
     % Device properties correspond to instrument parameters
@@ -47,7 +42,11 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
 
     properties (Constant = true)
         vendor_id = sscanf('0x041f', '%i');
-        product_id = sscanf('0x1209', '%i');
+        product_id = sscanf('0x1220', '%i'); %0x1209 for LSG-451
+        max_power = 10; % dBm
+        min_power = -40; % dBm
+        max_freq = 10; % GHz
+        min_freq = 5; % GHz
     end
     
     methods
@@ -73,11 +72,12 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             obj.serialNum = serialNum;
             
             % check that the device exists
-            serial_nums = obj.enumerate();
-            if ~any(serial_nums == serialNum)
-                error('Could not find a Labbrick with serial %i', serialNum);
-            end
-            obj.hid = calllib('hidapi', 'hid_open', obj.vendor_id, obj.product_id, [serialNum 0])
+%             serial_nums = obj.enumerate();
+%             if ~any(serial_nums == serialNum)
+%                 error('Could not find a Labbrick with serial %i', serialNum);
+%             end
+%             obj.hid = calllib('hidapi', 'hid_open', obj.vendor_id, obj.product_id, uint16[serialNum 0]));
+            obj.hid = calllib('hidapi', 'hid_open', obj.vendor_id, obj.product_id, []);
             if obj.hid.isNull
                 error('Could not open device serial %s', serialNum);
             end
@@ -91,21 +91,19 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
                 obj.hid = [];
             end
             obj.open = 0;
-            end
         end
         
         % get a list of connected Labbricks
-        function [ids, serials] = enumerate(obj)
+        function serials = enumerate(obj)
             
             serials = {};
-            null_pointer = libpointer();
-
-            device_info = calllib('hidapi', 'hid_enumerate', obj.vendor_id, obj.product_id);
-            cur_device = device_info
+%             device_info = calllib('hidapi', 'hid_enumerate', obj.vendor_id, obj.product_id);
+            device_info = calllib('hidapi', 'hid_enumerate', 0, 0);
+            cur_device = device_info;
             
             while ~cur_device.isNull
-                serials = [serials cur_device.serial_number];
-                cur_device = cur_device.next;
+                serials = [serials cur_device.value.serial_number];
+                cur_device = cur_device.value.next;
             end
 
             calllib('hidapi', 'hid_free_enumeration', device_info);
@@ -122,7 +120,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             calllib('hidapi', 'hid_write', obj.hid, report, length(report));
         end
 
-        function out = query(obj, val);
+        function out = query(obj, val)
             obj.write(val);
             out = obj.read();
         end
@@ -133,18 +131,17 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             % returns frequency in 10s of Hz
             cmd_id = 4;
             report = [cmd_id zeros(7.1)];
-            result = obj.query(report);
-            % TODO: unpack frequency from result
-            % convert to GHz
-            % val = val/1e8;
-            val = result;
+            result = typecast(obj.query(report), 'uint32');
+            % return value is in 10's of Hz -> convert to GHz
+            val = double(result)/1e8;
         end
         function val = get.power(obj)
             % returns power as attenuation from the max output power, in an integer multiple of 0.25dBm.
             cmd_id = 13;
             report = [cmd_id zeros(7,1)];
-            attenuation = str2double(obj.query(report)) / 4;
-            val = obj.max_power - attenuation;
+%             attenuation = str2double(obj.query(report)) / 4;
+%             val = obj.max_power - attenuation;
+            val = obj.query(report);
         end
 
         function val = get.output(obj)
@@ -157,7 +154,6 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             % value: frequency to set in GHz
             cmd_id = 132;
             cmd_size = 4;
-            report = [0 cmd_id cmd_size ]
             
             % error check that the frequency is within the bounds of
             % the device
@@ -170,7 +166,9 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             end
             
             % write frequency in 10s of Hz
-            calllib('vnx_fmsynth', 'fnLMS_SetFrequency', obj.devID, value*1e8);
+            value = typecast(uint32(value*1e8), 'uint8'); % pack as 4 bytes
+            report = [cmd_id cmd_size value zeros(1,2)];
+            obj.write(report);
         end
 
         function obj = set.power(obj, value)
@@ -199,13 +197,15 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             if isnumeric(value)
                 value = num2str(value);
             end
-            checkMapObj = containers.Map({'on','1','off','0'},...
+            valueMap = containers.Map({'on','1','off','0'},...
                 {uint8(1), uint8(1), uint8(0), uint8(0)});
-            if not (checkMapObj.isKey( lower(value) ))
+            if not (valueMap.isKey( lower(value) ))
                 error('Invalid input');
+            else
+                value = valueMap(lower(value));
             end
 
-            report = [cmd_id cmd_size, checkMapObj(lower(value)) zeros(1,5)];
+            report = [cmd_id cmd_size value zeros(1,5)];
             obj.write(report);
         end
     end
