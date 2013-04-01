@@ -42,7 +42,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
 
     properties (Constant = true)
         vendor_id = sscanf('0x041f', '%i');
-        product_id = sscanf('0x1220', '%i'); %0x1209 for LSG-451
+        product_id = sscanf('0x1220', '%i'); %0x1221 for LMS-802 or 0x1209 for LSG-451
         max_power = 10; % dBm
         min_power = -40; % dBm
         max_freq = 10; % GHz
@@ -62,7 +62,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
 
         %Destructor
         function delete(obj)
-            if ~isempty(obj.devID)
+            if ~isempty(obj.hid)
                 obj.disconnect();
             end
         end
@@ -72,11 +72,12 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             obj.serialNum = serialNum;
             
             % check that the device exists
-%             serial_nums = obj.enumerate();
-%             if ~any(serial_nums == serialNum)
-%                 error('Could not find a Labbrick with serial %i', serialNum);
-%             end
-%             obj.hid = calllib('hidapi', 'hid_open', obj.vendor_id, obj.product_id, uint16[serialNum 0]));
+            serial_nums = obj.enumerate();
+            if ~any(strcmp(serial_nums, serialNum))
+                error('Could not find a Labbrick with serial %i', serialNum);
+            end
+%             serial_ptr = libpointer('uint16Ptr', uint16([serialNum 0]));
+%             obj.hid = calllib('hidapi', 'hid_open', obj.vendor_id, obj.product_id, serial_ptr);
             obj.hid = calllib('hidapi', 'hid_open', obj.vendor_id, obj.product_id, []);
             if obj.hid.isNull
                 error('Could not open device serial %s', serialNum);
@@ -101,9 +102,14 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             device_info = calllib('hidapi', 'hid_enumerate', 0, 0);
             cur_device = device_info;
             
-            while ~cur_device.isNull
-                serials = [serials cur_device.value.serial_number];
+            while ~isempty(cur_device) && ~cur_device.isNull
+                snum = cur_device.value.serial_number;
+                setdatatype(snum, 'uint16Ptr', 8);
+                serials = [serials char(snum.value(5:end)')];
                 cur_device = cur_device.value.next;
+                if ~isempty(cur_device)
+                    setdatatype(cur_device, 'hid_device_infoPtr');
+                end
             end
 
             calllib('hidapi', 'hid_free_enumeration', device_info);
@@ -112,7 +118,8 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         function out = read(obj)
             read_buffer = zeros(1, 256, 'uint8');
             timeout = 100; % timeout in milliseconds
-            [success, hid, out] = calllib('hidapi', 'hid_read_timeout', obj.hid, read_buffer, length(read_buffer), timeout);
+            [bytesread, ~, out] = calllib('hidapi', 'hid_read_timeout', obj.hid, read_buffer, length(read_buffer), timeout);
+            out = out(1:bytesread);
         end
 
         function write(obj, val)
@@ -122,7 +129,18 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
 
         function out = query(obj, val)
             obj.write(val);
+            cmd_id = val(1);
             out = obj.read();
+            ct = 1;
+            % keep trying to read until the return block starts with the
+            % cmd id
+            while (out(1) ~= cmd_id && ct < 256)
+                out = obj.read();
+                ct = ct + 1;
+            end
+            if ct == 256
+                error('No result found with matching cmd id');
+            end
         end
 		
 		% Instrument parameter accessors
@@ -130,24 +148,25 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         function val = get.frequency(obj)
             % returns frequency in 10s of Hz
             cmd_id = 4;
-            report = [cmd_id zeros(7.1)];
-            result = typecast(obj.query(report), 'uint32');
-            % return value is in 10's of Hz -> convert to GHz
-            val = double(result)/1e8;
+            report = [cmd_id zeros(1,7)];
+            result = obj.query(report);
+            % return value is in 100's of kHz -> convert to GHz
+            val = double(typecast(result(3:6), 'uint32'))*1e-4;
         end
         function val = get.power(obj)
             % returns power as attenuation from the max output power, in an integer multiple of 0.25dBm.
             cmd_id = 13;
-            report = [cmd_id zeros(7,1)];
-%             attenuation = str2double(obj.query(report)) / 4;
-%             val = obj.max_power - attenuation;
-            val = obj.query(report);
+            report = [cmd_id zeros(1,7)];
+            result = obj.query(report);
+            attenuation = double(result(3)) / 4;
+            val = obj.max_power - attenuation;
         end
 
         function val = get.output(obj)
             cmd_id = 10;
-            report = [cmd_id zeros(7,1)];
-            val = obj.query(report);
+            report = [cmd_id zeros(1,7)];
+            result = obj.query(report);
+            val = result(3);
         end
         
         function obj = set.frequency(obj, value)
@@ -165,8 +184,8 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
                 warning('Frequency out of range');
             end
             
-            % write frequency in 10s of Hz
-            value = typecast(uint32(value*1e8), 'uint8'); % pack as 4 bytes
+            % write frequency in 100s of kHz
+            value = typecast(uint32(value*1e4), 'uint8'); % pack as 4 bytes
             report = [cmd_id cmd_size value zeros(1,2)];
             obj.write(report);
         end
@@ -183,8 +202,8 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
                 warning('Power out of range');
             end
             
-            % write power as a multiple of 0.25dBm
-            value = uint8(value*4);
+            % write power as attenuation from max power in increments of 0.25dBm
+            value = uint8(4 * (obj.max_power - value));
             report = [cmd_id cmd_size value zeros(1,5)];
             obj.write(report);
         end
