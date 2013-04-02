@@ -190,6 +190,7 @@ private:
 	static bool enableThreading_;		  /**< enabled threading support */
 
 	double triggerInterval_; 	  /**< trigger inverval in milliseconds */
+	unsigned int prefillPacketCount_;
 
 	ErrorCodes set_active_channels();
 	void set_defaults();

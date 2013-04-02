@@ -3,6 +3,7 @@
 #include <IppMemoryUtils_Mb.h>  // for Init::UsePerformanceMemoryFunctions
 #include <BufferDatagrams_Mb.h> // for ShortDG
 #include <algorithm>            // std::max
+#include <cstdlib>              // for  rand
 
 /* Provides Main Loop to distribute thunked messages */
 /* Current unncessary as of 3/27/2013 */
@@ -29,7 +30,8 @@ X6_1000::X6_1000() {
 }
 
 X6_1000::X6_1000(unsigned int target) :
-    deviceID_(target), isOpened_(false), triggerInterval_(1000.0)
+    deviceID_(target), isOpened_(false), triggerInterval_(1000.0),
+    prefillPacketCount_(0)
 {
     numBoards_ = getBoardCount();
 
@@ -174,8 +176,11 @@ X6_1000::ErrorCodes X6_1000::Open() {
     
     //  Connect Stream
     stream_.ConnectTo(&module_);
+
+    prefillPacketCount_ = stream_.PrefillPacketCount();
     
     FILE_LOG(logINFO) << "Stream Connected..." << endl;
+    FILE_LOG(logINFO) << "PrefillPacketCount = " << stream_.PrefillPacketCount() << endl;
 
     //  Initialize VeloMergeParse
     //VMP.OnDataAvailable.SetEvent(this, &ApplicationIo::VMPDataAvailable);
@@ -388,7 +393,6 @@ X6_1000::ErrorCodes X6_1000::enable_test_generator(X6_1000::FPGAWaveformType wfT
     timer_.Enabled(true);
 
 
-    FILE_LOG(logINFO) << "SUCCESS";
     return SUCCESS;
 }
 
@@ -396,7 +400,6 @@ X6_1000::ErrorCodes X6_1000::Start() {
     // Mimic Test Generater Mode from Stream Example
 
     set_active_channels();
-    FILE_LOG(logINFO) << "stream_.Preconfigure();";
     stream_.Preconfigure();
     
    //  Output Test Generator Setup
@@ -408,8 +411,8 @@ X6_1000::ErrorCodes X6_1000::Start() {
     module_.Output().Pulse().Reset();
     module_.Output().Pulse().Enabled(false);
     
-    // disable prefill
-    stream_.PrefillPacketCount(0);
+    // set prefill to default loaded during open
+    stream_.PrefillPacketCount(prefillPacketCount_);
     FILE_LOG(logINFO) << "trigger_.AtStreamStart();";
     trigger_.AtStreamStart();
     //  Start Streaming
@@ -419,11 +422,10 @@ X6_1000::ErrorCodes X6_1000::Start() {
     if (enableThreading_) {
         threadHandle = new thread(thunkLooper);
     }
+
     stream_.Start();
     timer_.Enabled(true);
-
-
-    FILE_LOG(logINFO) << "SUCCESS";
+    
     return SUCCESS;
 }
 
@@ -493,123 +495,79 @@ void X6_1000::HandlePackedDataAvailable(Innovative::VitaPacketPackerDataAvailabl
     outputPacket_ = Event.Data; 
 }
 
-void X6_1000::HandleDataRequired(VitaPacketStreamDataEvent & Event) {
-    FILE_LOG(logINFO) << "X6_1000::HandleDataRequired";
-    return;
-    
-    // the total VITA packet size is limited by 2^16-1 words (32bit), out of which 8
-    // are used for header and trailer
-    const size_t MAX_VITA_PACKET_DATA_SIZE = ( 0xffff - 8 ) * 4;
+void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event) { }
 
+void  X6_1000::HandleDataRequired(Innovative::VitaPacketStreamDataEvent & Event) {
 
-    Innovative::VitaBuffer vitaPacket;
-    Innovative::ShortDG DG(vitaPacket);
+    const size_t MAX_VITA_PACKET_DATA_SIZE  = 0xF000;
 
-    size_t leftToWrite = 0;
-    
-    // get channel 0 / 1 stream ID
     int streamID = module_.VitaOut().VitaStreamId(0);
 
-    Innovative::VitaPacketPacker VPPk(leftToWrite/4+100);
-    VPPk.OnDataAvailable.SetEvent(this, &X6_1000::HandlePackedDataAvailable);
-
-    unsigned int numActiveChannels = 0;
-    size_t maxSampleNum = 0;
-
-    // determine number of active channels and max sample
-    for (int ch = 0; ch < get_num_channels(); ch++) {
-        if (activeChannels_[ch]) {
-            maxSampleNum = max(maxSampleNum, chData_[ch].size());
-        }
-    }
-
-    leftToWrite = numActiveChannels * maxSampleNum;
-
-    unsigned int waveformIndex = 0;
+    //  We now have the data in an array of scratch buffers.
+    //     We need to copy it into VITA packets, and then pack those VITAs
+    //     into the outbound Waveform packet
     unsigned int numChannels = get_num_channels();
-    
-    size_t packet = 0;
-    // send data for each channel
-    
-    while (leftToWrite > 0)
-    {
-        ClearHeader(vitaPacket);
-        ClearTrailer(vitaPacket);
+    for (unsigned int ch = 0; ch < numChannels; ch++) {
+        if (!activeChannels_[ch] || ch >= chData_.size()) continue; // skip inactive channel
 
-        size_t writeNow = min(leftToWrite,MAX_VITA_PACKET_DATA_SIZE);
-        DG.Resize(writeNow);
+        size_t words_remaining = chData_[ch].size();
 
-        unsigned int numSamples = writeNow / numActiveChannels;
 
-        for(int sample = 0; sample < numSamples; sample++) {
-            for(int ch = 0; ch < numChannels; ch++) {
-                int idx = sample*get_num_channels()+ch;
-                DG[idx] = (waveformIndex < chData_[ch].size() && activeChannels_[ch]) ? chData_[ch][waveformIndex] : 0;
+
+        //
+        //  Use a packer to load full VITA packets into a velo packet
+        //  ...Make the packer output size so big, we will not fill it before finishing
+        VitaPacketPacker VPPk(words_remaining+10);
+        VPPk.OnDataAvailable.SetEvent(this, &X6_1000::HandlePackedDataAvailable);
+        //
+        //  Bust up the scratch buffer into VITA packets
+        size_t offset = 0;
+        size_t packet = 0;
+        while (words_remaining)
+            {
+            //  calculate size of VITA packet
+            size_t VP_size = std::min(MAX_VITA_PACKET_DATA_SIZE, words_remaining);
+
+            //  Get a properly cleared/inited Vita Header
+            VitaBuffer VBuf( VP_size );
+            ClearHeader(VBuf);
+            ClearTrailer(VBuf);
+            InitHeader(VBuf);
+            InitTrailer(VBuf);
+
+            Innovative::ShortDG   VitaDG(VBuf);
+
+
+            for (unsigned int idx=0; idx < VitaDG.size(); idx++) {
+                if (idx < words_remaining) 
+                    VitaDG[idx] = chData_[ch][idx];//(idx > VitaDG.size()/2) ? -32767 : 32767;
             }
-            waveformIndex++;
-        }
+
+            //  Init Vita Header
+            VitaHeaderDatagram VitaH( VBuf );
+            VitaH.StreamId(streamID);
+            VitaH.PacketCount(static_cast<int>(packet));
+
+            //  Shove in the new VITA packet
+            VPPk.Pack( VBuf );
             
-        InitHeader(vitaPacket);
-        InitTrailer(vitaPacket);
+            //  fix up buffer counters
+            words_remaining -= VP_size;
+            offset += VP_size;
 
-        Innovative::VitaHeaderDatagram VitaH( vitaPacket );
+            packet++;
+            }
 
-        VitaH.StreamId(streamID);
-        VitaH.PacketCount(static_cast<int>(packet));
+        VPPk.Flush();   // outputs the one waveform buffer into WaveformPacket
 
-        //  Shove in the new VITA packet
-        VPPk.Pack( vitaPacket );
+        ClearHeader(outputPacket_);
+        InitHeader(outputPacket_);   // make sure header packet size is valid...
 
-        leftToWrite -= writeNow;
-        packet++;
+        // WaveformPacket is now correctly filled with data...
+
+       stream_.Send(0,outputPacket_);  // "return" the waveform
     }
 
-    VPPk.Flush();   // outputs the one waveform buffer into outputPacket_
-
-    Innovative::ClearHeader(outputPacket_);
-    Innovative::InitHeader(outputPacket_);   // make sure header packet size is valid...
-
-    Innovative::VeloHeaderDatagram headerDG(outputPacket_);
-
-    stream_.Send(0,outputPacket_); // send to peripheral ID 0
-}
-
-void  X6_1000::HandleDataAvailable(VitaPacketStreamDataEvent & Event) {
-    FILE_LOG(logINFO) << "X6_1000::HandleDataRequired";
-
-    // if (Stopped)
-    //     return;
-
-    // VeloBuffer Packet;
-
-    // //
-    // //  Extract the packet from the Incoming Queue...
-    // Event.Sender->Recv(Packet);
-
-    // if (Settings.Rx.MergeParseEnable==false)
-    //     {
-    //     //  normal processing
-    //     if (Settings.Rx.LoggerEnable)
-    //         if (FWordCount < WordsToLog)
-    //             {
-    //             Logger.LogWithHeader(Packet);
-    //             }
-    //     }
-    // else
-    //     {
-    //     //  merge parse processing
-    //     VMP.Append(Packet);
-    //     VMP.Parse();
-    //     }
- 
-
-    // IntegerDG Packet_DG(Packet);
-
-    // TallyBlock(Packet_DG.size()*sizeof(int));
-
-    // FWordCount += Packet.SizeInInts();
-    // // Per block triggering actions
-    // Trig.AtBlockProcess(static_cast<unsigned int>(Packet_DG.size()*sizeof(int)));
 }
 
 void X6_1000::HandleTimer(OpenWire::NotifyEvent & /*Event*/) {
@@ -629,8 +587,6 @@ void  X6_1000::VMPDataAvailable(VeloMergeParserDataAvailable & Event) {
     //         }
                 
 }
-
-
 
 void X6_1000::HandleTimestampRolloverAlert(Innovative::AlertSignalEvent & event) {
     LogHandler("HandleTimestampRolloverAlert");
