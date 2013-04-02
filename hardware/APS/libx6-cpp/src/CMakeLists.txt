@@ -61,17 +61,42 @@ SET_SOURCE_FILES_PROPERTIES( ${TEST_SRC} PROPERTIES LANGUAGE CXX )
 ADD_LIBRARY( x6 SHARED ${DLL_SRC} )
 ADD_EXECUTABLE(x6test ./test/main.cpp )
 
-TARGET_LINK_LIBRARIES(x6test 
-	x6
+TARGET_LINK_LIBRARIES(x6test x6)
+
+ADD_EXECUTABLE(x6test2 
+	./test/main2.cpp 
+	./innovative/ApplicationIO.cpp
+	./innovative/ModuleIO.cpp
+	./innovative/Thunker_Con.cpp	
+	./innovative/CommandLine_Con.cpp	
+	./innovative/StaticWaveform_App.cpp
+	./innovative/TriggerManager_App.cpp
+)
+
+TARGET_LINK_LIBRARIES(x6test2 
+	#Application_Mb
+
+	Pci_Mb
+	Hardware_Mb
+	Analysis_Mb
+	Utility_Mb
+	Framework_Mb
+	Os_Mb
+	Ficl_Mb
+	
+	ipps-7.0  # in Intel IPP directory listed above
+	wdapi # WinDriver library in Innovative\lib\gcc
 
 )
 
 TARGET_LINK_LIBRARIES(x6 
 	Application_Mb
+
 	Pci_Mb
 	Hardware_Mb
 	Analysis_Mb
 	Utility_Mb
+	Framework_Mb
 	Os_Mb
 	Ficl_Mb
 	
