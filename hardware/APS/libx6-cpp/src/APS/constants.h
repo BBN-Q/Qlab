@@ -16,7 +16,7 @@ static const int  APS_WAVEFORM_UNIT_LENGTH = 4;
 static const int  MAX_APS_DEVICES = 10;
 
 static const int MAX_WF_LENGTH = 32768;
-static const int MAX_WF_AMP = 8191;
+static const int MAX_WF_AMP = 32767;
 static const int WF_MODULUS = 4;
 static const size_t MAX_LL_LENGTH = 8192;
 
