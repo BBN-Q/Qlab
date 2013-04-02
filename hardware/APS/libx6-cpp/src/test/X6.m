@@ -88,9 +88,9 @@ classdef X6 < APS
             
             x6.setEnabled(1,true);
             
-            %{
-            fprintf('enable ramp output\n');
             
+            fprintf('enable ramp output\n');
+            x6.samplingRate = 1000;
             x6.enableTestGenerator(x6.TEST_MODE_RAMP,0.001);
             
             pause(5);
@@ -98,25 +98,27 @@ classdef X6 < APS
             fprintf('enable sine wave output\n');
             
             x6.disableTestGenerator();
-            
-            x6.enableTestGenerator(x6.TEST_MODE_SINE,0.001);
+            x6.samplingRate = 100;
+            x6.enableTestGenerator(x6.TEST_MODE_SINE,0.1);
             
             pause(5);
             
             fprintf('disabling channel\n');
             x6.disableTestGenerator();
-            %}
-            
+
+            fprintf('Load Square Wavew\n');
             %Load a square wave
-            wf = [zeros([1,1000]) -0.8*ones([1,5000]) 0.8*ones([1,5000]) zeros([1,1000])];
+            wf = [1*ones([1,500]) -1*ones([1,500])];
             for ch = 1
                 x6.loadWaveform(ch, wf);
                 x6.setRunMode(ch, x6.RUN_WAVEFORM);
             end
-            
+            x6.samplingRate = 50;
+            fprintf('Run\n');
             x6.run();
             %keyboard
             pause(10)
+            fprintf('Stop\n');
             x6.stop();
             
             x6.setEnabled(1,false);
