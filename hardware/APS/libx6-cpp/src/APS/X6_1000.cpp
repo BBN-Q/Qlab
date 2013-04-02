@@ -31,7 +31,7 @@ X6_1000::X6_1000() {
 
 X6_1000::X6_1000(unsigned int target) :
     deviceID_(target), isOpened_(false), triggerInterval_(1000.0),
-    prefillPacketCount_(0)
+    prefillPacketCount_(0), enableTestGenerator_(false), isRunning_(false)
 {
     numBoards_ = getBoardCount();
 
@@ -362,38 +362,15 @@ void X6_1000::log_card_info() {
 X6_1000::ErrorCodes X6_1000::enable_test_generator(X6_1000::FPGAWaveformType wfType, float frequencyMHz) {
     // Mimic Test Generater Mode from Stream Example
 
-    wfType_ = wfType;
 
-    set_active_channels();
-    FILE_LOG(logINFO) << "stream_.Preconfigure();";
-    stream_.Preconfigure();
-    
+    enableTestGenerator_ = true;
+    wfType_ = wfType;
+   
    //  Output Test Generator Setup
-    module_.Output().TestModeEnabled( true, wfType_ );  // enable , mode
+    module_.Output().TestModeEnabled( false, wfType_ );  // enable , mode
     module_.Output().TestFrequency( frequencyMHz * 1e6 ); // frequency in Hz
 
-    // enable software trigger
-    module_.Output().SoftwareTrigger(true);
-
-    module_.Output().Pulse().Reset();
-    module_.Output().Pulse().Enabled(false);
-    
-    // disable prefill
-    stream_.PrefillPacketCount(0);
-    FILE_LOG(logINFO) << "trigger_.AtStreamStart();";
-    trigger_.AtStreamStart();
-    //  Start Streaming
-    FILE_LOG(logINFO) << "stream_.Start();";
-    
-    // start threadlooper
-    if (enableThreading_) {
-        threadHandle = new thread(thunkLooper);
-    }
-    stream_.Start();
-    timer_.Enabled(true);
-
-
-    return SUCCESS;
+    return Start();
 }
 
 X6_1000::ErrorCodes X6_1000::Start() {
@@ -403,7 +380,7 @@ X6_1000::ErrorCodes X6_1000::Start() {
     stream_.Preconfigure();
     
    //  Output Test Generator Setup
-    module_.Output().TestModeEnabled( false, wfType_ );  // enable , mode
+    module_.Output().TestModeEnabled( enableTestGenerator_, wfType_ );  // enable , mode
 
     // enable software trigger
     module_.Output().SoftwareTrigger(true);
@@ -412,6 +389,7 @@ X6_1000::ErrorCodes X6_1000::Start() {
     module_.Output().Pulse().Enabled(false);
     
     // set prefill to default loaded during open
+
     stream_.PrefillPacketCount(prefillPacketCount_);
     FILE_LOG(logINFO) << "trigger_.AtStreamStart();";
     trigger_.AtStreamStart();
@@ -423,6 +401,9 @@ X6_1000::ErrorCodes X6_1000::Start() {
         threadHandle = new thread(thunkLooper);
     }
 
+    // flag must be est before calling stream start in order to get output
+    isRunning_ = true; 
+
     stream_.Start();
     timer_.Enabled(true);
     
@@ -430,11 +411,13 @@ X6_1000::ErrorCodes X6_1000::Start() {
 }
 
 X6_1000::ErrorCodes X6_1000::disable_test_generator() {
+    enableTestGenerator_ = false;
     module_.Output().TestModeEnabled( false, wfType_);
     return Stop();
 }
 
 X6_1000::ErrorCodes X6_1000::Stop() {
+    isRunning_ = false;
     stream_.Stop();
     timer_.Enabled(false);
     trigger_.AtStreamStop();
@@ -498,6 +481,10 @@ void X6_1000::HandlePackedDataAvailable(Innovative::VitaPacketPackerDataAvailabl
 void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event) { }
 
 void  X6_1000::HandleDataRequired(Innovative::VitaPacketStreamDataEvent & Event) {
+
+    if (!isRunning_) return;
+
+    //cout << "HandleDataRequired" << endl;
 
     const size_t MAX_VITA_PACKET_DATA_SIZE  = 0xF000;
 

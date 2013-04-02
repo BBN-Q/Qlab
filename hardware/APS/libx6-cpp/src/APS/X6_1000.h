@@ -189,6 +189,9 @@ private:
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
 	static bool enableThreading_;		  /**< enabled threading support */
 
+	bool enableTestGenerator_;		  /**< enabled threading support */
+	bool isRunning_;
+
 	double triggerInterval_; 	  /**< trigger inverval in milliseconds */
 	unsigned int prefillPacketCount_;
 
