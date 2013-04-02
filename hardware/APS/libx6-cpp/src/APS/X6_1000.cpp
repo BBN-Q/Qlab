@@ -493,41 +493,46 @@ void  X6_1000::HandleDataRequired(Innovative::VitaPacketStreamDataEvent & Event)
     //  We now have the data in an array of scratch buffers.
     //     We need to copy it into VITA packets, and then pack those VITAs
     //     into the outbound Waveform packet
+
+    VitaBuffer VBuf;
+    Innovative::ShortDG   VitaDG(VBuf);
+
     unsigned int numChannels = get_num_channels();
     for (unsigned int ch = 0; ch < numChannels; ch++) {
         if (!activeChannels_[ch] || ch >= chData_.size()) continue; // skip inactive channel
-
+        
         size_t words_remaining = chData_[ch].size();
-
-
 
         //
         //  Use a packer to load full VITA packets into a velo packet
         //  ...Make the packer output size so big, we will not fill it before finishing
-        VitaPacketPacker VPPk(words_remaining+10);
+        VitaPacketPacker VPPk(words_remaining+8); // extra 8 bytes required to get output (header?)
         VPPk.OnDataAvailable.SetEvent(this, &X6_1000::HandlePackedDataAvailable);
         //
         //  Bust up the scratch buffer into VITA packets
         size_t offset = 0;
         size_t packet = 0;
+        
         while (words_remaining)
             {
             //  calculate size of VITA packet
             size_t VP_size = std::min(MAX_VITA_PACKET_DATA_SIZE, words_remaining);
 
             //  Get a properly cleared/inited Vita Header
-            VitaBuffer VBuf( VP_size );
+            
+            // for some reason the VitDG size is twice the VBuf size so half it here
+            VBuf.Resize( VP_size / 2 );
             ClearHeader(VBuf);
             ClearTrailer(VBuf);
+
             InitHeader(VBuf);
             InitTrailer(VBuf);
 
-            Innovative::ShortDG   VitaDG(VBuf);
-
+            VitaDG.Resize(VP_size);
 
             for (unsigned int idx=0; idx < VitaDG.size(); idx++) {
                 if (idx < words_remaining) 
-                    VitaDG[idx] = chData_[ch][idx];//(idx > VitaDG.size()/2) ? -32767 : 32767;
+                    VitaDG[idx] = chData_[ch][idx];
             }
 
             //  Init Vita Header
