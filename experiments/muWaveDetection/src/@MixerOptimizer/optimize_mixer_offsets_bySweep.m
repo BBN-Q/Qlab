@@ -23,28 +23,12 @@
 function [i_offset, q_offset] = optimize_mixer_offsets_bySweep(obj)
 
 % unpack constants from cfg file
-ExpParams = obj.inputStructure.ExpParams;
-spec_analyzer_span = ExpParams.SpecAnalyzer.span;
-spec_resolution_bw = ExpParams.SpecAnalyzer.resolution_bw;
-spec_sweep_points = ExpParams.SpecAnalyzer.sweep_points;
-awg_I_channel = ExpParams.Mixer.I_channel;
-awg_Q_channel = ExpParams.Mixer.Q_channel;
-max_offset = ExpParams.Search.max_offset; % max I/Q offset voltage
+ExpParams = obj.expParams;
+awg_I_channel = str2double(obj.channelParams.IQkey(end-1));
+awg_Q_channel = str2double(obj.channelParams.IQkey(end));
 
-% grab instrument objects
-sa = obj.sa;
-awg = obj.awg;
-
-% center on the current spec generator frequency
-sa.center_frequency = obj.specgen.frequency * 1e9;
-sa.span = spec_analyzer_span;
-sa.sweep_mode = 'single';
-sa.resolution_bw = spec_resolution_bw;
-sa.sweep_points = spec_sweep_points;
-sa.video_averaging = 0;
-
-awg.run();
-awg.waitForAWGtoStartRunning();
+obj.awg.run();
+obj.awg.waitForAWGtoStartRunning();
 
 offsetPts = linspace(ExpParams.Sweep.offset.start, ExpParams.Sweep.offset.stop, ExpParams.Sweep.offset.numPoints);
 vertex = struct();
@@ -112,37 +96,29 @@ plot(axesH, offsetPts, fitData,'g--')
 legend({'First I Sweep','First Q Sweep', 'Second I Sweep'})
 drawnow()
 
-
-% restore spectrum analyzer to a normal state
-sa.sweep_mode = 'cont';
-sa.resolution_bw = 'auto';
-sa.sweep_points = 800;
-sa.sweep();
-sa.peakAmplitude();
-
 % nested functions
 
 
     function power = readPower()
-        sa.sweep()
-        power = sa.peakAmplitude();
-%         [~, powerTrace] = sa.downloadTrace();
+        obj.sa.sweep()
+        power = obj.sa.peakAmplitude();
+%         [~, powerTrace] = obj.sa.downloadTrace();
 %         power = log10(sum(10.^(powerTrace/10)));
         %We try twice to overcome the flakey network analsyer
-%         sa.sweep();
-%         p1 = sa.peakAmplitude();
-%         sa.sweep();
-%         p2 = sa.peakAmplitude();
+%         obj.sa.sweep();
+%         p1 = obj.sa.peakAmplitude();
+%         obj.sa.sweep();
+%         p2 = obj.sa.peakAmplitude();
 %         power = max(p1, p2);
     end
 
     function setOffsets(vertex)
         
-        switch class(awg)
+        switch class(obj.awg)
             case 'deviceDrivers.Tek5014'
-                awg.(['chan_' num2str(awg_I_channel)]).offset = vertex.a;
-                awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
-                awg.operationComplete();
+                obj.awg.(['chan_' num2str(awg_I_channel)]).offset = vertex.a;
+                obj.awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
+                obj.awg.operationComplete();
                 pause(0.1);
             case 'deviceDrivers.APS'
                 obj.awg.setOffset(awg_I_channel, vertex.a);

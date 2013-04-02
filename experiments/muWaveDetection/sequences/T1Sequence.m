@@ -7,7 +7,7 @@ function T1Sequence(qubit, pulseSpacings, makePlot)
 
 basename = 'T1';
 fixedPt = pulseSpacings(end)+1000;
-cycleLength = fixedPt+2000; 
+cycleLength = fixedPt+4000; 
 nbrRepeats = 1;
 
 pg = PatternGen(qubit);
@@ -26,7 +26,7 @@ seqParams = struct(...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
-    'measLength', 2000);
+    'measLength', 3000);
 if ~isempty(calseq), calseq = {calseq}; end
 
 qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));

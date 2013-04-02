@@ -1,17 +1,16 @@
-function PulsedSpec(qubit, pulseLength, makePlot)
+function PulsedSpec(qubit, pulseAmp, pulseLength, makePlot)
 
 
 basename = 'PulsedSpec';
 
-fixedPt = 10000;
-cycleLength = 13100;
+fixedPt = pulseLength+1000;
+cycleLength = fixedPt + 3000;
 nbrRepeats = 1;
 
 % if using SSB, set the frequency here
-SSBFreq = -150e6;
-pg = PatternGen(qubit, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
+pg = PatternGen(qubit);
 
-patseq = {{pg.pulse('Xtheta', 'amp', 8000, 'width', pulseLength, 'pType', 'square')}};
+patseq = {{pg.pulse('Xtheta', 'amp', pulseAmp, 'width', pulseLength, 'pType', 'tanh', 'sigma', 128), pg.pulse('QId','width',64)}};
 calseq = [];
 
 % prepare parameter structures for the pulse compiler
@@ -31,7 +30,7 @@ IQkey = qubitMap.(qubit).IQkey;
 
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
 measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
+awgs = {'TekAWG1', 'TekAWG2', 'BBNAPS1', 'BBNAPS2'};
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 

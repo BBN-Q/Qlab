@@ -17,8 +17,10 @@ end
 
 %     seqlengths = [2, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96];
 %     seqlengths = [2, 4, 8, 16, 32, 64, 96, 128, 192, 256, 320];
-seqlengths = [4, 8, 12, 16, 24, 32, 64, 128, 192];
-xpts2 = seqlengths(1 + floor((0:length(ypts)-1)./32));
+seqlengths = [1 2 4 8 16 32 64 126 252];
+numRepeats = length(ypts)/length(seqlengths);
+
+xpts2 = seqlengths(1 + floor((0:length(ypts)-1)./numRepeats));
 
 % force long times to <sigma_z> = 0 by rescaling
 %midvalue = mean(ypts(end-32+1:end));
@@ -26,8 +28,8 @@ xpts2 = seqlengths(1 + floor((0:length(ypts)-1)./32));
 %ypts2 = (ypts+1)./scale - 1;
 ypts2 = ypts(:);
 
-avgpts = mean(reshape(ypts, 32, length(seqlengths)));
-errors = std(reshape(ypts, 32, length(seqlengths)));
+avgpts = mean(reshape(ypts, numRepeats, length(seqlengths)));
+errors = std(reshape(ypts, numRepeats, length(seqlengths)));
 
 fidelity = .5 * (1 - ypts2);
 avgFidelity = .5 * (1 - avgpts);

@@ -1,0 +1,10 @@
+function result = struct_filter(fcn, input)
+    result = struct();
+    fields = fieldnames(input)';
+    
+    for field = fields
+        if fcn(input.(field{1}))
+            result.(field{1}) = input.(field{1});
+        end
+    end
+end

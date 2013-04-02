@@ -21,7 +21,7 @@ EXFLAGS=-Wl
 LIBFLAGS=-dynamiclib -o libaps.dylib
 LIBS=-L. -L/usr/local/hdf5/lib -L/usr/local/lib -lftd2xx -lhdf5_cpp -lhdf5
 TESTLIBS=-laps
-CC=xcrun clang++
+CC=clang++
 else
 ####### Linux ####### 
 ifeq (${OS},Linux)

@@ -1,4 +1,4 @@
-function [gateFidelity, choiSDP] = analyzeProcessTomo(data, idealProcess, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrRepeats)
+function [gateFidelity, choiSDP] = analyzeProcessTomo(data, idealProcess, nbrQubits, nbrPrepPulses, nbrReadoutPulses, calRepeats)
 %analyzeProcess Performs SDP tomography, calculates gates fidelites and plots pauli maps.
 %
 % [gateFidelity, choiSDP] = analyzeProcessTomo(data, idealProcessStr, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrRepeats) 
@@ -16,15 +16,15 @@ numMeas = nbrReadoutPulses^nbrQubits;
 measMap = zeros(numMeas, numPreps, 'uint8');
 measMat = zeros(numMeas, numPreps, 'double');
 numSeqs = size(data,1);
-expPerSeq = round((size(data,2)-2^nbrQubits*nbrRepeats)/nbrRepeats); 
+expPerSeq = size(data,2)-2^nbrQubits*calRepeats; 
 measOps = cell(numSeqs,1);
 
 idx=1;
 for seqct = 1:size(data,1)
-    cals = data(seqct,end-2^nbrQubits*nbrRepeats+1:end);
-    raws = data(seqct,1:end-2^nbrQubits*nbrRepeats);
-    measOps{seqct} = diag(mean(reshape(cals, nbrRepeats, 2^nbrQubits),1));
-    measMat(idx:idx+expPerSeq-1) = mean(reshape(raws, nbrRepeats, expPerSeq),1);
+    cals = data(seqct,end-2^nbrQubits*calRepeats+1:end);
+    raws = data(seqct,1:end-2^nbrQubits*calRepeats);
+    measOps{seqct} = diag(mean(reshape(cals, calRepeats, 2^nbrQubits),1));
+    measMat(idx:idx+expPerSeq-1) = raws;
     measMap(idx:idx+expPerSeq-1) = seqct;
     idx = idx+expPerSeq;
 end
@@ -57,11 +57,26 @@ gateFidelity = (2^nbrQubits*processFidelity+1)/(2^nbrQubits+1)
 
 %Create the pauli map for plotting
 pauliMapIdeal = choi2pauliMap(choiIdeal);
+pauliMapLSQ = choi2pauliMap(choiLSQ);
 pauliMapExp = choi2pauliMap(choiSDP);
 
 %Create red-blue colorscale
 cmap = [hot(50); 1-hot(50)];
 cmap = cmap(19:19+63,:); % make a 64-entry colormap
+
+figure()
+imagesc(real(pauliMapLSQ),[-1,1])
+colormap(cmap)
+colorbar
+
+set(gca, 'XTick', 1:4^nbrQubits);
+set(gca, 'XTickLabel', pauliStrs);
+
+set(gca, 'YTick', 1:4^nbrQubits);
+set(gca, 'YTickLabel', pauliStrs);
+xlabel('Input Pauli Operator');
+ylabel('Output Pauli Operator');
+title('LSQ Reconstruction');
 
 figure()
 imagesc(real(pauliMapExp),[-1,1])
