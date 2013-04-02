@@ -17,11 +17,11 @@ classdef X6 < APS
             val = aps.libraryCall('get_logic_temperature');
         end
         
-        function val = enableTestGenerator(mode,rate)
+        function val = enableTestGenerator(aps,mode,rate)
             val = aps.libraryCall('enable_test_generator', mode,rate);
         end
         
-        function val = disableTestGenerator(id)
+        function val = disableTestGenerator(aps)
             val = aps.libraryCall('disable_test_generator');
         end
         
@@ -68,26 +68,27 @@ classdef X6 < APS
             
             x6.connect(0);
             
-            if (~aps.is_open)
+            if (~x6.is_open)
                 error('Could not open aps')
             end
             
             x6.init();
             
-            fprintf('current logic temperature = %.2f\n', x6.getLogicTemperature(0));
+            fprintf('current logic temperature = %.2f\n', x6.getLogicTemperature());
             
             fprintf('current PLL frequency = %.2f\n', x6.samplingRate);
             
             fprintf('setting trigger source = INTERNAL\n');
             
-            aps.triggerSource = 'internal';
-            aps.setDebugLevel(5);
+            x6.triggerSource = 'internal';
+            x6.setDebugLevel(5);
             
             
             fprintf('set channel(0) enabled = 1\n');
             
             x6.setEnabled(1,true);
             
+            %{
             fprintf('enable ramp output\n');
             
             x6.enableTestGenerator(x6.TEST_MODE_RAMP,0.001);
@@ -98,23 +99,25 @@ classdef X6 < APS
             
             x6.disableTestGenerator();
             
-            x6.enableTest_generator(x6.TEST_MODE_SINE,0.001);
+            x6.enableTestGenerator(x6.TEST_MODE_SINE,0.001);
             
             pause(5);
             
             fprintf('disabling channel\n');
             x6.disableTestGenerator();
+            %}
             
             %Load a square wave
-            wf = [zeros([1,2000]) 0.8*ones([1,2000])];
+            wf = [zeros([1,1000]) -0.8*ones([1,5000]) 0.8*ones([1,5000]) zeros([1,1000])];
             for ch = 1
-                aps.loadWaveform(ch, wf);
-                aps.setRunMode(ch, aps.RUN_WAVEFORM);
+                x6.loadWaveform(ch, wf);
+                x6.setRunMode(ch, x6.RUN_WAVEFORM);
             end
             
-            aps.run();
-            keyboard
-            aps.stop();
+            x6.run();
+            %keyboard
+            pause(10)
+            x6.stop();
             
             x6.setEnabled(1,false);
             

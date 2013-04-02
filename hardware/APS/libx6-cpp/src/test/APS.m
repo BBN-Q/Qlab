@@ -128,7 +128,7 @@ classdef APS < hgsetget
             [numDevices, deviceSerials] = aps.enumerate();
             
             deviceID_re = '^\d+';
-            if ~isempty(regexp(address, deviceID_re, 'once'))
+            if ischar(address) && ~isempty(regexp(address, deviceID_re, 'once'))
                 address = str2double(address);
             end
             if isnumeric(address)
@@ -348,7 +348,11 @@ classdef APS < hgsetget
         function rate = get.samplingRate(aps)
             % polls APS hardware to get current PLL Sample Rate
             % valid rates in MHz (1200, 600, 300, 100, 40)
-            rate = aps.libraryCall('get_sampleRate');
+            if aps.is_open
+                rate = aps.libraryCall('get_sampleRate');
+            else
+                rate = 0;
+            end
         end
         
         function aps = set.triggerSource(aps, trig)
