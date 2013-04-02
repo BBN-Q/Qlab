@@ -61,7 +61,7 @@ int main ()
 
   set_channel_enabled(0,0,true);
 
-#if 0
+
 
   cout << "enable ramp output" << endl;
   
@@ -77,16 +77,16 @@ int main ()
 
   std::this_thread::sleep_for(std::chrono::seconds(5));
 
-  cout << "disabling channel" << endl;
+  cout << "disabling test generator" << endl;
   disable_test_generator(0);
-
-#else
 
 
   const int wfs = 10000;
- short wf[wfs];
+  short wf[wfs];
   for (int cnt = 0; cnt < wfs; cnt++)
     wf[cnt] = (cnt < wfs/2) ? 32767 : -32767;
+
+  cout << "loading waveform" << endl;
 
   set_waveform_int(0, 0, wf, wfs);
 
@@ -99,9 +99,6 @@ int main ()
   cout << "Stopping" << endl;
 
   stop(0);
-
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-#endif
 
   set_channel_enabled(0,0,false);
 
