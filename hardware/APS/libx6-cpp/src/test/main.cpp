@@ -41,6 +41,10 @@ int main ()
 
   cout << "current logic temperature = " << get_logic_temperature(0) << endl;
 
+  cout << "Set sample rate " << endl;
+
+  set_sampleRate(0,100);
+
   cout << "current PLL frequency = " << get_sampleRate(0) << " MHz" << endl;
 
   cout << "setting trigger source = EXTERNAL" << endl;
@@ -61,27 +65,24 @@ int main ()
 
   set_channel_enabled(0,0,true);
 
-
-
   cout << "enable ramp output" << endl;
-  
-  enable_test_generator(0,0,0.001);
+  set_sampleRate(0,1000);
+  enable_test_generator(0,0,1);
 
-  std::this_thread::sleep_for(std::chrono::seconds(5));
-
+  std::this_thread::sleep_for(std::chrono::seconds(10));
 
   cout << "enable sine wave output" << endl;
 
   disable_test_generator(0);
-  enable_test_generator(0,1,0.001);
+  set_sampleRate(0,100);
+  enable_test_generator(0,1,0.1);
 
-  std::this_thread::sleep_for(std::chrono::seconds(5));
+  std::this_thread::sleep_for(std::chrono::seconds(10));
 
   cout << "disabling test generator" << endl;
   disable_test_generator(0);
 
-
-  const int wfs = 10000;
+  const int wfs = 1000;
   short wf[wfs];
   for (int cnt = 0; cnt < wfs; cnt++)
     wf[cnt] = (cnt < wfs/2) ? 32767 : -32767;
@@ -91,6 +92,8 @@ int main ()
   set_waveform_int(0, 0, wf, wfs);
 
   cout << "Running" << endl;
+
+  set_sampleRate(0,50);
 
   run(0);
 
