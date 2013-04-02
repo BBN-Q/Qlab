@@ -1,5 +1,10 @@
-% Labbrick microwave source driver
-%
+% Labbrick microwave source driver for 64-bit windows
+% Vaunix is yet to supply a 64-bit driver, so we make use of some reverse
+% engineering done by special-measure (http://code.google.com/p/special-measure)
+% to manually maninpulate the device through the USB byte stream. At this
+% time only a limited subset of commands are supported (output, power, and
+% frequency).
+
 % Author(s): Blake Johnson
 % Date created: April 1, 2013
 
@@ -19,9 +24,9 @@
 classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
 
     properties (Access = private)
-        hid;
+        hid
         open = 0;
-        serialNum = 1;
+        serialNum
         model = 'LMS-103';
     end
     
@@ -35,10 +40,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         alc
         pulse
         pulseSource = 'ext';
-        
-        % device specific
-        freq_reference
-    end % end device properties
+    end
 
     properties (Constant = true)
         vendor_id = sscanf('0x041f', '%i');
@@ -50,17 +52,14 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
     end
     
     methods
-        %Constructor
         function obj = Labbrick64()
             % load DLL
-            % build library path
             base_path = fileparts(mfilename('fullpath'));
             if ~libisloaded('hidapi')
                 loadlibrary(fullfile(base_path, 'hidapi.dll'), fullfile(base_path, 'hidapi.h'));
             end
         end
 
-        %Destructor
         function delete(obj)
             if ~isempty(obj.hid)
                 obj.disconnect();
@@ -142,9 +141,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         end
 		
 		% Instrument parameter accessors
-        % getters
         function val = get.frequency(obj)
-            % returns frequency in 10s of Hz
             cmd_id = 4;
             report = [cmd_id zeros(1,7)];
             result = obj.query(report);
@@ -152,7 +149,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             val = double(typecast(result(3:6), 'uint32'))*1e-4;
         end
         function val = get.power(obj)
-            % returns power as attenuation from the max output power, in an integer multiple of 0.25dBm.
+            % returns power as attenuation from the max output power, in integer multiples of 0.25dBm.
             cmd_id = 13;
             report = [cmd_id zeros(1,7)];
             result = obj.query(report);
