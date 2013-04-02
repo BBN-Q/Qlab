@@ -173,6 +173,8 @@ void ApplicationIo::Open()
     Log("Stream Connected...");
 
     PrefillPacketCount = Stream.PrefillPacketCount();
+
+    cout << "PrefillPacketCount = " << PrefillPacketCount << endl;
     
     //
     //  Initialize VeloMergeParse
@@ -208,6 +210,7 @@ void ApplicationIo::StreamPreconfigure()
     //    active channel filled in
     if (Builder.Settings.SingleChannelMode)
         {
+            cout << "Builder.Settings.SingleChannelMode" << endl;
         int active_channels = 0;
         for (unsigned int i = 0; i < Settings.Tx.ActiveChannels.size(); ++i)
             if ((Settings.Tx.ActiveChannels[i] ? true : false))
@@ -243,15 +246,14 @@ void ApplicationIo::StreamPreconfigure()
     // Clock Configuration
     
     //   Route ext clock source
-    IX6ClockIo::IIClockSelect cks[] = { IX6ClockIo::cslFrontPanel, IX6ClockIo::cslP16 };
-    Module().Clock().ExternalClkSelect(cks[Settings.ExtClockSrcSelection]);
+
+    Module().Clock().ExternalClkSelect(IX6ClockIo::cslFrontPanel);
     //   Route reference.
-    IX6ClockIo::IIReferenceSource ref[] = { IX6ClockIo::rsExternal, IX6ClockIo::rsInternal };
-    Module().Clock().Reference(ref[Settings.ReferenceClockSource]);
+    Module().Clock().Reference(IX6ClockIo::rsInternal);
     Module().Clock().ReferenceFrequency(Settings.ReferenceRate * 1e6);
+
     //   Route clock
-    IX6ClockIo::IIClockSource src[] = { IX6ClockIo::csExternal, IX6ClockIo::csInternal };
-    Module().Clock().Source(src[Settings.SampleClockSource]);
+    Module().Clock().Source(IX6ClockIo::csInternal);
     Module().Clock().Frequency(Settings.SampleRate * 1e6);
 
     // Readback Frequency
@@ -281,6 +283,7 @@ bool ApplicationIo::StartStreaming()
     if (Settings.AutoPreconfig)
         StreamPreconfigure();
 
+/*
     if (!FStreamConnected)
         {
         Log("Stream not connected! -- Open the boards");
@@ -314,6 +317,7 @@ bool ApplicationIo::StartStreaming()
             return false;
             }
         }
+    */
     FWordCount = 0;
      
     unsigned int SamplesPerWord = Module().Input().Info().SamplesPerWord();
@@ -343,6 +347,9 @@ bool ApplicationIo::StartStreaming()
     //
     // Trigger Configuration
     //  Frame Triggering
+    cout << "Output Trigger Mode " << Settings.Tx.Framed << " " << Settings.Tx.EdgeTrigger << " " << Settings.Tx.FrameSize << endl;
+    cout << " Input Trigger Mode " << Settings.Rx.Framed << " " << Settings.Rx.EdgeTrigger << " " << Settings.Rx.FrameSize << endl;
+
     Module().Output().Trigger().FramedMode((Settings.Tx.Framed)? true : false);
     Module().Output().Trigger().Edge((Settings.Tx.EdgeTrigger)? true : false);
     Module().Output().Trigger().FrameSize(Settings.Tx.FrameSize);
@@ -351,15 +358,19 @@ bool ApplicationIo::StartStreaming()
     Module().Input().Trigger().Edge((Settings.Rx.EdgeTrigger)? true : false);
     Module().Input().Trigger().FrameSize(Settings.Rx.FrameSize);
 
+    cout << "Settings.ExtTriggerSrcSelection = " << Settings.ExtTriggerSrcSelection << endl;
+
     //  Route External Trigger source
     IX6IoDevice::AfeExtSyncOptions syncsel[] = { IX6IoDevice::essFrontPanel, IX6IoDevice::essP16 };
     Module().Output().Trigger().ExternalSyncSource( syncsel[ Settings.ExtTriggerSrcSelection ] );
     Module().Input().Trigger().ExternalSyncSource( syncsel[ Settings.ExtTriggerSrcSelection ] );
 
+
     //  Pulse Trigger Config
     {
     std::vector<float> Delays;
     std::vector<float> Widths;
+    /*
     //  ...push first delay
     Delays.push_back(Settings.Rx.Pulse.Delay);  Widths.push_back(Settings.Rx.Pulse.Width);
     //  ...do we push delay 2?
@@ -379,10 +390,12 @@ bool ApplicationIo::StartStreaming()
         {  Delays.push_back(Settings.Tx.Pulse.Delay2);  Widths.push_back(Settings.Tx.Pulse.Width2 ); }
 
      //  ...add to module configuration
+    */
     Module.SetOutputPulseTriggerConfiguration(Settings.Tx.Pulse.Enable, 
                                              Settings.Tx.Pulse.Period,
                                              Delays, Widths);
     }
+    
     //
     //  Velocia Packet Size
     Module.SetOutputPacketDataSize(Settings.Tx.PacketSize);
@@ -390,10 +403,10 @@ bool ApplicationIo::StartStreaming()
     Module().Velo().ForceVeloPacketSize(Settings.Rx.ForceSize);
     //
     //  Output Test Generator Setup
-    cout << "Output Test config" << Settings.Tx.TestGenEnable <<  " " << Settings.Tx.TestGenMode << endl;
+    cout << "Output Test config " << Settings.Tx.TestGenEnable <<  " " << Settings.Tx.TestGenMode << endl;
     Module.SetOutputTestConfiguration( Settings.Tx.TestGenEnable, Settings.Tx.TestGenMode );
     Module.SetInputTestConfiguration( Settings.Rx.TestCounterEnable, Settings.Rx.TestGenMode );
-    cout << "Output Test Freq" << Settings.Tx.TestFrequencyMHz <<  endl;
+    cout << "Output Test Freq " << Settings.Tx.TestFrequencyMHz <<  endl;
     Module().Output().TestFrequency( Settings.Tx.TestFrequencyMHz * 1e6 );
     Module().Input().TestFrequency( Settings.Tx.TestFrequencyMHz * 1e6 );
 
@@ -407,10 +420,10 @@ bool ApplicationIo::StartStreaming()
     Module.ConfigureAlerts(Settings.AlertEnable);
 
     // Disable prefill if in test mode
-    if (Module().Output().ActiveChannels())
+    if (Module().Output().ActiveChannels()) 
         Stream.PrefillPacketCount(Settings.Tx.TestGenEnable ? 0 : PrefillPacketCount);
     else
-        Stream.PrefillPacketCount(0);
+        Stream.PrefillPacketCount(PrefillPacketCount);
     // Fill Waveform Buffer (if streaming)
     if ((Settings.Tx.TestGenEnable == false) && Module().Output().ActiveChannels())
         FillWaveformBuffer();
@@ -633,6 +646,8 @@ void ApplicationIo::FillWaveformBuffer()
     std::vector<int> sids(Module.VitaStreamIdVector());
 
     Builder.SampleRate(Settings.SampleRate*1e6);
+
+    cout << "Builder.Format(" <<  "," << channels << "," << bits << "," << samples << ")" << endl;
     Builder.Format(sids, channels, bits, samples);
     Builder.BuildWave(WaveformPacket);
 }
@@ -1138,7 +1153,7 @@ ApplicationSettings::ApplicationSettings( ApplicationIo * owner )
     Tx.TriggerDelayPeriod=  1;
     //  ..Analog
     Tx.ActiveChannels= {1,1,1};
-    Tx.TestGenEnable=   true;
+    Tx.TestGenEnable=   false;
     Tx.TestGenMode=         0;
     Tx.TestFrequencyMHz=    10.0;
     AlertEnable=  {1}      ;
@@ -1160,7 +1175,7 @@ ApplicationSettings::ApplicationSettings( ApplicationIo * owner )
 
     //  ..Wave Generator1
     Owner->Builder.Settings.WaveType=             1;
-    Owner->Builder.Settings.WaveformFrequency=    1.0f;
+    Owner->Builder.Settings.WaveformFrequency=    .75f;
     Owner->Builder.Settings.WaveformAmplitude=    95.0f;
     Owner->Builder.Settings.WaveFile=             std::string("");
     Owner->Builder.Settings.TwoToneMode=          false;
