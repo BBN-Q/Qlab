@@ -76,10 +76,8 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             if ~any(strcmp(serial_nums, serialNum))
                 error('Could not find a Labbrick with serial %i', serialNum);
             end
-%             serial_ptr = libpointer('uint16Ptr', uint16([serialNum 0]));
-%             obj.hid = calllib('hidapi', 'hid_open', obj.vendor_id, obj.product_id, serial_ptr);
-            obj.hid = calllib('hidapi', 'hid_open', obj.vendor_id, obj.product_id, []);
-            if obj.hid.isNull
+            obj.hid = calllib('hidapi', 'hid_open', obj.vendor_id, obj.product_id, uint16(['SN:0' serialNum 0]));
+            if obj.hid.isNull 
                 error('Could not open device serial %s', serialNum);
             end
             
