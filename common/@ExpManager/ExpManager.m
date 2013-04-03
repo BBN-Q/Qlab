@@ -46,6 +46,7 @@ classdef ExpManager < handle
         instrSettings = struct();
         measurements = struct();
         sweeps = {}
+        sweep_callbacks = {}
         data = struct();
         scopes
         AWGs
@@ -181,6 +182,9 @@ classdef ExpManager < handle
                         end
                     end
                     obj.sweeps{idx}.step(ct(idx));
+                    if ~isempty(obj.sweep_callbacks{idx})
+                        feval(obj.sweep_callbacks{idx}, obj);
+                    end
                     if idx < length(ct)
                         idx = idx + 1;
                     else % inner most loop... take data
@@ -416,8 +420,13 @@ classdef ExpManager < handle
             obj.measurements.(name) = meas;
         end
         
-        function add_sweep(obj, sweep)
+        function add_sweep(obj, sweep, callback)
             obj.sweeps{end+1} = sweep;
+            if exist('callback', 'var')
+                obj.sweep_callbacks{end+1} = callback;
+            else
+                obj.sweep_callbacks{end+1} = [];
+            end
         end
         
     end
