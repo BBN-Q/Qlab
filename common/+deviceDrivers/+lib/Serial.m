@@ -36,6 +36,9 @@ classdef Serial < deviceDrivers.lib.deviceDriverBase
 
         function delete(obj)
             obj.disconnect();
+            if ~isempty(obj.interface)
+                delete(obj.interface);
+            end
         end
         
         function write(obj, string)
