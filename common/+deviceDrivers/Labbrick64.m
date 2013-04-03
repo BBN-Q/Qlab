@@ -122,6 +122,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         function write(obj, val)
             report = uint8([0 val]);
             calllib('hidapi', 'hid_write', obj.hid, report, length(report));
+            pause(0.02);
         end
 
         function out = query(obj, val)
@@ -131,13 +132,21 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             ct = 1;
             % keep trying to read until the return block starts with the
             % cmd id
-            while (out(1) ~= cmd_id && ct < 256)
+            while (out(1) ~= cmd_id && ct < 128)
                 out = obj.read();
                 ct = ct + 1;
             end
             if ct == 256
                 error('No result found with matching cmd id');
             end
+        end
+        
+        function save_settings(obj)
+            % saves current settings
+            cmd_id = 140;
+            cmd_size = 3;
+            report = [cmd_id cmd_size 66 85 49 zeros(1,3)];
+            obj.write(report);
         end
 		
 		% Instrument parameter accessors
@@ -178,11 +187,14 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
                 value = obj.min_freq;
                 warning('Frequency out of range');
             end
+            check_value = value;
             
             % write frequency in 100s of kHz
             value = typecast(uint32(value*1e4), 'uint8'); % pack as 4 bytes
             report = [cmd_id cmd_size value zeros(1,2)];
             obj.write(report);
+            freq_diff = obj.frequency - check_value;
+            assert(freq_diff < 1e-4 + eps, 'Failed to set frequency. Found frequency %f', freq_diff+check_value);
         end
 
         function obj = set.power(obj, value)
@@ -196,11 +208,13 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
                 value = obj.min_power;
                 warning('Power out of range');
             end
+            check_value = value;
             
             % write power as attenuation from max power in increments of 0.25dBm
             value = uint8(4 * (obj.max_power - value));
             report = [cmd_id cmd_size value zeros(1,5)];
             obj.write(report);
+            assert(obj.power == check_value, 'Failed to set power');
         end
 
         function obj = set.output(obj, value)
@@ -221,6 +235,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
 
             report = [cmd_id cmd_size value zeros(1,5)];
             obj.write(report);
+            assert(obj.output == value, 'Failed to set output');
         end
     end
     
