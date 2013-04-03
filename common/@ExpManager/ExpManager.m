@@ -64,7 +64,7 @@ classdef ExpManager < handle
             % turn off uW sources
             function turn_uwave_off(instr)
                 if isa(instr, 'deviceDrivers.lib.uWSource')
-                        instr.output = 0;
+                    instr.output = 0;
                 end
             end
             structfun(@turn_uwave_off, obj.instruments); 
