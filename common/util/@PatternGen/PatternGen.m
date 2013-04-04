@@ -462,10 +462,10 @@ classdef PatternGen < handle
 			pat = uint8(logical(pat));
 			
 			% keep the pulse high if the delay is less than the reset time
-            onOffPts = find(diff(pat));
+            onOffPts = find(diff(int8(pat)));
             bufferSpacings = diff(onOffPts);
             if length(onOffPts) > 2
-                for ii = 1:(length(bufferSpacings)/2-1)
+                for ii = 1:floor(length(bufferSpacings)/2)
                     if bufferSpacings(2*ii) < reset
                         pat(onOffPts(2*ii):onOffPts(2*ii+1)+1) = 1;
                     end
