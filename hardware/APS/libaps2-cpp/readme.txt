@@ -1,4 +1,4 @@
-BBN APS - libap2-cpp
+BBN APS - libaps2-cpp
 
 This directory contains initial driver code to support the use of the ethernet controlled APS2
 
