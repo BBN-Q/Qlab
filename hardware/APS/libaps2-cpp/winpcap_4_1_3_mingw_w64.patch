@@ -1,0 +1,41 @@
+8c8
+< CFLAGS = -I ../../../common -shared -mno-cygwin ${OPTFLAGS} -I..
+---
+> CFLAGS = -I ../../../common -shared ${OPTFLAGS} -I..
+60c60
+< #if defined(_POSIX_THREAD_SAFE_FUNCTIONS) || defined(_REENTRANT)
+---
+> #if 0 // defined(_POSIX_THREAD_SAFE_FUNCTIONS) || defined(_REENTRANT)
+88c88
+< #include "IP6_misc.h"
+---
+> #include "ip6_misc.h"
+806,807c806,809
+< 			strcpy((char*)tUstr, tAstr);
+< 			(char*)tUstr += strlen(tAstr) + 1;;
+---
+> 			char * tempTUstr;
+> 			tempTUstr = (char*)tUstr;
+> 			strcpy(tempTUstr, tAstr);
+> 			tempTUstr += strlen(tAstr) + 1;;
+41,43c41,43
+< #ifdef __MINGW32__
+< #include <ddk/ndis.h>
+< #else /*__MINGW32__*/
+---
+> //#ifdef __MINGW32__
+> //#include <ddk/ndis.h>
+> //#else /*__MINGW32__*/
+45c45
+< #endif /*__MINGW32__*/
+---
+> //#endif /*__MINGW32__*/
+40c40
+< 	-mno-cygwin -shared ${OPTFLAGS}
+---
+> 	-shared ${OPTFLAGS}
+53d52
+< 	../libpcap/Win32/Src/getaddrinfo.o \
+70a70,71
+> 
+> 	#../libpcap/Win32/Src/getaddrinfo.o \
