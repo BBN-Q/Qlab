@@ -233,7 +233,8 @@ for awg = awgs
         % export Tek
         % hack... really ought to store this info somewhere or be able to
         % change in from the user interface, rather than writing it to file
-        options = struct('m12_high', 2.5, 'm31_high', 2.7, 'm22_high', 2.5, 'nbrRepeats', seqParams.nbrRepeats);
+        options = struct('m11_high', 2.5, 'm12_high', 2.5, 'm21_high', 2.5, 'm22_high', 2.5, 'm31_high', 2.5,...
+            'm32_high', 2.5, 'm41_high', 2.5, 'm42_high', 2.5, 'nbrRepeats', seqParams.nbrRepeats);
         TekPattern.exportTekSequence(tempdir, basename, extract_Tek_channel(awg), options);
         disp(['Moving AWG ' awg ' file to destination']);
         pathAWG = fullfile(getpref('qlab', 'awgDir'), seqParams.basename, [basename '.awg']);
