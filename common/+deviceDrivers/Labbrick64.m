@@ -45,6 +45,14 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
     properties (Constant = true)
         vendor_id = sscanf('0x041f', '%i');
         product_id = sscanf('0x1220', '%i'); %0x1221 for LMS-802 or 0x1209 for LSG-451
+
+        % CMD IDs
+        POWER_CMD = sscanf('0x0D', '%i');
+        OUTPUT_CMD = sscanf('0x0A', '%i');
+        FREQ_CMD = sscanf('0x44', '%i');
+
+        SET_BYTE = 8;
+
         max_power = 10; % dBm
         min_power = -40; % dBm
         max_freq = 10; % GHz
@@ -151,15 +159,15 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
 		
 		% Instrument parameter accessors
         function val = get.frequency(obj)
-            cmd_id = 4;
+            cmd_id = obj.FREQ_CMD;
             report = [cmd_id zeros(1,7)];
             result = obj.query(report);
-            % return value is in 100's of kHz -> convert to GHz
-            val = double(typecast(result(3:6), 'uint32'))*1e-4;
+            % return value is in 10's of Hz -> convert to GHz
+            val = double(typecast(result(3:6), 'uint32'))*1e-8;
         end
         function val = get.power(obj)
             % returns power as attenuation from the max output power, in integer multiples of 0.25dBm.
-            cmd_id = 13;
+            cmd_id = obj.POWER_CMD;
             report = [cmd_id zeros(1,7)];
             result = obj.query(report);
             attenuation = double(result(3)) / 4;
@@ -167,7 +175,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         end
 
         function val = get.output(obj)
-            cmd_id = 10;
+            cmd_id = obj.OUTPUT_CMD;
             report = [cmd_id zeros(1,7)];
             result = obj.query(report);
             val = result(3);
@@ -175,7 +183,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         
         function obj = set.frequency(obj, value)
             % value: frequency to set in GHz
-            cmd_id = 132;
+            cmd_id = bitset(obj.FREQ_CMD, obj.SET_BYTE);
             cmd_size = 4;
             
             % error check that the frequency is within the bounds of
@@ -189,16 +197,16 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             end
             check_value = value;
             
-            % write frequency in 100s of kHz
-            value = typecast(uint32(value*1e4), 'uint8'); % pack as 4 bytes
+            % write frequency in 10s of Hz
+            value = typecast(uint32(value*1e8), 'uint8'); % pack as 4 bytes
             report = [cmd_id cmd_size value zeros(1,2)];
             obj.write(report);
             freq_diff = obj.frequency - check_value;
-            assert(freq_diff < 1e-4 + eps, 'Failed to set frequency. Found frequency %f', freq_diff+check_value);
+            assert(freq_diff < 1e-8 + eps, 'Failed to set frequency. Found frequency %f', freq_diff+check_value);
         end
 
         function obj = set.power(obj, value)
-            cmd_id = 141;
+            cmd_id = bitset(obj.POWER_CMD, obj.SET_BYTE);
             cmd_size = 1;
             % error check power level within bounds of the device
             if value > obj.max_power
@@ -218,7 +226,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         end
 
         function obj = set.output(obj, value)
-            cmd_id = 138;
+            cmd_id = bitset(obj.OUTPUT_CMD, obj.SET_BYTE);
             cmd_size = 1;
             
             % Validate input
