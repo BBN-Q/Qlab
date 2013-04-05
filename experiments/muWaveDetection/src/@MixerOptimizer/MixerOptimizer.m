@@ -109,7 +109,7 @@ classdef MixerOptimizer < handle
             
             % restore instruments to a normal state
             obj.sa.centerFreq = obj.uwsource.frequency;
-            obj.sa.span = obj.expParams.SSBFreq * 2.1;
+            obj.sa.span = obj.expParams.SSBFreq * 2.2;
             obj.sa.sweep_mode = 'cont';
             obj.sa.resolution_bw = 'auto';
             obj.sa.sweep_points = 800;
