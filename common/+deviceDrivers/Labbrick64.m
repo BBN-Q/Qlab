@@ -72,6 +72,8 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             if ~isempty(obj.hid)
                 obj.disconnect();
             end
+            % cleanup the HID driver
+            calllib('hidapi', 'hid_exit');
         end
         
         % open the connection to the Labbrick with the given serial number
