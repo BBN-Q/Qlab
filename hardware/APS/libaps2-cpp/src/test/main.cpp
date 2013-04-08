@@ -3,6 +3,7 @@
 #include "libaps.h"
 #include "constants.h"
 #include <thread>
+#include "logger.h"
 
 #include "EthernetControl.h"
 
@@ -13,17 +14,20 @@ int main ()
 {
   cout << "BBN AP2 Test Executable" << endl;
 
+  FILELog::ReportingLevel() = TLogLevel(5);;
+
   cout << "Testing only EthernetControl" << endl;
 
+  // lookup based on device name
+  //string dev("\\Device\\NPF_{F47ACE9E-1961-4A8E-BA14-2564E3764BFA}");
+  
+  // lookup based on description
   string dev("Intel(R) 82579LM Gigabit Network Connection");
 
-   EthernetControl *ec = new EthernetControl();
+  EthernetControl *ec = new EthernetControl();
 
   EthernetControl::set_device_active(dev,true);
   EthernetControl::enumerate();
-
- 
-
 
 
 #if 0
