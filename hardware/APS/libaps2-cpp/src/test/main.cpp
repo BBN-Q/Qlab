@@ -70,12 +70,13 @@ int main (int argc, char* argv[])
   	cout << "Device " << cnt << " serial #: " << serialBuffer << endl;
   }
 
-#if 0
+
   int rc;
   rc = connect_by_ID(0);
 
   cout << "connect_by_ID(0) returned " << rc << endl;
-
+  
+#if 0
   cout << "Set sample rate " << endl;
 
   set_sampleRate(0,100);
