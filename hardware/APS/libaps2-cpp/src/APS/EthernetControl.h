@@ -28,15 +28,19 @@ public:
     	INVALID_NETWORK_DEVICE = -2
 	};
 
+	static const unsigned int MAC_ADDR_LEN = 6;
+
 	struct EthernetDevInfo {
 		string name;
 		string description;
+		string description2;
+		uint8_t macAddr[MAC_ADDR_LEN];
 		bool isActive;
 	};
 
 	struct APSEthernetHeader {
-		uint8_t  dest[6];
-		uint8_t  src[6];
+		uint8_t  dest[MAC_ADDR_LEN];
+		uint8_t  src[MAC_ADDR_LEN];
 		uint16_t frameType;
 		uint16_t seqNum;
 		uint32_t command;
@@ -71,6 +75,7 @@ private:
 	EthernetDevInfo *pcapDevice;
 
 	static EthernetDevInfo * findDeviceInfo(string device);
+	static void getMacAddr(struct EthernetDevInfo & devInfo) ;
 
 	static bool pcapRunning;
 
