@@ -71,6 +71,8 @@ EXPORT int load_sequence_file(int, const char*);
 
 EXPORT int clear_channel_data(int);
 
+EXPORT int set_ethernet_active(char * , int);
+
 EXPORT int run(int);
 EXPORT int stop(int);
 

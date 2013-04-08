@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <map>
 #include <sstream>
+#include <set>
 
 #include "pcap.h"
 
@@ -103,7 +104,7 @@ public:
 
 	bool isOpen();
 	static bool isOpen(int deviceID);
-	static ErrorCodes get_device_serials(vector<string> testSerials);
+	static ErrorCodes get_device_serials(vector<string> & testSerials);
 	static unsigned int get_num_devices();
 
 	static vector<string> get_network_devices_names();
@@ -111,6 +112,7 @@ public:
 	static void get_network_devices();
 	static ErrorCodes set_device_active(string, bool);
 	static void enumerate(unsigned int timeoutSeconds = 5, unsigned int broadcastPeriodSeconds = 1);
+	static void debugAPSEcho(string device);
 
 private:
 
@@ -123,6 +125,8 @@ private:
 
 	static bool pcapRunning;
 
+	static std::set<string> APSunits_;
+
 	static vector<EthernetDevInfo> pcapDevices;
 
 	static string print_ethernetAddress(uint8_t * addr);
@@ -134,6 +138,7 @@ private:
 	static ErrorCodes applyFilter(pcap_t * capHandle, string filter);
 
 	static string print_APS_command(struct APSCommand * cmd);
+
 };
 
 #endif

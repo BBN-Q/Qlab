@@ -9,7 +9,6 @@
 #include "headings.h"
 #include "libaps.h"
 
-
 APSRack APSRack_;
 
 #ifdef __cplusplus
@@ -238,6 +237,10 @@ int read_register(int deviceID, int fpga, int addr){
 
 int program_FPGA(int deviceID, char* bitFile, int chipSelect, int expectedVersion) {
 	return APSRack_.program_FPGA(deviceID, string(bitFile), FPGASELECT(chipSelect), expectedVersion);
+}
+
+EXPORT int set_ethernet_active(char * name, int active) {
+	 return EthernetControl::set_device_active(string(name),(active != 0));
 }
 
 #ifdef __cplusplus
