@@ -502,10 +502,15 @@ classdef PatternGen < handle
                 assert(delay+width<timePts(end), 'Oops! You have asked for a trigger outside of the pulse sequence');
 
                 %Find where to put the go high blip
-                goHighEntry = find(delay<timePts, 1)-1;
+                goHighEntry = find(delay<=timePts, 1)-1;
                 
                 seqs{miniLLct}{goHighEntry}.hasMarkerData = 1;
-                seqs{miniLLct}{goHighEntry}.(markerStr) = delay-timePts(goHighEntry);
+                markerDelay = delay-timePts(goHighEntry);
+                %The firmware can't handle 0 delays
+                if markerDelay == 0
+                    markerDelay = markerDelay+1;
+                end
+                seqs{miniLLct}{goHighEntry}.(markerStr) = markerDelay;
                 
                 %Now if the length of the pulse is greater than one we need
                 %to put the go low blip
