@@ -9,6 +9,8 @@
 
 #include <iostream>
 #include <iomanip>
+#include <chrono>
+
 using std::cout;
 using std::endl;
 
@@ -216,10 +218,15 @@ vector<string> EthernetControl::get_network_devices_names() {
     return devNames;
 }
 
-void EthernetControl::enumerate() {
+void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadcastPeriodSeconds) {
     cout << "enumerate" << endl;
+    cout << "sizeof command: " << sizeof(struct APSCommand);
     pcap_t *capHandle;
     char errbuf[PCAP_ERRBUF_SIZE];
+
+    static const int broadcastPacketLen = 40;
+    uint8_t broadcastPacket[broadcastPacketLen];
+    APSEthernetHeader *bph;
 
     int res;
     struct pcap_pkthdr *header;
@@ -227,16 +234,16 @@ void EthernetControl::enumerate() {
 
     struct tm ltime;
 
+
     get_network_devices();
     for (vector<EthernetDevInfo>::iterator it = pcapDevices.begin();
         it != pcapDevices.end(); ++it) {
         if (!it->isActive) continue;
         
         capHandle = pcap_open_live(it->name.c_str(),          // name of the device
-                              65536,            // portion of the packet to capture
-                                                // 65536 guarantees that the whole packet will be captured on all the link layers
+                              1500,            // portion of the packet to capture
                               true,    // promiscuous mode
-                              1000,             // read timeout
+                              pcapTimeoutMS,             // read timeout
                               errbuf            // error buffer
                               );
         if (!capHandle) {
@@ -248,30 +255,60 @@ void EthernetControl::enumerate() {
             FILE_LOG(logERROR) << "Network Device is not Ethernet" << endl;
         }
 
+        // build broadcast packet
+        std::fill(broadcastPacket, broadcastPacket + broadcastPacketLen, 0);    
+        bph = reinterpret_cast< APSEthernetHeader * >(broadcastPacket);
+        std::fill(bph->dest, bph->dest + MAC_ADDR_LEN, 0xFF);
+        std::copy(it->macAddr, it->macAddr + MAC_ADDR_LEN,  bph->src);
+        bph->frameType = APS_PROTO;
+        bph->command.cmd = APS_COMMAND_STATUS;
+        bph->command.mode_stat = APS_STATUS_TEMP;
+        bph->command.cnt = 0x10;
 
-        // send broadcast packet
+        cout << "Enumerate Packet: " << print_APS_command(&(bph->command)) << endl;
+
+        packetHTON(bph); // swap bytes to network order
+
+        // applfy filter to only get reply directed from APS to local machine
+        applyFilter(capHandle, getEnumerateFilter(it->macAddr));
         
-           /* Retrieve the packets */
-        int cnt = 0;
-        while((res = pcap_next_ex( capHandle, &header, &pkt_data)) >= 0) {
+        std::chrono::time_point<std::chrono::steady_clock> start, end, lastBroadcast;
 
-            if(res == 0) {
-                /* Timeout elapsed */
-                continue;
+        start = std::chrono::steady_clock::now();
+
+        int totalElapsed = 0;
+        int broadcastElapsed = 100; // force broadcast first time through
+        while (totalElapsed < timeoutSeconds ) {
+
+            if (broadcastElapsed > broadcastPeriodSeconds) {
+                // send enum packet
+                cout << "Sending Enumerate Packet:" << endl;
+                
+                if (pcap_sendpacket(capHandle, broadcastPacket, broadcastPacketLen) != 0) {
+                    FILE_LOG(logERROR) << "Error sending the packet: " << string(pcap_geterr(capHandle));
+                }       
+
+                lastBroadcast = std::chrono::steady_clock::now();
             }
-        
-            APSEthernetHeader * eh = (APSEthernetHeader *) pkt_data;
+            // get available packets
 
-            packetHTON(eh);
+            int res = pcap_next_ex( capHandle, &header, &pkt_data);
 
-            cout << "Src: " << print_ethernetAddress(eh->src);
-            cout << " Dest: " << print_ethernetAddress(eh->dest);
-            cout << " Frame Type: 0x" << std::hex << std::setfill('0') << std::setw(4) << eh->frameType << endl;
-            cnt++;
-            if (cnt > 10) break;
-        }
- 
-        // TODO add filter for BBN APS Packet 
+            if(res > 0) {
+                // have packet so process
+                APSEthernetHeader * eh = (APSEthernetHeader *) pkt_data;
+
+                packetHTON(eh);
+
+                cout << "Src: " << print_ethernetAddress(eh->src);
+                cout << " Dest: " << print_ethernetAddress(eh->dest);
+                cout << " Frame Type: 0x" << std::hex << std::setfill('0') << std::setw(4) << eh->frameType << endl;
+            }
+
+            end = std::chrono::steady_clock::now();
+            totalElapsed =  std::chrono::duration_cast<std::chrono::seconds>(end-start).count();
+            broadcastElapsed =  std::chrono::duration_cast<std::chrono::seconds>(end-lastBroadcast).count();
+        } 
     
     }
 }
@@ -301,12 +338,84 @@ string EthernetControl::print_ethernetAddress(uint8_t * addr) {
 void EthernetControl::packetHTON(APSEthernetHeader * frame) {
 
     frame->frameType = htons(frame->frameType);
-    if (frame->frameType != 0xBB4E || frame->frameType != 0x4EBB ) {
+    if (frame->frameType != APS_PROTO || frame->frameType != htons(APS_PROTO) ) {
         // packet is not an APS packet do not swap 
         return;
     }
-    frame->command = htonl(frame->command);
+    frame->packedCommand = htonl(frame->packedCommand);
     frame->addr    = htonl(frame->addr);
 }
 
+
+// winpcap filters
+// see: http://www.winpcap.org/docs/docs_41b5/html/group__language.html
+
+string EthernetControl::getPointToPointFilter(uint8_t * localMacAddr, uint8_t *apsMacAddr) {
+
+    ostringstream filter;
+
+    // build filter
+    filter << "ether src " << print_ethernetAddress(apsMacAddr);
+    filter << " and ether dst " << print_ethernetAddress(localMacAddr);
+    filter << " and ether proto " << APS_PROTO;
+
+    return filter.str();
+}
+
+string EthernetControl::getEnumerateFilter(uint8_t * localMacAddr) {
+    ostringstream filter;
+    // build filter
+    filter << "ether dst " << print_ethernetAddress(localMacAddr);
+    filter << " and ether proto " << APS_PROTO;
+    return filter.str();
+}
+
+string EthernetControl::getWatchFilter() {
+    
+    ostringstream filter;
+    
+    // build filter
+    filter << "broadcast ether proto " << APS_PROTO;
+    return filter.str();
+    
+}
+
+EthernetControl::ErrorCodes EthernetControl::applyFilter(pcap_t * capHandle, string filter) {
+
+    cout << "Setting filter to: " << filter << endl;
+
+    u_int netmask=0xffffff; // ignore netmask 
+    struct bpf_program filterCode;
+
+    if (pcap_compile(capHandle, &filterCode, filter.c_str(), true, netmask) < 0 ) {
+        cout << "Error to compiling enumerate packet filter. Check the syntax" << endl;
+        return INVALID_PCAP_FILTER;
+    }
+
+    // set filter
+    if (pcap_setfilter(capHandle, &filterCode) < 0) {
+         cout << "Error setting the filter" << endl;
+        /* Free the device list */
+        return INVALID_PCAP_FILTER;
+    }
+    return SUCCESS;
+}
+
+string EthernetControl::print_APS_command(struct EthernetControl::APSCommand * cmd) {
+    ostringstream ret;
+
+    uint32_t * packedCmd;
+
+    packedCmd = reinterpret_cast<uint32_t *>(cmd);
+
+    ret << std::hex << *packedCmd << " =";
+    ret << " ACK: " << cmd->ack;
+    ret << " SEQ: " << cmd->seq;
+    ret << " SEL: " << cmd->sel;
+    ret << " R/W: " << cmd->r_w;
+    ret << " CMD: " << cmd->cmd;
+    ret << " MODE/STAT: " << cmd->mode_stat;
+    ret << " cnt: " << cmd->cnt;
+    return ret.str();
+}
 
