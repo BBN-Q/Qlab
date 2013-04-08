@@ -45,7 +45,7 @@ ADD_EXECUTABLE(test
 	./test/main.cpp
 	./APS/EthernetControl.cpp )
 
- TARGET_LINK_LIBRARIES(test wpcap Packet ws2_32 iphlpapi)
+ TARGET_LINK_LIBRARIES(test aps2)
 
 TARGET_LINK_LIBRARIES(aps2 
 	
