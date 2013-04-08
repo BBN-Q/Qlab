@@ -3,6 +3,8 @@
 #include "libaps.h"
 #include "constants.h"
 #include <thread>
+#include <string>
+#include <algorithm>
 #include "logger.h"
 
 #include "EthernetControl.h"
@@ -10,13 +12,30 @@
 
 using namespace std;
 
-int main ()
+// command options functions taken from:
+// http://stackoverflow.com/questions/865668/parse-command-line-arguments
+string getCmdOption(char ** begin, char ** end, const std::string & option)
+{
+  char ** itr = std::find(begin, end, option);
+  if (itr != end && ++itr != end)
+  {
+    return string(*itr);
+  }
+  return "";
+}
+
+bool cmdOptionExists(char** begin, char** end, const std::string& option)
+{
+  return std::find(begin, end, option) != end;
+}
+
+
+int main (int argc, char* argv[])
 {
   cout << "BBN AP2 Test Executable" << endl;
 
-  FILELog::ReportingLevel() = TLogLevel(5);;
-
-  cout << "Testing only EthernetControl" << endl;
+  FILELog::ReportingLevel() = TLogLevel(5);
+  set_logging_level(5);
 
   // lookup based on device name
   //string dev("\\Device\\NPF_{F47ACE9E-1961-4A8E-BA14-2564E3764BFA}");
@@ -24,14 +43,12 @@ int main ()
   // lookup based on description
   string dev("Intel(R) 82579LM Gigabit Network Connection");
 
-  EthernetControl *ec = new EthernetControl();
+  if (cmdOptionExists(argv, argv + argc, "-e")) {
+    EthernetControl::debugAPSEcho(dev);
+    return 0;
+  }
 
-  EthernetControl::set_device_active(dev,true);
-  EthernetControl::enumerate();
-
-
-#if 0
-  set_logging_level(5);
+  set_ethernet_active(const_cast<char*>(dev.c_str()),true);
 
   int numDevices = get_numDevices();
 
@@ -39,13 +56,12 @@ int main ()
 
   if (numDevices < 1)
   	return 0;
-
-  char s[] = "stdout";
-  set_log(s);
-
+  
   cout << "Attempting to initialize libaps" << endl;
 
   init();
+
+  cout << "Attempting to get serials" << endl;  
 
   char serialBuffer[100];
 
@@ -54,6 +70,7 @@ int main ()
   	cout << "Device " << cnt << " serial #: " << serialBuffer << endl;
   }
 
+#if 0
   int rc;
   rc = connect_by_ID(0);
 
