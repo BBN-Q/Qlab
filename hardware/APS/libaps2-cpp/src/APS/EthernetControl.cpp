@@ -125,7 +125,7 @@ void EthernetControl::getMacAddr(struct EthernetDevInfo & devInfo) {
      */
 
     // clear address
-    memset(devInfo.macAddr,0, MAC_ADDR_LEN);
+    std::fill(devInfo.macAddr,devInfo.macAddr + MAC_ADDR_LEN, 0 );
 
 #ifdef _WIN32
     
