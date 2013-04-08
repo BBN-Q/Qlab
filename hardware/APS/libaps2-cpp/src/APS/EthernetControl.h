@@ -29,7 +29,8 @@ public:
     	SUCCESS = 0,
     	NOT_IMPLEMENTED = -1,
     	INVALID_NETWORK_DEVICE = -2,
-    	INVALID_PCAP_FILTER = -3
+    	INVALID_PCAP_FILTER = -3,
+    	INVALID_APS_ID = -4
 	};
 
 	enum APS_COMMANDS {
@@ -89,12 +90,10 @@ public:
 		uint32_t addr;
 	};
 
-
-
 	EthernetControl();
 	~EthernetControl() {};
 
-	ErrorCodes connect(int deviceID);
+	ErrorCodes connect(string deviceID);
 	ErrorCodes disconnect();
 
 	ErrorCodes set_network_device(string description);
@@ -116,9 +115,13 @@ public:
 
 private:
 
-	static const unsigned int pcapTimeoutMS = 500;
-
 	EthernetDevInfo *pcapDevice;
+	string deviceID_;
+	string filter_;
+	uint8_t apsMac_[MAC_ADDR_LEN];
+	pcap_t *apsHandle_;
+
+	static const unsigned int pcapTimeoutMS = 500;
 
 	static EthernetDevInfo * findDeviceInfo(string device);
 	static void getMacAddr(struct EthernetDevInfo & devInfo) ;
@@ -126,8 +129,8 @@ private:
 	static bool pcapRunning;
 
 	static std::set<string> APSunits_;
-
-	static vector<EthernetDevInfo> pcapDevices;
+	static std::map<string, EthernetDevInfo> APS2device_;
+	static vector<EthernetDevInfo> pcapDevices_;
 
 	static string print_ethernetAddress(uint8_t * addr);
 	static void packetHTON(APSEthernetHeader *);
@@ -135,9 +138,10 @@ private:
 	static string getPointToPointFilter(uint8_t * localMacAddr, uint8_t *apsMacAddr);
 	static string getEnumerateFilter(uint8_t * localMacAddr);
 	static string getWatchFilter();
-	static ErrorCodes applyFilter(pcap_t * capHandle, string filter);
+	static ErrorCodes applyFilter(pcap_t * capHandle, string & filter);
 
 	static string print_APS_command(struct APSCommand * cmd);
+	static pcap_t * start_capture(string & devName, string & filter);
 
 };
 

@@ -17,8 +17,9 @@ using std::endl;
 
 #include <ctime>
 
-vector<EthernetControl::EthernetDevInfo>  EthernetControl::pcapDevices;
+vector<EthernetControl::EthernetDevInfo>  EthernetControl::pcapDevices_;
 std::set<string> EthernetControl::APSunits_;
+std::map<string, EthernetControl::EthernetDevInfo> EthernetControl::APS2device_;
 
 bool EthernetControl::pcapRunning = false;
 
@@ -28,8 +29,38 @@ EthernetControl::EthernetControl() {
 	get_network_devices();
 }
 
-EthernetControl::ErrorCodes EthernetControl::connect(int deviceID) {
-	return EthernetControl::NOT_IMPLEMENTED;
+EthernetControl::ErrorCodes EthernetControl::connect(string deviceID) {
+    FILE_LOG(logDEBUG) << "Connecting to device: " << deviceID;
+
+    if (APSunits_.find(deviceID) == APSunits_.end()) {
+        return INVALID_APS_ID;
+    }
+
+    // double check to make sure device is in map
+    if (APS2device_.find(deviceID) == APS2device_.end()) {
+        return INVALID_APS_ID; 
+    }
+
+    deviceID_ = deviceID;
+
+    set_network_device(APS2device_[deviceID].name);
+
+    // parse string to mac addr
+    int start = 0;
+    for(int cnt = 0; cnt < MAC_ADDR_LEN; cnt++) {
+        apsMac_[cnt] = atoi(deviceID.substr(start,2).c_str());
+        start += 3;
+    }
+    // build filter
+    filter_ =  getPointToPointFilter(pcapDevice->macAddr, apsMac_);
+
+    FILE_LOG(logDEBUG3) << "Using filter " << filter_;
+
+    apsHandle_ = start_capture(pcapDevice->name, filter_);
+
+    if (!apsHandle_) return INVALID_APS_ID;
+
+	return SUCCESS;
 }
 
 bool isOpen() {
@@ -105,7 +136,7 @@ void EthernetControl::get_network_devices() {
             getMacAddr(devInfo);
             
 
-            pcapDevices.push_back(devInfo);
+            pcapDevices_.push_back(devInfo);
             FILE_LOG(logDEBUG2) << "New PCAP Device:";
             FILE_LOG(logDEBUG2) << "\t" << devInfo.description;
             FILE_LOG(logDEBUG2) << "\t" << devInfo.description2;
@@ -205,8 +236,8 @@ void EthernetControl::getMacAddr(struct EthernetDevInfo & devInfo) {
 
 EthernetControl::EthernetDevInfo * EthernetControl::findDeviceInfo(string device) {
     // find device info based on device name, description or description2
-    for (auto it = pcapDevices.begin();
-        it != pcapDevices.end(); ++it) {
+    for (auto it = pcapDevices_.begin();
+        it != pcapDevices_.end(); ++it) {
         if (it->name.compare(device) == 0) return &(*it);
         if (it->description.compare(device) == 0) return &(*it);
         if (it->description2.compare(device) == 0) return &(*it);
@@ -217,8 +248,8 @@ EthernetControl::EthernetDevInfo * EthernetControl::findDeviceInfo(string device
 vector<string> EthernetControl::get_network_devices_names() {
     get_network_devices();
     vector<string> devNames;
-    for(auto it = pcapDevices.begin();
-        it != pcapDevices.end(); ++it) {
+    for(auto it = pcapDevices_.begin();
+        it != pcapDevices_.end(); ++it) {
         devNames.push_back(it->name);
     }
     return devNames;
@@ -228,7 +259,6 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadc
     FILE_LOG(logDEBUG1) << "EthernetControl::enumerate";
 
     pcap_t *capHandle;
-    char errbuf[PCAP_ERRBUF_SIZE];
 
     static const int broadcastPacketLen = 40;
     uint8_t broadcastPacket[broadcastPacketLen];
@@ -239,29 +269,20 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadc
     const unsigned char *pkt_data;
 
     get_network_devices();
-    for (auto it = pcapDevices.begin(); it != pcapDevices.end(); ++it) {
-        if (!it->isActive) continue;
+    for (auto it = pcapDevices_.begin(); it != pcapDevices_.end(); ++it) {
+        EthernetDevInfo dev = *it;
+        if (!dev.isActive) continue;
         
-        capHandle = pcap_open_live(it->name.c_str(),          // name of the device
-                              1500,            // portion of the packet to capture
-                              true,    // promiscuous mode
-                              pcapTimeoutMS,             // read timeout
-                              errbuf            // error buffer
-                              );
-        if (!capHandle) {
-            FILE_LOG(logERROR) << "Error open pcap for device: " << it->description;
-            continue;
-        }
+        string filter = getEnumerateFilter(dev.macAddr);
+        capHandle = start_capture(dev.name, filter);
 
-        if (pcap_datalink(capHandle) != DLT_EN10MB) {
-            FILE_LOG(logERROR) << "Network Device is not Ethernet" << endl;
-        }
-
+        if (!capHandle) continue;
+        
         // build broadcast packet
         std::fill(broadcastPacket, broadcastPacket + broadcastPacketLen, 0);    
         bph = reinterpret_cast< APSEthernetHeader * >(broadcastPacket);
         std::fill(bph->dest, bph->dest + MAC_ADDR_LEN, 0xFF);
-        std::copy(it->macAddr, it->macAddr + MAC_ADDR_LEN,  bph->src);
+        std::copy(dev.macAddr, dev.macAddr + MAC_ADDR_LEN,  bph->src);
         bph->frameType = APS_PROTO;
         bph->command.cmd = APS_COMMAND_STATUS;
         bph->command.mode_stat = APS_STATUS_TEMP;
@@ -270,9 +291,6 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadc
         FILE_LOG(logDEBUG1) << "Enumerate Packet: " << print_APS_command(&(bph->command));
 
         packetHTON(bph); // swap bytes to network order
-
-        // applfy filter to only get reply directed from APS to local machine
-        applyFilter(capHandle, getEnumerateFilter(it->macAddr));
         
         std::chrono::time_point<std::chrono::steady_clock> start, end, lastBroadcast;
 
@@ -306,7 +324,9 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadc
                 FILE_LOG(logDEBUG3) << " Dest: " << print_ethernetAddress(eh->dest);
                 FILE_LOG(logDEBUG3) << " Command: " << print_APS_command(&eh->command);
 
-                APSunits_.insert(print_ethernetAddress(eh->src));
+                string devString = print_ethernetAddress(eh->src);
+                APSunits_.insert(devString);
+                APS2device_[devString] = dev;
             }
 
             end = std::chrono::steady_clock::now();
@@ -391,7 +411,7 @@ string EthernetControl::getWatchFilter() {
     
 }
 
-EthernetControl::ErrorCodes EthernetControl::applyFilter(pcap_t * capHandle, string filter) {
+EthernetControl::ErrorCodes EthernetControl::applyFilter(pcap_t * capHandle, string & filter) {
 
     FILE_LOG(logDEBUG3) << "Setting filter to: " << filter << endl;
 
@@ -437,7 +457,7 @@ void EthernetControl::debugAPSEcho(string device) {
     cout << "Starting APS Debug Echo" << endl;
  
     pcap_t *capHandle;
-    char errbuf[PCAP_ERRBUF_SIZE];
+
 
     int res;
     struct pcap_pkthdr *header;
@@ -449,31 +469,18 @@ void EthernetControl::debugAPSEcho(string device) {
         cout << "Error could not find device: " << device << endl;
         return;
     }
-        
-    capHandle = pcap_open_live(di->name.c_str(),          // name of the device
-                          1500,            // portion of the packet to capture
-                          true,    // promiscuous mode
-                          pcapTimeoutMS,             // read timeout
-                          errbuf            // error buffer
-                          );
-    if (!capHandle) {
-        cout << "Error open pcap for device: " << di->description;
-        return;
-    }
-
-    if (pcap_datalink(capHandle) != DLT_EN10MB) {
-        FILE_LOG(logERROR) << "Network Device is not Ethernet" << endl;
-    }
-
+  
     ostringstream filter;
     // build filter
     filter << "(ether dst " << print_ethernetAddress(di->macAddr);
     filter << " or broadcast)";
     filter << " and ether proto " << APS_PROTO;
+    string filterStr = filter.str();
 
-    // applfy filter to only get reply directed from APS to local machine
-    applyFilter(capHandle, filter.str());
-    
+    capHandle = start_capture(di->name, filterStr);
+
+    if (!capHandle) return;
+
     while ( true ) {
        
         int res = pcap_next_ex( capHandle, &header, &pkt_data);
@@ -516,6 +523,28 @@ void EthernetControl::debugAPSEcho(string device) {
     
 }
 
+pcap_t * EthernetControl::start_capture(string & devName, string & filter) {
+    pcap_t * capHandle;
+    char errbuf[PCAP_ERRBUF_SIZE];
+    capHandle = pcap_open_live(devName.c_str(),          // name of the device
+                          1500,            // portion of the packet to capture
+                          true,    // promiscuous mode
+                          pcapTimeoutMS,             // read timeout
+                          errbuf            // error buffer
+                          );
+    if (!capHandle) {
+        cout << "Error open pcap for device: " << devName;
+        return 0;;
+    }
+
+    if (pcap_datalink(capHandle) != DLT_EN10MB) {
+        FILE_LOG(logERROR) << "Network Device is not Ethernet";
+        return 0;
+    }
+    // applfy filter to only get reply directed from APS to local machine
+    applyFilter(capHandle, filter);
+    return capHandle;   
+}
 
 
 

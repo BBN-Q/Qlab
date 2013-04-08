@@ -41,7 +41,7 @@ int APS::connect(){
 	if (!isOpen) {
 		int success = 0;
 
-		success = handle_.connect(deviceID_);
+		success = handle_.connect(deviceSerial_);
 
 		if (success == 0) {
 			FILE_LOG(logINFO) << "Opened connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
