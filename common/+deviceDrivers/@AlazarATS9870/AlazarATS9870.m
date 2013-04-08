@@ -349,14 +349,17 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             % is not required by the hardware
             %We are always 50Ohm coupled for the ATS9870
             scaleMap = containers.Map({.04, .1, .2, .4, 1, 2, 4}, {2, 5, 6, 7, 10, 11, 12});
-            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_A'), vertSettings.verticalCoupling, scaleMap(vertSettings.verticalScale), obj.defs('IMPEDANCE_50_OHM'));
-            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_B'), vertSettings.verticalCoupling, scaleMap(vertSettings.verticalScale), obj.defs('IMPEDANCE_50_OHM'));
+            couplingMap = containers.Map({'AC','DC'}, {1, 2});
+            
+            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_A'), couplingMap(vertSettings.verticalCoupling),...
+                                scaleMap(vertSettings.verticalScale), obj.defs('IMPEDANCE_50_OHM'));
+            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_B'), couplingMap(vertSettings.verticalCoupling),...
+                                scaleMap(vertSettings.verticalScale), obj.defs('IMPEDANCE_50_OHM'));
             
             %Set the bandwidth
-            if vertSettings.bandwidth
-                obj.call_API('AlazarSetBWLimit',obj.boardHandle, obj.defs('CHANNEL_A'), 1)
-                obj.call_API('AlazarSetBWLimit',obj.boardHandle, obj.defs('CHANNEL_B'), 1)
-            end
+            bandwidthMap = containers.Map({'Full','20MHz'}, {0,1}); 
+            obj.call_API('AlazarSetBWLimit',obj.boardHandle, obj.defs('CHANNEL_A'), bandwidthMap(vertSettings.bandwidth));
+            obj.call_API('AlazarSetBWLimit',obj.boardHandle, obj.defs('CHANNEL_B'), bandwidthMap(vertSettings.bandwidth));
             
             % update obj property
             obj.verticalScale = vertSettings.verticalScale;
@@ -367,25 +370,21 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             %If the trigger channel is external then we also need to setup
             %that channel
-            trigSourceMap = containers.Map({'1', 'a', '2', 'b', 'ext', 'external'}, {0, 0, 1, 1, 2, 2});
-            if isnumeric(trigSettings.triggerSource)
-                trigSource = num2str(trigSettings.triggerSource);
-            else
-                trigSource = lower(trigSettings.triggerSource);
-            end
-            trigSettings.triggerSource = trigSourceMap(trigSource);
-            if(trigSettings.triggerSource == 2)
+            couplingMap = containers.Map({'AC','DC'}, {1, 2});
+            if(strcmp(trigSettings.triggerSource, 'Ext'))
                 %We can only choose 5V range and triggerLevel comes
                 %in mV
                 extTrigLevel = obj.defs('ETR_5V');
                 trigChannelRange = 5;
 
-                obj.call_API('AlazarSetExternalTrigger',obj.boardHandle, trigSettings.triggerCoupling, extTrigLevel);
+                obj.call_API('AlazarSetExternalTrigger',obj.boardHandle,...
+                            couplingMap(trigSettings.triggerCoupling), extTrigLevel);
                 
                 %Otherwise setup the channel
             else
                 trigChannelRange = obj.settings.vertical.verticalScale;
                 %TODO: implement
+                error('Channel triggers not implemented')
             end
             
             %We need to set the trigger level as a percentage of the full
@@ -395,8 +394,11 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %Set the rest of the trigger parameters
             %We'll default to trigger engine J and single condition for
             %now
-            obj.call_API('AlazarSetTriggerOperation', obj.boardHandle, obj.defs('TRIG_ENGINE_OP_J'), obj.defs('TRIG_ENGINE_J'), trigSettings.triggerSource, trigSettings.triggerSlope, trigLevelCode, ...
-                obj.defs('TRIG_ENGINE_K'), obj.defs('TRIG_DISABLE'), obj.defs('TRIGGER_SLOPE_POSITIVE'), 128);
+            triggerSourceMap = containers.Map({'A', 'B', 'Ext'}, {0, 1, 2});
+            triggerSlopeMap = containers.Map({'rising', 'falling'}, {1, 2});
+            obj.call_API('AlazarSetTriggerOperation', obj.boardHandle, obj.defs('TRIG_ENGINE_OP_J'), obj.defs('TRIG_ENGINE_J'),...
+                        triggerSourceMap(trigSettings.triggerSource), triggerSlopeMap(trigSettings.triggerSlope), trigLevelCode, ...
+                        obj.defs('TRIG_ENGINE_K'), obj.defs('TRIG_DISABLE'), obj.defs('TRIGGER_SLOPE_POSITIVE'), 128);
             
             %We'll wait forever for a trigger
             obj.call_API('AlazarSetTriggerTimeOut', obj.boardHandle, 0);
