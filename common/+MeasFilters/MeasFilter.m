@@ -36,7 +36,7 @@ classdef MeasFilter < handle
             % MeasFilter(filter, settings) or MeasFilter(settings)
             if nargin == 1
                 settings = varargin{1};
-                obj.channel = settings.channel;
+                obj.channel = sprintf('ch%d',settings.channel);
                 filter = [];
             elseif nargin == 2
                 [filter, settings] = varargin{:};
