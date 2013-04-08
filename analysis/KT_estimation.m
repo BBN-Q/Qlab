@@ -46,7 +46,7 @@ end
 %Create a cleaned Hankel matrix
 cleanedH = zeros(L,M);
 for ct = 1:M
-    cleanedH(:,ct) = analyticSig(ct:ct+L-1);
+    cleanedH(:,ct) = cleanedData(ct:ct+L-1);
 end
 
 %Compute Q with total least squares
