@@ -31,9 +31,9 @@ public:
 	static const unsigned int MAC_ADDR_LEN = 6;
 
 	struct EthernetDevInfo {
-		string name;
-		string description;
-		string description2;
+		string name;          // device name as set by winpcap
+		string description;   // set by winpcap
+		string description2;  // set by getMacAddr
 		uint8_t macAddr[MAC_ADDR_LEN];
 		bool isActive;
 	};
