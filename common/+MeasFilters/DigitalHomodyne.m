@@ -20,8 +20,8 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
     properties
         IFfreq
         samplingRate
-        integrationStart
-        integrationPts
+        boxCarStart
+        boxCarStop
         affine
     end
     
@@ -30,8 +30,8 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             obj = obj@MeasFilters.MeasFilter(settings);
             obj.IFfreq = settings.IFfreq;
             obj.samplingRate = settings.samplingRate;
-            obj.integrationStart = settings.integrationStart;
-            obj.integrationPts = settings.integrationPts;
+            obj.boxCarStart = settings.boxCarStart;
+            obj.boxCarStop = settings.boxCarStop;
             measAffines = getpref('qlab','MeasAffines');
             obj.affine = measAffines.M1;
         end
@@ -51,9 +51,9 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
 
             %Box car the demodulated signal
             if ndims(demodSignal) == 2
-                demodSignal = demodSignal(floor(obj.integrationStart/decimFactor):floor((obj.integrationStart+obj.integrationPts-1)/decimFactor),:);
+                demodSignal = demodSignal(floor(obj.boxCarStart/decimFactor):floor(obj.boxCarStop/decimFactor),:);
             elseif ndims(demodSignal) == 4
-                demodSignal = demodSignal(floor(obj.integrationStart/decimFactor):floor((obj.integrationStart+obj.integrationPts-1)/decimFactor),:,:,:);
+                demodSignal = demodSignal(floor(obj.boxCarStart/decimFactor):floor(obj.boxCarStop/decimFactor),:,:,:);
             else
                 error('Only able to handle 2 and 4 dimensional data.');
             end
