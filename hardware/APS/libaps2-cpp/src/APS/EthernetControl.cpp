@@ -432,7 +432,7 @@ EthernetControl::ErrorCodes EthernetControl::applyFilter(pcap_t * capHandle, str
     return SUCCESS;
 }
 
-string EthernetControl::print_APS_command(struct EthernetControl::APSCommand * cmd) {
+string EthernetControl::print_APS_command(struct APSCommand * cmd) {
     ostringstream ret;
 
     uint32_t * packedCmd;

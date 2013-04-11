@@ -9,12 +9,15 @@
 #include <sstream>
 #include <set>
 
+#include "aps2.h"
 #include "pcap.h"
 
 using std::vector;
 using std::string;
 using std::map;
 using std::ostringstream;
+
+using namespace APS2;
 
 struct EthernetDevInfo {
 	string name_;
@@ -33,25 +36,7 @@ public:
     	INVALID_APS_ID = -4
 	};
 
-	enum APS_COMMANDS {
-		APS_COMMAND_RESET = 0x0,
-		APS_COMMAND_USERIO_ACK = 0x1,
-		APS_COMMAND_USERIO_NACK = 0x9,
-		APS_COMMAND_EPROMIO = 0x2,
-		APS_COMMAND_CHIPCONFIGIO = 0x3,
-		APS_COMMAND_RUNCHIPCONFIG = 0x4,
-		APS_COMMAND_FPGACONFIG_ACK = 0x5,
-		APS_COMMAND_FPGACONFIG_NACK = 0xD,
-		APS_COMMAND_FPGACONFIG_CTRL = 0x6,
-		APS_COMMAND_STATUS = 0x7
-	};
 
-	enum APS_STATUS {
-		APS_STATUS_HOST = 0,
-		APS_STATUS_VOLT_A = 1,
-		APS_STATUS_VOLT_B = 2,
-		APS_STATUS_TEMP  = 3
-	};
 
 	static const unsigned int MAC_ADDR_LEN = 6;
 	
@@ -67,16 +52,6 @@ public:
 	};
 
 
-
-	struct APSCommand {
-		uint32_t cnt : 16;
-		uint32_t mode_stat : 8;
-		uint32_t cmd : 4;
-		uint32_t r_w : 1;
-		uint32_t sel : 1;
-		uint32_t seq : 1;
-		uint32_t ack : 1;
-	};
 
 	struct APSEthernetHeader {
 		uint8_t  dest[MAC_ADDR_LEN];
