@@ -43,11 +43,6 @@ int main (int argc, char* argv[])
   // lookup based on description
   string dev("Intel(R) 82579LM Gigabit Network Connection");
 
-  if (cmdOptionExists(argv, argv + argc, "-e")) {
-    EthernetControl::debugAPSEcho(dev);
-    return 0;
-  }
-
   set_ethernet_active(const_cast<char*>(dev.c_str()),true);
 
   int numDevices = get_numDevices();

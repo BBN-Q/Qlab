@@ -41,11 +41,23 @@ SET ( DLL_SRC
 SET_SOURCE_FILES_PROPERTIES( ${DLL_SRC} PROPERTIES LANGUAGE CXX )
 
 ADD_LIBRARY( aps2 SHARED ${DLL_SRC} )
-ADD_EXECUTABLE(test 
-	./test/main.cpp
-	./APS/EthernetControl.cpp )
 
- TARGET_LINK_LIBRARIES(test aps2)
+ADD_EXECUTABLE(test
+	./test/main.cpp
+)
+
+ADD_EXECUTABLE(echo
+	./test/echo.cpp
+	./APS/EthernetControl.cpp 
+)
+
+TARGET_LINK_LIBRARIES(echo 
+	wpcap Packet
+	ws2_32
+	iphlpapi 
+)
+
+TARGET_LINK_LIBRARIES(test aps2)
 
 TARGET_LINK_LIBRARIES(aps2 
 	
