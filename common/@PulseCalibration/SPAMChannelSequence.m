@@ -6,7 +6,7 @@ end
 
 basename = 'SPAM';
 fixedPt = 6000;
-cycleLength = 9000;
+cycleLength = fixedPt + obj.settings.measLength + 100;
 nbrRepeats = 1;
 
 pg = PatternGen(qubit,...
@@ -15,7 +15,7 @@ pg = PatternGen(qubit,...
     'delta', obj.pulseParams.delta);
 
 numPsQId = 10; % number pseudoidentities
-angleShifts = (pi/180)*(-2:0.5:2);
+angleShifts = (pi/180)*(-3:0.75:3);
 
 patseq = {};
 
@@ -41,7 +41,7 @@ seqParams = struct(...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
-    'measLength', 2000);
+    'measLength', obj.settings.measLength);
 if ~isempty(calseq), calseq = {calseq}; end
 
 qubitMap = obj.channelMap.(qubit);

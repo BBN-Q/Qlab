@@ -13,7 +13,7 @@ end
 basename = 'Pi2Cal';
 
 fixedPt = 6000;
-cycleLength = 9000;
+cycleLength = fixedPt + obj.settings.measLength + 100;
 numPi2s = 9; % number of odd numbered pi/2 sequences for each rotation direction
 
 pg = PatternGen(qubit, 'pi2Amp', obj.pulseParams.pi2Amp);
@@ -59,7 +59,7 @@ seqParams = struct(...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
-    'measLength', 2000);
+    'measLength', obj.settings.measLength);
 if ~isempty(calseq), calseq = {calseq}; end
 
 qubitMap = obj.channelMap.(qubit);

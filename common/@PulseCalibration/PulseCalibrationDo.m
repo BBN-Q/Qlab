@@ -187,7 +187,7 @@ if settings.DoSPAMCal
     
     % analyze for the best value to two digits
     numPsQId = 10; % number pseudoidentities
-    angleShifts = (-2:0.5:2)';
+    angleShifts = (-3:0.75:3)';
     phaseSkew = round(100*obj.analyzeSlopes(data, numPsQId, angleShifts))/100;
     title('SPAM Phase Skew Calibration');
     text(10, 0.8, sprintf('Found best phase Skew of %.2f', phaseSkew), 'FontSize', 12);
@@ -222,7 +222,7 @@ fprintf(FID, '%s', jsonlab.savejson('',params));
 fclose(FID);
 
 %Now the instrument parameters
-params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'));
+params = jsonlab.loadjson(obj.settings.cfgFile);
 
 %Now the offsets
 params.instruments.(channelMap.awg).(sprintf('chan_%s', IQkey(end-1))).offset = obj.pulseParams.i_offset;
@@ -234,7 +234,7 @@ if settings.DoRamsey
 end
 
 %Write back to file
-FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'),'wt'); %open in text mode
+FID = fopen(obj.settings.cfgFile,'wt'); %open in text mode
 fprintf(FID, '%s', jsonlab.savejson('',params));
 fclose(FID);
 

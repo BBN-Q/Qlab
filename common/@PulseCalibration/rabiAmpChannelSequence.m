@@ -7,7 +7,7 @@ end
 basename = 'Rabi';
 
 fixedPt = 2000;
-cycleLength = 6000;
+cycleLength = fixedPt + obj.settings.measLength + 100;
 numsteps = 40; %should be even
 stepsize = 400;
 
@@ -41,7 +41,7 @@ seqParams = struct(...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
-    'measLength', 2000);
+    'measLength', obj.settings.measLength);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 
