@@ -35,4 +35,5 @@ xlabel('Measurement Voltage');
 ylabel('Counts');
 text(0.1, 0.75, sprintf('Fidelity: %.1f%%',100*histData.maxFidelity_phase), 'Units', 'normalized', 'FontSize', 14)
 
+drawnow()
 end

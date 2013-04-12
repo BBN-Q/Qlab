@@ -2,7 +2,7 @@ function SingleShotSequence(obj, qubit)
 
 basename = 'SingleShot';
 fixedPt = 2000;
-cycleLength = 7100;
+cycleLength = fixedPt + obj.settings.measLength + 100;
 nbrRepeats = 1;
 
 % if using SSB, set the frequency here
@@ -19,7 +19,7 @@ seqParams = struct(...
     'nbrRepeats', nbrRepeats, ...
     'fixedPt', fixedPt, ...
     'cycleLength', cycleLength, ...
-    'measLength', 2000);
+    'measLength', obj.settings.measLength);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 

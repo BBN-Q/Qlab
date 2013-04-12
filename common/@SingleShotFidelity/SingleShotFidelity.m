@@ -53,7 +53,7 @@ classdef SingleShotFidelity < handle
                     else
                         ext = 'awg';
                     end
-                    instrSettings.(instrument{1}).seqfile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-' instrument{1} '.' ext]);
+                    instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-' instrument{1} '.' ext]);
                 end
                 add_instrument(obj.experiment, instrument{1}, instr, instrSettings.(instrument{1}));
             end
@@ -73,13 +73,15 @@ classdef SingleShotFidelity < handle
             end
 
             % create a generic SegmentNum sweep
-            add_sweep(obj.experiment, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 2)));
+            %Even though there really is two segments there only one data
+            %point (SS fidelity) being returned at each step.
+            add_sweep(obj.experiment, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 1)));
             
             % add single-shot measurement filter
             import MeasFilters.*
             measSettings = expSettings.measurements;
             dh = DigitalHomodyne(measSettings.(obj.settings.measurement));
-            add_measurement(obj.experiment, 'single_shot', SingleShot(dh));
+            add_measurement(obj.experiment, 'single_shot', SingleShot(dh, obj.settings.numShots));
             
             %Create the sequence of alternating QId, 180 inversion pulses
             obj.SingleShotSequence(obj.qubit)
@@ -88,8 +90,9 @@ classdef SingleShotFidelity < handle
             init(obj.experiment);
         end
         
-        function Do(obj)
+        function SSData = Do(obj)
             obj.SingleShotFidelityDo();
+            SSData = obj.experiment.data.single_shot;
         end
         
     end
