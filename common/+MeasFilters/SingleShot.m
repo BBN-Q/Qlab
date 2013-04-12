@@ -21,11 +21,15 @@ classdef SingleShot < MeasFilters.MeasFilter
         groundData
         excitedData
         histData
+        numShots = -1
     end
     
     methods
-        function obj = SingleShot(childFilter)
+        function obj = SingleShot(childFilter, varargin)
             obj = obj@MeasFilters.MeasFilter(childFilter, struct());
+            if length(varargin) == 1
+                obj.numShots = varargin{1};
+            end
         end
         
         function out = apply(obj, data)
@@ -40,7 +44,7 @@ classdef SingleShot < MeasFilters.MeasFilter
         
         function out = get_data(obj)
             %If we don't have any data yet return empty
-            if isempty(obj.groundData)
+            if size(obj.groundData,1) ~= obj.numShots/2 
                 out = [];
                 return
             end
@@ -48,11 +52,16 @@ classdef SingleShot < MeasFilters.MeasFilter
             % return histogrammed data
             obj.histData = struct();
             
-            groundAmpData = real(obj.groundData);
-            excitedAmpData = real(obj.excitedData);
+            groundMean = mean(obj.groundData);
+            excitedMean = mean(obj.excitedData);
+            centre = 0.5*(groundMean+excitedMean);
+            rotAngle = angle(excitedMean-groundMean);
+
+            groundAmpData = real(exp(-1j*rotAngle)*(obj.groundData-centre));
+            excitedAmpData = real(exp(-1j*rotAngle)*(obj.excitedData-centre));
             
-            groundPhaseData = imag(obj.groundData);
-            excitedPhaseData = imag(obj.excitedData);
+            groundPhaseData = imag(exp(-1j*rotAngle)*(obj.groundData-centre));
+            excitedPhaseData = imag(exp(-1j*rotAngle)*(obj.excitedData-centre));
             
             %Setup bins from the minimum to maximum measured voltage
             bins = linspace(min([groundAmpData; excitedAmpData]), max([groundAmpData; excitedAmpData]));
