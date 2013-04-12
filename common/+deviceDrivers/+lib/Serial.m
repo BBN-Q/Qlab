@@ -8,6 +8,7 @@ classdef Serial < deviceDrivers.lib.deviceDriverBase
         interface = []
         bufferSize = 64 
         baudRate = 115200
+        DTR = 'off' % default to off for Arduinos
     end
   
     methods
@@ -24,6 +25,7 @@ classdef Serial < deviceDrivers.lib.deviceDriverBase
             obj.interface.InputBufferSize = obj.bufferSize;
             obj.interface.OutputBufferSize = obj.bufferSize;
             obj.interface.BaudRate = obj.baudRate;
+            obj.interface.DataTerminalReady = obj.DTR:
             fopen(obj.interface);
         end
 
@@ -43,6 +45,7 @@ classdef Serial < deviceDrivers.lib.deviceDriverBase
         
         function write(obj, string)
             fprintf(obj.interface, string);
+            flushoutput(obj.interface);
         end
         
         function val = query(obj, string)

@@ -88,10 +88,7 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
         function pendingArduino(obj)
             % pendingArduino - clear the serial interface
             if ( obj.interface.BytesAvailable > 0)
-                rv = obj.read();
-                if (~isempty(rv))
-                    warning('DigitalAttenuator:pendingArduino:Data','%s\n', rv);
-                end
+                flushinput(obj.interface);
             end
         end
         
