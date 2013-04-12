@@ -35,7 +35,7 @@ classdef Frequency < sweeps.Sweep
             end
             
             % look for an instrument with the name 'genID'
-            obj.Instr = Instr.(sweepParams.genID);
+            obj.Instr = Instr.(sweepParams.instr);
             
             % generate frequency points
             obj.points = start:step:stop;
