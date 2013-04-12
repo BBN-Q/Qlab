@@ -48,7 +48,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
         pulseSource = 'ext';
         
         % device specific
-        freq_reference
+        refSource
     end % end device properties
     
     methods
@@ -186,7 +186,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             val = obj.pulseSource;
         end
         
-        function val = get.freq_reference(obj)
+        function val = get.refSource(obj)
             val = calllib('vnx_fmsynth', 'fnLMS_GetUseInternalRef', obj.devID);
             if val == true, val = 'int'; end
             if val == false, val = 'ext'; end
@@ -290,7 +290,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             end
         end
         
-        function obj = set.freq_reference(obj, value)
+        function obj = set.refSource(obj, value)
             % Validate input
             checkMapObj = containers.Map({'int','internal','ext','external'},...
                 {true,true,false,false});
