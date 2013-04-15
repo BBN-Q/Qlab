@@ -81,8 +81,7 @@ classdef PatternGen < handle
                 M = M(:, rows);
                 params = struct(M{:});
                 
-                % now initialize any property with that name (or the 'd'
-                % first letter variant)
+                % now initialize any property with that name 
                 fnames = fieldnames(params);
                 for ii = 1:length(fnames)
                     paramName = fnames{ii};
