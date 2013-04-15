@@ -30,8 +30,9 @@ function data = loadData(makePlot, fullpath)
     data.nbrDataSets = h5readatt(fullpath, '/', 'nbrDataSets');
     for ii = 1:data.nbrDataSets
         rawData = h5read(fullpath, ['/DataSet' num2str(ii) '/real']) + 1i * h5read(fullpath, ['/DataSet' num2str(ii) '/imag']);
-        data.abs_Data{ii} = abs(rawData);
-        data.phase_Data{ii} = 180.0/pi * angle(rawData);
+        data.absData{ii} = abs(rawData);
+        data.phaseData{ii} = 180.0/pi * angle(rawData);
+        data.data{ii} = rawData;
         data.dimension{ii} = h5readatt(fullpath, ['/DataSet' num2str(ii)], 'dimension');
         data.xpoints{ii} = h5read(fullpath, ['/DataSet' num2str(ii) '/xpoints']);
         data.xlabel{ii} = h5readatt(fullpath, ['/DataSet' num2str(ii) '/xpoints'], 'label');
@@ -56,8 +57,8 @@ function data = loadData(makePlot, fullpath)
                 case 1
                     h1 = figure();
                     subplot(2,1,1);
-                    amplitude = data.abs_Data{ii}(:);
-                    phase = data.phase_Data{ii}(:);
+                    amplitude = data.absData{ii}(:);
+                    phase = data.phaseData{ii}(:);
                     plot(data.xpoints{ii}(1:length(amplitude)),amplitude,'linewidth',1.5);
                     xlabel(['\fontname{Times}\fontsize{14}' data.xlabel{ii}]);
                     ylabel('\fontname{Times}\fontsize{14}Amplitude');
@@ -71,14 +72,14 @@ function data = loadData(makePlot, fullpath)
                     title(sanitized_filedname);
                 case 2
                     h1 = figure();
-                    imagesc(data.xpoints{ii}(1:size(data.abs_Data{ii},2)),data.ypoints{ii}(1:size(data.abs_Data{ii},1)),data.abs_Data{ii})
+                    imagesc(data.xpoints{ii}(1:size(data.absData{ii},2)),data.ypoints{ii}(1:size(data.absData{ii},1)),data.absData{ii})
                     xlabel(['\fontname{Times}\fontsize{14}' data.xlabel{ii}]);
                     ylabel(['\fontname{Times}\fontsize{14}' data.ylabel{ii}]);
                     set(gca,'FontSize',12)
                     title(sanitized_filedname);
 
                     h2 = figure();
-                    imagesc(data.xpoints{ii}(1:size(data.phase_Data{ii},2)),data.ypoints{ii}(1:size(data.phase_Data{ii},1)),data.phase_Data{ii})
+                    imagesc(data.xpoints{ii}(1:size(data.phaseData{ii},2)),data.ypoints{ii}(1:size(data.phaseData{ii},1)),data.phaseData{ii})
                     xlabel(['\fontname{Times}\fontsize{14}' data.xlabel{ii}]);
                     ylabel(['\fontname{Times}\fontsize{14}' data.ylabel{ii}]);
                     set(gca,'FontSize',12)
@@ -89,11 +90,11 @@ function data = loadData(makePlot, fullpath)
         end
     end
     
-    % if nbrDataSets = 1, then pull abs_Data and phase_Data out of the cell
+    % if nbrDataSets = 1, then pull absData and phaseData out of the cell
     % wrappers
     if data.nbrDataSets == 1
-        data.abs_Data = data.abs_Data{1};
-        data.phase_Data = data.phase_Data{1};
+        data.absData = data.absData{1};
+        data.phaseData = data.phaseData{1};
         data.xpoints = data.xpoints{1};
         if isfield(data, 'ypoints')
             data.ypoints = data.ypoints{1};
