@@ -298,7 +298,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
                 error('Invalid input');
             end
             
-            calllib('vnx_fmsynth', 'fnLMS_SetUseInternalRef', obj.devID, checkMapObj(value));
+            calllib('vnx_fmsynth', 'fnLMS_SetUseInternalRef', obj.devID, checkMapObj(lower(value)));
         end
     end % end instrument parameter accessors
     
