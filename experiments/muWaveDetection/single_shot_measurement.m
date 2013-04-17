@@ -1,18 +1,17 @@
-function single_shot_measurement(qubit)
+function SSData = single_shot_measurement(qubit)
 
 ExpParams.qubit = qubit;
-ExpParams.measurement = 'M1';
-ExpParams.cfgFile = fullfile(getpref('qlab', 'cfgDir'), 'scripter.json');
+ExpParams.measurement = 'M2';
+ExpParams.cfgFile = getpref('qlab', 'CurScripterFile');
 %Update some relevant parameters
-ExpParams.numShots = 20000;
-
+ExpParams.numShots = 40000;
 ExpParams.sweeps = struct();
-% Sweeps.AWGChannel = struct('type', 'AWGChannel', 'AWGName', 'BBNAPS2', 'channel', '3&4', 'mode', 'amp', 'start', 0.025, 'stop', 0.6, 'step', 0.025);
+%ExpParams.sweeps.AWGChannel = struct('type', 'AWGChannel', 'AWGName', 'BBNAPS1', 'channel', '3&4', 'mode', 'amp', 'start', 0.0, 'stop', 1, 'step', 0.02);
 % ExpParams.sweeps.frequency = struct('type','Frequency', 'start', 6.8317, 'stop', 6.8320, 'step', 50e-6, 'genID', 'Source1');
 
 SSMeasurement = SingleShotFidelity();
 
 SSMeasurement.Init(ExpParams);
-SSMeasurement.Do();
+SSData = SSMeasurement.Do();
 
 end
