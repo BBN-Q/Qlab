@@ -33,7 +33,11 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             obj.boxCarStart = settings.boxCarStart;
             obj.boxCarStop = settings.boxCarStop;
             measAffines = getpref('qlab','MeasAffines');
-            obj.affine = measAffines.M1;
+            if isfield(measAffines, settings.name)
+                obj.affine = measAffines.(settings.name);
+            else
+                obj.affine = [];
+            end
         end
         
         function out = apply(obj, data)
@@ -42,7 +46,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             
             [demodSignal, decimFactor] = digitalDemod(data, obj.IFfreq, obj.samplingRate);
             
-%             save(['SSRecords_', datestr(now, 'yymmdd-HH-MM-SS'), '.mat'], 'demodSignal');
+%             save(['SSRecords_', datestr(now, 'yymmdd-HH-MM-SS-FFF'), '.mat'], 'demodSignal');
             
             %Apply the affine transformation to unwind things
             if ~isempty(obj.affine)
