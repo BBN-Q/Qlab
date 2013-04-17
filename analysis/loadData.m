@@ -3,13 +3,9 @@ function data = loadData(makePlot, fullpath)
         makePlot = true;
     end
 
-    % base_path is up two levels from this file
-    [base_path] = fileparts(mfilename('fullpath'));
-    base_path = parent_dir(base_path, 3);
-
     % get path of file to load
     if ~exist('fullpath', 'var')
-        [filename, pathname] = uigetfile('*.h5');
+        [filename, pathname] = uigetfile(fullfile(getpref('qlab', 'dataDir'), '*.h5'));
         if isequal(filename,0) || isequal(pathname,0)
            data = [];
            return
