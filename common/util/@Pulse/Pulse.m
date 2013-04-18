@@ -10,21 +10,20 @@ classdef Pulse < handle
    properties
        label
        pulseShapes = {}; % pre-computed complex pulse shapes
-       pulseArray = {}; % pulse shapes after frame selection
+%        pulseArray = {}; % pulse shapes after frame selection
        angles % rotation axis for each pulse
        modAngles
        frameChanges
        T % mixer correction matrix
        
        % for link list mode
-       hashKeys = [];
        isTimeAmplitude = 0;
        isZero = 0;
    end
    
    methods
        %constructor
-       function obj = Pulse(label, params, linkListMode)
+       function obj = Pulse(label, params)
            %Pulse(label, params, linkListMode)
            %  label - The name of the pulse
            %  params - pulse parameters
@@ -33,6 +32,9 @@ classdef Pulse < handle
            
            % precompute the pulses
            % start by find longest parameter vector
+           obj.T = params.T;
+           params = rmfield(params, 'T'); % getelement/getlength does not work on matrix elements
+
            nbrPulses = max(structfun(@Pulse.getlength, params));
            obj.pulseShapes = cell(nbrPulses,1);
            obj.angles = zeros(nbrPulses, 1);
@@ -44,9 +46,15 @@ classdef Pulse < handle
            else
                error('Unknown pulse function %s', params.pType);
            end
-           obj.T = params.T;
-           params = rmfield(params, 'T'); % getelement does not work on matrix elements
            
+           if strcmp(params.pType, 'square')
+               %Square pulses are time/amplitude pairs
+               obj.isTimeAmplitude = 1;
+           end
+           if ismember(label, obj.identityPulses)
+               obj.isZero = 1;
+           end  
+
            % construct cell array of pulses for all parameter vectors
            for n = 1:nbrPulses
                % pick out the nth element of parameters provided as
@@ -89,30 +97,6 @@ classdef Pulse < handle
                obj.angles(n) = elementParams.angle;
            end
            
-           if linkListMode           
-               % how this should look
-                %retVal.pulseArray = arrayfun(@pulseFunction, 1:nbrPulses, 'UniformOutput', 0);
-                %retVal.hashKeys = cellfun(@obj.hashArray, retVal.pulseArray, 'UniformOutput', 0);
-                % some weird MATLAB bug causes this not to work, hence the
-                % following for loop
-                obj.pulseArray = cell(nbrPulses,1);
-                obj.hashKeys = cell(nbrPulses,1);
-                for ii = 1:nbrPulses
-                    [xpulse, ypulse] = obj.getPulse(ii, 0);
-                    obj.pulseArray{ii} = [xpulse, ypulse];
-                    obj.hashKeys{ii} = Pulse.hash(obj.pulseArray{ii});
-                end
-                if strcmp(params.pType, 'square')
-                    %Square pulses are time/amplitude pairs
-                    obj.isTimeAmplitude = 1;
-                    %We only want to hash the first point as only the
-                    %amplitude matters. 
-                    obj.hashKeys{ii} = Pulse.hash(obj.pulseArray{ii}(fix(end/2),:));
-                end
-                if ismember(label, obj.identityPulses)
-                    obj.isZero = 1;
-                end
-           end
        end
        
        function [xpulse, ypulse, frameChange] = getPulse(obj, n, accumulatedPhase)
@@ -121,7 +105,7 @@ classdef Pulse < handle
            %   based upon the position in time of the pulse
            angle = obj.angles(1+mod(n-1, length(obj.angles)));
            complexPulse = obj.pulseShapes{1+mod(n-1, length(obj.pulseShapes))};
-           
+
            % rotate and correct the pulse
            tmpAngles = angle + accumulatedPhase + obj.modAngles{1+mod(n-1, length(obj.modAngles))};
            complexPulse = complexPulse.*exp(1j*tmpAngles);
