@@ -1,4 +1,4 @@
-function PiCalSequence(varargin)
+function PiCalSequence(qubit, makePlot)
 
 basename = 'PiCal';
 fixedPt = 6000;
@@ -68,9 +68,7 @@ seqParams = struct(...
     'suffix', '', ...
     'numSteps', numsteps, ...
     'nbrRepeats', nbrRepeats, ...
-    'fixedPt', fixedPt, ...
-    'cycleLength', fixedPt + getpref('qlab','MeasLength')+100, ...
-    'measLength', getpref('qlab','MeasLength'));
+    'fixedPt', fixedPt);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 
@@ -83,6 +81,6 @@ measChannels = getpref('qlab','MeasCompileList');
 awgs = getpref('qlab','AWGCompileList');
 
 
-compileSequences(seqParams, patternDict, measChannels, awgs, makePlot, plotSeqNum);
+compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 
 end

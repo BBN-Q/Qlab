@@ -6,8 +6,6 @@ function compileSequences(seqParams, patternDict, measChannels, awgs, makePlot)
 %   numSteps
 %   nbrRepeats
 %   fixedPt
-%   cycleLength
-%   measLength
 % patternDict - containers.Map object that is keyed on IQkey. It contains:
 %   pg - PatternGen object
 %   patseq - experiment pattern sequence (will unroll over numsteps)
@@ -30,19 +28,24 @@ numSegments = nbrPatterns*seqParams.numSteps + calPatterns;
 fprintf('Number of sequences: %i\n', numSegments*seqParams.nbrRepeats);
 
 % inject measurement sequences
+measLength = 0;
 pulseParams = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
 for measCh = measChannels
     measCh = measCh{1};
     IQkey = qubitMap.(measCh).IQkey;
     ChParams = params.(IQkey);
-    % shift the delay to include the measurement length
-    params.(IQkey).delay = ChParams.delay + seqParams.measLength;
     %Override the SSBFreq for constant autodyne phase
     mFreq = pulseParams.(measCh).SSBFreq;
     pgM = PatternGen(measCh, 'SSBFreq', 0);    
-    measSeq = {{pgM.pulse('Xtheta', 'pType', 'tanh', 'sigma', 1, 'buffer', 0, 'amp', 4000, 'width', seqParams.measLength, 'modFrequency',mFreq)}};
+    % shift the delay to include the measurement length
+    params.(IQkey).delay = ChParams.delay + pgM.pulseLength;
+    measSeq = {{pgM.pulse('M', 'modFrequency',mFreq)}};
+    measLength = max(measLength, pgM.pulseLength);
     patternDict(IQkey) = struct('pg', pgM, 'patseq', {repmat(measSeq, 1, nbrPatterns)}, 'calseq', {repmat(measSeq,1,calPatterns)}, 'channelMap', qubitMap.(measCh));
 end
+
+%Setup appropriate cycleLength with buffer for trailing blips
+seqParams.cycleLength = seqParams.fixedPt + measLength + 240;
 
 % keep track of whether all channels on all AWGs are used
 awgChannels = struct();
