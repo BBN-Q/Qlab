@@ -23,6 +23,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
         boxCarStart
         boxCarStop
         affine
+        phase
     end
     
     methods
@@ -32,6 +33,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             obj.samplingRate = settings.samplingRate;
             obj.boxCarStart = settings.boxCarStart;
             obj.boxCarStop = settings.boxCarStop;
+            obj.phase = settings.phase;
             measAffines = getpref('qlab','MeasAffines');
             if isfield(measAffines, settings.name)
                 obj.affine = measAffines.(settings.name);
@@ -69,8 +71,8 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
 %             hold on
 %             plot((eData),'r');
             
-            %Integrate
-            obj.latestData = 2*mean(demodSignal,1);
+            %Integrate and rotate
+            obj.latestData = exp(1j*obj.phase) * 2 * mean(demodSignal,1);
                 
             obj.accumulate();
             out = obj.latestData;
