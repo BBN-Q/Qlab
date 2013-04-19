@@ -25,7 +25,7 @@ classdef Serial < deviceDrivers.lib.deviceDriverBase
             obj.interface.InputBufferSize = obj.bufferSize;
             obj.interface.OutputBufferSize = obj.bufferSize;
             obj.interface.BaudRate = obj.baudRate;
-            obj.interface.DataTerminalReady = obj.DTR:
+            obj.interface.DataTerminalReady = obj.DTR;
             fopen(obj.interface);
         end
 
