@@ -28,7 +28,7 @@ classdef APS < hgsetget
 
         bit_file_path; %path to the FPGA bit file
 
-        samplingRate = 1200;   % Global sampling rate in units of MHz (1200, 600, 300, 100, 40)
+        samplingRate = 1200000000;   % Global sampling rate in units of Hz (1200, 600, 300, 100, 40)MHz
         triggerSource
         triggerInterval
         miniLLRepeat
@@ -337,15 +337,16 @@ classdef APS < hgsetget
         
         function aps = set.samplingRate(aps, rate)
             % sets the sampling rate for all channels/FPGAs
-            % rate - sampling rate in MHz (1200, 600, 300, 100, 40)
-            aps.libraryCall('set_sampleRate',rate);
+            % rate - sampling rate in Hz 
+            % valid rates are (1200MHz, 600MHz, 300MHz, 100MHz, 40MHz)
+            aps.libraryCall('set_sampleRate',rate/1e6);
             aps.samplingRate = rate;
         end
         
         function rate = get.samplingRate(aps)
             % polls APS hardware to get current PLL Sample Rate
             % valid rates in MHz (1200, 600, 300, 100, 40)
-            rate = aps.libraryCall('get_sampleRate');
+            rate = 1e6*aps.libraryCall('get_sampleRate');
         end
         
         function aps = set.triggerSource(aps, trig)

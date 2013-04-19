@@ -190,8 +190,7 @@ classdef MixerOptimizer < handle
                     %Setup a SSB waveform with a 1200 pt sinusoid for both
                     %channels
                     waveformLength = 1200;
-                    % APS returns sampling rate in MHz, so convert to Hz
-                    tpts = (1e-6/obj.awg.samplingRate)*(0:(waveformLength-1));
+                    tpts = (1/obj.awg.samplingRate)*(0:(waveformLength-1));
                     
                     % i waveform
                     iwf = 0.5 * cos(2*pi*obj.expParams.SSBFreq*tpts);

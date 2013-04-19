@@ -21,7 +21,6 @@ function setInstrument(obj, amp, phase)
             obj.awg.(['chan_' num2str(Q_channel)]).skew = skew;
             obj.awg.operationComplete()
         case 'deviceDrivers.APS'
-            samplingRate = samplingRate*1e6; % APS gives sampling rate in MHz
             % on the APS we generate a new waveform and upload it
             waveform_length = 1200;
             timeStep = 1/samplingRate;
