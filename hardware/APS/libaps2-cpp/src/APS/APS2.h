@@ -9,9 +9,11 @@
 #define APS2_H
 
 #include <cstdint>
+#include <string>
+
+using std::string;
 
 namespace APS2 {
-
 	struct APSCommand {
 		uint32_t cnt : 16;
 		uint32_t mode_stat : 8;
@@ -21,6 +23,8 @@ namespace APS2 {
 		uint32_t seq : 1;
 		uint32_t ack : 1;
 	};
+
+	static const uint16_t NUM_STATUS_REGISTERS = 16;
 
 	enum APS_COMMANDS {
 		APS_COMMAND_RESET           = 0x0,
@@ -118,6 +122,48 @@ namespace APS2 {
 		RESERVED3 = 0xF,
 	};
 
+	struct APS_Status_Registers {
+		uint32_t hostFirmwareVersion;
+		uint32_t userFirmwareVersion;
+		uint32_t configurationSource;
+		uint32_t userStatus;
+		uint32_t dac0Status;
+		uint32_t dac1Status;
+		uint32_t pllStatus;
+		uint32_t vcxoStatus;
+		uint32_t sendPacketCount;
+		uint32_t receivePacketCount;
+		uint32_t sequenceSkipCount;
+		uint32_t sequenceDupCount;
+		uint32_t uptime;
+		uint32_t reserved1;
+		uint32_t reserved2;
+		uint32_t reserved3;
+	};
+
+	enum CONFIGURATION_SOURCE {
+		BASELINE_IMAGE = 0xBBBBBBBB,
+		USER_EPROM_IMAGE = 0xEEEEEEEE
+	};
+
+	struct APSEthernetHeader {
+		uint8_t  dest[6];
+		uint8_t  src[6];
+		uint16_t frameType;
+		uint16_t seqNum;
+		union {
+			uint32_t packedCommand;
+			struct APSCommand command;
+		};
+		uint32_t addr;
+	};
+
+	uint8_t * getPayloadPtr(uint8_t * packet);
+
+	string printStatusRegisters(const APS_Status_Registers & status);
+	string printAPSCommand(APSCommand * command);
+	void zeroAPSCommand(APSCommand * command);
+	
 } //end namespace APS2
 
 

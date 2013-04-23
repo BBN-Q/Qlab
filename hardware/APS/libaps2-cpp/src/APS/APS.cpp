@@ -6,6 +6,9 @@
  */
 
 #include "APS.h"
+#include "APS2.h"
+
+using namespace APS2;
 
 APS::APS() :  isOpen{false}, deviceID_{-1}, channels_(4), samplingRate_{-1}, writeQueue_(0),
 				streaming_{false}, mymutex_{std::unique_ptr<std::mutex>(new std::mutex())} {}
@@ -13,25 +16,23 @@ APS::APS() :  isOpen{false}, deviceID_{-1}, channels_(4), samplingRate_{-1}, wri
 APS::APS(int deviceID, string deviceSerial) :  isOpen{false}, deviceID_{deviceID}, deviceSerial_{deviceSerial},
 		samplingRate_{-1}, writeQueue_(0), streaming_{false}, mymutex_{std::unique_ptr<std::mutex>(new std::mutex())} {
 			channels_.reserve(4);
-			myBankBouncerThreads_.reserve(4);
+			//myBankBouncerThreads_.reserve(4);
 			for(size_t ct=0; ct<4; ct++){
 				channels_.push_back(Channel(ct));
-				myBankBouncerThreads_.emplace_back(ct, this);
+				//myBankBouncerThreads_.emplace_back(ct, this);
 			}
-			checksums_[FPGA1] = CheckSum();
-			checksums_[FPGA2] = CheckSum();
+			checksum_ = CheckSum();
 };
 
 APS::APS(APS && other) : isOpen{other.isOpen}, deviceID_{other.deviceID_}, handle_{other.handle_}, samplingRate_{other.samplingRate_},
 		writeQueue_{std::move(other.writeQueue_)}, streaming_{other.streaming_.load()}, mymutex_{std::move(other.mymutex_)}, deviceSerial_{other.deviceSerial_}{
 	channels_.reserve(4);
-	myBankBouncerThreads_.reserve(4);
+	//myBankBouncerThreads_.reserve(4);
 	for(size_t ct=0; ct<4; ct++){
 		channels_.push_back(std::move(other.channels_[ct]));
-		myBankBouncerThreads_.push_back(std::move(other.myBankBouncerThreads_[ct]));
+		//myBankBouncerThreads_.push_back(std::move(other.myBankBouncerThreads_[ct]));
 	}
-	checksums_[FPGA1] = other.checksums_[FPGA1];
-	checksums_[FPGA2] = other.checksums_[FPGA2];
+	checksum_ = other.checksum_;
 };
 
 
@@ -81,18 +82,30 @@ int APS::init(const string & bitFile, const bool & forceReload){
 	 * by looking at the current bitfile version and the PLL status.
 	 */
 
-	if (forceReload || read_bitFile_version(ALL_FPGAS) != FIRMWARE_VERSION || !read_PLL_status(ALL_FPGAS)) {
+	if (forceReload || read_bitFile_version() != FIRMWARE_VERSION || !read_PLL_status()) {
 		FILE_LOG(logINFO) << "Resetting instrument";
-		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version(ALL_FPGAS) << " PLL status: " << read_PLL_status(ALL_FPGAS);
-		//Setup the oscillators
-		setup_VCXO();
-		setup_PLL();
+		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version() << " PLL status: " << read_PLL_status();
 
+		// send hard reset to APS2
+		// this will recondifure the DACs, PLL and VCX0 with EPROM settings
+		APSCommand command;
+		zeroAPSCommand(&command);
+		command.cmd = APS_COMMAND_RESET;
+		command.mode_stat = RESET_RECONFIG_BASELINE_EPROM;
+		handle_.Write(command);
+
+		// get reply with status bytes
+		
+		struct APS_Status_Registers statusRegs;
+		handle_.Read(&statusRegs, sizeof(struct APS_Status_Registers));
+
+		FILE_LOG(logDEBUG1) << 	APS2::printStatusRegisters(statusRegs);
+
+		/*
 		//Program the bitfile to both FPGA's
-		program_FPGA(bitFile+"_FPGA1.bit", FPGA1, FIRMWARE_VERSION);
-		program_FPGA(bitFile+"_FPGA2.bit", FPGA2, FIRMWARE_VERSION);
+		program_FPGA(bitFile, FIRMWARE_VERSION);
 		//Reset all state machines
-		reset(ALL_FPGAS);
+		reset();
 
 		//Default to max sample rate
 		set_sampleRate(1200);
@@ -103,7 +116,7 @@ int APS::init(const string & bitFile, const bool & forceReload){
 
 		// test PLL sync on each FPGA
 		//int status = test_PLL_sync(FPGA1);
-		int status = test_PLL_sync(FPGA1) || test_PLL_sync(FPGA2);
+		int status = test_PLL_sync();
 		if (status) {
 			FILE_LOG(logERROR) << "DAC PLLs failed to sync";
 		}
@@ -113,7 +126,7 @@ int APS::init(const string & bitFile, const bool & forceReload){
 
 		// clear channel data
 		clear_channel_data();
-
+		*/
 		return 0;
 	}
 	samplingRate_ = get_sampleRate();
@@ -121,8 +134,8 @@ int APS::init(const string & bitFile, const bool & forceReload){
 	return 0;
 }
 
-int APS::reset(const FPGASELECT & fpga) {
-	return FPGA::reset(handle_, fpga);
+int APS::reset() {
+	return FPGA::reset(handle_);
 }
 
 
@@ -133,7 +146,7 @@ int APS::setup_DACs() {
 	}
 	return 0;
 }
-int APS::program_FPGA(const string & bitFile, const FPGASELECT & chipSelect, const int & expectedVersion) {
+int APS::program_FPGA(const string & bitFile, const int & expectedVersion) {
 	/**
 	 * @param bitFile path to a Lattice bit file
 	 * @param chipSelect which FPGA to write to (FPGA1, FPGA2, BOTH_FGPAS)
@@ -141,6 +154,7 @@ int APS::program_FPGA(const string & bitFile, const FPGASELECT & chipSelect, con
 	 */
 
 	//Open the bitfile
+	//
 	FILE_LOG(logDEBUG) << "Opening bitfile: " << bitFile;
 	std::ifstream FID (bitFile, std::ios::in|std::ios::binary);
 	//Get the size
@@ -156,14 +170,14 @@ int APS::program_FPGA(const string & bitFile, const FPGASELECT & chipSelect, con
 	FILE_LOG(logDEBUG) << "Read " << numBytes << " bytes from bitfile";
 
 	//Pass of the data to a lower-level function to actually push it to the FPGA
-	int bytesProgrammed = FPGA::program_FPGA(handle_, fileData, chipSelect);
+	int bytesProgrammed = FPGA::program_FPGA(handle_, fileData);
 
 	if (bytesProgrammed > 0 && expectedVersion != -1) {
 		// Read Bit File Version
 		int version;
 		bool ok = false;
 		for (int ct = 0; ct < 20 && !ok; ct++) {
-			version =  APS::read_bitFile_version(chipSelect);
+			version =  APS::read_bitFile_version();
 			if (version == expectedVersion) ok = true;
 			usleep(1000); // if doesn't match, wait a bit and try again
 		}
@@ -173,49 +187,31 @@ int APS::program_FPGA(const string & bitFile, const FPGASELECT & chipSelect, con
 	return 0;
 }
 
-int APS::read_bitFile_version(const FPGASELECT & chipSelect) {
+int APS::read_bitFile_version() {
 	// Reads version information from register 0x8006
 
-	int version, version2;
+	int version;
+
+	FILE_LOG(logERROR) << "read_bitFile_version not implemented";
+	return 0;
 
 	//For single FPGA we return that version, for both we return both if the same otherwise error.
-	switch (chipSelect) {
-	case FPGA1:
-	case FPGA2:
-		version = FPGA::read_FPGA(handle_, FPGA_ADDR_VERSION, chipSelect);
-		version &= 0x1FF; // First 9 bits hold version
-		FILE_LOG(logDEBUG2) << "Bitfile version for FPGA " << chipSelect << " is "  << myhex << version;
-		break;
-	case ALL_FPGAS:
-		version = FPGA::read_FPGA(handle_, FPGA_ADDR_VERSION, FPGA1);
-		version &= 0x1FF; // First 9 bits hold version
-		FILE_LOG(logDEBUG2) << "Bitfile version for FPGA 1 is "  << myhex << version;
-		version2 = FPGA::read_FPGA(handle_, FPGA_ADDR_VERSION, FPGA2);
-		version2 &= 0x1FF; // First 9 bits hold version
-		FILE_LOG(logDEBUG2) << "Bitfile version for FPGA 2 is "  << myhex << version2;
-			if (version != version2) {
-			FILE_LOG(logERROR) << "Bitfile versions are not the same on the two FPGAs: " << version << " and " << version2;
-			return -1;
-		}
-		break;
-	default:
-		FILE_LOG(logERROR) << "Unknown chipSelect value in APS::read_bitfile_version: " << chipSelect;
-		return -1;
-	}
-
+	version = FPGA::read_FPGA(handle_, FPGA_ADDR_VERSION);
+	version &= 0x1FF; // First 9 bits hold version
+	FILE_LOG(logDEBUG2) << "Bitfile version for FPGA is "  << myhex << version;
+	
 	return version;
 }
 
 int APS::set_sampleRate(const int & freq){
 	if (samplingRate_ != freq){
 		//Set PLL frequency for each fpga
-		APS::set_PLL_freq(FPGA1, freq);
-		APS::set_PLL_freq(FPGA2, freq);
+		APS::set_PLL_freq(freq);
 
 		samplingRate_ = freq;
 
 		//Test the sync
-		return APS::test_PLL_sync(FPGA1) || APS::test_PLL_sync(FPGA2);
+		return APS::test_PLL_sync();
 	}
 	else{
 		return 0;
@@ -224,12 +220,7 @@ int APS::set_sampleRate(const int & freq){
 
 int APS::get_sampleRate() {
 	//Pass through to FPGA code
-	int freq1 = APS::get_PLL_freq(FPGA1);
-	int freq2 = APS::get_PLL_freq(FPGA2);
-	if (freq1 != freq2){
-		FILE_LOG(logERROR) << "FGPA's did not have same PLL frequency.";
-		return -1;
-	}
+	int freq1 = APS::get_PLL_freq();
 	return freq1;
 }
 
@@ -239,12 +230,12 @@ int APS::clear_channel_data() {
 		ch.clear_data();
 	}
 	// clear waveform length registers
-	write(ALL_FPGAS, FPGA_ADDR_CHA_WF_LENGTH, 0, true);
-	write(ALL_FPGAS, FPGA_ADDR_CHB_WF_LENGTH, 0, true);
+	write(FPGA_ADDR_CHA_WF_LENGTH, 0, true);
+	write(FPGA_ADDR_CHB_WF_LENGTH, 0, true);
 
 	// clear LL length registers
-	write(ALL_FPGAS, FPGA_ADDR_CHA_LL_LENGTH, 0, true);
-	write(ALL_FPGAS, FPGA_ADDR_CHB_LL_LENGTH, 0, true);
+	write(FPGA_ADDR_CHA_LL_LENGTH, 0, true);
+	write(FPGA_ADDR_CHB_LL_LENGTH, 0, true);
 	flush();
 
 	return 0;
@@ -284,7 +275,7 @@ int APS::load_sequence_file(const string & seqFile){
 					channels_[chanct].LLBank_.read_state_from_hdf5(H5SeqFile, chanStrs[chanct]+"/linkListData");
 					//If the length is less than can fit on the chip then write it to the device
 					if (channels_[chanct].LLBank_.length < MAX_LL_LENGTH){
-						write_LL_data_IQ(dac2fpga(chanct), 0, 0, channels_[chanct].LLBank_.length, true );
+						write_LL_data_IQ(0, 0, channels_[chanct].LLBank_.length, true );
 					}
 
 				}
@@ -353,10 +344,10 @@ int APS::set_trigger_source(const TRIGGERSOURCE & triggerSource){
 	int returnVal;
 	switch (triggerSource){
 	case INTERNAL:
-		returnVal = FPGA::clear_bit(handle_, ALL_FPGAS, FPGA_ADDR_CSR, CSRMSK_CHA_TRIGSRC);
+		returnVal = FPGA::clear_bit(handle_, FPGA_ADDR_CSR, CSRMSK_CHA_TRIGSRC);
 		break;
 	case EXTERNAL:
-		returnVal = FPGA::set_bit(handle_, ALL_FPGAS, FPGA_ADDR_CSR, CSRMSK_CHA_TRIGSRC);
+		returnVal = FPGA::set_bit(handle_, FPGA_ADDR_CSR, CSRMSK_CHA_TRIGSRC);
 		break;
 	default:
 		returnVal = -1;
@@ -366,7 +357,7 @@ int APS::set_trigger_source(const TRIGGERSOURCE & triggerSource){
 }
 
 TRIGGERSOURCE APS::get_trigger_source() {
-	int regVal = FPGA::read_FPGA(handle_, FPGA_ADDR_CSR, FPGA1);
+	int regVal = FPGA::read_FPGA(handle_, FPGA_ADDR_CSR);
 	return TRIGGERSOURCE((regVal & CSRMSK_CHA_TRIGSRC) == CSRMSK_CHA_TRIGSRC ? 1 : 0);
 }
 
@@ -382,21 +373,21 @@ int APS::set_trigger_interval(const double & interval){
 	USHORT upperWord = clockCycles >> 16;
 	USHORT lowerWord = 0xFFFF  & clockCycles;
 
-	return write(ALL_FPGAS, FPGA_ADDR_TRIG_INTERVAL, {upperWord, lowerWord}, false);
+	return write(FPGA_ADDR_TRIG_INTERVAL, {upperWord, lowerWord}, false);
 }
 
 double APS::get_trigger_interval() {
 
 	//Trigger interval is 32bits wide so have to split up into two 16bit words reads
-	int upperWord = FPGA::read_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL, FPGA1);
-	int lowerWord = FPGA::read_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL+1, FPGA1);
+	int upperWord = FPGA::read_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL);
+	int lowerWord = FPGA::read_FPGA(handle_, FPGA_ADDR_TRIG_INTERVAL+1);
 
 	//Put it back together and covert from clock cycles to time (note: trigger interval is zero indexed and has a dead state)
 	return static_cast<double>((upperWord << 16) + lowerWord + 2)/(0.25*samplingRate_*1e6);
 }
 
 int APS::set_miniLL_repeat(const USHORT & miniLLRepeat){
-	return FPGA::write_FPGA(handle_, FPGA_ADDR_LL_REPEAT, miniLLRepeat, ALL_FPGAS);
+	return FPGA::write_FPGA(handle_, FPGA_ADDR_LL_REPEAT, miniLLRepeat);
 }
 
 
@@ -410,33 +401,37 @@ int APS::run() {
 	}
 
 	//If we have more LL entries than we can handle then we need to stream
+	
+	/*
 	for (int chanct = 0; chanct < 4; ++chanct) {
 		if (channelsEnabled[chanct]){
 			if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH && !myBankBouncerThreads_[chanct].isRunning()){
 				streaming_ = false;
-				myBankBouncerThreads_[chanct].start();
+				//myBankBouncerThreads_[chanct].start();
 				while(!streaming_){
 					usleep(10000);
 				}
 			}
 		}
 	}
+	*/
+
 	//Grab a lock to pause the streaming threads while writing to the CSR
 	mymutex_->lock();
 	FILE_LOG(logDEBUG1) << "Releasing state machine....";
 	//If all channels are enabled then trigger together
 	if (allChannels) {
-		FPGA::set_bit(handle_, ALL_FPGAS, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
+		FPGA::set_bit(handle_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
 	}
 	else {
 		if (channelsEnabled[0] || channelsEnabled[1]) {
-			FPGA::set_bit(handle_, FPGA1, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
+			FPGA::set_bit(handle_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
 		}
 		if (channelsEnabled[2] || channelsEnabled[3]) {
-			FPGA::set_bit(handle_, FPGA2, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
+			FPGA::set_bit(handle_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
 		}
 	}
-	FILE_LOG(logDEBUG2) << "Current CSR: " << FPGA::read_FPGA(handle_, 0, FPGA1);
+	FILE_LOG(logDEBUG2) << "Current CSR: " << FPGA::read_FPGA(handle_, 0);
 	mymutex_->unlock();
 	return 0;
 }
@@ -444,11 +439,14 @@ int APS::run() {
 int APS::stop() {
 
 	// stop all channels
+	
+	/*
 	for (int chanct = 0; chanct < 4; ++chanct) {
 		if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH){
 			myBankBouncerThreads_[chanct].stop();
 		}
 	}
+	*/
 
 	//Try to stop in a wait for trigger state by making the trigger interval long
 	//This leaves the flip-flops in a known state
@@ -459,8 +457,8 @@ int APS::stop() {
 	usleep(1000);
 
 	//Put the state machines back in reset
-	FPGA::clear_bit(handle_, FPGA1, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
-	FPGA::clear_bit(handle_, FPGA2, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
+	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
+	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
 
 	// restore trigger state
 	set_trigger_interval(curTriggerInt);
@@ -482,11 +480,6 @@ int APS::set_run_mode(const int & dac, const RUN_MODE & mode) {
 ********************************************************************/
 	int dacModeMask;
 
-	auto fpga = dac2fpga(dac);
-	if (fpga == INVALID_FPGA) {
-	  return -1;
-	}
-
 	// setup register addressing based on DAC
 	switch(dac) {
 	  case 0:
@@ -504,9 +497,9 @@ int APS::set_run_mode(const int & dac, const RUN_MODE & mode) {
 	//Set the run mode bit
 	FILE_LOG(logINFO) << "Setting Run Mode ==> DAC: " << dac << " Mode: " << mode;
 	if (mode) {
-	  FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, dacModeMask);
+	  FPGA::set_bit(handle_, FPGA_ADDR_CSR, dacModeMask);
 	} else {
-	  FPGA::clear_bit(handle_, fpga, FPGA_ADDR_CSR, dacModeMask);
+	  FPGA::clear_bit(handle_, FPGA_ADDR_CSR, dacModeMask);
 	}
 
 	return 0;
@@ -519,11 +512,6 @@ int APS::set_repeat_mode(const int & dac, const bool & mode) {
 	 * mode - 1 = one-shot 0 = continuous
 	 */
 	int dacModeMask;
-
-	auto fpga = dac2fpga(dac);
-	if (fpga == INVALID_FPGA) {
-	  return -1;
-	}
 
 	// setup register addressing based on DAC
 	switch(dac) {
@@ -542,33 +530,25 @@ int APS::set_repeat_mode(const int & dac, const bool & mode) {
 	//Set or clear the mode bit
 	FILE_LOG(logINFO) << "Setting repeat mode ==> DAC: " << dac << " Mode: " << mode;
 	if (mode) {
-		  FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, dacModeMask);
+		  FPGA::set_bit(handle_, FPGA_ADDR_CSR, dacModeMask);
 	} else {
-		  FPGA::clear_bit(handle_, fpga, FPGA_ADDR_CSR, dacModeMask);
+		  FPGA::clear_bit(handle_, FPGA_ADDR_CSR, dacModeMask);
 	}
 
 	return 0;
 }
 
-int APS::set_LLData_IQ(const FPGASELECT & fpga, const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat){
+int APS::set_LLData_IQ(const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat){
 
 	//We store the IQ linklist data in channels 1 and 3
 	int dataChan;
-	switch(fpga){
-		case FPGA1:
-			dataChan = 0;
-			break;
-		case FPGA2:
-			dataChan = 2;
-			break;
-		default:
-			return -1;
-	}
+
+	dataChan = 0;
 	channels_[dataChan].LLBank_ = LLBank(addr, count, trigger1, trigger2, repeat);
 
 	//If we can fit it on then do so
 	if (addr.size() < MAX_LL_LENGTH){
-		write_LL_data_IQ(fpga, 0, 0, addr.size(), true );
+		write_LL_data_IQ(0, 0, addr.size(), true );
 	}
 
 	return 0;
@@ -581,12 +561,12 @@ int APS::set_LLData_IQ(const FPGASELECT & fpga, const WordVec & addr, const Word
  * Private Functions
  */
 
-int APS::write(const FPGASELECT & fpga, const unsigned int & addr, const USHORT & data, const bool & queue /* see header for default */){
+int APS::write(const unsigned int & addr, const USHORT & data, const bool & queue /* see header for default */){
 	//Create the vector and pass through
-	return write(fpga, addr, vector<USHORT>(1, data), queue);
+	return write(addr, vector<USHORT>(1, data), queue);
 }
 
-int APS::write(const FPGASELECT & fpga, const unsigned int & addr, const vector<USHORT> & data, const bool & queue /* see header for default */){
+int APS::write(const unsigned int & addr, const vector<USHORT> & data, const bool & queue /* see header for default */){
 	/* APS::write
 	 * fpga = FPAG1, FPGA2, or ALL_FPGAS (for simultaneous writes)
 	 * addr = valid memory address to start to write to
@@ -595,13 +575,13 @@ int APS::write(const FPGASELECT & fpga, const unsigned int & addr, const vector<
 	 */
 
 	//Pack the data
-	vector<UCHAR> dataPacket = FPGA::format(fpga, addr, data);
+	vector<UCHAR> dataPacket = FPGA::format(addr, data);
 
 	//Update the software checksums
 	//Address checksum is defined as lower word of address
-	checksums_[fpga].address += addr & 0xFFFF;
+	checksum_.address += addr & 0xFFFF;
 	for(auto tmpData : data)
-		checksums_[fpga].data += tmpData;
+		checksum_.data += tmpData;
 
 	//Push into queue or write to FPGA
 	auto offsets = FPGA::computeCmdByteOffsets(data.size());
@@ -636,19 +616,19 @@ int APS::flush() {
 int APS::reset_status_ctrl() {
 	// sets Status/CTRL register to default state when running (OSCEN enabled)
 	UCHAR WriteByte = APS_OSCEN_BIT;
-	return FPGA::write_register(handle_, APS_STATUS_CTRL, 0, INVALID_FPGA, &WriteByte);
+	return FPGA::write_register(handle_, APS_STATUS_CTRL, 0, &WriteByte);
 }
 
 
 int APS::clear_status_ctrl() {
 	// clears Status/CTRL register. This is the required state to program the VCXO and PLL
 	UCHAR WriteByte = 0;
-	return FPGA::write_register(handle_, APS_STATUS_CTRL, 0, INVALID_FPGA, &WriteByte);
+	return FPGA::write_register(handle_, APS_STATUS_CTRL, 0, &WriteByte);
 }
 
 UCHAR APS::read_status_ctrl() {
-	UCHAR ReadByte = 0xBADD;
-	FPGA::read_register(handle_, APS_STATUS_CTRL, 0, INVALID_FPGA, &ReadByte);
+	UCHAR ReadByte = 0xBA;
+	FPGA::read_register(handle_, APS_STATUS_CTRL, 0, &ReadByte);
 	return ReadByte;
 }
 
@@ -659,7 +639,7 @@ int APS::setup_PLL() {
 
 	// Disable DDRs
 	int ddrMask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
-	FPGA::clear_bit(handle_, ALL_FPGAS, FPGA_ADDR_CSR, ddrMask);
+	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddrMask);
 	// disable dac FIFOs
 	for (int dac = 0; dac < 4; dac++)
 		disable_DAC_FIFO(dac);
@@ -707,7 +687,7 @@ int APS::setup_PLL() {
 		return -1;
 
 	// Enable DDRs
-	FPGA::set_bit(handle_, ALL_FPGAS, FPGA_ADDR_CSR, ddrMask);
+	FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddrMask);
 
 	//Record that sampling rate has been set to 1200
 	samplingRate_ = 1200;
@@ -717,7 +697,7 @@ int APS::setup_PLL() {
 
 
 
-int APS::set_PLL_freq(const FPGASELECT & fpga, const int & freq) {
+int APS::set_PLL_freq(const int & freq) {
 	/* APS::set_PLL_freq
 	 * fpga = FPGA1, FPGA2, or ALL_FPGAS
 	 * freq = frequency to set in MHz, allowed values are (1200, 600, 300, 200, 100, 50, and 40)
@@ -726,20 +706,11 @@ int APS::set_PLL_freq(const FPGASELECT & fpga, const int & freq) {
 	ULONG pllCyclesAddr, pllBypassAddr;
 	UCHAR pllCyclesVal, pllBypassVal;
 
-	FILE_LOG(logDEBUG) << "Setting PLL FPGA: " << fpga << " Freq.: " << freq;
+	FILE_LOG(logDEBUG) << "Setting PLL FPGA: Freq.: " << freq;
 
-	switch(fpga) {
-		case FPGA1:
-			pllCyclesAddr = FPGA1_PLL_CYCLES_ADDR;
-			pllBypassAddr = FPGA1_PLL_BYPASS_ADDR;
-			break;
-		case FPGA2:
-			pllCyclesAddr = FPGA2_PLL_CYCLES_ADDR;
-			pllBypassAddr = FPGA2_PLL_BYPASS_ADDR;
-			break;
-		default:
-			return -1;
-	}
+
+	pllCyclesAddr = FPGA1_PLL_CYCLES_ADDR;
+	pllBypassAddr = FPGA1_PLL_BYPASS_ADDR;
 
 	switch(freq) {
 //		case 40: pllCyclesVal = 0xEE; break; // 15 high / 15 low (divide by 30)
@@ -761,7 +732,7 @@ int APS::set_PLL_freq(const FPGASELECT & fpga, const int & freq) {
 
 	// Disable DDRs
 	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
-	FPGA::clear_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
+	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 	// disable DAC FIFOs
 	for (int dac = 0; dac < 4; dac++)
 		disable_DAC_FIFO(dac);
@@ -787,7 +758,7 @@ int APS::set_PLL_freq(const FPGASELECT & fpga, const int & freq) {
 	if (APS::reset_status_ctrl() != 1) return -4;
 
 	// Enable DDRs
-	FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
+	FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 	// Enable DAC FIFOs
 	// for (int dac = 0; dac < 4; dac++)
 	// 	enable_DAC_FIFO(dac);
@@ -797,7 +768,7 @@ int APS::set_PLL_freq(const FPGASELECT & fpga, const int & freq) {
 
 
 
-int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see header for default */) {
+int APS::test_PLL_sync(const int & numRetries /* see header for default */) {
 	/*
 		APS_TestPllSync synchronized the phases of the DAC clocks with the following procedure:
 		1) Make sure all PLLs have locked.
@@ -832,38 +803,29 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 
 	UINT pllResetBit  = CSRMSK_CHA_PLLRST | CSRMSK_CHB_PLLRST;
 
-	FILE_LOG(logINFO) << "Running channel sync on FPGA " << fpga;
+	FILE_LOG(logINFO) << "Running channel sync on FPGA ";
 
-	switch(fpga) {
-	case FPGA1:
-		pllEnableAddr = DAC0_ENABLE_ADDR;
-		pllEnableAddr2 = DAC1_ENABLE_ADDR;
-		break;
-	case FPGA2:
-		pllEnableAddr = DAC2_ENABLE_ADDR;
-		pllEnableAddr2 = DAC3_ENABLE_ADDR;
-		break;
-	default:
-		return -1;
-	}
+	pllEnableAddr = DAC0_ENABLE_ADDR;
+	pllEnableAddr2 = DAC1_ENABLE_ADDR;
+	
 
 	// Disable DDRs
 	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
-	FPGA::clear_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
+	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 	// disable DAC FIFOs
 	for (int dac = 0; dac < 4; dac++)
 		disable_DAC_FIFO(dac);
 
 	//A little helper function to wait for the PLL's to lock and reset if necessary
-	auto wait_PLL_relock = [this, &fpga, &pllResetBit](bool resetPLL, const int & regAddress, const vector<int> & pllBits) -> bool {
+	auto wait_PLL_relock = [this, &pllResetBit](bool resetPLL, const int & regAddress, const vector<int> & pllBits) -> bool {
 		bool inSync = false;
 		int testct = 0;
 		while (!inSync && (testct < 20)){
 			FILE_LOG(logDEBUG2) << "Reading PLL status for pllBits with size " << pllBits.size() << " and first bit is " << pllBits[0];
-			inSync = (APS::read_PLL_status(fpga, regAddress, pllBits) == 1);
+			inSync = (APS::read_PLL_status(regAddress, pllBits) == 1);
 			//If we aren't locked then reset for the next try by clearing the PLL reset bits
 			if (resetPLL) {
-				FPGA::clear_bit(handle_, fpga, FPGA_ADDR_CSR, pllResetBit);
+				FPGA::clear_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
 			}
 			//Otherwise just wait
 			else{
@@ -894,10 +856,10 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 		FPGA::write_SPI(handle_, APS_PLL_SPI, address, {data});
 	};
 
-	auto read_DLL_phase = [this, &fpga] (int addr) {
+	auto read_DLL_phase = [this] (int addr) {
 		// The phase register holds a 9-bit value [0, 511] representing the phase shift.
 		// We convert his value to phase in degrees in the range (-180, 180]
-		double phase = FPGA::read_FPGA(handle_, addr, fpga);
+		double phase = FPGA::read_FPGA(handle_, addr);
 		if (phase > 256) {
 			phase -= 512;
 		}
@@ -916,7 +878,7 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 
 		//Take twenty counts of the the xor data
 		for(int xorct = 0; xorct < xorCounts; xorct++) {
-			pllBit = FPGA::read_FPGA(handle_, FPGA_ADDR_PLL_STATUS, fpga);
+			pllBit = FPGA::read_FPGA(handle_, FPGA_ADDR_PLL_STATUS);
 			xorFlagCnts += (pllBit >> PLL_GLOBAL_XOR_BIT) & 0x1;
 		}
 
@@ -961,8 +923,8 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 			update_PLL_register();
 
 			// reset FPGA PLLs
-			FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, pllResetBit);
-			FPGA::clear_bit(handle_, fpga, FPGA_ADDR_CSR, pllResetBit);
+			FPGA::set_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
+			FPGA::clear_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
 
 			// wait for the PLL to relock
 			inSync = wait_PLL_relock(false, FPGA_ADDR_PLL_STATUS, PLL_LOCK_TEST);
@@ -993,8 +955,8 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 				globalSync = false;
 
 				// reset a single channel PLL
-				FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, PLL_RESET[ch]);
-				FPGA::clear_bit(handle_, fpga, FPGA_ADDR_CSR, PLL_RESET[ch]);
+				FPGA::set_bit(handle_, FPGA_ADDR_CSR, PLL_RESET[ch]);
+				FPGA::clear_bit(handle_, FPGA_ADDR_CSR, PLL_RESET[ch]);
 
 				// wait for lock
 				FILE_LOG(logDEBUG2) << "Waiting for relock of PLL " << ch << " by looking at bit " << PLL_LOCK_TEST[ch];
@@ -1020,14 +982,14 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 			FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr2, {writeByte});
 			update_PLL_register();
 
-			FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, pllResetBit);
-			FPGA::clear_bit(handle_, fpga, FPGA_ADDR_CSR, pllResetBit);
+			FPGA::set_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
+			FPGA::clear_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
 
 			//Try again by recursively calling the same function
-			return test_PLL_sync(fpga, numRetries - 1);
+			return test_PLL_sync(numRetries - 1);
 		} else {
 			// we failed, but enable DDRs to get a usable state
-			FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
+			FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 			// enable DAC FIFOs
 			//for (int dac = 0; dac < 4; dac++)
 				//enable_DAC_FIFO(dac);
@@ -1039,7 +1001,7 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 
 
 	// Enable DDRs
-	FPGA::set_bit(handle_, fpga, FPGA_ADDR_CSR, ddr_mask);
+	FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 	// enable DAC FIFOs
 	//for (int dac = 0; dac < 4; dac++)
 		//enable_DAC_FIFO(dac);
@@ -1049,7 +1011,7 @@ int APS::test_PLL_sync(const FPGASELECT & fpga, const int & numRetries /* see he
 }
 
 
-int APS::read_PLL_status(const FPGASELECT & fpga, const int & regAddr /*check header for default*/, const vector<int> & pllLockBits  /*check header for default*/ ){
+int APS::read_PLL_status(const int & regAddr /*check header for default*/, const vector<int> & pllLockBits  /*check header for default*/ ){
 	/*
 	 * Helper function to read the status of some PLL bit and whether the main PLL is locked.
 	 * fpga = FPGA1, FPGA2, or ALL_FPGAS
@@ -1059,20 +1021,23 @@ int APS::read_PLL_status(const FPGASELECT & fpga, const int & regAddr /*check he
 
 	int pllStatus = 1;
 
+	FILE_LOG(logERROR) << "read_PLL_status not implemented";
+	return 0;
+
 //	pll_bit = FPGA::read_FPGA(handle_, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga); // latched to USB clock (has version 0x020)
 //	pll_bit = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, fpga); // latched to 200 MHz PLL (has version 0x010)
 
-	ULONG pllRegister = FPGA::read_FPGA(handle_, regAddr, fpga);
+	ULONG pllRegister = FPGA::read_FPGA(handle_, regAddr);
 
 	//Check each of the clocks in series
 	for(int tmpBit : pllLockBits){
 		pllStatus &= ((pllRegister >> tmpBit) & 0x1);
-		FILE_LOG(logDEBUG2) << "FPGA " << fpga << " PLL status: " << ((pllRegister >> tmpBit) & 0x1) << " (bit " << tmpBit << " of " << myhex << pllRegister << " )";
+		FILE_LOG(logDEBUG2) << "FPGA PLL status: " << ((pllRegister >> tmpBit) & 0x1) << " (bit " << tmpBit << " of " << myhex << pllRegister << " )";
 	}
 	return pllStatus;
 }
 
-int APS::get_PLL_freq(const FPGASELECT & fpga) {
+int APS::get_PLL_freq() {
 	// Poll APS PLL chip to determine current frequency
 
 	ULONG pll_cycles_addr, pll_bypass_addr;
@@ -1080,20 +1045,10 @@ int APS::get_PLL_freq(const FPGASELECT & fpga) {
 
 	int freq;
 
-	FILE_LOG(logDEBUG2) << "Getting PLL frequency for FGPA " << fpga;
+	FILE_LOG(logDEBUG2) << "Getting PLL frequency for FGPA ";
 
-	switch(fpga) {
-	case FPGA1:
-		pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
-		pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
-		break;
-	case FPGA2:
-		pll_cycles_addr = FPGA2_PLL_CYCLES_ADDR;
-		pll_bypass_addr = FPGA2_PLL_BYPASS_ADDR;
-		break;
-	default:
-		return -1;
-	}
+	pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
+	pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
 
 	FPGA::read_SPI(handle_, APS_PLL_SPI, pll_cycles_addr, &pll_cycles_val);
 	FPGA::read_SPI(handle_, APS_PLL_SPI, pll_bypass_addr, &pll_bypass_val);
@@ -1114,7 +1069,7 @@ int APS::get_PLL_freq(const FPGASELECT & fpga) {
 			return -2;
 	}
 
-	FILE_LOG(logDEBUG2) << "PLL frequency for FPGA: " << fpga << " Freq: " << freq;
+	FILE_LOG(logDEBUG2) << "PLL frequency for FPGA:  Freq: " << freq;
 
 	return freq;
 }
@@ -1270,7 +1225,7 @@ int APS::disable_DAC_FIFO(const int & dac) {
 	return FPGA::write_SPI(handle_, APS_DAC_SPI, syncAddr, {UCHAR(data & ~mask)} );
 }
 
-int APS::reset_checksums(const FPGASELECT & fpga){
+int APS::reset_checksums(){
 	//TODO: make work
 	// Clears address and data checksum registers on the associated FPGA(s)
 	// write to registers to clear them
@@ -1282,7 +1237,7 @@ int APS::reset_checksums(const FPGASELECT & fpga){
 	return 0;
 }
 
-bool APS::verify_checksums(const FPGASELECT & fpga){
+bool APS::verify_checksums(){
 	//TODO: make work
 	//Checks that software and hardware checksums agree
 
@@ -1312,11 +1267,6 @@ int APS::set_offset_register(const int & dac, const float & offset) {
 	ULONG zeroRegisterAddr;
 	WORD scaledOffset;
 
-	FPGASELECT fpga = dac2fpga(dac);
-	if (fpga == INVALID_FPGA) {
-		return -1;
-	}
-
 	switch (dac) {
 		case 0:
 		case 2:
@@ -1334,7 +1284,7 @@ int APS::set_offset_register(const int & dac, const float & offset) {
 	scaledOffset = WORD(offset * MAX_WF_AMP);
 	FILE_LOG(logINFO) << "Setting DAC " << dac << "  zero register to " << scaledOffset;
 
-	FPGA::write_FPGA(handle_, zeroRegisterAddr, scaledOffset, fpga);
+	FPGA::write_FPGA(handle_, zeroRegisterAddr, scaledOffset);
 
 	return 0;
 }
@@ -1364,37 +1314,32 @@ int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 			return -2;
 	}
 
-	auto fpga = dac2fpga(dac);
-	if (fpga == INVALID_FPGA) {
-		return -1;
-	}
-
 	//Waveform length used by FPGA must be an integer multiple of WF_MODULUS and is 0 counted
 	wfLength = wfData.size() / WF_MODULUS - 1;
-	FILE_LOG(logINFO) << "Loading Waveform length " << wfData.size() << " (FPGA count = " << wfLength << " ) into FPGA  " << fpga << " DAC " << dac;
+	FILE_LOG(logINFO) << "Loading Waveform length " << wfData.size() << " (FPGA count = " << wfLength << " ) into DAC " << dac;
 
 	//Write the waveform parameters
-	FPGA::write_FPGA(handle_, sizeReg, wfLength, fpga);
+	FPGA::write_FPGA(handle_, sizeReg, wfLength);
 
 	if (FILELog::ReportingLevel() >= logDEBUG2) {
 		//Double check it took
-		tmpData = FPGA::read_FPGA(handle_, sizeReg, fpga);
+		tmpData = FPGA::read_FPGA(handle_, sizeReg);
 		FILE_LOG(logDEBUG2) << "Size set to: " << tmpData;
 		FILE_LOG(logDEBUG2) << "Loading waveform at " << myhex << startAddr;
 	}
 
 	//Reset the checksums
 	if (FILELog::ReportingLevel() >= logDEBUG) {
-		reset_checksums(fpga);
+		reset_checksums();
 	}
 
 	//Format the data and add to write queue
-	write(fpga, startAddr, vector<USHORT>(wfData.begin(), wfData.end()), true);
+	write(startAddr, vector<USHORT>(wfData.begin(), wfData.end()), true);
 	flush();
 
 	//Verify the checksums
 	if (FILELog::ReportingLevel() >= logDEBUG) {
-		if (!verify_checksums(fpga)){
+		if (!verify_checksums()){
 			FILE_LOG(logERROR) << "Checksums didn't match after writing waveform data";
 			return -2;
 		}
@@ -1403,20 +1348,12 @@ int APS::write_waveform(const int & dac, const vector<short> & wfData) {
 }
 
 
-int APS::write_LL_data_IQ(const FPGASELECT & fpga, const ULONG & startAddr, const size_t & startIdx, const size_t & stopIdx, const bool & writeLengthFlag ){
+int APS::write_LL_data_IQ(const ULONG & startAddr, const size_t & startIdx, const size_t & stopIdx, const bool & writeLengthFlag ){
 
 	//We store the IQ linklist data in channels 1 and 3
 	int dataChan;
-	switch(fpga){
-		case FPGA1:
-			dataChan = 0;
-			break;
-		case FPGA2:
-			dataChan = 2;
-			break;
-		default:
-			return -1;
-	}
+	dataChan = 0;
+	
 	FILE_LOG(logDEBUG) << "Writing LL Data with Start Addr=" << startAddr << "; startIdx=" << startIdx << "; stopIdx=" << stopIdx;
 	size_t entriesToWrite;
 	if (stopIdx > startIdx){
@@ -1437,20 +1374,20 @@ int APS::write_LL_data_IQ(const FPGASELECT & fpga, const ULONG & startAddr, cons
 		size_t tmpStopIdx = ((MAX_LL_LENGTH-startAddr) + startIdx)%channels_[dataChan].LLBank_.length;
 		writeData = channels_[dataChan].LLBank_.get_packed_data(startIdx, tmpStopIdx);
 		//queue it
-		write(fpga, FPGA_BANKSEL_LL_CHA | startAddr, writeData, true);
+		write(FPGA_BANKSEL_LL_CHA | startAddr, writeData, true);
 		//the second segment is written to the top of the memory (startAddr = 0)
 		writeData = channels_[dataChan].LLBank_.get_packed_data(tmpStopIdx, stopIdx);
-		write(fpga, FPGA_BANKSEL_LL_CHA | 0, writeData, true);
+		write(FPGA_BANKSEL_LL_CHA | 0, writeData, true);
 	}
 	else{
 		writeData = channels_[dataChan].LLBank_.get_packed_data(startIdx, stopIdx);
-		write(fpga, FPGA_BANKSEL_LL_CHA | startAddr, writeData, true);
+		write(FPGA_BANKSEL_LL_CHA | startAddr, writeData, true);
 	}
 
 	//If necessary write the LL length register
 	if (writeLengthFlag){
 		FILE_LOG(logDEBUG2) << "Writing Link List Length: " << myhex << stopIdx << " at address: " << FPGA_ADDR_CHA_LL_LENGTH;
-		write(fpga, FPGA_ADDR_CHA_LL_LENGTH, stopIdx-1, true);
+		write(FPGA_ADDR_CHA_LL_LENGTH, stopIdx-1, true);
 	}
 
 	//Flush the queue to the device
@@ -1538,11 +1475,11 @@ int APS::write_LL_data_IQ(const FPGASELECT & fpga, const ULONG & startAddr, cons
 }
 	*/
 
-int APS::read_LL_addr(const FPGASELECT & fpga){
+int APS::read_LL_addr(){
 	/*
 	 * Read the currently playing LL address
 	 */
-	return FPGA::read_FPGA(handle_, FPGA_ADDR_CHA_LL_CURADDR, fpga);
+	return FPGA::read_FPGA(handle_, FPGA_ADDR_CHA_LL_CURADDR);
 }
 
 int APS::read_LL_addr(const int & dac){
@@ -1550,27 +1487,17 @@ int APS::read_LL_addr(const int & dac){
 	 * Read the currently playing LL address
 	 */
 	int fpgaAddr;
-	switch (dac){
-	case 0:
-	case 2:
-		fpgaAddr = FPGA_ADDR_CHA_LL_CURADDR;
-		break;
-	case 1:
-	case 3:
-		fpgaAddr = FPGA_ADDR_CHB_LL_CURADDR;
-		break;
-	default:
-		return -1;
-	}
-	return FPGA::read_FPGA(handle_, fpgaAddr, dac2fpga(dac));
+
+	fpgaAddr = FPGA_ADDR_CHA_LL_CURADDR;
+	return FPGA::read_FPGA(handle_, fpgaAddr);
 }
 
 
-int APS::read_miniLL_startAddr(const FPGASELECT & fpga){
+int APS::read_miniLL_startAddr(){
 	/*
 	 * Read the start of the currently playing miniLL
 	 */
-	return FPGA::read_FPGA(handle_, FPGA_ADDR_CHA_MINILLSTART, fpga);
+	return FPGA::read_FPGA(handle_, FPGA_ADDR_CHA_MINILLSTART);
 }
 
 int APS::save_state_file(string & stateFile){
@@ -1630,12 +1557,11 @@ int APS::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootStr){
 	return 0;
 }
 
+/*
 void BankBouncerThread::run(){
 	//Acquire the device lock
 	//This is not exception safe....
 	myAPS_->mymutex_->lock();
-
-	FPGASELECT fpga = dac2fpga(channel_);
 
 	//To reduce traffic on the USB bus write only when we have a decent block size
 	//TODO:: implement
@@ -1666,11 +1592,11 @@ void BankBouncerThread::run(){
 
 	//Write the LL length to the max
 	FILE_LOG(logDEBUG1) << "Writing Link List Length: " << myhex << MAX_LL_LENGTH << " at address: " << FPGA_ADDR_CHA_LL_LENGTH;
-	myAPS_->write(fpga, FPGA_ADDR_CHA_LL_LENGTH, MAX_LL_LENGTH-1, false);
-	FILE_LOG(logDEBUG2) << "LL Length Register: " << FPGA::read_FPGA(myAPS_->handle_, FPGA_ADDR_CHA_LL_LENGTH, FPGA1);
+	myAPS_->write(FPGA_ADDR_CHA_LL_LENGTH, MAX_LL_LENGTH-1, false);
+	FILE_LOG(logDEBUG2) << "LL Length Register: " << FPGA::read_FPGA(myAPS_->handle_, FPGA_ADDR_CHA_LL_LENGTH);
 
 	// Fill sequence memory
-	myAPS_->write_LL_data_IQ(fpga, 0, 0, MAX_LL_LENGTH, false);
+	myAPS_->write_LL_data_IQ(0, 0, MAX_LL_LENGTH, false);
 
 	// find the index of the last full miniLL that fit in memory
 	WordVec::iterator lastMiniLLIdxIt = std::lower_bound(curLLBank->miniLLStartIdx.begin(), curLLBank->miniLLStartIdx.end(), MAX_LL_LENGTH);
@@ -1688,7 +1614,7 @@ void BankBouncerThread::run(){
 	while(running_) {
 		//Poll for current hardware address
 		myAPS_->mymutex_->lock();
-		curAddrHW = myAPS_->read_miniLL_startAddr(fpga);
+		curAddrHW = myAPS_->read_miniLL_startAddr();
 		myAPS_->mymutex_->unlock();
 		FILE_LOG(logDEBUG1) << "Device ID: " << myAPS_->deviceID_ << " Current LL Addr: " << curAddrHW;
 
@@ -1700,7 +1626,7 @@ void BankBouncerThread::run(){
 			size_t startMiniLL = (lastMiniLL+1)%curLLBank->numMiniLLs;
 			USHORT curWriteAddrHW = nextWriteAddrHW;
 			myAPS_->mymutex_->lock();
-			myAPS_->write_LL_data_IQ(fpga, USHORT(curWriteAddrHW), curLLBank->miniLLStartIdx[startMiniLL] , curLLBank->miniLLStartIdx[nextMiniLL], false);
+			myAPS_->write_LL_data_IQ(USHORT(curWriteAddrHW), curLLBank->miniLLStartIdx[startMiniLL] , curLLBank->miniLLStartIdx[nextMiniLL], false);
 			myAPS_->mymutex_->unlock();
 			//Update where we want to write to next
 			nextWriteAddrHW = mymod(nextWriteAddrHW + mymod(curLLBank->miniLLStartIdx[nextMiniLL] - curLLBank->miniLLStartIdx[startMiniLL], curLLBank->length), MAX_LL_LENGTH);
@@ -1714,3 +1640,4 @@ void BankBouncerThread::run(){
 
 
 }
+*/

@@ -12,6 +12,10 @@
 #include "aps2.h"
 #include "pcap.h"
 
+#ifdef DEBUGAPS	
+#include "DummyAPS.h"
+#endif
+
 using std::vector;
 using std::string;
 using std::map;
@@ -36,12 +40,11 @@ public:
     	INVALID_APS_ID = -4
 	};
 
-
+	typedef void (*DebugPacketCallback)(const void * data, unsigned int length);  
 
 	static const unsigned int MAC_ADDR_LEN = 6;
 	
 	static const uint16_t APS_PROTO = 0xBBAE;
-	//static const uint16_t APS_PROTO = 0x0800; // get IP packets for testing
 
 	struct EthernetDevInfo {
 		string name;          // device name as set by winpcap
@@ -52,19 +55,6 @@ public:
 	};
 
 
-
-	struct APSEthernetHeader {
-		uint8_t  dest[MAC_ADDR_LEN];
-		uint8_t  src[MAC_ADDR_LEN];
-		uint16_t frameType;
-		uint16_t seqNum;
-		union {
-			uint32_t packedCommand;
-			struct APSCommand command;
-		};
-		uint32_t addr;
-	};
-
 	EthernetControl();
 	~EthernetControl() {};
 
@@ -73,7 +63,8 @@ public:
 
 	ErrorCodes set_network_device(string description);
 
-	size_t Write(void * data, size_t length);
+	size_t Write(APSCommand & command) { Write(command, 0, 0);}
+	size_t Write(APSCommand & command, void * data, size_t length);
 	size_t Read(void * data, size_t packetLength);
 
 	bool isOpen();
@@ -86,15 +77,22 @@ public:
 	static void get_network_devices();
 	static ErrorCodes set_device_active(string, bool);
 	static void enumerate(unsigned int timeoutSeconds = 5, unsigned int broadcastPeriodSeconds = 1);
-	static void debugAPSEcho(string device);
+
+#ifdef DEBUGAPS	
+	static void debugAPSEcho(string device, DummyAPS * aps = 0);
+#endif
+
+	static string print_ethernetAddress(uint8_t * addr);
 
 private:
 
-	EthernetDevInfo *pcapDevice;
+	EthernetDevInfo *pcapDevice_;
 	string deviceID_;
 	string filter_;
 	uint8_t apsMac_[MAC_ADDR_LEN];
 	pcap_t *apsHandle_;
+
+	uint16_t seqNum_;
 
 	static const unsigned int pcapTimeoutMS = 500;
 
@@ -107,7 +105,9 @@ private:
 	static std::map<string, EthernetDevInfo> APS2device_;
 	static vector<EthernetDevInfo> pcapDevices_;
 
-	static string print_ethernetAddress(uint8_t * addr);
+	static bool isvalidMACAddress(string deviceID);
+	static void parseMACAddress(string macString, uint8_t * macBuffer_);
+	
 	static void packetHTON(APSEthernetHeader *);
 
 	static string getPointToPointFilter(uint8_t * localMacAddr, uint8_t *apsMacAddr);
@@ -115,7 +115,7 @@ private:
 	static string getWatchFilter();
 	static ErrorCodes applyFilter(pcap_t * capHandle, string & filter);
 
-	static string print_APS_command(struct APSCommand * cmd);
+	
 	static pcap_t * start_capture(string & devName, string & filter);
 
 };

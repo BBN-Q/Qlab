@@ -19,8 +19,10 @@ APSRack::~APSRack()  {
 int APSRack::init() {
 
 	//Create the logger
-	FILE* pFile = fopen("libaps.log", "a");
-	Output2FILE::Stream() = pFile;
+	// TODO renable 
+	FILE_LOG(logWARNING) << "libaps log file disabled in APSRack::init";
+	//FILE* pFile = fopen("libaps.log", "a");
+	//Output2FILE::Stream() = pFile;
 
 	//Enumerate the serial numbers of the devices attached
 	enumerate_devices();
@@ -141,7 +143,7 @@ void APSRack::update_device_enumeration() {
 
 
 int APSRack::read_bitfile_version(const int & deviceID) {
-	return APSs_[deviceID].read_bitFile_version(ALL_FPGAS);
+	return APSs_[deviceID].read_bitFile_version();
 }
 
 int APSRack::connect(const int & deviceID){
@@ -167,8 +169,8 @@ int APSRack::disconnect(const string & deviceSerial){
 	return APSs_[serial2dev[deviceSerial]].disconnect();
 }
 
-int APSRack::program_FPGA(const int & deviceID, const string &bitFile, const FPGASELECT & chipSelect, const int & expectedVersion){
-	return APSs_[deviceID].program_FPGA(bitFile, chipSelect, expectedVersion);
+int APSRack::program_FPGA(const int & deviceID, const string &bitFile, const int & expectedVersion){
+	return APSs_[deviceID].program_FPGA(bitFile, expectedVersion);
 }
 
 int APSRack::setup_DACs(const int & deviceID) {
@@ -207,7 +209,7 @@ int APSRack::load_sequence_file(const int & deviceID, const string & seqFile){
 }
 
 int APSRack::set_LL_data(const int & deviceID, const int & channelNum, const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat){
-	return APSs_[deviceID].set_LLData_IQ(dac2fpga(channelNum), addr, count, trigger1, trigger2, repeat);
+	return APSs_[deviceID].set_LLData_IQ(addr, count, trigger1, trigger2, repeat);
 }
 
 int APSRack::get_running(const int & deviceID){
@@ -337,26 +339,26 @@ int APSRack::read_bulk_state_file(string & stateFile){
 
 int APSRack::raw_write(int deviceID, int numBytes, UCHAR* data){
 	DWORD bytesWritten;
-	bytesWritten = APSs_[deviceID].handle_.Write(data, numBytes);
+	//bytesWritten = APSs_[deviceID].handle_.Write(data, numBytes);
 	return int(bytesWritten);
 }
 
-int APSRack::raw_read(int deviceID, FPGASELECT fpga) {
+int APSRack::raw_read(int deviceID) {
 	DWORD bytesRead, bytesWritten;
 	UCHAR dataBuffer[2];
 	USHORT transferSize = 1;
 	int Command = APS_FPGA_IO;
 
 	//Send the read command byte
-	UCHAR commandPacket = 0x80 | Command | (fpga<<2) | transferSize;
-   	bytesWritten = APSs_[deviceID].handle_.Write(&commandPacket, 1);
+	UCHAR commandPacket = 0x80 | Command | transferSize;
+   	//bytesWritten = APSs_[deviceID].handle_.Write(&commandPacket, 1);
 
 	//Look for the data
-	bytesRead = APSs_[deviceID].handle_.Read(dataBuffer, 2);
+	//bytesRead = APSs_[deviceID].handle_.Read(dataBuffer, 2);
 	FILE_LOG(logDEBUG2) << "Read " << bytesRead << " bytes with value" << myhex << ((dataBuffer[0] << 8) | dataBuffer[1]);
 	return int((dataBuffer[0] << 8) | dataBuffer[1]);
 }
 
-int APSRack::read_register(int deviceID, FPGASELECT fpga, int addr){
-	return FPGA::read_FPGA(APSs_[deviceID].handle_, addr, fpga);
+int APSRack::read_register(int deviceID, int addr){
+	return FPGA::read_FPGA(APSs_[deviceID].handle_, addr);
 }

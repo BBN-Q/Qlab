@@ -31,7 +31,7 @@ public:
 	void update_device_enumeration();
 	int read_bitfile_version(const int &);
 
-	int program_FPGA(const int &, const string &, const FPGASELECT &, const int &);
+	int program_FPGA(const int &, const string &, const int &);
 
 	int setup_DACs(const int &);
 
@@ -81,8 +81,8 @@ public:
 	int read_bulk_state_file(string & );
 
 	int raw_write(int, int, UCHAR*);
-	int raw_read(int, FPGASELECT);
-	int read_register(int, FPGASELECT, int);
+	int raw_read(int);
+	int read_register(int, int);
 
 private:
 	APSRack(const APSRack&) = delete;

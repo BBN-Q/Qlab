@@ -6,6 +6,7 @@
  */
 
 #include "FPGA.h"
+#include "APS2.h"
 
 static const UCHAR BitReverse[256] =
 {
@@ -31,7 +32,7 @@ static const UCHAR BitReverse[256] =
 
 
 
-int FPGA::program_FPGA(EthernetControl & deviceHandle, vector<UCHAR> bitFileData, const FPGASELECT & chipSelect) {
+int FPGA::program_FPGA(EthernetControl & deviceHandle, vector<UCHAR> bitFileData) {
 
 	// To configure the FPGAs, you initialize them, send the byte stream, and
 	// then wait for the DONE flag to be asserted.
@@ -44,20 +45,13 @@ int FPGA::program_FPGA(EthernetControl & deviceHandle, vector<UCHAR> bitFileData
 	// Create bit masks matching Config Status Register bits for the active FPGAs ...
 	// Create masks
 	UCHAR PgmMask=0, InitMask=0, DoneMask=0, RstMask=0;
-	if((chipSelect == FPGA1) || (chipSelect==ALL_FPGAS)){
-		PgmMask |= APS_PGM01_BIT;
-		InitMask |= APS_INIT01_BIT;
-		DoneMask |= APS_DONE01_BIT;
-		RstMask |= APS_FRST01_BIT;
-	}
-	if((chipSelect == FPGA2) || (chipSelect==ALL_FPGAS)) {
-		PgmMask |= APS_PGM23_BIT;
-		InitMask |= APS_INIT23_BIT;
-		DoneMask |= APS_DONE23_BIT;
-		RstMask |= APS_FRST23_BIT;
-	}
 
-	FILE_LOG(logDEBUG2) << "Starting to program FPGA Device from FPGA::program_FGPA with chipSelect = " << chipSelect;
+	PgmMask |= APS_PGM01_BIT;
+	InitMask |= APS_INIT01_BIT;
+	DoneMask |= APS_DONE01_BIT;
+	RstMask |= APS_FRST01_BIT;
+
+	FILE_LOG(logDEBUG2) << "Starting to program FPGA Device from FPGA::program_FGPA";
 
 	/*
 	 * Programming order:
@@ -79,16 +73,16 @@ int FPGA::program_FPGA(EthernetControl & deviceHandle, vector<UCHAR> bitFileData
 		FILE_LOG(logDEBUG2) << "Attempt: "  << ct+1;
 		// Read the Status to get state of RESETN for unused channel
 		//TODO: is this necessary or used at all?
-		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 0, INVALID_FPGA, &readByte) != 1) return(-1);
+		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 0, &readByte) != 1) return(-1);
 		FILE_LOG(logDEBUG2) << "Read 1: " << myhex << int(readByte);
 
 		// Clear Program and Reset Masks
 		writeByte = ~PgmMask & ~RstMask & 0xF;
 		FILE_LOG(logDEBUG2) << "Write 1: "  << myhex << int(writeByte);
-		if(FPGA::write_register(deviceHandle,  APS_CONF_STAT, 0, INVALID_FPGA, &writeByte) != 1) return(-2);
+		if(FPGA::write_register(deviceHandle,  APS_CONF_STAT, 0, &writeByte) != 1) return(-2);
 
 		// Read the Status to see that INITN is asserted in response to PROGRAMN
-		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 0, INVALID_FPGA, &readByte) != 1) return(-3);
+		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 0, &readByte) != 1) return(-3);
 		FILE_LOG(logDEBUG2) << "Read 2: " <<  myhex << int(readByte);
 
 		// verify Init bits are cleared
@@ -103,14 +97,14 @@ int FPGA::program_FPGA(EthernetControl & deviceHandle, vector<UCHAR> bitFileData
 		// Set *ALL* Program and Reset Bits
 		writeByte = (APS_PGM_BITS | APS_FRST_BITS) & 0xF;
 		FILE_LOG(logDEBUG2) << "Write 2: " << myhex << int(writeByte);
-		if(FPGA::write_register(deviceHandle, APS_CONF_STAT, 0, INVALID_FPGA, &writeByte) != 1)return(-5);
+		if(FPGA::write_register(deviceHandle, APS_CONF_STAT, 0,  &writeByte) != 1)return(-5);
 
 		// sleep to allow init to take place
 		// if the sleep is left out the next test might fail
 		usleep(1000);
 
 		// Read the Status to see that INITN is deasserted in response to PROGRAMN deassertion
-		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 0, INVALID_FPGA, &readByte) != 1) return(-6);
+		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 0, &readByte) != 1) return(-6);
 		FILE_LOG(logDEBUG2) << "Read 3: "  << myhex << int(readByte);
 
 		// verify Init Mask is high
@@ -133,7 +127,7 @@ int FPGA::program_FPGA(EthernetControl & deviceHandle, vector<UCHAR> bitFileData
 	for(auto dataIter=bitFileData.begin(); dataIter < bitFileData.end(); dataIter += BLOCKSIZE) {
 		// Write a full buffer if not at the end of the input data
 		if(dataIter + BLOCKSIZE < bitFileData.end()) {
-			if(FPGA::write_register(deviceHandle, APS_CONF_DATA, 0, chipSelect, &*dataIter) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
+			if(FPGA::write_register(deviceHandle, APS_CONF_DATA, 0, &*dataIter) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
 				return(-8);
 		}
 		else {
@@ -142,7 +136,7 @@ int FPGA::program_FPGA(EthernetControl & deviceHandle, vector<UCHAR> bitFileData
 			std::copy(dataIter, bitFileData.end(), lastBuffer.begin());
 
 			// Write out the last buffer
-			if(FPGA::write_register(deviceHandle, APS_CONF_DATA, 0, chipSelect, &lastBuffer.front()) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
+			if(FPGA::write_register(deviceHandle, APS_CONF_DATA, 0, &lastBuffer.front()) != BLOCKSIZE)  // Defaults to 61 bytes for CONF_DATA
 				return(-9);
 		}
 	}
@@ -152,7 +146,7 @@ int FPGA::program_FPGA(EthernetControl & deviceHandle, vector<UCHAR> bitFileData
 	// check done bits
 	ok = false;
 	for(int ct = 0; ct < maxAttemptCnt && !ok; ct++) {
-		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, INVALID_FPGA, &readByte) != 1) return(-3);
+		if(FPGA::read_register(deviceHandle, APS_CONF_STAT, 1, &readByte) != 1) return(-3);
 		FILE_LOG(logDEBUG2) << "Read 4: " << myhex << int(readByte) << " (looking for " << int(DoneMask) << " HIGH)";
 		if ((readByte & DoneMask) == DoneMask) ok = true;
 		usleep(1000); // if done has not set wait a bit
@@ -167,29 +161,17 @@ int FPGA::program_FPGA(EthernetControl & deviceHandle, vector<UCHAR> bitFileData
 	usleep(10000);
 
 	// Assert FPGA_RESETN to reset all registers and state machines
-	reset(deviceHandle, chipSelect);
+	reset(deviceHandle);
 
 	// Return the number of data bytes written
 	return numBytesProgrammed;
 }
 
-int FPGA::reset(EthernetControl & deviceHandle, const FPGASELECT & fpga) {
-	FILE_LOG(logDEBUG) << "Resetting FPGA " << fpga;
-	UCHAR RstMask=0;
-	if((fpga == FPGA1) || (fpga == ALL_FPGAS)){
-		RstMask |= APS_FRST01_BIT;
-	}
-	if((fpga == FPGA2) || (fpga == ALL_FPGAS)) {
-		RstMask |= APS_FRST23_BIT;
-	}
-	FILE_LOG(logDEBUG2) << "Reset mask " << myhex << RstMask;
-	// Bring RESETN low to reset all registers and state machines
-	UCHAR writeByte = ~RstMask & 0xF;
-	if(FPGA::write_register(deviceHandle, APS_CONF_STAT, 0, INVALID_FPGA, &writeByte) != 1) return(-1);
+int FPGA::reset(EthernetControl & deviceHandle) {
+	FILE_LOG(logDEBUG) << "Resetting APS2 ";
 
-	// Bring RESETN back high
-	writeByte = 0xF;
-	if(FPGA::write_register(deviceHandle, APS_CONF_STAT, 0, INVALID_FPGA, &writeByte) != 1) return(-2);
+	APSCommand command;
+	//deviceHandle.Write(command);
 
 	return 0;
 }
@@ -198,7 +180,6 @@ int FPGA::read_register(
 		EthernetControl & deviceHandle,
 		const ULONG & Command, // APS_FPGA_IO, APS_FPGA_ADDR, APS_CONF_DATA, APS_CONF_STAT, or APS_STATUS_CTRL
 		const ULONG & transferSize,    // Transfer size, 0, 1, 2, or 3 for 1, 2, 4, or 8 bytes.  Ignored for Config cycles
-		const FPGASELECT & chipSelect,     // Select bits to drive FPGA selects for I/O or Config
 		UCHAR *Data    // Buffer for read data
 )
 {
@@ -224,7 +205,7 @@ int FPGA::read_register(
 		return(-1);
 	}
 	// Start all packets with a APS Command Byte with the R/W = 1 for read
-	commandPacket = 0x80 | Command | (chipSelect<<2) | transferSize;
+	commandPacket = 0x80 | Command | transferSize;
 
 	// Send the read command with the number of bytes specified in the Command Byte
 	for (int repeats = 0; repeats < max_repeats; repeats++) {
@@ -232,7 +213,7 @@ int FPGA::read_register(
 		//Write the commmand
 		if (repeats > 0) {FILE_LOG(logDEBUG2) << "Retry APS Write " << repeats;}
 		
-		bytesWritten = deviceHandle.Write(&commandPacket, 1);
+		//bytesWritten = deviceHandle.Write(&commandPacket, 1);
 
 
 		if (bytesWritten != 1){
@@ -265,7 +246,6 @@ int FPGA::write_register(
 		EthernetControl & deviceHandle,
 		const ULONG & Command, // APS_FPGA_IO, APS_FPGA_ADDR, APS_CONF_DATA, APS_CONF_STAT, or APS_STATUS_CTRL
 		const ULONG & transferSize,    // Transfer size, 0, 1, 2, or 3 for 1, 2, 4, or 8 bytes.  Ignored for Config cycles
-		const FPGASELECT & chipSelect,     // Select bits to drive FPGA selects for I/O or Config
 		UCHAR * Data    // Data bytes to be written.  Must match length/transfer type
 )
 {
@@ -274,7 +254,7 @@ int FPGA::write_register(
 	
 	int repeats;
 	const int max_repeats = 5;
-	UCHAR cs = chipSelect; // internal chip select variable
+	
 
 	switch(Command)
 	{
@@ -289,7 +269,6 @@ int FPGA::write_register(
 		return -1;
 	case APS_CONF_STAT:
 	case APS_STATUS_CTRL:
-		cs = 0;
 		packetLength = 1;
 		break;
 	default:
@@ -300,14 +279,14 @@ int FPGA::write_register(
 	dataPacket.reserve(packetLength+1);
 
 	// Start all packets with a APS Command Byte with the R/W = 0 for write
-	dataPacket[0] = Command | (cs<<2) | transferSize;
+	dataPacket[0] = Command | transferSize;
 
 	// Copy data bytes to output packet
 	std::copy(Data, Data+packetLength, dataPacket.begin()+1);
 
 	for (repeats = 0; repeats < max_repeats; repeats++) {
 		if (repeats > 0) {FILE_LOG(logDEBUG2) << "Repeat Write " << repeats;}
-		bytesWritten = deviceHandle.Write(&dataPacket[0], packetLength+1);
+		//bytesWritten = deviceHandle.Write(&dataPacket[0], packetLength+1);
 		if (bytesWritten == packetLength+1) break;
 	}
 
@@ -320,19 +299,17 @@ int FPGA::write_register(
 }
 
 
-USHORT FPGA::read_FPGA(EthernetControl & deviceHandle, const ULONG & addr, FPGASELECT chipSelect)
+USHORT FPGA::read_FPGA(EthernetControl & deviceHandle, const ULONG & addr)
 {
 
-	if (chipSelect == ALL_FPGAS) chipSelect = FPGA1; // can only read from one FPGA at a time, assume we want data from FPGA 1
-
 	//Write the address with the read bit high
-	write_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, vector<USHORT>(0), chipSelect );
+	write_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, vector<USHORT>(0) );
 
 	//Now clock out the data by writing a read command byte
 	// Start all packets with a APS Command Byte with the R/W = 1 for read for 2 bytes
-	UCHAR commandPacket = 0x80 | APS_FPGA_IO | (chipSelect<<2) | 1;
+	UCHAR commandPacket = 0x80 | APS_FPGA_IO | 1;
 	DWORD bytesWritten, bytesRead;
-	bytesWritten = deviceHandle.Write(&commandPacket, 1);
+	//bytesWritten = deviceHandle.Write(&commandPacket, 1);
 	if (bytesWritten != 1){
 		FILE_LOG(logDEBUG2) << "FPGA::read_register: Error writing to APS with status bytes written = " << bytesWritten;
 	}
@@ -355,12 +332,12 @@ USHORT FPGA::read_FPGA(EthernetControl & deviceHandle, const ULONG & addr, FPGAS
 	return data;
 }
 
-int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, const USHORT & data, const FPGASELECT & fpga){
+int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, const USHORT & data){
 	//Create a vector and pass on
-	return write_FPGA(deviceHandle, addr, vector<USHORT>(1, data), fpga );
+	return write_FPGA(deviceHandle, addr, vector<USHORT>(1, data) );
 }
 
-int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, const vector<USHORT> & data, const FPGASELECT & fpga)
+int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, const vector<USHORT> & data)
 /********************************************************************
  *
  * Function Name : Write_FPGA()
@@ -375,7 +352,7 @@ int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, 
 {
 
 	//Format for the block write
-	vector<UCHAR> dataPacket = format(fpga, addr, data);
+	vector<UCHAR> dataPacket = format(addr, data);
 	vector<size_t> offsets = computeCmdByteOffsets(data.size());
 	if (data.size() > 0) {
 		FILE_LOG(logDEBUG2) << "Writing " << data.size() << " words at starting address: " << myhex << addr << " with Data[0]: " << data[0];
@@ -387,7 +364,7 @@ int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, 
 	return 0;
 }
 
-int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, const vector<USHORT> & data, const FPGASELECT & fpga, map<FPGASELECT, CheckSum> & checksums)
+int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, const vector<USHORT> & data, CheckSum & checksum)
 /********************************************************************
  *
  * Function Name : APS_WriteFPGA()
@@ -405,21 +382,15 @@ int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, 
 
 	//Call the basic function to write the data
 	int bytesWritten;
-	bytesWritten = write_FPGA(deviceHandle, addr, data, fpga);
+	bytesWritten = write_FPGA(deviceHandle, addr, data);
 
 	//Now update the software checksums
 	// address checksum is defined as lower word
-	if ((fpga==FPGA1) || (fpga == ALL_FPGAS)) {
-		checksums[FPGA1].address += addr & 0xFFFF;
-		for (auto tmpData : data)
-			checksums[FPGA1].data += tmpData;
-	}
-	if((fpga==FPGA2) || (fpga == ALL_FPGAS)) {
-		checksums[FPGA2].address += addr & 0xFFFF;
-		for (auto tmpData : data)
-			checksums[FPGA2].data += tmpData;
-	}
 
+	checksum.address += addr & 0xFFFF;
+	for (auto tmpData : data)
+		checksum.data += tmpData;
+	
 	return bytesWritten;
 }
 
@@ -434,12 +405,12 @@ int FPGA::write_block(EthernetControl & deviceHandle, vector<UCHAR> & dataPacket
 			//Find the last command byte where the data packet will fit under 64kB.
 			auto breakPt = std::lower_bound(offsets.begin(), offsets.end(), std::distance(curIdx,dataPackets.begin()) + maxWriteLength);
 			DWORD ptsToWrite = *(breakPt-1) - std::distance(curIdx,dataPackets.begin());
-			tmpBytesWritten - deviceHandle.Write(&(*curIdx), ptsToWrite);
+			//tmpBytesWritten - deviceHandle.Write(&(*curIdx), ptsToWrite);
 			bytesWritten += tmpBytesWritten;
 			std::advance(curIdx, ptsToWrite);
 		}
 		else{
-			tmpBytesWritten = deviceHandle.Write(&(*curIdx), std::distance(curIdx,dataPackets.end()));
+			//tmpBytesWritten = deviceHandle.Write(&(*curIdx), std::distance(curIdx,dataPackets.end()));
 			bytesWritten += tmpBytesWritten;
 			curIdx = dataPackets.end();
 		}
@@ -447,7 +418,7 @@ int FPGA::write_block(EthernetControl & deviceHandle, vector<UCHAR> & dataPacket
 	return(bytesWritten);
 }
 
-vector<UCHAR> FPGA::format(const FPGASELECT & fpga, const unsigned int & addr, const vector<USHORT> & data){
+vector<UCHAR> FPGA::format(const unsigned int & addr, const vector<USHORT> & data){
 /* Helper function to format data for the FGPA in block mode:
  * 	command byte followed by 4 bytes address
  * 	command byte followed by 2 bytes data length
@@ -455,7 +426,7 @@ vector<UCHAR> FPGA::format(const FPGASELECT & fpga, const unsigned int & addr, c
  */
 
 	//Some constants
-	const UCHAR fpgaSelectMask = fpga << 2;
+	const UCHAR fpgaSelectMask = 0; 
 	const UCHAR write2Bytes = APS_FPGA_IO | fpgaSelectMask | 1;
 	const UCHAR write4Bytes = APS_FPGA_IO | fpgaSelectMask | 2;
 	const UCHAR write8Bytes = APS_FPGA_IO | fpgaSelectMask | 3;
@@ -635,7 +606,7 @@ int FPGA::write_SPI
 	for(size_t ct = 0; ct < 8*byteBuffer.size(); ct++)
 		dataPacket.push_back( (byteBuffer[ct/8]>>(7-(ct%8))) & 1 );
 
-	bytesWritten = deviceHandle.Write(&dataPacket[0], dataPacket.size());
+	//bytesWritten = deviceHandle.Write(&dataPacket[0], dataPacket.size());
 	if (bytesWritten != dataPacket.size()) {FILE_LOG(logERROR) << "Write SPI command failed";}
 
 	return bytesWritten;
@@ -685,13 +656,13 @@ int FPGA::read_SPI
 
 
 	// Write the SPI command.  This stores the last 8 SPI read bits in the I/O FPGA SerData register
-	bytesWritten = deviceHandle.Write(&dataPacket[0], dataPacket.size());
+	//bytesWritten = deviceHandle.Write(&dataPacket[0], dataPacket.size());
 	if (bytesWritten != dataPacket.size()) {FILE_LOG(logERROR) << "Write SPI command failed";}
 
 	dataPacket[0] |= 0x80;  // Convert the Command Byte into a read
 
 	// Clock out data from SPI device with a dummy write to the same device
-	bytesWritten = deviceHandle.Write(&dataPacket[0], 1);
+	//bytesWritten = deviceHandle.Write(&dataPacket[0], 1);
 	if (bytesWritten != 1) {FILE_LOG(logERROR) << "Write SPI command failed";}
 
 
@@ -704,7 +675,7 @@ int FPGA::read_SPI
 }
 
 
-int FPGA::clear_bit(EthernetControl & deviceHandle, const FPGASELECT & fpga, const int & addr, const int & mask)
+int FPGA::clear_bit(EthernetControl & deviceHandle, const int & addr, const int & mask)
 /*
  * Description : Clears Bit in FPGA register
  * Returns : 0
@@ -717,22 +688,13 @@ int FPGA::clear_bit(EthernetControl & deviceHandle, const FPGASELECT & fpga, con
 	int currentState, currentState2;
 	//Use a lambda because we'll need the same call below
 	auto check_cur_state = [&] () {
-		if (fpga != ALL_FPGAS) {
-			currentState = FPGA::read_FPGA(deviceHandle, addr, fpga);
-		} else{ // read the two FPGAs serially
-			currentState = FPGA::read_FPGA(deviceHandle, addr, FPGA1);
-			currentState2 = FPGA::read_FPGA(deviceHandle, addr, FPGA2);
-			if (currentState != currentState2) {
-				// note the mismatch in the log file but continue on using FPGA1's data
-				FILE_LOG(logERROR) << "FPGA::clear_bit: FPGA registers don't match. Addr: " << myhex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
-			}
-		}
+		currentState = FPGA::read_FPGA(deviceHandle, addr);
 	};
 
 	check_cur_state();
 	FILE_LOG(logDEBUG2) << "Addr: " << myhex << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
 
-	FPGA::write_FPGA(deviceHandle, addr, currentState & ~mask, fpga);
+	FPGA::write_FPGA(deviceHandle, addr, currentState & ~mask);
 
 	if (FILELog::ReportingLevel() >= logDEBUG2) {
 		// verify write
@@ -743,7 +705,7 @@ int FPGA::clear_bit(EthernetControl & deviceHandle, const FPGASELECT & fpga, con
 }
 
 
-int FPGA::set_bit(EthernetControl & deviceHandle, const FPGASELECT & fpga, const int & addr, const int & mask)
+int FPGA::set_bit(EthernetControl & deviceHandle, const int & addr, const int & mask)
 /*
  * Description : Sets Bit in FPGA register
  * Returns : 0
@@ -755,22 +717,13 @@ int FPGA::set_bit(EthernetControl & deviceHandle, const FPGASELECT & fpga, const
 	int currentState, currentState2;
 	//Use a lambda because we'll need the same call below
 	auto check_cur_state = [&] () {
-		if (fpga != ALL_FPGAS) {
-			currentState = FPGA::read_FPGA(deviceHandle, addr, fpga);
-		} else{ // read the two FPGAs serially
-			currentState = FPGA::read_FPGA(deviceHandle, addr, FPGA1);
-			currentState2 = FPGA::read_FPGA(deviceHandle, addr, FPGA2);
-			if (currentState != currentState2) {
-				// note the mismatch in the log file but continue on using FPGA1's data
-				FILE_LOG(logERROR) << "FPGA::set_bit: FPGA registers don't match. Addr: " << myhex << addr << " FPGA1: " << currentState << " FPGA2: " << currentState2;
-			}
-		}
+		currentState = FPGA::read_FPGA(deviceHandle, addr);
 	};
 
 	check_cur_state();
 	FILE_LOG(logDEBUG2) << "Addr: " <<  myhex << addr << " Current State: " << currentState << " Mask: " << mask << " Writing: " << (currentState | mask);
 
-	FPGA::write_FPGA(deviceHandle, addr, currentState | mask, fpga);
+	FPGA::write_FPGA(deviceHandle, addr, currentState | mask);
 
 	if (FILELog::ReportingLevel() >= logDEBUG2) {
 		// verify write

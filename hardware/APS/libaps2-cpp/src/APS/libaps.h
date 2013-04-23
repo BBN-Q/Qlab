@@ -88,9 +88,9 @@ EXPORT int save_bulk_state_file();
 EXPORT int read_bulk_state_file();
 
 EXPORT int raw_write(int, int, unsigned char*);
-EXPORT int raw_read(int, int);
-EXPORT int read_register(int, int, int);
-EXPORT int program_FPGA(int, char*, int, int);
+EXPORT int raw_read(int);
+EXPORT int read_register(int, int);
+EXPORT int program_FPGA(int, char*, int);
 
 
 #ifdef __cplusplus

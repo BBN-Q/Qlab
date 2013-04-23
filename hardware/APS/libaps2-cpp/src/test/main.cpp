@@ -5,7 +5,6 @@
 #include <thread>
 #include <string>
 #include <algorithm>
-#include "logger.h"
 
 #include "EthernetControl.h"
 
@@ -34,7 +33,6 @@ int main (int argc, char* argv[])
 {
   cout << "BBN AP2 Test Executable" << endl;
 
-  FILELog::ReportingLevel() = TLogLevel(5);
   set_logging_level(5);
 
   // lookup based on device name
@@ -70,6 +68,10 @@ int main (int argc, char* argv[])
   rc = connect_by_ID(0);
 
   cout << "connect_by_ID(0) returned " << rc << endl;
+
+  rc = initAPS(0, "../dummyBitfile.bit", 0);
+
+  cout << "initAPS(0) returned " << rc << endl;
   
 #if 0
   cout << "Set sample rate " << endl;

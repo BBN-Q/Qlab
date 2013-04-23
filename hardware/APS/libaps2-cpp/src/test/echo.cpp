@@ -6,10 +6,11 @@
 #include <algorithm>
 #include "logger.h"
 
-#include "EthernetControl.h"
-
+#include "DummyAPS.h"
 
 using namespace std;
+
+
 
 // command options functions taken from:
 // http://stackoverflow.com/questions/865668/parse-command-line-arguments
@@ -28,7 +29,6 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
   return std::find(begin, end, option) != end;
 }
 
-
 int main (int argc, char* argv[])
 {
   cout << "BBN AP2 Test Echo Executable" << endl;
@@ -38,9 +38,10 @@ int main (int argc, char* argv[])
   //string dev("\\Device\\NPF_{F47ACE9E-1961-4A8E-BA14-2564E3764BFA}");
   
   // lookup based on description
-  string dev("Intel(R) 82579LM Gigabit Network Connection");
+  //string dev("Intel(R) 82579LM Gigabit Network Connection");
+  string dev("Broadcom NetXtreme 57xx Gigabit Controller");
 
-  EthernetControl::debugAPSEcho(dev);
+  DummyAPS aps = DummyAPS(dev);
   
   return 0;
 }

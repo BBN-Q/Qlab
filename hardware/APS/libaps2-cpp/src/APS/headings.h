@@ -93,7 +93,7 @@ typedef vector<unsigned short> WordVec;
 
 #include "LLBank.h"
 #include "Channel.h"
-#include "BankBouncerThread.h"
+//#include "BankBouncerThread.h"
 #include "APS.h"
 #include "APSRack.h"
 

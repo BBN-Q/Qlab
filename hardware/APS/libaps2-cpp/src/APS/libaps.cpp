@@ -227,16 +227,16 @@ int raw_write(int deviceID, int numBytes, UCHAR* data){
 	return APSRack_.raw_write(deviceID, numBytes, data);
 }
 
-int raw_read(int deviceID, int fpga){
-	return APSRack_.raw_read(deviceID, FPGASELECT(fpga));
+int raw_read(int deviceID){
+	return APSRack_.raw_read(deviceID);
 }
 
-int read_register(int deviceID, int fpga, int addr){
-	return APSRack_.read_register(deviceID, FPGASELECT(fpga), addr);
+int read_register(int deviceID, int addr){
+	return APSRack_.read_register(deviceID, addr);
 }
 
-int program_FPGA(int deviceID, char* bitFile, int chipSelect, int expectedVersion) {
-	return APSRack_.program_FPGA(deviceID, string(bitFile), FPGASELECT(chipSelect), expectedVersion);
+int program_FPGA(int deviceID, char* bitFile, int expectedVersion) {
+	return APSRack_.program_FPGA(deviceID, string(bitFile),  expectedVersion);
 }
 
 EXPORT int set_ethernet_active(char * name, int active) {

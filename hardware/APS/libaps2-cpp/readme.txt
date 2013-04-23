@@ -25,3 +25,8 @@ http://mathieu.carbou.free.fr/wiki/?title=Winpcap_/_Libpcap#Installing_Winpcap_i
 http://www.mail-archive.com/winpcap-users@winpcap.org/msg00750.html
 
 Downloaded winpcap 4.1.3 source see winpcap_4_1_4_mingw_w64.patch
+
+FIREWALL:
+
+A firewall rule must be added to PCs running this software to allow Ethernet frames of 
+type 0xBBAE.

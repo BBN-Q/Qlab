@@ -11,11 +11,15 @@
 #include <iomanip>
 #include <chrono>
 #include <set>
+#include <algorithm>
 
 using std::cout;
 using std::endl;
+using std::min;
 
 #include <ctime>
+#include <cstring>
+#include <cmath>
 
 vector<EthernetControl::EthernetDevInfo>  EthernetControl::pcapDevices_;
 std::set<string> EthernetControl::APSunits_;
@@ -26,11 +30,41 @@ bool EthernetControl::pcapRunning = false;
 EthernetControl::EthernetControl() {
     cout << "New EthernetControl" << endl;
 	// get list of interfaces from pcap
+    seqNum_ = 0;
+    apsHandle_ = 0;
 	get_network_devices();
+}
+
+bool EthernetControl::isvalidMACAddress(string deviceID) {
+    // validates against XX:XX:XX:XX:XX:XX
+    
+    static const int MAC_STR_LEN = 17;
+
+    // test length
+    if (deviceID.length() != MAC_STR_LEN) return false;
+
+    // test characters
+    for(int cnt; cnt < MAC_STR_LEN; cnt++) {
+        if ((cnt + 1)  % 3 == 0 && deviceID[cnt] != ':') {
+            return false;
+        }
+    }
+    return true;
+}
+
+void EthernetControl::parseMACAddress(string macString, uint8_t * macBuffer) {
+    for(int cnt = 0; cnt < MAC_ADDR_LEN; cnt++) {
+        // copy mac address from string
+        sscanf(macString.substr(3*cnt,2).c_str(), "%x", &macBuffer[cnt]);
+    }
 }
 
 EthernetControl::ErrorCodes EthernetControl::connect(string deviceID) {
     FILE_LOG(logDEBUG) << "Connecting to device: " << deviceID;
+
+    if (!isvalidMACAddress(deviceID)) {
+        return INVALID_APS_ID;
+    }
 
     if (APSunits_.find(deviceID) == APSunits_.end()) {
         return INVALID_APS_ID;
@@ -45,20 +79,20 @@ EthernetControl::ErrorCodes EthernetControl::connect(string deviceID) {
 
     set_network_device(APS2device_[deviceID].name);
 
-    // parse string to mac addr
-    int start = 0;
-    for(int cnt = 0; cnt < MAC_ADDR_LEN; cnt++) {
-        apsMac_[cnt] = atoi(deviceID.substr(start,2).c_str());
-        start += 3;
-    }
+    // set apsMAC to device ID
+    parseMACAddress(deviceID, apsMac_);
+
     // build filter
-    filter_ =  getPointToPointFilter(pcapDevice->macAddr, apsMac_);
+    filter_ =  getPointToPointFilter(pcapDevice_->macAddr, apsMac_);
 
-    FILE_LOG(logDEBUG3) << "Using filter " << filter_;
+    FILE_LOG(logDEBUG1) << "Using filter " << filter_;
 
-    apsHandle_ = start_capture(pcapDevice->name, filter_);
+    apsHandle_ = start_capture(pcapDevice_->name, filter_);
 
-    if (!apsHandle_) return INVALID_APS_ID;
+    if (!apsHandle_) {
+         FILE_LOG(logERROR) << "Error starting capture: " << string(pcap_geterr(apsHandle_));
+     return INVALID_APS_ID;
+    }
 
 	return SUCCESS;
 }
@@ -67,20 +101,113 @@ bool isOpen() {
 	return false;
 }
 
-size_t EthernetControl::Write(void * data, size_t length) {
-	return EthernetControl::NOT_IMPLEMENTED;
+size_t EthernetControl::Write(APSCommand & commmand, void * data, size_t length) {
+    static const int MAX_FRAME_LEN = 1500;
+    uint8_t frame[MAX_FRAME_LEN];
+    APSEthernetHeader * bph;
+    
+    FILE_LOG(logDEBUG1) << "Sending Command: " << APS2::printAPSCommand(&(commmand));
+    FILE_LOG(logDEBUG1) << "Sending " << length << " Bytes";
+
+    // build frame
+    std::fill(frame, frame + 1500, 0);    
+    bph = reinterpret_cast< APSEthernetHeader * >(frame);
+    std::copy(apsMac_, apsMac_ + MAC_ADDR_LEN, bph->dest);
+    std::copy(pcapDevice_->macAddr, pcapDevice_->macAddr + MAC_ADDR_LEN,  bph->src);
+
+    bph->frameType = APS_PROTO;
+    bph->command = commmand;
+
+    uint8_t * start = frame;
+    start += sizeof(APSEthernetHeader);
+
+    uint8_t * source = static_cast<uint8_t *>(data);
+
+    size_t bytesRemaining = length;
+    bool sent = false;
+
+    if (!apsHandle_) return INVALID_APS_ID;
+
+    size_t headerLen = sizeof(APSEthernetHeader);
+
+    while (bytesRemaining > 0 || !sent) {
+
+        size_t bytesSend = min(bytesRemaining, MAX_FRAME_LEN - headerLen);
+        
+        if (bytesSend > 0) {
+            // copy data into packet
+            std::copy(source, source + bytesSend, start);
+            source += bytesSend;
+        }
+        bytesRemaining -= bytesSend;
+
+        bytesSend += headerLen;
+
+        ++seqNum_;
+        if (seqNum_ == 0) {
+            seqNum_ = 1;
+        }
+
+        FILE_LOG(logDEBUG1) << "Src: " << print_ethernetAddress(bph->src);
+        FILE_LOG(logDEBUG1) << "Dest: " << print_ethernetAddress(bph->dest);
+        FILE_LOG(logDEBUG1) << "Command: " << APS2::printAPSCommand(&bph->command);
+        FILE_LOG(logDEBUG1) << "bytesSend: " << bytesSend;
+
+        bph->seqNum = seqNum_;
+
+        packetHTON(bph); // swap bytes to network order
+
+        if (pcap_sendpacket(apsHandle_, frame, bytesSend) != 0) {
+            FILE_LOG(logERROR) << "Error sending command: " << string(pcap_geterr(apsHandle_));
+         } 
+         
+         sent = true;      
+    }
+
+	return SUCCESS;
 }
 
-size_t EthernetControl::Read(void * data, size_t packetLength) {
-	return EthernetControl::NOT_IMPLEMENTED;
+size_t EthernetControl::Read(void * data, size_t readLength) {
+    struct pcap_pkthdr *header;
+    const unsigned char *pkt_data;
+
+    int res = pcap_next_ex( apsHandle_, &header, &pkt_data);
+
+    if(res > 0) {
+        // have packet so process
+        APSEthernetHeader * eh = (APSEthernetHeader *) pkt_data;
+
+        packetHTON(eh);
+
+        FILE_LOG(logDEBUG3) << "Src: " << print_ethernetAddress(eh->src);
+        FILE_LOG(logDEBUG3) << " Dest: " << print_ethernetAddress(eh->dest);
+        FILE_LOG(logDEBUG3) << " Command: " << APS2::printAPSCommand(&eh->command);
+
+        size_t payloadLen = header->len - sizeof(APSEthernetHeader);
+        size_t copyLen = eh->command.cnt * sizeof(uint32_t);
+
+        if (payloadLen > copyLen ) {
+            FILE_LOG(logWARNING) << "EthernetControl::Read received larger ethernet frame than expected from command cnt";
+        }
+
+        copyLen = min(copyLen, readLength);
+        copyLen = min(copyLen, payloadLen);
+        
+        uint8_t * start = const_cast<uint8_t *>(pkt_data);
+        start += sizeof(APSEthernetHeader);
+
+        std::copy(start, start + copyLen, static_cast<uint8_t*>(data) );
+    }    
+	return SUCCESS;
 }
 
 EthernetControl::ErrorCodes EthernetControl::set_network_device(string device) {
+    FILE_LOG(logDEBUG1) << "EthernetControl::set_network_device: " << device;
     EthernetDevInfo * di = findDeviceInfo(device);
     if (!di) 
         return INVALID_NETWORK_DEVICE;
-    pcapDevice = di;
-    pcapDevice->isActive = true;
+    pcapDevice_ = di;
+    pcapDevice_->isActive = true;
 }
 
 /*******************************************************************************
@@ -288,7 +415,7 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadc
         bph->command.mode_stat = APS_STATUS_TEMP;
         bph->command.cnt = 0x10;
 
-        FILE_LOG(logDEBUG1) << "Enumerate Packet: " << print_APS_command(&(bph->command));
+        FILE_LOG(logDEBUG1) << "Enumerate Packet: " << APS2::printAPSCommand(&(bph->command));
 
         packetHTON(bph); // swap bytes to network order
         
@@ -322,7 +449,7 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadc
 
                 FILE_LOG(logDEBUG3) << "Src: " << print_ethernetAddress(eh->src);
                 FILE_LOG(logDEBUG3) << " Dest: " << print_ethernetAddress(eh->dest);
-                FILE_LOG(logDEBUG3) << " Command: " << print_APS_command(&eh->command);
+                FILE_LOG(logDEBUG3) << " Command: " << APS2::printAPSCommand(&eh->command);
 
                 string devString = print_ethernetAddress(eh->src);
                 APSunits_.insert(devString);
@@ -432,25 +559,8 @@ EthernetControl::ErrorCodes EthernetControl::applyFilter(pcap_t * capHandle, str
     return SUCCESS;
 }
 
-string EthernetControl::print_APS_command(struct APSCommand * cmd) {
-    ostringstream ret;
-
-    uint32_t * packedCmd;
-
-    packedCmd = reinterpret_cast<uint32_t *>(cmd);
-
-    ret << std::hex << *packedCmd << " =";
-    ret << " ACK: " << cmd->ack;
-    ret << " SEQ: " << cmd->seq;
-    ret << " SEL: " << cmd->sel;
-    ret << " R/W: " << cmd->r_w;
-    ret << " CMD: " << cmd->cmd;
-    ret << " MODE/STAT: " << cmd->mode_stat;
-    ret << " cnt: " << cmd->cnt;
-    return ret.str();
-}
-
-void EthernetControl::debugAPSEcho(string device) {
+#ifdef DEBUGAPS 
+void EthernetControl::debugAPSEcho(string device, DummyAPS * aps) {
     // debug routine to echo APS packets back to sender
     // used for testing of EthernetControl without APS unit
     
@@ -462,6 +572,9 @@ void EthernetControl::debugAPSEcho(string device) {
     int res;
     struct pcap_pkthdr *header;
     const unsigned char *pkt_data;
+
+    size_t sendLength;
+    unsigned char * outbound_pkt;
 
     get_network_devices();
     EthernetDevInfo * di = findDeviceInfo(device);
@@ -488,6 +601,8 @@ void EthernetControl::debugAPSEcho(string device) {
         if(res > 0) {
             // have packet so process
             APSEthernetHeader * eh = (APSEthernetHeader *) pkt_data;
+            APSEthernetHeader * dh = eh;
+
 
             // skip packets where source and dest are the same
             bool same = true;
@@ -499,29 +614,45 @@ void EthernetControl::debugAPSEcho(string device) {
 
             packetHTON(eh); // swap to host
 
-            cout << "Src: " << print_ethernetAddress(eh->src);
-            cout << " Dest: " << print_ethernetAddress(eh->dest);
-            cout << " Command: " << print_APS_command(&(eh->command)) << endl;
+            sendLength =  header->len;
 
-            // set src to dest
-            std::copy(eh->src, eh->src + MAC_ADDR_LEN, eh->dest);
-            // set source
-            std::copy(di->macAddr, di->macAddr + MAC_ADDR_LEN,  eh->src);
+            if (aps)  {
+                outbound_pkt = aps->packetCallback(pkt_data, sendLength); // sendLength should change
+                dh = (APSEthernetHeader *) outbound_pkt;
+            } else {
+                cout << "Src: " << print_ethernetAddress(eh->src);
+                cout << " Dest: " << print_ethernetAddress(eh->dest);
+                cout << " Command: " << APS2::printAPSCommand(&(eh->command)) << endl;
 
-            if (eh->command.cmd == APS_COMMAND_USERIO_ACK || 
-                eh->command.cmd == APS_COMMAND_FPGACONFIG_ACK ) {
-                eh->command.ack = 1;
             }
 
-            packetHTON(eh); // swap to net
-             
-            if (pcap_sendpacket(capHandle, pkt_data, header->len) != 0) {
+            // continue if there is no packet to send back
+            if (sendLength == 0) continue; 
+
+            // copy send length
+            dh->command.cnt = ceil( 1.0 * sendLength / sizeof(uint32_t));
+
+            // set src to dest
+            std::copy(eh->src, eh->src + MAC_ADDR_LEN, dh->dest);
+            // set source
+            std::copy(di->macAddr, di->macAddr + MAC_ADDR_LEN,  dh->src);
+            
+            packetHTON(dh); // swap to net
+            
+            cout << "Send Src: " << print_ethernetAddress(dh->src);
+            cout << " Dest: " << print_ethernetAddress(dh->dest);
+            cout << " Command: " << APS2::printAPSCommand(&(dh->command)) << endl;
+
+            struct APS2::APS_Status_Registers * status = reinterpret_cast<struct APS2::APS_Status_Registers *>(outbound_pkt + sizeof(struct APSEthernetHeader));
+
+            if (pcap_sendpacket(capHandle, outbound_pkt, sendLength) != 0) {
                 FILE_LOG(logERROR) << "Error sending the packet: " << string(pcap_geterr(capHandle));
             } 
         }
     } 
     
 }
+#endif
 
 pcap_t * EthernetControl::start_capture(string & devName, string & filter) {
     pcap_t * capHandle;
