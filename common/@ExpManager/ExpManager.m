@@ -429,6 +429,11 @@ classdef ExpManager < handle
             end
         end
         
+        function clear_sweeps(obj)
+            obj.sweeps = {};
+            obj.sweep_callbacks = {};
+        end
+        
     end
     
     methods (Static)
