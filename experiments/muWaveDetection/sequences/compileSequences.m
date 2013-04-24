@@ -29,13 +29,12 @@ fprintf('Number of sequences: %i\n', numSegments*seqParams.nbrRepeats);
 
 % inject measurement sequences
 measLength = 0;
-pulseParams = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
 for measCh = measChannels
     measCh = measCh{1};
     IQkey = qubitMap.(measCh).IQkey;
     ChParams = params.(IQkey);
     %Override the SSBFreq for constant autodyne phase
-    mFreq = pulseParams.(measCh).SSBFreq;
+    mFreq = params.(measCh).SSBFreq;
     pgM = PatternGen(measCh, 'SSBFreq', 0);    
     % shift the delay to include the measurement length
     params.(IQkey).delay = ChParams.delay + pgM.pulseLength;
