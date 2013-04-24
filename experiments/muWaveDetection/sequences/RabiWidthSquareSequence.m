@@ -5,7 +5,7 @@ function RabiWidthSquareSequence(qubit, widths, makePlot)
 %   widths - pulse widths to scan over e.g. 0:5:250
 
 basename = 'RabiWidth';
-fixedPt = max(widths) + 500;
+fixedPt = max(widths) + 1000;
 nbrRepeats = 1;
 
 pg = PatternGen(qubit);
@@ -19,9 +19,7 @@ seqParams = struct(...
     'suffix', '', ...
     'numSteps', length(widths), ...
     'nbrRepeats', nbrRepeats, ...
-    'fixedPt', fixedPt + getpref('qlab','MeasLength')+100, ...
-    'cycleLength', cycleLength, ...
-    'measLength', getpref('qlab','MeasLength'));
+    'fixedPt', fixedPt);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 

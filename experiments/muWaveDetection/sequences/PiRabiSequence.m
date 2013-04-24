@@ -4,10 +4,12 @@ function PiRabiSequence(controlQ, targetQ, makePlot)
 %   controlQ - control qubit e.g. 'q1'
 %   targetQ - target qubuit, e.g. 'q2'
 %   makePlot - whether to plot a sequence or not (boolean)
+%
+% Example usage:
+% PiRabiSequence('q1', 'q2', false)  
 
 basename = 'PiRabi';
 fixedPt = 4000;
-cycleLength = 8100;
 nbrRepeats = 1;
 
 numsteps = 80;
@@ -17,7 +19,8 @@ pg2 = PatternGen(targetQ);
 pgCR = PatternGen('CR', 'buffer', 0);
 
 minWidth = 64;
-stepsize = 32;
+% stepsize = 32;
+stepsize = 8;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 % pulseLength = 160;
 % angle = linspace(0, pi, numsteps);
@@ -76,9 +79,7 @@ seqParams = struct(...
     'suffix', '', ...
     'numSteps', numsteps, ...
     'nbrRepeats', nbrRepeats, ...
-    'fixedPt', fixedPt, ...
-    'cycleLength', cycleLength, ...
-    'measLength', 4000);
+    'fixedPt', fixedPt);
 patternDict = containers.Map();
 if ~isempty(calSeq1), calSeq1 = {calSeq1}; end
 if ~isempty(calSeq2), calSeq2 = {calSeq2}; end
