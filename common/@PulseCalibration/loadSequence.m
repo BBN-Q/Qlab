@@ -21,7 +21,7 @@ function loadSequence(obj, paths, numRepeats)
     for ct = 1:length(awgNames)
         params = obj.AWGSettings.(awgNames{ct});
         params.seqFile = paths{ct};
-        params.seqforce = 1;
+        params.seqForce = 1;
         params.miniLLRepeat = numRepeats-1;
         obj.AWGs.(awgNames{ct}).setAll(params);
     end

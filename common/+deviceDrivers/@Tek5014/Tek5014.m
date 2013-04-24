@@ -133,19 +133,19 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
 		% instrument meta-setter
 		function setAll(obj, settings)
 			% load AWG file before doing anything else
-			if isfield(settings, 'seqfile')
-				if ~isfield(settings, 'seqforce')
-					settings.seqforce = false;
+			if isfield(settings, 'seqFile')
+				if ~isfield(settings, 'seqForce')
+					settings.seqForce = false;
 				end
 				
 				% load an AWG file if the settings file is changed or if force == true
-				if (~strcmp(obj.getSetupFileName(), settings.seqfile) || settings.seqforce)
-					obj.openConfig(settings.seqfile);
+				if (~strcmp(obj.getSetupFileName(), settings.seqFile) || settings.seqForce)
+					obj.openConfig(settings.seqFile);
                     obj.operationComplete(); % wait until we're done with the load to continue
 				end
 			end
-			settings = rmfield(settings, 'seqfile');
-			settings = rmfield(settings, 'seqforce');
+			settings = rmfield(settings, 'seqFile');
+			settings = rmfield(settings, 'seqForce');
 			
 			fields = fieldnames(settings);
 			for j = 1:length(fields);
@@ -630,7 +630,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
             end
 		end
 		function obj = set.triggerSource(obj, value)
-			check_val = value;
+			check_val = lower(value);
             optionString = 'Source';
 	        checkMapObj = containers.Map({...
 	            'internal','external',...
