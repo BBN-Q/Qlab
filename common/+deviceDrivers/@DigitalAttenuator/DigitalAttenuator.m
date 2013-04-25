@@ -31,6 +31,28 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
             % Initialize Super class
             obj = obj@deviceDrivers.lib.Serial();
         end
+
+        function setAll(obj, settings)
+            channels = {1,2,3};
+            for ch = channels
+                name = ['ch' num2str(ch{1}) 'Attenuation'];
+                if isfield(settings, name)
+                    obj.setAttenuation(1, settings.(name));
+                    settings = rmfield(settings, name);
+                end
+            end
+
+            fields = fieldnames(settings);
+            for j = 1:length(fields);
+                name = fields{j};
+                if ismember(name, methods(obj))
+                    args = eval(settings.(name));
+                    feval(name, obj, args{:});
+                elseif ismember(name, properties(obj))
+                    obj.(name) = settings.(name);
+                end
+            end
+        end
         
         function out = readUntilEND(obj)
             % readUntilEND
