@@ -37,7 +37,7 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
             for ch = channels
                 name = ['ch' num2str(ch{1}) 'Attenuation'];
                 if isfield(settings, name)
-                    obj.setAttenuation(1, settings.(name));
+                    obj.setAttenuation(ch{1}, settings.(name));
                     settings = rmfield(settings, name);
                 end
             end
