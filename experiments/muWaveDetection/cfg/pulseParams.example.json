@@ -122,9 +122,19 @@
 		"delayDiff": 104
 	},
     "M1": {
-        "channelType": "logical"
+		"channelType": "logical",
+		"SSBFreq": 10000000,
+		"pulseLength": 4000,
+		"piAmp": 4000,
+		"pulseType": "tanh",
+		"sigma": 1
     },
     "M2": {
-        "channelType": "logical"
+		"channelType": "logical",
+		"SSBFreq": 10000000,
+		"pulseLength": 4000,
+		"piAmp": 4000,
+		"pulseType": "tanh",
+		"sigma": 1
     }
 }
