@@ -371,7 +371,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %If the trigger channel is external then we also need to setup
             %that channel
             couplingMap = containers.Map({'AC','DC'}, {1, 2});
-            if(strcmp(trigSettings.triggerSource, 'Ext'))
+            if(strcmpi(trigSettings.triggerSource, 'Ext'))
                 %We can only choose 5V range and triggerLevel comes
                 %in mV
                 extTrigLevel = obj.defs('ETR_5V');
@@ -394,10 +394,10 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %Set the rest of the trigger parameters
             %We'll default to trigger engine J and single condition for
             %now
-            triggerSourceMap = containers.Map({'A', 'B', 'Ext'}, {0, 1, 2});
+            triggerSourceMap = containers.Map({'A', 'B', 'EXT'}, {0, 1, 2});
             triggerSlopeMap = containers.Map({'rising', 'falling'}, {1, 2});
             obj.call_API('AlazarSetTriggerOperation', obj.boardHandle, obj.defs('TRIG_ENGINE_OP_J'), obj.defs('TRIG_ENGINE_J'),...
-                        triggerSourceMap(trigSettings.triggerSource), triggerSlopeMap(trigSettings.triggerSlope), trigLevelCode, ...
+                        triggerSourceMap(upper(trigSettings.triggerSource)), triggerSlopeMap(trigSettings.triggerSlope), trigLevelCode, ...
                         obj.defs('TRIG_ENGINE_K'), obj.defs('TRIG_DISABLE'), obj.defs('TRIGGER_SLOPE_POSITIVE'), 128);
             
             %We'll wait forever for a trigger
