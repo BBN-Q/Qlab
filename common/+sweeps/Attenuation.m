@@ -26,7 +26,7 @@ classdef Attenuation < sweeps.Sweep
 			obj.label = 'Attenuation';
 			
             % look for an instrument with the name 'Instr'
-            obj.Instr = Instr.(sweepParams.Instr);
+            obj.Instr = Instr.(sweepParams.instr);
             obj.channel = sweepParams.channel;
 			
 			% generate power points
