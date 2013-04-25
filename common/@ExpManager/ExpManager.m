@@ -420,12 +420,21 @@ classdef ExpManager < handle
             obj.measurements.(name) = meas;
         end
         
-        function add_sweep(obj, sweep, callback)
-            obj.sweeps{end+1} = sweep;
+        function add_sweep(obj, order, sweep, callback)
+            % order = 1-indexed position to insert the sweep in the list of sweeps
+            % sweep = a sweep object
+            % callback = a method to call after each sweep.step()
+            if length(obj.sweeps) < order - 1
+                for ct=1:order
+                    obj.sweeps{ct} = [];
+                    obj.sweep_callbacks{ct} = [];
+                end
+            end
+            obj.sweeps{order} = sweep;
             if exist('callback', 'var')
-                obj.sweep_callbacks{end+1} = callback;
+                obj.sweep_callbacks{order} = callback;
             else
-                obj.sweep_callbacks{end+1} = [];
+                obj.sweep_callbacks{order} = [];
             end
         end
         
