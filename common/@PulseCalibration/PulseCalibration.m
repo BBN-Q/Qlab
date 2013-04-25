@@ -118,7 +118,7 @@ classdef PulseCalibration < handle
             end
             
             % create a generic SegmentNum sweep
-            add_sweep(obj.experiment, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 2)));
+            add_sweep(obj.experiment, 1, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 2)));
             
             % add measurement M1
             import MeasFilters.*

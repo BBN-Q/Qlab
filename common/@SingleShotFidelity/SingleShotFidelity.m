@@ -68,14 +68,16 @@ classdef SingleShotFidelity < handle
             
             %Add the instrument sweeps
             sweepSettings = settings.sweeps;
-            for sweep = fieldnames(sweepSettings)'
-                add_sweep(obj.experiment, SweepFactory(sweepSettings.(sweep{1}), obj.experiment.instruments));
+            sweepNames = fieldnames(sweepSettings);
+            for sweepct = 1:length(sweepNames)
+                add_sweep(obj.experiment, sweepct, SweepFactory(sweepSettings.(sweepNames{sweepct}), obj.experiment.instruments));
             end
+            if isempty(sweepct), sweepct = 0; end
 
             % create a generic SegmentNum sweep
             %Even though there really is two segments there only one data
             %point (SS fidelity) being returned at each step.
-            add_sweep(obj.experiment, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 1)));
+            add_sweep(obj.experiment, sweepct+1, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 1)));
             
             % add single-shot measurement filter
             import MeasFilters.*
