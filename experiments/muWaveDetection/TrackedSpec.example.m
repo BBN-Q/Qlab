@@ -27,10 +27,6 @@ for instrument = fieldnames(instrSettings)'
     add_instrument(exp, instrument{1}, instr, instrSettings.(instrument{1}));
 end
 
-% for sweep = fieldnames(sweepSettings)'
-%     add_sweep(exp, SweepFactory(sweepSettings.(sweep{1}), exp.instruments));
-% end
-
 cavitySweepSettings = struct(...
     'genID', 'Source5',...
     'start', 8.048,...
@@ -38,8 +34,8 @@ cavitySweepSettings = struct(...
     'step', 0.0001,...
     'offset', -0.0008);
 
-add_sweep(exp, SweepFactory(sweepSettings.DC, exp.instruments), rebias_cavity_callback(cavitySweepSettings));
-add_sweep(exp, SweepFactory(sweepSettings.Frequency, exp.instruments));
+add_sweep(exp, 1, SweepFactory(sweepSettings.DC, exp.instruments), rebias_cavity_callback(cavitySweepSettings));
+add_sweep(exp, 2, SweepFactory(sweepSettings.Frequency, exp.instruments));
 
 dh1 = DigitalHomodyne(measSettings.M1);
 add_measurement(exp, 'M1', dh1);
@@ -77,7 +73,6 @@ function fcn = rebias_cavity_callback(settings)
         peak_freq = freqPts( find(abs(data) == max(abs(data)), 1) );
         fprintf('Found cavity frequency: %f GHz\n', peak_freq);
         exp.instruments.(genID).frequency = peak_freq + offset;
-%         exp.instruments.(genID).frequency = 8.0505;
     end
 
     fcn = @rebias_cavity;
