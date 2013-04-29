@@ -101,7 +101,7 @@ bool isOpen() {
 	return false;
 }
 
-size_t EthernetControl::Write(APSCommand & commmand, void * data, size_t length) {
+size_t EthernetControl::Write(APSCommand & commmand, uint32_t addr, void * data, size_t length) {
     static const int MAX_FRAME_LEN = 1500;
     uint8_t frame[MAX_FRAME_LEN];
     APSEthernetHeader * bph;
@@ -117,6 +117,7 @@ size_t EthernetControl::Write(APSCommand & commmand, void * data, size_t length)
 
     bph->frameType = APS_PROTO;
     bph->command = commmand;
+    bph->addr = addr;
 
     uint8_t * start = frame;
     start += sizeof(APSEthernetHeader);
@@ -167,27 +168,31 @@ size_t EthernetControl::Write(APSCommand & commmand, void * data, size_t length)
 	return SUCCESS;
 }
 
-size_t EthernetControl::Read(void * data, size_t readLength) {
+size_t EthernetControl::Read(void * data, size_t readLength, APSCommand * command) {
     struct pcap_pkthdr *header;
     const unsigned char *pkt_data;
 
-    int res = pcap_next_ex( apsHandle_, &header, &pkt_data);
+    if (!apsHandle_) return INVALID_APS_ID;
 
+    int res = pcap_next_ex( apsHandle_, &header, &pkt_data);
+    
     if(res > 0) {
         // have packet so process
         APSEthernetHeader * eh = (APSEthernetHeader *) pkt_data;
 
         packetHTON(eh);
 
-        FILE_LOG(logDEBUG3) << "Src: " << print_ethernetAddress(eh->src);
-        FILE_LOG(logDEBUG3) << " Dest: " << print_ethernetAddress(eh->dest);
-        FILE_LOG(logDEBUG3) << " Command: " << APS2::printAPSCommand(&eh->command);
+        FILE_LOG(logDEBUG) << "Read Frame: ";
+        FILE_LOG(logDEBUG1) << "Src: " << print_ethernetAddress(eh->src);
+        FILE_LOG(logDEBUG1) << "Dest: " << print_ethernetAddress(eh->dest);
+        FILE_LOG(logDEBUG1) << "Command: " << APS2::printAPSCommand(&eh->command);
 
         size_t payloadLen = header->len - sizeof(APSEthernetHeader);
         size_t copyLen = eh->command.cnt * sizeof(uint32_t);
 
-        if (payloadLen > copyLen ) {
+        if (payloadLen > copyLen && payloadLen > MIN_PAYLOAD_LEN) {
             FILE_LOG(logWARNING) << "EthernetControl::Read received larger ethernet frame than expected from command cnt";
+            FILE_LOG(logWARNING) << "payloadLen = " << payloadLen << " copyLen = " << copyLen;
         }
 
         copyLen = min(copyLen, readLength);
@@ -196,9 +201,15 @@ size_t EthernetControl::Read(void * data, size_t readLength) {
         uint8_t * start = const_cast<uint8_t *>(pkt_data);
         start += sizeof(APSEthernetHeader);
 
+        // if APS command exists copy out for caller
+        if (command) {
+            *command = eh->command;
+        }
+
         std::copy(start, start + copyLen, static_cast<uint8_t*>(data) );
-    }    
-	return SUCCESS;
+        return SUCCESS;
+    }
+	return TIMEOUT;
 }
 
 EthernetControl::ErrorCodes EthernetControl::set_network_device(string device) {
@@ -637,13 +648,14 @@ void EthernetControl::debugAPSEcho(string device, DummyAPS * aps) {
             // set source
             std::copy(di->macAddr, di->macAddr + MAC_ADDR_LEN,  dh->src);
             
-            packetHTON(dh); // swap to net
-            
             cout << "Send Src: " << print_ethernetAddress(dh->src);
             cout << " Dest: " << print_ethernetAddress(dh->dest);
+            cout << " Len: " << sendLength;
             cout << " Command: " << APS2::printAPSCommand(&(dh->command)) << endl;
 
-            struct APS2::APS_Status_Registers * status = reinterpret_cast<struct APS2::APS_Status_Registers *>(outbound_pkt + sizeof(struct APSEthernetHeader));
+            dh->frameType = APS_PROTO;
+
+            packetHTON(dh); // swap to net
 
             if (pcap_sendpacket(capHandle, outbound_pkt, sendLength) != 0) {
                 FILE_LOG(logERROR) << "Error sending the packet: " << string(pcap_geterr(capHandle));
@@ -677,5 +689,86 @@ pcap_t * EthernetControl::start_capture(string & devName, string & filter) {
     return capHandle;   
 }
 
+size_t EthernetControl::program_FPGA(vector<UCHAR> fileData, uint32_t addr) {
 
+    UCHAR buffer[MAX_PAYLOAD_LEN];
+
+    APSCommand command;
+    APSCommand response;
+
+    FILE_LOG(logDEBUG) << "program_FPGA: " << fileData.size() << " Bytes @ " << addr;
+
+    const size_t max_fpga_payload_len = MAX_PAYLOAD_LEN - sizeof(uint32_t);
+
+    // determine number of frames based on max packet length
+    // extra uint32_t for offset
+    size_t numFrames = fileData.size();
+    numFrames = ceil(1.0 * numFrames / max_fpga_payload_len);
+
+    size_t dataOffset = 0;
+    size_t dataRemaining = fileData.size();
+    size_t copyCount;
+    size_t copyIdx = 0;
+
+
+
+    for (int frameCnt = 0; frameCnt < numFrames; frameCnt++) {
+
+        // build APS Command
+        zeroAPSCommand(&command);
+        command.cmd = APS_COMMAND_FPGACONFIG_NACK;
+        command.mode_stat = 0;
+
+        copyCount = min(dataRemaining, static_cast<size_t>(MAX_PAYLOAD_LEN));
+        command.cnt = copyCount / sizeof(uint32_t); // set equal to number of words to be written
+        for (int copyIdx = 0; copyIdx < copyCount; copyIdx++)
+            buffer[copyIdx] = fileData[dataOffset++];
+
+        FILE_LOG(logDEBUG) << "Writing frame " << frameCnt << "/" << numFrames;
+
+        Write(command, addr, buffer, copyCount);
+
+        dataRemaining -= copyCount;
+        addr += copyCount / sizeof(uint32_t);
+
+        // wait for ack
+        if (command.cmd == APS_COMMAND_FPGACONFIG_ACK) {
+            FILE_LOG(logDEBUG) << "Wait for ACK";
+            Read(nullptr, 0, &response);
+            FILE_LOG(logDEBUG) << "RECV ACK " << APS2::printAPSCommand(&(response));
+            if (!response.ack) {
+                FILE_LOG(logERROR) << "APS FPGA Write command acknowlege expected";
+            } else {
+
+            }
+            if (response.mode_stat == 0x1) {
+                FILE_LOG(logERROR) << "APS FPGA Write: Invalid CNT";  
+            }
+            if (response.mode_stat == 0x2) {
+                FILE_LOG(logERROR) << "APS FPGA Write: Invalid starting offset";  
+            }
+
+        }
+
+    }
+    return SUCCESS;
+}
+
+EthernetControl::ErrorCodes EthernetControl::select_FPGA_image(uint32_t addr) {
+
+    FILE_LOG(logDEBUG) << "select_fpga_image addr = " << addr;
+
+    APSCommand command;
+    zeroAPSCommand(&command);
+    command.cmd = APS_COMMAND_FPGACONFIG_CTRL;
+    Write(command, addr);
+
+    // wait for reset acknowlege 
+    struct APS_Status_Registers statusRegs;
+    int retries = 0;
+    int response = TIMEOUT;
+    while (retries < 5 && response != SUCCESS) {
+        response = Read(&statusRegs, sizeof(struct APS_Status_Registers));
+    }
+}
 

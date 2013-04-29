@@ -40,7 +40,7 @@ string APS2::printAPSCommand(APSCommand * cmd) {
     ret << " R/W: " << cmd->r_w;
     ret << " CMD: " << cmd->cmd;
     ret << " MODE/STAT: " << cmd->mode_stat;
-    ret << " cnt: " << cmd->cnt;
+    ret << std::dec << " cnt: " << cmd->cnt;
     return ret.str();
 }
 

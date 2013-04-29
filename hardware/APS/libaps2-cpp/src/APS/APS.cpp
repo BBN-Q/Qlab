@@ -101,9 +101,11 @@ int APS::init(const string & bitFile, const bool & forceReload){
 
 		FILE_LOG(logDEBUG1) << 	APS2::printStatusRegisters(statusRegs);
 
-		/*
+		
 		//Program the bitfile to both FPGA's
 		program_FPGA(bitFile, FIRMWARE_VERSION);
+
+		/*
 		//Reset all state machines
 		reset();
 
@@ -170,9 +172,11 @@ int APS::program_FPGA(const string & bitFile, const int & expectedVersion) {
 	FILE_LOG(logDEBUG) << "Read " << numBytes << " bytes from bitfile";
 
 	//Pass of the data to a lower-level function to actually push it to the FPGA
-	int bytesProgrammed = FPGA::program_FPGA(handle_, fileData);
+	int bytesProgrammed = handle_.program_FPGA(fileData);
 
-	if (bytesProgrammed > 0 && expectedVersion != -1) {
+	handle_.select_FPGA_image();
+
+	if (bytesProgrammed == EthernetControl::SUCCESS && expectedVersion != -1) {
 		// Read Bit File Version
 		int version;
 		bool ok = false;

@@ -37,7 +37,8 @@ public:
     	NOT_IMPLEMENTED = -1,
     	INVALID_NETWORK_DEVICE = -2,
     	INVALID_PCAP_FILTER = -3,
-    	INVALID_APS_ID = -4
+    	INVALID_APS_ID = -4,
+    	TIMEOUT = -5
 	};
 
 	typedef void (*DebugPacketCallback)(const void * data, unsigned int length);  
@@ -45,6 +46,9 @@ public:
 	static const unsigned int MAC_ADDR_LEN = 6;
 	
 	static const uint16_t APS_PROTO = 0xBBAE;
+
+	static const uint16_t MAX_PAYLOAD_LEN = 1468;
+	static const uint16_t MIN_PAYLOAD_LEN = 36;
 
 	struct EthernetDevInfo {
 		string name;          // device name as set by winpcap
@@ -63,9 +67,13 @@ public:
 
 	ErrorCodes set_network_device(string description);
 
-	size_t Write(APSCommand & command) { Write(command, 0, 0);}
-	size_t Write(APSCommand & command, void * data, size_t length);
-	size_t Read(void * data, size_t packetLength);
+	size_t Write(APSCommand & command) { Write(command, 0, 0, 0);}
+	size_t Write(APSCommand & command, uint32_t addr) { Write(command, addr, 0, 0);}
+	size_t Write(APSCommand & command, uint32_t addr,  void * data, size_t length);
+	size_t Read(void * data, size_t packetLength, APSCommand * command = nullptr);
+
+	size_t program_FPGA(vector<UCHAR> fileData, uint32_t addr = 0);
+	ErrorCodes   select_FPGA_image(uint32_t addr = 0);
 
 	bool isOpen();
 	static bool isOpen(int deviceID);
@@ -94,7 +102,7 @@ private:
 
 	uint16_t seqNum_;
 
-	static const unsigned int pcapTimeoutMS = 500;
+	static const unsigned int pcapTimeoutMS = 1000;
 
 	static EthernetDevInfo * findDeviceInfo(string device);
 	static void getMacAddr(struct EthernetDevInfo & devInfo) ;

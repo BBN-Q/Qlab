@@ -41,6 +41,9 @@ private:
 
 	unsigned int uptime();
 
+	size_t recv_fpga_file(const void * data,  size_t & length);
+	size_t select_fpga_program();
+
 };
 
 #endif
