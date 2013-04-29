@@ -1,4 +1,4 @@
-function rhoSDP = QST_SDP(expResults, varMat, measPulseMap, measOpMap, measPulseUs, measOps, n)
+function rhoSDP = QST_SDP_uncorrelated(expResults, varMat, measPulseMap, measOpMap, measPulseUs, measOps, n)
 
 %Function to perform constrained SDP optimization of a physical density matrix
 %consitent with the data.
@@ -28,14 +28,15 @@ fprintf('SDP optimizing...')
 yalmip('clear');
 rhoSDP = sdpvar(2^n, 2^n, 'hermitian', 'complex');
 
-residuals = predictorMat*rhoSDP(:) - expResults;
-t = sdpvar(1);
-Z = [t, residuals'; residuals, varMat];
+invVarMat = inv(varMat);
+invVarMat = real(sqrtm(real(sqrtm(invVarMat'*invVarMat))));
+
+residuals = invVarMat*predictorMat*rhoSDP(:) - invVarMat*expResults;
 % Constrain the density matrix to be positive semi-definite, trace 1
-constraint = [rhoSDP >= 0, trace(rhoSDP)==1, Z >=0];
+constraint = [rhoSDP >= 0, trace(rhoSDP)==1];
 
 %We want to minimize the difference between predicted results and experimental results
-solvesdp(constraint, t, sdpsettings('verbose',false));
+solvesdp(constraint, norm(residuals,2), sdpsettings('verbose',false));
 fprintf('Done\n')
 
 % Extract the matrix values from the result

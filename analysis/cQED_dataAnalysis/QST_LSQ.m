@@ -1,7 +1,6 @@
-function rhoSDP = QST_SDP(expResults, varMat, measPulseMap, measOpMap, measPulseUs, measOps, n)
+function rhoLSQ = QST_LSQ(expResults, varMat, measPulseMap, measOpMap, measPulseUs, measOps, n)
 
-%Function to perform constrained SDP optimization of a physical density matrix
-%consitent with the data.
+%Function to perform least-squares inversion of state tomography data
 %
 % expResults : structure array (length total number of experiments)
 %   each structure containts fields data, measPulse, measOperator
@@ -22,21 +21,8 @@ for expct = 1:length(expResults)
 end
 fprintf('Done!\n.')
 
-fprintf('SDP optimizing...')
+invVarMat = inverse(varMat);
 
-%Setup the SDP program
-yalmip('clear');
-rhoSDP = sdpvar(2^n, 2^n, 'hermitian', 'complex');
+rhoLSQ = (predictorMat'*invVarMat*predictorMat) \ predictorMat'*invVarMat*expResults;
 
-residuals = predictorMat*rhoSDP(:) - expResults;
-t = sdpvar(1);
-Z = [t, residuals'; residuals, varMat];
-% Constrain the density matrix to be positive semi-definite, trace 1
-constraint = [rhoSDP >= 0, trace(rhoSDP)==1, Z >=0];
-
-%We want to minimize the difference between predicted results and experimental results
-solvesdp(constraint, t, sdpsettings('verbose',false));
-fprintf('Done\n')
-
-% Extract the matrix values from the result
-rhoSDP = double(rhoSDP);
+rhoLSQ = reshape(rhoLSQ, 2^n, 2^n);
