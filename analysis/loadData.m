@@ -40,6 +40,15 @@ function data = loadData(makePlot, fullpath)
             data.zpoints{ii} = h5read(fullpath, ['/DataSet' num2str(ii) '/zpoints']);
             data.zlabel{ii} = h5readatt(fullpath, ['/DataSet' num2str(ii) '/zpoints'], 'label');
         end
+        
+        %Check for variance data
+        groupInfo = info.Groups(ii);
+        if any(strcmp('realvar', {groupInfo.Datasets.Name}))
+            data.realvar{ii} = h5read(fullpath, ['/DataSet' num2str(ii) '/realvar']);
+            data.imagvar{ii} = h5read(fullpath, ['/DataSet' num2str(ii) '/imagvar']);
+            data.prodvar{ii} = h5read(fullpath, ['/DataSet' num2str(ii) '/prodvar']);
+        end
+        
     end
     
     
@@ -68,18 +77,18 @@ function data = loadData(makePlot, fullpath)
                     title(sanitized_filedname);
                 case 2
                     h1 = figure();
-                    imagesc(data.xpoints{ii}(1:size(data.absData{ii},2)),data.ypoints{ii}(1:size(data.absData{ii},1)),data.absData{ii})
-                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel{ii}]);
-                    ylabel(['\fontname{Times}\fontsize{14}' data.ylabel{ii}]);
-                    set(gca,'FontSize',12)
-                    title(sanitized_filedname);
-
-                    h2 = figure();
-                    imagesc(data.xpoints{ii}(1:size(data.phaseData{ii},2)),data.ypoints{ii}(1:size(data.phaseData{ii},1)),data.phaseData{ii})
-                    xlabel(['\fontname{Times}\fontsize{14}' data.xlabel{ii}]);
-                    ylabel(['\fontname{Times}\fontsize{14}' data.ylabel{ii}]);
-                    set(gca,'FontSize',12)
-                    title(sanitized_filedname);
+%                     imagesc(data.xpoints{ii}(1:size(data.absData{ii},2)),data.ypoints{ii}(1:size(data.absData{ii},1)),data.absData{ii})
+%                     xlabel(['\fontname{Times}\fontsize{14}' data.xlabel{ii}]);
+%                     ylabel(['\fontname{Times}\fontsize{14}' data.ylabel{ii}]);
+%                     set(gca,'FontSize',12)
+%                     title(sanitized_filedname);
+% 
+%                     h2 = figure();
+%                     imagesc(data.xpoints{ii}(1:size(data.phaseData{ii},2)),data.ypoints{ii}(1:size(data.phaseData{ii},1)),data.phaseData{ii})
+%                     xlabel(['\fontname{Times}\fontsize{14}' data.xlabel{ii}]);
+%                     ylabel(['\fontname{Times}\fontsize{14}' data.ylabel{ii}]);
+%                     set(gca,'FontSize',12)
+%                     title(sanitized_filedname);
                 otherwise
                     fprintf('Cannot plot for dimension = %d\n', data.dimension{ii});
             end
@@ -98,6 +107,12 @@ function data = loadData(makePlot, fullpath)
         if isfield(data, 'zpoints')
             data.zpoints = data.zpoints{1};
         end
+        if isfield(data, 'realvar')
+            data.realvar = data.realvar{1};
+            data.imagvar = data.imagvar{1};
+            data.prodvar = data.prodvar{1};
+        end
+            
     end
 
     % helper function to find the nth parent of directory given in 'path'
