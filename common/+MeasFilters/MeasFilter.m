@@ -25,7 +25,9 @@ classdef MeasFilter < handle
         channel
         latestData
         accumulatedData
+        accumulatedVar
         avgct = 0
+        varct = 0
         childFilter
         plotScope = false
         scopeHandle
@@ -73,19 +75,41 @@ classdef MeasFilter < handle
             % robins
             if ndims(obj.latestData) == 4
                 tmpData = squeeze(mean(mean(obj.latestData, 4), 2));
+                tmpVar = struct();
+                tmpVar.real = squeeze(sum(sum(real(obj.latestData).^2, 4), 2));
+                tmpVar.imag = squeeze(sum(sum(imag(obj.latestData).^2, 4), 2));
+                tmpVar.prod = squeeze(sum(sum(real(obj.latestData).*imag(obj.latestData), 4), 2));
+                obj.varct = obj.varct + size(obj.latestData,2)*size(obj.latestData,4);
             else
                 tmpData = obj.latestData;
+                tmpVar = [];
             end
+            
             if isempty(obj.accumulatedData)
                 obj.accumulatedData = tmpData;
+                obj.accumulatedVar = tmpVar;
             else
                 obj.accumulatedData = obj.accumulatedData + tmpData;
+                if ndims(obj.latestData) == 4
+                    obj.accumulatedVar.real = obj.accumulatedVar.real + tmpVar.real;
+                    obj.accumulatedVar.imag = obj.accumulatedVar.real + tmpVar.imag;
+                    obj.accumulatedVar.prod = obj.accumulatedVar.real + tmpVar.prod;
+                end
             end
             obj.avgct = obj.avgct + 1;
         end
         
         function out = get_data(obj)
             out = obj.accumulatedData / obj.avgct;
+        end
+        
+        function out = get_var(obj)
+           out = struct();
+           if ~isempty(obj.accumulatedVar)
+               out.realvar = (obj.accumulatedVar.real - real(get_data(obj)).^2)/(obj.varct-1);
+               out.imagvar = (obj.accumulatedVar.imag - imag(get_data(obj)).^2)/(obj.varct-1);
+               out.prodvar = (obj.accumulatedVar.prod - real(get_data(obj)).*imag(get_data(obj)))/(obj.varct-1);
+           end
         end
         
         function plot_scope(obj, data)

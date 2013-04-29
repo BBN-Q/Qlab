@@ -53,6 +53,7 @@ classdef ExpManager < handle
         listeners = {}
         plotScopeTimer
         CWMode = false
+        saveVariances = false
     end
     
     methods
@@ -133,7 +134,7 @@ classdef ExpManager < handle
                     dataInfos{ct}.name = measNames{ct};
                 end
                 %Open data file
-                obj.dataFileHandler.open(header, dataInfos);
+                obj.dataFileHandler.open(header, dataInfos, obj.saveVariances);
             end
             
         end
@@ -160,7 +161,8 @@ classdef ExpManager < handle
                 sizes = [sizes 1];
             end
             % initialize data storage
-            obj.data = structfun(@(x) nan(sizes), obj.measurements, 'UniformOutput', false);
+            obj.data = structfun(@(x) struct('mean', nan(sizes), 'realvar', nan(sizes), 'imagvar', nan(sizes), 'prodvar', nan(sizes)),...
+                obj.measurements, 'UniformOutput', false);
             
             % generic nested loop sweeper through "stack"
             while idx > 0 && ct(1) <= stops(1)
@@ -191,6 +193,7 @@ classdef ExpManager < handle
                         obj.take_data();
                         % pull data out of measurements
                         stepData = structfun(@(m) m.get_data(), obj.measurements, 'UniformOutput', false);
+                        stepVar = structfun(@(m) m.get_var(), obj.measurements, 'UniformOutput', false);
                         for measName = fieldnames(stepData)'
                             if isa(obj.sweeps{end}, 'sweeps.SegmentNum')
                                 % we are sweeping segment number, so we
@@ -200,16 +203,21 @@ classdef ExpManager < handle
                                 % lacking an idiomatic way to build the generic
                                 % assignment, we manually call subsasgn
                                 indexer = struct('type', '()', 'subs', {[num2cell(ct(1:end-1)), ':']});
-                                obj.data.(measName{1}) = subsasgn(obj.data.(measName{1}), indexer, stepData.(measName{1}));
+                                obj.data.(measName{1}).mean = subsasgn(obj.data.(measName{1}).mean, indexer, stepData.(measName{1}));
+                                if obj.saveVariances
+                                    obj.data.(measName{1}).realvar = subsasgn(obj.data.(measName{1}).realvar, indexer, stepVar.(measName{1}).realvar);
+                                    obj.data.(measName{1}).imagvar = subsasgn(obj.data.(measName{1}).imagvar, indexer, stepVar.(measName{1}).imagvar);
+                                    obj.data.(measName{1}).prodvar = subsasgn(obj.data.(measName{1}).prodvar, indexer, stepVar.(measName{1}).prodvar);
+                                end
                             else
                                 % we have a single point
                                 indexer = struct('type', '()', 'subs', {num2cell(ct)});
-                                obj.data.(measName{1}) = subsasgn(obj.data.(measName{1}), indexer, stepData.(measName{1}));
+                                obj.data.(measName{1}).mean = subsasgn(obj.data.(measName{1}).mean, indexer, stepData.(measName{1}));
                             end
                         end
                         plotResetFlag = all(ct == 1);
                         obj.plot_data(plotResetFlag);
-                        obj.save_data(stepData);
+                        obj.save_data(stepData, stepVar);
                     end
                 else
                     %We've rolled over so reset this sweeps counter and
@@ -255,7 +263,7 @@ classdef ExpManager < handle
             end
             
             %Wait for data taking to finish
-            obj.scopes{1}.wait_for_acquisition(1000);
+            obj.scopes{1}.wait_for_acquisition(10000);
             
             if(~obj.CWMode)
                 %Stop all the AWGs
@@ -271,7 +279,7 @@ classdef ExpManager < handle
             structfun(@(m) apply(m, measData), obj.measurements, 'UniformOutput', false);
         end
         
-        function save_data(obj, stepData)
+        function save_data(obj, stepData, stepVar)
             if isempty(obj.dataFileHandler) || obj.dataFileHandler.fileOpen == 0
                 return
             end
@@ -279,6 +287,9 @@ classdef ExpManager < handle
             for ct = 1:length(measNames)
                 measData = squeeze(stepData.(measNames{ct}));
                 obj.dataFileHandler.write(measData, ct);
+                if obj.saveVariances
+                    obj.dataFileHandler.writevar(stepVar.(measNames{ct}), ct);
+                end
             end
         end
         
@@ -296,7 +307,7 @@ classdef ExpManager < handle
             end
             
             for measName = fieldnames(obj.data)'
-                measData = squeeze(obj.data.(measName{1}));
+                measData = squeeze(obj.data.(measName{1}).mean);
                 
                 if ~isempty(measData)
                     %Check whether we have an open figure handle to plot to
