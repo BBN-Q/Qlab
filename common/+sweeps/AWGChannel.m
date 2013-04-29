@@ -28,10 +28,10 @@ classdef AWGChannel < sweeps.Sweep
             obj.label = ['AWG Channel(s) ' sweepParams.channel ' ' sweepParams.mode ' (V)'];
             
             % look for the AWG instrument object
-            assert(isfield(Instr, sweepParams.AWGName), 'Could not find AWG instrument');
-            obj.Instr = Instr.(sweepParams.AWGName);
+            assert(isfield(Instr, sweepParams.instr), 'Could not find AWG instrument');
+            obj.Instr = Instr.(sweepParams.instr);
             
-            switch sweepParams.AWGName(1:6)
+            switch sweepParams.instr(1:6)
                 case 'TekAWG'
                     obj.AWGType = 'Tek';
                 case 'BBNAPS'
