@@ -49,7 +49,7 @@ classdef PulseCalibration < handle
             
             % pull out data from the first measurement
             measNames = fieldnames(obj.experiment.measurements);
-            data = obj.experiment.data.(measNames{1});
+            data = obj.experiment.data.(measNames{1}).mean;
             
             % return amplitude or phase data
             switch obj.settings.dataType
