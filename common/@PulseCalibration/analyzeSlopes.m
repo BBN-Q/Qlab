@@ -32,7 +32,7 @@ for ct = 1:numParams
     %Sort out whether the fit was any good and use the Rsquared to filter
     sse = sum((fitYs-tmpData).^2);
     Rsquared = (sse/varEstimate)/(numPsQId-2);
-    if Rsquared < 100 %arbitrary heuristic that seems to match a good fit by eye
+    if Rsquared < 20 %arbitrary heuristic that seems to match a good fit by eye
         slopes(ct) = fitResult(1);
     else
         slopes(ct) = nan;
