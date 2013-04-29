@@ -86,7 +86,9 @@ classdef SingleShotFidelity < handle
             add_measurement(obj.experiment, 'single_shot', SingleShot(dh, obj.settings.numShots));
             
             %Create the sequence of alternating QId, 180 inversion pulses
-            obj.SingleShotSequence(obj.qubit)
+            if obj.settings.createSequence
+                obj.SingleShotSequence(obj.qubit)
+            end
             
             % intialize the ExpManager
             init(obj.experiment);
