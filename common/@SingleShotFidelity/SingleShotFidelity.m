@@ -39,6 +39,8 @@ classdef SingleShotFidelity < handle
             % create an ExpManager object
             obj.experiment = ExpManager();
             
+            obj.experiment.dataFileHandler = HDF5DataHandler(settings.fileName);
+            
             % load ExpManager settings
             expSettings = jsonlab.loadjson(obj.settings.cfgFile);
             instrSettings = expSettings.instruments;
@@ -72,13 +74,13 @@ classdef SingleShotFidelity < handle
             for sweepct = 1:length(sweepNames)
                 add_sweep(obj.experiment, sweepct, SweepFactory(sweepSettings.(sweepNames{sweepct}), obj.experiment.instruments));
             end
-            if isempty(sweepct), sweepct = 0; end
+            if isempty(sweepct)
+                % create a generic SegmentNum sweep
+                %Even though there really is two segments there only one data
+                %point (SS fidelity) being returned at each step.
+                add_sweep(obj.experiment, 1, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 1)));
+            end
 
-            % create a generic SegmentNum sweep
-            %Even though there really is two segments there only one data
-            %point (SS fidelity) being returned at each step.
-            add_sweep(obj.experiment, sweepct+1, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 1)));
-            
             % add single-shot measurement filter
             import MeasFilters.*
             measSettings = expSettings.measurements;

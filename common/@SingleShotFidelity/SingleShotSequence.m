@@ -25,7 +25,7 @@ IQkey = qubitMap.(qubit).IQkey;
 
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
 measChannels = {obj.settings.measurement};
-awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
+awgs = getpref('qlab','AWGCompileList');
 
 compileSequences(seqParams, patternDict, measChannels, awgs, false);
 
