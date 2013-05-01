@@ -36,9 +36,14 @@ if nargin < 6
 end
 
 %Now pass off to the python script. 
+if ispc
+    pythonCmd = 'pythonw';
+else
+    pythonCmd = 'python';
+end
 [status, result] = system(sprintf(...
-    'pythonw "%s" --ploneSite "%s" --username "%s" --password "%s" --imageFile "%s" --imageDescrip "%s" --date "%s"',...
-    fullfile(fileparts(mfilename('fullpath')), 'Fig2Plone.py'), ploneSite, username, password, imageFile, imageDescrip, storeDate));
+    '%s "%s" --ploneSite "%s" --username "%s" --password "%s" --imageFile "%s" --imageDescrip "%s" --date "%s"',...
+    pythonCmd, fullfile(fileparts(mfilename('fullpath')), 'Fig2Plone.py'), ploneSite, username, password, imageFile, imageDescrip, storeDate));
 
 assert(status==0, 'Oops, the Python script seems to have failed out:\n %s',result);
 
