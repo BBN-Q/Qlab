@@ -15,7 +15,7 @@
 % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 % See the License for the specific language governing permissions and
 % limitations under the License.
-classdef DigitalHomodyne < MeasFilters.MeasFilter
+classdef DigitalHomodyneSS < MeasFilters.MeasFilter
    
     properties
         IFfreq
@@ -27,20 +27,13 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
     end
     
     methods
-        function obj = DigitalHomodyne(settings)
+        function obj = DigitalHomodyneSS(settings)
             obj = obj@MeasFilters.MeasFilter(settings);
             obj.IFfreq = settings.IFfreq;
             obj.samplingRate = settings.samplingRate;
             obj.boxCarStart = settings.boxCarStart;
             obj.boxCarStop = settings.boxCarStop;
             obj.phase = settings.phase;
-
-            if isfield(settings, 'affineFilePath') && ~isempty(settings.affineFilePath)
-                load(settings.affineFilePath, 'centers', 'angles');
-                obj.affine = struct('centers', centers, 'angles', angles);
-            else
-                obj.affine = [];
-            end
         end
         
         function out = apply(obj, data)
@@ -53,7 +46,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             
             %Apply the affine transformation to unwind things
             if ~isempty(obj.affine)
-                demodSignal = bsxfun(@times, bsxfun(@minus, demodSignal, obj.affine.centers), exp(-1j*obj.affine.angles));
+                demodSignal = bsxfun(@times, bsxfun(@minus, demodSignal, obj.affine.centres), exp(-1j*obj.affine.angles));
             end
 
             %Box car the demodulated signal
@@ -65,10 +58,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
                 error('Only able to handle 2 and 4 dimensional data.');
             end
             
-            %Integrate and rotate
-            obj.latestData = exp(1j*obj.phase) * 2 * mean(demodSignal,1);
-
-            obj.accumulate();
+            obj.latestData = demodSignal;
             out = obj.latestData;
         end
     end

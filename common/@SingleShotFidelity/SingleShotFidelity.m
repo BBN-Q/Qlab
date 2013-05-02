@@ -84,7 +84,7 @@ classdef SingleShotFidelity < handle
             % add single-shot measurement filter
             import MeasFilters.*
             measSettings = expSettings.measurements;
-            dh = DigitalHomodyne(measSettings.(obj.settings.measurement));
+            dh = DigitalHomodyneSS(measSettings.(obj.settings.measurement));
             add_measurement(obj.experiment, 'single_shot', SingleShot(dh, obj.settings.numShots));
             
             %Create the sequence of alternating QId, 180 inversion pulses
