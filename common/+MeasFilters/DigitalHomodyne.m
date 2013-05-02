@@ -34,9 +34,10 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             obj.boxCarStart = settings.boxCarStart;
             obj.boxCarStop = settings.boxCarStop;
             obj.phase = settings.phase;
-            measAffines = getpref('qlab','MeasAffines');
-            if isfield(measAffines, settings.name)
-                obj.affine = measAffines.(settings.name);
+
+            if isfield(settings, 'affineFilePath') && ~isempty(settings.affineFilePath)
+                load(settings.affineFilePath, 'centers', 'angles');
+                obj.affine = struct('centers', centers, 'angles', angles);
             else
                 obj.affine = [];
             end
@@ -52,7 +53,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             
             %Apply the affine transformation to unwind things
             if ~isempty(obj.affine)
-                demodSignal = bsxfun(@times, bsxfun(@minus, demodSignal, obj.affine.centres), exp(-1j*obj.affine.angles));
+                demodSignal = bsxfun(@times, bsxfun(@minus, demodSignal, obj.affine.centers), exp(-1j*obj.affine.angles));
             end
 
             %Box car the demodulated signal
