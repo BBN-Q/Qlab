@@ -19,104 +19,67 @@
 
 classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
 
-    % Device properties correspond to instrument parameters
     properties (Access = public)
-        identity;
         outputLoad      % output impedance (1 - 1e-4 Ohms)
         triggerSource   % {IMMediate|EXTernal|BUS}
-        samplingRate    % in Samp/sec
-        waveformDuration % in seconds
-        numWaveforms    % for use in burst mode
+        numCycles    % for use in burst mode
         burstMode       % {TRIGgered|GATed}
         burstState      % {ON|OFF}
         offset          % in Volts
+        high            % high voltage
+        low             % low voltage
         period          % in seconds
-    end % end device properties
- 
-        
-    methods (Access = public)
-        function obj = Agilent33220A()
-        end
+    end
+
+    methods
         function reset(obj)
             %RESET
-            gpib_string = '*RST';
-            obj.write(gpib_string);
+            obj.write('*RST');
             pause(3)
         end
+
         function trigger(obj)
-            gpib_string = '*TRG';
-            obj.write(gpib_string);
+            obj.write('*TRG');
         end
-    end
-    methods % Instrument parameter accessors
-        %% get
-        function val = get.identity(obj)
-            gpib_string = '*IDN';
-            val = obj.query([gpib_string '?']);
-        end
+
         function val = get.outputLoad(obj)
-            gpib_string = 'OUTPut:LOAD';
-            temp = obj.query([gpib_string '?']);
+            temp = obj.query('OUTPut:LOAD?');
             val = str2double(temp);
         end
         function val = get.triggerSource(obj)
-            gpib_string = 'TRIGger:SOURce';
-            val = obj.query([gpib_string '?']);
+            val = obj.query('TRIGger:SOURce?');
         end
-        function val = get.samplingRate(obj)
-            val = obj.samplingRate;
-        end
-        function val = get.waveformDuration(obj)
-            val = obj.waveformDuration;
-        end
-        function val = get.numWaveforms(obj)
-            gpib_string = 'BURSt:NCYCles';
-            temp = obj.query([gpib_string '?']);
+        function val = get.numCycles(obj)
+            temp = obj.query('BURSt:NCYCles?');
             val = str2double(temp);
         end
         function val = get.burstMode(obj)
-            gpib_string = 'BURSt:MODE';
-            val = obj.query([gpib_string '?']);
+            val = obj.query('BURSt:MODE?');
         end
         function val = get.burstState(obj)
-            gpib_string = 'BURSt:STATE';
-            val = obj.query([gpib_string '?']);
+            val = obj.query('BURSt:STATE?');
         end
         function val = get.offset(obj)
-            gpib_string = 'VOLT:OFFSET';
-            temp = obj.query([gpib_string '?']);
+            temp = obj.query('VOLT:OFFSET?');
+            val = str2double(temp);
+        end
+        function val = get.high(obj)
+            temp = obj.query('VOLT:HIGH?');
+            val = str2double(temp);
+        end
+        function val = get.low(obj)
+            temp = obj.query('VOLT:LOW?');
             val = str2double(temp);
         end
         function val = get.period(obj)
-            gpib_string = 'PULSE:PERIOD?';
-            temp = obj.query(gpib_string);
+            temp = obj.query('PULSE:PERIOD?');
             val = str2double(temp);
         end
-        %% set
-%         function obj = set.trigger_slope(obj, value)
-%             gpib_string = 'TRIGger:MAIn:EDGE:SLOpe';
-%             % Validate input
-%             checkMapObj = containers.Map({'RISE','rise','Rise','FALL','fall','Fall'},...
-%                 {'rise','rise','rise','fall','fall','fall'});
-%             if not (checkMapObj.isKey(value))
-%                 error('Invalid input');
-%             end
-%             gpib_string = [gpib_string ' ' checkMapObj(value)];
-%             obj.write(gpib_string);
-%         end
+
         function obj = set.outputLoad(obj, value)
-            gpib_string = 'OUTPut:LOAD';
-            % Validate input
-            if ~(isnumeric(value) && isscalar(value))
-                error('value must be a numeric scalar')
-            else
-                valueStr = num2str(value);
-            end
-            gpib_string = [gpib_string ' ' valueStr];
-            obj.write(gpib_string);
+            obj.write(['OUTPut:LOAD ' num2str(value)]);
         end
         function obj = set.burstMode(obj, value)
-            gpib_string = 'BURSt:MODE';
             % Validate input
             % {TRIGgered|GATed}
             checkMapObj = containers.Map({'TRIGgered','TRIGGERED','triggered'...
@@ -126,11 +89,9 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
             if not (checkMapObj.isKey(value))
                 error('Invalid input');
             end
-            gpib_string = [gpib_string ' ' checkMapObj(value)];
-            obj.write(gpib_string);
+            obj.write(['BURSt:MODE ' checkMapObj(value)]);
         end
         function obj = set.triggerSource(obj, value)
-            gpib_string = 'TRIGger:SOURce';
             % Validate input
             % {IMMediate|EXTernal|BUS}
             checkMapObj = containers.Map({'IMMediate','IMMEDIATE','immediate','IMM'...
@@ -140,68 +101,31 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
             if not (checkMapObj.isKey(value))
                 error('Invalid input');
             end
-            gpib_string = [gpib_string ' ' checkMapObj(value)];
-            obj.write(gpib_string);
+            obj.write(['TRIGger:SOURce ' checkMapObj(value)]);
         end
-        function obj = set.samplingRate(obj, value)
-            if ~(isnumeric(value) && isscalar(value))
-                error('value must be a numeric scalar')
-            else
-                obj.samplingRate = value;
-            end
-        end
-        function obj = set.waveformDuration(obj, value)
-            if ~(isnumeric(value) && isscalar(value))
-                error('value must be a numeric scalar')
-            else
-                obj.waveformDuration = value;
-            end
-        end
-        function obj = set.numWaveforms(obj, value)
-            gpib_string = 'BURSt:NCYCles';
-            % Validate input
-            if ~(isnumeric(value) && isscalar(value))
-                error('value must be a numeric scalar')
-            else
-                valueStr = num2str(value);
-            end
-            gpib_string = [gpib_string ' ' valueStr];
-            obj.write(gpib_string);
+        function obj = set.numCycles(obj, value)
+            obj.write(['BURSt:NCYCles ' num2str(value)]);
         end
         function obj = set.burstState(obj, value)
-            gpib_string = 'BURSt:STATE';
             % Validate input
             % {ON|OFF}
-            checkMapObj = containers.Map({'ON','On','on'...
-                ,'OFF','Off','off'},...
-                {'ON','ON','ON','OFF','OFF','OFF',});
-            if not (checkMapObj.isKey(value))
+            checkMapObj = containers.Map({'on','off'}, {'ON','OFF'});
+            if not (checkMapObj.isKey(lower(value)))
                 error('Invalid input');
             end
-            gpib_string = [gpib_string ' ' checkMapObj(value)];
-            obj.write(gpib_string);
+            obj.write(['BURSt:STATE ' checkMapObj(lower(value))]);
         end
         function obj = set.offset(obj, value)
-            gpib_string = 'VOLT:OFFSET';
-            % Validate input
-            if ~(isnumeric(value) && isscalar(value))
-                error('value must be a numeric scalar')
-            else
-                valueStr = num2str(value);
-            end
-            gpib_string = [gpib_string ' ' valueStr];
-            obj.write(gpib_string);
+            obj.write(['VOLT:OFFSET ' num2str(value)]);
+        end
+        function obj = set.high(obj. high)
+            obj.write(['VOLT:HIGH ' num2str(high)]);
+        end
+        function obj = set.low(obj, low)
+            obj.write(['VOLT:LOW ' num2str(low)]);
         end
         function obj = set.period(obj, value)
-            gpib_string = 'PULSE:PERIOD';
-            % validate input
-            if ~(isnumeric(value) && isscalar(value))
-                error('value must be a numeric scalar')
-            else
-                valueStr = num2str(value);
-            end
-            gpib_string = [gpib_string ' ' valueStr];
-            obj.write(gpib_string);
+            obj.write(['PULSE:PERIOD ' num2str(value)]);
         end
     end
-end % end class definition
+end
