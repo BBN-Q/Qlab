@@ -6,6 +6,8 @@
 #include <string>
 #include <algorithm>
 
+#include <concol.h> 
+
 #include "EthernetControl.h"
 
 
@@ -31,7 +33,10 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
 
 int main (int argc, char* argv[])
 {
-  cout << "BBN AP2 Test Executable" << endl;
+
+  setcolor(red,black);
+  cout<<"BBN AP2 Test Executable" << endl;
+  setcolor(white,black);
 
   set_logging_level(5);
 
@@ -45,33 +50,45 @@ int main (int argc, char* argv[])
 
   int numDevices = get_numDevices();
 
+  setcolor(red,black);
   cout << numDevices << " APS device" << (numDevices > 1 ? "s": "")  << " found" << endl;
+  setcolor(white,black);
 
   if (numDevices < 1)
   	return 0;
   
+  setcolor(red,black);
   cout << "Attempting to initialize libaps" << endl;
+  setcolor(white,black);
 
   init();
 
+  setcolor(red,black);
   cout << "Attempting to get serials" << endl;  
+  setcolor(white,black);
 
   char serialBuffer[100];
 
   for (int cnt; cnt < numDevices; cnt++) {
   	get_deviceSerial(cnt, serialBuffer);
+    setcolor(red,black);
   	cout << "Device " << cnt << " serial #: " << serialBuffer << endl;
+    setcolor(white,black);
   }
 
 
   int rc;
   rc = connect_by_ID(0);
 
+  setcolor(red,black);
   cout << "connect_by_ID(0) returned " << rc << endl;
+  setcolor(white,black);
 
   rc = initAPS(0, "../dummyBitfile.bit", 0);
 
+  setcolor(red,black);
   cout << "initAPS(0) returned " << rc << endl;
+  setcolor(white,black);
   
 #if 0
   cout << "Set sample rate " << endl;

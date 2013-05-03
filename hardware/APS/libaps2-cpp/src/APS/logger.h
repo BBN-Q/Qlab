@@ -14,7 +14,13 @@
 #include <sstream>
 #include <string>
 #include <stdio.h>
- #include <iostream>
+#include <iostream>
+
+#define FORCE_CONSOLE
+#ifdef FORCE_CONSOLE
+#include <concol.h>
+using std::cout;
+#endif
 
 inline std::string NowTime();
 
@@ -30,6 +36,7 @@ public:
 public:
     static TLogLevel& ReportingLevel();
     static std::string ToString(TLogLevel level);
+    static int ToColor(TLogLevel level);
     static TLogLevel FromString(const std::string& level);
 protected:
     std::ostringstream os;
@@ -43,12 +50,36 @@ Log<T>::Log()
 {
 }
 
+#ifdef FORCE_CONSOLE
+
 template <typename T>
 std::ostringstream& Log<T>::Get(TLogLevel level)
 {
+    setcolor(white, black);
+    cout << "- ";
+    cout << NowTime();
+    setcolor(ToColor(level), black);
+    cout << " " << ToString(level) << ": ";
+    cout << std::string(level > logDEBUG ? level - logDEBUG : 0, ' ');
+    setcolor(white, black);
+    return os;
+}
+
+template <typename T>
+Log<T>::~Log()
+{
+    cout << os.str() << std::endl;
+}
+
+#else
+
+template <typename T>
+std::ostringstream& Log<T>::Get(TLogLevel level)
+{
+
     os << "- " << NowTime();
     os << " " << ToString(level) << ": ";
-    os << std::string(level > logDEBUG ? level - logDEBUG : 0, '\t');
+    os << std::string(level > logDEBUG ? level - logDEBUG : 0, "  ");
     return os;
 }
 
@@ -58,6 +89,8 @@ Log<T>::~Log()
     os << std::endl;
     T::Output(os.str());
 }
+
+#endif
 
 template <typename T>
 TLogLevel& Log<T>::ReportingLevel()
@@ -70,6 +103,13 @@ template <typename T>
 std::string Log<T>::ToString(TLogLevel level)
 {
 	static const char* const buffer[] = {"ERROR", "WARNING", "INFO", "DEBUG", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4"};
+    return buffer[level];
+}
+
+template <typename T>
+int Log<T>::ToColor(TLogLevel level)
+{
+    static const int buffer[] = {red, yellow, white, green, aqua, purple, blue, dark_green};
     return buffer[level];
 }
 
@@ -105,7 +145,7 @@ public:
 
 inline FILE*& Output2FILE::Stream()
 {
-    static FILE* pStream = stderr;
+    static FILE* pStream = stdout;
     return pStream;
 }
 
