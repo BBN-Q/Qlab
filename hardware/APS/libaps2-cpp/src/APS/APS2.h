@@ -14,7 +14,8 @@
 using std::string;
 
 namespace APS2 {
-	struct APSCommand {
+	typedef union {
+		struct {
 		uint32_t cnt : 16;
 		uint32_t mode_stat : 8;
 		uint32_t cmd : 4;
@@ -22,7 +23,36 @@ namespace APS2 {
 		uint32_t sel : 1;
 		uint32_t seq : 1;
 		uint32_t ack : 1;
-	};
+		};
+		uint32_t packed;
+	} APSCommand_t;
+
+	typedef union  {
+		struct {
+		uint32_t instr : 16; // SPI instruction for DAC, PLL instruction, or 0
+		uint32_t spicnt_data: 8; // data byte for single byte or SPI insruction
+		uint32_t target : 8;
+		};
+		uint32_t packed;
+	} APSChipConfigCommand_t;
+
+	typedef union  {
+		struct {
+		uint16_t addr : 13;
+		uint16_t W  :  2;
+		uint16_t r_w : 1;
+		};
+		uint16_t packed;
+	} PLLCommand_t;
+
+	typedef union {
+		struct {
+		uint8_t addr : 5;
+		uint8_t N  :  2;
+		uint8_t r_w : 1;
+		};
+		uint8_t packed;
+	} DACCommand_t;
 
 	static const uint16_t NUM_STATUS_REGISTERS = 16;
 
@@ -79,16 +109,24 @@ namespace APS2 {
 		CHIPCONFIG_INVALID_TARGET = 2,
 	};
 
-	enum CHIPCONFIGIO_TARGET {
-		CHIPCONFIGIO_TARGET_PAUSE        = 0,
-		CHIPCONFIGIO_TARGET_DAC_0_MULTI  = 0xC0, // multiple byte length in SPI cnt
-		CHIPCONFIGIO_TARGET_DAC_1_MULTI  = 0xC1, // multiple byte length in SPI cnt
-		CHIPCONFIGIO_TARGET_PLL_MULTI    = 0xD0, // multiple byte length in SPI cnt
-		CHIPCONFIGIO_TARGET_DAC_0_SINGLE = 0xC8, // single byte payload
-		CHIPCONFIGIO_TARGET_DAC_1_SINGLE = 0xC9, // single byte payload
-		CHIPCONFIGIO_TARGET_PLL_SINGLE   = 0xD8, // single byte payload
-		CHIPCONFIGIO_TARGET_VCXO         = 0xE0, 
-		CHIPCONFIGIO_TARGET_EOL          = 0xFF, // end of list
+	enum CHIPCONFIG_IO_TARGET {
+		CHIPCONFIG_TARGET_PAUSE = 0,
+		CHIPCONFIG_TARGET_DAC_0 = 1,
+		CHIPCONFIG_TARGET_DAC_1 = 2,
+		CHIPCONFIG_TARGET_PLL = 3,
+		CHIPCONFIG_TARGET_VCXO = 4
+	};
+
+	enum CHIPCONFIG_IO_TARGET_CMD {
+		CHIPCONFIG_IO_TARGET_PAUSE        = 0,
+		CHIPCONFIG_IO_TARGET_DAC_0_MULTI  = 0xC0, // multiple byte length in SPI cnt
+		CHIPCONFIG_IO_TARGET_DAC_1_MULTI  = 0xC1, // multiple byte length in SPI cnt
+		CHIPCONFIG_IO_TARGET_PLL_MULTI    = 0xD0, // multiple byte length in SPI cnt
+		CHIPCONFIG_IO_TARGET_DAC_0_SINGLE = 0xC8, // single byte payload
+		CHIPCONFIG_IO_TARGET_DAC_1_SINGLE = 0xC9, // single byte payload
+		CHIPCONFIG_IO_TARGET_PLL_SINGLE   = 0xD8, // single byte payload
+		CHIPCONFIG_IO_TARGET_VCXO         = 0xE0, 
+		CHIPCONFIG_IO_TARGET_EOL          = 0xFF, // end of list
 	};
 
 	enum RUNCHIPCONFIG_MODE_STAT {
@@ -151,18 +189,19 @@ namespace APS2 {
 		uint8_t  src[6];
 		uint16_t frameType;
 		uint16_t seqNum;
-		union {
-			uint32_t packedCommand;
-			struct APSCommand command;
-		};
+		APSCommand_t command;
 		uint32_t addr;
 	};
 
-	uint8_t * getPayloadPtr(uint8_t * packet);
+
+	
+	uint32_t * getPayloadPtr(uint32_t * frame);
+	
 
 	string printStatusRegisters(const APS_Status_Registers & status);
-	string printAPSCommand(APSCommand * command);
-	void zeroAPSCommand(APSCommand * command);
+
+	string printAPSCommand(APSCommand_t & command);
+	string printAPSChipCommand(APSChipConfigCommand_t & command);
 	
 } //end namespace APS2
 
