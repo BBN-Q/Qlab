@@ -24,10 +24,10 @@ int write_register(EthernetControl &, const ULONG &, const ULONG &, UCHAR *);
 int read_SPI(EthernetControl &, ULONG, const ULONG &, UCHAR *);
 int write_SPI(EthernetControl &, ULONG, const ULONG &, const vector<UCHAR> &);
 
-int clear_bit(EthernetControl &, const int &, const int &);
-int set_bit(EthernetControl &, const int &, const int &);
+int clear_bit(EthernetControl &, const uint32_t , const uint32_t );
+int set_bit(EthernetControl &, const uint32_t , const uint32_t );
 
-USHORT read_FPGA(EthernetControl &, const ULONG &);
+uint32_t read_FPGA(EthernetControl &, const uint32_t &);
 
 int write_FPGA(EthernetControl &, const unsigned int &, const USHORT &);
 int write_FPGA(EthernetControl &, const unsigned int &, const WordVec &);

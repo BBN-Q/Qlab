@@ -168,10 +168,22 @@ int FPGA::program_FPGA(EthernetControl & deviceHandle, vector<UCHAR> bitFileData
 }
 
 int FPGA::reset(EthernetControl & deviceHandle) {
-	FILE_LOG(logDEBUG) << "Resetting APS2 ";
+	
+	FILE_LOG(logDEBUG) << "Resetting FPGA ";
+	uint32_t RstMask=0;
+	
+	RstMask |= APS_FRST01_BIT;
+	
+	FILE_LOG(logDEBUG2) << "Reset mask " << myhex << RstMask;
+	// Bring RESETN low to reset all registers and state machines
+	uint32_t writeByte = ~RstMask & 0xF;
+	if(deviceHandle.WriteRegister(APS_CONF_STAT, writeByte) != EthernetControl::SUCCESS) 
+		return(-1);
 
-	APSCommand command;
-	//deviceHandle.Write(command);
+	// Bring RESETN back high
+	writeByte = 0xF;
+	if(deviceHandle.WriteRegister( APS_CONF_STAT, writeByte) != EthernetControl::SUCCESS) 
+		return(-2);
 
 	return 0;
 }
@@ -183,62 +195,8 @@ int FPGA::read_register(
 		UCHAR *Data    // Buffer for read data
 )
 {
-	UCHAR commandPacket;
-	DWORD packetLength, bytesRead, bytesWritten;
-	const int max_repeats = 5;
 
-	//Figure out how many bytes we're sending
-	switch(Command)
-	{
-	case APS_FPGA_IO:
-		FILE_LOG(logERROR) << "FPGA::read_register can no longer be used with APS_FPGA_IO commands.";
-		return -1;
-	case APS_FPGA_ADDR:
-		FILE_LOG(logERROR) << "FPGA::read_register can no longer be used with APS_FPGA_ADDR commands.";
-		return -1;
-	case APS_CONF_STAT:
-	case APS_STATUS_CTRL:
-		packetLength = 1;
-		break;
-	default:
-		// Illegal command type
-		return(-1);
-	}
-	// Start all packets with a APS Command Byte with the R/W = 1 for read
-	commandPacket = 0x80 | Command | transferSize;
-
-	// Send the read command with the number of bytes specified in the Command Byte
-	for (int repeats = 0; repeats < max_repeats; repeats++) {
-
-		//Write the commmand
-		if (repeats > 0) {FILE_LOG(logDEBUG2) << "Retry APS Write " << repeats;}
-		
-		//bytesWritten = deviceHandle.Write(&commandPacket, 1);
-
-
-		if (bytesWritten != 1){
-			FILE_LOG(logDEBUG2) << "FPGA::read_register: Error writing to APS with bytes written = " << bytesWritten << "; repeat count = " << repeats;
-			continue;
-		}
-
-		usleep(100);
-
-		//Read the result
-		bytesRead = deviceHandle.Read(Data, packetLength);
-		if (repeats > 0) {FILE_LOG(logDEBUG2) << "Retry APS Read " << repeats;}
-		if (bytesRead != packetLength){
-			FILE_LOG(logDEBUG2) << "FPGA::read_register: Error reading from APS with bytes read = " << bytesRead << "; repeat count = " << repeats;
-		}
-		else{
-			break;
-		}
-	}
-	if ( bytesRead != packetLength){
-		FILE_LOG(logERROR) << "FPGA::read_register: Error reading from APS with bytes read = " << bytesRead;
-		return -1;
-	}
-
-	return(bytesRead);
+	FILE_LOG(logERROR) << "Error: FGPA::read_register no longer valid user EthernetControl::ReadRegister";
 }
 
 
@@ -249,92 +207,23 @@ int FPGA::write_register(
 		UCHAR * Data    // Data bytes to be written.  Must match length/transfer type
 )
 {
-	vector<UCHAR> dataPacket;
-	DWORD packetLength, bytesWritten;
-	
-	int repeats;
-	const int max_repeats = 5;
-	
-
-	switch(Command)
-	{
-	case APS_FPGA_IO:
-		FILE_LOG(logERROR) << "FPGA::write_register can no longer be used with APS_FPGA_IO commands.";
-		return -1;
-	case APS_CONF_DATA:
-		packetLength = 61;
-		break;
-	case APS_FPGA_ADDR:
-		FILE_LOG(logERROR) << "FPGA::write_register can no longer be used with APS_FPGA_ADDR commands.";
-		return -1;
-	case APS_CONF_STAT:
-	case APS_STATUS_CTRL:
-		packetLength = 1;
-		break;
-	default:
-		// Illegal command type
-		return(0);
-	}
-
-	dataPacket.reserve(packetLength+1);
-
-	// Start all packets with a APS Command Byte with the R/W = 0 for write
-	dataPacket[0] = Command | transferSize;
-
-	// Copy data bytes to output packet
-	std::copy(Data, Data+packetLength, dataPacket.begin()+1);
-
-	for (repeats = 0; repeats < max_repeats; repeats++) {
-		if (repeats > 0) {FILE_LOG(logDEBUG2) << "Repeat Write " << repeats;}
-		//bytesWritten = deviceHandle.Write(&dataPacket[0], packetLength+1);
-		if (bytesWritten == packetLength+1) break;
-	}
-
-	if (bytesWritten != packetLength+1){
-		FILE_LOG(logERROR) << "FPGA::write_register: Error writing to APS status with bytes written = " << bytesWritten;
-	}
-
-	// Adjust for command byte when returning bytes written
-	return(bytesWritten - 1);
+	FILE_LOG(logERROR) << "Error: FGPA::write_register no longer valid user EthernetControl::WriteRegister";
 }
 
 
-USHORT FPGA::read_FPGA(EthernetControl & deviceHandle, const ULONG & addr)
+uint32_t FPGA::read_FPGA(EthernetControl & deviceHandle, const uint32_t & addr)
 {
+	FILE_LOG(logWARNING) << "Error: FGPA::read_FPGA no longer valid user EthernetControl::ReadRegister";
 
-	//Write the address with the read bit high
-	write_FPGA(deviceHandle, FPGA_ADDR_REGREAD | addr, vector<USHORT>(0) );
-
-	//Now clock out the data by writing a read command byte
-	// Start all packets with a APS Command Byte with the R/W = 1 for read for 2 bytes
-	UCHAR commandPacket = 0x80 | APS_FPGA_IO | 1;
-	DWORD bytesWritten, bytesRead;
-	//bytesWritten = deviceHandle.Write(&commandPacket, 1);
-	if (bytesWritten != 1){
-		FILE_LOG(logDEBUG2) << "FPGA::read_register: Error writing to APS with status bytes written = " << bytesWritten;
-	}
-
-	//Now read the data
-	UCHAR readData[2];
-	//Put some data to make sure they're updated
-	readData[0] = 0xBA;
-	readData[1] = 0xDD;
-
-	bytesRead = deviceHandle.Read( readData, 2);
-	if ( bytesRead != 2){
-		FILE_LOG(logDEBUG2) << "FPGA::read_register: Error reading from APS with bytes read = " << bytesRead;
-	}
-
-	USHORT data = (readData[0] << 8) | readData[1];
-
-	FILE_LOG(logDEBUG2) << "Reading address " << myhex << addr << " with data " << data;
-
+	uint32_t data;
+	deviceHandle.ReadRegister(addr, data);
 	return data;
 }
 
 int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, const USHORT & data){
 	//Create a vector and pass on
-	return write_FPGA(deviceHandle, addr, vector<USHORT>(1, data) );
+	FILE_LOG(logWARNING) << "Error: FGPA::write_FPGA no longer valid user EthernetControl::WriteRegister";
+	return deviceHandle.WriteRegister(addr, data);
 }
 
 int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, const vector<USHORT> & data)
@@ -351,6 +240,8 @@ int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, 
  ********************************************************************/
 {
 
+	FILE_LOG(logERROR) << "Error: FGPA::write_FPGA not implemented";
+	return 0;
 	//Format for the block write
 	vector<UCHAR> dataPacket = format(addr, data);
 	vector<size_t> offsets = computeCmdByteOffsets(data.size());
@@ -379,6 +270,9 @@ int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, 
  *              checksumData - vector of FPGA checksums passed by reference
  ********************************************************************/
 {
+
+	FILE_LOG(logERROR) << "Error: FGPA::write_FPGA w/ checksum not implemented";
+	return 0;
 
 	//Call the basic function to write the data
 	int bytesWritten;
@@ -425,69 +319,11 @@ vector<UCHAR> FPGA::format(const unsigned int & addr, const vector<USHORT> & dat
  * 	n bytes data
  */
 
-	//Some constants
-	const UCHAR fpgaSelectMask = 0; 
-	const UCHAR write2Bytes = APS_FPGA_IO | fpgaSelectMask | 1;
-	const UCHAR write4Bytes = APS_FPGA_IO | fpgaSelectMask | 2;
-	const UCHAR write8Bytes = APS_FPGA_IO | fpgaSelectMask | 3;
-	const UCHAR writeAddress = APS_FPGA_ADDR | fpgaSelectMask | 2;
+ 	FILE_LOG(logERROR) << "FPGA::format is no longer valid remove call" << endl;
 
 	//We return a vector of bytes to write
 	vector<UCHAR> dataPacket(0);
-	if (data.size() > 0) {
-		dataPacket.reserve(5 + 3 + 2*data.size() + data.size()/3 + data.size()%3 );
-	}
-	else{
-		dataPacket.reserve(5);
-	}
 
-	//First push on the address
-	//4Byte command byte with address line high
-	dataPacket.push_back(writeAddress);
-
-	// 4 bytes of address
-	dataPacket.push_back((addr >> 24) & LSB_MASK);
-	dataPacket.push_back((addr >> 16) & LSB_MASK);
-	dataPacket.push_back((addr >> 8) & LSB_MASK);
-	dataPacket.push_back(addr & LSB_MASK);
-
-	//Now push on the number of points data if necessary
-	if (data.size() > 0){
-		// command byte
-		dataPacket.push_back(write2Bytes);
-
-		//
-		dataPacket.push_back((data.size() >> 8) & LSB_MASK);
-		dataPacket.push_back(data.size() & LSB_MASK);
-
-		// push on data
-		int ptsRemaining = data.size();
-		int ptsToWrite = 0;
-		int wfIndex = 0;
-		while (ptsRemaining > 0) {
-			switch (ptsRemaining) {
-			case 1:
-				ptsToWrite = 1;
-				dataPacket.push_back(write2Bytes);
-				break;
-			case 2:
-			case 3:
-				ptsToWrite = 2;
-				dataPacket.push_back(write4Bytes);
-				break;
-			default: // 4 or more
-				ptsToWrite = 4;
-				dataPacket.push_back(write8Bytes);
-				break;
-			}
-
-			for (int ct = 0; ct < ptsToWrite; ct++, wfIndex++ ) {
-				dataPacket.push_back((data[wfIndex] >> 8) & LSB_MASK);
-				dataPacket.push_back(data[wfIndex] & LSB_MASK);
-			}
-			ptsRemaining -= ptsToWrite;
-		}
-	}
 	return dataPacket;
 }
 
@@ -616,66 +452,17 @@ int FPGA::write_SPI
 int FPGA::read_SPI
 (
 		EthernetControl & deviceHandle,
-		ULONG Command,   // APS_DAC_SPI, APS_PLL_SPI, or APS_VCXO_SPI
+		ULONG target, 
 		const ULONG & Address,   // SPI register address.  Ignored for VCXO since address embedded in the data
 		UCHAR *Data      // Destination for the returned data byte.  Only single byte reads supported.
 )
 
 {
-	vector<UCHAR> dataPacket(0);
-	DWORD bytesWritten, bytesRead;
-	vector<UCHAR> byteBuffer(0);
-
-
-	// Create a 1 byte read command at the specified address of the specified device
-	// Note that the VCXO is not readable
-	switch(Command & APS_CMD)
-	{
-	case APS_DAC_SPI:
-		byteBuffer.push_back(0x80 | (Address & 0x1F));  // R/W = 1 for read, N = 00 for 1 Byte, A<4:0> = Address
-		byteBuffer.push_back(Data[0]);
-		Command |= ((Address & 0x60)>>3);  // Take bits above register address as DAC channel select
-		break;
-	case APS_PLL_SPI:
-		byteBuffer.push_back(0x80 | ((Address>>8) & 0x1F)); // R/W = 1 for read, W = 00 for 1 Byte, A<12:8>
-		byteBuffer.push_back(Address & 0xFF);  // A<7:0>
-		byteBuffer.push_back(Data[0]);
-		break;
-	default:
-		// Ignore unsupported commands
-		return(0);
-	}
-
-	// Start all packets with a APS Command Byte with the R/W= 0 for write
-	// Note that command byte from DAC has the SEL bits for the desired DAC set
-	dataPacket.push_back(Command);
-
-	// Serialize the data into bit 0 of the packet bytes
-	for(size_t ct = 0; ct < 8*byteBuffer.size(); ct++)
-		dataPacket.push_back( (byteBuffer[ct/8]>>(7-(ct%8))) & 1 );
-
-
-	// Write the SPI command.  This stores the last 8 SPI read bits in the I/O FPGA SerData register
-	//bytesWritten = deviceHandle.Write(&dataPacket[0], dataPacket.size());
-	if (bytesWritten != dataPacket.size()) {FILE_LOG(logERROR) << "Write SPI command failed";}
-
-	dataPacket[0] |= 0x80;  // Convert the Command Byte into a read
-
-	// Clock out data from SPI device with a dummy write to the same device
-	//bytesWritten = deviceHandle.Write(&dataPacket[0], 1);
-	if (bytesWritten != 1) {FILE_LOG(logERROR) << "Write SPI command failed";}
-
-
-	// Read the one byte of serial data from the SerData register
-	bytesRead = deviceHandle.Read(Data, 1);
-	if (bytesRead != 1) {FILE_LOG(logERROR) << "Read SPI command failed";}
-
-	return(bytesRead);
-
+	FILE_LOG(logERROR) << "Replace call to FPGA::read_SPI with EthernetControl::ReadSPI";
 }
 
 
-int FPGA::clear_bit(EthernetControl & deviceHandle, const int & addr, const int & mask)
+int FPGA::clear_bit(EthernetControl & deviceHandle, const uint32_t addr, const uint32_t mask)
 /*
  * Description : Clears Bit in FPGA register
  * Returns : 0
@@ -685,16 +472,16 @@ int FPGA::clear_bit(EthernetControl & deviceHandle, const int & addr, const int 
 	FILE_LOG(logDEBUG2) << "Clearing bit at address: " << myhex << addr;
 
 	//Read the current state so we know how set the uncleared bits.
-	int currentState, currentState2;
+	uint32_t currentState, currentState2;
 	//Use a lambda because we'll need the same call below
 	auto check_cur_state = [&] () {
-		currentState = FPGA::read_FPGA(deviceHandle, addr);
+		deviceHandle.ReadRegister(addr, currentState);
 	};
 
 	check_cur_state();
 	FILE_LOG(logDEBUG2) << "Addr: " << myhex << addr << " Current State: " << currentState << " Writing: " << (currentState & ~mask);
 
-	FPGA::write_FPGA(deviceHandle, addr, currentState & ~mask);
+	deviceHandle.WriteRegister(addr, currentState & ~mask);
 
 	if (FILELog::ReportingLevel() >= logDEBUG2) {
 		// verify write
@@ -705,7 +492,7 @@ int FPGA::clear_bit(EthernetControl & deviceHandle, const int & addr, const int 
 }
 
 
-int FPGA::set_bit(EthernetControl & deviceHandle, const int & addr, const int & mask)
+int FPGA::set_bit(EthernetControl & deviceHandle, const uint32_t addr, const uint32_t mask)
 /*
  * Description : Sets Bit in FPGA register
  * Returns : 0
