@@ -25,8 +25,8 @@ classdef Power < sweeps.Sweep
 		function obj = Power(sweepParams, Instr)
 			obj.label = 'Power';
 			
-            % look for an instrument with the name 'genID'
-            obj.Instr = Instr.(sweepParams.genID);
+            % look for an instrument with the name 'instr'
+            obj.Instr = Instr.(sweepParams.instr);
 			
 			obj.units = sweepParams.units;
 			
