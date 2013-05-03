@@ -4,6 +4,7 @@
 using std::ostringstream;
 using std::endl;
 
+
 string APS2::printStatusRegisters(const APS_Status_Registers & status) {
 	ostringstream ret;
 
@@ -26,34 +27,39 @@ string APS2::printStatusRegisters(const APS_Status_Registers & status) {
 	return ret.str();
 }
 
-string APS2::printAPSCommand(APSCommand * cmd) {
+string APS2::printAPSCommand(APSCommand_t & cmd) {
     ostringstream ret;
 
-    uint32_t * packedCmd;
-
-    packedCmd = reinterpret_cast<uint32_t *>(cmd);
-
-    ret << std::hex << *packedCmd << " =";
-    ret << " ACK: " << cmd->ack;
-    ret << " SEQ: " << cmd->seq;
-    ret << " SEL: " << cmd->sel;
-    ret << " R/W: " << cmd->r_w;
-    ret << " CMD: " << cmd->cmd;
-    ret << " MODE/STAT: " << cmd->mode_stat;
-    ret << std::dec << " cnt: " << cmd->cnt;
+    ret << std::hex << cmd.packed << " =";
+    ret << " ACK: " << cmd.ack;
+    ret << " SEQ: " << cmd.seq;
+    ret << " SEL: " << cmd.sel;
+    ret << " R/W: " << cmd.r_w;
+    ret << " CMD: " << cmd.cmd;
+    ret << " MODE/STAT: " << cmd.mode_stat;
+    ret << std::dec << " cnt: " << cmd.cnt;
     return ret.str();
 }
 
-void APS2::zeroAPSCommand(APSCommand * command) {
-	uint32_t * packedCmd;
-    packedCmd = reinterpret_cast<uint32_t *>(command);
-    packedCmd = 0;
+string APS2::printAPSChipCommand(APSChipConfigCommand_t & cmd) {
+    ostringstream ret;
+
+    ret << std::hex << cmd.packed << " =";
+    ret << " Target: " << cmd.target;
+    ret << " SPICNT_DATA: " << cmd.spicnt_data;
+    ret << " INSTR: " << cmd.instr;
+    return ret.str();
 }
 
-uint8_t * APS2::getPayloadPtr(uint8_t * packet) {
-	uint8_t * start = reinterpret_cast<uint8_t *>(packet);
-    start += sizeof(APSEthernetHeader);
-	return start;
+
+
+uint32_t * APS2::getPayloadPtr(uint32_t * frame) {
+   frame += sizeof(APSEthernetHeader) / sizeof(uint32_t);
+   return frame;
 }
+
+
+
+
 
 
