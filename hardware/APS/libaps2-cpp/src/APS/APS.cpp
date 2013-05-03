@@ -88,8 +88,9 @@ int APS::init(const string & bitFile, const bool & forceReload){
 
 		// send hard reset to APS2
 		// this will recondifure the DACs, PLL and VCX0 with EPROM settings
-		APSCommand command;
-		zeroAPSCommand(&command);
+		APSCommand_t command;
+		command.packed = 0;
+		
 		command.cmd = APS_COMMAND_RESET;
 		command.mode_stat = RESET_RECONFIG_BASELINE_EPROM;
 		handle_.Write(command);
@@ -105,13 +106,15 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		//Program the bitfile to both FPGA's
 		program_FPGA(bitFile, FIRMWARE_VERSION);
 
-		/*
+		
 		//Reset all state machines
 		reset();
 
-		//Default to max sample rate
-		set_sampleRate(1200);
 
+		//Default to max sample rate
+		//set_sampleRate(1200);
+
+		/*
 		// seems to be necessary on DAC2 devices
 		// probably worth further investigation to remove if possible
 		reset_status_ctrl();
@@ -129,7 +132,6 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		// clear channel data
 		clear_channel_data();
 		*/
-		return 0;
 	}
 	samplingRate_ = get_sampleRate();
 
@@ -194,15 +196,12 @@ int APS::program_FPGA(const string & bitFile, const int & expectedVersion) {
 int APS::read_bitFile_version() {
 	// Reads version information from register 0x8006
 
-	int version;
-
-	FILE_LOG(logERROR) << "read_bitFile_version not implemented";
-	return 0;
+	uint32_t version;
 
 	//For single FPGA we return that version, for both we return both if the same otherwise error.
-	version = FPGA::read_FPGA(handle_, FPGA_ADDR_VERSION);
+	handle_.ReadRegister(FPGA_ADDR_VERSION, version);
 	version &= 0x1FF; // First 9 bits hold version
-	FILE_LOG(logDEBUG2) << "Bitfile version for FPGA is "  << myhex << version;
+	FILE_LOG(logDEBUG) << "Bitfile version for FPGA is "  << myhex << version;
 	
 	return version;
 }
@@ -224,6 +223,7 @@ int APS::set_sampleRate(const int & freq){
 
 int APS::get_sampleRate() {
 	//Pass through to FPGA code
+	FILE_LOG(logDEBUG2) << "get_sampleRate";
 	int freq1 = APS::get_PLL_freq();
 	return freq1;
 }
@@ -738,7 +738,7 @@ int APS::set_PLL_freq(const int & freq) {
 	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
 	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 	// disable DAC FIFOs
-	for (int dac = 0; dac < 4; dac++)
+	for (int dac = 0; dac < MAX_APS_CHANNELS; dac++)
 		disable_DAC_FIFO(dac);
 
 	// Disable oscillator by clearing APS_STATUS_CTRL register
@@ -822,6 +822,8 @@ int APS::test_PLL_sync(const int & numRetries /* see header for default */) {
 
 	//A little helper function to wait for the PLL's to lock and reset if necessary
 	auto wait_PLL_relock = [this, &pllResetBit](bool resetPLL, const int & regAddress, const vector<int> & pllBits) -> bool {
+		FILE_LOG(logDEBUG2) << "wait_PLL_relock";
+
 		bool inSync = false;
 		int testct = 0;
 		while (!inSync && (testct < 20)){
@@ -1022,16 +1024,16 @@ int APS::read_PLL_status(const int & regAddr /*check header for default*/, const
 	 * regAddr = register to poll for PLL sync status (0x8006 or 0xF006)
 	 * PllLockBits = vector of register bit locations to query for lock state
 	 */
+	
+ FILE_LOG(logDEBUG2) << "APS::read_PLL_status";
 
 	int pllStatus = 1;
-
-	FILE_LOG(logERROR) << "read_PLL_status not implemented";
-	return 0;
 
 //	pll_bit = FPGA::read_FPGA(handle_, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga); // latched to USB clock (has version 0x020)
 //	pll_bit = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, fpga); // latched to 200 MHz PLL (has version 0x010)
 
-	ULONG pllRegister = FPGA::read_FPGA(handle_, regAddr);
+	uint32_t pllRegister;
+	handle_.ReadRegister(regAddr, pllRegister);
 
 	//Check each of the clocks in series
 	for(int tmpBit : pllLockBits){
@@ -1044,33 +1046,38 @@ int APS::read_PLL_status(const int & regAddr /*check header for default*/, const
 int APS::get_PLL_freq() {
 	// Poll APS PLL chip to determine current frequency
 
-	ULONG pll_cycles_addr, pll_bypass_addr;
-	UCHAR pll_cycles_val, pll_bypass_val;
+	uint16_t pll_cycles_addr, pll_bypass_addr;
+	uint8_t pll_cycles_val, pll_bypass_val;
 
 	int freq;
 
-	FILE_LOG(logDEBUG2) << "Getting PLL frequency for FGPA ";
+	FILE_LOG(logDEBUG2) << "get_PLL_freq";
 
 	pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
 	pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
 
-	FPGA::read_SPI(handle_, APS_PLL_SPI, pll_cycles_addr, &pll_cycles_val);
-	FPGA::read_SPI(handle_, APS_PLL_SPI, pll_bypass_addr, &pll_bypass_val);
+	handle_.ReadSPI(CHIPCONFIG_TARGET_PLL, pll_cycles_addr, pll_cycles_val);
+	handle_.ReadSPI(CHIPCONFIG_TARGET_PLL, pll_bypass_addr, pll_bypass_val);
+
+	FILE_LOG(logDEBUG3) << "pll_cycles_val = " << (int)pll_cycles_val;
+	FILE_LOG(logDEBUG3) << "pll_bypass_val = " << (int)pll_bypass_val;
 
 	// select frequency based on pll cycles setting
 	// the values here should match the reverse lookup in FGPA::set_PLL_freq
 
 	if (pll_bypass_val == 0x80 && pll_cycles_val == 0x00)
-		return 1200;
-	switch(pll_cycles_val) {
-		case 0xEE: freq = 40;  break;
-		case 0xBB: freq = 50;  break;
-		case 0x55: freq = 100; break;
-		case 0x22: freq = 200; break;
-		case 0x11: freq = 300; break;
-		case 0x00: freq = 600; break;
-		default:
-			return -2;
+		freq =  1200;
+	else {
+		switch(pll_cycles_val) {
+			case 0xEE: freq = 40;  break;
+			case 0xBB: freq = 50;  break;
+			case 0x55: freq = 100; break;
+			case 0x22: freq = 200; break;
+			case 0x11: freq = 300; break;
+			case 0x00: freq = 600; break;
+			default:
+				return -2;
+		}
 	}
 
 	FILE_LOG(logDEBUG2) << "PLL frequency for FPGA:  Freq: " << freq;
