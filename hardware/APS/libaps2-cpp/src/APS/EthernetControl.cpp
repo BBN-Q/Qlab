@@ -28,7 +28,7 @@ std::map<string, EthernetControl::EthernetDevInfo> EthernetControl::APS2device_;
 bool EthernetControl::pcapRunning = false;
 
 EthernetControl::EthernetControl() {
-    cout << "New EthernetControl" << endl;
+    FILE_LOG(logINFO) << "New EthernetControl";
 	// get list of interfaces from pcap
     seqNum_ = 0;
     apsHandle_ = 0;
@@ -101,13 +101,17 @@ bool isOpen() {
 	return false;
 }
 
-size_t EthernetControl::Write(APSCommand & commmand, uint32_t addr, void * data, size_t length) {
+size_t EthernetControl::Write(APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data ) { 
+    vector<uint8_t> bytes = words2bytes(data);
+    return Write(command,addr, bytes ); 
+}
+
+size_t EthernetControl::Write(APSCommand_t & commmand, uint32_t addr, vector<uint8_t> & data) {
     static const int MAX_FRAME_LEN = 1500;
     uint8_t frame[MAX_FRAME_LEN];
     APSEthernetHeader * bph;
-    
-    FILE_LOG(logDEBUG1) << "Sending Command: " << APS2::printAPSCommand(&(commmand));
-    FILE_LOG(logDEBUG1) << "Sending " << length << " Bytes";
+
+    FILE_LOG(logDEBUG2) << "EthernetControl::Write";
 
     // build frame
     std::fill(frame, frame + 1500, 0);    
@@ -122,14 +126,14 @@ size_t EthernetControl::Write(APSCommand & commmand, uint32_t addr, void * data,
     uint8_t * start = frame;
     start += sizeof(APSEthernetHeader);
 
-    uint8_t * source = static_cast<uint8_t *>(data);
-
-    size_t bytesRemaining = length;
+    size_t bytesRemaining = data.size();
     bool sent = false;
 
     if (!apsHandle_) return INVALID_APS_ID;
 
     size_t headerLen = sizeof(APSEthernetHeader);
+
+    auto dataItterator = data.begin();
 
     while (bytesRemaining > 0 || !sent) {
 
@@ -137,8 +141,8 @@ size_t EthernetControl::Write(APSCommand & commmand, uint32_t addr, void * data,
         
         if (bytesSend > 0) {
             // copy data into packet
-            std::copy(source, source + bytesSend, start);
-            source += bytesSend;
+            std::copy(dataItterator, dataItterator + bytesSend, start);
+            dataItterator += bytesSend;
         }
         bytesRemaining -= bytesSend;
 
@@ -149,12 +153,13 @@ size_t EthernetControl::Write(APSCommand & commmand, uint32_t addr, void * data,
             seqNum_ = 1;
         }
 
-        FILE_LOG(logDEBUG1) << "Src: " << print_ethernetAddress(bph->src);
-        FILE_LOG(logDEBUG1) << "Dest: " << print_ethernetAddress(bph->dest);
-        FILE_LOG(logDEBUG1) << "Command: " << APS2::printAPSCommand(&bph->command);
-        FILE_LOG(logDEBUG1) << "bytesSend: " << bytesSend;
-
         bph->seqNum = seqNum_;
+
+        FILE_LOG(logDEBUG1) << "Write Frame";
+        FILE_LOG(logDEBUG1) << " Src: " << print_ethernetAddress(bph->src)
+                            << " Dest: " << print_ethernetAddress(bph->dest);
+        FILE_LOG(logDEBUG1) << " Seqnum " << bph->seqNum << " Command: " << APS2::printAPSCommand(bph->command)
+                            << " + " <<  data.size() << " Bytes";
 
         packetHTON(bph); // swap bytes to network order
 
@@ -168,7 +173,7 @@ size_t EthernetControl::Write(APSCommand & commmand, uint32_t addr, void * data,
 	return SUCCESS;
 }
 
-size_t EthernetControl::Read(void * data, size_t readLength, APSCommand * command) {
+EthernetControl::ErrorCodes EthernetControl::Read(void * data, size_t readLength, APSCommand_t * command) {
     struct pcap_pkthdr *header;
     const unsigned char *pkt_data;
 
@@ -181,11 +186,6 @@ size_t EthernetControl::Read(void * data, size_t readLength, APSCommand * comman
         APSEthernetHeader * eh = (APSEthernetHeader *) pkt_data;
 
         packetHTON(eh);
-
-        FILE_LOG(logDEBUG) << "Read Frame: ";
-        FILE_LOG(logDEBUG1) << "Src: " << print_ethernetAddress(eh->src);
-        FILE_LOG(logDEBUG1) << "Dest: " << print_ethernetAddress(eh->dest);
-        FILE_LOG(logDEBUG1) << "Command: " << APS2::printAPSCommand(&eh->command);
 
         size_t payloadLen = header->len - sizeof(APSEthernetHeader);
         size_t copyLen = eh->command.cnt * sizeof(uint32_t);
@@ -205,6 +205,12 @@ size_t EthernetControl::Read(void * data, size_t readLength, APSCommand * comman
         if (command) {
             *command = eh->command;
         }
+
+        FILE_LOG(logDEBUG) << "Read Frame: ";
+        FILE_LOG(logDEBUG) << " Src: " << print_ethernetAddress(eh->src) 
+                           << " Dest: " << print_ethernetAddress(eh->dest);
+        FILE_LOG(logDEBUG) << " Seqnum " << eh->seqNum << " Command: " << APS2::printAPSCommand(eh->command)
+                            << " + " << copyLen << " bytes";
 
         std::copy(start, start + copyLen, static_cast<uint8_t*>(data) );
         return SUCCESS;
@@ -257,6 +263,8 @@ void EthernetControl::get_network_devices() {
     struct sockaddr * saddr;
     struct sockaddr_in *addrIn;
 
+    FILE_LOG(logDEBUG) << "Getting Network Devices";
+
 	/* Retrieve the device list from the local machine */
     if (pcap_findalldevs(&alldevs, errbuf) == -1) {
     	string err(errbuf);
@@ -264,6 +272,7 @@ void EthernetControl::get_network_devices() {
     }
 
     /* store list in map */
+    FILE_LOG(logDEBUG1) << "Initializing PCAP Devices:";
     for(d= alldevs; d != NULL; d= d->next) {
         if (!findDeviceInfo(d->name)) {
             
@@ -426,7 +435,7 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadc
         bph->command.mode_stat = APS_STATUS_TEMP;
         bph->command.cnt = 0x10;
 
-        FILE_LOG(logDEBUG1) << "Enumerate Packet: " << APS2::printAPSCommand(&(bph->command));
+        FILE_LOG(logDEBUG1) << "Enumerate Packet: " << APS2::printAPSCommand(bph->command);
 
         packetHTON(bph); // swap bytes to network order
         
@@ -460,7 +469,7 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadc
 
                 FILE_LOG(logDEBUG3) << "Src: " << print_ethernetAddress(eh->src);
                 FILE_LOG(logDEBUG3) << " Dest: " << print_ethernetAddress(eh->dest);
-                FILE_LOG(logDEBUG3) << " Command: " << APS2::printAPSCommand(&eh->command);
+                FILE_LOG(logDEBUG3) << " Command: " << APS2::printAPSCommand(eh->command);
 
                 string devString = print_ethernetAddress(eh->src);
                 APSunits_.insert(devString);
@@ -511,7 +520,7 @@ void EthernetControl::packetHTON(APSEthernetHeader * frame) {
         // packet is not an APS packet do not swap 
         return;
     }
-    frame->packedCommand = htonl(frame->packedCommand);
+    frame->command.packed = htonl(frame->command.packed);
     frame->addr    = htonl(frame->addr);
 }
 
@@ -633,7 +642,7 @@ void EthernetControl::debugAPSEcho(string device, DummyAPS * aps) {
             } else {
                 cout << "Src: " << print_ethernetAddress(eh->src);
                 cout << " Dest: " << print_ethernetAddress(eh->dest);
-                cout << " Command: " << APS2::printAPSCommand(&(eh->command)) << endl;
+                cout << " Command: " << APS2::printAPSCommand(eh->command) << endl;
 
             }
 
@@ -648,10 +657,13 @@ void EthernetControl::debugAPSEcho(string device, DummyAPS * aps) {
             // set source
             std::copy(di->macAddr, di->macAddr + MAC_ADDR_LEN,  dh->src);
             
-            cout << "Send Src: " << print_ethernetAddress(dh->src);
+            setcolor(dark_green,black);
+            cout << "Send";
+            setcolor(white,black);
+            cout << " Src: " << print_ethernetAddress(dh->src);
             cout << " Dest: " << print_ethernetAddress(dh->dest);
             cout << " Len: " << sendLength;
-            cout << " Command: " << APS2::printAPSCommand(&(dh->command)) << endl;
+            cout << " Command: " << APS2::printAPSCommand(dh->command) << endl;
 
             dh->frameType = APS_PROTO;
 
@@ -691,10 +703,10 @@ pcap_t * EthernetControl::start_capture(string & devName, string & filter) {
 
 size_t EthernetControl::program_FPGA(vector<UCHAR> fileData, uint32_t addr) {
 
-    UCHAR buffer[MAX_PAYLOAD_LEN];
+    vector<uint8_t> buffer;
 
-    APSCommand command;
-    APSCommand response;
+    APSCommand_t command;
+    APSCommand_t response;
 
     FILE_LOG(logDEBUG) << "program_FPGA: " << fileData.size() << " Bytes @ " << addr;
 
@@ -715,18 +727,20 @@ size_t EthernetControl::program_FPGA(vector<UCHAR> fileData, uint32_t addr) {
     for (int frameCnt = 0; frameCnt < numFrames; frameCnt++) {
 
         // build APS Command
-        zeroAPSCommand(&command);
+        command.packed = 0;
+        
         command.cmd = APS_COMMAND_FPGACONFIG_NACK;
         command.mode_stat = 0;
 
         copyCount = min(dataRemaining, static_cast<size_t>(MAX_PAYLOAD_LEN));
+        buffer.clear();
         command.cnt = copyCount / sizeof(uint32_t); // set equal to number of words to be written
         for (int copyIdx = 0; copyIdx < copyCount; copyIdx++)
-            buffer[copyIdx] = fileData[dataOffset++];
+            buffer.push_back(fileData[dataOffset++]);
 
         FILE_LOG(logDEBUG) << "Writing frame " << frameCnt << "/" << numFrames;
 
-        Write(command, addr, buffer, copyCount);
+        Write(command, addr, buffer);
 
         dataRemaining -= copyCount;
         addr += copyCount / sizeof(uint32_t);
@@ -735,7 +749,7 @@ size_t EthernetControl::program_FPGA(vector<UCHAR> fileData, uint32_t addr) {
         if (command.cmd == APS_COMMAND_FPGACONFIG_ACK) {
             FILE_LOG(logDEBUG) << "Wait for ACK";
             Read(nullptr, 0, &response);
-            FILE_LOG(logDEBUG) << "RECV ACK " << APS2::printAPSCommand(&(response));
+            FILE_LOG(logDEBUG) << "RECV ACK " << APS2::printAPSCommand(response);
             if (!response.ack) {
                 FILE_LOG(logERROR) << "APS FPGA Write command acknowlege expected";
             } else {
@@ -758,12 +772,13 @@ EthernetControl::ErrorCodes EthernetControl::select_FPGA_image(uint32_t addr) {
 
     FILE_LOG(logDEBUG) << "select_fpga_image addr = " << addr;
 
-    APSCommand command;
-    zeroAPSCommand(&command);
+    APSCommand_t command;
+    command.packed = 0;
+    
     command.cmd = APS_COMMAND_FPGACONFIG_CTRL;
     Write(command, addr);
 
-    // wait for reset acknowlege 
+    // wait for Resetting FPGA acknowlege 
     struct APS_Status_Registers statusRegs;
     int retries = 0;
     int response = TIMEOUT;
@@ -772,3 +787,127 @@ EthernetControl::ErrorCodes EthernetControl::select_FPGA_image(uint32_t addr) {
     }
 }
 
+EthernetControl::ErrorCodes EthernetControl::WriteRegister(uint32_t addr, uint32_t data)  {
+
+    FILE_LOG(logDEBUG) << "WriteRegister " << std::hex << addr << " = " << std::dec << data;
+
+    APSCommand_t command;
+    APSCommand_t response;
+    command.packed = 0;
+    command.cmd = APS_COMMAND_USERIO_ACK;
+    command.cnt = 1;
+    
+    vector<uint32_t> d = {data};
+
+    Write(command, addr,  d);
+    Read(nullptr, 0, &response);
+
+    if (response.mode_stat == 0x02) {
+        FILE_LOG(logERROR) << "Invalid CNT";
+    }
+
+    if ((response.cmd == command.cmd) && response.ack == 1) {
+        return SUCCESS;
+    } else {
+        return TIMEOUT;
+    }
+}
+
+EthernetControl::ErrorCodes EthernetControl::ReadRegister(uint32_t addr, uint32_t & data) {
+
+    FILE_LOG(logDEBUG) << "ReadRegister " << std::hex << addr;
+
+    APSCommand_t command;
+    APSCommand_t response;
+    command.packed = 0;
+    command.cmd = APS_COMMAND_USERIO_ACK;
+    command.cnt = 1;
+    command.r_w = 1;
+    Write(command, addr);
+    Read(&data, sizeof(uint32_t), &response);
+
+    return SUCCESS;
+}
+
+EthernetControl::ErrorCodes EthernetControl::WriteSPI(uint8_t target, uint16_t instr, vector<uint8_t> & data)     {
+
+    // make data 32 bit aligned
+    
+    int remainder = sizeof(uint32_t) - (data.size() % sizeof(uint32_t));
+    for (int cnt = 0; cnt < remainder; cnt++)
+        data.push_back(0);
+  
+}
+
+EthernetControl::ErrorCodes EthernetControl::ReadSPI( APS2::CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data)     {
+
+    APSChipConfigCommand_t cmd;
+    cmd.packed = 0;
+   
+
+    uint8_t commands[] = {CHIPCONFIG_IO_TARGET_PAUSE,
+                          CHIPCONFIG_IO_TARGET_DAC_0_MULTI,
+                          CHIPCONFIG_IO_TARGET_DAC_1_MULTI,
+                          CHIPCONFIG_IO_TARGET_PLL_MULTI,
+                          CHIPCONFIG_IO_TARGET_VCXO};
+
+    // VCXO is write only so error if trying to read
+    if (target >  CHIPCONFIG_TARGET_PLL)  return INVALID_SPI_TARGET ;
+
+    cmd.target = commands[target];
+    cmd.spicnt_data = 1; // single byte read
+
+    switch(target)
+    {
+    case CHIPCONFIG_TARGET_PLL: 
+        {
+        PLLCommand_t pllCmd = {static_cast<uint16_t>(addr & 0x1FFF), 0 , 1};
+        cmd.instr = pllCmd.packed;
+        }
+        break;
+    case CHIPCONFIG_TARGET_DAC_0:
+    case CHIPCONFIG_TARGET_DAC_1:
+        {
+        DACCommand_t dacCmd =   {static_cast<uint8_t>(addr & 0x1F), 0 , 1};
+        cmd.instr = dacCmd.packed;
+        }
+        break;
+    default:
+        // Ignore unsupported commands
+        return INVALID_SPI_TARGET;
+    }
+
+    APSCommand_t command;
+    APSCommand_t response;
+
+    command.packed = 0;
+    response.packed = 0;
+
+    command.cmd = APS_COMMAND_CHIPCONFIGIO;
+    command.cnt = 2;
+    command.r_w = 0;
+
+    vector<uint32_t> writeData;
+    writeData.push_back(cmd.packed);
+
+    FILE_LOG(logDEBUG2) << "Chip Config: " << APS2::printAPSChipCommand(cmd);
+
+    Write(command, addr, writeData);
+    Read(&data, 1, &response);
+
+    return SUCCESS;
+}
+
+vector<uint8_t> EthernetControl::words2bytes(vector<uint32_t> & words) {
+
+    vector<uint8_t> bytes;
+    bytes.reserve(sizeof(uint32_t) * words.size());
+
+    for( uint32_t data: words) {
+        uint8_t *asBytes = (uint8_t *) &data;
+        for(int cnt = 0; cnt < 4 ; cnt++)
+            bytes.push_back(*(asBytes++));
+    }
+
+    return bytes;
+}

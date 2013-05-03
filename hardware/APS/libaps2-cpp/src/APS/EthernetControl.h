@@ -38,7 +38,8 @@ public:
     	INVALID_NETWORK_DEVICE = -2,
     	INVALID_PCAP_FILTER = -3,
     	INVALID_APS_ID = -4,
-    	TIMEOUT = -5
+    	TIMEOUT = -5,
+    	INVALID_SPI_TARGET
 	};
 
 	typedef void (*DebugPacketCallback)(const void * data, unsigned int length);  
@@ -67,13 +68,23 @@ public:
 
 	ErrorCodes set_network_device(string description);
 
-	size_t Write(APSCommand & command) { Write(command, 0, 0, 0);}
-	size_t Write(APSCommand & command, uint32_t addr) { Write(command, addr, 0, 0);}
-	size_t Write(APSCommand & command, uint32_t addr,  void * data, size_t length);
-	size_t Read(void * data, size_t packetLength, APSCommand * command = nullptr);
+	size_t Write(APSCommand_t & command, uint32_t addr = 0) { auto data = vector<uint8_t>(); return Write(command, addr, data);};
+	size_t Write(APSCommand_t & command, uint32_t addr,  vector<uint8_t> & data );
+	size_t Write(APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data );
+	ErrorCodes Read(void * data, size_t packetLength, APSCommand_t * command = nullptr);
+
+	ErrorCodes WriteRegister(uint32_t addr, uint32_t data);	
+	ErrorCodes WriteRegister(int addr, uint32_t data) {return WriteRegister(static_cast<uint32_t>(addr), data);}
+	ErrorCodes ReadRegister(uint32_t addr, uint32_t & data);	
+	ErrorCodes ReadRegister(int addr, uint32_t & data) {return ReadRegister(static_cast<uint32_t>(addr), data);}	
+
+	ErrorCodes WriteSPI(uint8_t target, uint16_t instr, vector<uint8_t> & data);	
+	ErrorCodes ReadSPI( APS2::CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data);
 
 	size_t program_FPGA(vector<UCHAR> fileData, uint32_t addr = 0);
 	ErrorCodes   select_FPGA_image(uint32_t addr = 0);
+
+
 
 	bool isOpen();
 	static bool isOpen(int deviceID);
@@ -94,6 +105,8 @@ public:
 
 private:
 
+
+
 	EthernetDevInfo *pcapDevice_;
 	string deviceID_;
 	string filter_;
@@ -101,6 +114,8 @@ private:
 	pcap_t *apsHandle_;
 
 	uint16_t seqNum_;
+
+	static vector<uint8_t> words2bytes(vector<uint32_t> & words);
 
 	static const unsigned int pcapTimeoutMS = 1000;
 
