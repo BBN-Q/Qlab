@@ -9,7 +9,7 @@
 #define CONSTANTS_H_
 
 //Some maximum sizes of things we can fit
-static const int  MAX_APS_CHANNELS = 4;
+static const int  MAX_APS_CHANNELS = 2;
 
 static const int  APS_WAVEFORM_UNIT_LENGTH = 4;
 
@@ -58,17 +58,13 @@ static const int APS_CMD = (0x7<<4);
 static const int LSB_MASK = 0xFF;
 
 //Clock bits
-static const int FPGA1_PLL_CYCLES_ADDR =  0x190;
-static const int FPGA1_PLL_BYPASS_ADDR = 0x191;
+static const int FPGA1_PLL_CYCLES_ADDR =  0x193;
+static const int FPGA1_PLL_BYPASS_ADDR = 0x194;
 static const int DAC0_ENABLE_ADDR = 0xF0;
 static const int DAC1_ENABLE_ADDR = 0xF1;
 static const int FPGA1_PLL_ADDR = 0xF2;
 
-static const int FPGA2_PLL_CYCLES_ADDR = 0x196;
-static const int FPGA2_PLL_BYPASS_ADDR = 0x197;
-static const int DAC2_ENABLE_ADDR = 0xF5;
-static const int DAC3_ENABLE_ADDR = 0xF4;
-static const int FPGA2_PLL_ADDR = 0xF3;
+
 
 
 // configRegister Locations
