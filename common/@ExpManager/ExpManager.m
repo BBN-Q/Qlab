@@ -54,6 +54,7 @@ classdef ExpManager < handle
         plotScopeTimer
         CWMode = false
         saveVariances = false
+        dataTimeout = 60 % timeout in seconds
     end
     
     methods
@@ -263,7 +264,7 @@ classdef ExpManager < handle
             end
             
             %Wait for data taking to finish
-            obj.scopes{1}.wait_for_acquisition(10000);
+            obj.scopes{1}.wait_for_acquisition(obj.dataTimeout);
             
             if(~obj.CWMode)
                 %Stop all the AWGs
