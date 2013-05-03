@@ -389,34 +389,17 @@ classdef ExpManager < handle
         function plot_scope_callback(obj, ~, ~)
             %We keep track of figure handles to not pop new ones up all the
             %time
-            persistent figHandles axesHandles plotHandles
+            persistent figHandles 
             if isempty(figHandles)
                 figHandles = struct();
-                axesHandles = struct();
-                plotHandles = struct();
             end
             
             for measName = fieldnames(obj.measurements)'
-                measData = obj.measurements.(measName{1}).get_data();
-                
-                if ~isempty(measData)
-                    if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
-                        figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Scope']);
-                    end
-                    figHandle = figHandles.(measName{1});
-                    
-                    if ~isfield(axesHandles, [measName{1} '_abs']) || ~ishandle(axesHandles.([measName{1} '_abs'])) || ~isfield(plotHandles, [measName{1} '_abs'])
-                        axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
-                        plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), abs(measData));
-                        ylabel(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                        axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
-                        plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), (180/pi)*angle(measData));
-                        ylabel(axesHandles.([measName{1} '_phase']), 'Phase')
-                    else
-                        set(plotHandles.([measName{1} '_abs']), 'YData', abs(measData));
-                        set(plotHandles.([measName{1} '_phase']), 'YData', (180/pi)*angle(measData));
-                    end
+                if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
+                    figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Scope']);
                 end
+                figHandle = figHandles.(measName{1});
+                obj.measurements.(measName{1}).plot(figHandle);
             end
             drawnow()
         end

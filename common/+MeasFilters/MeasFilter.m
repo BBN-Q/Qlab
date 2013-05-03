@@ -31,6 +31,10 @@ classdef MeasFilter < handle
         childFilter
         plotScope = false
         scopeHandle
+        plotMode = 'amp/phase' %allowed enums are 'amp/phase', 'real/imag', 'quad'
+        axesHandles
+        plotHandles
+        
     end
     
     methods
@@ -46,6 +50,9 @@ classdef MeasFilter < handle
             if isfield(settings, 'plotScope')
                 obj.plotScope = settings.plotScope;
             end
+            if isfield(settings, 'plotMode')
+                obj.plotMode = settings.plotMode;
+            end
             if ~isempty(filter)
                 obj.childFilter = filter;
             end
@@ -60,7 +67,7 @@ classdef MeasFilter < handle
             if obj.plotScope
                 obj.plot_scope(out);
             end
-
+            
         end
         
         function reset(obj)
@@ -104,32 +111,74 @@ classdef MeasFilter < handle
         end
         
         function out = get_var(obj)
-           out = struct();
-           if ~isempty(obj.accumulatedVar)
-               out.realvar = (obj.accumulatedVar.real - real(get_data(obj)).^2)/(obj.varct-1);
-               out.imagvar = (obj.accumulatedVar.imag - imag(get_data(obj)).^2)/(obj.varct-1);
-               out.prodvar = (obj.accumulatedVar.prod - real(get_data(obj)).*imag(get_data(obj)))/(obj.varct-1);
-           end
+            out = struct();
+            if ~isempty(obj.accumulatedVar)
+                out.realvar = (obj.accumulatedVar.real - real(get_data(obj)).^2)/(obj.varct-1);
+                out.imagvar = (obj.accumulatedVar.imag - imag(get_data(obj)).^2)/(obj.varct-1);
+                out.prodvar = (obj.accumulatedVar.prod - real(get_data(obj)).*imag(get_data(obj)))/(obj.varct-1);
+            end
         end
         
         function plot_scope(obj, data)
-           %Helper function to plot raw data to check timing and what not
-           if isempty(obj.scopeHandle)
-               fh = figure();
-               obj.scopeHandle = axes('Parent', fh);
-           end
-           if ndims(obj.latestData) == 4
-               dims = size(data);
-               imagesc(reshape(data, dims(1), prod(dims(2:end))), 'Parent', obj.scopeHandle);
-               xlabel('Segment');
-               ylabel('Time');
-           elseif ndims(obj.latestData) == 2
-               imagesc(data, 'Parent', obj.scopeHandle);
-               xlabel('Segment');
-               ylabel('Time');
-           else
-               error('Unable to handle data with these dimensions.')
-           end
+            %Helper function to plot raw data to check timing and what not
+            if isempty(obj.scopeHandle)
+                fh = figure();
+                obj.scopeHandle = axes('Parent', fh);
+            end
+            if ndims(obj.latestData) == 4
+                dims = size(data);
+                imagesc(reshape(data, dims(1), prod(dims(2:end))), 'Parent', obj.scopeHandle);
+                xlabel('Segment');
+                ylabel('Time');
+            elseif ndims(obj.latestData) == 2
+                imagesc(data, 'Parent', obj.scopeHandle);
+                xlabel('Segment');
+                ylabel('Time');
+            else
+                error('Unable to handle data with these dimensions.')
+            end
+        end
+        
+        function plot(obj, figH)
+            %Given a figure handle plot the most recent data
+            plotMap = struct();
+            plotMap.abs = struct('label','Amplitude', 'func', @abs);
+            plotMap.phase = struct('label','Phase (degrees)', 'func', @(x) (180/pi)*angle(x));
+            plotMap.real = struct('label','Real Quad.', 'func', @real);
+            plotMap.imag = struct('label','Imag. Quad.', 'func', @imag);
+            
+            
+            switch obj.plotMode
+                case 'amp/phase'
+                    toPlot = {plotMap.abs, plotMap.phase};
+                    numRows = 2; numCols = 1;
+                case 'real/imag'
+                    toPlot = {plotMap.real, plotMap.imag};
+                    numRows = 2; numCols = 1;
+                case 'quad'
+                    toPlot = {plotMap.abs, plotMap.phase, plotMap.real, plotMap.imag};
+                    numRows = 2; numCols = 2;
+                otherwise
+                    toPlot = {};
+            end
+            
+            if isempty(obj.axesHandles)
+                obj.axesHandles = cell(length(toPlot),1);
+                obj.plotHandles = cell(length(toPlot),1);
+            end
+            
+            measData = obj.get_data();
+            if ~isempty(measData)
+                for ct = 1:length(toPlot)
+                    if isempty(obj.axesHandles{ct}) || ~ishandle(obj.axesHandles{ct})
+                        obj.axesHandles{ct} = subplot(numRows, numCols, ct, 'Parent', figH);
+                        obj.plotHandles{ct} = plot(obj.axesHandles{ct}, toPlot{ct}.func(measData));
+                        ylabel(obj.axesHandles{ct}, toPlot{ct}.label)
+                    else
+                        set(obj.plotHandles{ct}, 'YData', toPlot{ct}.func(measData));
+                    end
+                end
+            end
         end
     end
     
