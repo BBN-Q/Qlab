@@ -79,9 +79,6 @@ struct CheckSum {
 	WORD data;
 };
 
-//PLL routines go through sets of address/data pairs
-typedef std::pair<ULONG, UCHAR> PLLAddrData;
-
 //some vectors
 typedef vector<unsigned short> WordVec;
 
