@@ -39,13 +39,8 @@ unsigned char * DummyAPS::packetCallback(const void * voidDataPtr, size_t & leng
 
     uint32_t * data = reinterpret_cast<uint32_t*>(const_cast<void*>(voidDataPtr));
 
-    length /= sizeof(uint32_t);
-
 	APSEthernetHeader * eh = (APSEthernetHeader *) data;
     APSEthernetHeader * dh = (APSEthernetHeader *) outboundPacket_;
-
-    // copy inbound packet to outbound
-    memcpy(outboundPacket_, data, length);
 
     setcolor(red, black);
 	cout << "Recv ";
@@ -68,6 +63,10 @@ unsigned char * DummyAPS::packetCallback(const void * voidDataPtr, size_t & leng
     if (eh->command.cmd == APS_COMMAND_RESET) {
     	length = reset();
     } 
+
+    if (eh->command.cmd == APS_COMMAND_STATUS) {
+        length = status(data, length);
+    }
 
 
     if ((eh->command.cmd == APS_COMMAND_FPGACONFIG_ACK) || 
@@ -132,6 +131,28 @@ size_t DummyAPS::reset() {
     return sizeof(struct APSEthernetHeader) + sizeof(struct APS_Status_Registers);
 }
 
+size_t DummyAPS::status(uint32_t * frameData,  size_t & length) {
+
+    setcolor(purple,black);
+    cout << "status()" << endl;
+    setcolor(white,black);
+
+    APSEthernetHeader * eh = (APSEthernetHeader *) frameData;
+    APSEthernetHeader * dh = (APSEthernetHeader *) outboundPacket_;
+
+    std::fill(outboundPacket_, outboundPacket_ + frameLenWords, 0);
+
+    dh->command.packed = eh->command.packed;
+    dh->command.ack = 1;
+    
+    statusRegs_.uptime = uptime();
+
+    // copy status registers
+    memcpy((uint8_t *) getPayloadPtr(outboundPacketPtr_), &statusRegs_, sizeof(struct APS_Status_Registers));
+    
+    return sizeof(struct APSEthernetHeader) + sizeof(struct APS_Status_Registers);
+}
+
 unsigned int DummyAPS::uptime() {
     std::chrono::time_point<std::chrono::steady_clock> t;
     t = std::chrono::steady_clock::now();
@@ -144,7 +165,7 @@ size_t DummyAPS::recv_fpga_file(uint32_t * frameData,  size_t & length) {
 
     APSEthernetHeader * eh = (APSEthernetHeader *) frameData;
     APSEthernetHeader * dh = (APSEthernetHeader *) outboundPacket_;
-    std::fill(outboundPacket_, outboundPacket_ + length, 0);
+    std::fill(outboundPacket_,outboundPacket_ + frameLenWords, 0);
 
     dh->command.packed = 0;
     dh->command.cmd = APS_COMMAND_FPGACONFIG_ACK;
@@ -220,7 +241,7 @@ size_t DummyAPS::user_io(uint32_t * frameData,  size_t & length) {
 
     APSEthernetHeader * eh = (APSEthernetHeader *) frameData;
     APSEthernetHeader * dh = (APSEthernetHeader *) outboundPacket_;
-    std::fill(outboundPacket_, outboundPacket_ + length, 0);
+    std::fill(outboundPacket_,outboundPacket_ + frameLenWords, 0);
 
     setcolor(purple,black);
     cout << "user_io ";
@@ -251,19 +272,16 @@ size_t DummyAPS::user_io(uint32_t * frameData,  size_t & length) {
 }
 
 size_t DummyAPS::chip_config(uint32_t * frameData,  size_t & length) {
-    // mimic a reprogram
-    
 
     APSEthernetHeader * eh = (APSEthernetHeader *) frameData;
     APSEthernetHeader * dh = (APSEthernetHeader *) outboundPacket_;
-    std::fill(outboundPacket_, outboundPacket_ + length, 0);
+    std::fill(outboundPacket_,outboundPacket_ + frameLenWords, 0);
 
     setcolor(purple,black);
     cout << "chip_config ";
     setcolor(white,black);
 
-    dh->command.packed = 0;
-    dh->command.cmd = APS_COMMAND_CHIPCONFIGIO;
+    dh->command.packed = eh->command.packed;
     dh->command.ack = 1;
 
     APSChipConfigCommand_t chipCmd;
@@ -274,6 +292,10 @@ size_t DummyAPS::chip_config(uint32_t * frameData,  size_t & length) {
 
     chipCmd.packed = inValue[0];
 
+    // byte swap from big endian
+    
+    chipCmd.packed = ntohl(chipCmd.packed);
+    
     cout << "chip command = " << APS2::printAPSChipCommand(chipCmd) << endl;
 
 
@@ -286,10 +308,15 @@ size_t DummyAPS::chip_config(uint32_t * frameData,  size_t & length) {
             break;
 
         case CHIPCONFIG_IO_TARGET_PLL_MULTI: 
+           
+            break;
+        case CHIPCONFIG_IO_TARGET_DAC_0_SINGLE: 
+            break;
+        case CHIPCONFIG_IO_TARGET_DAC_1_SINGLE: 
+            break;
+        case CHIPCONFIG_IO_TARGET_PLL_SINGLE: 
             PLLCommand_t pllcmd;
             pllcmd.packed = chipCmd.instr;
-
-            cout << "pllcmd.r_w " << pllcmd.r_w << " pllcmd.addr " <<  pllcmd.addr;
 
             if (pllcmd.r_w && pllcmd.addr == FPGA1_PLL_CYCLES_ADDR) {
                 *outValue = pll_cycles_;
@@ -301,14 +328,6 @@ size_t DummyAPS::chip_config(uint32_t * frameData,  size_t & length) {
                 pll_bypass_ = (inValue[1]) & 0xFF;
             }
 
-
-            break;
-        case CHIPCONFIG_IO_TARGET_DAC_0_SINGLE: 
-            break;
-        case CHIPCONFIG_IO_TARGET_DAC_1_SINGLE: 
-            break;
-        case CHIPCONFIG_IO_TARGET_PLL_SINGLE: 
-
             break;
         case CHIPCONFIG_IO_TARGET_VCXO: 
             break;
@@ -319,12 +338,6 @@ size_t DummyAPS::chip_config(uint32_t * frameData,  size_t & length) {
             FILE_LOG(logERROR) << "Invalid Chip Config Target";
     }
  
-    cout << "pll_bypass_ " << (int) pll_bypass_ << endl;
-    cout << "pll_cycles_ " << (int) pll_cycles_ << endl;
-
-    
-    cout << "Returning: " << *outValue << endl;
-
     return sizeof(struct APSEthernetHeader) + sizeof(uint32_t);
 }
 

@@ -30,7 +30,10 @@ public:
 
 	
 private:
-	uint32_t outboundPacket_[375];
+
+	static const int frameLenWords = 375;
+	
+	uint32_t outboundPacket_[frameLenWords];
 	uint32_t *outboundPacketPtr_;
 	struct APS_Status_Registers statusRegs_;
 
@@ -46,6 +49,8 @@ private:
 	size_t select_fpga_program();
 	size_t user_io(uint32_t * data,  size_t & length);
 	size_t chip_config(uint32_t * data,  size_t & length);
+
+	size_t status(uint32_t * data,  size_t & length);
 
 	uint8_t pll_cycles_;
 	uint8_t pll_bypass_;

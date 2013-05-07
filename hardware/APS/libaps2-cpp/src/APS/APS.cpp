@@ -82,7 +82,9 @@ int APS::init(const string & bitFile, const bool & forceReload){
 	 * by looking at the current bitfile version and the PLL status.
 	 */
 
-	if (forceReload || read_bitFile_version() != FIRMWARE_VERSION || !read_PLL_status()) {
+	 FILE_LOG(logWARNING) << "forceReload enabled";
+
+	if (1||forceReload || read_bitFile_version() != FIRMWARE_VERSION || !read_PLL_status()) {
 		FILE_LOG(logINFO) << "Resetting instrument";
 		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version() << " PLL status: " << read_PLL_status();
 
@@ -106,13 +108,11 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		//Program the bitfile to both FPGA's
 		program_FPGA(bitFile, FIRMWARE_VERSION);
 
-		
 		//Reset all state machines
 		reset();
 
-
 		//Default to max sample rate
-		//set_sampleRate(1200);
+		set_sampleRate(1200);
 
 		/*
 		// seems to be necessary on DAC2 devices
@@ -620,19 +620,22 @@ int APS::flush() {
 int APS::reset_status_ctrl() {
 	// sets Status/CTRL register to default state when running (OSCEN enabled)
 	UCHAR WriteByte = APS_OSCEN_BIT;
-	return FPGA::write_register(handle_, APS_STATUS_CTRL, 0, &WriteByte);
+	return handle_.WriteRegister(APS_STATUS_CTRL, WriteByte);
 }
 
 
 int APS::clear_status_ctrl() {
 	// clears Status/CTRL register. This is the required state to program the VCXO and PLL
 	UCHAR WriteByte = 0;
-	return FPGA::write_register(handle_, APS_STATUS_CTRL, 0, &WriteByte);
+	return handle_.WriteRegister(APS_STATUS_CTRL, WriteByte);
 }
 
 UCHAR APS::read_status_ctrl() {
+
 	UCHAR ReadByte = 0xBA;
-	FPGA::read_register(handle_, APS_STATUS_CTRL, 0, &ReadByte);
+	uint32_t regData = 0;
+	handle_.ReadRegister(APS_STATUS_CTRL, regData);
+	ReadByte = (regData & 0xFF);
 	return ReadByte;
 }
 
@@ -681,10 +684,8 @@ int APS::setup_PLL() {
 	};
 
 
-	// Go through the routine
-	for (auto tmpPair : PLL_Routine){
-		FPGA::write_SPI(handle_, APS_PLL_SPI, tmpPair.first, {tmpPair.second});
-	}
+	// write routine to APS
+	handle_.WritePLLSPI(PLL_Routine);
 
 	// enable the oscillator
 	if (APS::reset_status_ctrl() != 1)
@@ -733,7 +734,6 @@ int APS::set_PLL_freq(const int & freq) {
 	FILE_LOG(logDEBUG2) << "Setting PLL cycles addr: " << myhex << pllCyclesAddr << " val: " << int(pllCyclesVal);
 	FILE_LOG(logDEBUG2) << "Setting PLL bypass addr: " << myhex << pllBypassAddr << " val: " << int(pllBypassVal);
 
-
 	// Disable DDRs
 	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
 	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
@@ -753,10 +753,14 @@ int APS::set_PLL_freq(const int & freq) {
 		{0x18, 0x70}, // Clear calibration flag so that next set generates 0 to 1.
 		{0x232, 0x1} // Set bit 0 to 1 to simultaneously update all registers with pending writes.
 	};
-	// Go through the routine
-	for (auto tmpPair : PLL_Routine){
-		FPGA::write_SPI(handle_, APS_PLL_SPI, tmpPair.first, {tmpPair.second});
-	}
+
+	cout << "WritePLLSPI" << endl;
+
+	// write routine to APS
+	handle_.WritePLLSPI(PLL_Routine);
+
+
+	cout << "Enable Oscillator" << endl;
 
 	// Enable Oscillator
 	if (APS::reset_status_ctrl() != 1) return -4;
@@ -812,6 +816,7 @@ int APS::test_PLL_sync(const int & numRetries /* see header for default */) {
 	pllEnableAddr = DAC0_ENABLE_ADDR;
 	pllEnableAddr2 = DAC1_ENABLE_ADDR;
 	
+	FILE_LOG(logDEBUG) << "Disable DDRs" << endl;
 
 	// Disable DDRs
 	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
@@ -842,6 +847,8 @@ int APS::test_PLL_sync(const int & numRetries /* see header for default */) {
 		return inSync;
 	};
 
+	FILE_LOG(logDEBUG) << "Step 1" << endl;
+
 	// Step 1: test for the PLL's being locked to the reference
 	inSync = wait_PLL_relock(true, FPGA_ADDR_PLL_STATUS, PLL_LOCK_TEST);
 	if (!inSync) {
@@ -851,6 +858,7 @@ int APS::test_PLL_sync(const int & numRetries /* see header for default */) {
 
 	inSync = false; globalSync = false;
 
+	FILE_LOG(logDEBUG) << "Step 2" << endl;
 
 	//Step 2:
 	// start by testing for a 600 MHz XOR always low
@@ -859,13 +867,15 @@ int APS::test_PLL_sync(const int & numRetries /* see header for default */) {
 	auto update_PLL_register = [this] (){
 		ULONG address = 0x232;
 		UCHAR data = 0x1;
-		FPGA::write_SPI(handle_, APS_PLL_SPI, address, {data});
+		handle_.WritePLLSPI(address, data);
 	};
 
 	auto read_DLL_phase = [this] (int addr) {
 		// The phase register holds a 9-bit value [0, 511] representing the phase shift.
 		// We convert his value to phase in degrees in the range (-180, 180]
-		double phase = FPGA::read_FPGA(handle_, addr);
+		uint32_t regData;
+		handle_.ReadRegister(addr, regData);
+		double phase = regData;
 		if (phase > 256) {
 			phase -= 512;
 		}
@@ -884,7 +894,9 @@ int APS::test_PLL_sync(const int & numRetries /* see header for default */) {
 
 		//Take twenty counts of the the xor data
 		for(int xorct = 0; xorct < xorCounts; xorct++) {
-			pllBit = FPGA::read_FPGA(handle_, FPGA_ADDR_PLL_STATUS);
+			uint32_t regData;
+			handle_.ReadRegister(FPGA_ADDR_PLL_STATUS, regData);
+			pllBit = regData;
 			xorFlagCnts += (pllBit >> PLL_GLOBAL_XOR_BIT) & 0x1;
 		}
 
@@ -907,25 +919,25 @@ int APS::test_PLL_sync(const int & numRetries /* see header for default */) {
 		// TODO: check that we are dealing with the case of in-phase 600 MHz clocks with BOTH 300 MHz clocks 180 out of phase with the reference
 		else {
 			// 600 MHz clocks out of phase, reset DAC clocks that are 90/270 degrees out of phase with reference
-			FILE_LOG(logDEBUG1) << "DAC clocks out of phase; resetting, XOR counts: " << xorFlagCnts;
+			FILE_LOG(logDEBUG1) << "DAC clocks out of phase; resetting, XOR init: " << xorFlagCnts;
 			writeByte = 0x2; //disable clock outputs
 			//If ChA is +/-90 degrees out of phase then reset it
 			if (abs(a_phase) >= lowPhaseCutoff && abs(a_phase) <= highPhaseCutoff) {
 				dac02Reset = 1;
-				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr, {writeByte});
+				handle_.WritePLLSPI(pllEnableAddr, writeByte );
 			}
 			//If ChB is +/-90 degrees out of phase then reset it
 			if (abs(b_phase) >= lowPhaseCutoff && abs(b_phase) <= highPhaseCutoff) {
 				dac13Reset = 1;
-				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr2, {writeByte});
+				handle_.WritePLLSPI(pllEnableAddr2, writeByte);
 			}
 			//Actually update things
 			update_PLL_register();
 			writeByte = 0x0; // enable clock outputs
-			if (dac02Reset)
-				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr, {writeByte});
+			if (dac02Reset) 
+				handle_.WritePLLSPI(pllEnableAddr, writeByte );
 			if (dac13Reset)
-				FPGA::write_SPI(handle_, APS_PLL_SPI, pllEnableAddr2, {writeByte});
+				handle_.WritePLLSPI(pllEnableAddr2, writeByte);
 			update_PLL_register();
 
 			// reset FPGA PLLs
@@ -940,6 +952,8 @@ int APS::test_PLL_sync(const int & numRetries /* see header for default */) {
 			}
 		}
 	}
+
+	FILE_LOG(logDEBUG) << "Steps 3,4,5" << endl;
 
 	//Steps 3,4,5
 	const vector<string> chStrs = {"A", "B"};
@@ -974,6 +988,8 @@ int APS::test_PLL_sync(const int & numRetries /* see header for default */) {
 			}
 		}
 	}
+
+	FILE_LOG(logDEBUG) << "globalSync" << endl;
 
 	if (!globalSync) { // failed to sync both channels
 		if (numRetries > 0) {
@@ -1227,13 +1243,13 @@ int APS::enable_DAC_FIFO(const int & dac) {
 }
 
 int APS::disable_DAC_FIFO(const int & dac) {
-	BYTE data, mask;
-	ULONG syncAddr = 0x0 | (dac << 5);
+	uint8_t data, mask;
+	uint32_t syncAddr = 0x0 | (dac << 5);
 	FILE_LOG(logDEBUG1) << "Disable DAC " << dac << " FIFO";
 	// clear sync bit
-	FPGA::read_SPI(handle_, APS_DAC_SPI, syncAddr, &data);
+	handle_.ReadSPI(CHIPCONFIG_TARGET_PLL, syncAddr, data);
 	mask = (0x1 << 2);
-	return FPGA::write_SPI(handle_, APS_DAC_SPI, syncAddr, {UCHAR(data & ~mask)} );
+	return handle_.WritePLLSPI(syncAddr, data & ~mask );
 }
 
 int APS::reset_checksums(){

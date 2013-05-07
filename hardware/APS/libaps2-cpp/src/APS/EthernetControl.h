@@ -48,8 +48,9 @@ public:
 	
 	static const uint16_t APS_PROTO = 0xBBAE;
 
-	static const uint16_t MAX_PAYLOAD_LEN = 1468;
-	static const uint16_t MIN_PAYLOAD_LEN = 36;
+	static const uint16_t MAX_PAYLOAD_LEN_BYTES = 1468;
+	static const uint16_t MAX_PAYLOAD_LEN_WORDS = MAX_PAYLOAD_LEN_BYTES / sizeof(uint32_t);
+	static const uint16_t MIN_PAYLOAD_LEN_BYTES = 36;
 
 	struct EthernetDevInfo {
 		string name;          // device name as set by winpcap
@@ -80,6 +81,9 @@ public:
 
 	ErrorCodes WriteSPI(uint8_t target, uint16_t instr, vector<uint8_t> & data);	
 	ErrorCodes ReadSPI( APS2::CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data);
+
+	ErrorCodes WritePLLSPI(const vector<APS2::PLLAddrData> & data);
+	ErrorCodes WritePLLSPI(uint8_t address, uint8_t data);
 
 	size_t program_FPGA(vector<UCHAR> fileData, uint32_t addr = 0);
 	ErrorCodes   select_FPGA_image(uint32_t addr = 0);
@@ -132,6 +136,7 @@ private:
 	static void parseMACAddress(string macString, uint8_t * macBuffer_);
 	
 	static void packetHTON(APSEthernetHeader *);
+	static void packetNTOH(APSEthernetHeader *);
 
 	static string getPointToPointFilter(uint8_t * localMacAddr, uint8_t *apsMacAddr);
 	static string getEnumerateFilter(uint8_t * localMacAddr);

@@ -190,7 +190,7 @@ EthernetControl::ErrorCodes EthernetControl::Read(void * data, size_t readLength
         size_t payloadLen = header->len - sizeof(APSEthernetHeader);
         size_t copyLen = eh->command.cnt * sizeof(uint32_t);
 
-        if (payloadLen > copyLen && payloadLen > MIN_PAYLOAD_LEN) {
+        if (payloadLen > copyLen && payloadLen > MIN_PAYLOAD_LEN_BYTES) {
             FILE_LOG(logWARNING) << "EthernetControl::Read received larger ethernet frame than expected from command cnt";
             FILE_LOG(logWARNING) << "payloadLen = " << payloadLen << " copyLen = " << copyLen;
         }
@@ -206,10 +206,10 @@ EthernetControl::ErrorCodes EthernetControl::Read(void * data, size_t readLength
             *command = eh->command;
         }
 
-        FILE_LOG(logDEBUG) << "Read Frame: ";
-        FILE_LOG(logDEBUG) << " Src: " << print_ethernetAddress(eh->src) 
+        FILE_LOG(logDEBUG2) << "Read Frame: ";
+        FILE_LOG(logDEBUG2) << " Src: " << print_ethernetAddress(eh->src) 
                            << " Dest: " << print_ethernetAddress(eh->dest);
-        FILE_LOG(logDEBUG) << " Seqnum " << eh->seqNum << " Command: " << APS2::printAPSCommand(eh->command)
+        FILE_LOG(logDEBUG2) << " Seqnum " << eh->seqNum << " Command: " << APS2::printAPSCommand(eh->command)
                             << " + " << copyLen << " bytes";
 
         std::copy(start, start + copyLen, static_cast<uint8_t*>(data) );
@@ -465,7 +465,7 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadc
                 // have packet so process
                 APSEthernetHeader * eh = (APSEthernetHeader *) pkt_data;
 
-                packetHTON(eh);
+                packetNTOH(eh);
 
                 FILE_LOG(logDEBUG3) << "Src: " << print_ethernetAddress(eh->src);
                 FILE_LOG(logDEBUG3) << " Dest: " << print_ethernetAddress(eh->dest);
@@ -515,13 +515,25 @@ string EthernetControl::print_ethernetAddress(uint8_t * addr) {
 
 void EthernetControl::packetHTON(APSEthernetHeader * frame) {
 
-    frame->frameType = htons(frame->frameType);
-    if (frame->frameType != APS_PROTO || frame->frameType != htons(APS_PROTO) ) {
+    if (frame->frameType != APS_PROTO ) {
         // packet is not an APS packet do not swap 
         return;
     }
+    frame->frameType = htons(frame->frameType);
+    frame->seqNum = htons(frame->seqNum);
     frame->command.packed = htonl(frame->command.packed);
     frame->addr    = htonl(frame->addr);
+}
+
+void EthernetControl::packetNTOH(APSEthernetHeader * frame) {
+    frame->frameType = ntohs(frame->frameType);
+    if (frame->frameType != APS_PROTO ) {
+        // packet is not an APS packet do not swap 
+        return;
+    }
+    frame->seqNum = ntohs(frame->seqNum);
+    frame->command.packed = ntohl(frame->command.packed);
+    frame->addr    = ntohl(frame->addr);
 }
 
 
@@ -632,7 +644,7 @@ void EthernetControl::debugAPSEcho(string device, DummyAPS * aps) {
 
             if (same) continue;
 
-            packetHTON(eh); // swap to host
+            packetNTOH(eh); // swap to host
 
             sendLength =  header->len;
 
@@ -710,7 +722,7 @@ size_t EthernetControl::program_FPGA(vector<UCHAR> fileData, uint32_t addr) {
 
     FILE_LOG(logDEBUG) << "program_FPGA: " << fileData.size() << " Bytes @ " << addr;
 
-    const size_t max_fpga_payload_len = MAX_PAYLOAD_LEN - sizeof(uint32_t);
+    const size_t max_fpga_payload_len = MAX_PAYLOAD_LEN_BYTES - sizeof(uint32_t);
 
     // determine number of frames based on max packet length
     // extra uint32_t for offset
@@ -732,7 +744,7 @@ size_t EthernetControl::program_FPGA(vector<UCHAR> fileData, uint32_t addr) {
         command.cmd = APS_COMMAND_FPGACONFIG_NACK;
         command.mode_stat = 0;
 
-        copyCount = min(dataRemaining, static_cast<size_t>(MAX_PAYLOAD_LEN));
+        copyCount = min(dataRemaining, static_cast<size_t>(MAX_PAYLOAD_LEN_BYTES));
         buffer.clear();
         command.cnt = copyCount / sizeof(uint32_t); // set equal to number of words to be written
         for (int copyIdx = 0; copyIdx < copyCount; copyIdx++)
@@ -839,16 +851,69 @@ EthernetControl::ErrorCodes EthernetControl::WriteSPI(uint8_t target, uint16_t i
   
 }
 
+EthernetControl::ErrorCodes EthernetControl::WritePLLSPI(const vector<APS2::PLLAddrData> & data) {
+        
+    // maximum number of addr / data pairs 
+    unsigned int numBlocks = data.size() / MAX_PAYLOAD_LEN_WORDS ;
+
+    APSCommand_t command;
+    APSCommand_t response;
+
+    APSChipConfigCommand_t cmd;
+
+    vector<uint32_t> writeData;
+
+    unsigned int dataElement = 0;
+
+    PLLCommand_t pllCmd;
+
+    for (int cnt = 0; cnt < numBlocks; cnt++) {
+        command.packed = 0;
+        response.packed = 0;
+
+        command.cmd = APS_COMMAND_CHIPCONFIGIO;
+        command.cnt = 2;
+        command.r_w = 0;
+
+        unsigned int maxData = min(data.size(), static_cast<size_t>(MAX_PAYLOAD_LEN_WORDS) );
+
+        for ( int dataCnt = 0; dataCnt < maxData; dataCnt++) {
+            APS2::PLLAddrData addrData = data[dataElement++];
+
+            cmd.packed = 0;
+            cmd.target = CHIPCONFIG_IO_TARGET_PLL_SINGLE;
+            pllCmd.packed = 0;
+            pllCmd.addr = addrData.first;
+            
+            cmd.spicnt_data = addrData.second;
+            cmd.instr = pllCmd.packed;
+
+            // swap byte order
+            cmd.packed = htonl(cmd.packed);
+            writeData.push_back(cmd.packed);
+        }
+
+        Write(command, 0, writeData);
+        //Read(&data, 1, &response); // docs do not specfiy a response
+    }
+    return SUCCESS;
+}
+
+EthernetControl::ErrorCodes EthernetControl::WritePLLSPI(uint8_t address, uint8_t data) {
+    
+    const vector<PLLAddrData> PLL_update = {{address, data}};
+    return  WritePLLSPI(PLL_update);
+}
+
 EthernetControl::ErrorCodes EthernetControl::ReadSPI( APS2::CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data)     {
 
     APSChipConfigCommand_t cmd;
     cmd.packed = 0;
-   
 
     uint8_t commands[] = {CHIPCONFIG_IO_TARGET_PAUSE,
-                          CHIPCONFIG_IO_TARGET_DAC_0_MULTI,
-                          CHIPCONFIG_IO_TARGET_DAC_1_MULTI,
-                          CHIPCONFIG_IO_TARGET_PLL_MULTI,
+                          CHIPCONFIG_IO_TARGET_DAC_0_SINGLE,
+                          CHIPCONFIG_IO_TARGET_DAC_1_SINGLE,
+                          CHIPCONFIG_IO_TARGET_PLL_SINGLE,
                           CHIPCONFIG_IO_TARGET_VCXO};
 
     // VCXO is write only so error if trying to read
@@ -884,15 +949,18 @@ EthernetControl::ErrorCodes EthernetControl::ReadSPI( APS2::CHIPCONFIG_IO_TARGET
     response.packed = 0;
 
     command.cmd = APS_COMMAND_CHIPCONFIGIO;
-    command.cnt = 2;
+    command.cnt = 1;
     command.r_w = 0;
+
+    // byte swap to big endian
+    cmd.packed = htonl(cmd.packed);
 
     vector<uint32_t> writeData;
     writeData.push_back(cmd.packed);
 
     FILE_LOG(logDEBUG2) << "Chip Config: " << APS2::printAPSChipCommand(cmd);
 
-    Write(command, addr, writeData);
+    Write(command, 0, writeData);
     Read(&data, 1, &response);
 
     return SUCCESS;
