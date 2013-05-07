@@ -1,8 +1,8 @@
 function RandomizedBenchmarking(qubit, makePlot)
 
 basename = 'RB';
-fixedPt = 27000;
-cycleLength = 30000;
+
+fixedPt = 12000;
 nbrRepeats = 1;
 introduceError = 0;
 errorAmp = 0.2;
@@ -12,6 +12,7 @@ pg = PatternGen(qubit);
 % load in random Clifford sequences from text file
 % FID = fopen('RBsequences-long.txt');
 FID = fopen('RB_ISeqs.txt');
+%FID = fopen('RBsequences.txt');
 % FID = fopen('RB-interleave-Y90p.txt');
 if ~FID
     error('Could not open Clifford sequence list')
@@ -49,19 +50,18 @@ seqParams = struct(...
     'suffix', '', ...
     'numSteps', 1, ...
     'nbrRepeats', nbrRepeats, ...
-    'fixedPt', fixedPt, ...
-    'cycleLength', cycleLength, ...
-    'measLength', 2000);
+    'fixedPt', fixedPt);
+
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
-
 qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
-
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
-measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
+
+measChannels = getpref('qlab','MeasCompileList');
+awgs = getpref('qlab','AWGCompileList');
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
+
 
 end
