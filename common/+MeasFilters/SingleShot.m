@@ -44,7 +44,7 @@ classdef SingleShot < MeasFilters.MeasFilter
         end
         
         function out = get_data(obj)
-            %If we don't have any data yet return empty
+            %If we don't have all the data yet return empty
             if size(obj.groundData,2) ~= obj.numShots/2
                 out = [];
                 return
@@ -130,6 +130,27 @@ classdef SingleShot < MeasFilters.MeasFilter
             obj.pdfData = struct();
             obj.analysed = false;
         end
+        
+        function plot(obj, figH)
+            
+            if obj.analysed
+                clf(figH);
+                axes1 = subplot(2,1,1, 'Parent', figH);
+                plot(axes1, obj.pdfData.bins_I, obj.pdfData.gPDF_I, 'b');
+                hold(axes1, 'on');
+                plot(axes1, obj.pdfData.bins_I, obj.pdfData.ePDF_I, 'r');
+                legend(axes1, {'Ground','Excited'})
+                text(0.1, 0.75, sprintf('Fidelity: %.1f%%',100*obj.pdfData.maxFidelity_I), 'Units', 'normalized', 'FontSize', 14, 'Parent', axes1)
+
+                axes2 = subplot(2,1,2, 'Parent', figH);
+                plot(axes2, obj.pdfData.bins_Q, obj.pdfData.gPDF_Q, 'b');
+                hold(axes2, 'on');
+                plot(axes2, obj.pdfData.bins_Q, obj.pdfData.ePDF_Q, 'r');
+                legend(axes2, {'Ground','Excited'})
+                text(0.1, 0.75, sprintf('Fidelity: %.1f%%',100*obj.pdfData.maxFidelity_Q), 'Units', 'normalized', 'FontSize', 14, 'Parent', axes2)
+            end
+        end
+
         
     end
 end
