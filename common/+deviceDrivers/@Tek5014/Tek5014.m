@@ -43,7 +43,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
         
 		% Trigger group object properties
 		Impedance;  		%	Values: 500Ohms, 1Ohms
-		InternalRate;		%	Values: <numeric>
+		triggerInterval;		%	Values: <numeric>
 		Level;				%	Values: <numeric>
 		Polarity; 			%	Values: Positive, Negative
 		Slope;    			%	Values: Positive, Negative
@@ -164,8 +164,8 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
                         obj.Level = settings.Level;
 					case 'triggerSource'
 						obj.triggerSource = settings.triggerSource;
-					case 'InternalRate'
-						obj.InternalRate = settings.InternalRate;
+					case 'triggerInterval'
+						obj.triggerInterval = settings.triggerInterval;
 					case 'samplingRate'
 						obj.samplingRate = settings.samplingRate;
 					otherwise
@@ -480,7 +480,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
 		function val = get.Impedance(obj)
             val = obj.query(['TRIGger' seq_string(obj) ':IMPedance?']);
 		end
-		function val = get.InternalRate(obj)
+		function val = get.triggerInterval(obj)
             val = obj.query(['TRIGger' seq_string(obj) ':TIMer?']);
 		end
 		function val = get.Level(obj)
@@ -578,15 +578,15 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
             end
         end
         
-		function obj = set.InternalRate(obj, value)
-            optionString = 'InternalRate';
+		function obj = set.triggerInterval(obj, value)
+            optionString = 'triggerInterval';
 
             if ~isnumeric(value)
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', num2str(value)]);
             else
                 gpib_string = ['TRIGger' seq_string(obj) ':TIMer ', num2str(value)];
                 obj.write(gpib_string);
-                obj.InternalRate = value; 
+                obj.triggerInterval = value; 
             end
 		end
 		function obj = set.Level(obj, value) % trigger level
