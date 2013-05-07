@@ -58,6 +58,10 @@ classdef PulseCalibration < handle
                 case 'phase'
                     % unwrap phase jumps
                     out = 180/pi * unwrap(angle(data));
+                case 'real'
+                    out = real(data);
+                case 'imag'
+                    out = imag(data);
                 otherwise
                     error('Unknown dataType can only be "amp" or "phase"');
             end
