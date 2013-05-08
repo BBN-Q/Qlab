@@ -300,86 +300,91 @@ classdef ExpManager < handle
             %time
             
             %TODO: Handle changes in data size 
-            persistent figHandles axesHandles plotHandles
+            persistent figHandles plotHandles
             if isempty(figHandles)
                 figHandles = struct();
-                axesHandles = struct();
                 plotHandles = struct();
             end
             
+            % available plotting modes
+            plotMap = struct();
+            plotMap.abs = struct('label','Amplitude', 'func', @abs);
+            plotMap.phase = struct('label','Phase (degrees)', 'func', @(x) (180/pi)*angle(x));
+            plotMap.real = struct('label','Real Quad.', 'func', @real);
+            plotMap.imag = struct('label','Imag. Quad.', 'func', @imag);
+            
             for measName = fieldnames(obj.data)'
                 measData = squeeze(obj.data.(measName{1}).mean);
+                if isempty(measData)
+                    continue;
+                end
                 
-                if ~isempty(measData)
-                    %Check whether we have an open figure handle to plot to
-                    if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
-                        %If we've closed the figure then we probably
-                        %need to reset the axes and plot handles too
-                        if isfield(figHandles, measName{1})
-                           axesHandles = rmfield(axesHandles, [measName{1} '_abs']); 
-                           axesHandles = rmfield(axesHandles, [measName{1} '_phase']); 
-                           plotHandles = rmfield(plotHandles, [measName{1} '_abs']); 
-                           plotHandles = rmfield(plotHandles, [measName{1} '_phase']); 
-                        end
-                        figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Data']);
+                switch obj.measurements.(measName{1}).plotMode
+                    case 'amp/phase'
+                        toPlot = {plotMap.abs, plotMap.phase};
+                        numRows = 2; numCols = 1;
+                    case 'real/imag'
+                        toPlot = {plotMap.real, plotMap.imag};
+                        numRows = 2; numCols = 1;
+                    case 'quad'
+                        toPlot = {plotMap.abs, plotMap.phase, plotMap.real, plotMap.imag};
+                        numRows = 2; numCols = 2;
+                    otherwise
+                        toPlot = {};
+                end
+
+                %Check whether we have an open figure handle to plot to
+                if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
+                    %If we've closed the figure then we probably
+                    %need to reset the axes and plot handles too
+                    if isfield(figHandles, measName{1})
+                       plotHandles.(measName{1}) = cell(length(toPlot),1);
                     end
-                    figHandle = figHandles.(measName{1});
-                    
-                    if reset || ~isfield(axesHandles, [measName{1} '_abs']) || ~isfield(plotHandles, [measName{1} '_abs']) || ~ishandle(axesHandles.([measName{1} '_abs']))
-                        axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
-                        axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
+                    figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Data']);
+                end
+                figHandle = figHandles.(measName{1});
+
+                for ct = 1:length(toPlot)
+                    if reset || ~isempty(plotHandles.(measName{1}){ct}) || ~ishandle(plotHandles.(measName{1}){ct})
+                        axesH = subplot(numRows, numCols, ct, 'Parent', figHandle);
                         sizes = cellfun(@(x) length(x.points), obj.sweeps);
                         switch nsdims(measData)
                             case 1
                                 %Find non-singleton sweep dimension
                                 goodSweepIdx = find(sizes ~= 1, 1);
-                                plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx}.plotPoints, abs(measData));
-                                xlabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx}.label);
-                                ylabel(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                                plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx}.plotPoints, (180/pi)*angle(measData));
-                                ylabel(axesHandles.([measName{1} '_phase']), 'Phase')
-                                xlabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx}.label);
-                                
+                                plotHandles.(measName{1}){ct} = plot(axesH, obj.sweeps{goodSweepIdx}.plotPoints, toPlot{ct}.func(measData));
+                                xlabel(axesH, obj.sweeps{goodSweepIdx}.label);
+                                ylabel(axesH, toPlot{ct}.label)
+
                             case 2
                                 goodSweepIdx = find(sizes ~= 1, 2);
                                 xPoints = obj.sweeps{goodSweepIdx(2)}.plotPoints;
                                 yPoints = obj.sweeps{goodSweepIdx(1)}.plotPoints;
-                                plotHandles.([measName{1} '_abs']) = imagesc(xPoints, yPoints, abs(measData), 'Parent', axesHandles.([measName{1} '_abs']));
-                                title(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                                xlabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx(2)}.label);
-                                ylabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx(1)}.label);
-                                plotHandles.([measName{1} '_phase']) = imagesc(xPoints, yPoints, (180/pi)*angle(measData), 'Parent', axesHandles.([measName{1} '_phase']));
-                                title(axesHandles.([measName{1} '_phase']), 'Phase')
-                                xlabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx(2)}.label);
-                                ylabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx(1)}.label);
+                                plotHandles.(measName{1}){ct} = imagesc(xPoints, yPoints, toPlot{ct}.func(measData), 'Parent', axesH);
+                                title(axesH, toPlot{ct}.label)
+                                xlabel(axesH, obj.sweeps{goodSweepIdx(2)}.label);
+                                ylabel(axesH, obj.sweeps{goodSweepIdx(1)}.label);
                             case 3
                                 goodSweepIdx = find(sizes ~= 1, 2);
                                 xPoints = obj.sweeps{goodSweepIdx(2)}.plotPoints;
                                 yPoints = obj.sweeps{goodSweepIdx(1)}.plotPoints;
-                                plotHandles.([measName{1} '_abs']) = imagesc(xPoints, yPoints, abs(squeeze(measData(1,:,:))), 'Parent', axesHandles.([measName{1} '_abs']));
-                                title(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                                xlabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx(2)}.label);
-                                ylabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx(1)}.label);
-                                plotHandles.([measName{1} '_phase']) = imagesc(xPoints, yPoints, (180/pi)*angle(squeeze(measData(1,:,:))), 'Parent', axesHandles.([measName{1} '_phase']));
-                                title(axesHandles.([measName{1} '_phase']), 'Phase')
-                                xlabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx(2)}.label);
-                                ylabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx(1)}.label);
+                                plotHandles.(measName{1}){ct} = imagesc(xPoints, yPoints, toPlot{ct}.func(squeeze(measData(1,:,:))), 'Parent', axesH);
+                                title(axesH, toPlot{ct}.label)
+                                xlabel(axesH, obj.sweeps{goodSweepIdx(2)}.label);
+                                ylabel(axesH, obj.sweeps{goodSweepIdx(1)}.label);
                         end
                     else
-                        switch length(setdiff(size(measData), 1))
+                        switch nsdims(measData)
                             case 1
-                                set(plotHandles.([measName{1} '_abs']), 'YData', abs(measData));
-                                set(plotHandles.([measName{1} '_phase']), 'YData', (180/pi)*angle(measData));
+                                set(plotHandles.(measName{1}){ct}, 'YData', toPlot{ct}.func(measData));
                             case 2
-                                set(plotHandles.([measName{1} '_abs']), 'CData', abs(measData));
-                                set(plotHandles.([measName{1} '_phase']), 'CData', (180/pi)*angle(measData));
+                                set(plotHandles.(measName{1}){ct}, 'CData', toPlot{ct}.func(measData));
                             case 3
                                 %Here we'll try to plot the last updated
                                 %slice
                                 curSliceIdx = find(~isnan(measData(:,1,1)), 1, 'last');
                                 curSlice = measData(curSliceIdx,:,:);
-                                set(plotHandles.([measName{1} '_abs']), 'CData', abs(squeeze(curSlice)));
-                                set(plotHandles.([measName{1} '_phase']), 'CData', (180/pi)*angle(squeeze(curSlice)));
+                                set(plotHandles.(measName{1}){ct}, 'CData', toPlot{ct}.func(squeeze(curSlice)));
                         end
                     end
                 end
