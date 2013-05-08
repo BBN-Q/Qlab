@@ -100,7 +100,7 @@ int APS::init(const string & bitFile, const bool & forceReload){
 		reset_status_ctrl();
 
 		// test PLL sync on each FPGA
-		//int status = test_PLL_sync(FPGA1);
+		// int status = test_PLL_sync(FPGA1);
 		int status = test_PLL_sync(FPGA1) || test_PLL_sync(FPGA2);
 		if (status) {
 			FILE_LOG(logERROR) << "DAC PLLs failed to sync";
@@ -640,16 +640,15 @@ int APS::reset_status_ctrl() {
 
 int APS::clear_status_ctrl() {
 	// clears Status/CTRL register. This is the required state to program the VCXO and PLL
-	UCHAR WriteByte = 0;
-	return FPGA::write_register(handle_, APS_STATUS_CTRL, 0, INVALID_FPGA, &WriteByte);
+	UCHAR writeByte = 0;
+	return FPGA::write_register(handle_, APS_STATUS_CTRL, 0, INVALID_FPGA, &writeByte);
 }
 
-UCHAR APS::read_status_ctrl() {
-	UCHAR ReadByte = 0xBADD;
-	FPGA::read_register(handle_, APS_STATUS_CTRL, 0, INVALID_FPGA, &ReadByte);
-	return ReadByte;
+UCHAR APS::read_status_ctrl() const {
+	UCHAR readByte = 0xAA;
+	FPGA::read_register(handle_, APS_STATUS_CTRL, 0, INVALID_FPGA, &readByte);
+	return readByte;
 }
-
 
 int APS::setup_PLL() {
 	// set the on-board PLL to its default state (two 1.2 GHz outputs, and one 300 MHz output)
