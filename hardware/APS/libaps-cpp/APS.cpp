@@ -22,8 +22,8 @@ APS::APS(int deviceID, string deviceSerial) :  isOpen{false}, deviceID_{deviceID
 			checksums_[FPGA2] = CheckSum();
 };
 
-APS::APS(APS && other) : isOpen{other.isOpen}, deviceID_{other.deviceID_}, handle_{other.handle_}, samplingRate_{other.samplingRate_},
-		writeQueue_{std::move(other.writeQueue_)}, streaming_{other.streaming_.load()}, mymutex_{std::move(other.mymutex_)}, deviceSerial_{other.deviceSerial_}{
+APS::APS(APS && other) : isOpen{other.isOpen}, deviceID_{other.deviceID_}, deviceSerial_{other.deviceSerial_}, handle_{other.handle_}, samplingRate_{other.samplingRate_},
+		writeQueue_{std::move(other.writeQueue_)}, streaming_{other.streaming_.load()}, mymutex_{std::move(other.mymutex_)}{
 	channels_.reserve(4);
 	myBankBouncerThreads_.reserve(4);
 	for(size_t ct=0; ct<4; ct++){
