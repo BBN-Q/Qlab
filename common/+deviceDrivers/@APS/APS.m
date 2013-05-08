@@ -480,6 +480,13 @@ classdef APS < hgsetget
             val = aps.libraryCall('read_register', fpga, addr);
         end
 
+        function [pllStatus, pllLock] = readPLLStatus(aps)
+            %Reads the status control register and pulls out the
+            %appropriate bits. 
+            regVal = aps.readStatusCtrl();
+            pllStatus = bitget(regVal, 6);
+            pllLock = bitget(regVal, 7);
+        end
         
     end %public methods
 
@@ -580,8 +587,7 @@ classdef APS < hgsetget
         end
 
         function val = readStatusCtrl(aps)
-            % TODO
-            %val = aps.libraryCall('Read status/ctrl', 'APS_ReadStatusCtrl');
+            val = aps.libraryCall('read_status_ctrl');
         end
         
         function regWriteTest(aps, addr)
