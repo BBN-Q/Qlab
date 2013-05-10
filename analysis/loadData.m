@@ -98,6 +98,8 @@ function data = loadData(makePlot, fullpath)
     % if nbrDataSets = 1, then pull absData and phaseData out of the cell
     % wrappers
     if data.nbrDataSets == 1
+        data.dimension = data.dimension{1};
+        data.data = data.data{1};
         data.absData = data.absData{1};
         data.phaseData = data.phaseData{1};
         data.xpoints = data.xpoints{1};
