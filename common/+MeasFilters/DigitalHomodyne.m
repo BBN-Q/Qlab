@@ -58,9 +58,9 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
 
             %Box car the demodulated signal
             if ndims(demodSignal) == 2
-                demodSignal = demodSignal(floor(obj.boxCarStart/decimFactor):floor(obj.boxCarStop/decimFactor),:);
+                demodSignal = demodSignal(1+floor(obj.boxCarStart/decimFactor):floor(obj.boxCarStop/decimFactor),:);
             elseif ndims(demodSignal) == 4
-                demodSignal = demodSignal(floor(obj.boxCarStart/decimFactor):floor(obj.boxCarStop/decimFactor),:,:,:);
+                demodSignal = demodSignal(1+floor(obj.boxCarStart/decimFactor):floor(obj.boxCarStop/decimFactor),:,:,:);
             else
                 error('Only able to handle 2 and 4 dimensional data.');
             end
