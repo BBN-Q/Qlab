@@ -82,11 +82,12 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             obj.serialNum = serialNum;
             
             % check that the device exists
-            serial_nums = obj.enumerate();
-            if ~any(strcmp(serial_nums, serialNum))
+            [serial_nums, product_ids] = obj.enumerate();
+            idx = find(strcmp(serial_nums, serialNum), 1);
+            if isempty(idx)
                 error('Could not find a Labbrick with serial %i', serialNum);
             end
-            obj.hid = calllib('hidapi', 'hid_open', obj.vendor_id, obj.product_id, uint16(['SN:0' serialNum 0]));
+            obj.hid = calllib('hidapi', 'hid_open', obj.vendor_id, product_ids(idx), uint16(['SN:0' serialNum 0]));
             if obj.hid.isNull 
                 error('Could not open device serial %s', serialNum);
             end
@@ -103,9 +104,10 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         end
         
         % get a list of connected Labbricks
-        function serials = enumerate(obj)
+        function [serials, product_ids] = enumerate(obj)
             
             serials = {};
+            product_ids = [];
 %             device_info = calllib('hidapi', 'hid_enumerate', obj.vendor_id, obj.product_id);
             device_info = calllib('hidapi', 'hid_enumerate', 0, 0);
             cur_device = device_info;
@@ -114,6 +116,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
                 snum = cur_device.value.serial_number;
                 setdatatype(snum, 'uint16Ptr', 8);
                 serials = [serials char(snum.value(5:end)')];
+                product_ids(end+1) = cur_device.value.product_id;
                 cur_device = cur_device.value.next;
                 if ~isempty(cur_device)
                     setdatatype(cur_device, 'hid_device_infoPtr');
