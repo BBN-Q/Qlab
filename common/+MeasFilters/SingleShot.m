@@ -23,11 +23,12 @@ classdef SingleShot < MeasFilters.MeasFilter
         pdfData
         numShots = -1
         analysed = false
+        bestIntegrationTime
     end
     
     methods
         function obj = SingleShot(childFilter, varargin)
-            obj = obj@MeasFilters.MeasFilter(childFilter, struct());
+            obj = obj@MeasFilters.MeasFilter(childFilter, struct('plotMode', 'real/imag'));
             if length(varargin) == 1
                 obj.numShots = varargin{1};
             end
@@ -92,6 +93,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 end
                 
                 [maxFidelity_I, intPt] = max(fidelities);
+                obj.bestIntegrationTime = intPt;
                 obj.pdfData.bins_I = linspace(min([intGroundIData(intPt,:), intExcitedIData(intPt,:)]), max([intGroundIData(intPt,:), intExcitedIData(intPt,:)]));
                 obj.pdfData.gPDF_I = ksdensity(intGroundIData(intPt,:), obj.pdfData.bins_I);
                 obj.pdfData.ePDF_I = ksdensity(intExcitedIData(intPt,:), obj.pdfData.bins_I);
@@ -127,13 +129,13 @@ classdef SingleShot < MeasFilters.MeasFilter
         function reset(obj)
             obj.groundData = [];
             obj.excitedData = [];
-            obj.pdfData = struct();
             obj.analysed = false;
         end
         
         function plot(obj, figH)
             
-            if obj.analysed
+            data = get_data(obj);
+            if ~isempty(data)
                 clf(figH);
                 axes1 = subplot(2,1,1, 'Parent', figH);
                 plot(axes1, obj.pdfData.bins_I, obj.pdfData.gPDF_I, 'b');
@@ -147,7 +149,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 hold(axes2, 'on');
                 plot(axes2, obj.pdfData.bins_Q, obj.pdfData.ePDF_Q, 'r');
                 legend(axes2, {'Ground','Excited'})
-                text(0.1, 0.75, sprintf('Fidelity: %.1f%%',100*obj.pdfData.maxFidelity_Q), 'Units', 'normalized', 'FontSize', 14, 'Parent', axes2)
+                text(0.1, 0.75, sprintf('Fidelity: %.1f%%\nIntegration time: %d',100*obj.pdfData.maxFidelity_Q, obj.bestIntegrationTime), 'Units', 'normalized', 'FontSize', 14, 'Parent', axes2)
             end
         end
 
