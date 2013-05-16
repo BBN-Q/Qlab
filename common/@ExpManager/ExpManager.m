@@ -162,7 +162,7 @@ classdef ExpManager < handle
                 sizes = [sizes 1];
             end
             % initialize data storage
-            obj.data = structfun(@(x) struct('mean', nan(sizes), 'realvar', nan(sizes), 'imagvar', nan(sizes), 'prodvar', nan(sizes)),...
+            obj.data = structfun(@(x) struct('mean', complex(nan(sizes),nan(sizes)), 'realvar', nan(sizes), 'imagvar', nan(sizes), 'prodvar', nan(sizes)),...
                 obj.measurements, 'UniformOutput', false);
             
             % generic nested loop sweeper through "stack"
