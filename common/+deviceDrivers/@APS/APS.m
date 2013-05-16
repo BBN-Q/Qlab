@@ -257,6 +257,8 @@ classdef APS < hgsetget
             if (err < 0)
                error(sprintf('APS: initAPS : %i', err));
             end
+            [~,b] = obj.readPLLStatus();
+            assert(b == 1, 'PLL seems to have lost its lock');
         end
         
         function loadWaveform(obj, ch, waveform)
