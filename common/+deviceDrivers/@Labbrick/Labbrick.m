@@ -225,40 +225,19 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             calllib('vnx_fmsynth', 'fnLMS_SetPowerLevel', obj.devID, value);
         end
         function obj = set.output(obj, value)
-            if isnumeric(value)
-                value = num2str(value);
-            end
-            
-            % Validate input
-            checkMapObj = containers.Map({'on','1','off','0'},...
-                {true, true, false, false});
-            if not (checkMapObj.isKey( lower(value) ))
-                error('Invalid input');
-            end
-
             % don't know why I need them, but without the pause commands
             % the SetRFOn command is occasionally ignored
             pause(0.1);
-            calllib('vnx_fmsynth', 'fnLMS_SetRFOn', obj.devID, checkMapObj(value));
+            calllib('vnx_fmsynth', 'fnLMS_SetRFOn', obj.devID, obj.cast_boolean(value));
             pause(0.1);
         end
 
-        function obj = set.mod(obj, value)
+        function obj = set.mod(obj, ~)
             %not supported by hardware
         end
         
         function obj = set.pulse(obj, value)
-            if isnumeric(value)
-                value = num2str(value);
-            end
-            
-            % Validate input
-            checkMapObj = containers.Map({'on','1','off','0'},...
-                {true, true, false, false});
-            if not (checkMapObj.isKey( lower(value) ))
-                error('Invalid input');
-            end
-            obj.pulseModeEnabled = checkMapObj(value);
+            obj.pulseModeEnabled = obj.cast_boolean(value);
             
             switch obj.pulseSource
                 case 'int'
@@ -302,5 +281,22 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
         end
     end % end instrument parameter accessors
     
+    methods (Static)
+       
+        %Helper function to cast boolean inputs to 'on'/'off' strings
+        function out = cast_boolean(in)
+            if isnumeric(in)
+                out = logical(in);
+            elseif ischar(in)
+                checkMapObj = containers.Map({'on','1','off','0'},...
+                    {true, true, false, false});
+                assert(checkMapObj.isKey(lower(in)), 'Invalid input');
+                out = checkMapObj(lower(in));
+            else islogical(in)
+                out = in;
+            end
+        end
+        
+    end
     
 end % end class definition
