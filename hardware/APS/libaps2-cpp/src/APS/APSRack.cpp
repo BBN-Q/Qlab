@@ -360,5 +360,7 @@ int APSRack::raw_read(int deviceID) {
 }
 
 int APSRack::read_register(int deviceID, int addr){
-	return FPGA::read_FPGA(APSs_[deviceID].handle_, addr);
+	uint32_t value;
+	APSs_[deviceID].handle_.ReadRegister(addr,value);
+	return value;
 }
