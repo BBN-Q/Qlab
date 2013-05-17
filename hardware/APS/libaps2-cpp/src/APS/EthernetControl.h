@@ -78,12 +78,14 @@ public:
 	ErrorCodes WriteRegister(int addr, uint32_t data) {return WriteRegister(static_cast<uint32_t>(addr), data);}
 	ErrorCodes ReadRegister(uint32_t addr, uint32_t & data);	
 	ErrorCodes ReadRegister(int addr, uint32_t & data) {return ReadRegister(static_cast<uint32_t>(addr), data);}	
+	uint32_t   ReadRegister(uint32_t addr) { uint32_t value; ReadRegister(addr,value); return value;}
+	uint32_t   ReadRegister(int addr) { uint32_t value; ReadRegister(static_cast<uint32_t>(addr),value); return value;}
 
-	ErrorCodes WriteSPI(uint8_t target, uint16_t instr, vector<uint8_t> & data);	
 	ErrorCodes ReadSPI( APS2::CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data);
 
-	ErrorCodes WritePLLSPI(const vector<APS2::PLLAddrData> & data);
-	ErrorCodes WritePLLSPI(uint8_t address, uint8_t data);
+	ErrorCodes WriteSPI(APS2::CHIPCONFIG_IO_TARGET target, const vector<APS2::AddrData> & data);
+	ErrorCodes WriteSPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, uint8_t data);
+	ErrorCodes WriteSPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, vector<uint8_t> data);
 
 	size_t program_FPGA(vector<UCHAR> fileData, uint32_t addr = 0);
 	ErrorCodes   select_FPGA_image(uint32_t addr = 0);
