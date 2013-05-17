@@ -292,8 +292,10 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
                     {true, true, false, false});
                 assert(checkMapObj.isKey(lower(in)), 'Invalid input');
                 out = checkMapObj(lower(in));
-            else islogical(in)
+            elseif islogical(in)
                 out = in;
+            else
+                error('Unable to cast to boolean');
             end
         end
         
