@@ -31,7 +31,7 @@ static const UCHAR BitReverse[256] =
 
 
 
-
+#if 0
 int FPGA::program_FPGA(EthernetControl & deviceHandle, vector<UCHAR> bitFileData) {
 
 	// To configure the FPGAs, you initialize them, send the byte stream, and
@@ -166,6 +166,7 @@ int FPGA::program_FPGA(EthernetControl & deviceHandle, vector<UCHAR> bitFileData
 	// Return the number of data bytes written
 	return numBytesProgrammed;
 }
+#endif
 
 int FPGA::reset(EthernetControl & deviceHandle) {
 	
@@ -188,6 +189,7 @@ int FPGA::reset(EthernetControl & deviceHandle) {
 	return 0;
 }
 
+#if 0
 int FPGA::read_register(
 		EthernetControl & deviceHandle,
 		const ULONG & Command, // APS_FPGA_IO, APS_FPGA_ADDR, APS_CONF_DATA, APS_CONF_STAT, or APS_STATUS_CTRL
@@ -287,11 +289,16 @@ int FPGA::write_FPGA(EthernetControl & deviceHandle, const unsigned int & addr, 
 	
 	return bytesWritten;
 }
+#endif
 
 int FPGA::write_block(EthernetControl & deviceHandle, vector<UCHAR> & dataPackets, const vector<size_t> & offsets){
 
+	FILE_LOG(logERROR) << "FPGA::write_block not implemented";
+
+
 	// seems to break with writes longer than 64kB so split on that
 	ULONG bytesWritten=0, tmpBytesWritten=0;
+/*
 	auto curIdx = dataPackets.begin();
 	const int maxWriteLength = 65536;
 	while (std::distance(curIdx, dataPackets.end()) > 0){
@@ -309,8 +316,10 @@ int FPGA::write_block(EthernetControl & deviceHandle, vector<UCHAR> & dataPacket
 			curIdx = dataPackets.end();
 		}
 	}
+*/
 	return(bytesWritten);
 }
+
 
 vector<UCHAR> FPGA::format(const unsigned int & addr, const vector<USHORT> & data){
 /* Helper function to format data for the FGPA in block mode:
@@ -372,6 +381,7 @@ vector<size_t> FPGA::computeCmdByteOffsets(const size_t & dataLength){
 	return offsets;
 }
 
+#if 0
 int FPGA::write_SPI
 (
 		EthernetControl & deviceHandle,
@@ -412,6 +422,8 @@ int FPGA::write_SPI
 	vector<UCHAR> dataPacket(0);
 	DWORD bytesWritten;
 	vector<UCHAR> byteBuffer(0);
+
+	FILE_LOG(logERROR) << "Replace call to FPGA::write_SPI with EthernetControl::WriteSPI";
 
 	switch(Command & APS_CMD)
 	{
@@ -460,7 +472,7 @@ int FPGA::read_SPI
 {
 	FILE_LOG(logERROR) << "Replace call to FPGA::read_SPI with EthernetControl::ReadSPI";
 }
-
+#endif
 
 int FPGA::clear_bit(EthernetControl & deviceHandle, const uint32_t addr, const uint32_t mask)
 /*
@@ -491,7 +503,6 @@ int FPGA::clear_bit(EthernetControl & deviceHandle, const uint32_t addr, const u
 	return 0;
 }
 
-
 int FPGA::set_bit(EthernetControl & deviceHandle, const uint32_t addr, const uint32_t mask)
 /*
  * Description : Sets Bit in FPGA register
@@ -501,16 +512,16 @@ int FPGA::set_bit(EthernetControl & deviceHandle, const uint32_t addr, const uin
 {
 
 	//Read the current state so we know how set the unset bits.
-	int currentState, currentState2;
+	uint32_t currentState, currentState2;
 	//Use a lambda because we'll need the same call below
 	auto check_cur_state = [&] () {
-		currentState = FPGA::read_FPGA(deviceHandle, addr);
+		deviceHandle.ReadRegister(addr, currentState);
 	};
 
 	check_cur_state();
 	FILE_LOG(logDEBUG2) << "Addr: " <<  myhex << addr << " Current State: " << currentState << " Mask: " << mask << " Writing: " << (currentState | mask);
 
-	FPGA::write_FPGA(deviceHandle, addr, currentState | mask);
+	deviceHandle.WriteRegister(addr, currentState | mask);
 
 	if (FILELog::ReportingLevel() >= logDEBUG2) {
 		// verify write
