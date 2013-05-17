@@ -38,7 +38,13 @@ int main (int argc, char* argv[])
   cout<<"BBN AP2 Test Executable" << endl;
   setcolor(white,black);
 
-  set_logging_level(5);
+
+  int dbgLevel = 4;
+  if (argc >= 2) {
+    dbgLevel = atoi(argv[1]);
+  }
+
+  set_logging_level(dbgLevel);
 
   // lookup based on device name
   //string dev("\\Device\\NPF_{F47ACE9E-1961-4A8E-BA14-2564E3764BFA}");
@@ -90,7 +96,7 @@ int main (int argc, char* argv[])
   cout << "initAPS(0) returned " << rc << endl;
   setcolor(white,black);
   
-#if 0
+
   cout << "Set sample rate " << endl;
 
   set_sampleRate(0,100);
@@ -143,6 +149,6 @@ int main (int argc, char* argv[])
   rc = disconnect_by_ID(0);
 
   cout << "disconnect_by_ID(0) returned " << rc << endl;
-#endif
+
   return 0;
 }
