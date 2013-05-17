@@ -22,7 +22,7 @@ measSettings = expSettings.measurements;
 
 for instrument = fieldnames(instrSettings)'
     fprintf('Connecting to %s\n', instrument{1});
-    instr = InstrumentFactory(instrument{1});
+    instr = InstrumentFactory(instrument{1}, instrSettings.(instrument{1}));
     add_instrument(exp, instrument{1}, instr, instrSettings.(instrument{1}));
 end
 
