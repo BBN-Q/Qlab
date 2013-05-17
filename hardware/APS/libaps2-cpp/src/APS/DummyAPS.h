@@ -31,8 +31,15 @@ public:
 	
 private:
 
+	struct DACRegisters {
+		uint8_t interrupt;
+		uint8_t controller;
+		uint8_t sd;
+		uint8_t msdMhd;
+	};
+
 	static const int frameLenWords = 375;
-	
+
 	uint32_t outboundPacket_[frameLenWords];
 	uint32_t *outboundPacketPtr_;
 	struct APS_Status_Registers statusRegs_;
@@ -54,6 +61,8 @@ private:
 
 	uint8_t pll_cycles_;
 	uint8_t pll_bypass_;
+
+	vector<DACRegisters> dacs;
 
 	map<uint32_t, uint32_t> user_registers_;
 

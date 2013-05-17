@@ -31,6 +31,10 @@ DummyAPS::DummyAPS( string dev ) : pll_cycles_(00), pll_bypass_(0x80) {
     user_registers_[FPGA_ADDR_PLL_STATUS] = (1 << PLL_02_LOCK_BIT) | (1 << PLL_13_LOCK_BIT) | (1 << REFERENCE_PLL_LOCK_BIT);
 
     outboundPacketPtr_ = &outboundPacket_[0];
+
+    for (int cnt = 0; cnt < MAX_APS_CHANNELS; cnt++) {
+        dacs.push_back({0,0,0,0});
+    }
 	
     EthernetControl::debugAPSEcho(dev,  this);
 }
@@ -45,8 +49,9 @@ unsigned char * DummyAPS::packetCallback(const void * voidDataPtr, size_t & leng
     setcolor(red, black);
 	cout << "Recv ";
     setcolor(white,black);
-    cout << "Src: " << EthernetControl::print_ethernetAddress(eh->src);
-    cout << " Dest: " << EthernetControl::print_ethernetAddress(eh->dest);
+    cout << "SeqNum: " << eh->seqNum;
+    //cout << "Src: " << EthernetControl::print_ethernetAddress(eh->src);
+    //out << " Dest: " << EthernetControl::print_ethernetAddress(eh->dest);
     cout << " Len: " << length;
     cout << " Command: " << APS2::printAPSCommand(eh->command) << endl;
 
@@ -246,7 +251,7 @@ size_t DummyAPS::user_io(uint32_t * frameData,  size_t & length) {
     setcolor(purple,black);
     cout << "user_io ";
     setcolor(white,black);
-    cout << ((eh->command.r_w) ? "read " : "write ") << eh->addr << " ";
+    cout << ((eh->command.r_w) ? "read " : "write ") << std::hex << eh->addr << std::dec << " ";
 
     dh->command.packed = 0;
     dh->command.cmd = APS_COMMAND_USERIO_ACK;
@@ -262,6 +267,13 @@ size_t DummyAPS::user_io(uint32_t * frameData,  size_t & length) {
         *outRegValue = user_registers_[eh->addr];
         cout << "val = " << *outRegValue << endl;
     }
+
+    /*
+    cout << "Register State" << endl;
+    for (auto reg: user_registers_) {
+        cout << std::hex << "Register: " << reg.first << " = " << std::dec << reg.second << endl;
+    }
+    */
     
     // ack frame if required
     if (eh->command.cmd == APS_COMMAND_USERIO_ACK) {
@@ -299,6 +311,8 @@ size_t DummyAPS::chip_config(uint32_t * frameData,  size_t & length) {
     cout << "chip command = " << APS2::printAPSChipCommand(chipCmd) << endl;
 
 
+
+
     switch(chipCmd.target) {
         case CHIPCONFIG_IO_TARGET_PAUSE:         
             break;
@@ -311,23 +325,58 @@ size_t DummyAPS::chip_config(uint32_t * frameData,  size_t & length) {
            
             break;
         case CHIPCONFIG_IO_TARGET_DAC_0_SINGLE: 
-            break;
         case CHIPCONFIG_IO_TARGET_DAC_1_SINGLE: 
-            break;
-        case CHIPCONFIG_IO_TARGET_PLL_SINGLE: 
-            PLLCommand_t pllcmd;
-            pllcmd.packed = chipCmd.instr;
+            {
+            DACCommand_t dacCmd;
+            dacCmd.packed = chipCmd.instr;
+            int dac = (chipCmd.target == CHIPCONFIG_IO_TARGET_DAC_0_SINGLE) ? 0 : 1;
+            uint8_t data = inValue[1] & 0xFF;
 
-            if (pllcmd.r_w && pllcmd.addr == FPGA1_PLL_CYCLES_ADDR) {
-                *outValue = pll_cycles_;
-            } else if (pllcmd.r_w && pllcmd.addr == FPGA1_PLL_BYPASS_ADDR) {
-                *outValue = pll_bypass_;
-            } else if (!pllcmd.r_w && pllcmd.addr == FPGA1_PLL_CYCLES_ADDR) {
-                pll_cycles_ = (inValue[1]) & 0xFF;
-            } else if (!pllcmd.r_w && pllcmd.addr == FPGA1_PLL_BYPASS_ADDR) {
-                pll_bypass_ = (inValue[1]) & 0xFF;
+            uint8_t cmd = dacCmd.addr & 0x0F;
+            
+            auto invalidDacCMD = [] () {  
+                setcolor(red,black);
+                cout << "Error: ";
+                setcolor(white, black);
+                cout << "Invalid DAC cmd" << endl; 
+            };
+
+            if (dacCmd.r_w) { // if read 
+                switch (cmd) {
+                    case 0x1: *outValue = dacs[dac].interrupt; break;
+                    case 0x6: *outValue = dacs[dac].controller; break;
+                    case 0x5: *outValue = dacs[dac].sd; break;
+                    case 0x4: *outValue = dacs[dac].msdMhd; break;
+                    default: invalidDacCMD(); break;
+                }
+            } else {
+                switch (cmd) {
+                    case 0x1: dacs[dac].interrupt = data; break;
+                    case 0x6: dacs[dac].controller = data; break;
+                    case 0x5: dacs[dac].sd = data; break;
+                    case 0x4: dacs[dac].msdMhd = data; break;
+                    default: invalidDacCMD(); break;
+                }
             }
 
+            cout << "DAC[" << dac << "] Addr " << dacCmd.addr << " r/w " << dacCmd.r_w << " Data " << data << endl ;
+            }
+            break;
+        case CHIPCONFIG_IO_TARGET_PLL_SINGLE:  
+            {
+                PLLCommand_t pllcmd;
+                pllcmd.packed = chipCmd.instr;
+                uint8_t data = inValue[1] & 0xFF;
+                if (pllcmd.r_w && pllcmd.addr == FPGA1_PLL_CYCLES_ADDR) {
+                    *outValue = pll_cycles_;
+                } else if (pllcmd.r_w && pllcmd.addr == FPGA1_PLL_BYPASS_ADDR) {
+                    *outValue = pll_bypass_;
+                } else if (!pllcmd.r_w && pllcmd.addr == FPGA1_PLL_CYCLES_ADDR) {
+                    pll_cycles_ = data;
+                } else if (!pllcmd.r_w && pllcmd.addr == FPGA1_PLL_BYPASS_ADDR) {
+                    pll_bypass_ = data;
+                }
+            }
             break;
         case CHIPCONFIG_IO_TARGET_VCXO: 
             break;
