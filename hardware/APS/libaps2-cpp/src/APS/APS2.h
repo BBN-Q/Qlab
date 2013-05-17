@@ -195,7 +195,7 @@ namespace APS2 {
 
 
 	//PLL routines go through sets of address/data pairs
-	typedef std::pair<uint8_t, uint8_t> PLLAddrData;
+	typedef std::pair<uint16_t, uint8_t> AddrData;
 	
 	uint32_t * getPayloadPtr(uint32_t * frame);
 	
