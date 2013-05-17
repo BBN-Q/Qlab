@@ -18,9 +18,9 @@ phases = unwrap(angle(rawData), [], 2);
 
 delayedPhases = zeros(size(phases));
 
+fitCoeffs = polyfit(freqs(1:100), phases(1,1:100),1);
 for ct = 1:size(phases,1)
-    fitCoeffs = polyfit(1:100, phases(ct,1:100),1);
-    delayedPhases(ct,:) = phases(ct,:) - (fitCoeffs(1)*(1:length(freqs))+fitCoeffs(2));
+    delayedPhases(ct,:) = phases(ct,:) - polyval(fitCoeffs, freqs);
 end
 
 %magic number cutoff to try and catch where unwrap goes back in between the
