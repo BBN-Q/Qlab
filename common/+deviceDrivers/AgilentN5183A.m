@@ -26,260 +26,132 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
         function obj = AgilentN5183A()
             %obj = obj@deviceDrivers.lib.uWSource();
         end
-		
+        
 		% Instrument parameter accessors
         % getters
         function val = get.frequency(obj)
-            gpib_string = ':freq?;';
-            temp = obj.query([gpib_string]);
-            val = str2double(temp)*1e-9; % convert to GHz
+            val = str2double(obj.query(':freq?;'))*1e-9; % convert to GHz
         end
         function val = get.power(obj)
-            gpib_string = ':power?;';
-            temp = obj.query([gpib_string]);
-            val = str2double(temp);
+            val = str2double(obj.query(':power?;'));
         end
         function val = get.phase(obj)
-            gpib_string = ':phase?;';
-            temp = obj.query([gpib_string]);
-            val = str2double(temp);
+            val = str2double(obj.query(':phase?;'));
         end
         function val = get.output(obj)
-            gpib_string = ':output?;';
-            temp = obj.query([gpib_string]);
-            val = temp;
+            val = obj.query(':output?;');
         end
         function val = get.mod(obj)
-            gpib_string = ':output:mod?;';
-            temp = obj.query([gpib_string]);
-            val = temp;
+            val = obj.query(':output:mod?;');
         end
         function val = get.alc(obj)
-            gpib_string = ':power:alc?;';
-            temp = obj.query([gpib_string]);
-            val = temp;
+            val = obj.query(':power:alc?;');
         end
         function val = get.pulse(obj)
-            gpib_string = ':pulm:state?;';
-            temp = obj.query([gpib_string]);
-            val = temp;
+            val = obj.query(':pulm:state?;');
         end
         function val = get.pulseSource(obj)
-            gpib_string = ':pulm:source?;';
-            temp = obj.query([gpib_string]);
-            val = temp;
+            val = obj.query(':pulm:source?;');
         end
         function val = get.IQ(obj)
-            gpib_string = ':dm:state?;';
-            temp = obj.query([gpib_string]);
-            val = temp;
+            val = obj.query(':dm:state?;');
         end
         function val = get.IQ_Adjust(obj)
-            gpib_string = ':dm:IQAD?;';
-            temp = obj.query([gpib_string]);
-            val = temp;
+            val = obj.query(':dm:IQAD?;');
         end
         function val = get.IQ_IOffset(obj)
-            gpib_string = ':dm:iqad:ioff?;';
-            temp = obj.query([gpib_string]);
-            val = str2double(temp);
+            val = str2double(obj.query(':dm:iqad:ioff?;'));
         end
         function val = get.IQ_QOffset(obj)
-            gpib_string = ':dm:iqad:qoff?;';
-            temp = obj.query([gpib_string]);
-            val = str2double(temp);
+            val = str2double(obj.query(':dm:iqad:qoff?;'));
         end
         function val = get.IQ_Skew(obj)
-            gpib_string = ':dm:iqad:qskew?;';
-            temp = obj.query([gpib_string]);
-            val = str2double(temp);
+            val = str2double(obj.query(':dm:iqad:qskew?;'));
         end
         
         % property setters
         function obj = set.frequency(obj, value)
-            gpib_string = ':freq:fixed %dGHz;';
-
-            % Validate input
-            if ~isnumeric(value)
-                error('Invalid input');
-            end
-            
-            gpib_string = sprintf(gpib_string, value);
+            assert(isnumeric(value), 'Requires numeric input');
 
             %mode_string = ':freq:mode fixed'; %set to fixed
             %obj.write(mode_string);
-            obj.write(gpib_string);
+            obj.write(sprintf(':freq:fixed %dGHz;', value));
 
             %Wait for frequency to settle
             pause(0.02);
         end
         function obj = set.power(obj, value)
-            gpib_string = ':power %ddbm;';
-
-            % Validate input
-            if ~isnumeric(value)
-                error('Invalid input');
-            end
-            
-            gpib_string = sprintf(gpib_string, value);
-            obj.write(gpib_string);
+            assert(isnumeric(value), 'Requires numeric input');
+            obj.write(sprintf(':power %ddbm;', value));
         end
         function obj = set.output(obj, value)
-            gpib_string = ':output ';
-            if isnumeric(value)
-                value = num2str(value);
-            end
-            
-            % Validate input
-            checkMapObj = containers.Map({'on','1','off','0'},...
-                {'on','on','off','off'});
-            if not (checkMapObj.isKey( lower(value) ))
-                error('Invalid input');
-            end
-            
-            gpib_string =[gpib_string checkMapObj(value) ';'];
-            obj.write(gpib_string);
+            obj.write([':output ' obj.cast_boolean(value) ';']);
         end
         % set phase in degrees
         function obj = set.phase(obj, value)
-            gpib_string = ':phase %dDEG;';
-            
-            % Validate input
-            if ~isnumeric(value)
-                error('Invalid input');
-            end
-            
-            gpib_string = sprintf(gpib_string, value);
-            obj.write(gpib_string);
+            assert(isnumeric(value), 'Requires numeric input');
+            obj.write(sprintf(':phase %dDEG;', value));
         end
         function obj = set.mod(obj, value)
-            gpib_string = ':output:mod ';
-            if isnumeric(value)
-                value = num2str(value);
-            end
-            
-            % Validate input
-            checkMapObj = containers.Map({'on','1','off','0'},...
-                {'on','on','off','off'});
-            if not (checkMapObj.isKey( lower(value) ))
-                error('Invalid input');
-            end
-            
-            gpib_string =[gpib_string checkMapObj(value) ';'];
-            obj.write(gpib_string);
+            obj.write([':output:mod ' obj.cast_boolean(value) ';']);
         end
         function obj = set.alc(obj, value)
-            gpib_string = ':power:alc ';
-            if isnumeric(value)
-                value = num2str(value);
-            end
-            
-            % Validate input
-            checkMapObj = containers.Map({'on','1','off','0'},...
-                {'on','on','off','off'});
-            if not (checkMapObj.isKey( lower(value) ))
-                error('Invalid input');
-            end
-            
-            gpib_string =[gpib_string checkMapObj(value) ';'];
-            obj.write(gpib_string);
+            obj.write([':power:alc ' obj.cast_boolean(value) ';']);
         end
         function obj = set.pulse(obj, value)
-            gpib_string = ':pulm:state ';
-            if isnumeric(value)
-                value = num2str(value);
-            end
-            
-            % Validate input
-            checkMapObj = containers.Map({'on','1','off','0'},...
-                {'on','on','off','off'});
-            if not (checkMapObj.isKey( lower(value) ))
-                error('Invalid input');
-            end
-            
-            gpib_string = [gpib_string checkMapObj(value) ';'];
-            obj.write(gpib_string);
+            obj.write([':pulm:state ' obj.cast_boolean(value) ';']);
         end
         function obj = set.pulseSource(obj, value)
-            gpib_string = ':pulm:source ';
             value = lower(value);
-            
             % Validate input
             checkMapObj = containers.Map({'int','internal','ext','external'},...
                 {'int','int','ext','ext'});
             if not (checkMapObj.isKey(value))
                 error('Invalid input');
             end
-            
-            gpib_string = [gpib_string checkMapObj(value) ';'];
-            obj.write(gpib_string);
+            obj.write([':pulm:source ' checkMapObj(value) ';']);
         end
         function obj = set.IQ(obj, value)
-            gpib_string = ':dm:state ';
-            if isnumeric(value)
-                value = num2str(value);
-            end
-            
-            % Validate input
-            checkMapObj = containers.Map({'on','1','off','0'},...
-                {'on','on','off','off'});
-            if not (checkMapObj.isKey( lower(value) ))
-                error('Invalid input');
-            end
-            
-            gpib_string = [gpib_string checkMapObj(value) ';'];
-            obj.write(gpib_string);
+            obj.write([':dm:state ' obj.cast_boolean(value) ';']);
         end
         function obj = set.IQ_Adjust(obj, value)
-            gpib_string = ':dm:IQAD ';
-            if isnumeric(value)
-                value = num2str(value);
-            end
-            
-            % Validate input
-            checkMapObj = containers.Map({'on','1','off','0'},...
-                {'on','on','off','off'});
-            if not (checkMapObj.isKey( lower(value) ))
-                error('Invalid input');
-            end
-            
-            gpib_string = [gpib_string checkMapObj(value) ';'];
-            obj.write(gpib_string);
+            obj.write([':dm:IQAD ' obj.cast_boolean(value) ';']);
         end
         function obj = set.IQ_IOffset(obj, value)
-            gpib_string = ':dm:iqad:ioff %d;';
-            
-            % Validate input
-            if ~isnumeric(value)
-                error('Invalid input');
-            end
-            
-            gpib_string = sprintf(gpib_string, value);
-            obj.write(gpib_string);
+            assert(isnumeric(value), 'Requires numeric input');
+            obj.write(sprintf(':dm:iqad:ioff %d;', value));
         end
         function obj = set.IQ_QOffset(obj, value)
-            gpib_string = ':dm:iqad:qoff %d;';
-            
-            % Validate input
-            if ~isnumeric(value)
-                error('Invalid input');
-            end
-            
-            gpib_string = sprintf(gpib_string, value);
-            obj.write(gpib_string);
+            assert(isnumeric(value), 'Requires numeric input');
+            obj.write(sprintf(':dm:iqad:qoff %d;', value));
         end
         function obj = set.IQ_Skew(obj, value)
-            gpib_string = ':dm:iqad:qskew %d;';
-            
-            % Validate input
-            if ~isnumeric(value)
-                error('Invalid input');
-            end
-            
-            gpib_string = sprintf(gpib_string, value);
-            obj.write(gpib_string);
+            assert(isnumeric(value), 'Requires numeric input');
+            obj.write(sprintf(':dm:iqad:qskew %d;', value));
         end
+
     end % end instrument parameter accessors
     
-    
+    methods (Static)
+       
+        %Helper function to cast boolean inputs to 'on'/'off' strings
+        function out = cast_boolean(in)
+            if isnumeric(in)
+                in = logical(in);
+            end
+            if islogical(in)
+                if in
+                    in = 'on';
+                else 
+                    in = 'off';
+                end
+            end
+            
+            checkMapObj = containers.Map({'on','1','off','0'},...
+                {'on','on','off','off'});
+            assert(checkMapObj.isKey(lower(in)), 'Invalid input');
+            out = checkMapObj(lower(in));
+        end
+        
+    end
 end % end class definition
