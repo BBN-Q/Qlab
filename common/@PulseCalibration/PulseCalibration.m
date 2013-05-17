@@ -27,7 +27,7 @@ classdef PulseCalibration < handle
         AWGs
         AWGSettings
         testMode = false;
-        costFunctionGoal = 0.075; % tweak experimentally
+        noiseVar % estimated variance of the noise from repeats
     end
     methods
         % Class constructor
@@ -92,8 +92,11 @@ classdef PulseCalibration < handle
             end
         end
 
-        function stop = LMStoppingCondition(obj, x, optimValues, state)
-            if optimValues.resnorm < obj.costFunctionGoal
+        function stop = LMStoppingCondition(obj, ~, optimValues, ~)
+            %Assume that if the variance of the residuals is less than some 
+            %multiple of the variance of the noise then we are as good as it gets
+            %Anecdotally 5 seems to be reasonable 
+            if var(optimValues.residual) < 3*obj.noiseVar
                 stop = true;
             else
                 stop = false;
@@ -178,7 +181,7 @@ classdef PulseCalibration < handle
     methods (Static)
         
         % externally defined static methods
-        [cost, J] = RepPulseCostFunction(data, angle);
+        [cost, J, noiseVar] = RepPulseCostFunction(data, angle, numPulses);
         [amp, offsetPhase]  = analyzeRabiAmp(data);
         bestParam = analyzeSlopes(data, numPsQIds, paramRange);
         

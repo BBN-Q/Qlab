@@ -1,4 +1,4 @@
-function [filename, segmentPoints] = Pi2CalChannelSequence(obj, qubit, direction, makePlot)
+function [filename, segmentPoints] = Pi2CalChannelSequence(obj, qubit, direction, numPulses, makePlot)
 
 if ~exist('direction', 'var')
     direction = 'X';
@@ -13,7 +13,6 @@ end
 basename = 'Pi2Cal';
 
 fixedPt = 6000;
-numPi2s = 9; % number of odd numbered pi/2 sequences for each rotation direction
 
 pg = PatternGen(qubit, 'pi2Amp', obj.pulseParams.pi2Amp);
 
@@ -30,16 +29,16 @@ sindex = 1;
 
 % +X rotations
 % (1, 3, 5, 7, 9, 11, 13, 15, 17) x X90p
-for j = 1:numPi2s
+for j = 1:numPulses
     for k = 1:(1+2*(j-1))
         patseq{sindex + j}{k} = pulseLib([direction '90p']);
     end
 end
-sindex = sindex + numPi2s;
+sindex = sindex + numPulses;
 
 % -X rotations
 % (1, 3, 5, 7, 9, 11, ...) x X90m
-for j = 1:numPi2s
+for j = 1:numPulses
     for k = 1:(1+2*(j-1))
         patseq{sindex + j}{k} = pulseLib([direction '90m']);
     end
