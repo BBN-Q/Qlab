@@ -5,9 +5,9 @@ progPath = fullfile(getpref('qlab', 'PyQLabDir'), 'ExpSettingsGUI.py');
 
 %Check whether we are on windows to use pythonw instead of python
 if ispc
-    system(['pythonw "', progPath, '" &']);
+    system(sprintf('pythonw "%s" --scripterFile "%s" &', progPath, getpref('qlab', 'CurScripterFile')));
 %Otherwise just call regular python
 else
-    system(['python "', progPath, '" &']);
+    system(sprintf('python "%s" --scripterFile "%s" &', progPath, getpref('qlab', 'CurScripterFile')));
 end
 
