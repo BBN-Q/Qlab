@@ -238,7 +238,14 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             % Validate input
             if isnumeric(value)
                 value = num2str(value);
+            elseif islogical(value)
+                if value
+                    value = 'on';
+                else
+                    value = 'off';
+                end
             end
+               
             valueMap = containers.Map({'on','1','off','0'},...
                 {uint8(1), uint8(1), uint8(0), uint8(0)});
             if not (valueMap.isKey( lower(value) ))
