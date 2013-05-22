@@ -258,7 +258,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 setdatatype(bufferOut, 'uint8Ptr', 1, obj.buffers.bufferSize);
                 
                 %scale data to floating point using MEX function, i.e. map (0,255) to (-Vs,Vs)
-                [obj.data{1}, obj.data{2}] = processBuffer(bufferOut.Value, obj.buffers.bufferSize, obj.verticalScale);
+                [obj.data{1}, obj.data{2}] = obj.processBuffer(bufferOut.Value, obj.verticalScale);
                 obj.data{1} = reshape(obj.data{1}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
                 obj.data{2} = reshape(obj.data{2}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
 
@@ -464,7 +464,9 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             val = obj.settings.horizontal;
             val.sampleInterval = 1/val.samplingRate;
         end
-            
-        
     end %methods
+    methods (Static)
+        % externally defined methdos
+        [dataA, dataB] = processBuffer(buffer, verticalScale);
+    end
 end %classdef

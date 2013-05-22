@@ -12,21 +12,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	double verticalScale, dacScale;
 	double *dataA, *dataB;
 	// error check inputs and outputs
-	if (nrhs != 3) {
-		mexErrMsgIdAndTxt("AlazarATS9870:processBuffer:nrhs", "3 inputs required.");
+	if (nrhs != 2) {
+		mexErrMsgIdAndTxt("AlazarATS9870:processBuffer:nrhs", "2 inputs required.");
 	}
 	if (nlhs != 2) {
 		mexErrMsgIdAndTxt("AlazarATS9870:processBuffer:nlhs", "2 outputs required.");
 	}
 
 	buffer = (uint8_t *)mxGetData(prhs[0]);
-	bufferSize = mxGetScalar(prhs[1]);
-	verticalScale = mxGetScalar(prhs[2]);
+	bufferSize = mxGetNumberOfElements(prhs[0]);
+	verticalScale = mxGetScalar(prhs[1]);
 	dacScale = 2.0*verticalScale/255.0;
-
-	if (mxGetNumberOfElements(prhs[0])!= bufferSize) {
-		mexErrMsgIdAndTxt("AlazarATS9870:processBuffer:bufferSize", "bufferSize does not match length of buffer.");
-	}
 
 	// prepare outputs
 	plhs[0] = mxCreateDoubleMatrix(1, bufferSize/2, mxREAL);
