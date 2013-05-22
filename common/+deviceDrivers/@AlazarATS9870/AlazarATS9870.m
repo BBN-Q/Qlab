@@ -228,9 +228,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 sumDataA = zeros(size(obj.data{1}));
                 sumDataB = zeros(size(obj.data{2}));
             end
-            
-            % Conversion between 8 bit integers and volts
-            int8toVolts = @(x) 2*obj.verticalScale/255*x - obj.verticalScale;
+
             %Loop until all are processed
             while bufferct < totNumBuffers
                 
@@ -255,33 +253,25 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 %
                 % Samples values are arranged contiguously in each record.
                 % An 8-bit sample code is stored in each 8-bit sample value.
-                %
-                % Sample codes are unsigned by default where:
                 
                 %Cast the pointer to the right type
                 setdatatype(bufferOut, 'uint8Ptr', 1, obj.buffers.bufferSize);
                 
-                %Extract and reshape the data
-                tmpDataA = reshape(bufferOut.Value(1:obj.buffers.bufferSize/2), [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
-                
-                %Extract and reshape the data
-                tmpDataB = reshape(bufferOut.Value(obj.buffers.bufferSize/2+1:obj.buffers.bufferSize), [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
-                
+                %scale data to floating point using MEX function, i.e. map (0,255) to (-Vs,Vs)
+                [obj.data{1}, obj.data{2}] = processBuffer(bufferOut.Value, obj.buffers.bufferSize, obj.verticalScale);
+                obj.data{1} = reshape(obj.data{1}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
+                obj.data{2} = reshape(obj.data{2}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
+
                 if strcmp(obj.acquireMode, 'averager')
-                    %Sum over repeats and cast to double precision so we don't
-                    %overflow
-                    sumDataA = sumDataA + squeeze(sum(sum(tmpDataA,4,'double'),2));
-                    sumDataB = sumDataB + squeeze(sum(sum(tmpDataB,4,'double'),2));
+                    %Sum over repeats (waveforms and round robins)
+                    sumDataA = sumDataA + squeeze(sum(sum(obj.data{1},4),2));
+                    sumDataB = sumDataB + squeeze(sum(sum(obj.data{2},4),2));
                     avgct = (bufferct+1)*obj.settings.averager.nbrWaveforms*obj.buffers.roundRobinsPerBuffer;
-                    obj.data{1} = int8toVolts(sumDataA/avgct);
-                    obj.data{2} = int8toVolts(sumDataB/avgct);
-                    notify(obj, 'DataReady');
-                else
-                    %Rescale data to appropriate scale, i.e. map (0,255) to (-Vs,Vs)
-                    obj.data{1} = int8toVolts(double(tmpDataA));
-                    obj.data{2} = int8toVolts(double(tmpDataB));
-                    notify(obj, 'DataReady');
+                    obj.data{1} = sumDataA/avgct;
+                    obj.data{2} = sumDataB/avgct;
                 end
+
+                notify(obj, 'DataReady');
                 
                 % Make the buffer available to be filled again by the board
                 obj.call_API('AlazarPostAsyncBuffer', obj.boardHandle, obj.buffers.bufferPtrs{bufferNum}, obj.buffers.bufferSize);
@@ -293,10 +283,9 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             if strcmp(obj.acquireMode, 'averager')
                 %Average the summed data
-                %Rescale data to appropriate scale, i.e. map (0,255) to (-Vs,Vs)
                 numRepeats = obj.settings.averager.nbrWaveforms*obj.settings.averager.nbrRoundRobins;
-                obj.data{1} = int8toVolts(sumDataA/numRepeats);
-                obj.data{2} = int8toVolts(sumDataB/numRepeats);
+                obj.data{1} = sumDataA/numRepeats;
+                obj.data{2} = sumDataB/numRepeats;
                 
                 notify(obj, 'DataReady');
             end
