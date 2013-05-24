@@ -19,6 +19,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
    
     properties
         IFfreq
+        bandwidth
         samplingRate
         boxCarStart
         boxCarStop
@@ -30,6 +31,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
         function obj = DigitalHomodyne(settings)
             obj = obj@MeasFilters.MeasFilter(settings);
             obj.IFfreq = settings.IFfreq;
+            obj.bandwidth = settings.bandwidth;
             obj.samplingRate = settings.samplingRate;
             obj.boxCarStart = settings.boxCarStart;
             obj.boxCarStop = settings.boxCarStop;
@@ -47,7 +49,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             import MeasFilters.*
             data = apply@MeasFilters.MeasFilter(obj, data);
             
-            [demodSignal, decimFactor] = digitalDemod(data, obj.IFfreq, obj.samplingRate);
+            [demodSignal, decimFactor] = digitalDemod(data, obj.IFfreq, obj.bandwidth, obj.samplingRate);
             
 %             save(['SSRecords_', datestr(now, 'yymmdd-HH-MM-SS-FFF'), '.mat'], 'demodSignal');
             
