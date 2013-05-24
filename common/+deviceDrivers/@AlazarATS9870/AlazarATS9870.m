@@ -189,13 +189,6 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         
         %Setup and start an acquisition
         function acquire(obj)
-            %Zero the stored data
-            obj.data = cell(2);
-            if strcmp(obj.acquireMode, 'averager')
-                obj.data{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
-                obj.data{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
-            end
-            
             %Setup the dual-port asynchronous AutoDMA with NPT mode
             %The acquisition starts automatically because I don't set the
             %ADMA_EXTERNAL_STARTCAPTURE flag
@@ -223,10 +216,10 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %Total number of buffers to process
             bufferct = 0;
             totNumBuffers = round(obj.settings.averager.nbrRoundRobins/obj.buffers.roundRobinsPerBuffer);
-            
+
             if strcmp(obj.acquireMode, 'averager')
-                sumDataA = zeros(size(obj.data{1}));
-                sumDataB = zeros(size(obj.data{2}));
+                sumDataA = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
+                sumDataB = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
             end
 
             %Loop until all are processed
@@ -258,17 +251,15 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 setdatatype(bufferOut, 'uint8Ptr', 1, obj.buffers.bufferSize);
                 
                 %scale data to floating point using MEX function, i.e. map (0,255) to (-Vs,Vs)
-                [obj.data{1}, obj.data{2}] = obj.processBuffer(bufferOut.Value, obj.verticalScale);
-                obj.data{1} = reshape(obj.data{1}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
-                obj.data{2} = reshape(obj.data{2}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
-
-                if strcmp(obj.acquireMode, 'averager')
-                    %Sum over repeats (waveforms and round robins)
-                    sumDataA = sumDataA + squeeze(sum(sum(obj.data{1},4),2));
-                    sumDataB = sumDataB + squeeze(sum(sum(obj.data{2},4),2));
-                    avgct = (bufferct+1)*obj.settings.averager.nbrWaveforms*obj.buffers.roundRobinsPerBuffer;
-                    obj.data{1} = sumDataA/avgct;
-                    obj.data{2} = sumDataB/avgct;
+                if strcmp(obj.acquireMode, 'digitizer')
+                    [obj.data{1}, obj.data{2}] = obj.processBuffer(bufferOut.Value, obj.verticalScale);
+                    obj.data{1} = reshape(obj.data{1}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
+                    obj.data{2} = reshape(obj.data{2}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
+                else
+                    %scale with averaging over repeats (waveforms and round robins)
+                    [obj.data{1}, obj.data{2}] = obj.processBufferAvg(bufferOut.Value, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer], obj.verticalScale);
+                    sumDataA = sumDataA + obj.data{1};
+                    sumDataB = sumDataB + obj.data{2};
                 end
 
                 notify(obj, 'DataReady');
@@ -283,9 +274,8 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             if strcmp(obj.acquireMode, 'averager')
                 %Average the summed data
-                numRepeats = obj.settings.averager.nbrWaveforms*obj.settings.averager.nbrRoundRobins;
-                obj.data{1} = sumDataA/numRepeats;
-                obj.data{2} = sumDataB/numRepeats;
+                obj.data{1} = sumDataA/totNumBuffers;
+                obj.data{2} = sumDataB/totNumBuffers;
                 
                 notify(obj, 'DataReady');
             end
@@ -468,5 +458,6 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
     methods (Static)
         % externally defined methdos
         [dataA, dataB] = processBuffer(buffer, verticalScale);
+        [dataA, dataB] = processBufferAvg(buffer, bufferDims, verticalScale);
     end
 end %classdef
