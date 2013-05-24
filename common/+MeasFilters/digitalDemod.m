@@ -1,12 +1,12 @@
-function [demodSignal, decimFactor] = digitalDemod(data, IFfreq, samplingRate)
+function [demodSignal, decimFactor] = digitalDemod(data, IFfreq, bandwidth, samplingRate)
 %Digitally demodulates a signal at frequency IFfreq down to DC. Does this
 %by moving to the IFfreq rotating frame and low-passing the result.
 
 %Setup the butterworth low-pass
 %Unfortunately we don't have the Filter toolbox so we have to create
-%our own.  The filter cutoff is arbitrary but we put it at the IF
-%frequency.
-[b,a] = my_butter(IFfreq/(samplingRate/2));
+%our own.  The filter cutoff is the bandwidth normalized to the nyquist
+%frequency
+[b,a] = my_butter(bandwidth/(samplingRate/2));
 
 %The signal is a 2D array with acquisition along a column
 
@@ -29,6 +29,7 @@ elseif ndims(demodSignal) == 4
 else
     error('Only able to handle 2 and 4 dimensional data.');
 end
+% decimFactor = 1;
 
 end
 
@@ -38,7 +39,7 @@ function [b,a] = my_butter(normIFFreq)
 %We discretize at 0.01 of the sampling frequency
 
 %Find the closest cut-off frequency in percentage
-assert(normIFFreq >= 0.01 && normIFFreq < 1, 'Oops! The normalized cutoff is not between 0.02 and 1')
+assert(normIFFreq >= 0.01 && normIFFreq < 1, 'Oops! The normalized cutoff is not between 0.01 and 1')
 roundedCutOff = floor(normIFFreq*100)+1;
 
 %Create the arrays of a's and b's
