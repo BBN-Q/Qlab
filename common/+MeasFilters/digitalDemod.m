@@ -11,7 +11,7 @@ function [demodSignal, decimFactor] = digitalDemod(data, IFfreq, samplingRate)
 %The signal is a 2D array with acquisition along a column
 
 %Create the weighted reference signal
-refSignal = exp(1i*2*pi*IFfreq*1/samplingRate*(1:1:size(data,1)))';
+refSignal = single(exp(1i*2*pi*IFfreq*1/samplingRate*(1:1:size(data,1)))');
 % efficiently compute the data .* refSignal (with singleton dimension
 % expansion)
 prodSignal = bsxfun(@times, data, refSignal);
@@ -247,7 +247,7 @@ filterCoeffs.b = {...
 
 
 %Pick out the row of coefficients.
-b = filterCoeffs.b{roundedCutOff-1};
-a = filterCoeffs.a{roundedCutOff-1};
+b = single(filterCoeffs.b{roundedCutOff-1});
+a = single(filterCoeffs.a{roundedCutOff-1});
 
 end
