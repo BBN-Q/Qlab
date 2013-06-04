@@ -44,18 +44,11 @@ classdef DigitalHomodyneSS < MeasFilters.MeasFilter
             
             [demodSignal, decimFactor] = digitalDemod(data, obj.IFfreq, obj.bandwidth, obj.samplingRate);
             
-%             save(['SSRecords_', datestr(now, 'yymmdd-HH-MM-SS-FFF'), '.mat'], 'demodSignal');
-            
-            %Apply the affine transformation to unwind things
-            if ~isempty(obj.affine)
-                demodSignal = bsxfun(@times, bsxfun(@minus, demodSignal, obj.affine.centres), exp(-1j*obj.affine.angles));
-            end
-
             %Box car the demodulated signal
             if ndims(demodSignal) == 2
-                demodSignal = demodSignal(floor(obj.boxCarStart/decimFactor):floor(obj.boxCarStop/decimFactor),:);
+                demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:);
             elseif ndims(demodSignal) == 4
-                demodSignal = demodSignal(floor(obj.boxCarStart/decimFactor):floor(obj.boxCarStop/decimFactor),:,:,:);
+                demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:,:,:);
             else
                 error('Only able to handle 2 and 4 dimensional data.');
             end
