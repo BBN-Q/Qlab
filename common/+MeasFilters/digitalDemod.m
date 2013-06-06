@@ -2,16 +2,34 @@ function [demodSignal, decimFactor] = digitalDemod(data, IFfreq, bandwidth, samp
 %Digitally demodulates a signal at frequency IFfreq down to DC. Does this
 %by moving to the IFfreq rotating frame and low-passing the result.
 
+sz = size(data);
+%normalize frequencies to Nyquist
+nbandwidth= bandwidth/(samplingRate/2);
+nIFfreq = IFfreq/(samplingRate/2);
+
+% If the IFfreq is too small, the resulting IIR lowpass is unstable. So, we
+% want to decimate first
+% try to decimate by 4
+if nIFfreq + nbandwidth/2 < 0.25
+    sz(1) = sz(1)/4;
+    data = data(1:4:end);
+    data = reshape(data, sz);
+    nbandwidth = nbandwidth * 4;
+    nIFfreq = nIFfreq * 4;
+    decimFactor1 = 4;
+else
+    decimFactor1 = 1;
+end
+
 %Setup the butterworth low-pass
 %Unfortunately we don't have the Filter toolbox so we have to create
-%our own.  The filter cutoff is the bandwidth normalized to the nyquist
-%frequency
-[b,a] = my_butter(bandwidth/(samplingRate/2));
+%our own.
+[b,a] = my_butter(nbandwidth);
 
 %The signal is a 2D array with acquisition along a column
 
 %Create the weighted reference signal
-refSignal = single(exp(1i*2*pi*IFfreq*1/samplingRate*(1:1:size(data,1)))');
+refSignal = single(exp(1i*pi*nIFfreq*(1:sz(1)))');
 % efficiently compute the data .* refSignal (with singleton dimension
 % expansion)
 prodSignal = bsxfun(@times, data, refSignal);
@@ -20,16 +38,15 @@ demodSignal = filter(b,a, prodSignal);
 
 %decimate by some factor of 2 close to the ratio of the IFfreq to the
 %samplingRate
-decimFactor = 2^floor(log2(samplingRate/IFfreq));
+% decimFactor = 2^floor(log2(samplingRate/IFfreq));
+decimFactor2 = 1;
 
-if ndims(demodSignal) == 2
-    demodSignal = demodSignal(1:decimFactor:end,:);
-elseif ndims(demodSignal) == 4
-    demodSignal = demodSignal(1:decimFactor:end,:,:,:);
-else
-    error('Only able to handle 2 and 4 dimensional data.');
+if decimFactor2 > 1
+    demodSignal = demodSignal(1:decimFactor2:end);
+    sz(1) = sz(1) / decimFactor2;
+    demodSignal = reshape(demodSignal, sz);
 end
-% decimFactor = 1;
+decimFactor = decimFactor1 * decimFactor2;
 
 end
 
