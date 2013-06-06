@@ -23,6 +23,7 @@ classdef SingleShot < MeasFilters.MeasFilter
         pdfData
         numShots = -1
         analysed = false
+        analysing = false
         bestIntegrationTime
     end
     
@@ -51,7 +52,9 @@ classdef SingleShot < MeasFilters.MeasFilter
                 return
             end
             
-            if ~obj.analysed
+            if ~obj.analysing
+                obj.analysing = true;
+
                 % return histogrammed data
                 obj.pdfData = struct();
                 
@@ -59,7 +62,9 @@ classdef SingleShot < MeasFilters.MeasFilter
                 excitedMean = mean(obj.excitedData, 2);
                 centre = 0.5*(groundMean+excitedMean);
                 rotAngle = angle(excitedMean-groundMean);
-                
+                groundData = obj.groundData;
+                excitedData = obj.excitedData;
+                save('SSData.mat', 'excitedData', 'groundData')
                 unwoundGroundData = bsxfun(@times, bsxfun(@minus, obj.groundData, centre), exp(-1j*rotAngle));
                 unwoundExcitedData = bsxfun(@times, bsxfun(@minus, obj.excitedData, centre), exp(-1j*rotAngle));
                 
@@ -81,7 +86,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 %then calculate best measurement fidelity
                 numTimePts = size(intGroundIData,1);
                 fidelities = zeros(numTimePts,1);
-                for intPt = 1:numTimePts
+                for intPt = 1:10:numTimePts
                     %Setup bins from the minimum to maximum measured voltage
                     bins = linspace(min([intGroundIData(intPt,:), intExcitedIData(intPt,:)]), max([intGroundIData(intPt,:), intExcitedIData(intPt,:)]));
                     
@@ -98,6 +103,12 @@ classdef SingleShot < MeasFilters.MeasFilter
                 obj.pdfData.gPDF_I = ksdensity(intGroundIData(intPt,:), obj.pdfData.bins_I);
                 obj.pdfData.ePDF_I = ksdensity(intExcitedIData(intPt,:), obj.pdfData.bins_I);
                 obj.pdfData.maxFidelity_I = maxFidelity_I;
+                tmpData = intGroundIData(intPt,:);
+                [mu, sigma] = normfit(tmpData(tmpData<0));
+                obj.pdfData.g_gaussPDF_I = normpdf(obj.pdfData.bins_I, mu, sigma);
+                tmpData = intExcitedIData(intPt,:);
+                [mu, sigma] = normfit(tmpData(tmpData>0));
+                obj.pdfData.e_gaussPDF_I = normpdf(obj.pdfData.bins_I, mu, sigma);
                 
                 fidelities = zeros(numTimePts,1);
                 for intPt = 1:numTimePts
@@ -116,10 +127,14 @@ classdef SingleShot < MeasFilters.MeasFilter
                 obj.pdfData.gPDF_Q = ksdensity(intGroundQData(intPt,:), obj.pdfData.bins_Q);
                 obj.pdfData.ePDF_Q = ksdensity(intExcitedQData(intPt,:), obj.pdfData.bins_Q);
                 obj.pdfData.maxFidelity_Q = maxFidelity_Q;
-                
+                [mu, sigma] = normfit(intGroundQData(intPt,:));
+                obj.pdfData.g_gaussPDF_Q = normpdf(obj.pdfData.bins_Q, mu, sigma);
+                [mu, sigma] = normfit(intExcitedQData(intPt,:));
+                obj.pdfData.e_gaussPDF_Q = normpdf(obj.pdfData.bins_Q, mu, sigma);
+
                 out = maxFidelity_I + 1j*maxFidelity_Q;
-                
                 obj.analysed = true;
+
                 
             else
                 out = obj.pdfData.maxFidelity_I + 1j*obj.pdfData.maxFidelity_Q;
@@ -130,26 +145,34 @@ classdef SingleShot < MeasFilters.MeasFilter
             obj.groundData = [];
             obj.excitedData = [];
             obj.analysed = false;
+            obj.analysing = false;
         end
         
         function plot(obj, figH)
-            
-            data = get_data(obj);
-            if ~isempty(data)
+            if obj.analysed
                 clf(figH);
                 axes1 = subplot(2,1,1, 'Parent', figH);
                 plot(axes1, obj.pdfData.bins_I, obj.pdfData.gPDF_I, 'b');
                 hold(axes1, 'on');
+                plot(axes1, obj.pdfData.bins_I, obj.pdfData.g_gaussPDF_I, 'b--')
                 plot(axes1, obj.pdfData.bins_I, obj.pdfData.ePDF_I, 'r');
+                plot(axes1, obj.pdfData.bins_I, obj.pdfData.e_gaussPDF_I, 'r--')
                 legend(axes1, {'Ground','Excited'})
-                text(0.1, 0.75, sprintf('Fidelity: %.1f%%',100*obj.pdfData.maxFidelity_I), 'Units', 'normalized', 'FontSize', 14, 'Parent', axes1)
-
+                text(0.1, 0.75, sprintf('Fidelity: %.1f%% (SNR Fidelity: %.1f%%)',100*obj.pdfData.maxFidelity_I, ...
+                    100*0.5*(obj.pdfData.bins_I(2)-obj.pdfData.bins_I(1))*sum(abs(obj.pdfData.g_gaussPDF_I - obj.pdfData.e_gaussPDF_I))),...
+                    'Units', 'normalized', 'FontSize', 14, 'Parent', axes1)
+                
+                %Fit gaussian to both peaks and return the esitmat
+                    
                 axes2 = subplot(2,1,2, 'Parent', figH);
                 plot(axes2, obj.pdfData.bins_Q, obj.pdfData.gPDF_Q, 'b');
                 hold(axes2, 'on');
+                plot(axes2, obj.pdfData.bins_Q, obj.pdfData.g_gaussPDF_Q, 'b--')
                 plot(axes2, obj.pdfData.bins_Q, obj.pdfData.ePDF_Q, 'r');
+                plot(axes2, obj.pdfData.bins_Q, obj.pdfData.e_gaussPDF_Q, 'r--')
                 legend(axes2, {'Ground','Excited'})
                 text(0.1, 0.75, sprintf('Fidelity: %.1f%%\nIntegration time: %d',100*obj.pdfData.maxFidelity_Q, obj.bestIntegrationTime), 'Units', 'normalized', 'FontSize', 14, 'Parent', axes2)
+                drawnow();
             end
         end
 
