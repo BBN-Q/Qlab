@@ -276,8 +276,6 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 %Average the summed data
                 obj.data{1} = sumDataA/totNumBuffers;
                 obj.data{2} = sumDataB/totNumBuffers;
-                
-                notify(obj, 'DataReady');
             end
 
             %Clear and reallocate the buffer ptrs
