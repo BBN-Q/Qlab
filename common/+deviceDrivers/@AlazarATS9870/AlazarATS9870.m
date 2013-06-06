@@ -257,11 +257,9 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                     obj.data{2} = reshape(obj.data{2}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
                 else
                     %scale with averaging over repeats (waveforms and round robins)
-                    [tmpA, tmpB] = obj.processBufferAvg(bufferOut.Value, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer], obj.verticalScale);
-                    sumDataA = sumDataA + tmpA;
-                    sumDataB = sumDataB + tmpB;
-                    obj.data{1} = sumDataA/(bufferct+1);
-                    obj.data{2} = sumDataB/(bufferct+1);
+                    [obj.data{1}, obj.data{2}] = obj.processBufferAvg(bufferOut.Value, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer], obj.verticalScale);
+                    sumDataA = sumDataA + obj.data{1};
+                    sumDataB = sumDataB + obj.data{2};
                 end
 
                 notify(obj, 'DataReady');
