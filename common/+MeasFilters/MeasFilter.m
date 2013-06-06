@@ -125,13 +125,13 @@ classdef MeasFilter < handle
                 fh = figure();
                 obj.scopeHandle = axes('Parent', fh);
             end
-            if ndims(obj.latestData) == 4
+            if nsdims(data) == 4
                 dims = size(data);
                 imagesc(reshape(data, dims(1), prod(dims(2:end))), 'Parent', obj.scopeHandle);
                 xlabel('Segment');
                 ylabel('Time');
-            elseif ndims(obj.latestData) == 2
-                imagesc(data, 'Parent', obj.scopeHandle);
+            elseif nsdims(data) == 2
+                imagesc(squeeze(data), 'Parent', obj.scopeHandle);
                 xlabel('Segment');
                 ylabel('Time');
             else
