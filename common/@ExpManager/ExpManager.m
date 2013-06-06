@@ -54,6 +54,7 @@ classdef ExpManager < handle
         plotScopeTimer
         CWMode = false
         saveVariances = false
+        dataFileHeader = struct();
         dataTimeout = 60 % timeout in seconds
     end
     
@@ -126,8 +127,6 @@ classdef ExpManager < handle
                     dataInfo.([xyz{xyzIdx}, 'points']) = points{ct};
                 end
                 dataInfo.dimension = length(obj.sweeps);
-                header = struct();
-                header.instrSettings = obj.instrSettings;
                 dataInfos = repmat({dataInfo}, 1, length(fieldnames(obj.measurements)));
                 % add measurement names to dataInfo structs
                 measNames = fieldnames(obj.measurements);
@@ -135,7 +134,7 @@ classdef ExpManager < handle
                     dataInfos{ct}.name = measNames{ct};
                 end
                 %Open data file
-                obj.dataFileHandler.open(header, dataInfos, obj.saveVariances);
+                obj.dataFileHandler.open(obj.dataFileHeader, dataInfos, obj.saveVariances);
             end
             
         end
