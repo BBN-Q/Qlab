@@ -28,6 +28,7 @@ classdef MeasFilter < handle
         accumulatedVar
         avgct = 0
         varct = 0
+        scopect = 0
         childFilter
         plotScope = false
         scopeHandle
@@ -67,7 +68,6 @@ classdef MeasFilter < handle
             if obj.plotScope
                 obj.plot_scope(out);
             end
-            
         end
         
         function reset(obj)
@@ -124,14 +124,20 @@ classdef MeasFilter < handle
             if isempty(obj.scopeHandle)
                 fh = figure();
                 obj.scopeHandle = axes('Parent', fh);
+                prevData = 0;
+                obj.scopect = 1;
+            else
+                prevData = get(get(obj.scopeHandle, 'Children'), 'CData');
+                obj.scopect = obj.scopect + 1;
             end
             if nsdims(data) == 4
                 dims = size(data);
-                imagesc(reshape(data, dims(1), prod(dims(2:end))), 'Parent', obj.scopeHandle);
+                data = (prevData*(obj.scopect-1) + reshape(data, dims(1), prod(dims(2:end)))) / obj.scopect;
+                imagesc(data, 'Parent', obj.scopeHandle);
                 xlabel('Segment');
                 ylabel('Time');
             elseif nsdims(data) == 2
-                imagesc(squeeze(data), 'Parent', obj.scopeHandle);
+                imagesc((prevData*(obj.scopect-1) + squeeze(data))/obj.scopect, 'Parent', obj.scopeHandle);
                 xlabel('Segment');
                 ylabel('Time');
             else
