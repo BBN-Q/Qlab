@@ -423,12 +423,6 @@ classdef ExpManager < handle
             % order = 1-indexed position to insert the sweep in the list of sweeps
             % sweep = a sweep object
             % callback = a method to call after each sweep.step()
-            if length(obj.sweeps) < order - 1
-                for ct=1:order
-                    obj.sweeps{ct} = [];
-                    obj.sweep_callbacks{ct} = [];
-                end
-            end
             obj.sweeps{order} = sweep;
             if exist('callback', 'var')
                 obj.sweep_callbacks{order} = callback;

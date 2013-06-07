@@ -56,7 +56,9 @@ function [b,a] = my_butter(normIFFreq)
 %We discretize at 0.01 of the sampling frequency
 
 %Find the closest cut-off frequency in percentage
-assert(normIFFreq >= 0.01 && normIFFreq < 1, 'Oops! The normalized cutoff is not between 0.01 and 1')
+%For single-precision arithmetic, we need the normalized cutoff to be at
+%least 0.05 for filter coefficients to be greater than eps('single')
+assert(normIFFreq >= 0.05 && normIFFreq < 1, 'Oops! The normalized cutoff is not between 0.05 and 1')
 roundedCutOff = floor(normIFFreq*100)+1;
 
 %Create the arrays of a's and b's
