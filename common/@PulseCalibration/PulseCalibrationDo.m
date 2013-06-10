@@ -203,9 +203,9 @@ end
 
 %% Save updated parameters to file
 
-%First the pulse parameters
+%First the pulse parameters from Matlab
 % Load the previous parameters from file
-params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
+params = json.read(getpref('qlab', 'pulseParamsBundleFile'));
 
 % Update the relevant variables
 params.(settings.Qubit).piAmp = obj.pulseParams.piAmp;
