@@ -45,8 +45,6 @@ classdef APS < hgsetget
 
         NUM_CHANNELS = 4;
 
-        EXPECTED_BIT_FILE_VERSION = hex2dec('1');
-
         ADDRESS_UNIT = 4;
         MAX_WAVEFORM_VALUE = 8191;        
         MAX_WAVFORM_LENGTH = 32768;
