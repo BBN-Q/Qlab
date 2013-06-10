@@ -19,7 +19,7 @@ for expct = 1:length(expResults)
     tmp = transpose(measPulseUs{measPulseMap(expct)}'*measOps{measOpMap(expct)}*measPulseUs{measPulseMap(expct)});
     predictorMat(expct,:) = tmp(:);
 end
-fprintf('Done!\n.')
+fprintf('Done!\n')
 
 invVarMat = inverse(varMat);
 
