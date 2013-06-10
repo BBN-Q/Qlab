@@ -51,8 +51,6 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             
             [demodSignal, decimFactor] = digitalDemod(data, obj.IFfreq, obj.bandwidth, obj.samplingRate);
             
-%             save(['SSRecords_', datestr(now, 'yymmdd-HH-MM-SS-FFF'), '.mat'], 'demodSignal');
-            
             %Apply the affine transformation to unwind things
             if ~isempty(obj.affine)
                 demodSignal = bsxfun(@times, bsxfun(@minus, demodSignal, obj.affine.centers), exp(-1j*obj.affine.angles));
