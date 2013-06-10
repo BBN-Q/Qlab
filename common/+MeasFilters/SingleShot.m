@@ -136,6 +136,28 @@ classdef SingleShot < MeasFilters.MeasFilter
                 obj.analysed = true;
 
                 
+                %Logistic regression
+                allData = cat(1, cat(2, real(obj.groundData)', imag(obj.groundData)'), cat(2, real(obj.excitedData)', imag(obj.excitedData)'));
+                prepStates = [zeros(size(obj.groundData,2),1); ones(size(obj.excitedData,2),1)];
+                %Matlab's logistic regression support is quite weak.  The
+                %code below takes forever and overfits.  It looks like in
+                %more recent versions lassoglm might provide some
+                %regularization
+%                 betas = glmfit(allData, prepStates, 'binomial');
+%                 guessStates = glmval(betas, allData, 'logit');
+%                 fidelity = 2*sum(guessStates == prepStates)/size(allData,1) - 1 
+
+                %Fortunately, liblinear is great!
+                model = train(prepStates, sparse(double(allData)), '-c 2.0 -B 1.0 -v 3');
+                [predictedState, accuracy, ~] = predict(prepStates, sparse(double(allData)), model);
+                fidelity = 2*accuracy(1)/100-1;
+                c = 0.95;
+                N = length(predictedState);
+                S = sum(predictedState == prepStates);
+                flo = betaincinv((1-c)/2.,S+1,N-S+1);
+                fup = betaincinv((1+c)/2.,S+1,N-S+1);
+                fprintf('Logistic Regression Fidelity %.2f, (%.2f, %.2f).\n', 100*fidelity, 200*flo-100, 200*fup-100);
+
             else
                 out = obj.pdfData.maxFidelity_I + 1j*obj.pdfData.maxFidelity_Q;
             end
