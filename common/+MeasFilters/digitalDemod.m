@@ -11,7 +11,7 @@ nIFfreq = IFfreq/(samplingRate/2);
 % when we digitally downconvert
 decimFactor1 = max(1, floor(0.45/(2*nIFfreq + nbandwidth/2)));
 if decimFactor1 > 1
-    data = polyDecimator(data, decimFactor1);
+    data = MeasFilters.polyDecimator(data, decimFactor1);
     nbandwidth = nbandwidth * decimFactor1;
     nIFfreq = nIFfreq * decimFactor1;
 end
@@ -27,7 +27,7 @@ prodSignal = bsxfun(@times, data, refSignal);
 % IIR filter will be unstable, so check if we need to decimate first.
 if nbandwidth < 0.05
     decimFactor2 = ceil(0.05/nbandwidth);
-    prodSignal = polyDecimator(prodSignal, decimFactor2);
+    prodSignal = MeasFilters.polyDecimator(real(prodSignal), decimFactor2) + 1i*MeasFilters.polyDecimator(imag(prodSignal), decimFactor2);
     nbandwidth = nbandwidth * decimFactor2;
 else
     decimFactor2 = 1;
@@ -44,7 +44,7 @@ demodSignal = filter(b,a, prodSignal);
 decimFactor3 = 1;
 
 if decimFactor3 > 1
-    % no longer need to be careful about decimating... can we just pick
+    % no longer need to be careful about decimating... we can just pick
     % points.
     demodSignal = demodSignal(1:decimFactor3:end);
     sz = size(data);
