@@ -9,7 +9,7 @@
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 	float *measRecords, *channelData;
-	mwSize numDims, recordLength, numWaveforms, numSegments, numRoundRobins;
+	mwSize numDims, recordLength, numSegments;
 	const mwSize *inDims;
 	mwSize *outDims;
 	int decimFactor;
@@ -20,23 +20,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	IppStatus status;
 	int stateSize;
 	Ipp8u *filterBuffer;
+	const float delayLine[16] = 0.0;
 	int ct, segct;
 
 	//Get the size of the input data
 	//Expect recordLength x numSegments or recordLength x numWaveforms x numSegments X numRoundRobins
+	//Can treat all of these as recordLength x N
 	numDims = mxGetNumberOfDimensions(prhs[0]);
 	inDims = mxGetDimensions(prhs[0]);
 	recordLength = inDims[0];
-	if (numDims == 2){
-		numSegments = inDims[1];
-	}
-	else if (numDims == 4){
-		numWaveforms = inDims[1];
-		numSegments = inDims[2];
-		numRoundRobins = inDims[3];
-	}
-	else{
-		mexErrMsgIdAndTxt("AlazarATS9870:polyDecimator", "Expected a 2 or 4 dimensional measurement record  array.");
+	numSegments = 1;
+	for (ct=1; ct < numDims; ct++) {
+		numSegments *= inDims[ct];
 	}
 
 	//Pointer to measurment records
@@ -57,20 +52,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	filterBuffer = ippsMalloc_8u(stateSize*sizeof(Ipp8u));
 
 	//Initialize the filter
-	status = ippsFIRMRInit_32f(&filterState, filterCoeff_f, 16, 1, 0.0, decimFactor, decimFactor-1, NULL, filterBuffer);
+	status = ippsFIRMRInit_32f(&filterState, filterCoeff_f, 16, 1, 0.0, decimFactor, decimFactor-1, delayLine, filterBuffer);
 	//TODO: error catch
 
-	//Apply the filter
+	// prepare the output buffer
 	outDims = malloc(numDims*sizeof(mwSize));
 	for (ct = 0; ct < numDims; ++ct)
 		outDims[ct] = inDims[ct];
-	outDims[0] = recordLength/decimFactor;
+	outDims[0] = floor(recordLength/decimFactor);
 	plhs[0] = mxCreateNumericArray(numDims, outDims, mxSINGLE_CLASS, mxREAL);
 	channelData = (float*)mxGetData(plhs[0]);
-	if (numDims == 2){
-		for(segct=0; segct<numSegments; segct++){
-			ippsFIR_32f(measRecords + segct*recordLength, channelData+segct*recordLength/decimFactor, outDims[0], filterState);
-		}
+
+	//Apply the filter to each record
+	for(segct=0; segct<numSegments; segct++){
+		ippsFIR_32f(measRecords + segct*recordLength, channelData+segct*outDims[0], outDims[0], filterState);
+		ippsFIRSetDlyLine_32f(filterState, delayLine);
 	}
 	
 	ippsFree(filterBuffer);
