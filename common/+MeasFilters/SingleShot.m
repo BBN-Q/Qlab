@@ -65,6 +65,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 groundData = obj.groundData;
                 excitedData = obj.excitedData;
                 save('SSData.mat', 'excitedData', 'groundData')
+                clear groundData excitedData
                 unwoundGroundData = bsxfun(@times, bsxfun(@minus, obj.groundData, centre), exp(-1j*rotAngle));
                 unwoundExcitedData = bsxfun(@times, bsxfun(@minus, obj.excitedData, centre), exp(-1j*rotAngle));
                 
@@ -75,6 +76,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 excitedIData = bsxfun(@times, real(unwoundExcitedData), weights);
                 groundQData = bsxfun(@times, imag(unwoundGroundData), weights);
                 excitedQData = bsxfun(@times, imag(unwoundExcitedData), weights);
+                clear unwoundGroundData unwoundExcitedData
                 
                 %Take cummulative sum up to each timestep
                 intGroundIData = cumsum(groundIData, 1);
@@ -109,6 +111,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 tmpData = intExcitedIData(intPt,:);
                 [mu, sigma] = normfit(tmpData(tmpData>0));
                 obj.pdfData.e_gaussPDF_I = normpdf(obj.pdfData.bins_I, mu, sigma);
+                clear groundIData intGroundIData excitedIData intExcitedIData
                 
                 fidelities = zeros(numTimePts,1);
                 for intPt = 1:numTimePts
@@ -133,8 +136,9 @@ classdef SingleShot < MeasFilters.MeasFilter
                 obj.pdfData.e_gaussPDF_Q = normpdf(obj.pdfData.bins_Q, mu, sigma);
 
                 out = maxFidelity_I + 1j*maxFidelity_Q;
-                obj.analysed = true;
+                clear groundQData intGroundQData excitedQData intExcitedQData
 
+                obj.analysed = true;
                 
                 %Logistic regression
                 allData = cat(1, cat(2, real(obj.groundData)', imag(obj.groundData)'), cat(2, real(obj.excitedData)', imag(obj.excitedData)'));
@@ -148,7 +152,17 @@ classdef SingleShot < MeasFilters.MeasFilter
 %                 fidelity = 2*sum(guessStates == prepStates)/size(allData,1) - 1 
 
                 %Fortunately, liblinear is great!
-                model = train(prepStates, sparse(double(allData)), '-c 2.0 -B 1.0 -v 3');
+                cScan = logspace(-1,1,10);
+                bestAccuracy = 0;
+                bestC = 0;
+                for c = cScan;
+                    accuracy = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -v 5',c));
+                    if accuracy > bestAccuracy
+                        bestAccuracy = accuracy;
+                        bestC = c;
+                    end
+                end
+                model = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0',bestC));
                 [predictedState, accuracy, ~] = predict(prepStates, sparse(double(allData)), model);
                 fidelity = 2*accuracy(1)/100-1;
                 c = 0.95;
@@ -156,7 +170,8 @@ classdef SingleShot < MeasFilters.MeasFilter
                 S = sum(predictedState == prepStates);
                 flo = betaincinv((1-c)/2.,S+1,N-S+1);
                 fup = betaincinv((1+c)/2.,S+1,N-S+1);
-                fprintf('Logistic Regression Fidelity %.2f, (%.2f, %.2f).\n', 100*fidelity, 200*flo-100, 200*fup-100);
+                fprintf('Cross-validated logistic regression accuracy: %.2f', bestAccuracy);
+                fprintf('In-place logistic regression fidelity %.2f, (%.2f, %.2f).\n', 100*fidelity, 200*flo-100, 200*fup-100);
 
             else
                 out = obj.pdfData.maxFidelity_I + 1j*obj.pdfData.maxFidelity_Q;
