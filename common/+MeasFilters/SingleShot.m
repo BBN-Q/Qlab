@@ -170,7 +170,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 S = sum(predictedState == prepStates);
                 flo = betaincinv((1-c)/2.,S+1,N-S+1);
                 fup = betaincinv((1+c)/2.,S+1,N-S+1);
-                fprintf('Cross-validated logistic regression accuracy: %.2f', bestAccuracy);
+                fprintf('Cross-validated logistic regression accuracy: %.2f\n', bestAccuracy);
                 fprintf('In-place logistic regression fidelity %.2f, (%.2f, %.2f).\n', 100*fidelity, 200*flo-100, 200*fup-100);
 
             else
