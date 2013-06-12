@@ -2,51 +2,56 @@ function [demodSignal, decimFactor] = digitalDemod(data, IFfreq, bandwidth, samp
 %Digitally demodulates a signal at frequency IFfreq down to DC. Does this
 %by moving to the IFfreq rotating frame and low-passing the result.
 
-sz = size(data);
 %normalize frequencies to Nyquist
 nbandwidth= bandwidth/(samplingRate/2);
 nIFfreq = IFfreq/(samplingRate/2);
 
 % If the IFfreq is too small, the resulting IIR lowpass is unstable. So, we
-% want to decimate first
-% try to decimate by 4
-if nIFfreq + nbandwidth/2 < 0.25
-    sz(1) = sz(1)/4;
-    data = data(1:4:end);
-    data = reshape(data, sz);
-    nbandwidth = nbandwidth * 4;
-    nIFfreq = nIFfreq * 4;
-    decimFactor1 = 4;
-else
-    decimFactor1 = 1;
+% use a first stage of decimation as long as the 2*omega signal won't alias
+% when we digitally downconvert
+decimFactor1 = max(1, floor(0.45/(2*nIFfreq + nbandwidth/2)));
+if decimFactor1 > 1
+    data = MeasFilters.polyDecimator(data, decimFactor1);
+    nbandwidth = nbandwidth * decimFactor1;
+    nIFfreq = nIFfreq * decimFactor1;
 end
 
-%Setup the butterworth low-pass
-%Unfortunately we don't have the Filter toolbox so we have to create
-%our own.
-[b,a] = my_butter(nbandwidth);
-
-%The signal is a 2D array with acquisition along a column
-
-%Create the weighted reference signal
-refSignal = single(exp(1i*pi*nIFfreq*(1:sz(1)))');
-% efficiently compute the data .* refSignal (with singleton dimension
+%Create the weighted reference signal (the size of a single acquisition is
+%given by the first dimension of data)
+refSignal = single(exp(1i*pi*nIFfreq*(1:size(data,1)))');
+% efficiently compute data .* refSignal (with singleton dimension
 % expansion)
 prodSignal = bsxfun(@times, data, refSignal);
+
+% We next want to low-pass filter the result, but if nbandwidth < 0.05, the
+% IIR filter will be unstable, so check if we need to decimate first.
+if nbandwidth < 0.05
+    decimFactor2 = ceil(0.05/nbandwidth);
+    prodSignal = MeasFilters.polyDecimator(real(prodSignal), decimFactor2) + 1i*MeasFilters.polyDecimator(imag(prodSignal), decimFactor2);
+    nbandwidth = nbandwidth * decimFactor2;
+else
+    decimFactor2 = 1;
+end
+
+%Get butterworth low-pass filter coefficients from a pre-computed lookup table
+[b,a] = my_butter(nbandwidth);
 % low-pass filter
 demodSignal = filter(b,a, prodSignal);
 
-%decimate by some factor of 2 close to the ratio of the IFfreq to the
+%optionally decimate by some factor of 2 close to the ratio of the IFfreq to the
 %samplingRate
 % decimFactor = 2^floor(log2(samplingRate/IFfreq));
-decimFactor2 = 1;
+decimFactor3 = 1;
 
-if decimFactor2 > 1
-    demodSignal = demodSignal(1:decimFactor2:end);
-    sz(1) = sz(1) / decimFactor2;
+if decimFactor3 > 1
+    % no longer need to be careful about decimating... we can just pick
+    % points.
+    demodSignal = demodSignal(1:decimFactor3:end);
+    sz = size(data);
+    sz(1) = sz(1) / decimFactor3;
     demodSignal = reshape(demodSignal, sz);
 end
-decimFactor = decimFactor1 * decimFactor2;
+decimFactor = decimFactor1 * decimFactor2 * decimFactor3;
 
 end
 
