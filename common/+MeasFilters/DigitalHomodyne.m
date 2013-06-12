@@ -23,7 +23,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
         samplingRate
         boxCarStart
         boxCarStop
-        affine
+        filter
         phase
     end
     
@@ -36,12 +36,11 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             obj.boxCarStart = settings.boxCarStart;
             obj.boxCarStop = settings.boxCarStop;
             obj.phase = settings.phase;
-
-            if isfield(settings, 'affineFilePath') && ~isempty(settings.affineFilePath)
-                load(settings.affineFilePath, 'centers', 'angles');
-                obj.affine = struct('centers', centers, 'angles', angles);
+            
+            if isfield(settings, 'filterFilePath') && ~isempty(settings.filterFilePath)
+                obj.filter = load(settings.filterFilePath, 'filter', 'bias');
             else
-                obj.affine = [];
+                obj.filter = [];
             end
         end
         
@@ -51,11 +50,6 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             
             [demodSignal, decimFactor] = digitalDemod(data, obj.IFfreq, obj.bandwidth, obj.samplingRate);
             
-            %Apply the affine transformation to unwind things
-            if ~isempty(obj.affine)
-                demodSignal = bsxfun(@times, bsxfun(@minus, demodSignal, obj.affine.centers), exp(-1j*obj.affine.angles));
-            end
-
             %Box car the demodulated signal
             if ndims(demodSignal) == 2
                 demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:);
@@ -64,10 +58,16 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             else
                 error('Only able to handle 2 and 4 dimensional data.');
             end
-            
-            %Integrate and rotate
-            obj.latestData = exp(1j*obj.phase) * 2 * mean(demodSignal,1);
 
+            %If we have a pre-defined filter use it, otherwise integrate
+            %and rotate
+            if ~isempty(obj.filter)
+                obj.latestData = bsxfun(@times, demodSignal, obj.filter.filter') + bias;
+            else
+                %Integrate and rotate
+                obj.latestData = exp(1j*obj.phase) * 2 * mean(demodSignal,1);
+            end
+            
             obj.accumulate();
             out = obj.latestData;
         end
