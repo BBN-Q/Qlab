@@ -16,7 +16,7 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 classdef DigitalHomodyne < MeasFilters.MeasFilter
-   
+    
     properties
         IFfreq
         bandwidth
@@ -25,6 +25,10 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
         boxCarStop
         filter
         phase
+        fileHandleReal
+        fileHandleImag
+        saveRecords
+        headerWritten = false;
     end
     
     methods
@@ -42,6 +46,19 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             else
                 obj.filter = [];
             end
+            
+            obj.saveRecords = settings.saveRecords;
+            if obj.saveRecords
+                obj.fileHandleReal = fopen([settings.recordsFilePath, '.real'], 'wb');
+                obj.fileHandleImag = fopen([settings.recordsFilePath, '.imag'], 'wb');
+            end
+        end
+        
+        function delete(obj)
+            if obj.saveRecords
+                fclose(obj.fileHandleReal);
+                fclose(obj.fileHandleImag);
+            end
         end
         
         function out = apply(obj, data)
@@ -55,14 +72,29 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
                 demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:);
             elseif ndims(demodSignal) == 4
                 demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:,:,:);
+                %If we have a file to save to then do so
+                if obj.saveRecords
+                    if ~obj.headerWritten
+                        %Write the first three dimensions of the demodSignal:
+                        %recordLength, numWaveforms, numSegments
+                        sizes = size(demodSignal);
+                        fwrite(obj.fileHandleReal, sizes(1:3), 'int32');
+                        fwrite(obj.fileHandleImag, sizes(1:3), 'int32');
+                        obj.headerWritten = true;
+                    end
+                    
+                    fwrite(obj.fileHandleReal, real(demodSignal), 'single');
+                    fwrite(obj.fileHandleImag, imag(demodSignal), 'single');
+                end
+                
             else
                 error('Only able to handle 2 and 4 dimensional data.');
             end
-
+            
             %If we have a pre-defined filter use it, otherwise integrate
             %and rotate
             if ~isempty(obj.filter)
-                obj.latestData = bsxfun(@times, demodSignal, obj.filter.filter') + bias;
+                obj.latestData = bsxfun(@times, demodSignal, conj(obj.filter.filter)) + obj.filter.bias;
             else
                 %Integrate and rotate
                 obj.latestData = exp(1j*obj.phase) * 2 * mean(demodSignal,1);
