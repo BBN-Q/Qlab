@@ -25,9 +25,14 @@ See the [wiki][] for release notes and further help.
 
 All source is distributed under the Apache open source [license][].
 
+### Binaries
+
+We also distribute mex binaries for some accelerated data processing and dll's for the BBN-APS pulse sequencers.  These can be found here [binaries][].
+
 [wiki]: http://github.com/BBN-Q/Qlab/wiki
 [Pulse-Generation]: http://github.com/BBN-Q/Qlab/wiki/Pulse-Sequence-Generation
 [scripter]: http://github.com/BBN-Q/Qlab/blob/develop/experiments/muWaveDetection/ExpScripter.example.m
 [JSON]: http://en.wikipedia.org/wiki/JSON
 [PyQLab]: http://github.com/BBN-Q/PyQLab
 [license]: http://github.com/BBN-Q/Qlab/blob/master/LICENSE
+[binaries]: https://drive.google.com/folderview?id=0B5nllspmfYgUNWdMS1gwNW9nSXM&usp=sharing
