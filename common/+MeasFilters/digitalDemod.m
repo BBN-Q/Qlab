@@ -41,15 +41,16 @@ demodSignal = filter(b,a, prodSignal);
 %optionally decimate by some factor of 2 close to the ratio of the IFfreq to the
 %samplingRate
 % decimFactor = 2^floor(log2(samplingRate/IFfreq));
-decimFactor3 = 1;
+decimFactor3 = 8;
 
 if decimFactor3 > 1
     % no longer need to be careful about decimating... we can just pick
     % points.
-    demodSignal = demodSignal(1:decimFactor3:end);
-    sz = size(data);
-    sz(1) = sz(1) / decimFactor3;
-    demodSignal = reshape(demodSignal, sz);
+    if ndims(demodSignal) == 2
+        demodSignal = demodSignal(1:decimFactor3:end,:);
+    else
+        demodSignal = demodSignal(1:decimFactor3:end,:,:,:);
+    end
 end
 decimFactor = decimFactor1 * decimFactor2 * decimFactor3;
 
