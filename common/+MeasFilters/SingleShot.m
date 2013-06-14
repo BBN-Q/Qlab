@@ -88,7 +88,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 %then calculate best measurement fidelity
                 numTimePts = size(intGroundIData,1);
                 fidelities = zeros(numTimePts,1);
-                for intPt = 1:10:numTimePts
+                for intPt = 1:2:numTimePts
                     %Setup bins from the minimum to maximum measured voltage
                     bins = linspace(min([intGroundIData(intPt,:), intExcitedIData(intPt,:)]), max([intGroundIData(intPt,:), intExcitedIData(intPt,:)]));
                     
@@ -113,29 +113,18 @@ classdef SingleShot < MeasFilters.MeasFilter
                 obj.pdfData.e_gaussPDF_I = normpdf(obj.pdfData.bins_I, mu, sigma);
                 clear groundIData intGroundIData excitedIData intExcitedIData
                 
-                fidelities = zeros(numTimePts,1);
-                for intPt = 1:numTimePts
-                    %Setup bins from the minimum to maximum measured voltage
-                    bins = linspace(min([intGroundQData(intPt,:), intExcitedQData(intPt,:)]), max([intGroundQData(intPt,:), intExcitedQData(intPt,:)]));
-                    
-                    %Estimate the PDF for the ground and excited states
-                    gPDF = ksdensity(intGroundQData(intPt,:), bins);
-                    ePDF = ksdensity(intExcitedQData(intPt,:), bins);
-                    
-                    fidelities(intPt) = 0.5*(bins(2)-bins(1))*sum(abs(gPDF-ePDF));
-                end
-                
-                [maxFidelity_Q, intPt] = max(fidelities);
+                %Calculate the kernel density estimates for the other
+                %quadrature too
                 obj.pdfData.bins_Q = linspace(min([intGroundQData(intPt,:), intExcitedQData(intPt,:)]), max([intGroundQData(intPt,:), intExcitedQData(intPt,:)]));
                 obj.pdfData.gPDF_Q = ksdensity(intGroundQData(intPt,:), obj.pdfData.bins_Q);
                 obj.pdfData.ePDF_Q = ksdensity(intExcitedQData(intPt,:), obj.pdfData.bins_Q);
-                obj.pdfData.maxFidelity_Q = maxFidelity_Q;
+                obj.pdfData.maxFidelity_Q = 0.5*(obj.pdfData.bins_Q(2)-obj.pdfData.bins_Q(1))*sum(abs(obj.pdfData.gPDF_Q-obj.pdfData.ePDF_Q));
                 [mu, sigma] = normfit(intGroundQData(intPt,:));
                 obj.pdfData.g_gaussPDF_Q = normpdf(obj.pdfData.bins_Q, mu, sigma);
                 [mu, sigma] = normfit(intExcitedQData(intPt,:));
                 obj.pdfData.e_gaussPDF_Q = normpdf(obj.pdfData.bins_Q, mu, sigma);
 
-                out = maxFidelity_I + 1j*maxFidelity_Q;
+                out = maxFidelity_I + 1j*obj.pdfData.maxFidelity_Q;
                 clear groundQData intGroundQData excitedQData intExcitedQData
 
                 obj.analysed = true;
@@ -152,11 +141,11 @@ classdef SingleShot < MeasFilters.MeasFilter
 %                 fidelity = 2*sum(guessStates == prepStates)/size(allData,1) - 1 
 
                 %Fortunately, liblinear is great!
-                cScan = logspace(-1,1,10);
+                cScan = logspace(-1,1,5);
                 bestAccuracy = 0;
                 bestC = 0;
                 for c = cScan;
-                    accuracy = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -v 5',c));
+                    accuracy = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -v 3',c));
                     if accuracy > bestAccuracy
                         bestAccuracy = accuracy;
                         bestC = c;
