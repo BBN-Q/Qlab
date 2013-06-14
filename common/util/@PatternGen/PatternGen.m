@@ -81,8 +81,7 @@ classdef PatternGen < handle
                 M = M(:, rows);
                 params = struct(M{:});
                 
-                % now initialize any property with that name (or the 'd'
-                % first letter variant)
+                % now initialize any property with that name 
                 fnames = fieldnames(params);
                 for ii = 1:length(fnames)
                     paramName = fnames{ii};
@@ -157,9 +156,9 @@ classdef PatternGen < handle
             params.rotAngle = 0;
             params.modFrequency = obj.SSBFreq;
             params.duration = params.width + obj.buffer;
-            if ismember(p, qubitPulses)
+            if ismember(p, qubitPulses) || ismember(p, measurementPulses)
                 params.pType = obj.pulseType;
-            elseif ismember(p, measurementPulses) || ismember(p, fluxPulses) || ismember(p, identityPulses)
+            elseif ismember(p, fluxPulses) || ismember(p, identityPulses)
                 params.pType = 'square';
             end
             params.arbfname = obj.arbfname; % for arbitrary pulse shapes
@@ -205,8 +204,8 @@ classdef PatternGen < handle
             
             % measurement pulses
             if ismember(p, measurementPulses)
-                params.amp = 1;
-                params.modFrequency = 0;
+                params.amp = obj.piAmp;
+                params.buffer = 0;
             end
             
             % these parameters are always determined by the class properties
@@ -214,14 +213,7 @@ classdef PatternGen < handle
             params.T = obj.T;
             
             % create the Pulse object
-            retVal = Pulse(p, params, obj.linkListMode);
-            
-            if obj.linkListMode
-                % add hashed pulses to pulseCollection
-                for ii = 1:length(retVal.hashKeys)
-                    obj.pulseCollection(retVal.hashKeys{ii}) = retVal.pulseArray{ii};
-                end
-            end
+            retVal = Pulse(p, params);
         end
         
         function LinkLists = build(obj, pulseList, numsteps, delay, fixedPoint, gated)
@@ -251,39 +243,42 @@ classdef PatternGen < handle
             padWaveform = [0,0];
             padWaveformKey = Pulse.hash(padWaveform);
             padPulse = struct();
-            padPulse.pulseArray = {padWaveform};
-            padPulse.hashKeys = {padWaveformKey};
             padPulse.isTimeAmplitude = 1;
             padPulse.isZero = 1;
             obj.pulseCollection(padWaveformKey) = padWaveform;
             
-            function entry = buildEntry(pulse, n)
+            function [entry, frameChange] = buildEntry(pulse, n, accumulatedPhase)
+                if isequal(pulse, padPulse)
+                    xypulse = padWaveform;
+                    frameChange = 0;
+                else
+                    [xpulse, ypulse, frameChange] = pulse.getPulse(n, accumulatedPhase);
+                    xypulse = [xpulse, ypulse];
+                end
+                entry.length = size(xypulse,1);
+
+                if pulse.isTimeAmplitude && entry.length > 1
+                    %Shorten up square waveforms to a single point
+                    xypulse = xypulse(fix(end/2),:);
+                end
                 
-                reducedIndex = 1 + mod(n-1, length(pulse.hashKeys));
-                entry.key = pulse.hashKeys{reducedIndex};
-                entry.length = size(pulse.pulseArray{reducedIndex},1);
+                entry.key = Pulse.hash(xypulse);
                 entry.repeat = 1;
                 entry.isTimeAmplitude = pulse.isTimeAmplitude;
                 entry.isZero = pulse.isZero || strcmp(entry.key,padWaveformKey);
                 if entry.isZero
-                    % remove zero pulses from pulse collection
-                    if ~all(entry.key == padWaveformKey) && obj.pulseCollection.isKey(entry.key)
-                        obj.pulseCollection.remove(entry.key);
-                    end
                     entry.key = padWaveformKey;
-                elseif entry.isTimeAmplitude
-                    %Shorten up square waveforms to the first point so as
-                    %not to waste waveform memory
-                    tmpPulse = obj.pulseCollection(entry.key);
-                    if size(tmpPulse,1) > 1
-                        obj.pulseCollection(entry.key) = tmpPulse(fix(end/2),:);
-                    end
                 end
                 entry.hasMarkerData = 0;
                 entry.markerDelay1 = 0;
                 entry.markerDelay2 = 0;
                 entry.markerMode = 3; % 0 - pulse, 1 - rising, 2 - falling, 3 - none
                 entry.linkListRepeat = 0;
+                
+                % add to pulse collection
+                if ~obj.pulseCollection.isKey(entry.key)
+                    obj.pulseCollection(entry.key) = xypulse;
+                end
             end
             
             LinkLists = cell(1, numsteps);
@@ -292,10 +287,14 @@ classdef PatternGen < handle
                 % start with a padding pulse which we later expand to the
                 % correct length
                 LinkList = cell(numPatterns+2,1);
-                LinkList{1} = buildEntry(padPulse, 1);
+                LinkList{1} = buildEntry(padPulse, 1, 0);
                 
+                accumulatedPhase = 0;
+                timeStep = 1/obj.samplingRate;
                 for ii = 1:numPatterns
-                    LinkList{1+ii} = buildEntry(pulseList{ii}, n);
+                    [LinkList{1+ii}, frameChange] = buildEntry(pulseList{ii}, n, accumulatedPhase);
+                    dt = LinkList{1+ii}.length * LinkList{1+ii}.repeat;
+                    accumulatedPhase = accumulatedPhase - 2*pi*obj.SSBFreq*timeStep*dt + frameChange;
                 end
 
                 % sum lengths
@@ -314,7 +313,7 @@ classdef PatternGen < handle
                 xsum = xsum + LinkList{1}.length;
                 
                 % pad right by adding pad waveform with appropriate repeat
-                LinkList{end} = buildEntry(padPulse, 1);
+                LinkList{end} = buildEntry(padPulse, 1, 0);
                 
                 LinkList{end}.length = obj.cycleLength - xsum;
                 
@@ -369,10 +368,10 @@ classdef PatternGen < handle
                     linkList{ii}.(markerStr) = markerDelay;
                     linkList{ii}.markerMode = 0;
                     state = 1;
-                elseif state == 1 && ((linkList{ii+1}.isZero && linkList{ii+1}.length > obj.bufferReset) || ii+1 == LLlength)
+                elseif state == 1 && ((linkList{ii+1}.isZero && linkList{ii+1}.length - 2*obj.bufferPadding > obj.bufferReset) || ii+1 == LLlength)
                     %Time from beginning of pulse LL entry that trigger needs to go
                     %low to end gate pulse
-                    endDelay = fix(entryWidth + obj.bufferPadding + obj.bufferDelay);
+                    endDelay = fix(entryWidth + obj.bufferDelay + obj.bufferPadding);
                     if endDelay < 1
                         endDelay = 1;
                         fprintf('addGatePulses warning: fixed buffer low pulse to start of pulse\n');
@@ -462,10 +461,10 @@ classdef PatternGen < handle
 			pat = uint8(logical(pat));
 			
 			% keep the pulse high if the delay is less than the reset time
-            onOffPts = find(diff(pat));
+            onOffPts = find(diff(int8(pat)));
             bufferSpacings = diff(onOffPts);
             if length(onOffPts) > 2
-                for ii = 1:(length(bufferSpacings)/2-1)
+                for ii = 1:floor(length(bufferSpacings)/2)
                     if bufferSpacings(2*ii) < reset
                         pat(onOffPts(2*ii):onOffPts(2*ii+1)+1) = 1;
                     end
@@ -502,10 +501,15 @@ classdef PatternGen < handle
                 assert(delay+width<timePts(end), 'Oops! You have asked for a trigger outside of the pulse sequence');
 
                 %Find where to put the go high blip
-                goHighEntry = find(delay<timePts, 1)-1;
+                goHighEntry = find(delay<=timePts, 1)-1;
                 
                 seqs{miniLLct}{goHighEntry}.hasMarkerData = 1;
-                seqs{miniLLct}{goHighEntry}.(markerStr) = delay-timePts(goHighEntry);
+                markerDelay = delay-timePts(goHighEntry);
+                %The firmware can't handle 0 delays
+                if markerDelay == 0
+                    markerDelay = markerDelay+1;
+                end
+                seqs{miniLLct}{goHighEntry}.(markerStr) = markerDelay;
                 
                 %Now if the length of the pulse is greater than one we need
                 %to put the go low blip

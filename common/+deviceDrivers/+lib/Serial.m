@@ -8,6 +8,7 @@ classdef Serial < deviceDrivers.lib.deviceDriverBase
         interface = []
         bufferSize = 64 
         baudRate = 115200
+        DTR = 'off' % default to off for Arduinos
     end
   
     methods
@@ -24,6 +25,7 @@ classdef Serial < deviceDrivers.lib.deviceDriverBase
             obj.interface.InputBufferSize = obj.bufferSize;
             obj.interface.OutputBufferSize = obj.bufferSize;
             obj.interface.BaudRate = obj.baudRate;
+            obj.interface.DataTerminalReady = obj.DTR;
             fopen(obj.interface);
         end
 
@@ -36,10 +38,14 @@ classdef Serial < deviceDrivers.lib.deviceDriverBase
 
         function delete(obj)
             obj.disconnect();
+            if ~isempty(obj.interface)
+                delete(obj.interface);
+            end
         end
         
         function write(obj, string)
             fprintf(obj.interface, string);
+            flushoutput(obj.interface);
         end
         
         function val = query(obj, string)
@@ -57,19 +63,6 @@ classdef Serial < deviceDrivers.lib.deviceDriverBase
         
         function val = binblockread(obj, varargin)
             val = binblockread(obj.interface, varargin{:});
-        end
-        
-        % instrument meta-setter
-        function setAll(obj, settings)
-            fields = fieldnames(settings);
-            for j = 1:length(fields);
-                name = fields{j};
-                if ismember(name, methods(obj))
-                    feval(['obj.' name], settings.(name));
-                elseif ismember(name, properties(obj))
-                    obj.(name) = settings.(name);
-                end
-            end
         end
     end
     

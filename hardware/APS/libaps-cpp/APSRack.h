@@ -32,6 +32,7 @@ public:
 	int read_bitfile_version(const int &) const;
 
 	int program_FPGA(const int &, const string &, const FPGASELECT &, const int &);
+	UCHAR read_status_control(const int &) const;
 
 	int setup_DACs(const int &) const;
 

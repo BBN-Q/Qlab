@@ -46,12 +46,16 @@ classdef ExpManager < handle
         instrSettings = struct();
         measurements = struct();
         sweeps = {}
+        sweep_callbacks = {}
         data = struct();
         scopes
         AWGs
         listeners = {}
         plotScopeTimer
         CWMode = false
+        saveVariances = false
+        dataFileHeader = struct();
+        dataTimeout = 60 % timeout in seconds
     end
     
     methods
@@ -64,7 +68,7 @@ classdef ExpManager < handle
             % turn off uW sources
             function turn_uwave_off(instr)
                 if isa(instr, 'deviceDrivers.lib.uWSource')
-                        instr.output = 0;
+                    instr.output = 0;
                 end
             end
             structfun(@turn_uwave_off, obj.instruments); 
@@ -123,8 +127,6 @@ classdef ExpManager < handle
                     dataInfo.([xyz{xyzIdx}, 'points']) = points{ct};
                 end
                 dataInfo.dimension = length(obj.sweeps);
-                header = struct();
-                header.instrSettings = obj.instrSettings;
                 dataInfos = repmat({dataInfo}, 1, length(fieldnames(obj.measurements)));
                 % add measurement names to dataInfo structs
                 measNames = fieldnames(obj.measurements);
@@ -132,7 +134,7 @@ classdef ExpManager < handle
                     dataInfos{ct}.name = measNames{ct};
                 end
                 %Open data file
-                obj.dataFileHandler.open(header, dataInfos);
+                obj.dataFileHandler.open(obj.dataFileHeader, dataInfos, obj.saveVariances);
             end
             
         end
@@ -159,7 +161,8 @@ classdef ExpManager < handle
                 sizes = [sizes 1];
             end
             % initialize data storage
-            obj.data = structfun(@(x) nan(sizes), obj.measurements, 'UniformOutput', false);
+            obj.data = structfun(@(x) struct('mean', complex(nan(sizes),nan(sizes)), 'realvar', nan(sizes), 'imagvar', nan(sizes), 'prodvar', nan(sizes)),...
+                obj.measurements, 'UniformOutput', false);
             
             % generic nested loop sweeper through "stack"
             while idx > 0 && ct(1) <= stops(1)
@@ -181,12 +184,16 @@ classdef ExpManager < handle
                         end
                     end
                     obj.sweeps{idx}.step(ct(idx));
+                    if ~isempty(obj.sweep_callbacks{idx})
+                        feval(obj.sweep_callbacks{idx}, obj);
+                    end
                     if idx < length(ct)
                         idx = idx + 1;
                     else % inner most loop... take data
                         obj.take_data();
                         % pull data out of measurements
                         stepData = structfun(@(m) m.get_data(), obj.measurements, 'UniformOutput', false);
+                        stepVar = structfun(@(m) m.get_var(), obj.measurements, 'UniformOutput', false);
                         for measName = fieldnames(stepData)'
                             if isa(obj.sweeps{end}, 'sweeps.SegmentNum')
                                 % we are sweeping segment number, so we
@@ -196,16 +203,21 @@ classdef ExpManager < handle
                                 % lacking an idiomatic way to build the generic
                                 % assignment, we manually call subsasgn
                                 indexer = struct('type', '()', 'subs', {[num2cell(ct(1:end-1)), ':']});
-                                obj.data.(measName{1}) = subsasgn(obj.data.(measName{1}), indexer, stepData.(measName{1}));
+                                obj.data.(measName{1}).mean = subsasgn(obj.data.(measName{1}).mean, indexer, stepData.(measName{1}));
+                                if obj.saveVariances
+                                    obj.data.(measName{1}).realvar = subsasgn(obj.data.(measName{1}).realvar, indexer, stepVar.(measName{1}).realvar);
+                                    obj.data.(measName{1}).imagvar = subsasgn(obj.data.(measName{1}).imagvar, indexer, stepVar.(measName{1}).imagvar);
+                                    obj.data.(measName{1}).prodvar = subsasgn(obj.data.(measName{1}).prodvar, indexer, stepVar.(measName{1}).prodvar);
+                                end
                             else
                                 % we have a single point
                                 indexer = struct('type', '()', 'subs', {num2cell(ct)});
-                                obj.data.(measName{1}) = subsasgn(obj.data.(measName{1}), indexer, stepData.(measName{1}));
+                                obj.data.(measName{1}).mean = subsasgn(obj.data.(measName{1}).mean, indexer, stepData.(measName{1}));
                             end
                         end
                         plotResetFlag = all(ct == 1);
                         obj.plot_data(plotResetFlag);
-                        obj.save_data(stepData);
+                        obj.save_data(stepData, stepVar);
                     end
                 else
                     %We've rolled over so reset this sweeps counter and
@@ -251,7 +263,7 @@ classdef ExpManager < handle
             end
             
             %Wait for data taking to finish
-            obj.scopes{1}.wait_for_acquisition(1000);
+            obj.scopes{1}.wait_for_acquisition(obj.dataTimeout);
             
             if(~obj.CWMode)
                 %Stop all the AWGs
@@ -267,7 +279,7 @@ classdef ExpManager < handle
             structfun(@(m) apply(m, measData), obj.measurements, 'UniformOutput', false);
         end
         
-        function save_data(obj, stepData)
+        function save_data(obj, stepData, stepVar)
             if isempty(obj.dataFileHandler) || obj.dataFileHandler.fileOpen == 0
                 return
             end
@@ -275,6 +287,9 @@ classdef ExpManager < handle
             for ct = 1:length(measNames)
                 measData = squeeze(stepData.(measNames{ct}));
                 obj.dataFileHandler.write(measData, ct);
+                if obj.saveVariances
+                    obj.dataFileHandler.writevar(stepVar.(measNames{ct}), ct);
+                end
             end
         end
         
@@ -284,86 +299,91 @@ classdef ExpManager < handle
             %time
             
             %TODO: Handle changes in data size 
-            persistent figHandles axesHandles plotHandles
+            persistent figHandles plotHandles
             if isempty(figHandles)
                 figHandles = struct();
-                axesHandles = struct();
                 plotHandles = struct();
             end
             
+            % available plotting modes
+            plotMap = struct();
+            plotMap.abs = struct('label','Amplitude', 'func', @abs);
+            plotMap.phase = struct('label','Phase (degrees)', 'func', @(x) (180/pi)*angle(x));
+            plotMap.real = struct('label','Real Quad.', 'func', @real);
+            plotMap.imag = struct('label','Imag. Quad.', 'func', @imag);
+            
             for measName = fieldnames(obj.data)'
-                measData = squeeze(obj.data.(measName{1}));
+                measData = squeeze(obj.data.(measName{1}).mean);
+                if isempty(measData)
+                    continue;
+                end
                 
-                if ~isempty(measData)
-                    %Check whether we have an open figure handle to plot to
-                    if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
-                        %If we've closed the figure then we probably
-                        %need to reset the axes and plot handles too
-                        if isfield(figHandles, measName{1})
-                           axesHandles = rmfield(axesHandles, [measName{1} '_abs']); 
-                           axesHandles = rmfield(axesHandles, [measName{1} '_phase']); 
-                           plotHandles = rmfield(plotHandles, [measName{1} '_abs']); 
-                           plotHandles = rmfield(plotHandles, [measName{1} '_phase']); 
-                        end
-                        figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Data']);
+                switch obj.measurements.(measName{1}).plotMode
+                    case 'amp/phase'
+                        toPlot = {plotMap.abs, plotMap.phase};
+                        numRows = 2; numCols = 1;
+                    case 'real/imag'
+                        toPlot = {plotMap.real, plotMap.imag};
+                        numRows = 2; numCols = 1;
+                    case 'quad'
+                        toPlot = {plotMap.abs, plotMap.phase, plotMap.real, plotMap.imag};
+                        numRows = 2; numCols = 2;
+                    otherwise
+                        toPlot = {};
+                end
+
+                %Check whether we have an open figure handle to plot to
+                if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
+                    %If we've closed the figure then we probably
+                    %need to reset the axes and plot handles too
+                    if isfield(figHandles, measName{1})
+                       plotHandles.(measName{1}) = cell(length(toPlot),1);
                     end
-                    figHandle = figHandles.(measName{1});
-                    
-                    if reset || ~isfield(axesHandles, [measName{1} '_abs']) || ~isfield(plotHandles, [measName{1} '_abs']) || ~ishandle(axesHandles.([measName{1} '_abs']))
-                        axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
-                        axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
+                    figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Data']);
+                end
+                figHandle = figHandles.(measName{1});
+
+                for ct = 1:length(toPlot)
+                    if reset || ~isempty(plotHandles.(measName{1}){ct}) || ~ishandle(plotHandles.(measName{1}){ct})
+                        axesH = subplot(numRows, numCols, ct, 'Parent', figHandle);
                         sizes = cellfun(@(x) length(x.points), obj.sweeps);
                         switch nsdims(measData)
                             case 1
                                 %Find non-singleton sweep dimension
                                 goodSweepIdx = find(sizes ~= 1, 1);
-                                plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx}.plotPoints, abs(measData));
-                                xlabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx}.label);
-                                ylabel(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                                plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx}.plotPoints, (180/pi)*angle(measData));
-                                ylabel(axesHandles.([measName{1} '_phase']), 'Phase')
-                                xlabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx}.label);
-                                
+                                plotHandles.(measName{1}){ct} = plot(axesH, obj.sweeps{goodSweepIdx}.plotPoints, toPlot{ct}.func(measData));
+                                xlabel(axesH, obj.sweeps{goodSweepIdx}.label);
+                                ylabel(axesH, toPlot{ct}.label)
+
                             case 2
                                 goodSweepIdx = find(sizes ~= 1, 2);
                                 xPoints = obj.sweeps{goodSweepIdx(2)}.plotPoints;
                                 yPoints = obj.sweeps{goodSweepIdx(1)}.plotPoints;
-                                plotHandles.([measName{1} '_abs']) = imagesc(xPoints, yPoints, abs(measData), 'Parent', axesHandles.([measName{1} '_abs']));
-                                title(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                                xlabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx(2)}.label);
-                                ylabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx(1)}.label);
-                                plotHandles.([measName{1} '_phase']) = imagesc(xPoints, yPoints, (180/pi)*angle(measData), 'Parent', axesHandles.([measName{1} '_phase']));
-                                title(axesHandles.([measName{1} '_phase']), 'Phase')
-                                xlabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx(2)}.label);
-                                ylabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx(1)}.label);
+                                plotHandles.(measName{1}){ct} = imagesc(xPoints, yPoints, toPlot{ct}.func(measData), 'Parent', axesH);
+                                title(axesH, toPlot{ct}.label)
+                                xlabel(axesH, obj.sweeps{goodSweepIdx(2)}.label);
+                                ylabel(axesH, obj.sweeps{goodSweepIdx(1)}.label);
                             case 3
                                 goodSweepIdx = find(sizes ~= 1, 2);
                                 xPoints = obj.sweeps{goodSweepIdx(2)}.plotPoints;
                                 yPoints = obj.sweeps{goodSweepIdx(1)}.plotPoints;
-                                plotHandles.([measName{1} '_abs']) = imagesc(xPoints, yPoints, abs(squeeze(measData(1,:,:))), 'Parent', axesHandles.([measName{1} '_abs']));
-                                title(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                                xlabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx(2)}.label);
-                                ylabel(axesHandles.([measName{1} '_abs']), obj.sweeps{goodSweepIdx(1)}.label);
-                                plotHandles.([measName{1} '_phase']) = imagesc(xPoints, yPoints, (180/pi)*angle(squeeze(measData(1,:,:))), 'Parent', axesHandles.([measName{1} '_phase']));
-                                title(axesHandles.([measName{1} '_phase']), 'Phase')
-                                xlabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx(2)}.label);
-                                ylabel(axesHandles.([measName{1} '_phase']), obj.sweeps{goodSweepIdx(1)}.label);
+                                plotHandles.(measName{1}){ct} = imagesc(xPoints, yPoints, toPlot{ct}.func(squeeze(measData(1,:,:))), 'Parent', axesH);
+                                title(axesH, toPlot{ct}.label)
+                                xlabel(axesH, obj.sweeps{goodSweepIdx(2)}.label);
+                                ylabel(axesH, obj.sweeps{goodSweepIdx(1)}.label);
                         end
                     else
-                        switch length(setdiff(size(measData), 1))
+                        switch nsdims(measData)
                             case 1
-                                set(plotHandles.([measName{1} '_abs']), 'YData', abs(measData));
-                                set(plotHandles.([measName{1} '_phase']), 'YData', (180/pi)*angle(measData));
+                                set(plotHandles.(measName{1}){ct}, 'YData', toPlot{ct}.func(measData));
                             case 2
-                                set(plotHandles.([measName{1} '_abs']), 'CData', abs(measData));
-                                set(plotHandles.([measName{1} '_phase']), 'CData', (180/pi)*angle(measData));
+                                set(plotHandles.(measName{1}){ct}, 'CData', toPlot{ct}.func(measData));
                             case 3
                                 %Here we'll try to plot the last updated
                                 %slice
                                 curSliceIdx = find(~isnan(measData(:,1,1)), 1, 'last');
                                 curSlice = measData(curSliceIdx,:,:);
-                                set(plotHandles.([measName{1} '_abs']), 'CData', abs(squeeze(curSlice)));
-                                set(plotHandles.([measName{1} '_phase']), 'CData', (180/pi)*angle(squeeze(curSlice)));
+                                set(plotHandles.(measName{1}){ct}, 'CData', toPlot{ct}.func(squeeze(curSlice)));
                         end
                     end
                 end
@@ -374,34 +394,17 @@ classdef ExpManager < handle
         function plot_scope_callback(obj, ~, ~)
             %We keep track of figure handles to not pop new ones up all the
             %time
-            persistent figHandles axesHandles plotHandles
+            persistent figHandles 
             if isempty(figHandles)
                 figHandles = struct();
-                axesHandles = struct();
-                plotHandles = struct();
             end
             
             for measName = fieldnames(obj.measurements)'
-                measData = obj.measurements.(measName{1}).get_data();
-                
-                if ~isempty(measData)
-                    if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
-                        figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Scope']);
-                    end
-                    figHandle = figHandles.(measName{1});
-                    
-                    if ~isfield(axesHandles, [measName{1} '_abs']) || ~ishandle(axesHandles.([measName{1} '_abs'])) || ~isfield(plotHandles, [measName{1} '_abs'])
-                        axesHandles.([measName{1} '_abs']) = subplot(2,1,1, 'Parent', figHandle);
-                        plotHandles.([measName{1} '_abs']) = plot(axesHandles.([measName{1} '_abs']), abs(measData));
-                        ylabel(axesHandles.([measName{1} '_abs']), 'Amplitude')
-                        axesHandles.([measName{1} '_phase']) = subplot(2,1,2, 'Parent', figHandle);
-                        plotHandles.([measName{1} '_phase']) = plot(axesHandles.([measName{1} '_phase']), (180/pi)*angle(measData));
-                        ylabel(axesHandles.([measName{1} '_phase']), 'Phase')
-                    else
-                        set(plotHandles.([measName{1} '_abs']), 'YData', abs(measData));
-                        set(plotHandles.([measName{1} '_phase']), 'YData', (180/pi)*angle(measData));
-                    end
+                if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
+                    figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Scope']);
                 end
+                figHandle = figHandles.(measName{1});
+                obj.measurements.(measName{1}).plot(figHandle);
             end
             drawnow()
         end
@@ -416,8 +419,21 @@ classdef ExpManager < handle
             obj.measurements.(name) = meas;
         end
         
-        function add_sweep(obj, sweep)
-            obj.sweeps{end+1} = sweep;
+        function add_sweep(obj, order, sweep, callback)
+            % order = 1-indexed position to insert the sweep in the list of sweeps
+            % sweep = a sweep object
+            % callback = a method to call after each sweep.step()
+            obj.sweeps{order} = sweep;
+            if exist('callback', 'var')
+                obj.sweep_callbacks{order} = callback;
+            else
+                obj.sweep_callbacks{order} = [];
+            end
+        end
+        
+        function clear_sweeps(obj)
+            obj.sweeps = {};
+            obj.sweep_callbacks = {};
         end
         
     end

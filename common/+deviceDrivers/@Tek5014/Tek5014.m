@@ -43,7 +43,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
         
 		% Trigger group object properties
 		Impedance;  		%	Values: 500Ohms, 1Ohms
-		InternalRate;		%	Values: <numeric>
+		triggerInterval;		%	Values: <numeric>
 		Level;				%	Values: <numeric>
 		Polarity; 			%	Values: Positive, Negative
 		Slope;    			%	Values: Positive, Negative
@@ -133,19 +133,19 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
 		% instrument meta-setter
 		function setAll(obj, settings)
 			% load AWG file before doing anything else
-			if isfield(settings, 'seqfile')
-				if ~isfield(settings, 'seqforce')
-					settings.seqforce = false;
+			if isfield(settings, 'seqFile')
+				if ~isfield(settings, 'seqForce')
+					settings.seqForce = false;
 				end
 				
 				% load an AWG file if the settings file is changed or if force == true
-				if (~strcmp(obj.getSetupFileName(), settings.seqfile) || settings.seqforce)
-					obj.openConfig(settings.seqfile);
+				if (~strcmp(obj.getSetupFileName(), settings.seqFile) || settings.seqForce)
+					obj.openConfig(settings.seqFile);
                     obj.operationComplete(); % wait until we're done with the load to continue
 				end
 			end
-			settings = rmfield(settings, 'seqfile');
-			settings = rmfield(settings, 'seqforce');
+			settings = rmfield(settings, 'seqFile');
+			settings = rmfield(settings, 'seqForce');
 			
 			fields = fieldnames(settings);
 			for j = 1:length(fields);
@@ -164,14 +164,14 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
                         obj.Level = settings.Level;
 					case 'triggerSource'
 						obj.triggerSource = settings.triggerSource;
-					case 'InternalRate'
-						obj.InternalRate = settings.InternalRate;
+					case 'triggerInterval'
+						obj.triggerInterval = settings.triggerInterval;
 					case 'samplingRate'
 						obj.samplingRate = settings.samplingRate;
 					otherwise
 						if ismember(name, methods(obj))
-							args = settings.(name)
-							feval(['obj.' name], args{:});
+							args = eval(settings.(name));
+							feval(name, obj, args{:});
 						elseif ismember(name, properties(obj))
 							obj.(name) = settings.(name);
 						end
@@ -480,7 +480,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
 		function val = get.Impedance(obj)
             val = obj.query(['TRIGger' seq_string(obj) ':IMPedance?']);
 		end
-		function val = get.InternalRate(obj)
+		function val = get.triggerInterval(obj)
             val = obj.query(['TRIGger' seq_string(obj) ':TIMer?']);
 		end
 		function val = get.Level(obj)
@@ -578,15 +578,15 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
             end
         end
         
-		function obj = set.InternalRate(obj, value)
-            optionString = 'InternalRate';
+		function obj = set.triggerInterval(obj, value)
+            optionString = 'triggerInterval';
 
             if ~isnumeric(value)
                 error(['AWG Property: ', 'Invalid ', optionString, ' value: ', num2str(value)]);
             else
                 gpib_string = ['TRIGger' seq_string(obj) ':TIMer ', num2str(value)];
                 obj.write(gpib_string);
-                obj.InternalRate = value; 
+                obj.triggerInterval = value; 
             end
 		end
 		function obj = set.Level(obj, value) % trigger level
@@ -630,7 +630,7 @@ classdef (Sealed) Tek5014 < deviceDrivers.lib.GPIBorEthernet
             end
 		end
 		function obj = set.triggerSource(obj, value)
-			check_val = value;
+			check_val = lower(value);
             optionString = 'Source';
 	        checkMapObj = containers.Map({...
 	            'internal','external',...

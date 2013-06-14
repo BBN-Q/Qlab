@@ -4,7 +4,6 @@ function PulsedSpec(qubit, pulseAmp, pulseLength, makePlot)
 basename = 'PulsedSpec';
 
 fixedPt = pulseLength+1000;
-cycleLength = fixedPt + 3000;
 nbrRepeats = 1;
 
 % if using SSB, set the frequency here
@@ -19,9 +18,7 @@ seqParams = struct(...
     'suffix', '', ...
     'numSteps', 1, ...
     'nbrRepeats', nbrRepeats, ...
-    'fixedPt', fixedPt, ...
-    'cycleLength', cycleLength, ...
-    'measLength', 2000);
+    'fixedPt', fixedPt);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 
@@ -29,8 +26,9 @@ qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
-measChannels = {'M1'};
-awgs = {'TekAWG1', 'TekAWG2', 'BBNAPS1', 'BBNAPS2'};
+
+measChannels = getpref('qlab','MeasCompileList');
+awgs = getpref('qlab','AWGCompileList');
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 

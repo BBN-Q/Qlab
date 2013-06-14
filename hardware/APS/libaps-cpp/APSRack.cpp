@@ -138,7 +138,9 @@ void APSRack::update_device_enumeration() {
 	serial2dev = newSerial2dev;           // serial to device map
 }
 
-
+UCHAR APSRack::read_status_control(const int & deviceID) const{
+	return APSs_[deviceID].read_status_ctrl();
+}
 
 int APSRack::read_bitfile_version(const int & deviceID) const {
 	return APSs_[deviceID].read_bitFile_version(ALL_FPGAS);

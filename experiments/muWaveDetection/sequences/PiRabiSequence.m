@@ -1,24 +1,26 @@
 function PiRabiSequence(controlQ, targetQ, makePlot)
+%PiRabiSequence Cross resonance Rabi width sequence with and without pi pulses on the control qubit.
+% PiRabiSequence(controlQ, targetQ, makePlot)
+%   controlQ - control qubit e.g. 'q1'
+%   targetQ - target qubuit, e.g. 'q2'
+%   makePlot - whether to plot a sequence or not (boolean)
+%
+% Example usage:
+% PiRabiSequence('q1', 'q2', false)  
 
 basename = 'PiRabi';
 fixedPt = 4000;
-cycleLength = 6000;
 nbrRepeats = 1;
 
 numsteps = 80;
 
-% if using SSB, set the frequency here
-SSBFreq = 0e6;
-pg1 = PatternGen(controlQ, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
-
-SSBFreq = 0e6;
-pg2 = PatternGen(targetQ, 'SSBFreq', SSBFreq, 'cycleLength', cycleLength);
-
-SSBFreq = 0;
-pgCR = PatternGen('CR', 'SSBFreq', SSBFreq, 'cycleLength', cycleLength, 'buffer', 0);
+pg1 = PatternGen(controlQ);
+pg2 = PatternGen(targetQ);
+pgCR = PatternGen('CR', 'buffer', 0);
 
 minWidth = 64;
-stepsize = 4;
+% stepsize = 32;
+stepsize = 8;
 pulseLength = minWidth:stepsize:(numsteps-1)*stepsize+minWidth;
 % pulseLength = 160;
 % angle = linspace(0, pi, numsteps);
@@ -77,9 +79,7 @@ seqParams = struct(...
     'suffix', '', ...
     'numSteps', numsteps, ...
     'nbrRepeats', nbrRepeats, ...
-    'fixedPt', fixedPt, ...
-    'cycleLength', cycleLength, ...
-    'measLength', 2000);
+    'fixedPt', fixedPt);
 patternDict = containers.Map();
 if ~isempty(calSeq1), calSeq1 = {calSeq1}; end
 if ~isempty(calSeq2), calSeq2 = {calSeq2}; end
@@ -95,7 +95,7 @@ patternDict(IQkey1) = struct('pg', pg1, 'patseq', {patSeq1}, 'calseq', calSeq1, 
 patternDict(IQkey2) = struct('pg', pg2, 'patseq', {patSeq2}, 'calseq', calSeq2, 'channelMap', qubitMap.(targetQ));
 patternDict(IQkeyCR) = struct('pg', pgCR, 'patseq', {patSeqCR}, 'calseq', calSeqCR, 'channelMap', qubitMap.CR);
 measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
+awgs = {'TekAWG1', 'BBNAPS1', 'BBNAPS2'};
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 

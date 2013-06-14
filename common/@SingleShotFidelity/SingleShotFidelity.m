@@ -39,6 +39,8 @@ classdef SingleShotFidelity < handle
             % create an ExpManager object
             obj.experiment = ExpManager();
             
+            obj.experiment.dataFileHandler = HDF5DataHandler(settings.fileName);
+            
             % load ExpManager settings
             expSettings = jsonlab.loadjson(obj.settings.cfgFile);
             instrSettings = expSettings.instruments;
@@ -53,7 +55,7 @@ classdef SingleShotFidelity < handle
                     else
                         ext = 'awg';
                     end
-                    instrSettings.(instrument{1}).seqfile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-' instrument{1} '.' ext]);
+                    instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-' instrument{1} '.' ext]);
                 end
                 add_instrument(obj.experiment, instrument{1}, instr, instrSettings.(instrument{1}));
             end
@@ -68,28 +70,35 @@ classdef SingleShotFidelity < handle
             
             %Add the instrument sweeps
             sweepSettings = settings.sweeps;
-            for sweep = fieldnames(sweepSettings)'
-                add_sweep(obj.experiment, SweepFactory(sweepSettings.(sweep{1}), obj.experiment.instruments));
+            sweepNames = fieldnames(sweepSettings);
+            for sweepct = 1:length(sweepNames)
+                add_sweep(obj.experiment, sweepct, SweepFactory(sweepSettings.(sweepNames{sweepct}), obj.experiment.instruments));
+            end
+            if isempty(sweepct)
+                % create a generic SegmentNum sweep
+                %Even though there really is two segments there only one data
+                %point (SS fidelity) being returned at each step.
+                add_sweep(obj.experiment, 1, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 1)));
             end
 
-            % create a generic SegmentNum sweep
-            add_sweep(obj.experiment, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 2)));
-            
             % add single-shot measurement filter
             import MeasFilters.*
             measSettings = expSettings.measurements;
-            dh = DigitalHomodyne(measSettings.(obj.settings.measurement));
-            add_measurement(obj.experiment, 'single_shot', SingleShot(dh));
+            dh = DigitalHomodyneSS(measSettings.(obj.settings.measurement));
+            add_measurement(obj.experiment, 'single_shot', SingleShot(dh, obj.settings.numShots));
             
             %Create the sequence of alternating QId, 180 inversion pulses
-            obj.SingleShotSequence(obj.qubit)
+            if obj.settings.createSequence
+                obj.SingleShotSequence(obj.qubit)
+            end
             
             % intialize the ExpManager
             init(obj.experiment);
         end
         
-        function Do(obj)
+        function SSData = Do(obj)
             obj.SingleShotFidelityDo();
+            SSData = obj.experiment.data.single_shot;
         end
         
     end

@@ -150,7 +150,7 @@ classdef APSPattern < handle
                     end
                     idx = idx + length(tmpWF_I);
                 end
-                if useVarients && length(origWF) > 1
+                if useVarients && length(origWF(:,1)) > 1
                     varients.(curKey) = varientWFs;
                 end
             end
@@ -195,11 +195,11 @@ classdef APSPattern < handle
             
             % lookup of class properites is expensive, create locals
             ADDRESS_UNIT = 4;
-            MIN_LL_ENTRY_COUNT = 3;
+            MIN_LL_ENTRY_COUNT = 2;
             
             expectedLength = expectedLength + entry.length;
             
-            % if we have a zero that is less than count 3, we skip it and
+            % if we have a zero that is less than MIN_LL_ENTRY_COUNT, we skip it and
             % pad the following entry
             if entry.isZero && (pendingLength + entry.length < (MIN_LL_ENTRY_COUNT+1) * ADDRESS_UNIT)
                 pendingLength = expectedLength - currentLength;
@@ -228,6 +228,8 @@ classdef APSPattern < handle
                     paddings(end+1) = 0;
                     updateKeyFlag = 1;
                 end
+                % pad out length to a multiple of ADDRESS_UNIT
+                entry.length = entry.length + mod(-entry.length, ADDRESS_UNIT);
             end
             
             % count val is (length in 4 sample units) - 1
@@ -252,7 +254,7 @@ classdef APSPattern < handle
             end
             
             if ~exist('waveformLibrary','var') || isempty(waveformLibrary)
-                waveformLibrary = self.buildWaveformLibrary(pattern, useVarients);
+                waveformLibrary = self.build_WFLib(pattern, useVarients);
             end
             
             wfVec_I = waveformLibrary.wfVec_I;
@@ -292,7 +294,7 @@ classdef APSPattern < handle
                         continue
                     end
                     
-                    assert(count > self.MIN_LL_ENTRY_COUNT, 'Warning entry count < 3. This causes problems with APS\n')
+                    assert(count >= self.MIN_LL_ENTRY_COUNT, 'Warning entry count < 2. This causes problems with APS\n')
                     
                     [triggerVal1, triggerVal2] = self.entryToTrigger(entry);
                     
@@ -350,7 +352,7 @@ classdef APSPattern < handle
             
             expectedLength = expectedLength + entry.length;
             
-            % if we have a zero that is less than count 3, we skip it and
+            % if we have a zero that is less than MIN_LL_ENTRY_COUNT, we skip it and
             % pad the following entry
             if entry.isZero && (pendingLength + entry.length < (MIN_LL_ENTRY_COUNT+1) * ADDRESS_UNIT)
                 pendingLength = expectedLength - currentLength;

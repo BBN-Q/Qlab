@@ -28,7 +28,7 @@ classdef APS < hgsetget
 
         bit_file_path; %path to the FPGA bit file
 
-        samplingRate = 1200;   % Global sampling rate in units of MHz (1200, 600, 300, 100, 40)
+        samplingRate = 1200000000;   % Global sampling rate in units of Hz (1200, 600, 300, 100, 40)MHz
         triggerSource
         triggerInterval
         miniLLRepeat
@@ -44,8 +44,6 @@ classdef APS < hgsetget
         APS_ROOT = '../../../hardware/APS'; 
 
         NUM_CHANNELS = 4;
-
-        EXPECTED_BIT_FILE_VERSION = hex2dec('1');
 
         ADDRESS_UNIT = 4;
         MAX_WAVEFORM_VALUE = 8191;        
@@ -171,7 +169,7 @@ classdef APS < hgsetget
             %           chan_x.amplitude
             %           chan_x.offset
             %           chan_x.enabled
-            %  settings.seqfile - hdf5 sequence file
+            %  settings.seqFile - hdf5 sequence file
             %  settings.seqforce - force reload of file
             
             obj.init();
@@ -180,12 +178,12 @@ classdef APS < hgsetget
             if(~isfield(settings, 'seqforce'))
                 settings.seqforce = 0;
             end
-            if(~isfield(settings, 'lastseqfile'))
-                settings.lastseqfile = '';
+            if(~isfield(settings, 'lastseqFile'))
+                settings.lastseqFile = '';
             end
             
             %If we are going to call loadConfig below, we can clear all channel data first
-            if (~strcmp(settings.lastseqfile, settings.seqfile) || settings.seqforce)
+            if (~strcmp(settings.lastseqFile, settings.seqFile) || settings.seqforce)
 				obj.libraryCall('clear_channel_data');
             end
 			
@@ -202,28 +200,29 @@ classdef APS < hgsetget
             settings = rmfield(settings, channelStrs);
             
 			% load AWG file before doing anything else
-			if isfield(settings, 'seqfile')
+			if isfield(settings, 'seqFile')
 				if ~isfield(settings, 'seqforce')
 					settings.seqforce = false;
                 end
-                if ~isfield(settings, 'lastseqfile')
-                    settings.lastseqfile = '';
+                if ~isfield(settings, 'lastseqFile')
+                    settings.lastseqFile = '';
                 end
 				
 				% load an AWG file if the settings file is changed or if force == true
-				if (~strcmp(settings.lastseqfile, settings.seqfile) || settings.seqforce)
-					obj.loadConfig(settings.seqfile);
+				if (~strcmp(settings.lastseqFile, settings.seqFile) || settings.seqforce)
+					obj.loadConfig(settings.seqFile);
                     obj.setRunMode(1,1); obj.setRunMode(3,1);
 				end
 			end
-			settings = rmfield(settings, {'lastseqfile', 'seqfile', 'seqforce'});
+			settings = rmfield(settings, {'lastseqFile', 'seqFile', 'seqforce'});
 			
             % parse remaining settings
 			fields = fieldnames(settings);
             for j = 1:length(fields);
 				name = fields{j};
                 if ismember(name, methods(obj))
-                    feval(['obj.' name], settings.(name));
+                    args = eval(settings.(name));
+                    feval(name, obj, args{:});
                 elseif ismember(name, properties(obj))
                     if ~isempty(settings.(name))
                         obj.(name) = settings.(name);
@@ -256,6 +255,8 @@ classdef APS < hgsetget
             if (err < 0)
                error(sprintf('APS: initAPS : %i', err));
             end
+            [~,b] = obj.readPLLStatus();
+            assert(b == 1, 'PLL seems to have lost its lock');
         end
         
         function loadWaveform(obj, ch, waveform)
@@ -336,15 +337,16 @@ classdef APS < hgsetget
         
         function aps = set.samplingRate(aps, rate)
             % sets the sampling rate for all channels/FPGAs
-            % rate - sampling rate in MHz (1200, 600, 300, 100, 40)
-            aps.libraryCall('set_sampleRate',rate);
+            % rate - sampling rate in Hz 
+            % valid rates are (1200MHz, 600MHz, 300MHz, 100MHz, 40MHz)
+            aps.libraryCall('set_sampleRate',rate/1e6);
             aps.samplingRate = rate;
         end
         
         function rate = get.samplingRate(aps)
             % polls APS hardware to get current PLL Sample Rate
             % valid rates in MHz (1200, 600, 300, 100, 40)
-            rate = aps.libraryCall('get_sampleRate');
+            rate = 1e6*aps.libraryCall('get_sampleRate');
         end
         
         function aps = set.triggerSource(aps, trig)
@@ -478,6 +480,13 @@ classdef APS < hgsetget
             val = aps.libraryCall('read_register', fpga, addr);
         end
 
+        function [pllStatus, pllLock] = readPLLStatus(aps)
+            %Reads the status control register and pulls out the
+            %appropriate bits. 
+            regVal = aps.readStatusCtrl();
+            pllStatus = bitget(regVal, 6);
+            pllLock = bitget(regVal, 7);
+        end
         
     end %public methods
 
@@ -578,8 +587,7 @@ classdef APS < hgsetget
         end
 
         function val = readStatusCtrl(aps)
-            % TODO
-            %val = aps.libraryCall('Read status/ctrl', 'APS_ReadStatusCtrl');
+            val = aps.libraryCall('read_status_ctrl');
         end
         
         function regWriteTest(aps, addr)

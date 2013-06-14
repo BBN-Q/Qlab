@@ -16,16 +16,23 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 classdef SingleShot < MeasFilters.MeasFilter
-   
+    
     properties
         groundData
         excitedData
-        histData
+        pdfData
+        numShots = -1
+        analysed = false
+        analysing = false
+        bestIntegrationTime
     end
     
     methods
-        function obj = SingleShot(childFilter)
-            obj = obj@MeasFilters.MeasFilter(childFilter, struct());
+        function obj = SingleShot(childFilter, varargin)
+            obj = obj@MeasFilters.MeasFilter(childFilter, struct('plotMode', 'real/imag'));
+            if length(varargin) == 1
+                obj.numShots = varargin{1};
+            end
         end
         
         function out = apply(obj, data)
@@ -33,61 +40,168 @@ classdef SingleShot < MeasFilters.MeasFilter
             data = apply@MeasFilters.MeasFilter(obj, data);
             %Assume that the data is recordLength x 1 (waveforms) x 2
             %(segments ground/excited) x roundRobinsPerBuffer
-            obj.groundData = [obj.groundData; squeeze(data(1,1,1,:))];
-            obj.excitedData = [obj.excitedData; squeeze(data(1,1,2,:))];
+            obj.groundData = cat(2, obj.groundData, squeeze(data(:,1,1,:)));
+            obj.excitedData = cat(2, obj.excitedData, squeeze(data(:,1,2,:)));
             out = [];
         end
         
         function out = get_data(obj)
-            %If we don't have any data yet return empty
-            if isempty(obj.groundData)
+            %If we don't have all the data yet return empty
+            if size(obj.groundData,2) ~= obj.numShots/2
                 out = [];
                 return
             end
             
-            % return histogrammed data
-            obj.histData = struct();
-            
-            groundAmpData = real(obj.groundData);
-            excitedAmpData = real(obj.excitedData);
-            
-            groundPhaseData = imag(obj.groundData);
-            excitedPhaseData = imag(obj.excitedData);
-            
-            %Setup bins from the minimum to maximum measured voltage
-            bins = linspace(min([groundAmpData; excitedAmpData]), max([groundAmpData; excitedAmpData]));
-            
-            groundCounts = histc(groundAmpData, bins);
-            excitedCounts = histc(excitedAmpData, bins);
-            
-            maxAmpFidelity = (1/2/length(obj.groundData))*sum(abs(groundCounts-excitedCounts));
-            
-            obj.histData.bins_amp = bins;
-            obj.histData.groundCounts_amp = groundCounts;
-            obj.histData.excitedCounts_amp = excitedCounts;
-            obj.histData.maxFidelity_amp = maxAmpFidelity;
-            
-            % recalculate bins for phase data
-            bins = linspace(min([groundPhaseData; excitedPhaseData]), max([groundPhaseData; excitedPhaseData]));
-            
-            groundCounts = histc(groundPhaseData, bins);
-            excitedCounts = histc(excitedPhaseData, bins);
-            
-            maxPhaseFidelity = (1/2/length(obj.groundData))*sum(abs(groundCounts-excitedCounts));
-            
-            obj.histData.bins_phase = bins;
-            obj.histData.groundCounts_phase = groundCounts;
-            obj.histData.excitedCounts_phase = excitedCounts;
-            obj.histData.maxFidelity_phase = maxPhaseFidelity;
+            if ~obj.analysing
+                obj.analysing = true;
 
-            out = maxAmpFidelity + 1j*maxPhaseFidelity;
+                % return histogrammed data
+                obj.pdfData = struct();
+                
+                groundMean = mean(obj.groundData, 2);
+                excitedMean = mean(obj.excitedData, 2);
+                centre = 0.5*(groundMean+excitedMean);
+                rotAngle = angle(excitedMean-groundMean);
+                groundData = obj.groundData;
+                excitedData = obj.excitedData;
+                save('SSData.mat', 'excitedData', 'groundData')
+                clear groundData excitedData
+                unwoundGroundData = bsxfun(@times, bsxfun(@minus, obj.groundData, centre), exp(-1j*rotAngle));
+                unwoundExcitedData = bsxfun(@times, bsxfun(@minus, obj.excitedData, centre), exp(-1j*rotAngle));
+                
+                %Use the difference magnitude as a weight function
+                diffMag = abs(excitedMean-groundMean);
+                weights = diffMag/sum(diffMag);
+                groundIData = bsxfun(@times, real(unwoundGroundData), weights);
+                excitedIData = bsxfun(@times, real(unwoundExcitedData), weights);
+                groundQData = bsxfun(@times, imag(unwoundGroundData), weights);
+                excitedQData = bsxfun(@times, imag(unwoundExcitedData), weights);
+                clear unwoundGroundData unwoundExcitedData
+                
+                %Take cummulative sum up to each timestep
+                intGroundIData = cumsum(groundIData, 1);
+                intExcitedIData = cumsum(excitedIData, 1);
+                intGroundQData = cumsum(groundQData, 1);
+                intExcitedQData = cumsum(excitedQData, 1);
+                
+                %Loop through each intergration point; esimtate the CDF and
+                %then calculate best measurement fidelity
+                numTimePts = size(intGroundIData,1);
+                fidelities = zeros(numTimePts,1);
+                for intPt = 1:2:numTimePts
+                    %Setup bins from the minimum to maximum measured voltage
+                    bins = linspace(min([intGroundIData(intPt,:), intExcitedIData(intPt,:)]), max([intGroundIData(intPt,:), intExcitedIData(intPt,:)]));
+                    
+                    %Estimate the PDF for the ground and excited states
+                    gPDF = ksdensity(intGroundIData(intPt,:), bins);
+                    ePDF = ksdensity(intExcitedIData(intPt,:), bins);
+                    
+                    fidelities(intPt) = 0.5*(bins(2)-bins(1))*sum(abs(gPDF-ePDF));
+                end
+                
+                [maxFidelity_I, intPt] = max(fidelities);
+                obj.bestIntegrationTime = intPt;
+                obj.pdfData.bins_I = linspace(min([intGroundIData(intPt,:), intExcitedIData(intPt,:)]), max([intGroundIData(intPt,:), intExcitedIData(intPt,:)]));
+                obj.pdfData.gPDF_I = ksdensity(intGroundIData(intPt,:), obj.pdfData.bins_I);
+                obj.pdfData.ePDF_I = ksdensity(intExcitedIData(intPt,:), obj.pdfData.bins_I);
+                obj.pdfData.maxFidelity_I = maxFidelity_I;
+                tmpData = intGroundIData(intPt,:);
+                [mu, sigma] = normfit(tmpData(tmpData<0));
+                obj.pdfData.g_gaussPDF_I = normpdf(obj.pdfData.bins_I, mu, sigma);
+                tmpData = intExcitedIData(intPt,:);
+                [mu, sigma] = normfit(tmpData(tmpData>0));
+                obj.pdfData.e_gaussPDF_I = normpdf(obj.pdfData.bins_I, mu, sigma);
+                clear groundIData intGroundIData excitedIData intExcitedIData
+                
+                %Calculate the kernel density estimates for the other
+                %quadrature too
+                obj.pdfData.bins_Q = linspace(min([intGroundQData(intPt,:), intExcitedQData(intPt,:)]), max([intGroundQData(intPt,:), intExcitedQData(intPt,:)]));
+                obj.pdfData.gPDF_Q = ksdensity(intGroundQData(intPt,:), obj.pdfData.bins_Q);
+                obj.pdfData.ePDF_Q = ksdensity(intExcitedQData(intPt,:), obj.pdfData.bins_Q);
+                obj.pdfData.maxFidelity_Q = 0.5*(obj.pdfData.bins_Q(2)-obj.pdfData.bins_Q(1))*sum(abs(obj.pdfData.gPDF_Q-obj.pdfData.ePDF_Q));
+                [mu, sigma] = normfit(intGroundQData(intPt,:));
+                obj.pdfData.g_gaussPDF_Q = normpdf(obj.pdfData.bins_Q, mu, sigma);
+                [mu, sigma] = normfit(intExcitedQData(intPt,:));
+                obj.pdfData.e_gaussPDF_Q = normpdf(obj.pdfData.bins_Q, mu, sigma);
+
+                out = maxFidelity_I + 1j*obj.pdfData.maxFidelity_Q;
+                clear groundQData intGroundQData excitedQData intExcitedQData
+
+                obj.analysed = true;
+                
+                %Logistic regression
+                allData = cat(1, cat(2, real(obj.groundData)', imag(obj.groundData)'), cat(2, real(obj.excitedData)', imag(obj.excitedData)'));
+                prepStates = [zeros(size(obj.groundData,2),1); ones(size(obj.excitedData,2),1)];
+                %Matlab's logistic regression support is quite weak.  The
+                %code below takes forever and overfits.  It looks like in
+                %more recent versions lassoglm might provide some
+                %regularization
+%                 betas = glmfit(allData, prepStates, 'binomial');
+%                 guessStates = glmval(betas, allData, 'logit');
+%                 fidelity = 2*sum(guessStates == prepStates)/size(allData,1) - 1 
+
+                %Fortunately, liblinear is great!
+                cScan = logspace(-1,1,5);
+                bestAccuracy = 0;
+                bestC = 0;
+                for c = cScan;
+                    accuracy = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -v 3',c));
+                    if accuracy > bestAccuracy
+                        bestAccuracy = accuracy;
+                        bestC = c;
+                    end
+                end
+                model = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0',bestC));
+                [predictedState, accuracy, ~] = predict(prepStates, sparse(double(allData)), model);
+                fidelity = 2*accuracy(1)/100-1;
+                c = 0.95;
+                N = length(predictedState);
+                S = sum(predictedState == prepStates);
+                flo = betaincinv((1-c)/2.,S+1,N-S+1);
+                fup = betaincinv((1+c)/2.,S+1,N-S+1);
+                fprintf('Cross-validated logistic regression accuracy: %.2f\n', bestAccuracy);
+                fprintf('In-place logistic regression fidelity %.2f, (%.2f, %.2f).\n', 100*fidelity, 200*flo-100, 200*fup-100);
+
+            else
+                out = obj.pdfData.maxFidelity_I + 1j*obj.pdfData.maxFidelity_Q;
+            end
         end
         
         function reset(obj)
             obj.groundData = [];
             obj.excitedData = [];
-            obj.histData = struct();
+            obj.analysed = false;
+            obj.analysing = false;
         end
-            
+        
+        function plot(obj, figH)
+            if obj.analysed
+                clf(figH);
+                axes1 = subplot(2,1,1, 'Parent', figH);
+                plot(axes1, obj.pdfData.bins_I, obj.pdfData.gPDF_I, 'b');
+                hold(axes1, 'on');
+                plot(axes1, obj.pdfData.bins_I, obj.pdfData.g_gaussPDF_I, 'b--')
+                plot(axes1, obj.pdfData.bins_I, obj.pdfData.ePDF_I, 'r');
+                plot(axes1, obj.pdfData.bins_I, obj.pdfData.e_gaussPDF_I, 'r--')
+                legend(axes1, {'Ground','Excited'})
+                text(0.1, 0.75, sprintf('Fidelity: %.1f%% (SNR Fidelity: %.1f%%)',100*obj.pdfData.maxFidelity_I, ...
+                    100*0.5*(obj.pdfData.bins_I(2)-obj.pdfData.bins_I(1))*sum(abs(obj.pdfData.g_gaussPDF_I - obj.pdfData.e_gaussPDF_I))),...
+                    'Units', 'normalized', 'FontSize', 14, 'Parent', axes1)
+                
+                %Fit gaussian to both peaks and return the esitmat
+                    
+                axes2 = subplot(2,1,2, 'Parent', figH);
+                plot(axes2, obj.pdfData.bins_Q, obj.pdfData.gPDF_Q, 'b');
+                hold(axes2, 'on');
+                plot(axes2, obj.pdfData.bins_Q, obj.pdfData.g_gaussPDF_Q, 'b--')
+                plot(axes2, obj.pdfData.bins_Q, obj.pdfData.ePDF_Q, 'r');
+                plot(axes2, obj.pdfData.bins_Q, obj.pdfData.e_gaussPDF_Q, 'r--')
+                legend(axes2, {'Ground','Excited'})
+                text(0.1, 0.75, sprintf('Fidelity: %.1f%%\nIntegration time: %d',100*obj.pdfData.maxFidelity_Q, obj.bestIntegrationTime), 'Units', 'normalized', 'FontSize', 14, 'Parent', axes2)
+                drawnow();
+            end
+        end
+
+        
     end
 end

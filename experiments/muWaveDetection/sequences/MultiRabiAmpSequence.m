@@ -8,7 +8,6 @@ function MultiRabiAmpSequence(q1, q2, amps, makePlot)
 
 basename = 'Rabi';
 fixedPt = 1000;
-cycleLength = 6100;
 nbrRepeats = 1;
 
 pg1 = PatternGen(q1);
@@ -16,7 +15,6 @@ pg2 = PatternGen(q2);
 
 patseq1 = {{pg1.pulse('Xtheta', 'amp', amps)}};
 patseq2 = {{pg2.pulse('Xtheta', 'amp', amps)}};
-% patseq = {{pg.pulse('Xtheta', 'amp', amps), pg.pulse('QId', 'width', 120)}};
 calseq = [];
 
 % prepare parameter structures for the pulse compiler
@@ -25,9 +23,7 @@ seqParams = struct(...
     'suffix', '', ...
     'numSteps', length(amps), ...
     'nbrRepeats', nbrRepeats, ...
-    'fixedPt', fixedPt, ...
-    'cycleLength', cycleLength, ...
-    'measLength', 2500);
+    'fixedPt', fixedPt);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 
@@ -35,8 +31,9 @@ qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 
 patternDict(qubitMap.(q1).IQkey) = struct('pg', pg1, 'patseq', {patseq1}, 'calseq', calseq, 'channelMap', qubitMap.(q1));
 patternDict(qubitMap.(q2).IQkey) = struct('pg', pg2, 'patseq', {patseq2}, 'calseq', calseq, 'channelMap', qubitMap.(q2));
-measChannels = {'M1', 'M2'};
-awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
+
+measChannels = getpref('qlab','MeasCompileList');
+awgs = getpref('qlab','AWGCompileList');
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 

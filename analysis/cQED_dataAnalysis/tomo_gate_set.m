@@ -13,13 +13,13 @@ I = eye(2);
 switch nbrPulses
     case 4
         %Four pulse set
-        Uset1Q{1}=speye(2);
+        Uset1Q{1}=eye(2);
         Uset1Q{2}=expm(-1i*(pi/2)*X);
         Uset1Q{3}=expm(-1i*(pi/4)*X);
         Uset1Q{4}=expm(-1i*(pi/4)*Y);
     case 6
         %Six pulse set
-        Uset1Q{1}=speye(2);
+        Uset1Q{1}=eye(2);
         Uset1Q{2}=expm(-1i*(pi/4)*X);
         Uset1Q{3}=expm(1i*(pi/4)*X);
         Uset1Q{4}=expm(-1i*(pi/4)*Y);

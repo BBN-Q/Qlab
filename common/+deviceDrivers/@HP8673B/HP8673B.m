@@ -26,7 +26,7 @@ classdef (Sealed) HP8673B < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBo
         function val = get.frequency(obj)
             response = obj.query('FR?');
             % responds in Hz
-            tokens = regexp(response, '(RF|CF)(\d+)HZ', 'tokens', 'once');
+            tokens = regexp(response, '(FR|CF)(\d+)HZ', 'tokens', 'once');
             val = str2double(tokens{2})/1e9;
         end
         function val = get.power(obj)

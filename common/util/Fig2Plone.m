@@ -24,9 +24,25 @@ if ischar(dataObj)
     %Use the image description plus date stamp as the filename
     dataObj.filename = [strrep(imageDescrip, ' ', '_'), '_', datestr(now,1), '.h5'];
 end
-    
 
+%Save the matlab figure for later editing
 saveas(figHandle, [dataObj.path strrep(dataObj.filename, '.h5', '.fig')]);
+
+%Modify the font sizes to make the png easier to read on Plone
+axesHandles = findobj(figHandle, 'Type', 'axes');
+for axesH = axesHandles'
+    %Find all lines and make them 2 points thick
+    set(findobj(axesH, 'Type', 'Line'), 'LineWidth', 2);
+    
+    %Find all axes labels and bump the fontsize
+    %Axes labels are hidden for some unknown reason so we use findall
+    set(findall(axesH, 'Type', 'text'), 'FontSize', 14);
+    
+    %Bump the tick labels fontsize
+    set(axesH, 'FontSize', 12);
+end
+
+%Save a png for Plont
 imageFile = [dataObj.path strrep(dataObj.filename, '.h5', '.png')];
 saveas(figHandle, imageFile)
 
@@ -36,9 +52,14 @@ if nargin < 6
 end
 
 %Now pass off to the python script. 
+if ispc
+    pythonCmd = 'pythonw';
+else
+    pythonCmd = 'python';
+end
 [status, result] = system(sprintf(...
-    'pythonw "%s" --ploneSite "%s" --username "%s" --password "%s" --imageFile "%s" --imageDescrip "%s" --date "%s"',...
-    fullfile(fileparts(mfilename('fullpath')), 'Fig2Plone.py'), ploneSite, username, password, imageFile, imageDescrip, storeDate));
+    '%s "%s" --ploneSite "%s" --username "%s" --password "%s" --imageFile "%s" --imageDescrip "%s" --date "%s"',...
+    pythonCmd, fullfile(fileparts(mfilename('fullpath')), 'Fig2Plone.py'), ploneSite, username, password, imageFile, imageDescrip, storeDate));
 
 assert(status==0, 'Oops, the Python script seems to have failed out:\n %s',result);
 

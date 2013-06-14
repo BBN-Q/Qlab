@@ -6,8 +6,6 @@ function compileSequences(seqParams, patternDict, measChannels, awgs, makePlot)
 %   numSteps
 %   nbrRepeats
 %   fixedPt
-%   cycleLength
-%   measLength
 % patternDict - containers.Map object that is keyed on IQkey. It contains:
 %   pg - PatternGen object
 %   patseq - experiment pattern sequence (will unroll over numsteps)
@@ -30,16 +28,23 @@ numSegments = nbrPatterns*seqParams.numSteps + calPatterns;
 fprintf('Number of sequences: %i\n', numSegments*seqParams.nbrRepeats);
 
 % inject measurement sequences
+measLength = 0;
 for measCh = measChannels
     measCh = measCh{1};
     IQkey = qubitMap.(measCh).IQkey;
     ChParams = params.(IQkey);
+    %Override the SSBFreq for constant autodyne phase
+    mFreq = params.(measCh).SSBFreq;
+    pgM = PatternGen(measCh, 'SSBFreq', 0);    
     % shift the delay to include the measurement length
-    params.(IQkey).delay = ChParams.delay + seqParams.measLength;
-    pgM = PatternGen(measCh, 'cycleLength', seqParams.cycleLength);    
-    measSeq = {{pgM.pulse('Xtheta', 'pType', 'tanh', 'sigma', 1, 'buffer', 0, 'amp', 4000, 'width', seqParams.measLength)}};
+    params.(IQkey).delay = ChParams.delay + pgM.pulseLength;
+    measSeq = {{pgM.pulse('M', 'modFrequency',mFreq)}};
+    measLength = max(measLength, pgM.pulseLength);
     patternDict(IQkey) = struct('pg', pgM, 'patseq', {repmat(measSeq, 1, nbrPatterns)}, 'calseq', {repmat(measSeq,1,calPatterns)}, 'channelMap', qubitMap.(measCh));
 end
+
+%Setup appropriate cycleLength with buffer for trailing blips
+seqParams.cycleLength = seqParams.fixedPt + measLength + 240;
 
 % keep track of whether all channels on all AWGs are used
 awgChannels = struct();
@@ -174,7 +179,7 @@ elseif (strncmp(digitizerTrigChan,'BBNAPS', 6))
     if isempty(awgChannels.(tmpIQkey))
         create_empty_APS_channel(tmpIQkey);
     end
-    awgChannels.(tmpIQkey).linkLists = PatternGen.addTrigger(awgChannels.(tmpIQkey).linkLists, seqParams.fixedPt-500, 1200, tmpMarkerNum);
+    awgChannels.(tmpIQkey).linkLists = PatternGen.addTrigger(awgChannels.(tmpIQkey).linkLists, seqParams.fixedPt-500, 1, tmpMarkerNum);
 end
 
 if (strncmp(slaveTrigChan,'TekAWG', 6))
@@ -233,7 +238,8 @@ for awg = awgs
         % export Tek
         % hack... really ought to store this info somewhere or be able to
         % change in from the user interface, rather than writing it to file
-        options = struct('m12_high', 2.5, 'm31_high', 2.7, 'm22_high', 2.5, 'nbrRepeats', seqParams.nbrRepeats);
+        options = struct('m11_high', 2.5, 'm12_high', 2.5, 'm21_high', 2.5, 'm22_high', 2.5, 'm31_high', 2.5,...
+            'm32_high', 2.5, 'm41_high', 2.5, 'm42_high', 2.5, 'nbrRepeats', seqParams.nbrRepeats);
         TekPattern.exportTekSequence(tempdir, basename, extract_Tek_channel(awg), options);
         disp(['Moving AWG ' awg ' file to destination']);
         pathAWG = fullfile(getpref('qlab', 'awgDir'), seqParams.basename, [basename '.awg']);

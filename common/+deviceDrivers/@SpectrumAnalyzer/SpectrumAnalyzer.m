@@ -28,6 +28,13 @@ classdef (Sealed) SpectrumAnalyzer < deviceDrivers.lib.Serial
         numSweepPts
         sweepPts
         sweepData
+        
+        sweep_mode
+        resolution_bw
+        sweep_points 
+        number_averages
+        video_averaging
+        
     end
     
     properties ( Access=private)
@@ -70,6 +77,7 @@ classdef (Sealed) SpectrumAnalyzer < deviceDrivers.lib.Serial
         
         function set.LOsource(obj, sourceName)
             obj.LOsource= InstrumentFactory(sourceName);
+            obj.LOsource.output = 1;
         end 
         
         function set.centerFreq(obj, value)

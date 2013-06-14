@@ -16,58 +16,90 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 classdef DigitalHomodyne < MeasFilters.MeasFilter
-   
+    
     properties
         IFfreq
+        bandwidth
         samplingRate
-        integrationStart
-        integrationPts
-        affine
+        boxCarStart
+        boxCarStop
+        filter
+        phase
+        fileHandleReal
+        fileHandleImag
+        saveRecords
+        headerWritten = false;
     end
     
     methods
         function obj = DigitalHomodyne(settings)
             obj = obj@MeasFilters.MeasFilter(settings);
             obj.IFfreq = settings.IFfreq;
+            obj.bandwidth = settings.bandwidth;
             obj.samplingRate = settings.samplingRate;
-            obj.integrationStart = settings.integrationStart;
-            obj.integrationPts = settings.integrationPts;
-            measAffines = getpref('qlab','MeasAffines');
-            obj.affine = measAffines.M1;
+            obj.boxCarStart = settings.boxCarStart;
+            obj.boxCarStop = settings.boxCarStop;
+            obj.phase = settings.phase;
+            
+            if isfield(settings, 'filterFilePath') && ~isempty(settings.filterFilePath)
+                obj.filter = load(settings.filterFilePath, 'filter', 'bias');
+            else
+                obj.filter = [];
+            end
+            
+            obj.saveRecords = settings.saveRecords;
+            if obj.saveRecords
+                obj.fileHandleReal = fopen([settings.recordsFilePath, '.real'], 'wb');
+                obj.fileHandleImag = fopen([settings.recordsFilePath, '.imag'], 'wb');
+            end
+        end
+        
+        function delete(obj)
+            if obj.saveRecords
+                fclose(obj.fileHandleReal);
+                fclose(obj.fileHandleImag);
+            end
         end
         
         function out = apply(obj, data)
             import MeasFilters.*
             data = apply@MeasFilters.MeasFilter(obj, data);
             
-            [demodSignal, decimFactor] = digitalDemod(data, obj.IFfreq, obj.samplingRate);
+            [demodSignal, decimFactor] = digitalDemod(data, obj.IFfreq, obj.bandwidth, obj.samplingRate);
             
-%             save(['SSRecords_', datestr(now, 'yymmdd-HH-MM-SS'), '.mat'], 'demodSignal');
-            
-            %Apply the affine transformation to unwind things
-            if ~isempty(obj.affine)
-                demodSignal = bsxfun(@times, bsxfun(@minus, demodSignal, obj.affine.centres), exp(-1j*obj.affine.angles));
-            end
-
             %Box car the demodulated signal
             if ndims(demodSignal) == 2
-                demodSignal = demodSignal(floor(obj.integrationStart/decimFactor):floor((obj.integrationStart+obj.integrationPts-1)/decimFactor),:);
+                demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:);
             elseif ndims(demodSignal) == 4
-                demodSignal = demodSignal(floor(obj.integrationStart/decimFactor):floor((obj.integrationStart+obj.integrationPts-1)/decimFactor),:,:,:);
+                demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:,:,:);
+                %If we have a file to save to then do so
+                if obj.saveRecords
+                    if ~obj.headerWritten
+                        %Write the first three dimensions of the demodSignal:
+                        %recordLength, numWaveforms, numSegments
+                        sizes = size(demodSignal);
+                        fwrite(obj.fileHandleReal, sizes(1:3), 'int32');
+                        fwrite(obj.fileHandleImag, sizes(1:3), 'int32');
+                        obj.headerWritten = true;
+                    end
+                    
+                    fwrite(obj.fileHandleReal, real(demodSignal), 'single');
+                    fwrite(obj.fileHandleImag, imag(demodSignal), 'single');
+                end
+                
             else
                 error('Only able to handle 2 and 4 dimensional data.');
             end
             
-%             figure()
-%             gData = squeeze(mean(demodSignal(:,:,1,:),4));
-%             eData = squeeze(mean(demodSignal(:,:,2,:),4));
-%             plot((gData));
-%             hold on
-%             plot((eData),'r');
+            %If we have a pre-defined filter use it, otherwise integrate
+            %and rotate
+            if ~isempty(obj.filter)
+                obj.latestData = sum(bsxfun(@times, demodSignal, obj.filter.filter')) + obj.filter.bias;
+            else
+                %Integrate and rotate
+                obj.latestData = exp(1j*obj.phase) * 2 * mean(demodSignal,1);
+            end
             
-            %Integrate
-            obj.latestData = 2*mean(demodSignal,1);
-                
             obj.accumulate();
             out = obj.latestData;
         end

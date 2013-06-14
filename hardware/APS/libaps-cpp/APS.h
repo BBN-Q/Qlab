@@ -106,7 +106,7 @@ private:
 	int flush();
 	int reset_status_ctrl();
 	int clear_status_ctrl();
-	UCHAR read_status_ctrl();
+	UCHAR read_status_ctrl() const;
 
 	int setup_PLL();
 	int set_PLL_freq(const FPGASELECT &, const int &);

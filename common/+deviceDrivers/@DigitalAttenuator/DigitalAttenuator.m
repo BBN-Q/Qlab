@@ -30,7 +30,28 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
         function obj = DigitalAttenuator()
             % Initialize Super class
             obj = obj@deviceDrivers.lib.Serial();
-            obj.baudRate = 9600;
+        end
+
+        function setAll(obj, settings)
+            channels = {1,2,3};
+            for ch = channels
+                name = ['ch' num2str(ch{1}) 'Attenuation'];
+                if isfield(settings, name)
+                    obj.setAttenuation(ch{1}, settings.(name));
+                    settings = rmfield(settings, name);
+                end
+            end
+
+            fields = fieldnames(settings);
+            for j = 1:length(fields);
+                name = fields{j};
+                if ismember(name, methods(obj))
+                    args = eval(settings.(name));
+                    feval(name, obj, args{:});
+                elseif ismember(name, properties(obj))
+                    obj.(name) = settings.(name);
+                end
+            end
         end
         
         function out = readUntilEND(obj)
@@ -38,7 +59,7 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
             % Reads from the Arduino until it receives 'END'
             out = '';
             val = obj.read();
-            while (strcmp(val, 'END') == 0)
+            while (strcmp(strtrim(val), 'END') == 0)
                 out = [out val];
                 val = obj.read();
             end
@@ -46,7 +67,7 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
         
         function val = get.serial(obj)
             % poll device for its serial number
-            obj.write('ID?;');
+            obj.write('ID?');
             val = obj.readUntilEND();
             val = str2double(val);
             obj.serial = val;
@@ -89,10 +110,7 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
         function pendingArduino(obj)
             % pendingArduino - clear the serial interface
             if ( obj.interface.BytesAvailable > 0)
-                rv = obj.read();
-                if (~isempty(rv))
-                    warning('DigitalAttenuator:pendingArduino:Data','%s\n', rv);
-                end
+                flushinput(obj.interface);
             end
         end
         

@@ -189,13 +189,6 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         
         %Setup and start an acquisition
         function acquire(obj)
-            %Zero the stored data
-            obj.data = cell(2);
-            if strcmp(obj.acquireMode, 'averager')
-                obj.data{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
-                obj.data{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
-            end
-            
             %Setup the dual-port asynchronous AutoDMA with NPT mode
             %The acquisition starts automatically because I don't set the
             %ADMA_EXTERNAL_STARTCAPTURE flag
@@ -223,14 +216,12 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %Total number of buffers to process
             bufferct = 0;
             totNumBuffers = round(obj.settings.averager.nbrRoundRobins/obj.buffers.roundRobinsPerBuffer);
-            
+
             if strcmp(obj.acquireMode, 'averager')
-                sumDataA = zeros(size(obj.data{1}));
-                sumDataB = zeros(size(obj.data{2}));
+                sumDataA = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
+                sumDataB = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
             end
-            
-            % Conversion between 8 bit integers and volts
-            int8toVolts = @(x) 2*obj.verticalScale/255*x - obj.verticalScale;
+
             %Loop until all are processed
             while bufferct < totNumBuffers
                 
@@ -255,33 +246,23 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 %
                 % Samples values are arranged contiguously in each record.
                 % An 8-bit sample code is stored in each 8-bit sample value.
-                %
-                % Sample codes are unsigned by default where:
                 
                 %Cast the pointer to the right type
                 setdatatype(bufferOut, 'uint8Ptr', 1, obj.buffers.bufferSize);
                 
-                %Extract and reshape the data
-                tmpDataA = reshape(bufferOut.Value(1:obj.buffers.bufferSize/2), [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
-                
-                %Extract and reshape the data
-                tmpDataB = reshape(bufferOut.Value(obj.buffers.bufferSize/2+1:obj.buffers.bufferSize), [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
-                
-                if strcmp(obj.acquireMode, 'averager')
-                    %Sum over repeats and cast to double precision so we don't
-                    %overflow
-                    sumDataA = sumDataA + squeeze(sum(sum(tmpDataA,4,'double'),2));
-                    sumDataB = sumDataB + squeeze(sum(sum(tmpDataB,4,'double'),2));
-                    avgct = (bufferct+1)*obj.settings.averager.nbrWaveforms*obj.buffers.roundRobinsPerBuffer;
-                    obj.data{1} = int8toVolts(sumDataA/avgct);
-                    obj.data{2} = int8toVolts(sumDataB/avgct);
-                    notify(obj, 'DataReady');
+                %scale data to floating point using MEX function, i.e. map (0,255) to (-Vs,Vs)
+                if strcmp(obj.acquireMode, 'digitizer')
+                    [obj.data{1}, obj.data{2}] = obj.processBuffer(bufferOut.Value, obj.verticalScale);
+                    obj.data{1} = reshape(obj.data{1}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
+                    obj.data{2} = reshape(obj.data{2}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
                 else
-                    %Rescale data to appropriate scale, i.e. map (0,255) to (-Vs,Vs)
-                    obj.data{1} = int8toVolts(double(tmpDataA));
-                    obj.data{2} = int8toVolts(double(tmpDataB));
-                    notify(obj, 'DataReady');
+                    %scale with averaging over repeats (waveforms and round robins)
+                    [obj.data{1}, obj.data{2}] = obj.processBufferAvg(bufferOut.Value, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer], obj.verticalScale);
+                    sumDataA = sumDataA + obj.data{1};
+                    sumDataB = sumDataB + obj.data{2};
                 end
+
+                notify(obj, 'DataReady');
                 
                 % Make the buffer available to be filled again by the board
                 obj.call_API('AlazarPostAsyncBuffer', obj.boardHandle, obj.buffers.bufferPtrs{bufferNum}, obj.buffers.bufferSize);
@@ -293,12 +274,8 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             if strcmp(obj.acquireMode, 'averager')
                 %Average the summed data
-                %Rescale data to appropriate scale, i.e. map (0,255) to (-Vs,Vs)
-                numRepeats = obj.settings.averager.nbrWaveforms*obj.settings.averager.nbrRoundRobins;
-                obj.data{1} = int8toVolts(sumDataA/numRepeats);
-                obj.data{2} = int8toVolts(sumDataB/numRepeats);
-                
-                notify(obj, 'DataReady');
+                obj.data{1} = sumDataA/totNumBuffers;
+                obj.data{2} = sumDataB/totNumBuffers;
             end
 
             %Clear and reallocate the buffer ptrs
@@ -349,14 +326,17 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             % is not required by the hardware
             %We are always 50Ohm coupled for the ATS9870
             scaleMap = containers.Map({.04, .1, .2, .4, 1, 2, 4}, {2, 5, 6, 7, 10, 11, 12});
-            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_A'), vertSettings.verticalCoupling, scaleMap(vertSettings.verticalScale), obj.defs('IMPEDANCE_50_OHM'));
-            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_B'), vertSettings.verticalCoupling, scaleMap(vertSettings.verticalScale), obj.defs('IMPEDANCE_50_OHM'));
+            couplingMap = containers.Map({'AC','DC'}, {1, 2});
+            
+            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_A'), couplingMap(vertSettings.verticalCoupling),...
+                                scaleMap(vertSettings.verticalScale), obj.defs('IMPEDANCE_50_OHM'));
+            obj.call_API('AlazarInputControl',obj.boardHandle, obj.defs('CHANNEL_B'), couplingMap(vertSettings.verticalCoupling),...
+                                scaleMap(vertSettings.verticalScale), obj.defs('IMPEDANCE_50_OHM'));
             
             %Set the bandwidth
-            if vertSettings.bandwidth
-                obj.call_API('AlazarSetBWLimit',obj.boardHandle, obj.defs('CHANNEL_A'), 1)
-                obj.call_API('AlazarSetBWLimit',obj.boardHandle, obj.defs('CHANNEL_B'), 1)
-            end
+            bandwidthMap = containers.Map({'Full','20MHz'}, {0,1}); 
+            obj.call_API('AlazarSetBWLimit',obj.boardHandle, obj.defs('CHANNEL_A'), bandwidthMap(vertSettings.bandwidth));
+            obj.call_API('AlazarSetBWLimit',obj.boardHandle, obj.defs('CHANNEL_B'), bandwidthMap(vertSettings.bandwidth));
             
             % update obj property
             obj.verticalScale = vertSettings.verticalScale;
@@ -367,25 +347,21 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             %If the trigger channel is external then we also need to setup
             %that channel
-            trigSourceMap = containers.Map({'1', 'a', '2', 'b', 'ext', 'external'}, {0, 0, 1, 1, 2, 2});
-            if isnumeric(trigSettings.triggerSource)
-                trigSource = num2str(trigSettings.triggerSource);
-            else
-                trigSource = lower(trigSettings.triggerSource);
-            end
-            trigSettings.triggerSource = trigSourceMap(trigSource);
-            if(trigSettings.triggerSource == 2)
+            couplingMap = containers.Map({'AC','DC'}, {1, 2});
+            if(strcmpi(trigSettings.triggerSource, 'Ext'))
                 %We can only choose 5V range and triggerLevel comes
                 %in mV
                 extTrigLevel = obj.defs('ETR_5V');
                 trigChannelRange = 5;
 
-                obj.call_API('AlazarSetExternalTrigger',obj.boardHandle, trigSettings.triggerCoupling, extTrigLevel);
+                obj.call_API('AlazarSetExternalTrigger',obj.boardHandle,...
+                            couplingMap(trigSettings.triggerCoupling), extTrigLevel);
                 
                 %Otherwise setup the channel
             else
                 trigChannelRange = obj.settings.vertical.verticalScale;
                 %TODO: implement
+                error('Channel triggers not implemented')
             end
             
             %We need to set the trigger level as a percentage of the full
@@ -395,8 +371,11 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %Set the rest of the trigger parameters
             %We'll default to trigger engine J and single condition for
             %now
-            obj.call_API('AlazarSetTriggerOperation', obj.boardHandle, obj.defs('TRIG_ENGINE_OP_J'), obj.defs('TRIG_ENGINE_J'), trigSettings.triggerSource, trigSettings.triggerSlope, trigLevelCode, ...
-                obj.defs('TRIG_ENGINE_K'), obj.defs('TRIG_DISABLE'), obj.defs('TRIGGER_SLOPE_POSITIVE'), 128);
+            triggerSourceMap = containers.Map({'A', 'B', 'EXT'}, {0, 1, 2});
+            triggerSlopeMap = containers.Map({'rising', 'falling'}, {1, 2});
+            obj.call_API('AlazarSetTriggerOperation', obj.boardHandle, obj.defs('TRIG_ENGINE_OP_J'), obj.defs('TRIG_ENGINE_J'),...
+                        triggerSourceMap(upper(trigSettings.triggerSource)), triggerSlopeMap(trigSettings.triggerSlope), trigLevelCode, ...
+                        obj.defs('TRIG_ENGINE_K'), obj.defs('TRIG_DISABLE'), obj.defs('TRIGGER_SLOPE_POSITIVE'), 128);
             
             %We'll wait forever for a trigger
             obj.call_API('AlazarSetTriggerTimeOut', obj.boardHandle, 0);
@@ -473,7 +452,10 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             val = obj.settings.horizontal;
             val.sampleInterval = 1/val.samplingRate;
         end
-            
-        
     end %methods
+    methods (Static)
+        % externally defined methdos
+        [dataA, dataB] = processBuffer(buffer, verticalScale);
+        [dataA, dataB] = processBufferAvg(buffer, bufferDims, verticalScale);
+    end
 end %classdef

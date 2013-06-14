@@ -7,7 +7,6 @@ function T1Sequence(qubit, pulseSpacings, makePlot)
 
 basename = 'T1';
 fixedPt = pulseSpacings(end)+1000;
-cycleLength = fixedPt+4000; 
 nbrRepeats = 1;
 
 pg = PatternGen(qubit);
@@ -24,9 +23,7 @@ seqParams = struct(...
     'suffix', '', ...
     'numSteps', length(pulseSpacings), ...
     'nbrRepeats', nbrRepeats, ...
-    'fixedPt', fixedPt, ...
-    'cycleLength', cycleLength, ...
-    'measLength', 3000);
+    'fixedPt', fixedPt);
 if ~isempty(calseq), calseq = {calseq}; end
 
 qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
@@ -35,8 +32,8 @@ IQkey = qubitMap.(qubit).IQkey;
 patternDict = containers.Map();
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
 
-measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
+measChannels = getpref('qlab','MeasCompileList');
+awgs = getpref('qlab','AWGCompileList');
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 end

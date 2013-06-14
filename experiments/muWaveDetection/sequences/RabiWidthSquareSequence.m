@@ -5,8 +5,7 @@ function RabiWidthSquareSequence(qubit, widths, makePlot)
 %   widths - pulse widths to scan over e.g. 0:5:250
 
 basename = 'RabiWidth';
-fixedPt = max(widths) + 500;
-cycleLength = fixedPt + 2100;
+fixedPt = max(widths) + 1000;
 nbrRepeats = 1;
 
 pg = PatternGen(qubit);
@@ -20,9 +19,7 @@ seqParams = struct(...
     'suffix', '', ...
     'numSteps', length(widths), ...
     'nbrRepeats', nbrRepeats, ...
-    'fixedPt', fixedPt, ...
-    'cycleLength', cycleLength, ...
-    'measLength', 2000);
+    'fixedPt', fixedPt);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 
@@ -30,8 +27,9 @@ qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
-measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
+
+measChannels = getpref('qlab','MeasCompileList');
+awgs = getpref('qlab','AWGCompileList');
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 

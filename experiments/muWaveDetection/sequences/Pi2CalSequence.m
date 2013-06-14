@@ -2,7 +2,6 @@ function Pi2CalSequence(qubit, makePlot)
 
 basename = 'Pi2Cal';
 fixedPt = 6000;
-cycleLength = 9000;
 nbrRepeats = 2;
 numsteps = 1;
 
@@ -70,9 +69,7 @@ seqParams = struct(...
     'suffix', '', ...
     'numSteps', numsteps, ...
     'nbrRepeats', nbrRepeats, ...
-    'fixedPt', fixedPt, ...
-    'cycleLength', cycleLength, ...
-    'measLength', 2000);
+    'fixedPt', fixedPt);
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 
@@ -80,8 +77,9 @@ qubitMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
 IQkey = qubitMap.(qubit).IQkey;
 
 patternDict(IQkey) = struct('pg', pg, 'patseq', {patseq}, 'calseq', calseq, 'channelMap', qubitMap.(qubit));
-measChannels = {'M1'};
-awgs = {'TekAWG', 'BBNAPS1', 'BBNAPS2'};
+
+measChannels = getpref('qlab','MeasCompileList');
+awgs = getpref('qlab','AWGCompileList');
 
 compileSequences(seqParams, patternDict, measChannels, awgs, makePlot);
 end

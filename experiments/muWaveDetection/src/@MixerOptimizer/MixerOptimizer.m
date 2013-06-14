@@ -59,7 +59,7 @@ classdef MixerOptimizer < handle
             %Get references to the AWG, uW source, and spectrum analyzer
             obj.awg = InstrumentFactory(obj.channelParams.awg);
             %TODO: Update this to the instrument library instead.
-            instrLibParams = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'));
+            instrLibParams = jsonlab.loadjson(getpref('qlab', 'CurScripterFile'));
             obj.awg.setAll(instrLibParams.instruments.(obj.channelParams.awg));
             obj.uwsource = InstrumentFactory(obj.channelParams.source);
             obj.sa = InstrumentFactory(obj.expParams.specAnalyzer);
@@ -109,7 +109,7 @@ classdef MixerOptimizer < handle
             
             % restore instruments to a normal state
             obj.sa.centerFreq = obj.uwsource.frequency;
-            obj.sa.span = obj.expParams.SSBFreq * 2.1;
+            obj.sa.span = obj.expParams.SSBFreq * 2.2;
             obj.sa.sweep_mode = 'cont';
             obj.sa.resolution_bw = 'auto';
             obj.sa.sweep_points = 800;
@@ -190,8 +190,7 @@ classdef MixerOptimizer < handle
                     %Setup a SSB waveform with a 1200 pt sinusoid for both
                     %channels
                     waveformLength = 1200;
-                    % APS returns sampling rate in MHz, so convert to Hz
-                    tpts = (1e-6/obj.awg.samplingRate)*(0:(waveformLength-1));
+                    tpts = (1/obj.awg.samplingRate)*(0:(waveformLength-1));
                     
                     % i waveform
                     iwf = 0.5 * cos(2*pi*obj.expParams.SSBFreq*tpts);

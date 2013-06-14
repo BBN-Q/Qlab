@@ -7,7 +7,6 @@ end
 basename = 'Rabi';
 
 fixedPt = 2000;
-cycleLength = 6000;
 numsteps = 40; %should be even
 stepsize = 400;
 
@@ -39,9 +38,8 @@ seqParams = struct(...
     'suffix', '', ...
     'numSteps', numsteps, ...
     'nbrRepeats', nbrRepeats, ...
-    'fixedPt', fixedPt, ...
-    'cycleLength', cycleLength, ...
-    'measLength', 2000);
+    'fixedPt', fixedPt);
+
 patternDict = containers.Map();
 if ~isempty(calseq), calseq = {calseq}; end
 

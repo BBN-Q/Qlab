@@ -24,8 +24,8 @@ classdef deviceDriverBase < hgsetget
             for j = 1:length(fields);
                 name = fields{j};
                 if ismember(name, methods(obj))
-                    args = settings.(name)
-                    feval(['obj.' name], args{:});
+                    args = eval(settings.(name));
+                    feval(name, obj, args{:});
                 elseif ismember(name, properties(obj))
                     obj.(name) = settings.(name);
                 end

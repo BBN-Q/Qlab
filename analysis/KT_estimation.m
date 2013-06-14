@@ -8,9 +8,7 @@ function [freqs, Tcs, amps] = KT_estimation(data, timeStep, order)
 %       Signal Processing, 33(3), 333-355. doi:10.1016/0165-1684(93)90130-3
 
 %Perform a Hilbert transform to get the analytic signal
-specData = fft(data);
-specData(end/2+1:end) = 0;
-analyticSig = ifft(2*specData);
+analyticSig = myhilbert(data);
 
 %Create the raw Hankel matrix
 N = length(analyticSig);
@@ -45,8 +43,9 @@ end
 
 %Create a cleaned Hankel matrix
 cleanedH = zeros(L,M);
+cleanedAnalyticSig = myhilbert(cleanedData);
 for ct = 1:M
-    cleanedH(:,ct) = analyticSig(ct:ct+L-1);
+    cleanedH(:,ct) = cleanedAnalyticSig(ct:ct+L-1);
 end
 
 %Compute Q with total least squares
@@ -80,3 +79,5 @@ for ct = 1:K
 end
 
 amps = A\cleanedData;
+
+end

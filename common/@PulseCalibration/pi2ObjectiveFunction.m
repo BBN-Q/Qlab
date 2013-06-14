@@ -4,7 +4,7 @@ function [cost, J] = pi2ObjectiveFunction(obj, x, direction)
     fprintf('pi2Amp: %.1f, offset: %.4f\n', pi2Amp, offset);
     % create sequence
     obj.pulseParams.pi2Amp = pi2Amp;
-    [filenames segmentPoints] = obj.Pi2CalChannelSequence(obj.settings.Qubit, direction, false);
+    [filenames segmentPoints] = obj.Pi2CalChannelSequence(obj.settings.Qubit, direction, obj.settings.NumPi2s, false);
     
     % set channel offset
     switch direction
@@ -32,13 +32,14 @@ function [cost, J] = pi2ObjectiveFunction(obj, x, direction)
     end
     
     % evaluate cost
-    [cost, J] = obj.RepPulseCostFunction(data, pi/2);
+    [cost, J, obj.noiseVar] = obj.RepPulseCostFunction(data, pi/2, obj.settings.NumPi2s);
     % scale J rows by amplitude and offset->amplitude conversion factor and
     % turn on/off offset shifting if we are using SSB
     J(:,1) = J(:,1)/pi2Amp;
     offset2amp = obj.settings.offset2amp;
     J(:,2) = (obj.pulseParams.SSBFreq == 0)*obj.settings.OffsetNorm*J(:,2)*offset2amp/pi2Amp; % offset can have a different integral norm
     fprintf('Cost: %.4f (%.4f) \n', sum(cost.^2), sum(cost.^2/length(cost)));
+    fprintf('Noise var: %.4f\n', obj.noiseVar);
 end
 
 function data = simulateMeasurement(x)

@@ -27,7 +27,7 @@ classdef PulseCalibration < handle
         AWGs
         AWGSettings
         testMode = false;
-        costFunctionGoal = 0.075; % tweak experimentally
+        noiseVar % estimated variance of the noise from repeats
     end
     methods
         % Class constructor
@@ -49,7 +49,7 @@ classdef PulseCalibration < handle
             
             % pull out data from the first measurement
             measNames = fieldnames(obj.experiment.measurements);
-            data = obj.experiment.data.(measNames{1});
+            data = obj.experiment.data.(measNames{1}).mean;
             
             % return amplitude or phase data
             switch obj.settings.dataType
@@ -58,6 +58,10 @@ classdef PulseCalibration < handle
                 case 'phase'
                     % unwrap phase jumps
                     out = 180/pi * unwrap(angle(data));
+                case 'real'
+                    out = real(data);
+                case 'imag'
+                    out = imag(data);
                 otherwise
                     error('Unknown dataType can only be "amp" or "phase"');
             end
@@ -88,8 +92,11 @@ classdef PulseCalibration < handle
             end
         end
 
-        function stop = LMStoppingCondition(obj, x, optimValues, state)
-            if optimValues.resnorm < obj.costFunctionGoal
+        function stop = LMStoppingCondition(obj, ~, optimValues, ~)
+            %Assume that if the variance of the residuals is less than some 
+            %multiple of the variance of the noise then we are as good as it gets
+            %Anecdotally 5 seems to be reasonable 
+            if var(optimValues.residual) < 3*obj.noiseVar
                 stop = true;
             else
                 stop = false;
@@ -118,7 +125,7 @@ classdef PulseCalibration < handle
             end
             
             % create a generic SegmentNum sweep
-            add_sweep(obj.experiment, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 2)));
+            add_sweep(obj.experiment, 1, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 2)));
             
             % add measurement M1
             import MeasFilters.*
@@ -143,8 +150,8 @@ classdef PulseCalibration < handle
                 obj.pulseParams = params.(obj.settings.Qubit);
                 obj.pulseParams.T = params.(IQchannels.IQkey).T;
                 controlAWGsettings = obj.AWGSettings.(obj.controlAWG);
-                obj.pulseParams.i_offset = controlAWGsettings.(['chan_' num2str(IQchannels.i)]).offset;
-                obj.pulseParams.q_offset = controlAWGsettings.(['chan_' num2str(IQchannels.q)]).offset;
+                obj.pulseParams.i_offset = controlAWGsettings.(['chan_' IQchannels.IQkey(end-1)]).offset;
+                obj.pulseParams.q_offset = controlAWGsettings.(['chan_' IQchannels.IQkey(end)]).offset;
             else
                 obj.pulseParams = struct('piAmp', 6560, 'pi2Amp', 3280, 'delta', -0.5, 'T', eye(2,2),...
                     'pulseType', 'drag', 'i_offset', 0.119, 'q_offset', 0.130);
@@ -174,7 +181,7 @@ classdef PulseCalibration < handle
     methods (Static)
         
         % externally defined static methods
-        [cost, J] = RepPulseCostFunction(data, angle);
+        [cost, J, noiseVar] = RepPulseCostFunction(data, angle, numPulses);
         [amp, offsetPhase]  = analyzeRabiAmp(data);
         bestParam = analyzeSlopes(data, numPsQIds, paramRange);
         

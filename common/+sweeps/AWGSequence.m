@@ -60,8 +60,16 @@ classdef AWGSequence < sweeps.Sweep
                 assert(logical(exist(fileName, 'file')), 'AWGSequence ERROR: Could not find file %s\n', fileName)
                 
                 %Load the new file
+                wasRunning = false;
+                if obj.AWGs.(curAWGName).isRunning
+                    wasRunning = true;
+                    obj.AWGs.(curAWGName).stop()
+                end
                 obj.AWGs.(curAWGName).loadConfig(fileName);
-                
+                if wasRunning
+                    obj.AWGs.(curAWGName).run()
+                    pause(0.1);
+                end
             end
         end
     end
