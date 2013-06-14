@@ -28,7 +28,7 @@ All source is distributed under the Apache open source [license][].
 
 ### Binaries
 
-We also distribute mex binaries for some accelerated data processing and dll's for the BBN-APS pulse sequencers.  These can be found here [binaries].
+We also distribute mex binaries for some accelerated data processing and dll's for the BBN-APS pulse sequencers.  These can be found here [binaries][].
 
 [wiki]: http://github.com/BBN-Q/Qlab/wiki
 [Pulse-Generation]: http://github.com/BBN-Q/Qlab/wiki/Pulse-Sequence-Generation
@@ -36,3 +36,4 @@ We also distribute mex binaries for some accelerated data processing and dll's f
 [JSON]: http://en.wikipedia.org/wiki/JSON
 [PyQLab]: http://github.com/BBN-Q/PyQLab
 [license]: http://github.com/BBN-Q/Qlab/blob/master/LICENSE
+[binaries]: https://drive.google.com/folderview?id=0B5nllspmfYgUNWdMS1gwNW9nSXM&usp=sharing
