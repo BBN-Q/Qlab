@@ -29,4 +29,4 @@ We also distribute mex binaries for some accelerated data processing and dll's f
 [wiki]: http://github.com/BBN-Q/Qlab/wiki
 [Pulse-Generation]: http://github.com/BBN-Q/Qlab/wiki/Pulse-Generation
 [license]: http://github.com/BBN-Q/Qlab/blob/master/LICENSE
-[binaries]: [https://drive.google.com/folderview?id=0B5nllspmfYgUNWdMS1gwNW9nSXM&usp=sharing]
+[binaries]: https://drive.google.com/folderview?id=0B5nllspmfYgUNWdMS1gwNW9nSXM&usp=sharing
