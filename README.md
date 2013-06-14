@@ -9,12 +9,12 @@ To get started, simply download and unzip the latest release. Or, if you want th
 
 	git clone git@github.com:BBN-Q/Qlab.git localname
 
-Navigate to the Qlab folder and run `installQlab` to setup the necessary preferences. The install script will also recommend a list of folder to add to the MATLAB path.
+Navigate to the Qlab folder and run `installQlab` to setup the necessary preferences. The install script will also recommend a list of folders to add to the MATLAB path.
 
 The code is loosely organized into
 
 * `analysis/` - routines for data analysis
-* `experiment/` - experiment control and measurement
+* `experiment/` - experiment scripts and utilities (example config files in `experiment/muWaveDetection/cfg`)
 * `common/` - instrument drivers, ExpManager, measurement filters, sweeps, and pulse calibration
 * `common/util` - general utilities, including PatternGen for pulse sequence generation.
 * `hardware/` - firmware and low-level drivers for custom BBN hardware
