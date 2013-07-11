@@ -17,10 +17,10 @@ function data = calScale(varargin)
     elseif ischar(varargin{1})
         axesHs = findobj(gcf, 'Type', 'Axes');
         switch varargin{1}
-            case {'top','one'}
-                axesH = axesHs(1);
             case 'bottom'
-                axesH = axesHs{2};
+                axesH = axesHs(1);
+            case {'top','one'}
+                axesH = axesHs(2);
             otherwise
                 error('Unknown plot grab command.');
         end
