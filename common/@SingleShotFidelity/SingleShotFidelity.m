@@ -45,6 +45,11 @@ classdef SingleShotFidelity < handle
             expSettings = jsonlab.loadjson(obj.settings.cfgFile);
             instrSettings = expSettings.instruments;
             
+            % construct data file header
+            headerStruct = expSettings;
+            headerStruct.singleshot = settings;
+            obj.experiment.dataFileHeader = headerStruct;
+            
             % add instruments
             for instrument = fieldnames(instrSettings)'
                 instr = InstrumentFactory(instrument{1});
