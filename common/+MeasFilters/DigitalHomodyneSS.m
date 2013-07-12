@@ -36,6 +36,12 @@ classdef DigitalHomodyneSS < MeasFilters.MeasFilter
             obj.boxCarStart = settings.boxCarStart;
             obj.boxCarStop = settings.boxCarStop;
             obj.phase = settings.phase;
+            
+            if isfield(settings, 'filterFilePath') && ~isempty(settings.filterFilePath)
+                obj.filter = load(settings.filterFilePath, 'filterCoeffs', 'bias');
+            else
+                obj.filter = [];
+            end
         end
         
         function out = apply(obj, data)
@@ -56,7 +62,7 @@ classdef DigitalHomodyneSS < MeasFilters.MeasFilter
             %If we have a pre-defined filter use it, otherwise just update
             %latestData
             if ~isempty(obj.filter)
-                obj.latestData = bsxfun(@times, demodSignal, obj.filter.filter') + obj.filter.bias;
+                obj.latestData = bsxfun(@times, demodSignal, obj.filter.filterCoeffs') + obj.filter.bias;
             else
                 %Integrate and rotate
                 obj.latestData = demodSignal;
