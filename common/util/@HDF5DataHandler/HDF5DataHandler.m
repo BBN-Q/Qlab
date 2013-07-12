@@ -257,9 +257,9 @@ classdef HDF5DataHandler < handle
                     % entire row, then write the row.
                     % otherwise, we have an entire row, so write it
                     if length(val.realvar) == 1
-                        obj.varbuffers{dataSet}(obj.varbufferIdx(dataSet)).realvar = val.realvar;
-                        obj.varbuffers{dataSet}(obj.varbufferIdx(dataSet)).imagvar = val.imagvar;
-                        obj.varbuffers{dataSet}(obj.varbufferIdx(dataSet)).prodvar = val.prodvar;
+                        obj.varbuffers{dataSet}.realvar(obj.varbufferIdx(dataSet)) = val.realvar;
+                        obj.varbuffers{dataSet}.imagvar(obj.varbufferIdx(dataSet)) = val.imagvar;
+                        obj.varbuffers{dataSet}.prodvar(obj.varbufferIdx(dataSet)) = val.prodvar;
                         obj.varbufferIdx(dataSet) = obj.varbufferIdx(dataSet) + 1;
                         % check if we need to flush the buffer
                         if obj.varbufferIdx(dataSet) > obj.rowSizes(dataSet)
@@ -275,9 +275,9 @@ classdef HDF5DataHandler < handle
                     % TODO: accept single points in a 3D data set
                     if nsdims(val.realvar) == 1 % 1D row/column
                         % put it in a buffer until we have an entire page
-                        obj.varbuffers{dataSet}(obj.varbufferIdx(dataSet)).realvar = val.realvar;
-                        obj.varbuffers{dataSet}(obj.varbufferIdx(dataSet)).imagvar = val.imagvar;
-                        obj.varbuffers{dataSet}(obj.varbufferIdx(dataSet)).prodvar = val.prodvar;
+                        obj.varbuffers{dataSet}.realvar(obj.varbufferIdx(dataSet),:) = val.realvar;
+                        obj.varbuffers{dataSet}.imagvar(obj.varbufferIdx(dataSet),:) = val.imagvar;
+                        obj.varbuffers{dataSet}.prodvar(obj.varbufferIdx(dataSet),:) = val.prodvar;
                         obj.varbufferIdx(dataSet) = obj.varbufferIdx(dataSet) + 1;
                         % check if we need to flush the buffer
                         if obj.varbufferIdx(dataSet) > obj.columnSizes(dataSet)
