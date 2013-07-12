@@ -19,7 +19,6 @@
 classdef StateComparator < MeasFilters.MeasFilter
     
     properties
-        numShots = 0
         integrationTime = -1
         threshold = 0
     end
@@ -35,10 +34,6 @@ classdef StateComparator < MeasFilters.MeasFilter
             % apply child filter
             data = apply@MeasFilters.MeasFilter(obj, data);
 
-            % data comes back 4D (recordLength x waveforms x segments x roundRobinsPerBuffer)
-            % the number of new shots is waveforms * round robins
-            obj.numShots = obj.numShots + size(data,2)*size(data,4);
-            
             % integrate and threshold
             if obj.integrationTime < 0
                 obj.integrationTime = size(data,1);
@@ -57,12 +52,13 @@ classdef StateComparator < MeasFilters.MeasFilter
             % in the 4D case, we want to average over waveforms and round
             % robins
             assert(ndims(obj.latestData) == 4, 'State comparator expects single-shot data, so latestData should be 4D');
+            numShots = size(obj.latestData,2)*size(obj.latestData,4);
             tmpData = squeeze(sum(sum(obj.latestData, 4), 2));
             tmpVar = struct();
             tmpVar.real = squeeze(sum(sum(real(obj.latestData).^2, 4), 2));
             tmpVar.imag = squeeze(sum(sum(imag(obj.latestData).^2, 4), 2));
             tmpVar.prod = squeeze(sum(sum(real(obj.latestData).*imag(obj.latestData), 4), 2));
-            obj.varct = obj.varct + size(obj.latestData,2)*size(obj.latestData,4);
+            obj.varct = obj.varct + numShots;
             
             if isempty(obj.accumulatedData)
                 obj.accumulatedData = tmpData;
@@ -70,10 +66,21 @@ classdef StateComparator < MeasFilters.MeasFilter
             else
                 obj.accumulatedData = obj.accumulatedData + tmpData;
                 obj.accumulatedVar.real = obj.accumulatedVar.real + tmpVar.real;
-                obj.accumulatedVar.imag = obj.accumulatedVar.real + tmpVar.imag;
-                obj.accumulatedVar.prod = obj.accumulatedVar.real + tmpVar.prod;
+                obj.accumulatedVar.imag = obj.accumulatedVar.imag + tmpVar.imag;
+                obj.accumulatedVar.prod = obj.accumulatedVar.prod + tmpVar.prod;
             end
-            obj.avgct = 1; % hard code to 1 to preserve counts all the way through
+            obj.avgct = obj.avgct + numShots;
         end
+        
+                
+        function out = get_var(obj)
+            out = struct();
+            if ~isempty(obj.accumulatedVar)
+                out.realvar = (1/obj.varct)*obj.accumulatedVar.real - real(get_data(obj)).^2;
+                out.imagvar = (1/obj.varct)*obj.accumulatedVar.imag - imag(get_data(obj)).^2;
+                out.prodvar = (1/obj.varct)*obj.accumulatedVar.prod - abs(get_data(obj)).^2;
+            end
+        end
+        
     end
 end

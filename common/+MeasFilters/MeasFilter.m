@@ -72,6 +72,7 @@ classdef MeasFilter < handle
         
         function reset(obj)
             obj.avgct = 0;
+            obj.varct = 0;
             obj.accumulatedData = [];
         end
         
@@ -99,8 +100,8 @@ classdef MeasFilter < handle
                 obj.accumulatedData = obj.accumulatedData + tmpData;
                 if ndims(obj.latestData) == 4
                     obj.accumulatedVar.real = obj.accumulatedVar.real + tmpVar.real;
-                    obj.accumulatedVar.imag = obj.accumulatedVar.real + tmpVar.imag;
-                    obj.accumulatedVar.prod = obj.accumulatedVar.real + tmpVar.prod;
+                    obj.accumulatedVar.imag = obj.accumulatedVar.imag + tmpVar.imag;
+                    obj.accumulatedVar.prod = obj.accumulatedVar.prod + tmpVar.prod;
                 end
             end
             obj.avgct = obj.avgct + 1;
