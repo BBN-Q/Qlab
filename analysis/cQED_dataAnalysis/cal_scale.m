@@ -20,7 +20,7 @@ function data = calScale(varargin)
             case {'top','one'}
                 axesH = axesHs(1);
             case 'bottom'
-                axesH = axesHs{2};
+                axesH = axesHs(2);
             otherwise
                 error('Unknown plot grab command.');
         end
