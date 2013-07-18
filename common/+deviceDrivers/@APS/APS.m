@@ -259,7 +259,7 @@ classdef APS < hgsetget
             if b ~= 1
                 warning('PLL seems to have lost its lock. Trying to reinitialize');
                 status = obj.libraryCall('initAPS', [filename 0], true);
-                assert(status < 0, sprintf('APS: initAPS : %i', status));
+                assert(status == 0, sprintf('APS: initAPS : %i', status));
                 %Check again and error out if we still don't have a lock. 
                 [~,b] = obj.readPLLStatus();
                 assert(b == 1, 'PLL seems to have lost its lock. Try to power-cycle the APS.');
