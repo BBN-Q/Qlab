@@ -6,6 +6,8 @@
  Implements a polyphase FIR filter to efficiently decimate the input signal by decimFactor.
 */
 
+#define FILTERLENGTH 32
+
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 	float *measRecords, *channelData;
@@ -15,12 +17,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	int decimFactor;
 	IppsFIRState_32f *filterState;
 	int size,len,height;
-	double filterCoeff_d[16];
-	float filterCoeff_f[16];
+	double filterCoeff_d[FILTERLENGTH];
+	float filterCoeff_f[FILTERLENGTH];
 	IppStatus status;
 	int stateSize;
 	Ipp8u *filterBuffer;
-	const float delayLine[16] = 0.0;
+	const float delayLine[FILTERLENGTH] = 0.0;
 	int ct, segct;
 
 	//Get the size of the input data
@@ -40,19 +42,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 	//Apply a polyphase resampling filter to reduce the sampling rate
 	//First design a crude low-pass filter 15-tap
-	status = ippsFIRGenLowpass_64f(0.8*0.5/decimFactor, filterCoeff_d, 16, ippWinBlackman, ippTrue);
+	status = ippsFIRGenLowpass_64f(0.8*0.5/decimFactor, filterCoeff_d, FILTERLENGTH, ippWinBlackman, ippTrue);
 	//TODO: error catch
 	//Convert to single precision
-	for (ct=0; ct<16; ct++){
+	for (ct=0; ct<FILTERLENGTH; ct++){
 		filterCoeff_f[ct] = (float) filterCoeff_d[ct];
 	}
 	//Get the size of the filter
-	status = ippsFIRMRGetStateSize_32f(16, 1, decimFactor, &stateSize);
+	status = ippsFIRMRGetStateSize_32f(FILTERLENGTH, 1, decimFactor, &stateSize);
 	//TODO: error catch
 	filterBuffer = ippsMalloc_8u(stateSize*sizeof(Ipp8u));
 
 	//Initialize the filter
-	status = ippsFIRMRInit_32f(&filterState, filterCoeff_f, 16, 1, 0.0, decimFactor, decimFactor-1, delayLine, filterBuffer);
+	status = ippsFIRMRInit_32f(&filterState, filterCoeff_f, FILTERLENGTH, 1, 0.0, decimFactor, decimFactor-1, delayLine, filterBuffer);
 	//TODO: error catch
 
 	// prepare the output buffer

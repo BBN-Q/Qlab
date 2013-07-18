@@ -42,7 +42,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             obj.phase = settings.phase;
             
             if isfield(settings, 'filterFilePath') && ~isempty(settings.filterFilePath)
-                obj.filter = load(settings.filterFilePath, 'filter', 'bias');
+                obj.filter = load(settings.filterFilePath, 'filterCoeffs', 'bias');
             else
                 obj.filter = [];
             end
@@ -94,7 +94,7 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             %If we have a pre-defined filter use it, otherwise integrate
             %and rotate
             if ~isempty(obj.filter)
-                obj.latestData = sum(bsxfun(@times, demodSignal, obj.filter.filter')) + obj.filter.bias;
+                obj.latestData = sum(bsxfun(@times, demodSignal, obj.filter.filterCoeffs')) + obj.filter.bias;
             else
                 %Integrate and rotate
                 obj.latestData = exp(1j*obj.phase) * 2 * mean(demodSignal,1);

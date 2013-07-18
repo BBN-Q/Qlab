@@ -62,10 +62,10 @@ classdef SingleShot < MeasFilters.MeasFilter
                 excitedMean = mean(obj.excitedData, 2);
                 centre = 0.5*(groundMean+excitedMean);
                 rotAngle = angle(excitedMean-groundMean);
-                groundData = obj.groundData;
-                excitedData = obj.excitedData;
-                save('SSData.mat', 'excitedData', 'groundData')
-                clear groundData excitedData
+%                 groundData = obj.groundData;
+%                 excitedData = obj.excitedData;
+%                 save('SSData.mat', 'excitedData', 'groundData')
+%                 clear groundData excitedData
                 unwoundGroundData = bsxfun(@times, bsxfun(@minus, obj.groundData, centre), exp(-1j*rotAngle));
                 unwoundExcitedData = bsxfun(@times, bsxfun(@minus, obj.excitedData, centre), exp(-1j*rotAngle));
                 
@@ -141,17 +141,16 @@ classdef SingleShot < MeasFilters.MeasFilter
 %                 fidelity = 2*sum(guessStates == prepStates)/size(allData,1) - 1 
 
                 %Fortunately, liblinear is great!
-                cScan = logspace(-1,1,5);
                 bestAccuracy = 0;
                 bestC = 0;
-                for c = cScan;
-                    accuracy = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -v 3',c));
+                for c = logspace(-1,1,5);
+                    accuracy = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -v 3 -q',c));
                     if accuracy > bestAccuracy
                         bestAccuracy = accuracy;
                         bestC = c;
                     end
                 end
-                model = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0',bestC));
+                model = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -q',bestC));
                 [predictedState, accuracy, ~] = predict(prepStates, sparse(double(allData)), model);
                 fidelity = 2*accuracy(1)/100-1;
                 c = 0.95;

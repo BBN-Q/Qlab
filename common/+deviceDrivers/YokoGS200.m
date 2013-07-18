@@ -54,7 +54,7 @@ classdef (Sealed) YokoGS200 < deviceDrivers.lib.deviceDriverBase & deviceDrivers
             obj.write([':SOURCE:FUNCTION ' mode]);
         end
         function obj = set.output(obj, value)
-            if isnumeric(value)
+            if isnumeric(value) || islogical(value)
                 value = num2str(value);
             end
             valid_inputs = ['on', '1', 'off', '0'];

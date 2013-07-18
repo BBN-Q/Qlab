@@ -1,4 +1,4 @@
-function data = calScale(varargin)
+function data = cal_scale(varargin)
     % FUNCTION calScale(dupFactor, handle h)
     % Rescales the data by the pi and 0 calibration experiments at the end.
     % Inputs:
@@ -17,9 +17,9 @@ function data = calScale(varargin)
     elseif ischar(varargin{1})
         axesHs = findobj(gcf, 'Type', 'Axes');
         switch varargin{1}
-            case {'top','one'}
-                axesH = axesHs(1);
             case 'bottom'
+                axesH = axesHs(1);
+            case {'top','one'}
                 axesH = axesHs(2);
             otherwise
                 error('Unknown plot grab command.');

@@ -21,8 +21,8 @@ classdef DC < sweeps.Sweep
 		function obj = DC(sweepParams, Instr)
 			obj.label = 'DC';
 			
-            % look for an instrument with the name 'sourceID'
-            obj.Instr = Instr.(sweepParams.sourceID);
+            % look for an instrument with the name 'instr'
+            obj.Instr = Instr.(sweepParams.instr);
 			
 			% generate power points
 			start = sweepParams.start;

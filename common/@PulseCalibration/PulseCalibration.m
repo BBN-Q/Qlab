@@ -95,7 +95,7 @@ classdef PulseCalibration < handle
         function stop = LMStoppingCondition(obj, ~, optimValues, ~)
             %Assume that if the variance of the residuals is less than some 
             %multiple of the variance of the noise then we are as good as it gets
-            %Anecdotally 5 seems to be reasonable 
+            %Anecdotally 2-3 seems to be reasonable 
             if var(optimValues.residual) < 3*obj.noiseVar
                 stop = true;
             else

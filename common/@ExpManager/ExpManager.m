@@ -365,12 +365,12 @@ classdef ExpManager < handle
                                 ylabel(axesH, obj.sweeps{goodSweepIdx(1)}.label);
                             case 3
                                 goodSweepIdx = find(sizes ~= 1, 2);
-                                xPoints = obj.sweeps{goodSweepIdx(2)}.plotPoints;
-                                yPoints = obj.sweeps{goodSweepIdx(1)}.plotPoints;
+                                xPoints = obj.sweeps{goodSweepIdx(1)}.plotPoints;
+                                yPoints = obj.sweeps{goodSweepIdx(2)}.plotPoints;
                                 plotHandles.(measName{1}){ct} = imagesc(xPoints, yPoints, toPlot{ct}.func(squeeze(measData(1,:,:))), 'Parent', axesH);
                                 title(axesH, toPlot{ct}.label)
-                                xlabel(axesH, obj.sweeps{goodSweepIdx(2)}.label);
-                                ylabel(axesH, obj.sweeps{goodSweepIdx(1)}.label);
+                                xlabel(axesH, obj.sweeps{goodSweepIdx(1)}.label);
+                                ylabel(axesH, obj.sweeps{goodSweepIdx(2)}.label);
                         end
                     else
                         switch nsdims(measData)

@@ -1,4 +1,4 @@
-% A single-channel digital homodyne measurement filter.
+% A single-channel digital homodyne measurement filter without a boxcar filter.
 
 % Author/Date : Blake Johnson and Colm Ryan / February 4, 2013
 
@@ -23,7 +23,7 @@ classdef DigitalHomodyneSS < MeasFilters.MeasFilter
         samplingRate
         boxCarStart
         boxCarStop
-        affine
+        filter
         phase
     end
     
@@ -36,6 +36,12 @@ classdef DigitalHomodyneSS < MeasFilters.MeasFilter
             obj.boxCarStart = settings.boxCarStart;
             obj.boxCarStop = settings.boxCarStop;
             obj.phase = settings.phase;
+            
+            if isfield(settings, 'filterFilePath') && ~isempty(settings.filterFilePath)
+                obj.filter = load(settings.filterFilePath, 'filterCoeffs', 'bias');
+            else
+                obj.filter = [];
+            end
         end
         
         function out = apply(obj, data)
@@ -44,7 +50,7 @@ classdef DigitalHomodyneSS < MeasFilters.MeasFilter
             
             [demodSignal, decimFactor] = digitalDemod(data, obj.IFfreq, obj.bandwidth, obj.samplingRate);
             
-            %Box car the demodulated signal
+            % Use box car start/stop just to select a time span
             if ndims(demodSignal) == 2
                 demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:);
             elseif ndims(demodSignal) == 4
@@ -53,7 +59,15 @@ classdef DigitalHomodyneSS < MeasFilters.MeasFilter
                 error('Only able to handle 2 and 4 dimensional data.');
             end
             
-            obj.latestData = demodSignal;
+            %If we have a pre-defined filter use it, otherwise just update
+            %latestData
+            if ~isempty(obj.filter)
+                obj.latestData = bsxfun(@times, demodSignal, obj.filter.filterCoeffs') + obj.filter.bias;
+            else
+                %Integrate and rotate
+                obj.latestData = demodSignal;
+            end
+
             out = obj.latestData;
         end
     end
