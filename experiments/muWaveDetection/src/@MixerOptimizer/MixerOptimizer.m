@@ -46,23 +46,27 @@ classdef MixerOptimizer < handle
         function Init(obj, cfgFile, chan)
             
             % pull in channel parameters from requested logical channel in the Qubit2ChannelMap
-            channelLib = jsonlab.loadjson(getpref('qlab','ChannelParams'));
-            assert(isfield(channelLib, chan), 'Qubit %s not found in channel library', chan);
+            channelLib = json.read(getpref('qlab','ChannelParams'));
+            assert(isfield(channelLib.channelDict, chan), 'Qubit %s not found in channel library', chan);
             obj.chan = chan;
-            obj.channelParams = channelLib.(obj.chan);
+            obj.channelParams = channelLib.channelDict.(chan);
             
             % load any optimize mixer specific configurations
-            settings = jsonlab.loadjson(cfgFile);
+            settings = json.read(cfgFile);
             obj.expParams = settings.ExpParams;
             instrSettings = settings.InstrParams;
             
             %Get references to the AWG, uW source, and spectrum analyzer
-            tmpStr = strsplit(obj.channelParams.physChan);
+            tmpStr = regexp(obj.channelParams.physChan, '-', 'split'); % split on '-'
             awgName = tmpStr{1};
             obj.awg = InstrumentFactory(awgName);
-            instrLib = jsonlab.loadjson(getpref('qlab', 'InstrumentLibraryFile'));
-            obj.awg.setAll(instrLib.instrDict.(awgName));
-            obj.uwsource = InstrumentFactory(obj.channelParams.source);
+            instrLib = json.read(getpref('qlab', 'CurScripterFile'));
+            obj.awg.setAll(instrLib.instruments.(awgName));
+            
+            %MATLAB chokes on dashes in the physical channel name
+            mangledPhysChan = strrep(obj.channelParams.physChan, '-', '0x2D');
+            sourceName = channelLib.channelDict.(mangledPhysChan).generator;
+            obj.uwsource = InstrumentFactory(sourceName);
             obj.sa = InstrumentFactory(obj.expParams.specAnalyzer);
             
             obj.sa.setAll(instrSettings.(obj.expParams.specAnalyzer));
@@ -85,12 +89,12 @@ classdef MixerOptimizer < handle
                     obj.setup_SSB_AWG(0,0);
                     [obj.results.iOffset, obj.results.qOffset] = obj.optimize_mixer_offsets_bySweep();
                     obj.setup_SSB_AWG(obj.results.iOffset,obj.results.qOffset);
-                    obj.results.ampFactor, obj.results.phaseSkew = obj.optimize_mixer_ampPhase_bySweep();
+                    [obj.results.ampFactor, obj.results.phaseSkew] = obj.optimize_mixer_ampPhase_bySweep();
                 case 'search'
                     obj.setup_SSB_AWG(0,0);
                     [obj.results.iOffset, obj.results.qOffset] = obj.optimize_mixer_offsets_bySearch();
                     obj.setup_SSB_AWG(obj.results.iOffset, obj.results.qOffset);
-                    obj.results.ampFactor, obj.results.phaseSkew = obj.optimize_mixer_ampPhase_bySearch();
+                    [obj.results.ampFactor, obj.results.phaseSkew] = obj.optimize_mixer_ampPhase_bySearch();
                 otherwise
                     error('Unknown optimMode');
             end
@@ -124,25 +128,18 @@ classdef MixerOptimizer < handle
             switch happy
                 case 'Yes'
             
-                % update transformation matrix T in channel library
-                channelLib = jsonlab.loadjson(getpref('qlab','ChannelParams'));
-                channelLib.(obj.channelParams.physChan).ampFactor = obj.results.ampFactor;
-                channelLib.(obj.channelParams.physChan).phaseSkew = obj.results.phaseSkew;
-                FID = fopen(getpref('qlab', 'ChannelParams'),'wt');
-                fprintf(FID, '%s', jsonlab.savejson('',channelLib));
-                fclose(FID);
+                % update transformation matrix params in channel library
+                updateAmpPhase(obj.channelParams.physChan, obj.results.ampFactor, obj.results.phaseSkew);
 
                 % update i and q offsets in the instrument library
-                instrLib = jsonlab.loadjson(getpref('qlab', 'InstrumentLibraryFile'));
+                instrLib = json.read(getpref('qlab', 'InstrumentLibraryFile'));
                 tmpStr = strsplit(obj.channelParams.physChan);
                 awgName = tmpStr{1};
                 iChan = str2double(obj.channelParams.physChan(end-1));
                 qChan = str2double(obj.channelParams.physChan(end));
-                instrLib.instrDict.(awgName)[iChan].offset = obj.results.iOffset;
-                instrLib.instrDict.(awgName)[qChan].offset = obj.results.qOffset;
-                FID = fopen(getpref('qlab', 'InstrumentLibraryFile'),'wt'); %open in text mode
-                fprintf(FID, '%s', jsonlab.savejson('',instrLib));
-                fclose(FID);
+                instrLib.instrDict.(awgName)(iChan).offset = obj.results.iOffset;
+                instrLib.instrDict.(awgName)(qChan).offset = obj.results.qOffset;
+                json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'));
                 
                 case {'No','Cancel'}
                     fprintf('Not writing to file...');
@@ -154,7 +151,7 @@ classdef MixerOptimizer < handle
             %Print out a summary for the notebook
             fprintf('\nSummary:\n');
             fprintf('i_offset = %.4f; q_offset = %.4f; ampFactor = %.4f; phaseSkew = %.1f\n', ...
-                obj.results.iOffset, obj.results.qOffset, obj.results.T(1,1), atand(obj.results.T(1,2)/obj.results.T(1,1)))
+                obj.results.iOffset, obj.results.qOffset, obj.results.ampFactor, obj.results.phaseSkew)
             
         end
         

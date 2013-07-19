@@ -106,6 +106,7 @@ classdef PulseCalibration < handle
             obj.settings = settings;
 
             channelLib = jsonlab.loadjson(getpref('qlab','ChannelParams'));
+            channelLib = channelLib.channelDict;
             assert(isfield(channelLib, settings.Qubit), 'Qubit %s not found in channel library', settings.Qubit);
             obj.channelParams = channelLib.(settings.Qubit);
             
@@ -142,7 +143,7 @@ classdef PulseCalibration < handle
             obj.AWGSettings = cellfun(@(awg) obj.experiment.instrSettings.(awg), fieldnames(obj.AWGs)', 'UniformOutput', false);
             obj.AWGSettings = cell2struct(obj.AWGSettings, fieldnames(obj.AWGs)', 2);
 
-            tmpStr = strsplit(obj.channelParams.physChan);
+            tmpStr = regexp(obj.channelParams.physChan, '-', 'split');
             obj.controlAWG = tmpStr{1};
 
             if ~obj.testMode

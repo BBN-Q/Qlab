@@ -17,7 +17,7 @@
 % Description: Searches for optimal amplitude and phase correction on an
 % I/Q mixer.
 
-function ampFactor, phaseSkew = optimize_mixer_ampPhase_bySearch(obj)
+function [ampFactor, phaseSkew] = optimize_mixer_ampPhase_bySearch(obj)
     % unpack constants from cfg file
     ExpParams = obj.expParams;
     awg_amp = obj.awgAmp;

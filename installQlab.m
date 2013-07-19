@@ -4,7 +4,7 @@ function installQlab()
     setpref('qlab', 'awgDir', answer{2});
     setpref('qlab', 'PyQLabDir', answer{3});
     setpref('qlab', 'dataDir', answer{4});
-    setpref('qlab', 'ChannelParams', fullfile(answer{1}, 'Channels.json'));
+    setpref('qlab', 'ChannelParams', fullfile(answer{1}, 'ChannelParams.json'));
     setpref('qlab', 'ExpQuickPickFile', fullfile(answer{1}, 'ExpQuickPick.json'));
     setpref('qlab', 'InstrumentLibraryFile', fullfile(answer{1}, 'Instruments.json'));
     setpref('qlab', 'CurScripterFile', answer{5})

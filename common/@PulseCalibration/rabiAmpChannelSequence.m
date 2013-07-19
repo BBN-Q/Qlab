@@ -4,7 +4,7 @@ if ~exist('makePlot', 'var')
     makePlot = false;
 end
 
-[status, result] = system(sprintf('python "%s" %s', getpref('qlab', 'PyQLabDir'), qubit));
+[status, result] = system(sprintf('python RabiAmp.py "%s" %s', getpref('qlab', 'PyQLabDir'), qubit));
 
 numsteps = 40; %should be even
 stepsize = 1/numsteps;

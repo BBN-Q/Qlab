@@ -197,30 +197,24 @@ end
 
 
 %% Save updated parameters to file
-
-channelLib = jsonlab.loadjson(getpref('qlab','ChannelParams'));
-channelLib.(obj.channelParams.physChan).ampFactor = obj.channelParams.ampFactor;
-channelLib.(obj.channelParams.physChan).phaseSkew = obj.channelParams.phaseSkew;
-FID = fopen(getpref('qlab', 'ChannelParams'),'wt');
-fprintf(FID, '%s', jsonlab.savejson('',channelLib));
-fclose(FID);
+updateAmpPhase(obj.channelParams.physChan, obj.channelParams.ampFactor, obj.channelParams.phaseSkew);
 
 % update i and q offsets in the instrument library
-instrLib = jsonlab.loadjson(getpref('qlab', 'InstrumentLibraryFile'));
+instrLib = json.read(getpref('qlab', 'InstrumentLibraryFile'));
 tmpStr = strsplit(obj.channelParams.physChan);
 awgName = tmpStr{1};
 iChan = str2double(obj.channelParams.physChan(end-1));
 qChan = str2double(obj.channelParams.physChan(end));
-instrLib.instrDict.(awgName)[iChan].offset = obj.channelParams.i_offset;
-instrLib.instrDict.(awgName)[qChan].offset = obj.channelParams.q_offset;
+instrLib.instrDict.(awgName)(iChan).offset = obj.channelParams.i_offset;
+instrLib.instrDict.(awgName)(qChan).offset = obj.channelParams.q_offset;
 %Drive frequency from Ramsey
 if settings.DoRamsey
-    instrLib.instrDict.(settings.source).frequency = qubitSource.frequency;
+    channelLib = json.read(getpref('qlab','ChannelParams'));
+    sourceName = channelLib.channelDict.(mangledPhysChan).generator;
+    instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
 end
 
-FID = fopen(getpref('qlab', 'InstrumentLibraryFile'),'wt'); %open in text mode
-fprintf(FID, '%s', jsonlab.savejson('',instrLib));
-fclose(FID);
+json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'));
 
 % Display the final results
 obj.channelParams
