@@ -3,7 +3,7 @@ function [cost, J] = piObjectiveFunction(obj, x, direction)
     offset = real(x(2));
     fprintf('piAmp: %.1f, offset: %.4f\n', piAmp, offset);
     % create sequence
-    obj.pulseParams.piAmp = piAmp;
+    obj.channelParams.piAmp = piAmp;
     [filenames segmentPoints] = obj.PiCalChannelSequence(obj.settings.Qubit, direction, obj.settings.NumPis);
     
     % set channel offset
@@ -16,7 +16,7 @@ function [cost, J] = piObjectiveFunction(obj, x, direction)
             error('Unknown direction %s', direction);
     end
     if ~obj.testMode
-        obj.pulseParams.(chan) = offset;
+        obj.channelParams.(chan) = offset;
         % load sequence
         obj.loadSequence(filenames, 2);
     end
@@ -38,7 +38,7 @@ function [cost, J] = piObjectiveFunction(obj, x, direction)
     % turn on/off offset shifting if we are using SSB
     J(:,1) = J(:,1)/piAmp;
     offset2amp = obj.settings.offset2amp;
-    J(:,2) = (obj.pulseParams.SSBFreq == 0)*obj.settings.OffsetNorm*J(:,2)*offset2amp/piAmp; % offset can have a different integral norm
+    J(:,2) = (obj.channelParams.SSBFreq == 0)*obj.settings.OffsetNorm*J(:,2)*offset2amp/piAmp; % offset can have a different integral norm
     fprintf('Cost: %.4f (%.4f) \n', sum(cost.^2), sum(cost.^2/length(cost)));
     fprintf('Noise var: %.4f\n', obj.noiseVar);
 end

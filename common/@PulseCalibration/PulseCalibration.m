@@ -21,8 +21,7 @@ classdef PulseCalibration < handle
     properties
         experiment % an instance of the ExpManager class
         settings
-        pulseParams
-        channelMap
+        channelParams
         controlAWG % name of control AWG
         AWGs
         AWGSettings
@@ -105,7 +104,10 @@ classdef PulseCalibration < handle
         
         function Init(obj, settings)
             obj.settings = settings;
-            obj.channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
+
+            channelLib = jsonlab.loadjson(getpref('qlab','ChannelParams'));
+            assert(isfield(channelLib, settings.Qubit), 'Qubit %s not found in channel library', settings.Qubit);
+            obj.channelParams = channelLib.(settings.Qubit);
             
             if isfield(obj.settings, 'SoftwareDevelopmentMode') && obj.settings.SoftwareDevelopmentMode
                 obj.testMode = true;
@@ -136,25 +138,25 @@ classdef PulseCalibration < handle
             % intialize the ExpManager
             init(obj.experiment);
             
-            IQchannels = obj.channelMap.(obj.settings.Qubit);
-            
             obj.AWGs = struct_filter(@(x) ExpManager.is_AWG(x), obj.experiment.instruments);
             obj.AWGSettings = cellfun(@(awg) obj.experiment.instrSettings.(awg), fieldnames(obj.AWGs)', 'UniformOutput', false);
             obj.AWGSettings = cell2struct(obj.AWGSettings, fieldnames(obj.AWGs)', 2);
-            obj.controlAWG = IQchannels.awg;
+
+            tmpStr = strsplit(obj.channelParams.physChan);
+            obj.controlAWG = tmpStr{1};
 
             if ~obj.testMode
-                % load pulse parameters for the relevant qubit and
-                % control AWG
-                params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-                obj.pulseParams = params.(obj.settings.Qubit);
-                obj.pulseParams.T = params.(IQchannels.IQkey).T;
+                % pull in physical channel parameters into channelParams
+                physChan = obj.channelParams.physChan;
+                obj.channelParams.ampFactor = channelLib.(physChan).ampFactor;
+                obj.channelParams.phaseSkew = channelLib.(physChan).phaseSkew;
                 controlAWGsettings = obj.AWGSettings.(obj.controlAWG);
-                obj.pulseParams.i_offset = controlAWGsettings.(['chan_' IQchannels.IQkey(end-1)]).offset;
-                obj.pulseParams.q_offset = controlAWGsettings.(['chan_' IQchannels.IQkey(end)]).offset;
+                obj.channelParams.i_offset = controlAWGsettings.(['chan_' physChan(end-1)]).offset;
+                obj.channelParams.q_offset = controlAWGsettings.(['chan_' physChan(end)]).offset;
+                obj.channelParams.SSBFreq = channelLib.(physChan).SSBFreq;
             else
-                obj.pulseParams = struct('piAmp', 6560, 'pi2Amp', 3280, 'delta', -0.5, 'T', eye(2,2),...
-                    'pulseType', 'drag', 'i_offset', 0.119, 'q_offset', 0.130);
+                obj.channelParams = struct('piAmp', 0.6, 'pi2Amp', 0.3, 'dragScaling', -0.5, 'ampFactor', 1,...
+                    'phaseSkew', 0, 'shapeFun', 'drag', 'i_offset', 0.019, 'q_offset', 0.013);
             end
         end
         
@@ -176,6 +178,10 @@ classdef PulseCalibration < handle
                 end
             end
         end
+
+        function cleanup(obj)
+            error('Not implemented')
+        end
     end
         
     methods (Static)
@@ -196,26 +202,23 @@ classdef PulseCalibration < handle
             ExpParams.DoPiCal = 1;
             ExpParams.DoDRAGCal = 0;
             ExpParams.OffsetNorm = 1;
-            ExpParams.offset2amp = 8192/2;
+            ExpParams.offset2amp = 1/2;
             ExpParams.dataType = 'amp';
             ExpParams.SoftwareDevelopmentMode = 1;
-            ExpParams.cfgFile = fullfile(getpref('qlab', 'cfgDir'), 'scripter.json');
+            ExpParams.cfgFile = getpref('qlab', 'CurScripterFile');
             
             % create object instance
             pulseCal = PulseCalibration();
             
-            %pulseCal.pulseParams = struct('piAmp', 6000, 'pi2Amp', 2800, 'delta', -0.5, 'T', eye(2,2), 'pulseType', 'drag',...
+            %pulseCal.channelParams = struct('piAmp', 0.6, 'pi2Amp', 0.28, 'dragScaling', -0.5, 'ampFactor', 1, 'phaseSkew', 0, 'pulseType', 'drag',...
             %                        'i_offset', 0.110, 'q_offset', 0.138, 'SSBFreq', 0);
-            %pulseCal.rabiAmpChannelSequence('q1q2', true);
             %pulseCal.rabiAmpChannelSequence('q2', false);
-            %pulseCal.Pi2CalChannelSequence('q1q2', 'X', true);
             %pulseCal.Pi2CalChannelSequence('q2', 'Y', false);
-            %pulseCal.PiCalChannelSequence('q1q2', 'Y', true);
             %pulseCal.PiCalChannelSequence('q2', 'X', false);
             
             % rabi Amp data
-            %xpts = 0:100:80*100;
-            %piAmp = 6200;
+            %xpts = linspace(0, 1, 81);
+            %piAmp = 0.6;
             %data = 0.5 - 0.1 * cos(2*pi*xpts/(2*piAmp));
             %piAmpGuess = pulseCal.analyzeRabiAmp(data);
             %fprintf('Initial guess for piAmp: %.1f\n', piAmpGuess);

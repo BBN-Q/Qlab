@@ -129,7 +129,7 @@ classdef MixerOptimizer < handle
                 channelLib.(obj.channelParams.physChan).ampFactor = obj.results.ampFactor;
                 channelLib.(obj.channelParams.physChan).phaseSkew = obj.results.phaseSkew;
                 FID = fopen(getpref('qlab', 'ChannelParams'),'wt');
-                fprintf(FID, '%s', jsonlab.savejson('',params));
+                fprintf(FID, '%s', jsonlab.savejson('',channelLib));
                 fclose(FID);
 
                 % update i and q offsets in the instrument library

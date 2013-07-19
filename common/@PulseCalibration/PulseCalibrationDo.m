@@ -9,6 +9,8 @@ function PulseCalibrationDo(obj)
 %
 % v1.0 Aug 24, 2011 Blake Johnson
 
+c = onCleanup(@() obj.cleanup())
+
 settings = obj.settings;
 
 %% MixerCal
@@ -21,11 +23,11 @@ if settings.DoMixerCal
         obj.openInstruments();
         obj.initializeInstruments();
     end
-    % update pulseParams
+    % update pulseParams (TODO: FIXME!)
     load(obj.mixerCalPath, 'i_offset', 'q_offset', 'T');
-    obj.pulseParams.T = T;
-    obj.pulseParams.i_offset = i_offset;
-    obj.pulseParams.q_offfset = q_offset;
+    obj.channelParams.T = T;
+    obj.channelParams.i_offset = i_offset;
+    obj.channelParams.q_offfset = q_offset;
 end
 
 %% Rabi
@@ -45,13 +47,13 @@ if settings.DoRabiAmp
    % analyze Y data
    [piAmpGuesses(2), offsetPhases(2)] = obj.analyzeRabiAmp(data(end/2+1:end));
    %Arbitary extra division by two so that it doesn't push the offset too far. 
-   amp2offset = 2.0/8192/obj.settings.OffsetNorm/2;
+   amp2offset = 0.5/obj.settings.offset2amp;
    
-   obj.pulseParams.piAmp = piAmpGuesses(1);
-   obj.pulseParams.pi2Amp = obj.pulseParams.piAmp/2;
-   obj.pulseParams.i_offset = obj.pulseParams.i_offset + offsetPhases(1)*amp2offset;
-   obj.pulseParams.q_offset = obj.pulseParams.q_offset + offsetPhases(2)*amp2offset;
-   fprintf('Initial guess for X180Amp: %.0f\n', obj.pulseParams.piAmp);
+   obj.channelParams.piAmp = piAmpGuesses(1);
+   obj.channelParams.pi2Amp = obj.channelParams.piAmp/2;
+   obj.channelParams.i_offset = obj.channelParams.i_offset + offsetPhases(1)*amp2offset;
+   obj.channelParams.q_offset = obj.channelParams.q_offset + offsetPhases(2)*amp2offset;
+   fprintf('Initial guess for X180Amp: %.0f\n', obj.channelParams.piAmp);
    fprintf('Shifting i_offset by: %.3f\n', offsetPhases(1)*amp2offset);
    fprintf('Shifting q_offset by: %.3f\n', offsetPhases(2)*amp2offset);
 end
@@ -100,7 +102,7 @@ end
 %% Pi/2 Calibration
 if settings.DoPi2Cal
     % calibrate amplitude and offset for +/- X90
-    x0 = [obj.pulseParams.pi2Amp, obj.pulseParams.i_offset];
+    x0 = [obj.channelParams.pi2Amp, obj.channelParams.i_offset];
 
     % options for Levenberg-Marquardt (seed small lambda to make it more
     % like Gauss-Newton)
@@ -109,34 +111,32 @@ if settings.DoPi2Cal
     x0 = lsqnonlin(@obj.Xpi2ObjectiveFnc,x0,[],[],options);
     X90Amp = real(x0(1));
     i_offset = real(x0(2));
-    obj.pulseParams.i_offset = i_offset;
-    fprintf('Found X90Amp: %.0f\n', X90Amp);
-    fprintf('Found I offset: %.3f\n\n\n', i_offset);
+    obj.channelParams.i_offset = i_offset;
+    fprintf('Found X90Amp: %.4f\n', X90Amp);
+    fprintf('Found I offset: %.4f\n\n\n', i_offset);
     
     % calibrate amplitude and offset for +/- Y90
-    x0(2) = obj.pulseParams.q_offset;
+    x0(2) = obj.channelParams.q_offset;
     
     x0 = lsqnonlin(@obj.Ypi2ObjectiveFnc,x0,[],[],options);
     Y90Amp = real(x0(1));
     q_offset = real(x0(2));
-    fprintf('Found Y90Amp: %.0f\n', Y90Amp);
-    fprintf('Found Q offset: %.3f\n\n\n', q_offset);
+    fprintf('Found Y90Amp: %.4f\n', Y90Amp);
+    fprintf('Found Q offset: %.4f\n\n\n', q_offset);
     
-    % update pulseParams
-    obj.pulseParams.pi2Amp = Y90Amp;
-    obj.pulseParams.q_offset = q_offset;
+    % update channelParams
+    obj.channelParams.pi2Amp = Y90Amp;
+    obj.channelParams.q_offset = q_offset;
     % update T matrix with ratio X90Amp/Y90Amp
-    ampFactor = obj.pulseParams.T(1,1)*X90Amp/Y90Amp;
-    fprintf('ampFactor: %.3f\n', ampFactor);
-    theta = sign(obj.pulseParams.T(1,2))*asec(obj.pulseParams.T(2,2));
-    T = [ampFactor, ampFactor*tan(theta); 0, sec(theta)];
-    obj.pulseParams.T = T;
+    obj.channelParams.ampFactor = obj.channelParams.ampFactor*X90Amp/Y90Amp;
+    fprintf('ampFactor: %.3f\n', obj.channelParams.ampFactor);
+    % TODO: update QGL library here
 end
 
 %% Pi Calibration
 if settings.DoPiCal
     % calibrate amplitude and offset for +/- X180
-    x0 = [obj.pulseParams.piAmp, obj.pulseParams.i_offset];
+    x0 = [obj.channelParams.piAmp, obj.channelParams.i_offset];
     
     % options for Levenberg-Marquardt
     options = optimset('TolX', 1e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
@@ -146,9 +146,9 @@ if settings.DoPiCal
     i_offset = real(x0(2));
     fprintf('Found X180Amp: %.0f\n\n\n', X180Amp);
     
-    % update pulseParams
-    obj.pulseParams.piAmp = X180Amp;
-    obj.pulseParams.i_offset = i_offset;
+    % update channelParams
+    obj.channelParams.piAmp = X180Amp;
+    obj.channelParams.i_offset = i_offset;
 end
 
 %% DRAG calibration    
@@ -168,12 +168,12 @@ if settings.DoDRAGCal
     % analyze for the best value to two digits
     numPsQId = 8; % number pseudoidentities
     
-    obj.pulseParams.delta = round(100*obj.analyzeSlopes(data, numPsQId, deltas))/100;
+    obj.channelParams.dragScaling = round(100*obj.analyzeSlopes(data, numPsQId, deltas))/100;
     
     title('DRAG Parameter Calibration');
-    text(10, 0.8, sprintf('Found best DRAG parameter of %.2f', obj.pulseParams.delta), 'FontSize', 12);
+    text(10, 0.8, sprintf('Found best DRAG parameter of %.2f', obj.channelParams.dragScaling), 'FontSize', 12);
 
-    
+    % TODO update QGL library here
 end
 
 %% SPAM calibration    
@@ -191,55 +191,39 @@ if settings.DoSPAMCal
     phaseSkew = round(100*obj.analyzeSlopes(data, numPsQId, angleShifts))/100;
     title('SPAM Phase Skew Calibration');
     text(10, 0.8, sprintf('Found best phase Skew of %.2f', phaseSkew), 'FontSize', 12);
-    
-    tmpT = obj.pulseParams.T;
-    ampFactor = tmpT(1,1);
-    curSkew = atand(tmpT(1,2)/tmpT(1,1));
-    curSkew = curSkew - phaseSkew;
-    obj.pulseParams.T = [ampFactor, ampFactor*tand(curSkew); 0, secd(curSkew)];
-end
 
+    obj.channelParams.phaseSkew = obj.channelParams.phaseSkew - phaseSkew;
+end
 
 
 %% Save updated parameters to file
 
-%First the pulse parameters from Matlab
-% Load the previous parameters from file
-params = json.read(getpref('qlab', 'pulseParamsBundleFile'));
-
-% Update the relevant variables
-params.(settings.Qubit).piAmp = obj.pulseParams.piAmp;
-params.(settings.Qubit).pi2Amp = obj.pulseParams.pi2Amp;
-params.(settings.Qubit).delta = obj.pulseParams.delta;
-
-channelMap = obj.channelMap.(obj.settings.Qubit);
-IQkey = channelMap.IQkey;
-
-params.(IQkey).T = obj.pulseParams.T;
-
-FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'w'); 
-fprintf(FID, '%s', jsonlab.savejson('',params));
+channelLib = jsonlab.loadjson(getpref('qlab','ChannelParams'));
+channelLib.(obj.channelParams.physChan).ampFactor = obj.channelParams.ampFactor;
+channelLib.(obj.channelParams.physChan).phaseSkew = obj.channelParams.phaseSkew;
+FID = fopen(getpref('qlab', 'ChannelParams'),'wt');
+fprintf(FID, '%s', jsonlab.savejson('',channelLib));
 fclose(FID);
 
-%Now the instrument parameters
-params = jsonlab.loadjson(obj.settings.cfgFile);
-
-%Now the offsets
-params.instruments.(channelMap.awg).(sprintf('chan_%s', IQkey(end-1))).offset = obj.pulseParams.i_offset;
-params.instruments.(channelMap.awg).(sprintf('chan_%s', IQkey(end))).offset = obj.pulseParams.q_offset;
-
+% update i and q offsets in the instrument library
+instrLib = jsonlab.loadjson(getpref('qlab', 'InstrumentLibraryFile'));
+tmpStr = strsplit(obj.channelParams.physChan);
+awgName = tmpStr{1};
+iChan = str2double(obj.channelParams.physChan(end-1));
+qChan = str2double(obj.channelParams.physChan(end));
+instrLib.instrDict.(awgName)[iChan].offset = obj.channelParams.i_offset;
+instrLib.instrDict.(awgName)[qChan].offset = obj.channelParams.q_offset;
 %Drive frequency from Ramsey
 if settings.DoRamsey
-    params.instruments.(channelMap.source).frequency = qubitSource.frequency;
+    instrLib.instrDict.(settings.source).frequency = qubitSource.frequency;
 end
 
-%Write back to file
-FID = fopen(obj.settings.cfgFile,'wt'); %open in text mode
-fprintf(FID, '%s', jsonlab.savejson('',params));
+FID = fopen(getpref('qlab', 'InstrumentLibraryFile'),'wt'); %open in text mode
+fprintf(FID, '%s', jsonlab.savejson('',instrLib));
 fclose(FID);
 
 % Display the final results
-obj.pulseParams
+obj.channelParams
 
 end
 
