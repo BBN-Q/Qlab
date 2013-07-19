@@ -24,8 +24,8 @@ function [i_offset, q_offset] = optimize_mixer_offsets_bySweep(obj)
 
 % unpack constants from cfg file
 ExpParams = obj.expParams;
-awg_I_channel = str2double(obj.channelParams.IQkey(end-1));
-awg_Q_channel = str2double(obj.channelParams.IQkey(end));
+awg_I_channel = str2double(obj.channelParams.physChan(end-1));
+awg_Q_channel = str2double(obj.channelParams.physChan(end));
 
 obj.awg.run();
 obj.awg.waitForAWGtoStartRunning();

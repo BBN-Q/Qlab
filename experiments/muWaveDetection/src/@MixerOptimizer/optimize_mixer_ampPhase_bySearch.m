@@ -17,7 +17,7 @@
 % Description: Searches for optimal amplitude and phase correction on an
 % I/Q mixer.
 
-function T = optimize_mixer_ampPhase_bySearch(obj)
+function ampFactor, phaseSkew = optimize_mixer_ampPhase_bySearch(obj)
     % unpack constants from cfg file
     ExpParams = obj.expParams;
     awg_amp = obj.awgAmp;
@@ -94,8 +94,7 @@ function T = optimize_mixer_ampPhase_bySearch(obj)
     fprintf('a: %.3g, skew: %.3f (%.3f degrees)\n', [ampFactor, skew, skew*180/pi]);
     fprintf('SSB power: %.2f\n', 10*log10(optPower));
     
-    % correction transformation
-    T = [ampFactor ampFactor*tan(skew); 0 sec(skew)];
+    phaseSkew = skew*180/pi;
     
     % restore instruments to a normal state
     if ~simulate

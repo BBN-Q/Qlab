@@ -17,7 +17,7 @@
 % Description: Searches for optimal amplitude and phase correction on an
 % I/Q mixer.
 
-function T = optimize_mixer_ampPhase_bySweep(obj)
+function ampFactor, phaseSkew = optimize_mixer_ampPhase_bySweep(obj)
 
 % unpack constants from cfg file
 ExpParams = obj.expParams;
@@ -98,8 +98,7 @@ fprintf('Optimal amp/phase parameters:\n');
 fprintf('a: %.3g, skew: %.3f (%.3f degrees)\n', [ampFactor, bestSkew, bestSkew*180/pi]);
 fprintf('SSB power: %.2f\n', min(measPowers3));
 
-% correction transformation
-T = [ampFactor ampFactor*tan(bestSkew); 0 sec(bestSkew)];
+phaseSkew = bestSkew*180/pi;
 
 obj.setInstrument(bestAmp, bestSkew);
 

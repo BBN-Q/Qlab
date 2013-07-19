@@ -34,7 +34,7 @@ classdef MixerOptimizer < handle
         costFunctionGoal = -70;
         expParams
         optimMode = 'sweep' %optimize by naive sweeping ('sweep') or clever searching ('search')
-        results = struct('iOffset',0, 'qOffset',0, 'T', eye(2))
+        results = struct('iOffset',0, 'qOffset',0, 'ampFactor', 1, 'phaseSkew', 0)
     end
     
     methods
@@ -46,10 +46,10 @@ classdef MixerOptimizer < handle
         function Init(obj, cfgFile, chan)
             
             % pull in channel parameters from requested logical channel in the Qubit2ChannelMap
-            channelMap = jsonlab.loadjson(getpref('qlab','Qubit2ChannelMap'));
-            assert(isfield(channelMap, chan), 'Qubit %s not found in channel map', chan);
+            channelLib = jsonlab.loadjson(getpref('qlab','ChannelParams'));
+            assert(isfield(channelLib, chan), 'Qubit %s not found in channel library', chan);
             obj.chan = chan;
-            obj.channelParams = channelMap.(obj.chan);
+            obj.channelParams = channelLib.(obj.chan);
             
             % load any optimize mixer specific configurations
             settings = jsonlab.loadjson(cfgFile);
@@ -57,10 +57,11 @@ classdef MixerOptimizer < handle
             instrSettings = settings.InstrParams;
             
             %Get references to the AWG, uW source, and spectrum analyzer
-            obj.awg = InstrumentFactory(obj.channelParams.awg);
-            %TODO: Update this to the instrument library instead.
-            instrLibParams = jsonlab.loadjson(getpref('qlab', 'CurScripterFile'));
-            obj.awg.setAll(instrLibParams.instruments.(obj.channelParams.awg));
+            tmpStr = strsplit(obj.channelParams.physChan);
+            awgName = tmpStr{1};
+            obj.awg = InstrumentFactory(awgName);
+            instrLib = jsonlab.loadjson(getpref('qlab', 'InstrumentLibraryFile'));
+            obj.awg.setAll(instrLib.instrDict.(awgName));
             obj.uwsource = InstrumentFactory(obj.channelParams.source);
             obj.sa = InstrumentFactory(obj.expParams.specAnalyzer);
             
@@ -84,12 +85,12 @@ classdef MixerOptimizer < handle
                     obj.setup_SSB_AWG(0,0);
                     [obj.results.iOffset, obj.results.qOffset] = obj.optimize_mixer_offsets_bySweep();
                     obj.setup_SSB_AWG(obj.results.iOffset,obj.results.qOffset);
-                    obj.results.T = obj.optimize_mixer_ampPhase_bySweep();
+                    obj.results.ampFactor, obj.results.phaseSkew = obj.optimize_mixer_ampPhase_bySweep();
                 case 'search'
                     obj.setup_SSB_AWG(0,0);
                     [obj.results.iOffset, obj.results.qOffset] = obj.optimize_mixer_offsets_bySearch();
                     obj.setup_SSB_AWG(obj.results.iOffset, obj.results.qOffset);
-                    obj.results.T = obj.optimize_mixer_ampPhase_bySearch();
+                    obj.results.ampFactor, obj.results.phaseSkew = obj.optimize_mixer_ampPhase_bySearch();
                 otherwise
                     error('Unknown optimMode');
             end
@@ -123,22 +124,24 @@ classdef MixerOptimizer < handle
             switch happy
                 case 'Yes'
             
-                % update transformation matrix T in pulse param file
-                params = jsonlab.loadjson(getpref('qlab', 'pulseParamsBundleFile'));
-                params.(obj.channelParams.IQkey).T = obj.results.T;
-                FID = fopen(getpref('qlab', 'pulseParamsBundleFile'),'w');
+                % update transformation matrix T in channel library
+                channelLib = jsonlab.loadjson(getpref('qlab','ChannelParams'));
+                channelLib.(obj.channelParams.physChan).ampFactor = obj.results.ampFactor;
+                channelLib.(obj.channelParams.physChan).phaseSkew = obj.results.phaseSkew;
+                FID = fopen(getpref('qlab', 'ChannelParams'),'wt');
                 fprintf(FID, '%s', jsonlab.savejson('',params));
                 fclose(FID);
 
-                % update i and q offsets in ExpScripter cfg
-                %TODO: Update this to the instrument library instead.
-                params = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'));
-                iChan = obj.channelParams.IQkey(end-1);
-                qChan = obj.channelParams.IQkey(end);
-                params.instruments.(obj.channelParams.awg).(['chan_' iChan]).offset = obj.results.iOffset;
-                params.instruments.(obj.channelParams.awg).(['chan_' qChan]).offset = obj.results.qOffset;
-                FID = fopen(fullfile(getpref('qlab', 'cfgDir'), 'scripter.json'),'wt'); %open in text mode
-                fprintf(FID, '%s', jsonlab.savejson('',params));
+                % update i and q offsets in the instrument library
+                instrLib = jsonlab.loadjson(getpref('qlab', 'InstrumentLibraryFile'));
+                tmpStr = strsplit(obj.channelParams.physChan);
+                awgName = tmpStr{1};
+                iChan = str2double(obj.channelParams.physChan(end-1));
+                qChan = str2double(obj.channelParams.physChan(end));
+                instrLib.instrDict.(awgName)[iChan].offset = obj.results.iOffset;
+                instrLib.instrDict.(awgName)[qChan].offset = obj.results.qOffset;
+                FID = fopen(getpref('qlab', 'InstrumentLibraryFile'),'wt'); %open in text mode
+                fprintf(FID, '%s', jsonlab.savejson('',instrLib));
                 fclose(FID);
                 
                 case {'No','Cancel'}
@@ -159,8 +162,8 @@ classdef MixerOptimizer < handle
         function setup_SSB_AWG(obj, i_offset, q_offset)
             %Helper function to setup the SSB waveforms from the AWGs
             awgfile = obj.expParams.SSBAWGFile;
-            iChan = obj.channelParams.IQkey(end-1);
-            qChan = obj.channelParams.IQkey(end);
+            iChan = obj.channelParams.physChan(end-1);
+            qChan = obj.channelParams.physChan(end);
             
             switch class(obj.awg)
                 case 'deviceDrivers.Tek5014'
@@ -179,7 +182,7 @@ classdef MixerOptimizer < handle
                     obj.awg.run();
                     
                 case 'deviceDrivers.APS'
-                    % convert iChan and qChan
+                    % convert iChan and qChan to numbers
                     iChan = str2double(iChan);
                     qChan = str2double(qChan);
                     
@@ -208,7 +211,7 @@ classdef MixerOptimizer < handle
                     obj.awg.triggerSource = 'internal';
                     
                     %Set all channels to continuous waveform to avoid a
-                    %conflict betweent the two FPGAs
+                    %conflict between the two FPGAs
                     for ct = 1:4
                         obj.awg.setRepeatMode(ct, obj.awg.CONTINUOUS);
                         obj.awg.setRunMode(ct, obj.awg.RUN_WAVEFORM);

@@ -25,8 +25,8 @@
 function [i_offset, q_offset] = optimize_mixer_offsets_bySearch(obj)
     % unpack constants from cfg file
     ExpParams = obj.expParams;
-    awg_I_channel = str2double(obj.channelParams.IQkey(end-1));
-    awg_Q_channel = str2double(obj.channelParams.IQkey(end));
+    awg_I_channel = str2double(obj.channelParams.physChan(end-1));
+    awg_Q_channel = str2double(obj.channelParams.physChan(end));
     max_offset = ExpParams.Search.max_offset; % max I/Q offset voltage
     max_steps = ExpParams.Search.max_steps;
     min_step_size = ExpParams.Search.min_step_size;
@@ -39,8 +39,6 @@ function [i_offset, q_offset] = optimize_mixer_offsets_bySearch(obj)
     simul_vertex.b = 0;
     fevals = 0;
     fevals2 = 0;
-    zeroWaveform = APSWaveform();
-    zeroWaveform.data = int16(zeros(1,1000));
     
     % initialize instruments
     if ~simulate

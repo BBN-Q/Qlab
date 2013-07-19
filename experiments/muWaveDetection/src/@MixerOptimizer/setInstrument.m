@@ -3,8 +3,8 @@ function setInstrument(obj, amp, phase)
     
     fssb = 2*pi*obj.expParams.SSBFreq;
     samplingRate = obj.awg.samplingRate;
-    I_channel = str2double(obj.channelParams.IQkey(end-1));
-    Q_channel = str2double(obj.channelParams.IQkey(end));
+    I_channel = str2double(obj.channelParams.physChan(end-1));
+    Q_channel = str2double(obj.channelParams.physChan(end));
     % restrict phase to range [-pi, pi]
     phase = mod(phase, 2*pi);
     if phase > pi, phase = phase - 2*pi; end
