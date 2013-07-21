@@ -8,10 +8,10 @@ parser.add_argument('phaseSkew', type=float, help='phaseSkew')
 args = parser.parse_args()
 
 sys.path.append(args.pyqlabpath)
-execfile(os.path.join(args.pyqlabpath, 'startup.py'))
+from Libraries import channelLib
 
-if args.physChan not in channelLib:
-	return -1
+if args.physChan not in channelLib.channelDict:
+	sys.exit(1)
 
 channelLib[args.physChan].ampFactor = args.ampFactor
 channelLib[args.physChan].phaseSkew = args.phaseSkew
