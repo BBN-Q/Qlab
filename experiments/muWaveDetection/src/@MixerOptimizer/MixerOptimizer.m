@@ -133,7 +133,7 @@ classdef MixerOptimizer < handle
 
                 % update i and q offsets in the instrument library
                 instrLib = json.read(getpref('qlab', 'InstrumentLibraryFile'));
-                tmpStr = strsplit(obj.channelParams.physChan);
+                tmpStr = regexp(obj.channelParams.physChan, '-', 'split');
                 awgName = tmpStr{1};
                 iChan = str2double(obj.channelParams.physChan(end-1));
                 qChan = str2double(obj.channelParams.physChan(end));
