@@ -137,9 +137,9 @@ classdef MixerOptimizer < handle
                 awgName = tmpStr{1};
                 iChan = str2double(obj.channelParams.physChan(end-1));
                 qChan = str2double(obj.channelParams.physChan(end));
-                instrLib.instrDict.(awgName)(iChan).offset = obj.results.iOffset;
-                instrLib.instrDict.(awgName)(qChan).offset = obj.results.qOffset;
-                json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'));
+                instrLib.instrDict.(awgName).channels(iChan).offset = obj.results.iOffset;
+                instrLib.instrDict.(awgName).channels(qChan).offset = obj.results.qOffset;
+                json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
                 
                 case {'No','Cancel'}
                     fprintf('Not writing to file...');
