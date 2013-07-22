@@ -105,7 +105,9 @@ classdef PulseCalibration < handle
         function Init(obj, settings)
             obj.settings = settings;
 
-            channelLib = jsonlab.loadjson(getpref('qlab','ChannelParams'));
+            warning('off', 'json:fieldNameConflict');
+            channelLib = json.read(getpref('qlab','ChannelParamsFile'));
+            warning('on', 'json:fieldNameConflict');
             channelLib = channelLib.channelDict;
             assert(isfield(channelLib, settings.Qubit), 'Qubit %s not found in channel library', settings.Qubit);
             obj.channelParams = channelLib.(settings.Qubit);
@@ -118,7 +120,7 @@ classdef PulseCalibration < handle
             obj.experiment = ExpManager();
             
             % load ExpManager settings
-            expSettings = jsonlab.loadjson(obj.settings.cfgFile);
+            expSettings = json.read(obj.settings.cfgFile);
             instrSettings = expSettings.instruments;
             
             % add instruments
@@ -148,7 +150,9 @@ classdef PulseCalibration < handle
 
             if ~obj.testMode
                 % pull in physical channel parameters into channelParams
-                physChan = obj.channelParams.physChan;
+                % Note: need to use genvarname to match the field name in
+                % the JSON struct
+                physChan = genvarname(obj.channelParams.physChan);
                 obj.channelParams.ampFactor = channelLib.(physChan).ampFactor;
                 obj.channelParams.phaseSkew = channelLib.(physChan).phaseSkew;
                 controlAWGsettings = obj.AWGSettings.(obj.controlAWG);

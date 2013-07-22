@@ -48,7 +48,7 @@ classdef MixerOptimizer < handle
             % pull in channel parameters from requested logical channel in the Qubit2ChannelMap
             %Quiet down warnings from '-''s in fieldnames
             warning('off', 'json:fieldNameConflict');
-            channelLib = json.read(getpref('qlab','ChannelParams'));
+            channelLib = json.read(getpref('qlab','ChannelParamsFile'));
             warning('on', 'json:fieldNameConflict');
             assert(isfield(channelLib.channelDict, chan), 'Qubit %s not found in channel library', chan);
             obj.chan = chan;
@@ -63,11 +63,14 @@ classdef MixerOptimizer < handle
             tmpStr = regexp(obj.channelParams.physChan, '-', 'split'); % split on '-'
             awgName = tmpStr{1};
             obj.awg = InstrumentFactory(awgName);
+            % would like to use instrument library rather than
+            % CurScripterFile, but the struct in the instrument library is
+            % not compatible with awg.setAll()
             instrLib = json.read(getpref('qlab', 'CurScripterFile'));
             obj.awg.setAll(instrLib.instruments.(awgName));
             
-            %MATLAB chokes on dashes in the physical channel name
-            mangledPhysChan = strrep(obj.channelParams.physChan, '-', '0x2D');
+            %pass physChan through genvarname to get a MATLAB compatible name
+            mangledPhysChan = genvarname(obj.channelParams.physChan);
             sourceName = channelLib.channelDict.(mangledPhysChan).generator;
             obj.uwsource = InstrumentFactory(sourceName);
             obj.sa = InstrumentFactory(obj.expParams.specAnalyzer);
