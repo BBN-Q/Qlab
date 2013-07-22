@@ -10,7 +10,9 @@ if ~exist('makePlot', 'var')
     makePlot = false;
 end
 
-[status, result] = system(sprintf('python Pi2Cal.py "%s" %s %s %d %f', getpref('qlab', 'PyQLabDir'), qubit, direction, numPulses, obj.channelParams.pi2Amp));
+[thisPath, ~] = fileparts(mfilename('fullpath'));
+scriptName = fullfile(thisPath, 'Pi2Cal.py');
+[status, result] = system(sprintf('python "%s" "%s" %s %s %d %f', scriptName, getpref('qlab', 'PyQLabDir'), qubit, direction, numPulses, obj.channelParams.pi2Amp), '-echo');
 
 nbrRepeats = 2;
 segmentPoints = 1:nbrRepeats*(1+2*numPulses);
