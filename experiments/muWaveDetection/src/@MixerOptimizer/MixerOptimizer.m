@@ -46,7 +46,10 @@ classdef MixerOptimizer < handle
         function Init(obj, cfgFile, chan)
             
             % pull in channel parameters from requested logical channel in the Qubit2ChannelMap
+            %Quiet down warnings from '-''s in fieldnames
+            warning('off', 'json:fieldNameConflict');
             channelLib = json.read(getpref('qlab','ChannelParams'));
+            warning('on', 'json:fieldNameConflict');
             assert(isfield(channelLib.channelDict, chan), 'Qubit %s not found in channel library', chan);
             obj.chan = chan;
             obj.channelParams = channelLib.channelDict.(chan);
