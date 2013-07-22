@@ -160,8 +160,8 @@ classdef PulseCalibration < handle
                 obj.channelParams.q_offset = controlAWGsettings.(['chan_' physChan(end)]).offset;
                 obj.channelParams.SSBFreq = channelLib.(physChan).SSBFreq;
             else
-                obj.channelParams = struct('piAmp', 0.6, 'pi2Amp', 0.3, 'dragScaling', -0.5, 'ampFactor', 1,...
-                    'phaseSkew', 0, 'shapeFun', 'drag', 'i_offset', 0.019, 'q_offset', 0.013);
+                obj.channelParams = struct('piAmp', 0.65, 'pi2Amp', 0.32, 'dragScaling', -0.5, 'ampFactor', 1,...
+                    'phaseSkew', 0, 'shapeFun', 'drag', 'i_offset', 0.074, 'q_offset', 0.083, 'SSBFreq', 0);
             end
         end
         
@@ -200,22 +200,26 @@ classdef PulseCalibration < handle
             % construct settings struct
             ExpParams = struct();
             ExpParams.Qubit = 'q1';
+            ExpParams.measurement = 'M1';
             ExpParams.DoMixerCal = 0;
-            ExpParams.DoRabiAmp = 1;
+            ExpParams.DoRabiAmp = 0;
             ExpParams.DoRamsey = 0;
+            ExpParams.NumPi2s = 9;
             ExpParams.DoPi2Cal = 1;
+            ExpParams.NumPis = 9;
             ExpParams.DoPiCal = 1;
             ExpParams.DoDRAGCal = 0;
-            ExpParams.OffsetNorm = 1;
-            ExpParams.offset2amp = 1/2;
-            ExpParams.dataType = 'amp';
+            ExpParams.DoSPAMCal = 0;
+            ExpParams.OffsetNorm = 2;
+            ExpParams.offset2amp = 1;
+            ExpParams.dataType = 'real';
             ExpParams.SoftwareDevelopmentMode = 1;
             ExpParams.cfgFile = getpref('qlab', 'CurScripterFile');
             
             % create object instance
             pulseCal = PulseCalibration();
             
-            %pulseCal.channelParams = struct('piAmp', 0.6, 'pi2Amp', 0.28, 'dragScaling', -0.5, 'ampFactor', 1, 'phaseSkew', 0, 'pulseType', 'drag',...
+            %pulseCal.channelParams = struct('piAmp', 0.6, 'pi2Amp', 0.28, 'dragScaling', -0.5, 'ampFactor', 1, 'phaseSkew', 0, 'shapeFun', 'drag',...
             %                        'i_offset', 0.110, 'q_offset', 0.138, 'SSBFreq', 0);
             %pulseCal.rabiAmpChannelSequence('q2', false);
             %pulseCal.Pi2CalChannelSequence('q2', 'Y', false);

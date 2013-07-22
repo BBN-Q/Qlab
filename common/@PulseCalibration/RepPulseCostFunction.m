@@ -7,11 +7,17 @@ function [cost, J, noiseVar] = RepPulseCostFunction(data, angle, numPulses)
     
     % average together pairs of data points
     rawData = data;
-    data = (data(1:2:end) + data(2:2:end))/2;
+    avgdata = (data(1:2:end) + data(2:2:end))/2;
     
     % normalize data using first pulses as guess for middle
-    norm = 0.5*(data(2)+data(2+numPulses)) - data(1);
-    data = (data(2:end)-data(1))/norm;
+%     norm = 0.5*(data(2)+data(2+numPulses)) - data(1);
+%     data = (data(2:end)-data(1))/norm;
+    % use separate normalization for each half of the data
+    data = [(avgdata(2:1+numPulses)-avgdata(1))/(avgdata(2)-avgdata(1)) (avgdata(2+numPulses:end)-avgdata(1))/(avgdata(2+numPulses)-avgdata(1))];
+    % check for bad scaling
+    if max(abs(data-1)) > 1.0
+        data = data / max(abs(data-1));
+    end
     
     %In this normalized scaling the ideal data is all ones
     cost = data-1;
@@ -21,6 +27,7 @@ function [cost, J, noiseVar] = RepPulseCostFunction(data, angle, numPulses)
     
     %Estimate the noise from the distribution of difference of repeats
     %Seems like there should be a factor for that fact
+    norm = 0.5*(avgdata(2)+avgdata(2+numPulses)) - avgdata(1);
     noiseVar = var((rawData(1:2:end) - rawData(2:2:end))/norm);
 end
 
@@ -43,7 +50,7 @@ function J = PulseJacobian(data, angle, numPulses)
     end
     
     J = zeros(2*numPulses,2);
-    J(:,1) = (-1).^(n+1).*sqrt(1-(data-1).^2).*derivScale*angle;
+    J(:,1) = (-1).^(n+1).*sqrt(max(0, 1-(data-1).^2)).*derivScale*angle;
     J(1:numPulses,2) = J(1:numPulses,1);
     J(numPulses+1:end,2) = -J(numPulses+1:end,1);
 end

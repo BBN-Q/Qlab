@@ -1,7 +1,7 @@
 function [cost, J] = piObjectiveFunction(obj, x, direction)
     piAmp = real(x(1));
     offset = real(x(2));
-    fprintf('piAmp: %.1f, offset: %.4f\n', piAmp, offset);
+    fprintf('piAmp: %.4f, offset: %.4f\n', piAmp, offset);
     % create sequence
     obj.channelParams.piAmp = piAmp;
     [filenames segmentPoints] = obj.PiCalChannelSequence(obj.settings.Qubit, direction, obj.settings.NumPis);
@@ -25,9 +25,9 @@ function [cost, J] = piObjectiveFunction(obj, x, direction)
     if ~obj.testMode
         data = obj.homodyneMeasurement(segmentPoints);
     else
-        data = simulateMeasurement(x);
+        data = simulateMeasurement(x, obj.settings.offset2amp, obj.settings.OffsetNorm);
         plot(data);
-        ylim([.49 .81])
+        ylim([-.21 .21])
         pause(.1);
     end
     
@@ -43,16 +43,14 @@ function [cost, J] = piObjectiveFunction(obj, x, direction)
     fprintf('Noise var: %.4f\n', obj.noiseVar);
 end
 
-function data = simulateMeasurement(x)
-    idealAmp = 7100;
-    idealOffset = .124;
+function data = simulateMeasurement(x, offset2amp, offsetNorm)
+    idealAmp = 0.69;
+    idealOffset = .081;
     
     amp = x(1);
     offset = x(2);
     
-    % amp = 8192 <=> offset 2.0
-    off2Amp = 8192/2.0;
-    offsetError = off2Amp*(offset - idealOffset);
+    offsetError = offsetNorm*offset2amp*(offset - idealOffset);
     ampError = (amp + offsetError - idealAmp)/idealAmp;
     ampError2 = (amp - offsetError - idealAmp)/idealAmp;
     angleError = ampError*pi;
@@ -60,10 +58,13 @@ function data = simulateMeasurement(x)
     
     % data representing amplitude error
     n = 1:9;
-    data = 0.65 + 0.15*(-1).^(n+1) .* sin((n-1) * angleError);
-    data2 = 0.65 + 0.15*(-1).^(n+1) .* sin((n-1) * angleError2);
+    scale = 0.2;
+    data = scale*(-1).^(n+1) .* sin((n-1) * angleError);
+    data2 = scale*(-1).^(n+1) .* sin((n-1) * angleError2);
     % double every point
     data = data(floor(1:.5:9.5));
     data2 = data2(floor(1:.5:9.5));
-    data = [0.5 0.5 data data2];
+    data = [-scale -scale data data2];
+    % add noise
+    data = data + 0.005*scale*randn(1,length(data));
 end

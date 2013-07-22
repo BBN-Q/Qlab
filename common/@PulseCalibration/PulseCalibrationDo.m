@@ -9,7 +9,7 @@ function PulseCalibrationDo(obj)
 %
 % v1.0 Aug 24, 2011 Blake Johnson
 
-c = onCleanup(@() obj.cleanup())
+c = onCleanup(@() obj.cleanup());
 
 settings = obj.settings;
 
@@ -106,7 +106,7 @@ if settings.DoPi2Cal
 
     % options for Levenberg-Marquardt (seed small lambda to make it more
     % like Gauss-Newton)
-    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
+    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'iter');
     
     x0 = lsqnonlin(@obj.Xpi2ObjectiveFnc,x0,[],[],options);
     X90Amp = real(x0(1));
@@ -139,12 +139,12 @@ if settings.DoPiCal
     x0 = [obj.channelParams.piAmp, obj.channelParams.i_offset];
     
     % options for Levenberg-Marquardt
-    options = optimset('TolX', 1e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
+    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'iter');
     
     x0 = lsqnonlin(@obj.XpiObjectiveFnc,x0,[],[],options);
     X180Amp = real(x0(1));
     i_offset = real(x0(2));
-    fprintf('Found X180Amp: %.0f\n\n\n', X180Amp);
+    fprintf('Found X180Amp: %.4f\n\n\n', X180Amp);
     
     % update channelParams
     obj.channelParams.piAmp = X180Amp;
@@ -205,16 +205,16 @@ tmpStr = strsplit(obj.channelParams.physChan);
 awgName = tmpStr{1};
 iChan = str2double(obj.channelParams.physChan(end-1));
 qChan = str2double(obj.channelParams.physChan(end));
-instrLib.instrDict.(awgName)(iChan).offset = obj.channelParams.i_offset;
-instrLib.instrDict.(awgName)(qChan).offset = obj.channelParams.q_offset;
+instrLib.instrDict.(awgName).channels(iChan).offset = round(1e5*obj.channelParams.i_offset)/1e5;
+instrLib.instrDict.(awgName).channels(qChan).offset = round(1e5*obj.channelParams.q_offset)/1e5;
 %Drive frequency from Ramsey
 if settings.DoRamsey
-    channelLib = json.read(getpref('qlab','ChannelParams'));
+    channelLib = json.read(getpref('qlab','ChannelParamsFile'));
     sourceName = channelLib.channelDict.(mangledPhysChan).generator;
     instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
 end
 
-json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'));
+json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
 
 % Display the final results
 obj.channelParams
