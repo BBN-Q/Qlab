@@ -106,7 +106,7 @@ if settings.DoPi2Cal
 
     % options for Levenberg-Marquardt (seed small lambda to make it more
     % like Gauss-Newton)
-    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'iter');
+    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
     
     x0 = lsqnonlin(@obj.Xpi2ObjectiveFnc,x0,[],[],options);
     X90Amp = real(x0(1));
@@ -130,7 +130,8 @@ if settings.DoPi2Cal
     % update T matrix with ratio X90Amp/Y90Amp
     obj.channelParams.ampFactor = obj.channelParams.ampFactor*X90Amp/Y90Amp;
     fprintf('ampFactor: %.3f\n', obj.channelParams.ampFactor);
-    % TODO: update QGL library here
+    % update QGL library
+    updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 end
 
 %% Pi Calibration
@@ -139,7 +140,7 @@ if settings.DoPiCal
     x0 = [obj.channelParams.piAmp, obj.channelParams.i_offset];
     
     % options for Levenberg-Marquardt
-    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'iter');
+    options = optimset('TolX', 2e-3, 'TolFun', 1e-4, 'MaxFunEvals', 5, 'OutputFcn', @obj.LMStoppingCondition, 'Jacobian', 'on', 'Algorithm', {'levenberg-marquardt',1e-4}, 'ScaleProblem', 'Jacobian', 'Display', 'none');
     
     x0 = lsqnonlin(@obj.XpiObjectiveFnc,x0,[],[],options);
     X180Amp = real(x0(1));
@@ -149,6 +150,7 @@ if settings.DoPiCal
     % update channelParams
     obj.channelParams.piAmp = X180Amp;
     obj.channelParams.i_offset = i_offset;
+    updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 end
 
 %% DRAG calibration    
@@ -173,7 +175,8 @@ if settings.DoDRAGCal
     title('DRAG Parameter Calibration');
     text(10, 0.8, sprintf('Found best DRAG parameter of %.2f', obj.channelParams.dragScaling), 'FontSize', 12);
 
-    % TODO update QGL library here
+    % update QGL library
+    updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 end
 
 %% SPAM calibration    
@@ -198,15 +201,14 @@ end
 
 %% Save updated parameters to file
 updateAmpPhase(obj.channelParams.physChan, obj.channelParams.ampFactor, obj.channelParams.phaseSkew);
+updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 
 % update i and q offsets in the instrument library
 instrLib = json.read(getpref('qlab', 'InstrumentLibraryFile'));
-tmpStr = strsplit(obj.channelParams.physChan);
-awgName = tmpStr{1};
 iChan = str2double(obj.channelParams.physChan(end-1));
 qChan = str2double(obj.channelParams.physChan(end));
-instrLib.instrDict.(awgName).channels(iChan).offset = round(1e5*obj.channelParams.i_offset)/1e5;
-instrLib.instrDict.(awgName).channels(qChan).offset = round(1e5*obj.channelParams.q_offset)/1e5;
+instrLib.instrDict.(obj.controlAWG).channels(iChan).offset = round(1e4*obj.channelParams.i_offset)/1e4;
+instrLib.instrDict.(obj.controlAWG).channels(qChan).offset = round(1e4*obj.channelParams.q_offset)/1e4;
 %Drive frequency from Ramsey
 if settings.DoRamsey
     channelLib = json.read(getpref('qlab','ChannelParamsFile'));
@@ -218,6 +220,8 @@ json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
 
 % Display the final results
 obj.channelParams
+
+obj.finished = true;
 
 end
 

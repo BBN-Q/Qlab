@@ -27,6 +27,8 @@ classdef PulseCalibration < handle
         AWGSettings
         testMode = false;
         noiseVar % estimated variance of the noise from repeats
+        finished = false
+        initialParams
     end
     methods
         % Class constructor
@@ -110,7 +112,7 @@ classdef PulseCalibration < handle
             warning('on', 'json:fieldNameConflict');
             channelLib = channelLib.channelDict;
             assert(isfield(channelLib, settings.Qubit), 'Qubit %s not found in channel library', settings.Qubit);
-            obj.channelParams = channelLib.(settings.Qubit);
+            obj.channelParams = channelLib.(settings.Qubit).pulseParams;
             
             if isfield(obj.settings, 'SoftwareDevelopmentMode') && obj.settings.SoftwareDevelopmentMode
                 obj.testMode = true;
@@ -145,14 +147,15 @@ classdef PulseCalibration < handle
             obj.AWGSettings = cellfun(@(awg) obj.experiment.instrSettings.(awg), fieldnames(obj.AWGs)', 'UniformOutput', false);
             obj.AWGSettings = cell2struct(obj.AWGSettings, fieldnames(obj.AWGs)', 2);
 
-            tmpStr = regexp(obj.channelParams.physChan, '-', 'split');
+            tmpStr = regexp(channelLib.(settings.Qubit).physChan, '-', 'split');
             obj.controlAWG = tmpStr{1};
+            obj.channelParams.physChan = channelLib.(settings.Qubit).physChan;
 
             if ~obj.testMode
                 % pull in physical channel parameters into channelParams
                 % Note: need to use genvarname to match the field name in
                 % the JSON struct
-                physChan = genvarname(obj.channelParams.physChan);
+                physChan = genvarname(channelLib.(settings.Qubit).physChan);
                 obj.channelParams.ampFactor = channelLib.(physChan).ampFactor;
                 obj.channelParams.phaseSkew = channelLib.(physChan).phaseSkew;
                 controlAWGsettings = obj.AWGSettings.(obj.controlAWG);
@@ -160,9 +163,19 @@ classdef PulseCalibration < handle
                 obj.channelParams.q_offset = controlAWGsettings.(['chan_' physChan(end)]).offset;
                 obj.channelParams.SSBFreq = channelLib.(physChan).SSBFreq;
             else
-                obj.channelParams = struct('piAmp', 0.65, 'pi2Amp', 0.32, 'dragScaling', -0.5, 'ampFactor', 1,...
-                    'phaseSkew', 0, 'shapeFun', 'drag', 'i_offset', 0.074, 'q_offset', 0.083, 'SSBFreq', 0);
+                % setup parameters compatible with unit test
+                obj.channelParams.piAmp = 0.65;
+                obj.channelParams.pi2Amp = 0.32;
+                obj.channelParams.dragScaling = -0.50;
+                obj.channelParams.ampFactor = 1;
+                obj.channelParams.phaseSkew = 0;
+                obj.channelParams.i_offset = 0.074;
+                obj.channelParams.q_offset = 0.083;
+                obj.channelParams.SSBFreq = 0;
             end
+            % save a copy of the parameters to restore later if something
+            % goes wrong
+            obj.initialParams = obj.channelParams;
         end
         
         function Do(obj)
@@ -185,7 +198,20 @@ classdef PulseCalibration < handle
         end
 
         function cleanup(obj)
-            error('Not implemented')
+            % restore pulse parameters if we didn't make it to the end
+            if ~obj.finished
+                updateAmpPhase(obj.channelParams.physChan, obj.initialParams.ampFactor, obj.initialParams.phaseSkew);
+                updateQubitPulseParams(obj.settings.Qubit, obj.initialParams);
+                
+                instrLib = json.read(getpref('qlab', 'InstrumentLibraryFile'));
+                tmpStr = regexp(obj.channelParams.physChan, '-', 'split');
+                awgName = tmpStr{1};
+                iChan = str2double(obj.channelParams.physChan(end-1));
+                qChan = str2double(obj.channelParams.physChan(end));
+                instrLib.instrDict.(awgName).channels(iChan).offset = round(1e4*obj.initialParams.i_offset)/1e4;
+                instrLib.instrDict.(awgName).channels(qChan).offset = round(1e4*obj.initialParams.q_offset)/1e4;
+                json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
+            end
         end
     end
         
