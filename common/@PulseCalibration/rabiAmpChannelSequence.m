@@ -9,7 +9,7 @@ scriptName = fullfile(thisPath, 'RabiAmp.py');
 [status, result] = system(sprintf('python "%s" "%s" %s', scriptName, getpref('qlab', 'PyQLabDir'), qubit), '-echo');
 
 numsteps = 40; %should be even
-stepsize = 1/numsteps;
+stepsize = 2/numsteps;
 amps = [-1:stepsize:-stepsize stepsize:stepsize:1];
 segmentPoints = [amps amps];
 

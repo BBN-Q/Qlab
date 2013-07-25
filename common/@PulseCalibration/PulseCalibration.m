@@ -27,6 +27,7 @@ classdef PulseCalibration < handle
         AWGSettings
         testMode = false;
         noiseVar % estimated variance of the noise from repeats
+        numShots % also participates in noise variance estimate
         finished = false
         initialParams
     end
@@ -124,6 +125,7 @@ classdef PulseCalibration < handle
             % load ExpManager settings
             expSettings = json.read(obj.settings.cfgFile);
             instrSettings = expSettings.instruments;
+            obj.numShots = instrSettings.scope.averager.nbrRoundRobins * instrSettings.scope.averager.nbrWaveforms;
             
             % add instruments
             for instrument = fieldnames(instrSettings)'
@@ -220,7 +222,7 @@ classdef PulseCalibration < handle
         % externally defined static methods
         [cost, J, noiseVar] = RepPulseCostFunction(data, angle, numPulses);
         [amp, offsetPhase]  = analyzeRabiAmp(data);
-        bestParam = analyzeSlopes(data, numPsQIds, paramRange);
+        bestParam = analyzeSlopes(data, numPsQIds, paramRange, numShots);
         
         function UnitTest()
             % construct settings struct

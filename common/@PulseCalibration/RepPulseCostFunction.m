@@ -13,7 +13,7 @@ function [cost, J, noiseVar] = RepPulseCostFunction(data, angle, numPulses)
 %     norm = 0.5*(data(2)+data(2+numPulses)) - data(1);
 %     data = (data(2:end)-data(1))/norm;
     % use separate normalization for each half of the data
-    data = [(avgdata(2:1+numPulses)-avgdata(1))/(avgdata(2)-avgdata(1)) (avgdata(2+numPulses:end)-avgdata(1))/(avgdata(2+numPulses)-avgdata(1))];
+    data = [(avgdata(2:1+numPulses)-avgdata(1))/(avgdata(2)-avgdata(1)); (avgdata(2+numPulses:end)-avgdata(1))/(avgdata(2+numPulses)-avgdata(1))];
     % check for bad scaling
     if max(abs(data-1)) > 1.0
         data = data / max(abs(data-1));

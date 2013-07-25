@@ -1,17 +1,19 @@
-function bestParam = analyzeSlopes(data, numPsQId, paramRange)
+function bestParam = analyzeSlopes(data, numPsQId, paramRange, numShots)
 
 %Assume that we have nbrRepeats = 1 for now
 nbrRepeats = 1;
 data = mean(reshape(data,nbrRepeats,[]),1);
 
-%Add one for the first 90 only experiment
-numPsQId = numPsQId+1;
-
+%Step by extra 1 to account for ground cal at start of each set
 groundCal = mean(data(1:numPsQId+1:end-1));
 excitedCal = data(end);
 
 scaledData = (data-groundCal)/(excitedCal-groundCal);
-varEstimate = var(scaledData(1:numPsQId+1:end-1));
+measNoise = var(scaledData(1:numPsQId+1:end-1));
+% central limit theorem approximation for the shot noise of an X-Y plane result
+shotNoise = 1/numShots;
+% actual variance should be measurement noise plus shot noise
+varEstimate = sqrt(measNoise^2 + shotNoise^2);
 figure;
 h = axes();
 plot(h, 1:length(scaledData), scaledData); hold on;
@@ -31,8 +33,8 @@ for ct = 1:numParams
 
     %Sort out whether the fit was any good and use the Rsquared to filter
     sse = sum((fitYs-tmpData).^2);
-    Rsquared = (sse/varEstimate)/(numPsQId-2);
-    if Rsquared < 20 %arbitrary heuristic that seems to match a good fit by eye
+    Rsquared = (sse/varEstimate)/(numPsQId-1);
+    if Rsquared < 2 %arbitrary heuristic that seems to match a good fit by eye
         slopes(ct) = fitResult(1);
     else
         slopes(ct) = nan;

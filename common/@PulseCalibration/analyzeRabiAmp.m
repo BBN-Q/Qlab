@@ -1,7 +1,7 @@
 function [piAmp, offsetPhase] = analyzeRabiAmp(data)
     
     numsteps = 40; %should be even
-    stepsize = 400;
+    stepsize = 2/numsteps;
     xpts = [-(numsteps/2)*stepsize:stepsize:-stepsize stepsize:stepsize:(numsteps/2)*stepsize]';
 
     % use largest FFT frequency component to seed Rabi frequency

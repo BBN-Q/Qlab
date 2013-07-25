@@ -170,7 +170,7 @@ if settings.DoDRAGCal
     % analyze for the best value to two digits
     numPsQId = 8; % number pseudoidentities
     
-    obj.channelParams.dragScaling = round(100*obj.analyzeSlopes(data, numPsQId, deltas))/100;
+    obj.channelParams.dragScaling = round(100*obj.analyzeSlopes(data, numPsQId, deltas, obj.numShots))/100;
     
     title('DRAG Parameter Calibration');
     text(10, 0.8, sprintf('Found best DRAG parameter of %.2f', obj.channelParams.dragScaling), 'FontSize', 12);
@@ -191,7 +191,7 @@ if settings.DoSPAMCal
     % analyze for the best value to two digits
     numPsQId = 10; % number pseudoidentities
     angleShifts = (-3:0.75:3)';
-    phaseSkew = round(100*obj.analyzeSlopes(data, numPsQId, angleShifts))/100;
+    phaseSkew = round(100*obj.analyzeSlopes(data, numPsQId, angleShifts, obj.numShots))/100;
     title('SPAM Phase Skew Calibration');
     text(10, 0.8, sprintf('Found best phase Skew of %.2f', phaseSkew), 'FontSize', 12);
 
