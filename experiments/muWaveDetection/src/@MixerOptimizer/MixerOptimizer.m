@@ -50,9 +50,9 @@ classdef MixerOptimizer < handle
             warning('off', 'json:fieldNameConflict');
             channelLib = json.read(getpref('qlab','ChannelParamsFile'));
             warning('on', 'json:fieldNameConflict');
-            assert(isfield(channelLib.channelDict, chan), 'Qubit %s not found in channel library', chan);
+            assert(isfield(channelLib.channelDict, genvarname(chan)), 'Qubit %s not found in channel library', chan);
             obj.chan = chan;
-            obj.channelParams = channelLib.channelDict.(chan);
+            obj.channelParams = channelLib.channelDict.(genvarname(chan));
             
             % load any optimize mixer specific configurations
             settings = json.read(cfgFile);
