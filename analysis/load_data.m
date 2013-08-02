@@ -1,15 +1,37 @@
-function data = loadData(plotMode)
-if ~exist('plotMode', 'var')
+function data = load_data(varargin)
+% load_data(varargin)
+% Usage:
+%   load_data(path, plotMode)
+%   load_data(path)
+%   load_data(plotMode)
+%   load_data()
+%
+%   plotMode = 'real/imag', 'amp/phase', 'quad', or '' (no plot)
+if nargin == 2
+    [fullpath, plotMode] = varargin{:};
+elseif nargin == 1
+    if exist(varargin{1}, 'file')
+        fullpath = varargin{1};
+        [pathname, filename] = fileparts(fullpath);
+        plotMode = '';
+    else
+        fullpath = '';
+        plotMode = varargin{1};
+    end
+else
+    fullpath = '';
     plotMode = '';
 end
 
-% get path of file to load
-[filename, pathname] = uigetfile(fullfile(getpref('qlab', 'dataDir'), '*.h5'));
-if isequal(filename,0) || isequal(pathname,0)
-    data = [];
-    return
+if isempty(fullpath)
+    % get path of file to load
+    [filename, pathname] = uigetfile(fullfile(getpref('qlab', 'dataDir'), '*.h5'));
+    if isequal(filename,0) || isequal(pathname,0)
+        data = [];
+        return
+    end
+    fullpath = [pathname '/' filename];
 end
-fullpath = [pathname '/' filename];
 
 % for backwards compatibility, we assume that files that do not have a
 % 'nbrDataSets' attribute store data at the root level under the names
