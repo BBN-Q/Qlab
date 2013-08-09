@@ -51,7 +51,7 @@ if settings.DoRabiAmp
    
    obj.channelParams.piAmp = piAmpGuesses(1);
    obj.channelParams.pi2Amp = obj.channelParams.piAmp/2;
-   obj.channelParams.i_offset = obj.channelParams.i_offset + offsetPhases(1)*amp2offset;
+   obj.channelParams.i_offset = obj.channelParams.i_offset + obj.channelParams.ampFactor*offsetPhases(1)*amp2offset;
    obj.channelParams.q_offset = obj.channelParams.q_offset + offsetPhases(2)*amp2offset;
    fprintf('Initial guess for X180Amp: %.0f\n', obj.channelParams.piAmp);
    fprintf('Shifting i_offset by: %.3f\n', offsetPhases(1)*amp2offset);

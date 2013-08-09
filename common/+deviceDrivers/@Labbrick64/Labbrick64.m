@@ -56,7 +56,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         max_power = 10; % dBm
         min_power = -40; % dBm
         max_freq = 10; % GHz
-        min_freq = 5; % GHz
+        min_freq = 4; % GHz
     end
     
     methods
