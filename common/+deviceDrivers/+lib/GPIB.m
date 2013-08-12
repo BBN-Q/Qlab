@@ -20,6 +20,8 @@
 classdef GPIB < hgsetget
     properties
         interface = []
+        vendor = 'ni'; %so far we only use ni boards but should be general
+        boardIndex = 0; %so far we usually have only one board
         buffer_size = 1048576 % 1 MB buffer
     end
   
@@ -36,7 +38,7 @@ classdef GPIB < hgsetget
                 delete(obj.interface);
             end
                 
-            obj.interface = gpib('ni', 0, address);
+            obj.interface = gpib(obj.vendor, obj.boardIndex, address);
             obj.interface.InputBufferSize = obj.buffer_size;
             obj.interface.OutputBufferSize = obj.buffer_size;
             fopen(obj.interface);
