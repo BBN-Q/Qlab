@@ -22,6 +22,7 @@ classdef (Sealed) KepcoBOP < deviceDrivers.lib.GPIB
         mode % 'current', or 'voltage'
         value %output value in V or A
         range = 'full' % 'full' or 'quarter' 
+        limit %voltage or current limit
     end
     
     properties (SetAccess=private)
@@ -31,12 +32,14 @@ classdef (Sealed) KepcoBOP < deviceDrivers.lib.GPIB
     
     properties (Constant)
         modeMap = containers.Map({'voltage', 'current'}, {'VOLT', 'CURR'});
+        limitModeMap = containers.Map({'voltage', 'current'}, {'CURR', 'VOLT'}) %limit sets the complement
+        rangeMap = containers.Map({'full','quarter'}, {1, 4});
     end
     
     methods
-        %Current of voltage source mode
+        %Current or voltage source mode
         function val = get.mode(obj)
-            numericMode = strtrim(obj.query('FUNC:MODE ?'));
+            numericMode = strtrim(obj.query('FUNC:MODE?'));
             if numericMode == '1'
                 val = 'current';
             else
@@ -44,9 +47,25 @@ classdef (Sealed) KepcoBOP < deviceDrivers.lib.GPIB
             end
         end
         function obj = set.mode(obj, mode)
+            assert(isKey(obj.modeMap,mode), 'Oops! Mode must be "voltage" or "current".');
             obj.write(sprintf('FUNC:MODE %s', obj.modeMap(mode)));
         end
-    
+        
+        %The complement limit value
+        function obj = set.limit(obj, limit)
+            %In voltage mode, set the current; in current mode, the voltage
+            %"MAX" is also a valid option
+            if ischar(limit)
+                assert(strcmp(limit, 'MAX'), 'Oops! Only non-numeric value allowed is "MAX".');
+            else
+                limit = num2str(limit, '%E');
+            end
+            obj.write(sprintf('%s %s', obj.limitModeMap(obj.mode), limit));
+        end
+        function val = get.limit(obj)
+            val = str2double(obj.query(sprintf('%s?', obj.limitModeMap(obj.mode))));
+        end
+                
         
         %The programmed output value
         function val = get.value(obj)
@@ -59,39 +78,31 @@ classdef (Sealed) KepcoBOP < deviceDrivers.lib.GPIB
         
         %Whether output is enabled
         function val = get.output(obj)
-            val = strtrim(obj.query('OUTP?'));
+            val = logical(str2double(obj.query('OUTP?')));
         end
         function obj = set.output(obj, output)
             obj.write(sprintf('OUTP %d', logical(output)));
         end
         
-% 
-%         %The output range: full or quarter. 
-%         function val = get.range(obj)
-%             val = str2double(obj.query(':SOURCE:RANGE?'));
-%         end
-%         
-%         function obj = set.output(obj, value)
-%             if isnumeric(value) || islogical(value)
-%                 value = num2str(value);
-%             end
-%             valid_inputs = ['on', '1', 'off', '0'];
-%             if ~ismember(value, valid_inputs)
-%                 error('Invalid input');
-%             end
-%             
-%             obj.write([':OUTPUT ' value]);
-%         end
-%         function obj = set.range(obj, range)
-%             valid_ranges = [1e-3, 10e-3, 100e-3, 200e-3, 1, 10, 30];
-%             if ~isnumeric(range)
-%                 range = str2double(range);
-%             end
-%             if ~ismember(range, valid_ranges)
-%                 error('Invalid range: %f', range);
-%             end
-%             
-%             obj.write([':SOURCE:RANGE ' num2str(range)]);
-%         end
+        %The output range: full or quarter. 
+        function val = get.range(obj)
+            inverseMap = invertMap(obj.rangeMap);
+            val = inverseMap(str2double(obj.query(sprintf('%s:RANG?', obj.modeMap(obj.mode)))));
+        end
+        function obj = set.range(obj, range)
+            assert(isKey(obj.rangeMap, range), 'Oops! The range must be set to "full" or "quarter".');
+            obj.write(sprintf('%s:RANG %d',obj.modeMap(obj.mode), obj.rangeMap(range)));
+        end
+        
+        %The actual current or voltage
+        function val = get.current(obj)
+            val = str2double(obj.query('MEAS:CURR?'));
+        end
+        function val = get.voltage(obj)
+            val = str2double(obj.query('MEAS:VOLT?'));
+        end
+        
+        
+        
     end
 end
