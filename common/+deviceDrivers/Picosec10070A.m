@@ -76,7 +76,7 @@ classdef (Sealed) Picosec10070A < deviceDrivers.lib.GPIB
         
         %output enabled
         function val = get.enable(obj)
-            inverseMap = invertMap(obj.enableMap)
+            inverseMap = invertMap(obj.enableMap);
             val = inverseMap(strtrim(obj.query('enable?')));
         end
         function obj = set.enable(obj, enable)
@@ -103,19 +103,19 @@ classdef (Sealed) Picosec10070A < deviceDrivers.lib.GPIB
 
         %trigger level
         function val = get.triggerLevel(obj)
-            val = str2double(obj.query('level?'))
+            val = str2double(obj.query('level?'));
         end
         function obj = set.triggerLevel(obj, level)
             assert(level >= -2 && level <= -2, 'Oops! The trigger level must be between -2V and +2V.');
-            obj.write('level %E', period);
+            obj.write('level %E', level);
         end
 
         %trigger gating
-        function val = get.triggerLevel(obj)
-            val = strtrim(obj.query('gate?'))
+        function val = get.triggerGate(obj)
+            val = strtrim(obj.query('gate?'));
         end
-        function obj = set.triggerLevel(obj, gate)
-            assert(strcmp(lower(gate), 'on') || strcmp(lower(gate), 'off')), 'Oops! The trigger gate must be "on" or "off".');
+        function obj = set.triggerGate(obj, gate)
+            assert(strcmpi(gate, 'on') || strcmpi(gate, 'off'), 'Oops! The trigger gate must be "on" or "off".');
             obj.write('gate %s', lower(gate));
         end
 
