@@ -27,6 +27,8 @@ classdef (Sealed) Picosec10070A < deviceDrivers.lib.GPIB
         enable % whether output is enabled (boolean)
         frequency % pulse repetition frequency (1Hz-100kHz)
         period % pulse repitition period (10us to 1s; resolution 0.1us)
+        triggerLevel % trigger level (-2V to +2V; resolution 1mV)
+        triggerGate % whether trigger is gated or not "on" or "off"
     end
     
 
@@ -99,6 +101,23 @@ classdef (Sealed) Picosec10070A < deviceDrivers.lib.GPIB
             obj.write('period %E', period);
         end
 
+        %trigger level
+        function val = get.triggerLevel(obj)
+            val = str2double(obj.query('level?'))
+        end
+        function obj = set.triggerLevel(obj, level)
+            assert(level >= -2 && level <= -2, 'Oops! The trigger level must be between -2V and +2V.');
+            obj.write('level %E', period);
+        end
+
+        %trigger gating
+        function val = get.triggerLevel(obj)
+            val = strtrim(obj.query('gate?'))
+        end
+        function obj = set.triggerLevel(obj, gate)
+            assert(strcmp(lower(gate), 'on') || strcmp(lower(gate), 'off')), 'Oops! The trigger gate must be "on" or "off".');
+            obj.write('gate %s', lower(gate));
+        end
 
         function trigger(obj)
             %Sends a software trigger
