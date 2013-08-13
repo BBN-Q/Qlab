@@ -24,6 +24,10 @@ classdef GPIB < hgsetget
         boardIndex = 0; %so far we usually have only one board
         buffer_size = 1048576 % 1 MB buffer
     end
+
+    properties (SetAccess=private)
+        identity % standard *IDN? response
+    end
   
     methods
         %%
@@ -63,6 +67,14 @@ classdef GPIB < hgsetget
         
         function val = read(obj)
             val = fgetl(obj.interface);
+        end
+        
+        %typically available SCPI commands
+        function val = get.identity(obj)
+            val = obj.query('*IDN?');
+        end
+        function reset(obj)
+            obj.write('*RST');
         end
         
         % binary read/write functions

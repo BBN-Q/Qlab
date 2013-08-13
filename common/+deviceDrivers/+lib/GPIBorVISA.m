@@ -63,6 +63,14 @@ classdef GPIBorVISA < hgsetget
             val = fgetl(obj.interface);
         end
         
+        %typically available SCPI commands
+        function val = get.identity(obj)
+            val = obj.query('*IDN?');
+        end
+        function reset(obj)
+            obj.write('*RST');
+        end
+        
         % binary read/write functions
         function binblockwrite(obj, varargin)
             binblockwrite(obj.interface, varargin{:});
