@@ -120,4 +120,4 @@ function aps_proto.dissector(buffer,pinfo,tree)
 end
 eth_table = DissectorTable.get("ethertype")
 -- attach to ethernet type 0xBBAE
-eth_table:add(48046,aps_proto)
+eth_table:add(47950,aps_proto)
