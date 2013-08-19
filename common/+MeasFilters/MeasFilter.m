@@ -125,7 +125,7 @@ classdef MeasFilter < handle
             if isempty(obj.scopeHandle)
                 fh = figure('HandleVisibility', 'callback', 'Name', 'MeasFilter Scope');
                 obj.scopeHandle = axes('Parent', fh);
-                prevData = 0;
+                prevData = [];
                 obj.scopeavgct = 1;
             else
                 if nsdims(data) > 1
@@ -138,18 +138,32 @@ classdef MeasFilter < handle
             if nsdims(data) == 4
                 %Flatten single shot data into a 2D array
                 dims = size(data);
-                data = (prevData*(obj.scopeavgct-1) + reshape(data, dims(1), prod(dims(2:end)))) / obj.scopeavgct;
-                imagesc(data, 'Parent', obj.scopeHandle);
-                xlabel('Segment');
-                ylabel('Time');
+                if isempty(prevData)
+                    imagesc(reshape(data, dims(1), prod(dims(2:end))), 'Parent', obj.scopeHandle);
+                    xlabel(obj.scopeHandle, 'Segment');
+                    ylabel(obj.scopeHandle, 'Time');
+                else
+                    data = (prevData*(obj.scopeavgct-1) + reshape(data, dims(1), prod(dims(2:end)))) / obj.scopeavgct;
+                    set(get(obj.scopeHandle, 'Children'), 'CData', data);
+                end
             elseif nsdims(data) == 2
                 %Simply image plot 2D averaged data
-                imagesc((prevData*(obj.scopeavgct-1) + squeeze(data))/obj.scopeavgct, 'Parent', obj.scopeHandle);
-                xlabel('Segment');
-                ylabel('Time');
+                if isempty(prevData)
+                    imagesc(squeeze(data), 'Parent', obj.scopeHandle);
+                    xlabel(obj.scopeHandle, 'Segment');
+                    ylabel(obj.scopeHandle, 'Time');
+                else
+                    set(get(obj.scopeHandle, 'Children'), 'CData', (prevData*(obj.scopeavgct-1) + squeeze(data))/obj.scopeavgct);
+                end
             elseif nsdims(data) == 1
                 %Plot single shot data
-                plot((prevData*(obj.scopeavgct-1) + squeeze(data))/obj.scopeavgct, 'Parent', obj.scopeHandle);
+                if isempty(prevData)
+                    plot(squeeze(data), 'Parent', obj.scopeHandle);
+                    xlabel(obj.scopeHandle, 'Time')
+                    ylabel(obj.scopeHandle, 'Voltage');
+                else
+                    set(get(obj.scopeHandle, 'Children'), 'YData', (prevData*(obj.scopeavgct-1) + squeeze(data))/obj.scopeavgct);
+                end
             else
                 error('Unable to handle data with these dimensions.')
             end
