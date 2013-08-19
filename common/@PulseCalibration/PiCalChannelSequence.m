@@ -11,8 +11,8 @@ if ~exist('makePlot', 'var')
 end
 
 [thisPath, ~] = fileparts(mfilename('fullpath'));
-scriptName = fullfile(thisPath, 'Pi2Cal.py');
-[status, result] = system(sprintf('python "%s" "%s" %s %s %d %f', scriptName, getpref('qlab', 'PyQLabDir'), qubit, direction, numPulses, obj.channelParams.pi2Amp), '-echo');
+scriptName = fullfile(thisPath, 'PiCal.py');
+[status, result] = system(sprintf('python "%s" "%s" %s %s %d %f', scriptName, getpref('qlab', 'PyQLabDir'), qubit, direction, numPulses, obj.channelParams.piAmp), '-echo');
 
 nbrRepeats = 2;
 segmentPoints = 1:nbrRepeats*(1+2*numPulses);

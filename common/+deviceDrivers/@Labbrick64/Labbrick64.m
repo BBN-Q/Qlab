@@ -22,7 +22,7 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
-
+    
     properties (Access = private)
         hid
         open = 0;
@@ -41,18 +41,18 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         pulse
         pulseSource = 'ext';
     end
-
+    
     properties (Constant = true)
         vendor_id = sscanf('0x041f', '%i');
         product_id = sscanf('0x1220', '%i'); %0x1221 for LMS-802 or 0x1209 for LSG-451
-
+        
         % CMD IDs
         POWER_CMD = sscanf('0x0D', '%i');
         OUTPUT_CMD = sscanf('0x0A', '%i');
         FREQ_CMD = sscanf('0x44', '%i');
-
+        
         SET_BYTE = 8;
-
+        
         max_power = 10; % dBm
         min_power = -40; % dBm
         max_freq = 10; % GHz
@@ -64,10 +64,10 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             % load DLL
             base_path = fileparts(mfilename('fullpath'));
             if ~libisloaded('hidapi')
-                loadlibrary(fullfile(base_path, 'hidapi.dll'), fullfile(base_path, 'hidapi.h'));
+                loadlibrary(fullfile(base_path, 'hidapi.dll'), @obj.hidapi_proto);
             end
         end
-
+        
         function delete(obj)
             if ~isempty(obj.hid)
                 obj.disconnect();
@@ -88,7 +88,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
                 error('Could not find a Labbrick with serial %i', serialNum);
             end
             obj.hid = calllib('hidapi', 'hid_open', obj.vendor_id, product_ids(idx), uint16(['SN:0' serialNum 0]));
-            if obj.hid.isNull 
+            if obj.hid.isNull
                 error('Could not open device serial %s', serialNum);
             end
             
@@ -108,7 +108,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             
             serials = {};
             product_ids = [];
-%             device_info = calllib('hidapi', 'hid_enumerate', obj.vendor_id, obj.product_id);
+            %             device_info = calllib('hidapi', 'hid_enumerate', obj.vendor_id, obj.product_id);
             device_info = calllib('hidapi', 'hid_enumerate', 0, 0);
             cur_device = device_info;
             
@@ -122,23 +122,23 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
                     setdatatype(cur_device, 'hid_device_infoPtr');
                 end
             end
-
+            
             calllib('hidapi', 'hid_free_enumeration', device_info);
         end
-
+        
         function out = read(obj)
             read_buffer = zeros(1, 256, 'uint8');
             timeout = 100; % timeout in milliseconds
             [bytesread, ~, out] = calllib('hidapi', 'hid_read_timeout', obj.hid, read_buffer, length(read_buffer), timeout);
             out = out(1:bytesread);
         end
-
+        
         function write(obj, val)
             report = uint8([0 val]);
             calllib('hidapi', 'hid_write', obj.hid, report, length(report));
             pause(0.02);
         end
-
+        
         function out = query(obj, val)
             obj.write(val);
             cmd_id = val(1);
@@ -162,8 +162,8 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             report = [cmd_id cmd_size 66 85 49 zeros(1,3)];
             obj.write(report);
         end
-		
-		% Instrument parameter accessors
+        
+        % Instrument parameter accessors
         function val = get.frequency(obj)
             cmd_id = obj.FREQ_CMD;
             report = [cmd_id zeros(1,7)];
@@ -179,7 +179,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             attenuation = double(result(3)) / 4;
             val = obj.max_power - attenuation;
         end
-
+        
         function val = get.output(obj)
             cmd_id = obj.OUTPUT_CMD;
             report = [cmd_id zeros(1,7)];
@@ -210,7 +210,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             freq_diff = obj.frequency - check_value;
             assert(freq_diff < 1e-8 + eps, 'Failed to set frequency. Found frequency %f', freq_diff+check_value);
         end
-
+        
         function obj = set.power(obj, value)
             cmd_id = bitset(obj.POWER_CMD, obj.SET_BYTE);
             cmd_size = 1;
@@ -230,7 +230,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             obj.write(report);
             assert(obj.power == check_value, 'Failed to set power');
         end
-
+        
         function obj = set.output(obj, value)
             cmd_id = bitset(obj.OUTPUT_CMD, obj.SET_BYTE);
             cmd_size = 1;
@@ -245,7 +245,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
                     value = 'off';
                 end
             end
-               
+            
             valueMap = containers.Map({'on','1','off','0'},...
                 {uint8(1), uint8(1), uint8(0), uint8(0)});
             if not (valueMap.isKey( lower(value) ))
@@ -253,12 +253,18 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             else
                 value = valueMap(lower(value));
             end
-
+            
             report = [cmd_id cmd_size value zeros(1,5)];
             obj.write(report);
             assert(obj.output == value, 'Failed to set output');
         end
     end
     
+    methods (Static)
+        
+        %Reference prototype file for fast loading of shared library
+        [methodinfo,structs,enuminfo,ThunkLibName]=hidapi_proto
+        
+    end
     
 end
