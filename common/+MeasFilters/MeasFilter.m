@@ -28,7 +28,7 @@ classdef MeasFilter < handle
         accumulatedVar
         avgct = 0
         varct = 0
-        scopect = 0
+        scopeavgct = 0
         childFilter
         plotScope = false
         scopeHandle
@@ -123,24 +123,33 @@ classdef MeasFilter < handle
         function plot_scope(obj, data)
             %Helper function to plot raw data to check timing and what not
             if isempty(obj.scopeHandle)
-                fh = figure();
+                fh = figure('HandleVisibility', 'callback', 'Name', 'MeasFilter Scope');
                 obj.scopeHandle = axes('Parent', fh);
                 prevData = 0;
-                obj.scopect = 1;
+                obj.scopeavgct = 1;
             else
-                prevData = get(get(obj.scopeHandle, 'Children'), 'CData');
-                obj.scopect = obj.scopect + 1;
+                if nsdims(data) > 1
+                    prevData = get(get(obj.scopeHandle, 'Children'), 'CData');
+                else
+                    prevData = get(get(obj.scopeHandle, 'Children'), 'YData')';
+                end
+                obj.scopeavgct = obj.scopeavgct + 1;
             end
             if nsdims(data) == 4
+                %Flatten single shot data into a 2D array
                 dims = size(data);
-                data = (prevData*(obj.scopect-1) + reshape(data, dims(1), prod(dims(2:end)))) / obj.scopect;
+                data = (prevData*(obj.scopeavgct-1) + reshape(data, dims(1), prod(dims(2:end)))) / obj.scopeavgct;
                 imagesc(data, 'Parent', obj.scopeHandle);
                 xlabel('Segment');
                 ylabel('Time');
             elseif nsdims(data) == 2
-                imagesc((prevData*(obj.scopect-1) + squeeze(data))/obj.scopect, 'Parent', obj.scopeHandle);
+                %Simply image plot 2D averaged data
+                imagesc((prevData*(obj.scopeavgct-1) + squeeze(data))/obj.scopeavgct, 'Parent', obj.scopeHandle);
                 xlabel('Segment');
                 ylabel('Time');
+            elseif nsdims(data) == 1
+                %Plot single shot data
+                plot((prevData*(obj.scopeavgct-1) + squeeze(data))/obj.scopeavgct, 'Parent', obj.scopeHandle);
             else
                 error('Unable to handle data with these dimensions.')
             end
