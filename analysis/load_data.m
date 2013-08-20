@@ -9,8 +9,13 @@ function data = load_data(varargin)
 %   plotMode = 'real/imag', 'amp/phase', 'quad', or '' (no plot)
 if nargin == 2
     [fullpath, plotMode] = varargin{:};
+    [pathname, filename] = fileparts(fullpath);
 elseif nargin == 1
-    if exist(varargin{1}, 'file')
+    %exist is too clever by half and searches the whole ruddy Matlab path
+    %so it finds a quad.m somewhere on the path and returns 2
+    %Hack around with some java
+    javaFile = java.io.File(varargin{1});
+    if javaFile.exists() && javaFile.isFile()
         fullpath = varargin{1};
         [pathname, filename] = fileparts(fullpath);
         plotMode = '';
