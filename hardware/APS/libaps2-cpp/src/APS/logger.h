@@ -16,10 +16,12 @@
 #include <stdio.h>
 #include <iostream>
 
+#ifdef _WIN32
 #define FORCE_CONSOLE
 #ifdef FORCE_CONSOLE
 #include <concol.h>
 using std::cout;
+#endif
 #endif
 
 inline std::string NowTime();

@@ -9,7 +9,7 @@
 #include <sstream>
 #include <set>
 
-#include "aps2.h"
+#include "APS2.h"
 #include "pcap.h"
 
 #ifdef DEBUGAPS	

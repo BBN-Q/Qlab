@@ -9,7 +9,9 @@
 #include "constants.h"
 #include "logger.h"
 
+#ifdef _WIN32
 #include "concol.h"
+#endif 
 
 using std::cout;
 using std::endl;

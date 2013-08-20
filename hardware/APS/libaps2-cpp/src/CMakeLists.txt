@@ -1,19 +1,23 @@
 # build using
 # mkdir build
 # cd build
-# cmake -G "MSSYS Makefiles" ../CMake/
+# cmake -G "MSSYS Makefiles" ../CMake/  # -For Windows
+# 
 # make
 
 PROJECT( libaps2 )
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-SET (  WINPCAPPATH "C:\\Apps\\winpcap" )
 
 # define WIN32 for winpcap
 if (WIN32)
+	SET (  WINPCAPPATH "C:\\Apps\\winpcap" )
+	INCLUDE_DIRECTORIES(${WINPCAPPATH}/Include)
 	add_definitions( -DWIN32 )
 endif(WIN32)
 
+
+#look for hdf5 and otherwise hack in mingw64 built one
 FIND_PACKAGE(HDF5)
 if (HDF5_FOUND)
 INCLUDE_DIRECTORIES( ${HDF5_INCLUDE_DIR} )
@@ -25,16 +29,18 @@ LINK_DIRECTORIES( ${LINK_DIRECTORIES} "C:\\MinGW\\msys\\1.0\\local\\hdf5\\lib")
 endif()
 
 
-INCLUDE_DIRECTORIES(${WINPCAPPATH}/Include)
+#Grab all the header files in the src directory including concol.h
 INCLUDE_DIRECTORIES("./APS/")
 
+#Check for 32bit or 64 bit platform and link against the appropriate winpcap
 If(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	LINK_DIRECTORIES( ${LINK_DIRECTORIES} "C:\\Projects\\MQCO\\Qlab\\hardware\\APS\\libaps2-cpp\\lib\\winpcap\\x64\\")    
+	LINK_DIRECTORIES( ${LINK_DIRECTORIES} "..\\lib\\winpcap\\x64\\")    
  else()
-     LINK_DIRECTORIES( ${LINK_DIRECTORIES} "Y:\\APS\\libaps2-cpp\\lib\\winpcap\\x86\\")  
+     LINK_DIRECTORIES( ${LINK_DIRECTORIES} "..\\lib\\winpcap\\x86\\")  
  endif()
 
 
+#Add flags for gcc and C++11
 ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-DGCC")
 ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-std=c++11")
 
@@ -65,11 +71,14 @@ ADD_EXECUTABLE(echo
 	./APS/APS2.cpp
 )
 
+#For Windows pull in some additional libraries for network stuff
+if (WIN32)
 TARGET_LINK_LIBRARIES(echo 
 	wpcap Packet
 	ws2_32
 	iphlpapi 
 )
+endif(WIN32)
 
 set_target_properties(echo PROPERTIES COMPILE_DEFINITIONS "DEBUGAPS")
 
@@ -91,6 +100,7 @@ set_target_properties(echo PROPERTIES COMPILE_DEFINITIONS "DEBUGAPS")
 
 TARGET_LINK_LIBRARIES(test aps2)
 
+if (WIN32)
 TARGET_LINK_LIBRARIES(aps2 
 	
 	hdf5_cpp
@@ -100,7 +110,7 @@ TARGET_LINK_LIBRARIES(aps2
 	ws2_32
 	iphlpapi    # for GetAdaptersInfo
 )
-
+endif(WIN32)
 
 
 

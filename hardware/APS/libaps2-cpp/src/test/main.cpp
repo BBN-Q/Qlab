@@ -6,7 +6,9 @@
 #include <string>
 #include <algorithm>
 
+#ifdef _WIN32
 #include <concol.h> 
+#endif
 
 #include "EthernetControl.h"
 
