@@ -226,16 +226,6 @@ public:
 		USER_EPROM_IMAGE = 0xEEEEEEEE
 	};
 
-	struct APSEthernetHeader {
-		uint8_t  dest[6];
-		uint8_t  src[6];
-		uint16_t frameType;
-		uint16_t seqNum;
-		APSCommand_t command;
-		uint32_t addr;
-	};
-
-
 	//PLL routines go through sets of address/data pairs
 	typedef std::pair<uint16_t, uint8_t> AddrData;
 	
@@ -248,6 +238,8 @@ public:
 	string printAPSCommand(APSCommand_t & command);
 	string printAPSChipCommand(APSChipConfigCommand_t & command);
 
+	static const int NUM_CHANNELS = 2;
+
 
 	//Constructors
 	APS2();
@@ -257,15 +249,16 @@ public:
 	int connect();
 	int disconnect();
 
-	int init(const string &, const bool &);
+	int init(const bool & = false, const int & bitFileNum);
 	int reset();
+
+	int load_bitfile(const string &, const int &);
+	int program_bitfile(const int &);
+	int get_bitfile_version() const;
 
 	int setup_VCXO() const;
 	int setup_PLL() const;
 	int setup_DACs();
-
-	int program_FPGA(const string &, const int &);
-	int read_bitFile_version();
 
 	int set_sampleRate(const int &);
 	int get_sampleRate();

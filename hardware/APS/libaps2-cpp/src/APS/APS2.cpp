@@ -103,57 +103,39 @@ int APS2::disconnect(){
 }
 
 int APS2::reset() {
-	return FPGA::reset(handle_);
+	APS2Command_t command;
+	command.packed = 0;
+	
+	command.cmd = APS2_COMMAND_RESET;
+	command.mode_stat = RESET_RECONFIG_BASELINE_EPROM;
+	handle_.write(command);
+
+	// get reply with status bytes
+	
+	struct APS2_Status_Registers statusRegs;
+	handle_.read(&statusRegs, sizeof(struct APS2_Status_Registers));
+
+	FILE_LOG(logDEBUG1) << 	APS2::printStatusRegisters(statusRegs);
+	return 0;
 }
 
 int APS2::init(const bool & forceReload, const bool & int bitFileNum){
-	/* initialize the APS
-	 * On power up sets up the PLL's, DACs and VCXO
-	 * 
-	 * forceReload = force loading of the bitfile, even if other initialization checks pass
-	 *
-	 * Initializes the APS2 into its default ready state. Attempts to figure out if programming is necessary
-	 * by looking at the current bitfile version and the PLL status.
-	 */
+	 //TODO: bitfiles will be stored in flash so all we need to do here is the DAC's
 
-	 //TODO: bitfiles will be stored in flash 
-
-	 FILE_LOG(logWARNING) << "forceReload enabled";
-
-	if (1||forceReload || read_bitFile_version() != FIRMWARE_VERSION || !read_PLL_status()) {
+	if (forceReload || !read_PLL_status()) {
 		FILE_LOG(logINFO) << "Resetting instrument";
 		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version() << " PLL status: " << read_PLL_status();
 
 		// send hard reset to APS2
-		// this will recondifure the DACs, PLL and VCX0 with EPROM settings
-		APS2Command_t command;
-		command.packed = 0;
-		
-		command.cmd = APS2_COMMAND_RESET;
-		command.mode_stat = RESET_RECONFIG_BASELINE_EPROM;
-		handle_.Write(command);
-
-		// get reply with status bytes
-		
-		struct APS2_Status_Registers statusRegs;
-		handle_.Read(&statusRegs, sizeof(struct APS2_Status_Registers));
-
-		FILE_LOG(logDEBUG1) << 	APS2::printStatusRegisters(statusRegs);
+		// this will reconfigure the DACs, PLL and VCX0 with EPROM settings
+		reset()
 
 		
 		//Program the bitfile to both FPGA's
-		program_FPGA(bitFile, FIRMWARE_VERSION);
-
-		//Reset all state machines
-		reset();
+		program_bitfile(bitFileNum);
 
 		//Default to max sample rate
 		set_sampleRate(1200);
-
-		
-		// seems to be necessary on DAC2 devices
-		// probably worth further investigation to remove if possible
-		reset_status_ctrl();
 
 		// test PLL sync on each FPGA
 		//int status = test_PLL_sync(FPGA1);
@@ -175,11 +157,13 @@ int APS2::init(const bool & forceReload, const bool & int bitFileNum){
 
 int APS2::setup_DACs() {
 	//Call the setup function for each DAC
-	for(int dac=0; dac < MAX_APS2_CHANNELS; dac++){
+	for(int dac=0; dac < NUM_CHANNELS; dac++){
 		setup_DAC(dac);
 	}
 	return 0;
 }
+
+
 int APS2::program_FPGA(const string & bitFile, const int & expectedVersion) {
 	/**
 	 * @param bitFile path to a Lattice bit file
@@ -654,29 +638,6 @@ int APS2::flush() {
 }
 
 
-int APS2::reset_status_ctrl() {
-	// sets Status/CTRL register to default state when running (OSCEN enabled)
-	UCHAR WriteByte = APS2_OSCEN_BIT;
-	return handle_.WriteRegister(APS2_STATUS_CTRL, WriteByte);
-}
-
-
-int APS2::clear_status_ctrl() {
-	// clears Status/CTRL register. This is the required state to program the VCXO and PLL
-	UCHAR WriteByte = 0;
-	return handle_.WriteRegister(APS2_STATUS_CTRL, WriteByte);
-}
-
-UCHAR APS2::read_status_ctrl() {
-
-	UCHAR ReadByte = 0xBA;
-	uint32_t regData = 0;
-	handle_.ReadRegister(APS2_STATUS_CTRL, regData);
-	ReadByte = (regData & 0xFF);
-	return ReadByte;
-}
-
-
 int APS2::setup_PLL() {
 	// set the on-board PLL to its default state (two 1.2 GHz outputs, and one 300 MHz output)
 	FILE_LOG(logINFO) << "Setting up PLL";
@@ -685,7 +646,7 @@ int APS2::setup_PLL() {
 	int ddrMask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
 	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddrMask);
 	// disable dac FIFOs
-	for (int dac = 0; dac < MAX_APS2_CHANNELS; dac++)
+	for (int dac = 0; dac < NUM_CHANNELS; dac++)
 		disable_DAC_FIFO(dac);
 
 	// Setup modified for 300 MHz FPGA clock rate
@@ -775,7 +736,7 @@ int APS2::set_PLL_freq(const int & freq) {
 	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
 	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 	// disable DAC FIFOs
-	for (int dac = 0; dac < MAX_APS2_CHANNELS; dac++)
+	for (int dac = 0; dac < NUM_CHANNELS; dac++)
 		disable_DAC_FIFO(dac);
 
 	// Disable oscillator by clearing APS2_STATUS_CTRL register
@@ -805,7 +766,7 @@ int APS2::set_PLL_freq(const int & freq) {
 	// Enable DDRs
 	FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 	// Enable DAC FIFOs
-	// for (int dac = 0; dac < MAX_APS2_CHANNELS; dac++)
+	// for (int dac = 0; dac < NUM_CHANNELS; dac++)
 	// 	enable_DAC_FIFO(dac);
 
 	return 0;
@@ -857,7 +818,7 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
 	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 	// disable DAC FIFOs
-	for (int dac = 0; dac < MAX_APS2_CHANNELS; dac++)
+	for (int dac = 0; dac < NUM_CHANNELS; dac++)
 		disable_DAC_FIFO(dac);
 
 	//A little helper function to wait for the PLL's to lock and reset if necessary
@@ -1039,7 +1000,7 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 			// we failed, but enable DDRs to get a usable state
 			FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 			// enable DAC FIFOs
-			//for (int dac = 0; dac < MAX_APS2_CHANNELS; dac++)
+			//for (int dac = 0; dac < NUM_CHANNELS; dac++)
 				//enable_DAC_FIFO(dac);
 
 			FILE_LOG(logERROR) << "Error could not sync PLLs";
@@ -1051,7 +1012,7 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 	// Enable DDRs
 	FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 	// enable DAC FIFOs
-	//for (int dac = 0; dac < MAX_APS2_CHANNELS; dac++)
+	//for (int dac = 0; dac < NUM_CHANNELS; dac++)
 		//enable_DAC_FIFO(dac);
 
 	FILE_LOG(logINFO) << "Sync test complete";
@@ -1167,7 +1128,7 @@ int APS2::setup_DAC(const int & dac)
 	sdAddr = 0x5 | (dac << 5);
 	msdMhdAddr = 0x4 | (dac << 5);
 
-	if (dac < 0 || dac >= MAX_APS2_CHANNELS) {
+	if (dac < 0 || dac >= NUM_CHANNELS) {
 		FILE_LOG(logERROR) << "FPGA::setup_DAC: unknown DAC, " << dac;
 		return -1;
 	}
@@ -1268,7 +1229,7 @@ int APS2::setup_DAC(const int & dac)
 
 int APS2::enable_DAC_FIFO(const int & dac) {
 
-	if (dac < 0 || dac >= MAX_APS2_CHANNELS) {
+	if (dac < 0 || dac >= NUM_CHANNELS) {
 		FILE_LOG(logERROR) << "FPGA::setup_DAC: unknown DAC, " << dac;
 		return -1;
 	}
