@@ -25,6 +25,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <queue>
+
 using std::vector;
 using std::string;
 using std::cout;
@@ -37,6 +38,10 @@ using std::runtime_error;
 #include <atomic>
 #include <utility>
 #include <chrono>
+
+
+//We often deal with vectors of 16bit values
+typedef vector<uint16_t> WordVec;
 
 
 /*boost thread
@@ -73,15 +78,6 @@ using boost::thread;
 
 #include "logger.h"
 
-//Simple structure for pairs of address/data checksums
-struct CheckSum {
-	WORD address;
-	WORD data;
-};
-
-//some vectors
-typedef vector<unsigned short> WordVec;
-
 //Load all the constants
 #include "constants.h"
 
@@ -103,6 +99,7 @@ myhex(std::ios_base& __base)
   __base.setf(std::ios::showbase);
   return __base;
 }
+
 
 
 //Helper function for loading 1D dataset from H5 files

@@ -87,7 +87,7 @@ public:
 	ErrorCodes WriteSPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, uint8_t data);
 	ErrorCodes WriteSPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, vector<uint8_t> data);
 
-	size_t program_FPGA(vector<UCHAR> fileData, uint32_t addr = 0);
+	size_t program_FPGA(vector<uint8_t> fileData, uint32_t addr = 0);
 	ErrorCodes   select_FPGA_image(uint32_t addr = 0);
 
 

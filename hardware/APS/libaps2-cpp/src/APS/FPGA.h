@@ -33,8 +33,8 @@ uint32_t read_FPGA(EthernetControl &, const uint32_t &);
 //int write_FPGA(EthernetControl &, const unsigned int &, const WordVec &);
 //int write_FPGA(EthernetControl &, const unsigned int &, const WordVec &, CheckSum & checksum);
 
-int write_block(EthernetControl &, vector<UCHAR> &, const vector<size_t> &);
-vector<UCHAR> format(const unsigned int &, const WordVec &);
+int write_block(EthernetControl &, vector<uint8_t> &, const vector<size_t> &);
+vector<uint8_t> format(const unsigned int &, const WordVec &);
 vector<size_t> computeCmdByteOffsets(const size_t &);
 
 } //end namespace FPGA

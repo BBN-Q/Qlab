@@ -16,10 +16,10 @@
 #include <stdio.h>
 #include <iostream>
 
+#include <concol.h>
 #ifdef _WIN32
 #define FORCE_CONSOLE
 #ifdef FORCE_CONSOLE
-#include <concol.h>
 using std::cout;
 #endif
 #endif
