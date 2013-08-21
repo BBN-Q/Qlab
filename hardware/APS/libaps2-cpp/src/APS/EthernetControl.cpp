@@ -101,12 +101,12 @@ bool isOpen() {
 	return false;
 }
 
-size_t EthernetControl::Write(APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data ) { 
+size_t EthernetControl::write(APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data ) { 
     vector<uint8_t> bytes = words2bytes(data);
     return Write(command,addr, bytes ); 
 }
 
-size_t EthernetControl::Write(APSCommand_t & commmand, uint32_t addr, vector<uint8_t> & data) {
+size_t EthernetControl::write(APSCommand_t & commmand, uint32_t addr, vector<uint8_t> & data) {
     static const int MAX_FRAME_LEN = 1500;
     uint8_t frame[MAX_FRAME_LEN];
     APSEthernetHeader * bph;
@@ -173,7 +173,7 @@ size_t EthernetControl::Write(APSCommand_t & commmand, uint32_t addr, vector<uin
 	return SUCCESS;
 }
 
-EthernetControl::ErrorCodes EthernetControl::Read(void * data, size_t readLength, APSCommand_t * command) {
+EthernetControl::ErrorCodes EthernetControl::read(void * data, size_t readLength, APSCommand_t * command) {
     struct pcap_pkthdr *header;
     const unsigned char *pkt_data;
 

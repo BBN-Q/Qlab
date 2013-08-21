@@ -21,13 +21,28 @@ using std::string;
 using std::map;
 using std::ostringstream;
 
-using namespace APS2;
-
 struct EthernetDevInfo {
 	string name_;
 	string description_;
 	bool isActive_;
 };
+
+//Custom UDP style ethernet packets for APS
+class APSEthernetPacket()
+public:
+	struct APSEthernetHeader {
+		uint8_t  dest[6];
+		uint8_t  src[6];
+		uint16_t frameType;
+		uint16_t seqNum;
+		APS2::APSCommand_t command;
+		uint32_t addr;
+	};
+
+
+
+
+
 
 class EthernetControl 
 {
@@ -69,23 +84,23 @@ public:
 
 	ErrorCodes set_network_device(string description);
 
-	size_t Write(APSCommand_t & command, uint32_t addr = 0) { auto data = vector<uint8_t>(); return Write(command, addr, data);};
-	size_t Write(APSCommand_t & command, uint32_t addr,  vector<uint8_t> & data );
-	size_t Write(APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data );
-	ErrorCodes Read(void * data, size_t packetLength, APSCommand_t * command = nullptr);
+	size_t write(APS2::APSCommand_t & command, uint32_t addr = 0) { auto data = vector<uint8_t>(); return write(command, addr, data);};
+	size_t write(APS2::APSCommand_t & command, uint32_t addr,  vector<uint8_t> & data );
+	size_t write(APS2::APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data );
+	ErrorCodes read(void * data, size_t packetLength, APSCommand_t * command = nullptr);
 
-	ErrorCodes WriteRegister(uint32_t addr, uint32_t data);	
-	ErrorCodes WriteRegister(int addr, uint32_t data) {return WriteRegister(static_cast<uint32_t>(addr), data);}
-	ErrorCodes ReadRegister(uint32_t addr, uint32_t & data);	
-	ErrorCodes ReadRegister(int addr, uint32_t & data) {return ReadRegister(static_cast<uint32_t>(addr), data);}	
-	uint32_t   ReadRegister(uint32_t addr) { uint32_t value; ReadRegister(addr,value); return value;}
-	uint32_t   ReadRegister(int addr) { uint32_t value; ReadRegister(static_cast<uint32_t>(addr),value); return value;}
+	ErrorCodes write_register(uint32_t addr, uint32_t data);	
+	ErrorCodes write_register(int addr, uint32_t data) {return write_register(static_cast<uint32_t>(addr), data);}
+	ErrorCodes read_register(uint32_t addr, uint32_t & data);	
+	ErrorCodes read_register(int addr, uint32_t & data) {return read_register(static_cast<uint32_t>(addr), data);}	
+	uint32_t   read_register(uint32_t addr) { uint32_t value; read_register(addr,value); return value;}
+	uint32_t   read_register(int addr) { uint32_t value; read_register(static_cast<uint32_t>(addr),value); return value;}
 
-	ErrorCodes ReadSPI( APS2::CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data);
+	ErrorCodes read_SPI( APS2::CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data);
 
-	ErrorCodes WriteSPI(APS2::CHIPCONFIG_IO_TARGET target, const vector<APS2::AddrData> & data);
-	ErrorCodes WriteSPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, uint8_t data);
-	ErrorCodes WriteSPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, vector<uint8_t> data);
+	ErrorCodes write_SPI(APS2::CHIPCONFIG_IO_TARGET target, const vector<APS2::AddrData> & data);
+	ErrorCodes write_SPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, uint8_t data);
+	ErrorCodes write_SPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, vector<uint8_t> data);
 
 	size_t program_FPGA(vector<uint8_t> fileData, uint32_t addr = 0);
 	ErrorCodes   select_FPGA_image(uint32_t addr = 0);
