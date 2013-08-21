@@ -68,25 +68,13 @@ classdef AWGChannel < sweeps.Sweep
         
         function stepAmplitude(obj, index)
             for ch = obj.channelList
-                switch (obj.AWGType)
-                    case 'Tek'
-                        channel_str = sprintf('chan_%d', ch);
-                        obj.Instr.(channel_str).amplitude = obj.points(index);
-                    case 'APS'
-                        obj.Instr.setAmplitude(ch, obj.points(index));
-                end
+                obj.Instr.setAmplitude(ch, obj.points(index));
             end
         end
         
         function stepOffset(obj, index)
             for ch = obj.channelList
-                switch (obj.AWGType)
-                    case 'Tek'
-                        channel_str = sprintf('chan_%d', ch);
-                        obj.Instr.(channel_str).offset = obj.points(index);
-                    case 'APS'
-                        obj.Instr.setOffset(ch, obj.points(index));
-                end
+                obj.Instr.setOffset(ch, obj.points(index));
             end
         end
         
