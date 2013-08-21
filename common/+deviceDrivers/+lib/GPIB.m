@@ -27,25 +27,28 @@ classdef GPIB < hgsetget
 
     properties (SetAccess=private)
         identity % standard *IDN? response
+        isConnected
     end
   
     methods
         %%
         function connect(obj, address)
-            if ischar(address)
-                address = str2double(address);
+            if ~obj.isConnected
+                if ischar(address)
+                    address = str2double(address);
+                end
+
+                % create a GPIB object
+                if ~isempty(obj.interface)
+                    fclose(obj.interface);
+                    delete(obj.interface);
+                end
+
+                obj.interface = gpib(obj.vendor, obj.boardIndex, address);
+                obj.interface.InputBufferSize = obj.buffer_size;
+                obj.interface.OutputBufferSize = obj.buffer_size;
+                fopen(obj.interface);
             end
-            
-            % create a GPIB object
-            if ~isempty(obj.interface)
-                fclose(obj.interface);
-                delete(obj.interface);
-            end
-                
-            obj.interface = gpib(obj.vendor, obj.boardIndex, address);
-            obj.interface.InputBufferSize = obj.buffer_size;
-            obj.interface.OutputBufferSize = obj.buffer_size;
-            fopen(obj.interface);
         end
 
         function disconnect(obj)
@@ -53,8 +56,14 @@ classdef GPIB < hgsetget
             fclose(obj.interface);
         end
 
+        function val = get.isConnected(obj)
+            val = ~isempty(obj.interface) && strcmp(obj.interface.Status, 'open');
+        end
+
         function delete(obj)
-            obj.disconnect();
+            if obj.isConnected
+                obj.disconnect();
+            end
         end
         
         function write(obj, string)
@@ -62,7 +71,7 @@ classdef GPIB < hgsetget
         end
         
         function val = query(obj, string)
-            val = query(obj.interface, string);
+            val = strtrim(query(obj.interface, string));
         end
         
         function val = read(obj)
