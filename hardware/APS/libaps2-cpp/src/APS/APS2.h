@@ -239,6 +239,7 @@ public:
 	//PLL routines go through sets of address/data pairs
 	typedef std::pair<uint16_t, uint8_t> AddrData;
 	
+	//
 	uint32_t * getPayloadPtr(uint32_t * frame);
 	
 
@@ -246,8 +247,102 @@ public:
 
 	string printAPSCommand(APSCommand_t & command);
 	string printAPSChipCommand(APSChipConfigCommand_t & command);
+
+
+	//Constructors
+	APS2();
+	APS2(int, string);
+	~APS();
+
+	int connect();
+	int disconnect();
+
+	int init(const string &, const bool &);
+	int reset();
+
+	int setup_VCXO() const;
+	int setup_PLL() const;
+	int setup_DACs();
+
+	int program_FPGA(const string &, const int &);
+	int read_bitFile_version();
+
+	int set_sampleRate(const int &);
+	int get_sampleRate();
+
+	int set_trigger_source(const TRIGGERSOURCE &);
+	TRIGGERSOURCE get_trigger_source();
+	int set_trigger_interval(const double &);
+	double get_trigger_interval();
+
+	int set_channel_enabled(const int &, const bool &);
+	bool get_channel_enabled(const int &) const;
+	int set_channel_offset(const int &, const float &);
+	float get_channel_offset(const int &) const;
+	int set_channel_scale(const int &, const float &);
+	float get_channel_scale(const int &) const;
+	int set_offset_register(const int &, const float &);
+
+	template <typename T>
+	int set_waveform(const int & dac, const vector<T> & data){
+		channels_[dac].set_waveform(data);
+		return write_waveform(dac, channels_[dac].prep_waveform());
+	}
+
+	int set_run_mode(const int &, const RUN_MODE &);
+
+	int set_LLData_IQ(const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
+	int clear_channel_data();
+
+	int load_sequence_file(const string &);
+
+	int run();
+	int stop();
+
+	//The owning APSRack needs access to some private members
+	friend class APSRack;
+
+	//Whether the APS connection is open
+	bool isOpen;
+
+private:
+
+	int deviceID_;
+	string deviceSerial_;
+	EthernetControl handle_;
+	vector<Channel> channels_;
+	int samplingRate_;
+	vector<UCHAR> writeQueue_;
+
+	int write(const unsigned int & addr, const uint32_t & data, const bool & queue = false);
+	int write(const unsigned int & addr, const vector<uint32_t> & data, const bool & queue = false);
+
+	int flush();
+
+	int setup_PLL();
+	int set_PLL_freq(const int &);
+
+	int setup_VCXO();
+
+	int setup_DAC(const int &);
+	int enable_DAC_FIFO(const int &);
+	int disable_DAC_FIFO(const int &);
+
+	// int trigger();
+	// int disable();
+
+	int write_waveform(const int &, const vector<short> &);
+
+	int write_LL_data_IQ(const ULONG &, const size_t &, const size_t &, const bool &);
+	int set_LL_data_IQ(const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
+
+	// int save_state_file(string &);
+	// int read_state_file(string &);
+	// int write_state_to_hdf5(  H5::H5File & , const string & );
+	// int read_state_from_hdf5( H5::H5File & , const string & );
+
 	
-} //end namespace APS2
+} //end class APS2
 
 
 
