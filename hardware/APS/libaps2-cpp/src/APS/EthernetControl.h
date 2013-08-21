@@ -27,21 +27,24 @@ struct EthernetDevInfo {
 	bool isActive_;
 };
 
+struct APSEthernetHeader {
+	uint8_t  dest[6];
+	uint8_t  src[6];
+	uint16_t frameType;
+	uint16_t seqNum;
+	APS2::APSCommand_t command;
+	uint32_t addr;
+};
+
 //Custom UDP style ethernet packets for APS
-class APSEthernetPacket()
+class APSEthernetPacket{
 public:
-	struct APSEthernetHeader {
-		uint8_t  dest[6];
-		uint8_t  src[6];
-		uint16_t frameType;
-		uint16_t seqNum;
-		APS2::APSCommand_t command;
-		uint32_t addr;
-	};
+	APSEthernetHeader header;
+	vector<uint8_t> payload;
 
-
-
-
+	vector<uint8_t> serialize();
+	size_t numBytes();
+};
 
 
 class EthernetControl 

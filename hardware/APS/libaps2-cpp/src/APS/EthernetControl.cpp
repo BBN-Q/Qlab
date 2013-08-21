@@ -97,16 +97,90 @@ EthernetControl::ErrorCodes EthernetControl::connect(string deviceID) {
 	return SUCCESS;
 }
 
-bool isOpen() {
-	return false;
-}
-
 size_t EthernetControl::write(APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data ) { 
     vector<uint8_t> bytes = words2bytes(data);
-    return Write(command,addr, bytes ); 
+    return write(command,addr, bytes ); 
+}
+
+int EthernetControl::send_packet(const & APSEthernetPacket packet){
+    //Platform independent way to send a single packet
+    FILE_LOG(logDEBUG2) << "Write Frame";
+    FILE_LOG(logDEBUG2) << " Src: " << print_ethernetAddress(bph->src)
+                        << " Dest: " << print_ethernetAddress(bph->dest);
+    FILE_LOG(logDEBUG2) << " Seqnum " << bph->seqNum << " Command: " << APS2::printAPSCommand(bph->command)
+                        << " + " <<  data.size() << " Bytes";
+
+    if (pcap_sendpacket(apsHandle_, packet.seralize(), packet.length()) != 0) {
+        FILE_LOG(logERROR) << "Error sending command: " << string(pcap_geterr(apsHandle_));
+     } 
+}
+
+int EthernetControl::send_packets(const & vector<APSEthernetPacket>::iterator start, const & vector<APSEthernetPacket>::iterator stop){
+    //Send a group of packets
+    //With pcap it is important to queue the packets for performance
+    //TODO: needs to be checked
+    //Allocate the queue
+    size_t queueSize = 0;
+    for (auto packetIter = start; packerIter != stop; ++packetIter) queueSize += packIter->numBytes();
+    pcap_send_queue * myQueue = pcap_sendqueue_alloc(queueSize)
+
+    //Load the packets
+    pcap_pkthdr dummyHeader;
+    dummyHeader.ts = 0;
+    for (auto packetIter = start; packerIter != stop; ++packetIter){
+        dummyHeader.caplen = packIter.numBytes();
+        dummyHeader.len = packIter.numBytes(); 
+        pcap_sendqueue_queue(myQueue, &dummyHeader, packet.seralize())    
+    }
+
+    //We're not setting timestamps so sync parameter is zero
+    pcap_sendqueue_transmit(apsHandle_, myQueue, 0)    
+
+    //Free the queue memory
+    pcap_sendqueue_destroy(myQueue);
+
+    //For now just send the packets one at a time
+    for (auto packetIter = start; packerIter != stop; ++packetIter) send_packet(*packetIter);
 }
 
 size_t EthernetControl::write(APSCommand_t & commmand, uint32_t addr, vector<uint8_t> & data) {
+
+    //Convert the data to a vector custom ethernet frames
+    vector<APSEthernetPacket> framesToSend = framer(addr, data)
+
+    //Send them out. The APS2 has a buffer for 22 frames.  The framer asks for an acknowledge every 11.
+    //Send 22 then wait for an acknowledge then send another 11 and repeat. 
+
+    //Send the first 11 to get things started
+    size_t numFramesLeft = framesToSend.size();
+    nextFrame = framesToSend.begin();
+    if (numFramesLeft > 11){
+        send_packets(nextFrame, nextFrame + 11);
+        nextFrame += 11;    
+        numFramesLeft -= 11;
+    }
+
+    while (numFramesLeft > 11) {
+        //Send out a group of 11 of packets
+        send_packets(nextFrame, nextFrame + 11);
+        nextFrame += 11;
+        numFramesLeft -= 11;
+
+        //Wait for acknowledge from the previous set
+        wait_for_ack();
+    }
+
+    //Send the final bunch
+    if (numFramesLeft > 0){
+        send_packets(nextFrame, nextFrame + 11);
+        nextFrame += 11;
+        numFramesLeft -= 11;
+    }
+    //Wait for final acknowledgment
+    wait_for_ack();
+
+
+
     static const int MAX_FRAME_LEN = 1500;
     uint8_t frame[MAX_FRAME_LEN];
     APSEthernetHeader * bph;
@@ -155,17 +229,6 @@ size_t EthernetControl::write(APSCommand_t & commmand, uint32_t addr, vector<uin
 
         bph->seqNum = seqNum_;
 
-        FILE_LOG(logDEBUG2) << "Write Frame";
-        FILE_LOG(logDEBUG2) << " Src: " << print_ethernetAddress(bph->src)
-                            << " Dest: " << print_ethernetAddress(bph->dest);
-        FILE_LOG(logDEBUG2) << " Seqnum " << bph->seqNum << " Command: " << APS2::printAPSCommand(bph->command)
-                            << " + " <<  data.size() << " Bytes";
-
-        packetHTON(bph); // swap bytes to network order
-
-        if (pcap_sendpacket(apsHandle_, frame, bytesSend) != 0) {
-            FILE_LOG(logERROR) << "Error sending command: " << string(pcap_geterr(apsHandle_));
-         } 
          
          sent = true;      
     }
