@@ -13,7 +13,31 @@
 
 using std::string;
 
-namespace APS2 {
+class APS2 {
+
+public:
+	//Some bitfield unions for packing/unpacking the commands words
+	//APS Command Protocol 
+	//ACK SEQ SEL R/W CMD<3:0> MODE/STAT CNT<15:0>
+	//31 30 29 28 27..24 23..16 15..0
+	//ACK .......Acknowledge Flag. Set in the Acknowledge Packet returned in response to a
+	// Command Packet. Must be zero in a Command Packet.
+	// SEQ............Set for Sequence Error. MODE/STAT = 0x01 for skip and 0x00 for duplicate.
+	// SEL........Channel Select. Selects target for commands with more than one target. Zero
+	// if not used. Unmodified in the Acknowledge Packet.
+	// R/W ........Read/Write. Set for read commands, cleared for write commands. Unmodified
+	// in the Acknowledge Packet.
+	// CMD<3:0> ....Specifies the command to perform when the packet is received by the APS
+	// module. Unmodified in the Acknowledge Packet. See section 3.8 for
+	// information on the supported commands.
+	// MODE/STAT....Command Mode or Status. MODE bits modify the operation of some
+	// commands. STAT bits are returned in the Acknowledge Packet to indicate
+	// command completion status. A STAT value of 0xFF indicates an invalid or
+	// unrecognized command. See individual command descriptions for more
+	// information.
+	// CNT<15:0> ...Number of 32-bit data words to transfer for a read or a write command. Note
+	// that the length does NOT include the Address Word. CNT must be at least 1.
+	// To meet Ethernet packet length limitations, CNT must not exceed 366.
 	typedef union {
 		struct {
 		uint32_t cnt : 16;
@@ -27,15 +51,29 @@ namespace APS2 {
 		uint32_t packed;
 	} APSCommand_t;
 
+
+
+	//Chip config SPI commands for setting up DAC,PLL,VXCO
+	//Possible target bytes
+	// 0x00 ............Pause commands stream for 100ns times the count in D<23:0>
+	// 0xC0/0xC8 .......DAC Channel 0 Access (AD9736)
+	// 0xC1/0xC9 .......DAC Channel 1 Access (AD9736)
+	// 0xD0/0xD8 .......PLL Clock Generator Access (AD518-1)
+	// 0xE0 ............VCXO Controller Access (CDC7005)
+	// 0xFF ............End of list
 	typedef union  {
 		struct {
 		uint32_t instr : 16; // SPI instruction for DAC, PLL instruction, or 0
 		uint32_t spicnt_data: 8; // data byte for single byte or SPI insruction
-		uint32_t target : 8;
+		uint32_t target : 8; 
 		};
 		uint32_t packed;
 	} APSChipConfigCommand_t;
 
+	//PLL commands 
+	// INSTR<12..0> ......ADDR. Specifies the address of the register to read or write.
+	// INSTR<14..13> .....W<1..0>. Specified transfer length. 00 = 1, 01 = 2, 10 = 3, 11 = stream
+	// INSTR<15> .........R/W. Read/Write select. Read = 1, Write = 0.
 	typedef union  {
 		struct {
 		uint16_t addr : 13;
@@ -45,6 +83,10 @@ namespace APS2 {
 		uint16_t packed;
 	} PLLCommand_t;
 
+	//DAC Commands
+	// INSTR<4..0> ......ADDR. Specifies the address of the register to read or write.
+	// INSTR<6..5> ......N<1..0>. Specified transfer length. Only 00 = single byte mode supported.
+	// INSTR<7> ..........R/W. Read/Write select. Read = 1, Write = 0.
 	typedef union {
 		struct {
 		uint8_t addr : 5;
