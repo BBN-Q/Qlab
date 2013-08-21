@@ -45,7 +45,7 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
                 
                 % load an AWG file if the settings file is changed or if force == true
                 if (~strcmp(obj.getSetupFileName(), settings.seqFile) || settings.seqForce)
-                    obj.openConfig(settings.seqFile);
+                    obj.loadConfig(settings.seqFile);
                     obj.operationComplete(); % wait until we're done with the load to continue
                 end
             end
@@ -67,7 +67,8 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
             for j = 1:length(fields);
                 name = fields{j};
                 if ismember(name, methods(obj))
-                    feval(['obj.' name], settings.(name));
+                    args = eval(settings.(name));
+                    feval(name, obj, args{:});
                 elseif ismember(name, properties(obj))
                     if ~isempty(settings.(name))
                         obj.(name) = settings.(name);
@@ -317,10 +318,7 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
         end
         
         function setEnabled(obj, ch, enabled)
-            if isnumeric(enabled)
-                enabled = num2str(enabled);
-            end
-            propMap = containers.Map({'on', '1', 'off', '0'},{'ON','ON','OFF','OFF'});
+            propMap = containers.Map({true, false},{'ON','OFF'});
             obj.write(['OUTPut' num2str(ch) ':STATe ' propMap(lower(enabled))]);
         end
         
