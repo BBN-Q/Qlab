@@ -1,75 +1,129 @@
-#ifndef _EKU_CONCOL
-#define _EKU_CONCOL
+/*Header file to color text and background in windows console applications
 
-#ifndef _INC_WINDOWS
+See http://www.cplusplus.com/articles/Eyhv0pDG/ for Windows inspiration.
+
+Modified by Colm Ryan for some cross-platform ability.
+
+Global variables - textcol,backcol,deftextcol,defbackcol,colorprotect
+*/
+
+#ifdef WIN32
+
 #include<windows.h>
-#endif /*_INC_WINDOWS*/
+#include<iosfwd>
 
-/*doesn't let textcolor be the same as backgroung color if true*/
-
-enum concol
+namespace concol
 {
-	black=0,
-	dark_blue=1,
-	dark_green=2,
-	dark_aqua,dark_cyan=3,
-	dark_red=4,
-	dark_purple=5,dark_pink=5,dark_magenta=5,
-	dark_yellow=6,
-	dark_white=7,
-	gray=8,
-	blue=9,
-	green=10,
-	aqua=11,cyan=11,
-	red=12,
-	purple=13,pink=13,magenta=13,
-	yellow=14,
-	white=15
-};
 
-inline void setcolor(concol textcolor,concol backcolor);
-inline void setcolor(int textcolor,int backcolor);
-int textcolor();/*returns current text color*/
-int backcolor();/*returns current background color*/
+	enum concol
+	{
+		BLACK=0,
+		BOLDBLUE=1,
+		BOLDGREEN=2,
+		BOLDCYAN=3,
+		BOLDRED=4,
+		BOLDMAGENTA=5,
+		BOLDYELLOW=6,
+		BOLDWHITE=7,
+		GREY=8,
+		BLUE=9,
+		GREEN=10,
+		CYAN=11,
+		RED=12,
+		MAGENTA=13,
+		YELLOW=14,
+		WHITE,RESET=15
+	};
 
-#define std_con_out GetStdHandle(STD_OUTPUT_HANDLE)
+	HANDLE std_con_out;
+	//Standard Output Handle
+	bool colorprotect=false;
+	//If colorprotect is true, background and text colors will never be the same
+	concol textcol,backcol,deftextcol,defbackcol;
+	/*textcol - current text color
+	backcol - current back color
+	deftextcol - original text color
+	defbackcol - original back color*/
 
-inline int textcolor()
-{
-	CONSOLE_SCREEN_BUFFER_INFO csbi;
-	GetConsoleScreenBufferInfo(std_con_out,&csbi);
-	int a=csbi.wAttributes;
-	return a%16;
-}
+	inline void update_colors()
+	{
+		CONSOLE_SCREEN_BUFFER_INFO csbi;
+		GetConsoleScreenBufferInfo(std_con_out,&csbi);
+		textcol = concol(csbi.wAttributes & 15);
+		backcol = concol((csbi.wAttributes & 0xf0)>>4);
+	}
 
-inline int backcolor()
-{
-	CONSOLE_SCREEN_BUFFER_INFO csbi;
-	GetConsoleScreenBufferInfo(std_con_out,&csbi);
-	int a=csbi.wAttributes;
-	return (a/16)%16;
-}
+	inline void setcolor(concol textcolor,concol backcolor)
+	{
+		if(colorprotect && textcolor==backcolor)return;
+		textcol=textcolor;backcol=backcolor;
+		unsigned short wAttributes=((unsigned int)backcol<<4) | (unsigned int)textcol;
+		SetConsoleTextAttribute(std_con_out,wAttributes);
+	}
 
-inline void setcolor(concol textcol,concol backcol)
-{setcolor(int(textcol),int(backcol));}
+	inline void settextcolor(concol textcolor)
+	{
+		if(colorprotect && textcolor==backcol)return;
+		textcol=textcolor;
+		unsigned short wAttributes=((unsigned int)backcol<<4) | (unsigned int)textcol;
+		SetConsoleTextAttribute(std_con_out,wAttributes);
+	}
 
-inline void setcolor(int textcol,int backcol)
-{
-	{if((textcol%16)==(backcol%16))textcol++;}
-	textcol%=16;backcol%=16;
-	unsigned short wAttributes= ((unsigned)backcol<<4)|(unsigned)textcol;
-	SetConsoleTextAttribute(std_con_out, wAttributes);
-}
+	inline void setbackcolor(concol backcolor)
+	{
+		if(colorprotect && textcol==backcolor)return;
+		backcol=backcolor;
+		unsigned short wAttributes=((unsigned int)backcol<<4) | (unsigned int)textcol;
+		SetConsoleTextAttribute(std_con_out,wAttributes);
+	}
 
+	inline void concolinit()
+	{
+		std_con_out=GetStdHandle(STD_OUTPUT_HANDLE);
+		update_colors();
+		deftextcol=textcol;defbackcol=backcol;
+	}
 
-#if defined(_INC_OSTREAM)||defined(_IOSTREAM_)
-ostream& operator<<(ostream& os,concol c)
-{os.flush();setcolor(c,backcolor());return os;}
+	template<class elem,class traits>
+	inline std::basic_ostream<elem,traits>& operator<<(std::basic_ostream<elem,traits>& os,concol col)
+	{os.flush();settextcolor(col);return os;}
+
+	template<class elem,class traits>
+	inline std::basic_istream<elem,traits>& operator>>(std::basic_istream<elem,traits>& is,concol col)
+	{
+		std::basic_ostream<elem,traits>* p=is.tie();
+		if(p!=NULL)p->flush();
+		settextcolor(col);
+		return is;
+	}
+	
+}	//end of namespace concol
+
+#else
+
+//Just use some ASCII escape sequences on Linux.  Most modern terminals should support this.
+
+namespace concol{
+
+	static const std::string RESET    = "\033[0m";
+	static const std::string BLACK    = "\033[30m";      /* Black */
+	static const std::string RED      = "\033[31m";      /* Red */
+	static const std::string GREEN    = "\033[32m";      /* Green */
+	static const std::string YELLOW   = "\033[33m";      /* Yellow */
+	static const std::string BLUE     = "\033[34m";      /* Blue */
+	static const std::string MAGENTA  = "\033[35m";      /* Magenta */
+	static const std::string CYAN     = "\033[36m";      /* Cyan */
+	static const std::string WHITE    = "\033[37m";      /* White */
+	static const std::string BOLDBLACK    = "\033[1m\033[30m";      /* Bold Black */
+	static const std::string BOLDRED      = "\033[1m\033[31m";      /* Bold Red */
+	static const std::string BOLDGREEN    = "\033[1m\033[32m";      /* Bold Green */
+	static const std::string BOLDYELLOW   = "\033[1m\033[33m";      /* Bold Yellow */
+	static const std::string BOLDBLUE     = "\033[1m\033[34m";      /* Bold Blue */
+	static const std::string BOLDMAGENTA  = "\033[1m\033[35m";      /* Bold Magenta */
+	static const std::string BOLDCYAN     = "\033[1m\033[36m";      /* Bold Cyan */
+	static const std::string BOLDWHITE    = "\033[1m\033[37m";      /* Bold White */}
+
+	#Dummy init function
+	inline void concolinit() {};
+
 #endif
-
-#if defined(_INC_ISTREAM)||defined(_IOSTREAM_)
-istream& operator>>(istream& is,concol c)
-{cout.flush();setcolor(c,backcolor());return is;}
-#endif
-
-#endif /*_EKU_CONCOL*/ 
