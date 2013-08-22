@@ -46,9 +46,8 @@ ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-std=c++11")
 
 SET ( DLL_SRC 
 	./APS/libaps.cpp
-	./APS/FPGA.cpp
 	./APS/Channel.cpp
-	./APS/APS.cpp
+	./APS/APS2.cpp
 	./APS/APSRack.cpp
 	./APS/LLBank.cpp
 	./APS/EthernetControl.cpp
