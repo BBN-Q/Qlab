@@ -9,7 +9,6 @@
 #include <sstream>
 #include <set>
 
-#include "APS2.h"
 #include "pcap.h"
 
 #ifdef DEBUGAPS	
@@ -32,9 +31,27 @@ struct APSEthernetHeader {
 	uint8_t  src[6];
 	uint16_t frameType;
 	uint16_t seqNum;
-	APS2::APSCommand_t command;
+	APSCommand_t command;
 	uint32_t addr;
 };
+
+
+//Custom UDP style ethernet packets for APS
+class EthernetControl;
+class APSEthernetPacket{
+public:
+	APSEthernetHeader header;
+	vector<uint8_t> payload;
+
+	APSEthernetPacket();
+	APSEthernetPacket(const EthernetControl &, const APSCommand_t &, const uint32_t &);
+
+	vector<uint8_t> serialize();
+	size_t numBytes();
+	void set_MAC(uint8_t *, uint8_t *);
+};
+
+
 
 class EthernetControl 
 {
@@ -76,10 +93,10 @@ public:
 
 	ErrorCodes set_network_device(string description);
 
-	size_t write(APS2::APSCommand_t & command, uint32_t addr = 0) { auto data = vector<uint8_t>(); return write(command, addr, data);};
-	size_t write(APS2::APSCommand_t & command, uint32_t addr,  vector<uint8_t> & data );
-	size_t write(APS2::APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data );
-	ErrorCodes read(void * data, size_t packetLength, APS2::APSCommand_t * command = nullptr);
+	size_t write(APSCommand_t & command, uint32_t addr = 0) { auto data = vector<uint8_t>(); return write(command, addr, data);};
+	size_t write(APSCommand_t & command, uint32_t addr,  vector<uint8_t> & data );
+	size_t write(APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data );
+	ErrorCodes read(void * data, size_t packetLength, APSCommand_t * command = nullptr);
 
 	ErrorCodes write_register(uint32_t addr, uint32_t data);	
 	ErrorCodes write_register(int addr, uint32_t data) {return write_register(static_cast<uint32_t>(addr), data);}
@@ -88,11 +105,11 @@ public:
 	uint32_t   read_register(uint32_t addr) { uint32_t value; read_register(addr,value); return value;}
 	uint32_t   read_register(int addr) { uint32_t value; read_register(static_cast<uint32_t>(addr),value); return value;}
 
-	ErrorCodes read_SPI( APS2::CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data);
+	ErrorCodes read_SPI( CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data);
 
-	ErrorCodes write_SPI(APS2::CHIPCONFIG_IO_TARGET target, const vector<APS2::AddrData> & data);
-	ErrorCodes write_SPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, uint8_t data);
-	ErrorCodes write_SPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, vector<uint8_t> data);
+	ErrorCodes write_SPI(CHIPCONFIG_IO_TARGET target, const vector<AddrData> & data);
+	ErrorCodes write_SPI(CHIPCONFIG_IO_TARGET target, uint16_t address, uint8_t data);
+	ErrorCodes write_SPI(CHIPCONFIG_IO_TARGET target, uint16_t address, vector<uint8_t> data);
 
 	size_t load_bitfile(vector<uint8_t> fileData, uint32_t addr = 0);
 	ErrorCodes select_FPGA_image(uint32_t addr = 0);
@@ -130,11 +147,11 @@ private:
 
 	static vector<uint8_t> words2bytes(vector<uint32_t> & words);
 
-	vector<APSEthernetPacket> framer(APS2::APSCommand_t const & , uint32_t  , const vector<uint8_t> &);
+	vector<APSEthernetPacket> framer(APSCommand_t const & , uint32_t  , const vector<uint8_t> &);
 
 	int send_packet(const APSEthernetPacket & );
 	int send_packets(const vector<APSEthernetPacket>::iterator & , const vector<APSEthernetPacket>::iterator & );
-	APS2::APSCommand_t wait_for_ack();
+	APSCommand_t wait_for_ack();
 
 	static EthernetDevInfo * findDeviceInfo(string device);
 	static void getMacAddr(struct EthernetDevInfo & devInfo) ;
@@ -159,20 +176,6 @@ private:
 	
 	static pcap_t * start_capture(string & devName, string & filter);
 
-};
-
-//Custom UDP style ethernet packets for APS
-class APSEthernetPacket{
-public:
-	APSEthernetHeader header;
-	vector<uint8_t> payload;
-
-	APSEthernetPacket();
-	APSEthernetPacket(const EthernetControl &, const APS2::APSCommand_t &, const uint32_t &);
-
-	vector<uint8_t> serialize();
-	size_t numBytes();
-	void set_MAC(uint8_t *, uint8_t *);
 };
 
 

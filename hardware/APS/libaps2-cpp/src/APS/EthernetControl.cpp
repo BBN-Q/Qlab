@@ -23,8 +23,6 @@ using std::min;
 #include <cstring>
 #include <cmath>
 
-using APS2::APSCommand_t;
-
 vector<EthernetControl::EthernetDevInfo>  EthernetControl::pcapDevices_;
 std::set<string> EthernetControl::APSunits_;
 std::map<string, EthernetControl::EthernetDevInfo> EthernetControl::APS2device_;
@@ -507,8 +505,8 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadc
         std::fill(bph->dest, bph->dest + MAC_ADDR_LEN, 0xFF);
         std::copy(dev.macAddr, dev.macAddr + MAC_ADDR_LEN,  bph->src);
         bph->frameType = APS_PROTO;
-        bph->command.cmd = APS2::APS_COMMAND_STATUS;
-        bph->command.mode_stat = APS2::APS_STATUS_TEMP;
+        bph->command.cmd = APS_COMMAND_STATUS;
+        bph->command.mode_stat = APS_STATUS_TEMP;
         bph->command.cnt = 0x10;
 
         FILE_LOG(logDEBUG1) << "Enumerate Packet: " << APS2::printAPSCommand(bph->command);
@@ -818,7 +816,7 @@ size_t EthernetControl::load_bitfile(vector<uint8_t> fileData, uint32_t addr) {
         // build APS Command
         command.packed = 0;
         
-        command.cmd = APS2::APS_COMMAND_FPGACONFIG_NACK;
+        command.cmd = APS_COMMAND_FPGACONFIG_NACK;
         command.mode_stat = 0;
 
         copyCount = min(dataRemaining, static_cast<size_t>(MAX_PAYLOAD_LEN_BYTES));
@@ -846,7 +844,7 @@ EthernetControl::ErrorCodes EthernetControl::select_FPGA_image(uint32_t addr) {
     APSCommand_t command;
     command.packed = 0;
     
-    command.cmd = APS2::APS_COMMAND_FPGACONFIG_CTRL;
+    command.cmd = APS_COMMAND_FPGACONFIG_CTRL;
     write(command, addr);
 
     // wait for Resetting FPGA acknowlege 
@@ -866,7 +864,7 @@ EthernetControl::ErrorCodes EthernetControl::write_register(uint32_t addr, uint3
     APSCommand_t command;
     APSCommand_t response;
     command.packed = 0;
-    command.cmd = APS2::APS_COMMAND_USERIO_ACK;
+    command.cmd = APS_COMMAND_USERIO_ACK;
     command.cnt = 1;
     
     vector<uint32_t> d = {data};
@@ -892,7 +890,7 @@ EthernetControl::ErrorCodes EthernetControl::read_register(uint32_t addr, uint32
     APSCommand_t command;
     APSCommand_t response;
     command.packed = 0;
-    command.cmd = APS2::APS_COMMAND_USERIO_ACK;
+    command.cmd = APS_COMMAND_USERIO_ACK;
     command.cnt = 1;
     command.r_w = 1;
     write(command, addr);
@@ -903,7 +901,7 @@ EthernetControl::ErrorCodes EthernetControl::read_register(uint32_t addr, uint32
     return SUCCESS;
 }
 
-EthernetControl::ErrorCodes EthernetControl::write_SPI(APS2::CHIPCONFIG_IO_TARGET target, const vector<APS2::AddrData> & data) {
+EthernetControl::ErrorCodes EthernetControl::write_SPI CHIPCONFIG_IO_TARGET target, const vector AddrData> & data) {
         
     // TODO: This treats all commands as singles investigate sending multi commands with multi
 
@@ -913,7 +911,7 @@ EthernetControl::ErrorCodes EthernetControl::write_SPI(APS2::CHIPCONFIG_IO_TARGE
     APSCommand_t command;
     APSCommand_t response;
 
-    APS2::APSChipConfigCommand_t cmd;
+    APSChipConfigCommand_t cmd;
 
     vector<uint32_t> writeData;
 
@@ -925,36 +923,36 @@ EthernetControl::ErrorCodes EthernetControl::write_SPI(APS2::CHIPCONFIG_IO_TARGE
         command.packed = 0;
         response.packed = 0;
 
-        command.cmd = APS2::APS_COMMAND_CHIPCONFIGIO;
+        command.cmd = APS_COMMAND_CHIPCONFIGIO;
         command.cnt = 2;
         command.r_w = 0;
 
         unsigned int maxData = min(data.size(), static_cast<size_t>(MAX_PAYLOAD_LEN_WORDS) );
 
         for ( int dataCnt = 0; dataCnt < maxData; dataCnt++) {
-            APS2::AddrData addrData = data[dataElement++];
+            AddrData addrData = data[dataElement++];
 
             cmd.packed = 0;
 
-            if (target == APS2::CHIPCONFIG_TARGET_PLL) {
-                    cmd.target = APS2::CHIPCONFIG_IO_TARGET_PLL_SINGLE;
-                    APS2::PLLCommand_t pllCmd;
+            if (target == CHIPCONFIG_TARGET_PLL) {
+                    cmd.target = CHIPCONFIG_IO_TARGET_PLL_SINGLE;
+                    PLLCommand_t pllCmd;
 
                     pllCmd.packed = 0;
                     pllCmd.addr = addrData.first;
             
                     cmd.spicnt_data = addrData.second;
                     cmd.instr = pllCmd.packed;
-            } else if (target == APS2::CHIPCONFIG_TARGET_DAC_0 || target == APS2::CHIPCONFIG_TARGET_DAC_1) {
-                cmd.target = (target == APS2::CHIPCONFIG_TARGET_DAC_0) ? APS2::CHIPCONFIG_IO_TARGET_DAC_0_SINGLE : APS2::CHIPCONFIG_IO_TARGET_DAC_1_SINGLE;
-                APS2::DACCommand_t dacCmd;
+            } else if (target == CHIPCONFIG_TARGET_DAC_0 || target == CHIPCONFIG_TARGET_DAC_1) {
+                cmd.target = (target == CHIPCONFIG_TARGET_DAC_0) ? CHIPCONFIG_IO_TARGET_DAC_0_SINGLE : CHIPCONFIG_IO_TARGET_DAC_1_SINGLE;
+                DACCommand_t dacCmd;
                 dacCmd.packed = 0;
                 dacCmd.addr = addrData.first & 0xFF;
 
                 cmd.spicnt_data = addrData.second;
                 cmd.instr = dacCmd.packed;
-            } else if (target == APS2::CHIPCONFIG_TARGET_VCXO) {
-                cmd.target = APS2::CHIPCONFIG_IO_TARGET_VCXO;
+            } else if (target == CHIPCONFIG_TARGET_VCXO) {
+                cmd.target = CHIPCONFIG_IO_TARGET_VCXO;
                 cmd.spicnt_data = 8;
                 {
                     int numWords = data.size() / 4;
@@ -984,13 +982,13 @@ EthernetControl::ErrorCodes EthernetControl::write_SPI(APS2::CHIPCONFIG_IO_TARGE
     return SUCCESS;
 }
 
-EthernetControl::ErrorCodes EthernetControl::write_SPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, uint8_t data) {
+EthernetControl::ErrorCodes EthernetControl::write_SPI CHIPCONFIG_IO_TARGET target, uint16_t address, uint8_t data) {
     
     const vector<AddrData> update = {{address, data}};
     return  write_SPI(target, update);
 }
 
-EthernetControl::ErrorCodes EthernetControl::write_SPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, vector<uint8_t> data) {
+EthernetControl::ErrorCodes EthernetControl::write_SPI CHIPCONFIG_IO_TARGET target, uint16_t address, vector<uint8_t> data) {
     
     vector<AddrData> update;
 
@@ -1002,35 +1000,35 @@ EthernetControl::ErrorCodes EthernetControl::write_SPI(APS2::CHIPCONFIG_IO_TARGE
 }
 
 
-EthernetControl::ErrorCodes EthernetControl::read_SPI( APS2::CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data)     {
+EthernetControl::ErrorCodes EthernetControl::read_SPI( CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data)     {
 
-    APS2::APSChipConfigCommand_t cmd;
+    APSChipConfigCommand_t cmd;
     cmd.packed = 0;
 
-    uint8_t commands[] = {APS2::CHIPCONFIG_IO_TARGET_PAUSE,
-    					  APS2::CHIPCONFIG_IO_TARGET_DAC_0_SINGLE,
-    					  APS2::CHIPCONFIG_IO_TARGET_DAC_1_SINGLE,
-    					  APS2::CHIPCONFIG_IO_TARGET_PLL_SINGLE,
-    					  APS2::CHIPCONFIG_IO_TARGET_VCXO};
+    uint8_t commands[] =  CHIPCONFIG_IO_TARGET_PAUSE,
+    					  CHIPCONFIG_IO_TARGET_DAC_0_SINGLE,
+    					  CHIPCONFIG_IO_TARGET_DAC_1_SINGLE,
+    					  CHIPCONFIG_IO_TARGET_PLL_SINGLE,
+    					  CHIPCONFIG_IO_TARGET_VCXO};
 
     // VCXO is write only so error if trying to read
-    if (target >  APS2::CHIPCONFIG_TARGET_PLL)  return INVALID_SPI_TARGET ;
+    if (target >  CHIPCONFIG_TARGET_PLL)  return INVALID_SPI_TARGET ;
 
     cmd.target = commands[target];
     cmd.spicnt_data = 1; // single byte read
 
     switch(target)
     {
-    case APS2::CHIPCONFIG_TARGET_PLL:
+    case CHIPCONFIG_TARGET_PLL:
         {
-        	APS2::PLLCommand_t pllCmd = {static_cast<uint16_t>(addr & 0x1FFF), 0 , 1};
+         PLLCommand_t pllCmd = {static_cast<uint16_t>(addr & 0x1FFF), 0 , 1};
         	cmd.instr = pllCmd.packed;
         }
         break;
-    case APS2::CHIPCONFIG_TARGET_DAC_0:
-    case APS2::CHIPCONFIG_TARGET_DAC_1:
+    case CHIPCONFIG_TARGET_DAC_0:
+    case CHIPCONFIG_TARGET_DAC_1:
         {
-        	APS2::DACCommand_t dacCmd =   {static_cast<uint8_t>(addr & 0x1F), 0 , 1};
+         DACCommand_t dacCmd =   {static_cast<uint8_t>(addr & 0x1F), 0 , 1};
         cmd.instr = dacCmd.packed;
         }
         break;
@@ -1045,7 +1043,7 @@ EthernetControl::ErrorCodes EthernetControl::read_SPI( APS2::CHIPCONFIG_IO_TARGE
     command.packed = 0;
     response.packed = 0;
 
-    command.cmd = APS2::APS_COMMAND_CHIPCONFIGIO;
+    command.cmd = APS_COMMAND_CHIPCONFIGIO;
     command.cnt = 1;
     command.r_w = 0;
 
@@ -1055,7 +1053,7 @@ EthernetControl::ErrorCodes EthernetControl::read_SPI( APS2::CHIPCONFIG_IO_TARGE
     vector<uint32_t> writeData;
     writeData.push_back(cmd.packed);
 
-    FILE_LOG(logDEBUG2) << "Chip Config: " << APS2::printAPSChipCommand(cmd);
+    FILE_LOG(logDEBUG2) << "Chip Config: " << printAPSChipCommand(cmd);
 
     write(command, 0, writeData);
     read(&data, 1, &response);
