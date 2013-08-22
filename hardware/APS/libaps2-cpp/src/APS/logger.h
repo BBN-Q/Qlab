@@ -111,8 +111,10 @@ std::string Log<T>::ToString(TLogLevel level)
 template <typename T>
 int Log<T>::ToColor(TLogLevel level)
 {
-    static const int buffer[] = {red, yellow, white, green, aqua, purple, blue, dark_green};
-    return buffer[level];
+//    static const int buffer[] = {red, yellow, white, green, aqua, purple, blue, dark_green};
+//    return buffer[level];
+	//hacked out by Colm Ryan 22 Aug. 2013
+	return 1;
 }
 
 template <typename T>

@@ -123,7 +123,7 @@ namespace concol{
 	static const std::string BOLDCYAN     = "\033[1m\033[36m";      /* Bold Cyan */
 	static const std::string BOLDWHITE    = "\033[1m\033[37m";      /* Bold White */}
 
-	#Dummy init function
+	//Dummy init function
 	inline void concolinit() {};
 
 #endif

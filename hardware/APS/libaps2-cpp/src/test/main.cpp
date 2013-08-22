@@ -6,9 +6,7 @@
 #include <string>
 #include <algorithm>
 
-#ifdef _WIN32
 #include <concol.h> 
-#endif
 
 #include "EthernetControl.h"
 
@@ -36,9 +34,8 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
 int main (int argc, char* argv[])
 {
 
-  setcolor(red,black);
-  cout<<"BBN AP2 Test Executable" << endl;
-  setcolor(white,black);
+  concol::concolinit()
+  cout << concol::RED << "BBN AP2 Test Executable" << concol::RESET endl;
 
 
   int dbgLevel = 4;

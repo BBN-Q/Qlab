@@ -82,12 +82,9 @@ using boost::thread;
 #include "constants.h"
 
 #include "EthernetControl.h"
-#include "FPGA.h"
-
 #include "LLBank.h"
 #include "Channel.h"
-//#include "BankBouncerThread.h"
-#include "APS.h"
+#include "APS2.h"
 #include "APSRack.h"
 
 

@@ -235,8 +235,8 @@ public:
 
 	string printStatusRegisters(const APS_Status_Registers & status);
 
-	string printAPSCommand(const APSCommand_t & command);
-	string printAPSChipCommand(APSChipConfigCommand_t & command);
+	static string printAPSCommand(const APSCommand_t & command);
+	static string printAPSChipCommand(APSChipConfigCommand_t & command);
 
 	static const int NUM_CHANNELS = 2;
 
@@ -244,7 +244,7 @@ public:
 	//Constructors
 	APS2();
 	APS2(int, string);
-	~APS();
+	~APS2();
 
 	int connect();
 	int disconnect();
