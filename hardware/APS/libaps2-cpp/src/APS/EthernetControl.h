@@ -36,17 +36,6 @@ struct APSEthernetHeader {
 	uint32_t addr;
 };
 
-//Custom UDP style ethernet packets for APS
-class APSEthernetPacket{
-public:
-	APSEthernetHeader header;
-	vector<uint8_t> payload;
-
-	vector<uint8_t> serialize();
-	size_t numBytes();
-};
-
-
 class EthernetControl 
 {
 public:
@@ -139,9 +128,11 @@ private:
 
 	uint16_t seqNum_;
 
+	static const unsigned int pcapTimeoutMS = 1000;
+
 	static vector<uint8_t> words2bytes(vector<uint32_t> & words);
 
-	static const unsigned int pcapTimeoutMS = 1000;
+	vector<APSEthernetPacket> framer(APS2::APSCommand_t const & , uint32_t  , const vector<uint8_t> &);
 
 	static EthernetDevInfo * findDeviceInfo(string device);
 	static void getMacAddr(struct EthernetDevInfo & devInfo) ;
@@ -168,4 +159,20 @@ private:
 
 };
 
-#endif
+//Custom UDP style ethernet packets for APS
+class APSEthernetPacket{
+public:
+	APSEthernetHeader header;
+	vector<uint8_t> payload;
+
+	APSEthernetPacket();
+	APSEthernetPacket(const EthernetControl &, const APS2::APSCommand_t &, const uint32_t &);
+
+	vector<uint8_t> serialize();
+	size_t numBytes();
+	void set_MAC(uint8_t *, uint8_t *);
+};
+
+
+
+#endif //ETHERNETCONTROL_H_

@@ -25,13 +25,16 @@ vector<EthernetControl::EthernetDevInfo>  EthernetControl::pcapDevices_;
 std::set<string> EthernetControl::APSunits_;
 std::map<string, EthernetControl::EthernetDevInfo> EthernetControl::APS2device_;
 
+APSEthernetPacket::APSEthernetPacket() : header{0, 0, EthernetControl::APS_PROTO, 0, 0, 0}, payload(0){};
+
+APSEthernetPacket::APSEthernetPacket(const EthernetControl & controller, const APS2::APSCommand_t & command, const uint32_t & addr) :
+		header{controller.apsMac_, controller.pcapDevice_->macAddr, EthernetControl::APS_PROTO, controller.seqNum_, command, addr}, payload(0){};
+
 bool EthernetControl::pcapRunning = false;
 
-EthernetControl::EthernetControl() {
+EthernetControl::EthernetControl() :  seqNum_{0}, apsHandle_{0}{
     FILE_LOG(logINFO) << "New EthernetControl";
 	// get list of interfaces from pcap
-    seqNum_ = 0;
-    apsHandle_ = 0;
 	get_network_devices();
 }
 
@@ -97,10 +100,40 @@ EthernetControl::ErrorCodes EthernetControl::connect(string deviceID) {
 	return SUCCESS;
 }
 
-size_t EthernetControl::write(APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data ) { 
+size_t EthernetControl::write(APS2::APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data ) {
     vector<uint8_t> bytes = words2bytes(data);
     return write(command,addr, bytes ); 
 }
+
+vector<APSEthernetPacket> EthernetControl::framer(const APS2::APSCommand_t & command, uint32_t addr, const vector<uint8_t> & data){
+    /* Load data into custom UDP ethernet frames. 
+     Each Ethernet frame carries 1500 bytes of payload so may have to split across multiple packets
+    */
+    static const size_t MAX_FRAME_PAYLOAD = 1500 - 10 ; // 2 bytes seqnum; 4 bytes command; 4 bytes address
+
+	vector<APSEthernetPacket> outVec;
+
+    auto dataItterator = data.begin();
+	size_t bytesRemaining = data.size();
+
+    while (bytesRemaining > 0){
+        //Create a new packet
+        APSEthernetPacket newPacket(this, command, addr);
+        newPacket.header.command = command;
+        size_t bytesToSend = min(bytesRemaining, MAX_FRAME_PAYLOAD);
+        //Fill the payload
+        newPacket.payload.reserve(bytesToSend);
+        std::copy(dataItterator, dataItterator + bytesToSend, newPacket.payload.begin());
+
+        //Push it onto the output vector
+        outVec.push_back(newPacket);
+
+        addr += bytesToSend;
+        bytesRemaining -= bytesToSend;
+    }
+
+    return outVec;
+};
 
 int EthernetControl::send_packet(const & APSEthernetPacket packet){
     //Platform independent way to send a single packet
@@ -146,7 +179,7 @@ int EthernetControl::send_packets(const & vector<APSEthernetPacket>::iterator st
 size_t EthernetControl::write(APSCommand_t & commmand, uint32_t addr, vector<uint8_t> & data) {
 
     //Convert the data to a vector custom ethernet frames
-    vector<APSEthernetPacket> framesToSend = framer(addr, data)
+    vector<APSEthernetPacket> framesToSend = framer(command, addr, data)
 
     //Send them out. The APS2 has a buffer for 22 frames.  The framer asks for an acknowledge every 11.
     //Send 22 then wait for an acknowledge then send another 11 and repeat. 
@@ -178,60 +211,6 @@ size_t EthernetControl::write(APSCommand_t & commmand, uint32_t addr, vector<uin
     }
     //Wait for final acknowledgment
     wait_for_ack();
-
-
-
-    static const int MAX_FRAME_LEN = 1500;
-    uint8_t frame[MAX_FRAME_LEN];
-    APSEthernetHeader * bph;
-
-    FILE_LOG(logDEBUG2) << "EthernetControl::Write";
-
-    // build frame
-    std::fill(frame, frame + 1500, 0);    
-    bph = reinterpret_cast< APSEthernetHeader * >(frame);
-    std::copy(apsMac_, apsMac_ + MAC_ADDR_LEN, bph->dest);
-    std::copy(pcapDevice_->macAddr, pcapDevice_->macAddr + MAC_ADDR_LEN,  bph->src);
-
-    bph->frameType = APS_PROTO;
-    bph->command = commmand;
-    bph->addr = addr;
-
-    uint8_t * start = frame;
-    start += sizeof(APSEthernetHeader);
-
-    size_t bytesRemaining = data.size();
-    bool sent = false;
-
-    if (!apsHandle_) return INVALID_APS_ID;
-
-    size_t headerLen = sizeof(APSEthernetHeader);
-
-    auto dataItterator = data.begin();
-
-    while (bytesRemaining > 0 || !sent) {
-
-        size_t bytesSend = min(bytesRemaining, MAX_FRAME_LEN - headerLen);
-        
-        if (bytesSend > 0) {
-            // copy data into packet
-            std::copy(dataItterator, dataItterator + bytesSend, start);
-            dataItterator += bytesSend;
-        }
-        bytesRemaining -= bytesSend;
-
-        bytesSend += headerLen;
-
-        ++seqNum_;
-        if (seqNum_ == 0) {
-            seqNum_ = 1;
-        }
-
-        bph->seqNum = seqNum_;
-
-         
-         sent = true;      
-    }
 
 	return SUCCESS;
 }
