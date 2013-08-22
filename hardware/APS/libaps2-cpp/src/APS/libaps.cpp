@@ -78,8 +78,8 @@ int initAPS(int deviceID, char * bitFile, int forceReload){
 
 }
 
-int read_bitfile_version(int deviceID) {
-	return APSRack_.read_bitfile_version(deviceID);
+int get_bitfile_version(int deviceID) {
+	return APSRack_.get_bitfile_version(deviceID);
 }
 
 int set_sampleRate(int deviceID, int freq){
@@ -198,10 +198,6 @@ int set_run_mode(int deviceID, int channelNum, int mode) {
 	return APSRack_.set_run_mode(deviceID, channelNum, RUN_MODE(mode));
 }
 
-int set_repeat_mode(int deviceID, int channelNum, int mode) {
-	return APSRack_.set_repeat_mode(deviceID, channelNum, mode);
-}
-
 int save_state_files() {
 	return APSRack_.save_state_files();
 }
@@ -231,8 +227,8 @@ int read_register(int deviceID, int addr){
 	return APSRack_.read_register(deviceID, addr);
 }
 
-int program_FPGA(int deviceID, char* bitFile, int expectedVersion) {
-	return APSRack_.program_FPGA(deviceID, string(bitFile),  expectedVersion);
+int program_FPGA(int deviceID, int bitFileNum) {
+	return APSRack_.program_FPGA(deviceID, bitFileNum);
 }
 
 EXPORT int set_ethernet_active(char * name, int active) {

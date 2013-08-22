@@ -236,6 +236,65 @@ enum CONFIGURATION_SOURCE {
 typedef std::pair<uint16_t, uint8_t> AddrData;
 
 
+//FPGA registers
+//TODO: update for new memory map
+static const int FPGA_BANKSEL_CSR = (0 << 28);
+static const int FPGA_BANKSEL_WF_CHA = (1 << 28);
+static const int FPGA_BANKSEL_WF_CHB = (2 << 28);
+static const int FPGA_BANKSEL_LL_CHA = (3 << 28);
+static const int FPGA_BANKSEL_LL_CHB = (4 << 28);
+
+//Registers we write to
+static const int FPGA_ADDR_CSR 	  =   FPGA_BANKSEL_CSR | 0x0;
+static const int FPGA_ADDR_TRIG_INTERVAL = FPGA_BANKSEL_CSR | 0x1;
+static const int FPGA_ADDR_CHA_WF_LENGTH =  FPGA_BANKSEL_CSR | 0x3;
+static const int FPGA_ADDR_CHB_WF_LENGTH =  FPGA_BANKSEL_CSR | 0x4;
+static const int FPGA_ADDR_CHA_LL_LENGTH =  FPGA_BANKSEL_CSR | 0x5;
+static const int FPGA_ADDR_CHB_LL_LENGTH =  FPGA_BANKSEL_CSR | 0x6;
+static const int FPGA_ADDR_CHA_ZERO = FPGA_BANKSEL_CSR | 0x7; // DAC0/2 zero offset register
+static const int FPGA_ADDR_CHB_ZERO = FPGA_BANKSEL_CSR | 0x8; // DAC1/3 zero offset register
+static const int FPGA_ADDR_LL_REPEAT = FPGA_BANKSEL_CSR | 0x9;
+
+
+//Registers we read from
+static const int  FPGA_ADDR_VERSION  =   FPGA_BANKSEL_CSR | 0x10;
+//Expected version
+static const int FIRMWARE_VERSION =  0x3;
+
+static const int FPGA_ADDR_PLL_STATUS = FPGA_BANKSEL_CSR | 0x11;
+static const int FPGA_ADDR_CHA_LL_CURADDR = FPGA_BANKSEL_CSR | 0x12;
+static const int FPGA_ADDR_CHB_LL_CURADDR = FPGA_BANKSEL_CSR | 0x13;
+static const int FPGA_ADDR_CHA_MINILLSTART = FPGA_BANKSEL_CSR | 0x14;
+
+static const int FPGA_ADDR_A_PHASE = FPGA_BANKSEL_CSR | 0x15;
+static const int FPGA_ADDR_B_PHASE = FPGA_BANKSEL_CSR | 0x16;
+
+static const int CSRMSK_CHA_SMRSTN = 0x1; // state machine reset
+static const int CSRMSK_CHA_PLLRST = 0x2; // pll reset
+static const int CSRMSK_CHA_DDR = 0x4; // DDR enable
+static const int CSRMSK_CHA_TRIGSRC = 0x10; // trigger source (1 = external, 0 = internal)
+static const int CSRMSK_CHA_OUTMODE = 0x20; // output mode (1 = link list, 0 = waveform)
+static const int CSRMSK_CHA_REPMODE = 0x40; // LL repeat mode (1 = one-shot, 0 = continuous)
+
+static const int CSRMSK_CHB_SMRST = 0x100; // state machine reset
+static const int CSRMSK_CHB_PLLRST = 0x200; // pll reset
+static const int CSRMSK_CHB_DDR = 0x400; // DDR enable
+static const int CSRMSK_CHB_TRIGSRC = 0x1000;
+static const int CSRMSK_CHB_OUTMODE = 0x2000;
+static const int CSRMSK_CHB_REPMODE = 0x4000;
+
+
+//PLL bits
+//TODO: update
+static const int PLL_GLOBAL_XOR_BIT = 15;
+static const int PLL_02_XOR_BIT = 14;
+static const int PLL_13_XOR_BIT = 13;
+static const int PLL_02_LOCK_BIT = 12;
+static const int PLL_13_LOCK_BIT = 11;
+static const int REFERENCE_PLL_LOCK_BIT = 10;
+static const int MAX_PHASE_TEST_CNT = 40;
+
+
 typedef enum {INTERNAL=0, EXTERNAL} TRIGGERSOURCE;
 
 typedef enum {INVALID_FPGA=0, FPGA1, FPGA2, ALL_FPGAS} FPGASELECT;

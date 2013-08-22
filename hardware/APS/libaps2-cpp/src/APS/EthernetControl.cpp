@@ -1000,12 +1000,12 @@ EthernetControl::ErrorCodes EthernetControl::write_SPI CHIPCONFIG_IO_TARGET targ
 }
 
 
-EthernetControl::ErrorCodes EthernetControl::read_SPI( CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data)     {
+EthernetControl::ErrorCodes EthernetControl::read_SPI( CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data)  const {
 
     APSChipConfigCommand_t cmd;
     cmd.packed = 0;
 
-    uint8_t commands[] =  CHIPCONFIG_IO_TARGET_PAUSE,
+    uint8_t commands[] =  {CHIPCONFIG_IO_TARGET_PAUSE,
     					  CHIPCONFIG_IO_TARGET_DAC_0_SINGLE,
     					  CHIPCONFIG_IO_TARGET_DAC_1_SINGLE,
     					  CHIPCONFIG_IO_TARGET_PLL_SINGLE,

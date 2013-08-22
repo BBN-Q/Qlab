@@ -4,9 +4,6 @@
 using std::ostringstream;
 using std::endl;
 
-//TODO: sort out
-static const int MAX_PHASE_TEST_CNT = 0;
-
 string APS2::printStatusRegisters(const APS_Status_Registers & status) {
 	ostringstream ret;
 
@@ -201,7 +198,7 @@ int APS2::program_FPGA(const int & bitFileNum) {
 		int version;
 		bool ok = false;
 		for (int ct = 0; ct < 20 && !ok; ct++) {
-			version =  APS2::read_bitFile_version();
+			version =  get_bitfile_version();
 			if (version == expectedVersion) ok = true;
 			usleep(1000); // if doesn't match, wait a bit and try again
 		}
@@ -1024,7 +1021,7 @@ int APS2::read_PLL_status(const int & regAddr /*check header for default*/, cons
 	return pllStatus;
 }
 
-int APS2::get_PLL_freq() {
+int APS2::get_PLL_freq() const {
 	// Poll APS2 PLL chip to determine current frequency
 
 	uint16_t pll_cycles_addr, pll_bypass_addr;
@@ -1323,6 +1320,10 @@ int APS2::write_waveform(const int & dac, const vector<short> & wfData) {
 
 int APS2::write_LL_data_IQ(const uint32_t & startAddr, const size_t & startIdx, const size_t & stopIdx, const bool & writeLengthFlag ){
 
+	//TODO: this should get much simpler as this was mainly for streaming.
+
+	/*
+
 	//We store the IQ linklist data in channels 1 and 3
 	int dataChan;
 	dataChan = 0;
@@ -1365,6 +1366,7 @@ int APS2::write_LL_data_IQ(const uint32_t & startAddr, const size_t & startIdx, 
 
 	//Flush the queue to the device
 	flush();
+	*/
 	return 0;
 }
 

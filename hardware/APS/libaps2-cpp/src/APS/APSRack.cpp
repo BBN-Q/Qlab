@@ -32,7 +32,7 @@ int APSRack::init() {
 
 //Initialize a specific APS unit
 int APSRack::initAPS(const int & deviceID, const string & bitFile, const bool & forceReload){
-	return APSs_[deviceID].init(bitFile, forceReload);
+	return APSs_[deviceID].init(forceReload);
 }
 
 int APSRack::get_num_devices()  {
@@ -106,7 +106,7 @@ void APSRack::update_device_enumeration() {
 	EthernetControl::get_device_serials(newSerials);
 
 	// construct new APS_ vector & new serial2dev map
-	vector<APS> newAPS_;
+	vector<APS2> newAPS_;
 	map<string, int> newSerial2dev;
 
 	size_t devicect = 0;
@@ -142,8 +142,8 @@ void APSRack::update_device_enumeration() {
 
 
 
-int APSRack::read_bitfile_version(const int & deviceID) {
-	return APSs_[deviceID].read_bitFile_version();
+int APSRack::get_bitfile_version(const int & deviceID) {
+	return APSs_[deviceID].get_bitfile_version();
 }
 
 int APSRack::connect(const int & deviceID){
@@ -169,8 +169,8 @@ int APSRack::disconnect(const string & deviceSerial){
 	return APSs_[serial2dev[deviceSerial]].disconnect();
 }
 
-int APSRack::program_FPGA(const int & deviceID, const string &bitFile, const int & expectedVersion){
-	return APSs_[deviceID].program_FPGA(bitFile, expectedVersion);
+int APSRack::program_FPGA(const int & deviceID, const int & bitFileNum){
+	return APSs_[deviceID].program_FPGA(bitFileNum);
 }
 
 int APSRack::setup_DACs(const int & deviceID) {
@@ -187,10 +187,6 @@ int APSRack::get_sampleRate(const int & deviceID) {
 
 int APSRack::set_run_mode(const int & deviceID, const int & dac, const RUN_MODE & mode){
 	return APSs_[deviceID].set_run_mode(dac, mode);
-}
-
-int APSRack::set_repeat_mode(const int & deviceID, const int & dac, const bool & mode){
-	return APSs_[deviceID].set_repeat_mode(dac, mode);
 }
 
 int APSRack::clear_channel_data(const int & deviceID) {
@@ -334,19 +330,20 @@ int APSRack::read_bulk_state_file(string & stateFile){
 }
 
 int APSRack::raw_write(int deviceID, int numBytes, uint8_t* data){
-	DWORD bytesWritten;
+	uint16_t bytesWritten;
 	//bytesWritten = APSs_[deviceID].handle_.Write(data, numBytes);
 	return int(bytesWritten);
 }
 
 int APSRack::raw_read(int deviceID) {
-	DWORD bytesRead, bytesWritten;
-	UCHAR dataBuffer[2];
-	USHORT transferSize = 1;
-	int Command = APS_FPGA_IO;
+	uint16_t bytesRead, bytesWritten;
+	uint8_t dataBuffer[2];
+	uint16_t transferSize = 1;
+	//TODO: fix!
+	int Command = 0;
 
 	//Send the read command byte
-	UCHAR commandPacket = 0x80 | Command | transferSize;
+	uint8_t commandPacket = 0x80 | Command | transferSize;
    	//bytesWritten = APSs_[deviceID].handle_.Write(&commandPacket, 1);
 
 	//Look for the data
@@ -357,6 +354,6 @@ int APSRack::raw_read(int deviceID) {
 
 int APSRack::read_register(int deviceID, int addr){
 	uint32_t value;
-	APSs_[deviceID].handle_.ReadRegister(addr,value);
+	APSs_[deviceID].handle_.read_register(addr,value);
 	return value;
 }

@@ -29,9 +29,10 @@ public:
 	string get_deviceSerial(const int &) ;
 	void enumerate_devices();
 	void update_device_enumeration();
-	int read_bitfile_version(const int &);
+	int get_bitfile_version(const int &);
 
-	int program_FPGA(const int &, const string &, const int &);
+	int program_FPGA(const int &, const int &);
+	int load_bitfile(const int &, const string &, const int &);
 
 	int setup_DACs(const int &);
 
@@ -66,7 +67,6 @@ public:
 	}
 
 	int set_run_mode(const int &, const int &, const RUN_MODE &);
-	int set_repeat_mode(const int &, const int &, const bool & mode);
 
 	int set_LL_data(const int &, const int &, const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 	int set_LL_data(const int &, const int &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);

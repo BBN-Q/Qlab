@@ -105,7 +105,7 @@ public:
 	uint32_t   read_register(uint32_t addr) { uint32_t value; read_register(addr,value); return value;}
 	uint32_t   read_register(int addr) { uint32_t value; read_register(static_cast<uint32_t>(addr),value); return value;}
 
-	ErrorCodes read_SPI( CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data);
+	ErrorCodes read_SPI( CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data) const;
 
 	ErrorCodes write_SPI(CHIPCONFIG_IO_TARGET target, const vector<AddrData> & data);
 	ErrorCodes write_SPI(CHIPCONFIG_IO_TARGET target, uint16_t address, uint8_t data);

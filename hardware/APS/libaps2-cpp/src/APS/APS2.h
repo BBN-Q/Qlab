@@ -108,10 +108,6 @@ private:
 	int get_PLL_freq() const;
 
 
-	int read_PLL_status();
-	int test_PLL_sync(const int & numRetries = 10);
-	int get_PLL_freq();
-
 	int setup_VCXO();
 
 	int setup_DAC(const int &);
@@ -126,10 +122,10 @@ private:
 	int write_LL_data_IQ(const uint32_t &, const size_t &, const size_t &, const bool &);
 	int set_LL_data_IQ(const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 
-	// int save_state_file(string &);
-	// int read_state_file(string &);
-	// int write_state_to_hdf5(  H5::H5File & , const string & );
-	// int read_state_from_hdf5( H5::H5File & , const string & );
+	int save_state_file(string &);
+	int read_state_file(string &);
+	int write_state_to_hdf5(  H5::H5File & , const string & );
+	int read_state_from_hdf5( H5::H5File & , const string & );
 
 	
 }; //end class APS2

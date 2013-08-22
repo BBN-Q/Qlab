@@ -40,7 +40,7 @@ EXPORT int disconnect_by_serial(char *);
 EXPORT int serial2ID(char *);
 
 EXPORT int initAPS(int, char*, int);
-EXPORT int read_bitfile_version(int);
+EXPORT int get_bitfile_version(int);
 
 EXPORT int set_sampleRate(int, int);
 EXPORT int get_sampleRate(int);
@@ -63,7 +63,6 @@ EXPORT int set_waveform_int(int, int, short*, int);
 EXPORT int set_LL_data_IQ(int, int, int, unsigned short*, unsigned short*, unsigned short*, unsigned short*, unsigned short*);
 
 EXPORT int set_run_mode(int, int, int);
-EXPORT int set_repeat_mode(int, int, int);
 
 EXPORT int load_sequence_file(int, const char*);
 
@@ -88,7 +87,7 @@ EXPORT int read_bulk_state_file();
 EXPORT int raw_write(int, int, uint8_t*);
 EXPORT int raw_read(int);
 EXPORT int read_register(int, int);
-EXPORT int program_FPGA(int, char*, int);
+EXPORT int program_FPGA(int, int);
 
 
 #ifdef __cplusplus
