@@ -44,8 +44,6 @@ public:
 	int set_trigger_interval(const int &, const double &);
 	double get_trigger_interval(const int &);
 
-	int set_miniLL_repeat(const int &, const USHORT &);
-
 	int get_sampleRate(const int &);
 	int set_sampleRate(const int &, const int &);
 
@@ -80,7 +78,7 @@ public:
 	int save_bulk_state_file(string & );
 	int read_bulk_state_file(string & );
 
-	int raw_write(int, int, UCHAR*);
+	int raw_write(int, int, uint8_t*);
 	int raw_read(int);
 	int read_register(int, int);
 
@@ -88,7 +86,7 @@ private:
 	APSRack(const APSRack&) = delete;
 	APSRack& operator=(const APSRack&) = delete;
 	int numDevices_;
-	vector<APS> APSs_;
+	vector<APS2> APSs_;
 	vector<string> deviceSerials_;
 };
 

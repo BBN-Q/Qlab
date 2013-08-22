@@ -167,10 +167,6 @@ double get_trigger_interval(int deviceID){
 	return APSRack_.get_trigger_interval(deviceID);
 }
 
-int set_miniLL_repeat(int deviceID, unsigned short repeat){
-	return APSRack_.set_miniLL_repeat(deviceID, repeat);
-}
-
 int set_channel_offset(int deviceID, int channelNum, float offset){
 	return APSRack_.set_channel_offset(deviceID, channelNum, offset);
 }
@@ -223,7 +219,7 @@ int read_bulk_state_file() {
 	return APSRack_.read_bulk_state_file(fileName);
 }
 
-int raw_write(int deviceID, int numBytes, UCHAR* data){
+int raw_write(int deviceID, int numBytes, uint8_t* data){
 	return APSRack_.raw_write(deviceID, numBytes, data);
 }
 

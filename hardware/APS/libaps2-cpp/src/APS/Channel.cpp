@@ -160,13 +160,13 @@ int Channel::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootS
 	//Load the linklist data
 	//First figure our how many banks there are from the attribute
 	tmpGroup = H5StateFile.openGroup(rootStr + "/linkListData");
-	USHORT numBanks;
-	numBanks = h5element2element<USHORT>("numBanks",&tmpGroup, H5::PredType::NATIVE_UINT16);
+	uint16_t numBanks;
+	numBanks = h5element2element<uint16_t>("numBanks",&tmpGroup, H5::PredType::NATIVE_UINT16);
   tmpGroup.close();
 
 	std::ostringstream tmpStream;
 	//Now loop over the number of banks found and add the bank
-	for (USHORT bankct=0; bankct<numBanks; bankct++){
+	for (uint16_t bankct=0; bankct<numBanks; bankct++){
 		LLBank bank;
 		tmpStream.str(rootStr);
 		tmpStream << "/linkListData/bank" << bankct+1;

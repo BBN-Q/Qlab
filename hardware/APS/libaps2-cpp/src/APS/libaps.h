@@ -57,8 +57,6 @@ EXPORT int get_trigger_source(int);
 EXPORT int set_trigger_interval(int, double);
 EXPORT double get_trigger_interval(int);
 
-EXPORT int set_miniLL_repeat(int, unsigned short);
-
 EXPORT int set_waveform_float(int, int, float*, int);
 EXPORT int set_waveform_int(int, int, short*, int);
 
@@ -87,7 +85,7 @@ EXPORT int read_state_files();
 EXPORT int save_bulk_state_file();
 EXPORT int read_bulk_state_file();
 
-EXPORT int raw_write(int, int, unsigned char*);
+EXPORT int raw_write(int, int, uint8_t*);
 EXPORT int raw_read(int);
 EXPORT int read_register(int, int);
 EXPORT int program_FPGA(int, char*, int);

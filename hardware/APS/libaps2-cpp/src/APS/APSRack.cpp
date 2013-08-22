@@ -251,10 +251,6 @@ double APSRack::get_trigger_interval(const int & deviceID) {
 	return APSs_[deviceID].get_trigger_interval();
 }
 
-int APSRack::set_miniLL_repeat(const int & deviceID, const USHORT & repeat){
-	return APSs_[deviceID].set_miniLL_repeat(repeat);
-}
-
 int APSRack::set_channel_enabled(const int & deviceID, const int & channelNum, const bool & enable){
 	return APSs_[deviceID].set_channel_enabled(channelNum, enable);
 }
@@ -337,7 +333,7 @@ int APSRack::read_bulk_state_file(string & stateFile){
 	return 0;
 }
 
-int APSRack::raw_write(int deviceID, int numBytes, UCHAR* data){
+int APSRack::raw_write(int deviceID, int numBytes, uint8_t* data){
 	DWORD bytesWritten;
 	//bytesWritten = APSs_[deviceID].handle_.Write(data, numBytes);
 	return int(bytesWritten);
