@@ -5,7 +5,7 @@ using std::ostringstream;
 using std::endl;
 
 
-string APS2::printStatusRegisters(const APS2_Status_Registers & status) {
+string APS2::printStatusRegisters(const APS_Status_Registers & status) {
 	ostringstream ret;
 
 	ret << "Host Firmware Version = " << std::hex << status.hostFirmwareVersion << endl;
@@ -27,7 +27,7 @@ string APS2::printStatusRegisters(const APS2_Status_Registers & status) {
 	return ret.str();
 }
 
-string APS2::printAPS2Command(APS2Command_t & cmd) {
+string APS2::printAPSCommand(const APSCommand_t & cmd) {
     ostringstream ret;
 
     ret << std::hex << cmd.packed << " =";
@@ -41,7 +41,7 @@ string APS2::printAPS2Command(APS2Command_t & cmd) {
     return ret.str();
 }
 
-string APS2::printAPS2ChipCommand(APS2ChipConfigCommand_t & cmd) {
+string APS2::printAPSChipCommand(APSChipConfigCommand_t & cmd) {
     ostringstream ret;
 
     ret << std::hex << cmd.packed << " =";
@@ -103,10 +103,10 @@ int APS2::disconnect(){
 }
 
 int APS2::reset() {
-	APS2Command_t command;
+	APSCommand_t command;
 	command.packed = 0;
 	
-	command.cmd = APS2_COMMAND_RESET;
+	command.cmd = APS_COMMAND_RESET;
 	command.mode_stat = RESET_RECONFIG_BASELINE_EPROM;
 	handle_.write(command);
 

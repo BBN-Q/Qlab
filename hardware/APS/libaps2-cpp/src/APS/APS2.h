@@ -235,7 +235,7 @@ public:
 
 	string printStatusRegisters(const APS_Status_Registers & status);
 
-	string printAPSCommand(APSCommand_t & command);
+	string printAPSCommand(const APSCommand_t & command);
 	string printAPSChipCommand(APSChipConfigCommand_t & command);
 
 	static const int NUM_CHANNELS = 2;

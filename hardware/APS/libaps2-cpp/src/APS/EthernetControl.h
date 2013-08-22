@@ -79,7 +79,7 @@ public:
 	size_t write(APS2::APSCommand_t & command, uint32_t addr = 0) { auto data = vector<uint8_t>(); return write(command, addr, data);};
 	size_t write(APS2::APSCommand_t & command, uint32_t addr,  vector<uint8_t> & data );
 	size_t write(APS2::APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data );
-	ErrorCodes read(void * data, size_t packetLength, APSCommand_t * command = nullptr);
+	ErrorCodes read(void * data, size_t packetLength, APS2::APSCommand_t * command = nullptr);
 
 	ErrorCodes write_register(uint32_t addr, uint32_t data);	
 	ErrorCodes write_register(int addr, uint32_t data) {return write_register(static_cast<uint32_t>(addr), data);}
@@ -94,8 +94,8 @@ public:
 	ErrorCodes write_SPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, uint8_t data);
 	ErrorCodes write_SPI(APS2::CHIPCONFIG_IO_TARGET target, uint16_t address, vector<uint8_t> data);
 
-	size_t program_FPGA(vector<uint8_t> fileData, uint32_t addr = 0);
-	ErrorCodes   select_FPGA_image(uint32_t addr = 0);
+	size_t load_bitfile(vector<uint8_t> fileData, uint32_t addr = 0);
+	ErrorCodes select_FPGA_image(uint32_t addr = 0);
 
 
 
@@ -114,11 +114,9 @@ public:
 	static void debugAPSEcho(string device, DummyAPS * aps = 0);
 #endif
 
-	static string print_ethernetAddress(uint8_t * addr);
+	static string print_ethernetAddress(const uint8_t * addr);
 
 private:
-
-
 
 	EthernetDevInfo *pcapDevice_;
 	string deviceID_;
@@ -133,6 +131,9 @@ private:
 	static vector<uint8_t> words2bytes(vector<uint32_t> & words);
 
 	vector<APSEthernetPacket> framer(APS2::APSCommand_t const & , uint32_t  , const vector<uint8_t> &);
+
+	int send_packet(const APSEthernetPacket & );
+	int send_packets(const vector<APSEthernetPacket>::iterator & , const vector<APSEthernetPacket>::iterator & );
 
 	static EthernetDevInfo * findDeviceInfo(string device);
 	static void getMacAddr(struct EthernetDevInfo & devInfo) ;
