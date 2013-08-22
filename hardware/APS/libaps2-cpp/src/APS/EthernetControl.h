@@ -134,6 +134,7 @@ private:
 
 	int send_packet(const APSEthernetPacket & );
 	int send_packets(const vector<APSEthernetPacket>::iterator & , const vector<APSEthernetPacket>::iterator & );
+	APS2::APSCommand_t wait_for_ack();
 
 	static EthernetDevInfo * findDeviceInfo(string device);
 	static void getMacAddr(struct EthernetDevInfo & devInfo) ;

@@ -153,6 +153,27 @@ int EthernetControl::send_packet(const APSEthernetPacket & packet){
     return 0;
 }
 
+APSCommand_t EthernetControl::wait_for_ack(){
+
+	APSCommand_t response;
+	//Wait for the acknowledge packet back from the APS and log any errors.
+	FILE_LOG(logDEBUG) << "Wait for ACK";
+	read(nullptr, 0, &response);
+	FILE_LOG(logDEBUG) << "RECV ACK " << APS2::printAPSCommand(response);
+	if (!response.ack) {
+		FILE_LOG(logERROR) << "APS FPGA Write command acknowlege expected";
+	} else {
+
+	}
+	if (response.mode_stat == 0x1) {
+		FILE_LOG(logERROR) << "APS FPGA Write: Invalid CNT";
+	}
+	if (response.mode_stat == 0x2) {
+		FILE_LOG(logERROR) << "APS FPGA Write: Invalid starting offset";
+	}
+	return response;
+}
+
 int EthernetControl::send_packets(const vector<APSEthernetPacket>::iterator & start, const vector<APSEthernetPacket>::iterator & stop){
     //Send a group of packets
     //With pcap it is important to queue the packets for performance
@@ -165,10 +186,10 @@ int EthernetControl::send_packets(const vector<APSEthernetPacket>::iterator & st
     //Load the packets
     pcap_pkthdr dummyHeader;
     dummyHeader.ts = 0;
-    for (auto packetIter = start; packerIter != stop; ++packetIter){
-        dummyHeader.caplen = packIter.numBytes();
-        dummyHeader.len = packIter.numBytes(); 
-        pcap_sendqueue_queue(myQueue, &dummyHeader, packet.seralize())    
+    for (auto packetIter = start; packetIter != stop; ++packetIter){
+        dummyHeader.caplen = (*packetIter).numBytes();
+        dummyHeader.len = (*packetIter).numBytes();
+        pcap_sendqueue_queue(myQueue, &dummyHeader, packet.seralize());
     }
 
     //We're not setting timestamps so sync parameter is zero
@@ -178,7 +199,7 @@ int EthernetControl::send_packets(const vector<APSEthernetPacket>::iterator & st
     pcap_sendqueue_destroy(myQueue);
 
     //For now just send the packets one at a time
-    for (auto packetIter = start; packerIter != stop; ++packetIter) send_packet(*packetIter);
+    for (auto packetIter = start; packetIter != stop; ++packetIter) send_packet(*packetIter);
 
     return 0;
 }
@@ -212,9 +233,7 @@ size_t EthernetControl::write(APSCommand_t & command, uint32_t addr, vector<uint
 
     //Send the final bunch
     if (numFramesLeft > 0){
-        send_packets(nextFrame, nextFrame + 11);
-        nextFrame += 11;
-        numFramesLeft -= 11;
+        send_packets(nextFrame, nextFrame + numFramesLeft);
     }
     //Wait for final acknowledgment
     wait_for_ack();
@@ -815,25 +834,7 @@ size_t EthernetControl::load_bitfile(vector<uint8_t> fileData, uint32_t addr) {
         dataRemaining -= copyCount;
         addr += copyCount / sizeof(uint32_t);
 
-        // wait for ack
-        if (command.cmd == APS2::APS_COMMAND_FPGACONFIG_ACK) {
-            FILE_LOG(logDEBUG) << "Wait for ACK";
-            read(nullptr, 0, &response);
-            FILE_LOG(logDEBUG) << "RECV ACK " << APS2::printAPSCommand(response);
-            if (!response.ack) {
-                FILE_LOG(logERROR) << "APS FPGA Write command acknowlege expected";
-            } else {
-
-            }
-            if (response.mode_stat == 0x1) {
-                FILE_LOG(logERROR) << "APS FPGA Write: Invalid CNT";  
-            }
-            if (response.mode_stat == 0x2) {
-                FILE_LOG(logERROR) << "APS FPGA Write: Invalid starting offset";  
-            }
-
-        }
-
+        wait_for_ack();
     }
     return SUCCESS;
 }
