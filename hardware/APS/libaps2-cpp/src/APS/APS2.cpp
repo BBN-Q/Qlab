@@ -4,6 +4,8 @@
 using std::ostringstream;
 using std::endl;
 
+//TODO: sort out
+static const int MAX_PHASE_TEST_CNT = 0;
 
 string APS2::printStatusRegisters(const APS_Status_Registers & status) {
 	ostringstream ret;
@@ -53,12 +55,12 @@ string APS2::printAPSChipCommand(APSChipConfigCommand_t & cmd) {
 
 
 uint32_t * APS2::getPayloadPtr(uint32_t * frame) {
-   frame += sizeof(APS2EthernetHeader) / sizeof(uint32_t);
+   frame += sizeof(APSEthernetHeader) / sizeof(uint32_t);
    return frame;
 }
 
 
-APS2::APS2() :  isOpen{false}, deviceID_{-1}, channels_(2), samplingRate_{-1}, writeQueue_(0), streaming_{false})} {}
+APS2::APS2() :  isOpen{false}, deviceID_{-1}, channels_(2), samplingRate_{-1}, writeQueue_(0) {};
 
 APS2::APS2(int deviceID, string deviceSerial) :  isOpen{false}, deviceID_{deviceID}, deviceSerial_{deviceSerial},
 		samplingRate_{-1}, writeQueue_(0) {
@@ -112,27 +114,27 @@ int APS2::reset() {
 
 	// get reply with status bytes
 	
-	struct APS2_Status_Registers statusRegs;
-	handle_.read(&statusRegs, sizeof(struct APS2_Status_Registers));
+	struct APS_Status_Registers statusRegs;
+	handle_.read(&statusRegs, sizeof(struct APS_Status_Registers));
 
 	FILE_LOG(logDEBUG1) << 	APS2::printStatusRegisters(statusRegs);
 	return 0;
 }
 
-int APS2::init(const bool & forceReload, const bool & int bitFileNum){
+int APS2::init(const bool & forceReload, const int & bitFileNum){
 	 //TODO: bitfiles will be stored in flash so all we need to do here is the DAC's
 
 	if (forceReload || !read_PLL_status()) {
 		FILE_LOG(logINFO) << "Resetting instrument";
-		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << read_bitFile_version() << " PLL status: " << read_PLL_status();
+		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << get_bitfile_version() << " PLL status: " << read_PLL_status();
 
 		// send hard reset to APS2
 		// this will reconfigure the DACs, PLL and VCX0 with EPROM settings
-		reset()
+		reset();
 
 		
-		//Program the bitfile to both FPGA's
-		program_bitfile(bitFileNum);
+		//Program the bitfile to the FPGA
+		program_FPGA(bitFileNum);
 
 		//Default to max sample rate
 		set_sampleRate(1200);
@@ -164,13 +166,15 @@ int APS2::setup_DACs() {
 }
 
 
-int APS2::program_FPGA(const string & bitFile, const int & expectedVersion) {
+int APS2::program_FPGA(const int & bitFileNum) {
 	/**
 	 * @param bitFile path to a Lattice bit file
 	 * @param chipSelect which FPGA to write to (FPGA1, FPGA2, BOTH_FGPAS)
 	 * @param expectedVersion - checks whether version register matches this value after programming. -1 = skip the check
 	 */
+	//TODO: fix and move to load_bitfile
 
+	/*
 	//Open the bitfile
 	//
 	FILE_LOG(logDEBUG) << "Opening bitfile: " << bitFile;
@@ -183,8 +187,8 @@ int APS2::program_FPGA(const string & bitFile, const int & expectedVersion) {
 
 	//Copy over the file data to the data vector
 	//The default istreambuf_iterator constructor returns the "end-of-stream" iterator.
-	vector<UCHAR> fileData((std::istreambuf_iterator<char>(FID)), std::istreambuf_iterator<char>());
-	ULONG numBytes = fileData.size();
+	vector<uint8_t> fileData((std::istreambuf_iterator<char>(FID)), std::istreambuf_iterator<char>());
+	size_t numBytes = fileData.size();
 	FILE_LOG(logDEBUG) << "Read " << numBytes << " bytes from bitfile";
 
 	//Pass of the data to a lower-level function to actually push it to the FPGA
@@ -203,17 +207,17 @@ int APS2::program_FPGA(const string & bitFile, const int & expectedVersion) {
 		}
 		if (!ok) return -11;
 	}
-
+	*/
 	return 0;
 }
 
-int APS2::read_bitFile_version() {
+int APS2::get_bitfile_version() const {
 	// Reads version information from register 0x8006
 
 	uint32_t version;
 
-	//For single FPGA we return that version, for both we return both if the same otherwise error.
-	handle_.ReadRegister(FPGA_ADDR_VERSION, version);
+	//TODO: fix
+//	handle_.read_register(FPGA_ADDR_VERSION, version);
 	version &= 0x1FF; // First 9 bits hold version
 	FILE_LOG(logDEBUG) << "Bitfile version for FPGA is "  << myhex << version;
 	
@@ -235,10 +239,10 @@ int APS2::set_sampleRate(const int & freq){
 	}
 }
 
-int APS2::get_sampleRate() {
+int APS2::get_sampleRate() const {
 	//Pass through to FPGA code
 	FILE_LOG(logDEBUG2) << "get_sampleRate";
-	int freq1 = APS2::get_PLL_freq();
+	int freq1 = get_PLL_freq();
 	return freq1;
 }
 
@@ -248,12 +252,12 @@ int APS2::clear_channel_data() {
 		ch.clear_data();
 	}
 	// clear waveform length registers
-	handle_.WriteRegister(FPGA_ADDR_CHA_WF_LENGTH, 0);
-	handle_.WriteRegister(FPGA_ADDR_CHB_WF_LENGTH, 0);
+	handle_.write_register(FPGA_ADDR_CHA_WF_LENGTH, 0);
+	handle_.write_register(FPGA_ADDR_CHB_WF_LENGTH, 0);
 	
 	// clear LL length registers
-	handle_.WriteRegister(FPGA_ADDR_CHA_LL_LENGTH, 0);
-	handle_.WriteRegister(FPGA_ADDR_CHB_LL_LENGTH, 0);
+	handle_.write_register(FPGA_ADDR_CHA_LL_LENGTH, 0);
+	handle_.write_register(FPGA_ADDR_CHB_LL_LENGTH, 0);
 	
 	flush();
 
@@ -282,9 +286,9 @@ int APS2::load_sequence_file(const string & seqFile){
 
 			//Check if there is the linklist data and if it is IQ mode style
 			H5::Group chanGroup = H5SeqFile.openGroup(chanStr);
-			USHORT isLinkListData, isIQMode;
-			isLinkListData = h5element2element<USHORT>("isLinkListData", &chanGroup, H5::PredType::NATIVE_UINT16);
-			isIQMode = h5element2element<USHORT>("isIQMode", &chanGroup, H5::PredType::NATIVE_UINT16);
+			uint16_t isLinkListData, isIQMode;
+			isLinkListData = h5element2element<uint16_t>("isLinkListData", &chanGroup, H5::PredType::NATIVE_UINT16);
+			isIQMode = h5element2element<uint16_t>("isIQMode", &chanGroup, H5::PredType::NATIVE_UINT16);
 			chanGroup.close();
 
 			//Load the linklist data
@@ -303,13 +307,6 @@ int APS2::load_sequence_file(const string & seqFile){
 				}
 			}
 		}
-		//Set the mini LL count
-		H5::Group rootGroup = H5SeqFile.openGroup("/");
-		USHORT miniLLRepeat;
-		miniLLRepeat = h5element2element<USHORT>("miniLLRepeat", &rootGroup, H5::PredType::NATIVE_UINT16);
-		rootGroup.close();
-		set_miniLL_repeat(miniLLRepeat);
-
 		//Close the file
 		H5SeqFile.close();
 		return 0;
@@ -361,6 +358,8 @@ float APS2::get_channel_scale(const int & dac) const{
 int APS2::set_trigger_source(const TRIGGERSOURCE & triggerSource){
 
 	int returnVal;
+	//TODO: implement with new memory map
+	/*
 	switch (triggerSource){
 	case INTERNAL:
 		returnVal = FPGA::clear_bit(handle_, FPGA_ADDR_CSR, CSRMSK_CHA_TRIGSRC);
@@ -372,12 +371,13 @@ int APS2::set_trigger_source(const TRIGGERSOURCE & triggerSource){
 		returnVal = -1;
 		break;
 	}
+	*/
 	return returnVal;
 }
 
 TRIGGERSOURCE APS2::get_trigger_source() {
 	uint32_t regVal;
-	handle_.ReadRegister(FPGA_ADDR_CSR, regVal);
+	handle_.read_register(FPGA_ADDR_CSR, regVal);
 	return TRIGGERSOURCE((regVal & CSRMSK_CHA_TRIGSRC) == CSRMSK_CHA_TRIGSRC ? 1 : 0);
 }
 
@@ -390,8 +390,8 @@ int APS2::set_trigger_interval(const double & interval){
 	FILE_LOG(logDEBUG) << "Setting trigger interval to " << interval << "s (" << clockCycles << " cycles)";
 
 	//Trigger interval is 32bits wide so have to split up into two 16bit words
-	USHORT upperWord = clockCycles >> 16;
-	USHORT lowerWord = 0xFFFF  & clockCycles;
+	uint16_t upperWord = clockCycles >> 16;
+	uint16_t lowerWord = 0xFFFF  & clockCycles;
 
 	return write(FPGA_ADDR_TRIG_INTERVAL, {upperWord, lowerWord}, false);
 }
@@ -400,15 +400,11 @@ double APS2::get_trigger_interval() {
 
 	//Trigger interval is 32bits wide so have to split up into two 16bit words reads
 	uint32_t upperWord, lowerWord;
-	handle_.ReadRegister(FPGA_ADDR_TRIG_INTERVAL,upperWord );
-	handle_.ReadRegister(FPGA_ADDR_TRIG_INTERVAL+1, lowerWord);
+	handle_.read_register(FPGA_ADDR_TRIG_INTERVAL,upperWord );
+	handle_.read_register(FPGA_ADDR_TRIG_INTERVAL+1, lowerWord);
 	
 	//Put it back together and covert from clock cycles to time (note: trigger interval is zero indexed and has a dead state)
 	return static_cast<double>((upperWord << 16) + lowerWord + 2)/(0.25*samplingRate_*1e6);
-}
-
-int APS2::set_miniLL_repeat(const USHORT & miniLLRepeat){
-	return handle_.WriteRegister(FPGA_ADDR_LL_REPEAT, miniLLRepeat);
 }
 
 
@@ -435,7 +431,6 @@ int APS2::run() {
 			}
 		}
 	}
-	*/
 
 	//Grab a lock to pause the streaming threads while writing to the CSR
 	mymutex_->lock();
@@ -453,9 +448,10 @@ int APS2::run() {
 		}
 	}
 	uint32_t CSR;
-	handle_.ReadRegister(0, CSR);
+	handle_.read_register(0, CSR);
 	FILE_LOG(logDEBUG2) << "Current CSR: " << CSR;
 	mymutex_->unlock();
+	*/
 	return 0;
 }
 
@@ -480,8 +476,8 @@ int APS2::stop() {
 	usleep(1000);
 
 	//Put the state machines back in reset
-	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
-	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
+//	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
+//	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
 
 	// restore trigger state
 	set_trigger_interval(curTriggerInt);
@@ -519,47 +515,15 @@ int APS2::set_run_mode(const int & dac, const RUN_MODE & mode) {
 
 	//Set the run mode bit
 	FILE_LOG(logINFO) << "Setting Run Mode ==> DAC: " << dac << " Mode: " << mode;
-	if (mode) {
-	  FPGA::set_bit(handle_, FPGA_ADDR_CSR, dacModeMask);
-	} else {
-	  FPGA::clear_bit(handle_, FPGA_ADDR_CSR, dacModeMask);
-	}
+//	if (mode) {
+//	  FPGA::set_bit(handle_, FPGA_ADDR_CSR, dacModeMask);
+//	} else {
+//	  FPGA::clear_bit(handle_, FPGA_ADDR_CSR, dacModeMask);
+//	}
 
 	return 0;
 }
 
-int APS2::set_repeat_mode(const int & dac, const bool & mode) {
-	/*
-	 * set_repeat_mode
-	 * dac - channel (0-3)
-	 * mode - 1 = one-shot 0 = continuous
-	 */
-	int dacModeMask;
-
-	// setup register addressing based on DAC
-	switch(dac) {
-	  case 0:
-	  case 2:
-	    dacModeMask   = CSRMSK_CHA_REPMODE;
-	    break;
-	  case 1:
-	  case 3:
-	    dacModeMask   = CSRMSK_CHB_REPMODE;
-	    break;
-	  default:
-	    return -2;
-	}
-
-	//Set or clear the mode bit
-	FILE_LOG(logINFO) << "Setting repeat mode ==> DAC: " << dac << " Mode: " << mode;
-	if (mode) {
-		  FPGA::set_bit(handle_, FPGA_ADDR_CSR, dacModeMask);
-	} else {
-		  FPGA::clear_bit(handle_, FPGA_ADDR_CSR, dacModeMask);
-	}
-
-	return 0;
-}
 
 int APS2::set_LLData_IQ(const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat){
 
@@ -584,12 +548,13 @@ int APS2::set_LLData_IQ(const WordVec & addr, const WordVec & count, const WordV
  * Private Functions
  */
 
-int APS2::write(const unsigned int & addr, const USHORT & data, const bool & queue /* see header for default */){
+
+int APS2::write(const unsigned int & addr, const uint32_t & data, const bool & queue /* see header for default */){
 	//Create the vector and pass through
-	return write(addr, vector<USHORT>(1, data), queue);
+	return write(addr, vector<uint32_t>(1, data), queue);
 }
 
-int APS2::write(const unsigned int & addr, const vector<USHORT> & data, const bool & queue /* see header for default */){
+int APS2::write(const unsigned int & addr, const vector<uint32_t> & data, const bool & queue /* see header for default */){
 	/* APS2::write
 	 * fpga = FPAG1, FPGA2, or ALL_FPGAS (for simultaneous writes)
 	 * addr = valid memory address to start to write to
@@ -598,7 +563,9 @@ int APS2::write(const unsigned int & addr, const vector<USHORT> & data, const bo
 	 */
 
 	//Pack the data
-	vector<UCHAR> dataPacket = FPGA::format(addr, data);
+	//TODO!
+	/*
+	vector<uint8_t> dataPacket = FPGA::format(addr, data);
 
 	//Update the software checksums
 	//Address checksum is defined as lower word of address
@@ -620,7 +587,7 @@ int APS2::write(const unsigned int & addr, const vector<USHORT> & data, const bo
 	else{
 		FPGA::write_block(handle_, dataPacket, offsets);
 	}
-
+	*/
 	return 0;
 }
 
@@ -633,7 +600,6 @@ int APS2::flush() {
 	//int bytesWritten = FPGA::write_block(handle_, writeQueue_, offsetQueue_);
 	FILE_LOG(logDEBUG1) << "Flushed " << bytesWritten << " bytes to device";
 	writeQueue_.clear();
-	offsetQueue_.clear();
 	return bytesWritten;
 }
 
@@ -644,7 +610,7 @@ int APS2::setup_PLL() {
 
 	// Disable DDRs
 	int ddrMask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
-	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddrMask);
+//	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddrMask);
 	// disable dac FIFOs
 	for (int dac = 0; dac < NUM_CHANNELS; dac++)
 		disable_DAC_FIFO(dac);
@@ -683,14 +649,14 @@ int APS2::setup_PLL() {
 
 
 	// write routine to APS2
-	handle_.WriteSPI(CHIPCONFIG_TARGET_PLL, PLL_Routine);
+	handle_.write_SPI(CHIPCONFIG_TARGET_PLL, PLL_Routine);
 
 	// enable the oscillator
-	if (APS2::reset_status_ctrl() != 1)
-		return -1;
+//	if (APS2::reset_status_ctrl() != 1)
+//		return -1;
 
 	// Enable DDRs
-	FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddrMask);
+//	FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddrMask);
 
 	//Record that sampling rate has been set to 1200
 	samplingRate_ = 1200;
@@ -706,14 +672,14 @@ int APS2::set_PLL_freq(const int & freq) {
 	 * freq = frequency to set in MHz, allowed values are (1200, 600, 300, 200, 100, 50, and 40)
 	 */
 
-	ULONG pllCyclesAddr, pllBypassAddr;
-	UCHAR pllCyclesVal, pllBypassVal;
+	uint32_t pllCyclesAddr, pllBypassAddr;
+	uint8_t pllCyclesVal, pllBypassVal;
 
 	FILE_LOG(logDEBUG) << "Setting PLL FPGA: Freq.: " << freq;
 
-
-	pllCyclesAddr = FPGA1_PLL_CYCLES_ADDR;
-	pllBypassAddr = FPGA1_PLL_BYPASS_ADDR;
+	//TODO: fix!
+	pllCyclesAddr = 0;
+	pllBypassAddr = 0;
 
 	switch(freq) {
 //		case 40: pllCyclesVal = 0xEE; break; // 15 high / 15 low (divide by 30)
@@ -734,13 +700,15 @@ int APS2::set_PLL_freq(const int & freq) {
 
 	// Disable DDRs
 	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
-	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
+	//TODO: fix!
+//	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 	// disable DAC FIFOs
 	for (int dac = 0; dac < NUM_CHANNELS; dac++)
 		disable_DAC_FIFO(dac);
 
 	// Disable oscillator by clearing APS2_STATUS_CTRL register
-	if (APS2::clear_status_ctrl() != 1) return -4;
+	//TODO: fix!
+//	if (APS2::clear_status_ctrl() != 1) return -4;
 
 	//Setup of a vector of address-data pairs for all the writes we need for the PLL routine
 	const vector<AddrData> PLL_Routine = {
@@ -755,16 +723,18 @@ int APS2::set_PLL_freq(const int & freq) {
 	cout << "WritePLLSPI" << endl;
 
 	// write routine to APS2
-	handle_.WriteSPI(CHIPCONFIG_TARGET_PLL, PLL_Routine);
+	handle_.write_SPI(CHIPCONFIG_TARGET_PLL, PLL_Routine);
 
 
 	cout << "Enable Oscillator" << endl;
 
 	// Enable Oscillator
-	if (APS2::reset_status_ctrl() != 1) return -4;
+	//TODO: fix!
+//	if (APS2::reset_status_ctrl() != 1) return -4;
 
 	// Enable DDRs
-	FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
+	//TODO: fix!
+//	FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 	// Enable DAC FIFOs
 	// for (int dac = 0; dac < NUM_CHANNELS; dac++)
 	// 	enable_DAC_FIFO(dac);
@@ -799,24 +769,26 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 	int dac02Reset, dac13Reset;
 
 	int pllBit;
-	UINT pllEnableAddr, pllEnableAddr2;
-	UCHAR writeByte;
+	unsigned int pllEnableAddr, pllEnableAddr2;
+	uint8_t writeByte;
 
 	const vector<int> PLL_XOR_TEST = {PLL_02_XOR_BIT, PLL_13_XOR_BIT,PLL_GLOBAL_XOR_BIT};
 	const vector<int> CH_PHASE_TESTS = {FPGA_ADDR_A_PHASE, FPGA_ADDR_B_PHASE};
 	const vector<int> PLL_LOCK_TEST = {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT};
 	const vector<int> PLL_RESET = {CSRMSK_CHA_PLLRST, CSRMSK_CHB_PLLRST, 0};
 
-	UINT pllResetBit  = CSRMSK_CHA_PLLRST | CSRMSK_CHB_PLLRST;
+	unsigned int pllResetBit  = CSRMSK_CHA_PLLRST | CSRMSK_CHB_PLLRST;
 
 	FILE_LOG(logINFO) << "Running channel sync on FPGA ";
 
-	pllEnableAddr = DAC0_ENABLE_ADDR;
-	pllEnableAddr2 = DAC1_ENABLE_ADDR;
+	//TODO: fix!
+	pllEnableAddr = 0;
+	pllEnableAddr2 = 0;
 	
 	// Disable DDRs
 	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
-	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
+	//TODO: fix!
+//	FPGA::clear_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 	// disable DAC FIFOs
 	for (int dac = 0; dac < NUM_CHANNELS; dac++)
 		disable_DAC_FIFO(dac);
@@ -829,10 +801,10 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 		int testct = 0;
 		while (!inSync && (testct < 20)){
 			FILE_LOG(logDEBUG2) << "Reading PLL status for pllBits with size " << pllBits.size() << " and first bit is " << pllBits[0];
-			inSync = (APS2::read_PLL_status(regAddress, pllBits) == 1);
+//			inSync = (APS2::read_PLL_status(regAddress, pllBits) == 1);
 			//If we aren't locked then reset for the next try by clearing the PLL reset bits
 			if (resetPLL) {
-				FPGA::clear_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
+//				FPGA::clear_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
 			}
 			//Otherwise just wait
 			else{
@@ -857,16 +829,16 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 
 	//First a little helper function to update the PLL registers
 	auto update_PLL_register = [this] (){
-		ULONG address = 0x232;
-		UCHAR data = 0x1;
-		handle_.WriteSPI(CHIPCONFIG_TARGET_PLL, address, data);
+		uint32_t address = 0x232;
+		uint8_t data = 0x1;
+		handle_.write_SPI(CHIPCONFIG_TARGET_PLL, address, data);
 	};
 
 	auto read_DLL_phase = [this] (int addr) {
 		// The phase register holds a 9-bit value [0, 511] representing the phase shift.
 		// We convert his value to phase in degrees in the range (-180, 180]
 		uint32_t regData;
-		handle_.ReadRegister(addr, regData);
+		handle_.read_register(addr, regData);
 		double phase = regData;
 		if (phase > 256) {
 			phase -= 512;
@@ -887,7 +859,7 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 		//Take twenty counts of the the xor data
 		for(int xorct = 0; xorct < xorCounts; xorct++) {
 			uint32_t regData;
-			handle_.ReadRegister(FPGA_ADDR_PLL_STATUS, regData);
+			handle_.read_register(FPGA_ADDR_PLL_STATUS, regData);
 			pllBit = regData;
 			xorFlagCnts += (pllBit >> PLL_GLOBAL_XOR_BIT) & 0x1;
 		}
@@ -916,25 +888,26 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 			//If ChA is +/-90 degrees out of phase then reset it
 			if (abs(a_phase) >= lowPhaseCutoff && abs(a_phase) <= highPhaseCutoff) {
 				dac02Reset = 1;
-				handle_.WriteSPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr, writeByte );
+				handle_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr, writeByte );
 			}
 			//If ChB is +/-90 degrees out of phase then reset it
 			if (abs(b_phase) >= lowPhaseCutoff && abs(b_phase) <= highPhaseCutoff) {
 				dac13Reset = 1;
-				handle_.WriteSPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr2, writeByte);
+				handle_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr2, writeByte);
 			}
 			//Actually update things
 			update_PLL_register();
 			writeByte = 0x0; // enable clock outputs
 			if (dac02Reset) 
-				handle_.WriteSPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr, writeByte );
+				handle_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr, writeByte );
 			if (dac13Reset)
-				handle_.WriteSPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr2, writeByte);
+				handle_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr2, writeByte);
 			update_PLL_register();
 
 			// reset FPGA PLLs
-			FPGA::set_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
-			FPGA::clear_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
+			//TODO: fix!
+//			FPGA::set_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
+//			FPGA::clear_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
 
 			// wait for the PLL to relock
 			inSync = wait_PLL_relock(false, FPGA_ADDR_PLL_STATUS, PLL_LOCK_TEST);
@@ -965,8 +938,9 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 				globalSync = false;
 
 				// reset a single channel PLL
-				FPGA::set_bit(handle_, FPGA_ADDR_CSR, PLL_RESET[ch]);
-				FPGA::clear_bit(handle_, FPGA_ADDR_CSR, PLL_RESET[ch]);
+				//TODO: fix!
+//				FPGA::set_bit(handle_, FPGA_ADDR_CSR, PLL_RESET[ch]);
+//				FPGA::clear_bit(handle_, FPGA_ADDR_CSR, PLL_RESET[ch]);
 
 				// wait for lock
 				FILE_LOG(logDEBUG2) << "Waiting for relock of PLL " << ch << " by looking at bit " << PLL_LOCK_TEST[ch];
@@ -983,22 +957,23 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 		if (numRetries > 0) {
 			FILE_LOG(logDEBUG) << "Sync failed; retrying.";
 			// restart both DAC clocks and try again
-			handle_.WriteSPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr, 0x2);  // MAGIC NUMBER
-			handle_.WriteSPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr2, 0x2); // MAGIC NUMBER
+			handle_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr, 0x2);  // MAGIC NUMBER
+			handle_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr2, 0x2); // MAGIC NUMBER
 			update_PLL_register();
 			writeByte = 0x0;
-			handle_.WriteSPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr, 0x0);  // MAGIC NUMBER
-			handle_.WriteSPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr2, 0x0); // MAGIC NUMBER
+			handle_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr, 0x0);  // MAGIC NUMBER
+			handle_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr2, 0x0); // MAGIC NUMBER
 			update_PLL_register();
 
-			FPGA::set_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
-			FPGA::clear_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
+			//TODO: fix!
+//			FPGA::set_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
+//			FPGA::clear_bit(handle_, FPGA_ADDR_CSR, pllResetBit);
 
 			//Try again by recursively calling the same function
 			return test_PLL_sync(numRetries - 1);
 		} else {
 			// we failed, but enable DDRs to get a usable state
-			FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
+//			FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 			// enable DAC FIFOs
 			//for (int dac = 0; dac < NUM_CHANNELS; dac++)
 				//enable_DAC_FIFO(dac);
@@ -1009,8 +984,10 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 	}
 
 
+
 	// Enable DDRs
-	FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
+	//TODO: fix!
+//	FPGA::set_bit(handle_, FPGA_ADDR_CSR, ddr_mask);
 	// enable DAC FIFOs
 	//for (int dac = 0; dac < NUM_CHANNELS; dac++)
 		//enable_DAC_FIFO(dac);
@@ -1036,7 +1013,7 @@ int APS2::read_PLL_status(const int & regAddr /*check header for default*/, cons
 //	pll_bit = FPGA::read_FPGA(handle_, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, fpga); // latched to 200 MHz PLL (has version 0x010)
 
 	uint32_t pllRegister;
-	handle_.ReadRegister(regAddr, pllRegister);
+	handle_.read_register(regAddr, pllRegister);
 
 	//Check each of the clocks in series
 	for(int tmpBit : pllLockBits){
@@ -1057,11 +1034,12 @@ int APS2::get_PLL_freq() {
 
 	FILE_LOG(logDEBUG2) << "get_PLL_freq";
 
-	pll_cycles_addr = FPGA1_PLL_CYCLES_ADDR;
-	pll_bypass_addr = FPGA1_PLL_BYPASS_ADDR;
+	//TODO: get the right address
+	pll_cycles_addr = 0;
+	pll_bypass_addr = 0;
 
-	handle_.ReadSPI(CHIPCONFIG_TARGET_PLL, pll_cycles_addr, pll_cycles_val);
-	handle_.ReadSPI(CHIPCONFIG_TARGET_PLL, pll_bypass_addr, pll_bypass_val);
+	handle_.read_SPI(CHIPCONFIG_TARGET_PLL, pll_cycles_addr, pll_cycles_val);
+	handle_.read_SPI(CHIPCONFIG_TARGET_PLL, pll_bypass_addr, pll_bypass_val);
 
 	FILE_LOG(logDEBUG3) << "pll_cycles_val = " << (int)pll_cycles_val;
 	FILE_LOG(logDEBUG3) << "pll_bypass_val = " << (int)pll_bypass_val;
@@ -1096,17 +1074,18 @@ int APS2::setup_VCXO() {
 	FILE_LOG(logINFO) << "Setting up VCX0";
 
 	// Register 00 VCXO value, MS Byte First
-	vector<UCHAR> Reg00Bytes = {0x8, 0x60, 0x0, 0x4};
+	vector<uint8_t> Reg00Bytes = {0x8, 0x60, 0x0, 0x4};
 
 	// Register 01 VCXO value, MS Byte First
-	vector<UCHAR> Reg01Bytes = {0x64, 0x91, 0x0, 0x61};
+	vector<uint8_t> Reg01Bytes = {0x64, 0x91, 0x0, 0x61};
 
 	// ensure the oscillator is disabled before programming
-	if (APS2::clear_status_ctrl() != 1)
-		return -1;
+	//TODO: fix!
+//	if (APS2::clear_status_ctrl() != 1)
+//		return -1;
 
-	handle_.WriteSPI(CHIPCONFIG_TARGET_VCXO, 0, Reg00Bytes);
-	handle_.WriteSPI(CHIPCONFIG_TARGET_VCXO, 0, Reg01Bytes);
+	handle_.write_SPI(CHIPCONFIG_TARGET_VCXO, 0, Reg00Bytes);
+	handle_.write_SPI(CHIPCONFIG_TARGET_VCXO, 0, Reg01Bytes);
 
 	return 0;
 }
@@ -1138,42 +1117,42 @@ int APS2::setup_DAC(const int & dac)
 	// Ensure that surveilance and auto modes are off
 	// get initial states of registers
 	
-	const vector<APS2::CHIPCONFIG_IO_TARGET> targets = {CHIPCONFIG_TARGET_DAC_0, CHIPCONFIG_TARGET_DAC_1};
+	const vector<CHIPCONFIG_IO_TARGET> targets = {CHIPCONFIG_TARGET_DAC_0, CHIPCONFIG_TARGET_DAC_1};
 
-	APS2::CHIPCONFIG_IO_TARGET target = targets[dac];
+	CHIPCONFIG_IO_TARGET target = targets[dac];
 
-	handle_.ReadSPI(target, interruptAddr, data);
+	handle_.read_SPI(target, interruptAddr, data);
 	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(interruptAddr & 0x1F) << " Val: " << int(data & 0xFF);
 
-	handle_.ReadSPI(target, msdMhdAddr, data);
+	handle_.read_SPI(target, msdMhdAddr, data);
 	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(msdMhdAddr & 0x1F) << " Val: " << int(data & 0xFF);
 	
-	handle_.ReadSPI(target, sdAddr, data);
+	handle_.read_SPI(target, sdAddr, data);
 	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(sdAddr & 0x1F) << " Val: " << int(data & 0xFF);
 	
-	handle_.ReadSPI(target, controllerAddr, data);
+	handle_.read_SPI(target, controllerAddr, data);
 	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(controllerAddr & 0x1F) << " Val: " << int(data & 0xFF);
 	
 	data = 0;
-	handle_.WriteSPI(target, controllerAddr, data);
+	handle_.write_SPI(target, controllerAddr, data);
 
 	// Slide the data valid window left (with MSD) and check for the interrupt
 	SD = 0;  //(sample delay nibble, stored in Reg. 5, bits 7:4)
 	MSD = 0; //(setup delay nibble, stored in Reg. 4, bits 7:4)
 	MHD = 0; //(hold delay nibble,  stored in Reg. 4, bits 3:0)
 	data = SD << 4;
-	handle_.WriteSPI(target, sdAddr, data);
+	handle_.write_SPI(target, sdAddr, data);
 
 	for (MSD = 0; MSD < 16; MSD++) {
 		FILE_LOG(logDEBUG2) <<  "Setting MSD: " << int(MSD);
 		
 		data = (MSD << 4) | MHD;
-		handle_.WriteSPI(target, msdMhdAddr, data);
+		handle_.write_SPI(target, msdMhdAddr, data);
 		FILE_LOG(logDEBUG2) <<  "Write Reg: " << myhex << int(msdMhdAddr & 0x1F) << " Val: " << int(data & 0xFF);
 		
 		//FPGA::read_SPI(handle_, APS2_DAC_SPI, msd_mhd_addr, &data);
 		//dlog(DEBUG_VERBOSE2, "Read reg 0x%x, value 0x%x\n", msd_mhd_addr & 0x1F, data & 0xFF);
-		handle_.ReadSPI(target, sdAddr, data);
+		handle_.read_SPI(target, sdAddr, data);
 		FILE_LOG(logDEBUG2) <<  "Read Reg: " << myhex << int(sdAddr & 0x1F) << " Val: " << int(data & 0xFF);
 		
 		bool check = data & 1;
@@ -1190,9 +1169,9 @@ int APS2::setup_DAC(const int & dac)
 		FILE_LOG(logDEBUG2) <<  "Setting MHD: " << int(MHD);
 		
 		data = (MSD << 4) | MHD;
-		handle_.WriteSPI(target, msdMhdAddr, data);
+		handle_.write_SPI(target, msdMhdAddr, data);
 		
-		handle_.ReadSPI(target, sdAddr, data);
+		handle_.read_SPI(target, sdAddr, data);
 		FILE_LOG(logDEBUG2) << "Read: " << myhex << int(data & 0xFF);
 		bool check = data & 1;
 		FILE_LOG(logDEBUG2) << "Check: " << check;
@@ -1207,10 +1186,10 @@ int APS2::setup_DAC(const int & dac)
 	// Clear MSD and MHD
 	MHD = 0;
 	data = (MSD << 4) | MHD;
-	handle_.WriteSPI(target, msdMhdAddr, data);
+	handle_.write_SPI(target, msdMhdAddr, data);
 	// Set the optimal sample delay (SD)
 	data = SD << 4;
-	handle_.WriteSPI(target, sdAddr, data);
+	handle_.write_SPI(target, sdAddr, data);
 
 	// AD9376 data sheet advises us to enable surveilance and auto modes, but this
 	// has introduced output glitches in limited testing
@@ -1238,14 +1217,14 @@ int APS2::enable_DAC_FIFO(const int & dac) {
 	uint16_t syncAddr = 0x0 | (dac << 5);
 	uint16_t fifoStatusAddr = 0x7 | (dac << 5);
 	FILE_LOG(logDEBUG) << "Enabling DAC " << dac << " FIFO";
-	const vector<APS2::CHIPCONFIG_IO_TARGET> targets = {CHIPCONFIG_TARGET_DAC_0, CHIPCONFIG_TARGET_DAC_1};
-	APS2::CHIPCONFIG_IO_TARGET target = targets[dac];
+	const vector<CHIPCONFIG_IO_TARGET> targets = {CHIPCONFIG_TARGET_DAC_0, CHIPCONFIG_TARGET_DAC_1};
+	CHIPCONFIG_IO_TARGET target = targets[dac];
 	// set sync bit (Reg 0, bit 2)
-	handle_.ReadSPI(target, syncAddr, data);
+	handle_.read_SPI(target, syncAddr, data);
 	data = data | (1 << 2);
-	int status = handle_.WriteSPI(target, syncAddr, data );
+	int status = handle_.write_SPI(target, syncAddr, data );
 	// read back FIFO phase to ensure we are in a safe zone
-	handle_.ReadSPI(target, fifoStatusAddr, data);
+	handle_.read_SPI(target, fifoStatusAddr, data);
 	// phase (FIFOSTAT) is in bits <6:4>
 	FILE_LOG(logDEBUG2) << "Read: " << myhex << int(data & 0xFF);
 	FILE_LOG(logDEBUG) << "FIFO phase = " << ((data & 0x70) >> 4);
@@ -1258,9 +1237,9 @@ int APS2::disable_DAC_FIFO(const int & dac) {
 	uint32_t syncAddr = 0x0 | (dac << 5);
 	FILE_LOG(logDEBUG1) << "Disable DAC " << dac << " FIFO";
 	// clear sync bit
-	handle_.ReadSPI(CHIPCONFIG_TARGET_PLL, syncAddr, data);
+	handle_.read_SPI(CHIPCONFIG_TARGET_PLL, syncAddr, data);
 	mask = (0x1 << 2);
-	return handle_.WriteSPI( CHIPCONFIG_TARGET_PLL, syncAddr, data & ~mask );
+	return handle_.write_SPI( CHIPCONFIG_TARGET_PLL, syncAddr, data & ~mask );
 }
 
 int APS2::set_offset_register(const int & dac, const float & offset) {
@@ -1270,7 +1249,7 @@ int APS2::set_offset_register(const int & dac, const float & offset) {
 	 */
 
 	uint32_t zeroRegisterAddr;
-	WORD scaledOffset;
+	uint16_t scaledOffset;
 
 	switch (dac) {
 		case 0:
@@ -1286,10 +1265,10 @@ int APS2::set_offset_register(const int & dac, const float & offset) {
 			return -2;
 	}
 
-	scaledOffset = WORD(offset * MAX_WF_AMP);
+	scaledOffset = uint16_t(offset * MAX_WF_AMP);
 	FILE_LOG(logINFO) << "Setting DAC " << dac << "  zero register to " << scaledOffset;
 
-	handle_.WriteRegister(zeroRegisterAddr, scaledOffset);
+	handle_.write_register(zeroRegisterAddr, scaledOffset);
 
 	return 0;
 }
@@ -1324,36 +1303,25 @@ int APS2::write_waveform(const int & dac, const vector<short> & wfData) {
 	FILE_LOG(logINFO) << "Loading Waveform length " << wfData.size() << " (FPGA count = " << wfLength << " ) into DAC " << dac;
 
 	//Write the waveform parameters
-	handle_.WriteRegister(sizeReg, wfLength);
+	handle_.write_register(sizeReg, wfLength);
 
 	if (FILELog::ReportingLevel() >= logDEBUG2) {
 		//Double check it took
-		handle_.ReadRegister(sizeReg, tmpData);
+		handle_.read_register(sizeReg, tmpData);
 		FILE_LOG(logDEBUG2) << "Size set to: " << tmpData;
 		FILE_LOG(logDEBUG2) << "Loading waveform at " << myhex << startAddr;
 	}
 
-	//Reset the checksums
-	if (FILELog::ReportingLevel() >= logDEBUG) {
-		reset_checksums();
-	}
-
 	//Format the data and add to write queue
-	write(startAddr, vector<USHORT>(wfData.begin(), wfData.end()), true);
+	//TODO: check data alignment from 16 to 32 bit
+	write(startAddr, vector<uint32_t>(wfData.begin(), wfData.end()), true);
 	flush();
 
-	//Verify the checksums
-	if (FILELog::ReportingLevel() >= logDEBUG) {
-		if (!verify_checksums()){
-			FILE_LOG(logERROR) << "Checksums didn't match after writing waveform data";
-			return -2;
-		}
-	}
 	return 0;
 }
 
 
-int APS2::write_LL_data_IQ(const ULONG & startAddr, const size_t & startIdx, const size_t & stopIdx, const bool & writeLengthFlag ){
+int APS2::write_LL_data_IQ(const uint32_t & startAddr, const size_t & startIdx, const size_t & stopIdx, const bool & writeLengthFlag ){
 
 	//We store the IQ linklist data in channels 1 and 3
 	int dataChan;
@@ -1480,28 +1448,8 @@ int APS2::write_LL_data_IQ(const ULONG & startAddr, const size_t & startIdx, con
 }
 	*/
 
-int APS2::read_LL_addr(){
-	/*
-	 * Read the currently playing LL address
-	 */
-	return handle_.ReadRegister(FPGA_ADDR_CHA_LL_CURADDR);
-}
-
-int APS2::read_LL_addr(const int & dac){
-	/*
-	 * Read the currently playing LL address
-	 */
-	return handle_.ReadRegister(FPGA_ADDR_CHA_LL_CURADDR);
-}
-
-
-int APS2::read_miniLL_startAddr(){
-	/*
-	 * Read the start of the currently playing miniLL
-	 */
-	return handle_.ReadRegister(FPGA_ADDR_CHA_MINILLSTART);
-}
-
+//TODO: implement
+/*
 int APS2::save_state_file(string & stateFile){
 
 	if (stateFile.length() == 0) {
@@ -1559,7 +1507,7 @@ int APS2::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootStr)
 	return 0;
 }
 
-
+*/
 
 
 
