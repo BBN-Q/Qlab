@@ -57,15 +57,15 @@ WordVec LLBank::get_packed_data(const size_t & startIdx, const size_t & stopIdx)
 int LLBank::write_state_to_hdf5(H5::H5File & H5StateFile, const string & rootStr){
 	H5::Group chanGroup = H5StateFile.openGroup(rootStr);
 	H5::DataType dt = H5::PredType::NATIVE_UINT16;
-	USHORT tmpLength = static_cast<USHORT>(length);
-	element2h5attribute<USHORT>("length", tmpLength, &chanGroup, dt);
+	uint16_t tmpLength = static_cast<uint16_t>(length);
+	element2h5attribute<uint16_t>("length", tmpLength, &chanGroup, dt);
 	chanGroup.close();
-	vector2h5array<USHORT>(addr_,  &H5StateFile, "addr",  rootStr + "/addr",  dt);
-	vector2h5array<USHORT>(count_,   &H5StateFile, "count",   rootStr + "/count",   dt);
-	vector2h5array<USHORT>(repeat_,  &H5StateFile, "repeat",  rootStr + "/repeat",  dt);
-	vector2h5array<USHORT>(trigger1_, &H5StateFile, "trigger1", rootStr + "/trigger1", dt);
+	vector2h5array<uint16_t>(addr_,  &H5StateFile, "addr",  rootStr + "/addr",  dt);
+	vector2h5array<uint16_t>(count_,   &H5StateFile, "count",   rootStr + "/count",   dt);
+	vector2h5array<uint16_t>(repeat_,  &H5StateFile, "repeat",  rootStr + "/repeat",  dt);
+	vector2h5array<uint16_t>(trigger1_, &H5StateFile, "trigger1", rootStr + "/trigger1", dt);
 	if (IQMode){
-		vector2h5array<USHORT>(trigger2_, &H5StateFile, "trigger2", rootStr + "/trigger2", dt);
+		vector2h5array<uint16_t>(trigger2_, &H5StateFile, "trigger2", rootStr + "/trigger2", dt);
 	}
 	return 0;
 }
@@ -73,14 +73,14 @@ int LLBank::write_state_to_hdf5(H5::H5File & H5StateFile, const string & rootStr
 int LLBank::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootStr){
 	H5::Group chanGroup = H5StateFile.openGroup(rootStr);
 	H5::DataType dt = H5::PredType::NATIVE_UINT16;
-	length = h5element2element<USHORT>("length", &chanGroup, dt);
+	length = h5element2element<uint16_t>("length", &chanGroup, dt);
 	chanGroup.close();
-	addr_  = h5array2vector<USHORT>(&H5StateFile, rootStr + "/addr",  dt);
-	count_   = h5array2vector<USHORT>(&H5StateFile, rootStr + "/count",   dt);
-	trigger1_ = h5array2vector<USHORT>(&H5StateFile, rootStr + "/trigger1", dt);
-	repeat_  = h5array2vector<USHORT>(&H5StateFile, rootStr + "/repeat",  dt);
+	addr_  = h5array2vector<uint16_t>(&H5StateFile, rootStr + "/addr",  dt);
+	count_   = h5array2vector<uint16_t>(&H5StateFile, rootStr + "/count",   dt);
+	trigger1_ = h5array2vector<uint16_t>(&H5StateFile, rootStr + "/trigger1", dt);
+	repeat_  = h5array2vector<uint16_t>(&H5StateFile, rootStr + "/repeat",  dt);
 	if(IQMode){
-		trigger2_ = h5array2vector<USHORT>(&H5StateFile, rootStr + "/trigger2", dt);
+		trigger2_ = h5array2vector<uint16_t>(&H5StateFile, rootStr + "/trigger2", dt);
 	}
 
 	init_data();
@@ -93,12 +93,12 @@ void LLBank::init_data(){
 	//Go through the LL entries and calculate lengths and start points of each miniLL
 	miniLLLengths.clear();
 	miniLLStartIdx.clear();
-	const USHORT startMiniLLMask = (1 << 15);
-	const USHORT endMiniLLMask = (1 << 14);
+	const uint16_t startMiniLLMask = (1 << 15);
+	const uint16_t endMiniLLMask = (1 << 14);
 	size_t lengthCt = 0;
 	for(size_t ct = 0; ct < length; ct++){
 		// flags are stored in repeat vector
-		USHORT curWord = repeat_[ct];
+		uint16_t curWord = repeat_[ct];
 		if (curWord & startMiniLLMask){
 			miniLLStartIdx.push_back(ct);
 			lengthCt = 0;
