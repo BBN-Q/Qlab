@@ -10,6 +10,7 @@
 #endif
 
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <chrono>
 #include <set>
@@ -448,8 +449,13 @@ void EthernetControl::getMacAddr(struct EthernetDevInfo & devInfo) {
 
     if (pAdapterInfo) free(pAdapterInfo);
         
-#else 
-    #error "getMacAddr only implemented for WIN32"
+#else
+    //On Linux we simply look in /sys/class/net/DEVICE_NAME/address
+    std::ifstream devFile(std::string("/sys/class/net/") + devInfo.name + std::string("/address"));
+	std::string macAddrStr;
+	getline(devFile, macAddrStr);
+	parseMACAddress(macAddrStr, devInfo.macAddr);
+
 #endif
 
 }
@@ -901,7 +907,7 @@ EthernetControl::ErrorCodes EthernetControl::read_register(uint32_t addr, uint32
     return SUCCESS;
 }
 
-EthernetControl::ErrorCodes EthernetControl::write_SPI CHIPCONFIG_IO_TARGET target, const vector AddrData> & data) {
+EthernetControl::ErrorCodes EthernetControl::write_SPI(CHIPCONFIG_IO_TARGET target, const vector <AddrData> & data) {
         
     // TODO: This treats all commands as singles investigate sending multi commands with multi
 
@@ -982,13 +988,13 @@ EthernetControl::ErrorCodes EthernetControl::write_SPI CHIPCONFIG_IO_TARGET targ
     return SUCCESS;
 }
 
-EthernetControl::ErrorCodes EthernetControl::write_SPI CHIPCONFIG_IO_TARGET target, uint16_t address, uint8_t data) {
+EthernetControl::ErrorCodes EthernetControl::write_SPI(CHIPCONFIG_IO_TARGET target, uint16_t address, uint8_t data) {
     
     const vector<AddrData> update = {{address, data}};
     return  write_SPI(target, update);
 }
 
-EthernetControl::ErrorCodes EthernetControl::write_SPI CHIPCONFIG_IO_TARGET target, uint16_t address, vector<uint8_t> data) {
+EthernetControl::ErrorCodes EthernetControl::write_SPI(CHIPCONFIG_IO_TARGET target, uint16_t address, vector<uint8_t> data) {
     
     vector<AddrData> update;
 
