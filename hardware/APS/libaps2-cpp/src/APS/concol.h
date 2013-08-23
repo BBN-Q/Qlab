@@ -7,6 +7,10 @@ Modified by Colm Ryan for some cross-platform ability.
 Global variables - textcol,backcol,deftextcol,defbackcol,colorprotect
 */
 
+
+#ifndef CONCOL_H
+#define CONCOL_H
+
 #ifdef WIN32
 
 #include<windows.h>
@@ -121,9 +125,11 @@ namespace concol{
 	static const std::string BOLDBLUE     = "\033[1m\033[34m";      /* Bold Blue */
 	static const std::string BOLDMAGENTA  = "\033[1m\033[35m";      /* Bold Magenta */
 	static const std::string BOLDCYAN     = "\033[1m\033[36m";      /* Bold Cyan */
-	static const std::string BOLDWHITE    = "\033[1m\033[37m";      /* Bold White */}
+	static const std::string BOLDWHITE    = "\033[1m\033[37m";      /* Bold White */
 
 	//Dummy init function
 	inline void concolinit() {};
+}
 
 #endif
+#endif /*CONCOL_H*/

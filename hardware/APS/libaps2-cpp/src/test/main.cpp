@@ -34,8 +34,8 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
 int main (int argc, char* argv[])
 {
 
-  concol::concolinit()
-  cout << concol::RED << "BBN AP2 Test Executable" << concol::RESET endl;
+  concol::concolinit();
+  cout << concol::RED << "BBN AP2 Test Executable" << concol::RESET << endl;
 
 
   int dbgLevel = 4;
@@ -55,45 +55,33 @@ int main (int argc, char* argv[])
 
   int numDevices = get_numDevices();
 
-  setcolor(red,black);
-  cout << numDevices << " APS device" << (numDevices > 1 ? "s": "")  << " found" << endl;
-  setcolor(white,black);
+  cout << concol::RED << numDevices << " APS device" << (numDevices > 1 ? "s": "")  << " found" << concol::RESET << endl;
 
   if (numDevices < 1)
   	return 0;
   
-  setcolor(red,black);
-  cout << "Attempting to initialize libaps" << endl;
-  setcolor(white,black);
+  cout << concol::RED << "Attempting to initialize libaps" << concol::RESET << endl;
 
   init();
 
-  setcolor(red,black);
-  cout << "Attempting to get serials" << endl;  
-  setcolor(white,black);
+  cout << concol::RED << "Attempting to get serials" << concol::RESET << endl;
 
   char serialBuffer[100];
 
   for (int cnt; cnt < numDevices; cnt++) {
   	get_deviceSerial(cnt, serialBuffer);
-    setcolor(red,black);
-  	cout << "Device " << cnt << " serial #: " << serialBuffer << endl;
-    setcolor(white,black);
+  	cout << concol::RED << "Device " << cnt << " serial #: " << serialBuffer << concol::RESET << endl;
   }
 
 
   int rc;
   rc = connect_by_ID(0);
 
-  setcolor(red,black);
-  cout << "connect_by_ID(0) returned " << rc << endl;
-  setcolor(white,black);
+  cout << concol::RED << "connect_by_ID(0) returned " << rc << concol::RESET << endl;
 
-  rc = initAPS(0, "../dummyBitfile.bit", 0);
+  rc = initAPS(0, const_cast<char *>("../dummyBitfile.bit"), 0);
 
-  setcolor(red,black);
-  cout << "initAPS(0) returned " << rc << endl;
-  setcolor(white,black);
+  cout << concol::RED << "initAPS(0) returned " << rc << concol::RESET << endl;
   
 
   cout << "Set sample rate " << endl;
