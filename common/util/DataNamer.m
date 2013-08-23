@@ -58,5 +58,23 @@ classdef DataNamer < handle
             increment(obj);
         end
             
+    end
+    methods (Static)
+        function name = get_data_filename(deviceName, expName)
+            % implements a Singleton DataNamer and updates it appropriately
+            persistent dataNamer
+            if isempty(dataNamer)
+                dataNamer = DataNamer(getpref('qlab', 'dataDir'), deviceName);
+            end
+            if ~strcmp(dataNamer.dataDir, getpref('qlab', 'dataDir'))
+                dataNamer.dataDir = getpref('qlab', 'dataDir');
+                reset(dataNamer);
+            end
+            if ~strcmp(dataNamer.deviceName, deviceName)
+                dataNamer.deviceName = deviceName;
+                reset(dataNamer);
+            end
+            name = dataNamer.get_name(expName);
         end
     end
+end

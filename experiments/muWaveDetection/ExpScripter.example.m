@@ -3,17 +3,8 @@ function ExpScripter(expName)
 
 exp = ExpManager();
 
-global dataNamer
 deviceName = 'IBM_PhaseII';
-if ~isa(dataNamer, 'DataNamer')
-    dataNamer = DataNamer(getpref('qlab', 'dataDir'), deviceName);
-end
-if ~strcmp(dataNamer.deviceName, deviceName)
-    dataNamer.deviceName = deviceName;
-    reset(dataNamer);
-end
-
-exp.dataFileHandler = HDF5DataHandler(dataNamer.get_name(expName));
+exp.dataFileHandler = HDF5DataHandler(DataNamer.get_data_filename(deviceName, expName));
 
 expSettings = json.read(getpref('qlab', 'CurScripterFile'));
 instrSettings = expSettings.instruments;
