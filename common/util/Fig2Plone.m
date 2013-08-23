@@ -3,8 +3,8 @@ function Fig2Plone(figHandle, dataObj, imageDescrip, username, password, storeDa
 %
 % Bridge function to Python functions to push image to the Plone site
 %
-% Date is a string in the format '22-Mar-2012'
-% If date is not defined then default to today.
+% dataObj - an input structure from load_data() or a string path
+% date - a string in the format '22-Mar-2012' (defaults to today)
 
 ploneSite = 'echelon.bbn.com:8080/QLab';
 
