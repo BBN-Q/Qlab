@@ -33,12 +33,13 @@ endif()
 INCLUDE_DIRECTORIES("./APS/")
 
 #Check for 32bit or 64 bit platform and link against the appropriate winpcap
-If(CMAKE_SIZEOF_VOID_P EQUAL 8)
+if(WIN32)
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	LINK_DIRECTORIES( ${LINK_DIRECTORIES} "..\\lib\\winpcap\\x64\\")    
  else()
      LINK_DIRECTORIES( ${LINK_DIRECTORIES} "..\\lib\\winpcap\\x86\\")  
- endif()
-
+endif()
+endif(WIN32)
 
 #Add flags for gcc and C++11
 ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-DGCC")
@@ -63,12 +64,12 @@ ADD_EXECUTABLE(test
 	./test/main.cpp
 )
 
-ADD_EXECUTABLE(echo
-	./test/echo.cpp
-	./APS/EthernetControl.cpp 
-	./APS/DummyAPS.cpp
-	./APS/APS2.cpp
-)
+#ADD_EXECUTABLE(echo
+#	./test/echo.cpp
+#	./APS/EthernetControl.cpp 
+#	./APS/DummyAPS.cpp
+#	./APS/APS2.cpp
+#)
 
 #For Windows pull in some additional libraries for network stuff
 if (WIN32)
@@ -79,7 +80,7 @@ TARGET_LINK_LIBRARIES(echo
 )
 endif(WIN32)
 
-set_target_properties(echo PROPERTIES COMPILE_DEFINITIONS "DEBUGAPS")
+#set_target_properties(echo PROPERTIES COMPILE_DEFINITIONS "DEBUGAPS")
 
 #ADD_EXECUTABLE(echo32
 #	./test/echo.cpp
@@ -99,15 +100,20 @@ set_target_properties(echo PROPERTIES COMPILE_DEFINITIONS "DEBUGAPS")
 
 TARGET_LINK_LIBRARIES(test aps2)
 
-if (WIN32)
 TARGET_LINK_LIBRARIES(aps2 
-	
 	hdf5_cpp
 	hdf5
+)
 
+if (WIN32)
+TARGET_LINK_LIBRARIES(aps2 
 	wpcap Packet
 	ws2_32
 	iphlpapi    # for GetAdaptersInfo
+)
+else()
+TARGET_LINK_LIBRARIES(aps2 
+	pcap
 )
 endif(WIN32)
 
