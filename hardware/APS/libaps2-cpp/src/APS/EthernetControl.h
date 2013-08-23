@@ -1,11 +1,10 @@
 
+#include "headings.h"
+
 #ifndef ETHERNETCONTROL_H_
 #define ETHERNETCONTROL_H_
 
-#include <vector>
-#include <string>
 #include <cstdio>
-#include <map>
 #include <sstream>
 #include <set>
 
@@ -56,6 +55,7 @@ public:
 class EthernetControl 
 {
 public:
+	friend class APSEthernetPacket;
 	enum ErrorCodes {
     	SUCCESS = 0,
     	NOT_IMPLEMENTED = -1,

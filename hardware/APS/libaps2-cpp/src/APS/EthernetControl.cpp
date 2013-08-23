@@ -28,10 +28,12 @@ vector<EthernetControl::EthernetDevInfo>  EthernetControl::pcapDevices_;
 std::set<string> EthernetControl::APSunits_;
 std::map<string, EthernetControl::EthernetDevInfo> EthernetControl::APS2device_;
 
-APSEthernetPacket::APSEthernetPacket() : header{0, 0, EthernetControl::APS_PROTO, 0, 0, 0}, payload(0){};
+APSEthernetPacket::APSEthernetPacket() : header{{0}, {0}, EthernetControl::APS_PROTO, 0, {0}, 0}, payload(0){};
 
 APSEthernetPacket::APSEthernetPacket(const EthernetControl & controller, const APSCommand_t & command, const uint32_t & addr) :
-		header{controller.apsMac_, controller.pcapDevice_->macAddr, EthernetControl::APS_PROTO, controller.seqNum_, command, addr}, payload(0){};
+		header{{controller.apsMac_[0],controller.apsMac_[1],controller.apsMac_[2],controller.apsMac_[3],controller.apsMac_[4],controller.apsMac_[5]},
+		       {controller.pcapDevice_->macAddr[0],controller.pcapDevice_->macAddr[1],controller.pcapDevice_->macAddr[2],controller.pcapDevice_->macAddr[3],controller.pcapDevice_->macAddr[4],controller.pcapDevice_->macAddr[5] },
+               EthernetControl::APS_PROTO, controller.seqNum_, command, addr}, payload(0){};
 
 bool EthernetControl::pcapRunning = false;
 
@@ -121,7 +123,7 @@ vector<APSEthernetPacket> EthernetControl::framer(const APSCommand_t & command, 
 
     while (bytesRemaining > 0){
         //Create a new packet
-        APSEthernetPacket newPacket(this, command, addr);
+        APSEthernetPacket newPacket(*this, command, addr);
         size_t bytesToSend = min(bytesRemaining, MAX_FRAME_PAYLOAD);
         //TODO: align payload at 32bit boundaries and set count in command
         //Fill the payload
