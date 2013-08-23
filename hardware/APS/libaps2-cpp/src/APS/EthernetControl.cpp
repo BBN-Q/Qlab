@@ -63,7 +63,7 @@ bool EthernetControl::isvalidMACAddress(string deviceID) {
 void EthernetControl::parseMACAddress(string macString, uint8_t * macBuffer) {
     for(int cnt = 0; cnt < MAC_ADDR_LEN; cnt++) {
         // copy mac address from string
-        sscanf(macString.substr(3*cnt,2).c_str(), "%x", &macBuffer[cnt]);
+        sscanf(macString.substr(3*cnt,2).c_str(), "%x", macBuffer+cnt);
     }
 }
 
@@ -103,11 +103,6 @@ EthernetControl::ErrorCodes EthernetControl::connect(string deviceID) {
     }
 
 	return SUCCESS;
-}
-
-size_t EthernetControl::write(APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data ) {
-    vector<uint8_t> bytes = words2bytes(data);
-    return write(command,addr, bytes ); 
 }
 
 vector<APSEthernetPacket> EthernetControl::framer(const APSCommand_t & command, uint32_t addr, const vector<uint8_t> & data){
@@ -180,9 +175,10 @@ int EthernetControl::send_packets(const vector<APSEthernetPacket>::iterator & st
     //With pcap it is important to queue the packets for performance
     //TODO: needs to be checked
     //Allocate the queue
+    #ifdef _WIN32
     size_t queueSize = 0;
     for (auto packetIter = start; packetIter != stop; ++packetIter) queueSize += packetIter->numBytes();
-    pcap_send_queue * myQueue = pcap_sendqueue_alloc(queueSize)
+    pcap_send_queue * myQueue = pcap_sendqueue_alloc(queueSize);
 
     //Load the packets
     pcap_pkthdr dummyHeader;
@@ -190,7 +186,7 @@ int EthernetControl::send_packets(const vector<APSEthernetPacket>::iterator & st
     for (auto packetIter = start; packetIter != stop; ++packetIter){
         dummyHeader.caplen = (*packetIter).numBytes();
         dummyHeader.len = (*packetIter).numBytes();
-        pcap_sendqueue_queue(myQueue, &dummyHeader, packet.seralize());
+        pcap_sendqueue_queue(myQueue, &dummyHeader, (*packetIter).seralize());
     }
 
     //We're not setting timestamps so sync parameter is zero
@@ -198,17 +194,22 @@ int EthernetControl::send_packets(const vector<APSEthernetPacket>::iterator & st
 
     //Free the queue memory
     pcap_sendqueue_destroy(myQueue);
-
+    #endif //_WIN32
     //For now just send the packets one at a time
     for (auto packetIter = start; packetIter != stop; ++packetIter) send_packet(*packetIter);
 
     return 0;
 }
 
+size_t EthernetControl::write(APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data ) {
+    vector<uint8_t> bytes = words2bytes(data);
+    return write(command,addr, bytes );
+}
+
 size_t EthernetControl::write(APSCommand_t & command, uint32_t addr, vector<uint8_t> & data) {
 
     //Convert the data to a vector custom ethernet frames
-    vector<APSEthernetPacket> framesToSend = framer(command, addr, data)
+    vector<APSEthernetPacket> framesToSend = framer(command, addr, data);
 
     //Send them out. The APS2 has a buffer for 22 frames.  The framer asks for an acknowledge every 11.
     //Send 22 then wait for an acknowledge then send another 11 and repeat. 
@@ -242,7 +243,7 @@ size_t EthernetControl::write(APSCommand_t & command, uint32_t addr, vector<uint
 	return SUCCESS;
 }
 
-EthernetControl::ErrorCodes EthernetControl::read(void * data, size_t readLength, APSCommand_t * command) {
+EthernetControl::ErrorCodes EthernetControl::read(void * data, size_t readLength, APSCommand_t * command) const {
     struct pcap_pkthdr *header;
     const unsigned char *pkt_data;
 
@@ -858,7 +859,7 @@ EthernetControl::ErrorCodes EthernetControl::select_FPGA_image(uint32_t addr) {
     // wait for Resetting FPGA acknowlege 
     struct APS_Status_Registers statusRegs;
     int retries = 0;
-    int response = TIMEOUT;
+    ErrorCodes response = TIMEOUT;
     while (retries < 5 && response != SUCCESS) {
         response = read(&statusRegs, sizeof(struct APS_Status_Registers));
     }
@@ -1008,7 +1009,7 @@ EthernetControl::ErrorCodes EthernetControl::write_SPI(CHIPCONFIG_IO_TARGET targ
 }
 
 
-EthernetControl::ErrorCodes EthernetControl::read_SPI( CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data)  const {
+EthernetControl::ErrorCodes EthernetControl::read_SPI( CHIPCONFIG_IO_TARGET target, uint16_t addr, uint8_t & data) const{
 
     APSChipConfigCommand_t cmd;
     cmd.packed = 0;
@@ -1061,9 +1062,10 @@ EthernetControl::ErrorCodes EthernetControl::read_SPI( CHIPCONFIG_IO_TARGET targ
     vector<uint32_t> writeData;
     writeData.push_back(cmd.packed);
 
-    FILE_LOG(logDEBUG2) << "Chip Config: " << printAPSChipCommand(cmd);
+    FILE_LOG(logDEBUG2) << "Chip Config: " << APS2::printAPSChipCommand(cmd);
 
-    write(command, 0, writeData);
+    //TODO: Fix-me properly by deciding whether write should be const
+    const_cast<EthernetControl*>(this)->write(command, 0, writeData);
     read(&data, 1, &response);
 
     return SUCCESS;

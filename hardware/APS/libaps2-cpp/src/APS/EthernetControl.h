@@ -45,8 +45,8 @@ public:
 	APSEthernetPacket();
 	APSEthernetPacket(const EthernetControl &, const APSCommand_t &, const uint32_t &);
 
-	vector<uint8_t> serialize();
-	size_t numBytes();
+	vector<uint8_t> serialize() const;
+	size_t numBytes() const;
 	void set_MAC(uint8_t *, uint8_t *);
 };
 
@@ -96,7 +96,7 @@ public:
 	size_t write(APSCommand_t & command, uint32_t addr = 0) { auto data = vector<uint8_t>(); return write(command, addr, data);};
 	size_t write(APSCommand_t & command, uint32_t addr,  vector<uint8_t> & data );
 	size_t write(APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data );
-	ErrorCodes read(void * data, size_t packetLength, APSCommand_t * command = nullptr);
+	ErrorCodes read(void * data, size_t packetLength, APSCommand_t * command = nullptr) const;
 
 	ErrorCodes write_register(uint32_t addr, uint32_t data);	
 	ErrorCodes write_register(int addr, uint32_t data) {return write_register(static_cast<uint32_t>(addr), data);}
