@@ -94,7 +94,11 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             %If we have a pre-defined filter use it, otherwise integrate
             %and rotate
             if ~isempty(obj.filter)
-                obj.latestData = sum(bsxfun(@times, demodSignal, obj.filter.filterCoeffs')) + obj.filter.bias;
+                %obj.latestData = sum(bsxfun(@times, demodSignal, obj.filter.filterCoeffs')) + obj.filter.bias;
+                %mex function below gives the *real* part of the statements
+                %above. Keeping the old version for testing purposes.
+                obj.latestData = dotFirstDim(demodSignal, obj.filter.filterCoeffs);
+                obj.latestData = obj.latestData + obj.filter.bias;
             else
                 %Integrate and rotate
                 obj.latestData = exp(1j*obj.phase) * 2 * mean(demodSignal,1);
