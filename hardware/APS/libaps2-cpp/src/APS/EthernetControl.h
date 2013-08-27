@@ -43,10 +43,12 @@ public:
 	vector<uint8_t> payload;
 
 	APSEthernetPacket();
-	APSEthernetPacket(const EthernetControl &, const APSCommand_t &, const uint32_t &);
+	APSEthernetPacket(const EthernetControl &, APSCommand_t, const uint32_t &);
 
-	vector<uint8_t> serialize() const;
-	size_t numBytes() const;
+	static const size_t NUM_HEADER_BYTES = 24;
+
+	vector<uint8_t> serialize() const ;
+	inline size_t numBytes() const {return 24 + payload.size();};
 	void set_MAC(uint8_t *, uint8_t *);
 };
 

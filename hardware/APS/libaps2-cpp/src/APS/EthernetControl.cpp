@@ -30,10 +30,39 @@ std::map<string, EthernetControl::EthernetDevInfo> EthernetControl::APS2device_;
 
 APSEthernetPacket::APSEthernetPacket() : header{{0}, {0}, EthernetControl::APS_PROTO, 0, {0}, 0}, payload(0){};
 
-APSEthernetPacket::APSEthernetPacket(const EthernetControl & controller, const APSCommand_t & command, const uint32_t & addr) :
+APSEthernetPacket::APSEthernetPacket(const EthernetControl & controller, APSCommand_t command, const uint32_t & addr) :
 		header{{controller.apsMac_[0],controller.apsMac_[1],controller.apsMac_[2],controller.apsMac_[3],controller.apsMac_[4],controller.apsMac_[5]},
 		       {controller.pcapDevice_->macAddr[0],controller.pcapDevice_->macAddr[1],controller.pcapDevice_->macAddr[2],controller.pcapDevice_->macAddr[3],controller.pcapDevice_->macAddr[4],controller.pcapDevice_->macAddr[5] },
                EthernetControl::APS_PROTO, controller.seqNum_, command, addr}, payload(0){};
+
+vector<uint8_t> APSEthernetPacket::serialize() const {
+	//Create a vector bytes for the packet
+	//TODO: sort out byte ordering
+	vector<uint8_t> outVec;
+	outVec.resize(NUM_HEADER_BYTES + payload.size());
+
+	//Push on the destination and source mac address
+	auto insertPt = outVec.begin();
+	std::copy(header.dest, header.dest+6, insertPt); insertPt += 6;
+	std::copy(header.src, header.src+6, insertPt); insertPt += 6;
+
+	//Push on ethernet protocol
+	std::copy(reinterpret_cast<const uint8_t *>(&header.frameType), reinterpret_cast<const uint8_t *>(&header.frameType)+2, insertPt); insertPt += 2;
+
+	//Sequence number
+	std::copy(reinterpret_cast<const uint8_t*>(&header.seqNum), reinterpret_cast<const uint8_t*>(&header.seqNum)+2, insertPt); insertPt += 2;
+
+	//Command
+	std::copy(reinterpret_cast<const uint8_t*>(&header.command), reinterpret_cast<const uint8_t*>(&header.command)+4, insertPt); insertPt += 4;
+
+	//Address
+	std::copy(reinterpret_cast<const uint8_t*>(&header.addr), reinterpret_cast<const uint8_t*>(&header.addr)+4, insertPt); insertPt += 4;
+
+	//Data
+	std::copy(payload.begin(), payload.end(), insertPt);
+
+	return outVec;
+}
 
 bool EthernetControl::pcapRunning = false;
 
