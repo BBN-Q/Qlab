@@ -198,22 +198,22 @@ int set_run_mode(int deviceID, int channelNum, int mode) {
 	return APSRack_.set_run_mode(deviceID, channelNum, RUN_MODE(mode));
 }
 
-int save_state_files() {
-	return APSRack_.save_state_files();
-}
-
-int read_state_files() {
-	return APSRack_.read_state_files();
-}
-
-int save_bulk_state_file() {
-	string fileName = "";
-	return APSRack_.save_bulk_state_file(fileName);
-}
-int read_bulk_state_file() {
-	string fileName = "";
-	return APSRack_.read_bulk_state_file(fileName);
-}
+//int save_state_files() {
+//	return APSRack_.save_state_files();
+//}
+//
+//int read_state_files() {
+//	return APSRack_.read_state_files();
+//}
+//
+//int save_bulk_state_file() {
+//	string fileName = "";
+//	return APSRack_.save_bulk_state_file(fileName);
+//}
+//int read_bulk_state_file() {
+//	string fileName = "";
+//	return APSRack_.read_bulk_state_file(fileName);
+//}
 
 int raw_write(int deviceID, int numBytes, uint8_t* data){
 	return APSRack_.raw_write(deviceID, numBytes, data);

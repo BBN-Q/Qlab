@@ -271,6 +271,7 @@ float APSRack::get_channel_scale(const int & deviceID, const int & channelNum) c
 	return APSs_[deviceID].get_channel_scale(channelNum);
 }
 
+/*
 int APSRack::save_state_files(){
 	// loop through available APS Units and save state
 	for(unsigned int apsct = 0; apsct < APSs_.size(); apsct++) {
@@ -279,6 +280,7 @@ int APSRack::save_state_files(){
 	}
 	return 0;
 }
+
 
 int APSRack::read_state_files(){
 	// loop through available APS Units and load state
@@ -328,7 +330,7 @@ int APSRack::read_bulk_state_file(string & stateFile){
 	H5StateFile.close();
 	return 0;
 }
-
+*/
 int APSRack::raw_write(int deviceID, int numBytes, uint8_t* data){
 	uint16_t bytesWritten;
 	//bytesWritten = APSs_[deviceID].handle_.Write(data, numBytes);
