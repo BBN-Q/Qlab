@@ -4,7 +4,7 @@
  out = dotFirstDim(bufferA, bufferB)
  bufferA assumed to be N-D, where N > 1
  bufferB assumed to be 1D with length matching size(bufferA,1)
- returns the real part of the dot product along the first dimension
+ returns the dot product along the first dimension
  */
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -12,7 +12,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	mwSize sA, sB, i, j, k, numDims;
 	const mwSize *dims;
 	mwSize *outDims;
-	float *out, tmp;
+	mxComplexity outType;
+	float *outr, *outi, tmpr, tmpi;
 	// error check inputs and outputs
 	if (nrhs != 2) {
 		mexErrMsgIdAndTxt("dotFirstDim:nrhs", "2 inputs required.");
@@ -36,7 +37,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		mexErrMsgIdAndTxt("dotFirstDim:type", "dotFirstDim only works on single-precision (float) inputs");
 	}
 
-
 	// prepare output buffer
 	outDims = mxMalloc(numDims);
 	outDims[0] = 1;
@@ -44,24 +44,51 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	for (i = 1; i < numDims; i++)
 		outDims[i] = dims[i];
 
-	plhs[0] = mxCreateNumericArray(numDims, outDims, mxSINGLE_CLASS, mxREAL);
-	out = (float *)mxGetPr(plhs[0]);
+	outType = (mxIsComplex(prhs[0]) || mxIsComplex(prhs[1])) ? mxCOMPLEX : mxREAL;
+	plhs[0] = mxCreateNumericArray(numDims, outDims, mxSINGLE_CLASS, outType);
+	outr = (float *)mxGetPr(plhs[0]);
+	outi = (float *)mxGetPi(plhs[0]);
 
 	if (mxIsComplex(prhs[0]) && mxIsComplex(prhs[1])) {
 		for (i = 0, k = 0; i < sA; i += sB, k++) {
-			tmp = 0.0;
+			tmpr = 0.0;
+			tmpi = 0.0;
 			for (j = 0; j < sB; j++) {
-				tmp += bufferAr[i+j] * bufferBr[j] - bufferAi[i+j] * bufferBi[j];
+				tmpr += bufferAr[i+j] * bufferBr[j] - bufferAi[i+j] * bufferBi[j];
+				tmpi += bufferAr[i+j] * bufferBi[j] + bufferAi[i+j] * bufferBr[j];
 			}
-			out[k] = tmp;
+			outr[k] = tmpr;
+			outi[k] = tmpi;
 		}
-	} else {
+	} else if (mxIsComplex(prhs[0])) { // only bufferA is complex
 		for (i = 0, k = 0; i < sA; i += sB, k++) {
-			tmp = 0.0;
+			tmpr = 0.0;
+			tmpi = 0.0;
 			for (j = 0; j < sB; j++) {
-				tmp += bufferAr[i+j] * bufferBr[j];
+				tmpr += bufferAr[i+j] * bufferBr[j];
+				tmpi += bufferAi[i+j] * bufferBr[j];
 			}
-			out[k] = tmp;
+			outr[k] = tmpr;
+			outi[k] = tmpi;
+		}
+	} else if (mxIsComplex(prhs[1])) { // only bufferB is complex
+		for (i = 0, k = 0; i < sA; i += sB, k++) {
+			tmpr = 0.0;
+			tmpi = 0.0;
+			for (j = 0; j < sB; j++) {
+				tmpr += bufferAr[i+j] * bufferBr[j];
+				tmpi += bufferAr[i+j] * bufferBi[j];
+			}
+			outr[k] = tmpr;
+			outi[k] = tmpi;
+		}
+	} else { // both A and B are real
+		for (i = 0, k = 0; i < sA; i += sB, k++) {
+			tmpr = 0.0;
+			for (j = 0; j < sB; j++) {
+				tmpr += bufferAr[i+j] * bufferBr[j];
+			}
+			outr[k] = tmpr;
 		}
 	}
 	mxFree(outDims);
