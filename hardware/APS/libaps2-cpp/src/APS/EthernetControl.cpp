@@ -385,9 +385,9 @@ void EthernetControl::get_network_devices() {
             
             struct EthernetDevInfo devInfo;
             devInfo.name = string(d->name);
-            devInfo.description = string(d->description);
+            if (d->description != NULL) devInfo.description = string(d->description);
             devInfo.isActive = false;
-            getMacAddr(devInfo);
+            if (d->addresses != NULL) getMacAddr(devInfo);
             
 
             pcapDevices_.push_back(devInfo);
