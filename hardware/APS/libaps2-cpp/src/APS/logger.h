@@ -81,9 +81,7 @@ std::ostringstream& Log<T>::Get(TLogLevel level)
 
     os << "- " << NowTime();
     os << " " << ToString(level) << ": ";
-    //TODO: fix const char * to char issue
-//    os << std::string(level > logDEBUG ? level - logDEBUG : 0, "  ");
-    os << std::string("silly", "  ");
+    os << std::string(level > logDEBUG ? level - logDEBUG : 0, '\t');
 
     return os;
 }
