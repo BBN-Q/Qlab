@@ -43,7 +43,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         
         %Acquire mode controls whether we return single-shot results or
         %averaged data
-        acquireMode
+        acquireMode = 'averager';
         
         %The size of the memory of the card
         onBoardMemory = 256e6;
