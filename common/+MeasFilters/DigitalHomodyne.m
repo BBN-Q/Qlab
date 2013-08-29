@@ -95,8 +95,6 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             %and rotate
             if ~isempty(obj.filter)
                 %obj.latestData = sum(bsxfun(@times, demodSignal, obj.filter.filterCoeffs')) + obj.filter.bias;
-                %mex function below gives the *real* part of the statements
-                %above. Keeping the old version for testing purposes.
                 obj.latestData = dotFirstDim(demodSignal, obj.filter.filterCoeffs);
                 obj.latestData = obj.latestData + obj.filter.bias;
             else
