@@ -3,21 +3,21 @@ function fftScope()
 %setup the scope
 scope = deviceDrivers.AlazarATS9870();
 scope.connect(0);
-samplingRate = 100e6;
-recordLength = 6400;
+samplingRate = 500e6;
+recordLength = 8192;
 
 scope.horizontal = struct('samplingRate', samplingRate, 'delayTime', 0);
-scope.vertical = struct('verticalScale', 0.2, 'verticalCoupling', 2, 'bandwidth', 0);
-scope.trigger = struct('triggerLevel', 500, 'triggerSource', 2, 'triggerCoupling', 2, 'triggerSlope', 0);
-scope.averager = struct('recordLength', recordLength, 'nbrSegments', 1, 'nbrWaveforms', 1, 'nbrRoundRobins', 1, 'ditherRange', 0);
+scope.vertical = struct('verticalScale', 0.04, 'verticalCoupling', 'AC', 'bandwidth', 'Full');
+scope.trigger = struct('triggerLevel', 100, 'triggerSource', 'ext', 'triggerCoupling', 'DC', 'triggerSlope', 'rising');
+scope.averager = struct('recordLength', recordLength, 'nbrSegments', 1, 'nbrWaveforms', 1, 'nbrRoundRobins', 10000, 'ditherRange', 0);
 
 running = true;
 figure();
-xpts = linspace(0, samplingRate/2, recordLength/2+1);
+freqs = [0:1:recordLength/2-1, -recordLength/2:1:-1] * (samplingRate/recordLength);
 % skip DC term
-h = plot(xpts(2:end), nan(1, recordLength/2));
-set(gca(), 'YLimMode', 'manual');
-set(gca(), 'YLim', [0, 35]);
+h = plot(freqs(2:end/2), nan(1, recordLength/2 - 1));
+% set(gca(), 'YLimMode', 'manual');
+% set(gca(), 'YLim', [0, 35]);
 
 while (running)
     scope.acquire();
@@ -26,7 +26,7 @@ while (running)
     y = fft(wfm);
     
     % skip DC term
-    set(h, 'YData', abs(y(2:recordLength/2+1)));
+    set(h, 'YData', abs(y(2:recordLength/2)));
     
     % check for quit
     k=get(gcf,'currentkey');
