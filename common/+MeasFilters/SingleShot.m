@@ -143,14 +143,14 @@ classdef SingleShot < MeasFilters.MeasFilter
                 %Fortunately, liblinear is great!
                 bestAccuracy = 0;
                 bestC = 0;
-                for c = logspace(-1,1,5);
-                    accuracy = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -v 3 -q',c));
+                for c = logspace(0,2,5);
+                    accuracy = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -v 3 -q -s 0',c));
                     if accuracy > bestAccuracy
                         bestAccuracy = accuracy;
                         bestC = c;
                     end
                 end
-                model = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -q',bestC));
+                model = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -q -s 0',bestC));
                 [predictedState, accuracy, ~] = predict(prepStates, sparse(double(allData)), model);
                 fidelity = 2*accuracy(1)/100-1;
                 c = 0.95;
@@ -183,8 +183,8 @@ classdef SingleShot < MeasFilters.MeasFilter
                 plot(axes1, obj.pdfData.bins_I, obj.pdfData.ePDF_I, 'r');
                 plot(axes1, obj.pdfData.bins_I, obj.pdfData.e_gaussPDF_I, 'r--')
                 legend(axes1, {'Ground','Excited'})
-                text(0.1, 0.75, sprintf('Fidelity: %.1f%% (SNR Fidelity: %.1f%%)',100*obj.pdfData.maxFidelity_I, ...
-                    100*0.5*(obj.pdfData.bins_I(2)-obj.pdfData.bins_I(1))*sum(abs(obj.pdfData.g_gaussPDF_I - obj.pdfData.e_gaussPDF_I))),...
+                snrFidelity = 100*0.5*(obj.pdfData.bins_I(2)-obj.pdfData.bins_I(1))*sum(abs(obj.pdfData.g_gaussPDF_I - obj.pdfData.e_gaussPDF_I));
+                text(0.1, 0.75, sprintf('Fidelity: %.1f%% (SNR Fidelity: %.1f%%)',100*obj.pdfData.maxFidelity_I, snrFidelity),...
                     'Units', 'normalized', 'FontSize', 14, 'Parent', axes1)
                 
                 %Fit gaussian to both peaks and return the esitmat
