@@ -60,8 +60,8 @@ APSEthernetPacket::APSEthernetPacket(const MACAddr & destMAC, const MACAddr & sr
 
 vector<uint8_t> APSEthernetPacket::serialize() const {
 	/*
-	 * Serialize a packet to a vector of bytes for tranmission.
-	 * TODO: handle host to network byte ordering here
+	 * Serialize a packet to a vector of bytes for transmission.
+	 * Handle host to network byte ordering here
 	 */
 	vector<uint8_t> outVec;
 	outVec.resize(NUM_HEADER_BYTES + payload.size());
@@ -72,16 +72,25 @@ vector<uint8_t> APSEthernetPacket::serialize() const {
 	std::copy(header.src.addr.begin(), header.src.addr.end(), insertPt); insertPt += 6;
 
 	//Push on ethernet protocol
-	std::copy(reinterpret_cast<const uint8_t *>(&header.frameType), reinterpret_cast<const uint8_t *>(&header.frameType)+2, insertPt); insertPt += 2;
+	uint16_t myuint16;
+	uint8_t * start;
+	start = reinterpret_cast<uint8_t*>(&myuint16);
+	myuint16 = htons(header.frameType);
+	std::copy(start, start+2, insertPt); insertPt += 2;
 
 	//Sequence number
-	std::copy(reinterpret_cast<const uint8_t*>(&header.seqNum), reinterpret_cast<const uint8_t*>(&header.seqNum)+2, insertPt); insertPt += 2;
+	myuint16 = htons(header.seqNum);
+	std::copy(start, start+2, insertPt); insertPt += 2;
 
 	//Command
-	std::copy(reinterpret_cast<const uint8_t*>(&header.command), reinterpret_cast<const uint8_t*>(&header.command)+4, insertPt); insertPt += 4;
+	uint32_t myuint32;
+	start = reinterpret_cast<uint8_t*>(&myuint32);
+	myuint32 = htonl(header.command.packed);
+	std::copy(start, start+4, insertPt); insertPt += 4;
 
 	//Address
-	std::copy(reinterpret_cast<const uint8_t*>(&header.addr), reinterpret_cast<const uint8_t*>(&header.addr)+4, insertPt); insertPt += 4;
+	myuint32 = htonl(header.addr);
+	std::copy(start, start+4, insertPt); insertPt += 4;
 
 	//Data
 	std::copy(payload.begin(), payload.end(), insertPt);
@@ -93,17 +102,19 @@ bool EthernetControl::pcapRunning = false;
 
 APSEthernetPacket EthernetControl::create_broadcast_packet(const MACAddr & srcMAC){
 	/*
-	 * Helper function to put together a broadcast packet that all APS units should respond to.
+	 * Helper function to put together a broadcast status packet that all APS units should respond to.
 	 */
 	APSEthernetPacket myPacket;
 
 	//Put the broadcast FF:FF:FF:FF:FF:FF in the MAC destination address
 	std::fill(myPacket.header.dest.addr.begin(), myPacket.header.dest.addr.end(), 0xFF);
-
-	//Put the source MAC addresss
+	//Put the source MAC address
 	myPacket.header.src = srcMAC;
+	//Fill out the host register status command
+	myPacket.header.command.ack = 0;
+	myPacket.header.command.r_w = 1;
 	myPacket.header.command.cmd = APS_COMMAND_STATUS;
-	myPacket.header.command.mode_stat = APS_STATUS_TEMP;
+	myPacket.header.command.mode_stat = APS_STATUS_HOST;
 	myPacket.header.command.cnt = 0x10; //minimum length packet
 
 	return myPacket;
