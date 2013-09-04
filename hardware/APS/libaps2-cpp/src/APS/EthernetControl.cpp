@@ -536,83 +536,33 @@ vector<string> EthernetControl::get_network_devices_names() {
     return devNames;
 }
 
-void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadcastPeriodSeconds) {
-    FILE_LOG(logDEBUG1) << "EthernetControl::enumerate";
+void EthernetControl::enumerate(unsigned int timeoutSeconds) {
+	/*
+	 * Look for all APS units that respond to the broadcast packet
+	 */
 
-    pcap_t *capHandle;
 
-    static const int broadcastPacketLen = 40;
-    uint8_t broadcastPacket[broadcastPacketLen];
-    APSEthernetHeader *bph;
+	FILE_LOG(logDEBUG1) << "EthernetControl::enumerate";
 
-    int res;
-    struct pcap_pkthdr *header;
-    const unsigned char *pkt_data;
+    APSEthernetPacket broadcastPacket = create_broadcast_packet();
 
-    get_network_devices();
-    for (auto it = pcapDevices_.begin(); it != pcapDevices_.end(); ++it) {
-        EthernetDevInfo dev = *it;
-        if (!dev.isActive) continue;
-        
-        string filter = getEnumerateFilter(dev.macAddr);
-        capHandle = start_capture(dev.name, filter);
+    //Send out the broadcast packet
+    send_packet(broadcastPacket);
 
-        if (!capHandle) continue;
-        
+    //Read the packets coming back in up to the timeout
+    std::chrono::time_point<std::chrono::steady_clock> start, end, lastBroadcast;
+    start = std::chrono::steady_clock::now();
+    int elapsedTime = 0;
 
-        FILE_LOG(logDEBUG1) << "Enumerate Packet: " << APS2::printAPSCommand(bph->command);
-
-        packetHTON(bph); // swap bytes to network order
-        
-        std::chrono::time_point<std::chrono::steady_clock> start, end, lastBroadcast;
-
-        start = std::chrono::steady_clock::now();
-
-        int totalElapsed = 0;
-        int broadcastElapsed = 100; // force broadcast first time through
-        while (totalElapsed < timeoutSeconds ) {
-
-            if (broadcastElapsed > broadcastPeriodSeconds) {
-                // send enum packet
-                FILE_LOG(logDEBUG1) << "Sending Enumerate Packet:";
-                
-                if (pcap_sendpacket(capHandle, broadcastPacket, broadcastPacketLen) != 0) {
-                    FILE_LOG(logERROR) << "Error sending the packet: " << string(pcap_geterr(capHandle));
-                }       
-
-                lastBroadcast = std::chrono::steady_clock::now();
-            }
-            // get available packets
-
-            int res = pcap_next_ex( capHandle, &header, &pkt_data);
-
-            if(res > 0) {
-                // have packet so process
-                APSEthernetHeader * eh = (APSEthernetHeader *) pkt_data;
-
-                packetNTOH(eh);
-
-                FILE_LOG(logDEBUG3) << "Src: " << print_ethernetAddress(eh->src);
-                FILE_LOG(logDEBUG3) << " Dest: " << print_ethernetAddress(eh->dest);
-                FILE_LOG(logDEBUG3) << " Command: " << APS2::printAPSCommand(eh->command);
-
-                string devString = print_ethernetAddress(eh->src);
-                APSunits_.insert(devString);
-                APS2device_[devString] = dev;
-            }
-
-            end = std::chrono::steady_clock::now();
-            totalElapsed =  std::chrono::duration_cast<std::chrono::seconds>(end-start).count();
-            broadcastElapsed =  std::chrono::duration_cast<std::chrono::seconds>(end-lastBroadcast).count();
-        } 
+    while ( elapsedTime < timeoutSeconds){
+    	APSCommand_t myCommand;
+        if (read(nullptr, 0, &myCommand) == SUCCESS){
+        	FILE_LOG(logINFO) << "Found APS Unit....";
+        }
+        end = std::chrono::steady_clock::now();
+        elapsedTime =  std::chrono::duration_cast<std::chrono::seconds>(end-start).count();
+    }
     
-    }
-
-
-    for (string aps : APSunits_) {
-        FILE_LOG(logINFO) << "Found APS Unit: " << aps;
-    }
-
 }
 
 EthernetControl::ErrorCodes EthernetControl::set_device_active(string device, bool isActive) {

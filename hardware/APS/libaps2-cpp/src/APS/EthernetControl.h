@@ -127,7 +127,7 @@ public:
 
 	static void get_network_devices();
 	static ErrorCodes set_device_active(string, bool);
-	static void enumerate(unsigned int timeoutSeconds = 5, unsigned int broadcastPeriodSeconds = 1);
+	static void enumerate(unsigned int timeoutSeconds = 5);
 
 	static APSEthernetPacket create_broadcast_packet();
 
@@ -139,7 +139,11 @@ public:
 
 private:
 
+	pcap_t  *pcapHandle_;
+
 	EthernetDevInfo *pcapDevice_;
+
+
 	string deviceID_;
 	string filter_;
 	uint8_t apsMac_[MAC_ADDR_LEN];
