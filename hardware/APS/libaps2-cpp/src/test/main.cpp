@@ -49,8 +49,9 @@ int main (int argc, char* argv[])
   //string dev("\\Device\\NPF_{F47ACE9E-1961-4A8E-BA14-2564E3764BFA}");
   
   // lookup based on description
-  string dev("Intel(R) 82579LM Gigabit Network Connection");
-
+  // string dev("Intel(R) 82579LM Gigabit Network Connection");
+  string dev("eth0");
+  
   set_ethernet_active(const_cast<char*>(dev.c_str()),true);
 
   int numDevices = get_numDevices();

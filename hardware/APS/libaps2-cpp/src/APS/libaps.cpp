@@ -15,9 +15,9 @@ APSRack APSRack_;
 extern "C" {
 #endif
 
-int init(){
+int init(char* NICName){
 
-	APSRack_.init();
+	APSRack_.init(string(NICName));
 
 	return APS_OK;
 }

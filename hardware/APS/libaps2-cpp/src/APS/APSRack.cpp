@@ -16,7 +16,7 @@ APSRack::~APSRack()  {
 }
 
 //Initialize the rack by polling for devices and serial numbers
-int APSRack::init() {
+int APSRack::init(string NICName) {
 
 	//Create the logger
 	// TODO renable 
@@ -24,7 +24,10 @@ int APSRack::init() {
 	//FILE* pFile = fopen("libaps.log", "a");
 	//Output2FILE::Stream() = pFile;
 
-	//Enumerate the serial numbers of the devices attached
+	//Activate the NIC connected to the devices
+	EthernetControl::set_device_active(NICName, true);
+
+	//Enumerate the serial numbers and MAC addresses of the devices attached
 	enumerate_devices();
 
 	return 0;
