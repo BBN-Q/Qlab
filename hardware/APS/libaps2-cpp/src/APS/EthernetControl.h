@@ -90,7 +90,7 @@ public:
 	typedef void (*DebugPacketCallback)(const void * data, unsigned int length);  
 
 
-	static const uint16_t APS_PROTO = 0xBBAE;
+	static const uint16_t APS_PROTO = 0xBB4E;
 
 	static const uint16_t MAX_PAYLOAD_LEN_BYTES = 1468;
 	static const uint16_t MAX_PAYLOAD_LEN_WORDS = MAX_PAYLOAD_LEN_BYTES / sizeof(uint32_t);
