@@ -24,8 +24,9 @@ int APSRack::init(const string & NICName) {
 	//FILE* pFile = fopen("libaps.log", "a");
 	//Output2FILE::Stream() = pFile;
 
-	//Activate the NIC connected to the devices
-	interface_.set_device_active(NICName, true);
+	//Setup the NIC connected to the devices
+	interface_.get_network_devices();
+	interface_.set_network_device(NICName);
 
 	//Enumerate the serial numbers and MAC addresses of the devices attached
 	enumerate_devices();

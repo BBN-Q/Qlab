@@ -173,11 +173,11 @@ private:
 
 	vector<APSEthernetPacket> framer(const MACAddr &, APSCommand_t const & , uint32_t  , const vector<uint8_t> &);
 
-	int send_packet(const APSEthernetPacket & );
+	int send_packet(pcap_t *, const APSEthernetPacket & );
 	int send_packets(const vector<APSEthernetPacket>::iterator & , const vector<APSEthernetPacket>::iterator & );
 	APSCommand_t wait_for_ack();
 
-	static EthernetDevInfo * findDeviceInfo(string device);
+	static EthernetDevInfo * find_device_info(const string & device);
 	static MACAddr get_MAC_addr(struct EthernetDevInfo &) ;
 
 	static bool pcapRunning;
@@ -192,12 +192,12 @@ private:
 	static void packetHTON(APSEthernetHeader *);
 	static void packetNTOH(APSEthernetHeader *);
 
-	static string getPointToPointFilter(uint8_t * localMacAddr, uint8_t *apsMacAddr);
+	static string create_point2point_filter(const MACAddr &, const MACAddr &);
+	static string create_enumerate_filter(const MACAddr &);
 	static string getEnumerateFilter(uint8_t * localMacAddr);
 	static string getWatchFilter();
-	static ErrorCodes applyFilter(pcap_t * capHandle, string & filter);
+	static ErrorCodes apply_filter(pcap_t * capHandle, string & filter);
 
-	
 	static pcap_t * start_capture(string & devName, string & filter);
 
 };

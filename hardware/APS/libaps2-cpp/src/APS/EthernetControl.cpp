@@ -53,7 +53,7 @@ string MACAddr::to_string() const{
     return myStr;
 }
 
-APSEthernetPacket::APSEthernetPacket() : header{{0}, {0}, EthernetControl::APS_PROTO, 0, {0}, 0}, payload(0){};
+APSEthernetPacket::APSEthernetPacket() : header{{}, {}, EthernetControl::APS_PROTO, 0, {0}, 0}, payload(0){};
 
 APSEthernetPacket::APSEthernetPacket(const MACAddr & destMAC, const MACAddr & srcMAC, APSCommand_t command, const uint32_t & addr) :
 		header{destMAC, srcMAC, EthernetControl::APS_PROTO, 0, command, addr}, payload(0){};
@@ -200,15 +200,14 @@ vector<APSEthernetPacket> EthernetControl::framer(const MACAddr & destMAC, const
     return outVec;
 };
 
-int EthernetControl::send_packet(const APSEthernetPacket & packet){
+int EthernetControl::send_packet(pcap_t * pcapHandle, const APSEthernetPacket & packet){
     //Platform independent way to send a single packet
     FILE_LOG(logDEBUG2) << "Write Frame";
-    FILE_LOG(logDEBUG2) << " Src: " << packet.header.src.to_string()
-                        << " Dest: " << packet.header.dest.to_string();
+    FILE_LOG(logDEBUG2) << " Src: " << packet.header.src.to_string() << " Dest: " << packet.header.dest.to_string();
     FILE_LOG(logDEBUG2) << " Seqnum " << packet.header.seqNum << " Command: " << APS2::printAPSCommand(packet.header.command)
                         << " + " <<  packet.payload.size() << " Bytes";
 
-    if (pcap_sendpacket(apsHandle_, packet.serialize().data(), packet.numBytes()) != 0) {
+    if (pcap_sendpacket(pcapHandle, packet.serialize().data(), packet.numBytes()) != 0) {
         FILE_LOG(logERROR) << "Error sending command: " << string(pcap_geterr(apsHandle_));
      }
     return 0;
@@ -261,7 +260,7 @@ int EthernetControl::send_packets(const vector<APSEthernetPacket>::iterator & st
     pcap_sendqueue_destroy(myQueue);
     #endif //_WIN32
     //For now just send the packets one at a time
-    for (auto packetIter = start; packetIter != stop; ++packetIter) send_packet(*packetIter);
+    for (auto packetIter = start; packetIter != stop; ++packetIter) send_packet(apsHandle_, *packetIter);
 
     return 0;
 }
@@ -361,12 +360,17 @@ EthernetControl::ErrorCodes EthernetControl::read(void * data, size_t readLength
 }
 
 EthernetControl::ErrorCodes EthernetControl::set_network_device(string device) {
+	/*
+	 * Attach the EthernetControl instance to a particular device.
+	 */
     FILE_LOG(logDEBUG1) << "EthernetControl::set_network_device: " << device;
-    EthernetDevInfo * di = findDeviceInfo(device);
+    EthernetDevInfo * di = find_device_info(device);
     if (!di) 
         return INVALID_NETWORK_DEVICE;
     pcapDevice_ = di;
     pcapDevice_->isActive = true;
+    srcMAC_ = get_MAC_addr(*di);
+
     return SUCCESS;
 }
 
@@ -423,7 +427,7 @@ void EthernetControl::get_network_devices() {
     /* store list in map */
     FILE_LOG(logDEBUG1) << "Initializing PCAP Devices:";
     for(d= alldevs; d != NULL; d= d->next) {
-        if (!findDeviceInfo(d->name)) {
+        if (!find_device_info(d->name)) {
             
             struct EthernetDevInfo devInfo;
             devInfo.name = string(d->name);
@@ -530,13 +534,12 @@ MACAddr EthernetControl::get_MAC_addr(struct EthernetDevInfo & devInfo) {
 }
 
 
-EthernetControl::EthernetDevInfo * EthernetControl::findDeviceInfo(string device) {
+EthernetControl::EthernetDevInfo * EthernetControl::find_device_info(const string & device) {
     // find device info based on device name, description or description2
-    for (auto it = pcapDevices_.begin();
-        it != pcapDevices_.end(); ++it) {
-        if (it->name.compare(device) == 0) return &(*it);
-        if (it->description.compare(device) == 0) return &(*it);
-        if (it->description2.compare(device) == 0) return &(*it);
+    for (auto & dev : pcapDevices_) {
+        if (dev.name.compare(device) == 0) return &dev;
+        if (dev.description.compare(device) == 0) return &dev;
+        if (dev.description2.compare(device) == 0) return &dev;
     }
     return NULL;
 }
@@ -561,8 +564,21 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds) {
 
     APSEthernetPacket broadcastPacket = create_broadcast_packet(srcMAC_);
 
+    //Create a new pcap filter to capture the replies
+    pcap_t * capHandle;
+    char errbuf[PCAP_ERRBUF_SIZE];
+    capHandle = pcap_open_live(pcapDevice_->name.c_str(),          // name of the device
+                          1500,            // portion of the packet to capture
+                          true,    // promiscuous mode
+                          pcapTimeoutMS,             // read timeout
+                          errbuf            // error buffer
+                          );
+
+    string filterStr = create_enumerate_filter(srcMAC_);
+    apply_filter(capHandle, filterStr);
+
     //Send out the broadcast packet
-    send_packet(broadcastPacket);
+    send_packet(capHandle, broadcastPacket);
 
     //Read the packets coming back in up to the timeout
     std::chrono::time_point<std::chrono::steady_clock> start, end, lastBroadcast;
@@ -584,7 +600,7 @@ EthernetControl::ErrorCodes EthernetControl::set_device_active(string device, bo
 
 	//List all the devices that pcap sees and get specific info about the one we want to activate
 	get_network_devices();
-    EthernetDevInfo * di = findDeviceInfo(device);
+    EthernetDevInfo * di = find_device_info(device);
     if (!di) {
         FILE_LOG(logERROR) << "Device: " << device << " not found";
         return INVALID_NETWORK_DEVICE;
@@ -593,6 +609,7 @@ EthernetControl::ErrorCodes EthernetControl::set_device_active(string device, bo
     }
     
     di->isActive = isActive;
+
     return SUCCESS;
 }
 
@@ -624,24 +641,20 @@ void EthernetControl::packetNTOH(APSEthernetHeader * frame) {
 // winpcap filters
 // see: http://www.winpcap.org/docs/docs_41b5/html/group__language.html
 
-string EthernetControl::getPointToPointFilter(uint8_t * localMacAddr, uint8_t *apsMacAddr) {
+string EthernetControl::create_point2point_filter(const MACAddr & srcMAC, const MACAddr & destMAC) {
 
     ostringstream filter;
 
-    // build filter
-    //TODO: fix me!
-    // filter << "ether src " << print_ethernetAddress(apsMacAddr);
-    // filter << " and ether dst " << print_ethernetAddress(localMacAddr);
+    filter << "ether src " << srcMAC.to_string();
+    filter << " and ether dst " << destMAC.to_string();
     filter << " and ether proto " << APS_PROTO;
 
     return filter.str();
 }
 
-string EthernetControl::getEnumerateFilter(uint8_t * localMacAddr) {
+string EthernetControl::create_enumerate_filter(const MACAddr & hostMAC) {
     ostringstream filter;
-    // build filter
-    //TODO: fix me!
-    // filter << "ether dst " << print_ethernetAddress(localMacAddr);
+    filter << "ether dst " << hostMAC.to_string();
     filter << " and ether proto " << APS_PROTO;
     return filter.str();
 }
@@ -656,7 +669,7 @@ string EthernetControl::getWatchFilter() {
     
 }
 
-EthernetControl::ErrorCodes EthernetControl::applyFilter(pcap_t * capHandle, string & filter) {
+EthernetControl::ErrorCodes EthernetControl::apply_filter(pcap_t * capHandle, string & filter) {
 
     FILE_LOG(logDEBUG3) << "Setting filter to: " << filter << endl;
 
@@ -795,8 +808,8 @@ pcap_t * EthernetControl::start_capture(string & devName, string & filter) {
         FILE_LOG(logERROR) << "Network Device is not Ethernet";
         return 0;
     }
-    // applfy filter to only get reply directed from APS to local machine
-    applyFilter(capHandle, filter);
+    // apply filter to only get reply directed from APS to local machine
+    apply_filter(capHandle, filter);
     return capHandle;   
 }
 
