@@ -94,6 +94,7 @@ private:
 	vector<Channel> channels_;
 	int samplingRate_;
 	vector<uint8_t> writeQueue_;
+	MACAddr macAddr_;
 
 	//Queued writing
 	int write(const unsigned int & addr, const uint32_t & data, const bool & queue = false);

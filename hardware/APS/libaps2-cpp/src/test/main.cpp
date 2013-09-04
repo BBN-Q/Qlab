@@ -38,7 +38,7 @@ int main (int argc, char* argv[])
   cout << concol::RED << "BBN AP2 Test Executable" << concol::RESET << endl;
 
 
-  int dbgLevel = 4;
+  int dbgLevel = 8;
   if (argc >= 2) {
     dbgLevel = atoi(argv[1]);
   }
@@ -52,7 +52,9 @@ int main (int argc, char* argv[])
   // string dev("Intel(R) 82579LM Gigabit Network Connection");
   string dev("eth0");
   
-  set_ethernet_active(const_cast<char*>(dev.c_str()),true);
+  cout << concol::RED << "Attempting to initialize libaps" << concol::RESET << endl;
+
+  init(const_cast<char*>(dev.c_str()));
 
   int numDevices = get_numDevices();
 
@@ -61,10 +63,6 @@ int main (int argc, char* argv[])
   if (numDevices < 1)
   	return 0;
   
-  cout << concol::RED << "Attempting to initialize libaps" << concol::RESET << endl;
-
-  init();
-
   cout << concol::RED << "Attempting to get serials" << concol::RESET << endl;
 
   char serialBuffer[100];

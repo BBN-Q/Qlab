@@ -107,7 +107,7 @@ int APS2::reset() {
 	
 	command.cmd = APS_COMMAND_RESET;
 	command.mode_stat = RESET_RECONFIG_BASELINE_EPROM;
-	handle_.write(command);
+	handle_.write(macAddr_, command);
 
 	// get reply with status bytes
 	

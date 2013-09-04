@@ -19,6 +19,24 @@ using std::string;
 using std::map;
 using std::ostringstream;
 
+//We use MAC addresses all the time so wrap in their own class
+class MACAddr{
+public:
+
+	MACAddr();
+	MACAddr(const int &);
+	MACAddr(const string &);
+
+	string to_string() const;
+
+	static bool is_valid(const string &);
+	static const unsigned int MAC_ADDR_LEN = 6;
+
+	vector<uint8_t> addr;
+
+};
+
+
 struct EthernetDevInfo {
 	string name_;
 	string description_;
@@ -26,13 +44,14 @@ struct EthernetDevInfo {
 };
 
 struct APSEthernetHeader {
-	uint8_t  dest[6];
-	uint8_t  src[6];
+	MACAddr  dest;
+	MACAddr  src;
 	uint16_t frameType;
 	uint16_t seqNum;
 	APSCommand_t command;
 	uint32_t addr;
 };
+
 
 
 //Custom UDP style ethernet packets for APS
@@ -43,7 +62,7 @@ public:
 	vector<uint8_t> payload;
 
 	APSEthernetPacket();
-	APSEthernetPacket(const EthernetControl &, APSCommand_t, const uint32_t &);
+	APSEthernetPacket(const MACAddr &, const MACAddr &, APSCommand_t, const uint32_t &);
 
 	static const size_t NUM_HEADER_BYTES = 24;
 
@@ -70,8 +89,7 @@ public:
 
 	typedef void (*DebugPacketCallback)(const void * data, unsigned int length);  
 
-	static const unsigned int MAC_ADDR_LEN = 6;
-	
+
 	static const uint16_t APS_PROTO = 0xBBAE;
 
 	static const uint16_t MAX_PAYLOAD_LEN_BYTES = 1468;
@@ -81,8 +99,8 @@ public:
 	struct EthernetDevInfo {
 		string name;          // device name as set by winpcap
 		string description;   // set by winpcap
-		string description2;  // set by getMacAddr
-		uint8_t macAddr[MAC_ADDR_LEN];
+		string description2;  // string MAC address
+		MACAddr macAddr;
 		bool isActive;
 	};
 
@@ -95,9 +113,9 @@ public:
 
 	ErrorCodes set_network_device(string description);
 
-	size_t write(APSCommand_t & command, uint32_t addr = 0) { auto data = vector<uint8_t>(); return write(command, addr, data);};
-	size_t write(APSCommand_t & command, uint32_t addr,  vector<uint8_t> & data );
-	size_t write(APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data );
+	size_t write(const MACAddr & destMAC, APSCommand_t & command, uint32_t addr = 0) { auto data = vector<uint8_t>(); return write(destMAC, command, addr, data);};
+	size_t write(const MACAddr &, APSCommand_t & command, uint32_t addr,  vector<uint8_t> & data );
+	size_t write(const MACAddr &, APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data );
 	ErrorCodes read(void * data, size_t packetLength, APSCommand_t * command = nullptr) const;
 
 	ErrorCodes write_register(uint32_t addr, uint32_t data);	
@@ -120,22 +138,20 @@ public:
 
 	bool isOpen();
 	static bool isOpen(int deviceID);
-	static ErrorCodes get_device_serials(vector<string> & testSerials);
-	static unsigned int get_num_devices();
+	ErrorCodes get_device_serials(vector<string> & testSerials);
+	unsigned int get_num_devices();
 
 	static vector<string> get_network_devices_names();
 
 	static void get_network_devices();
 	static ErrorCodes set_device_active(string, bool);
-	static void enumerate(unsigned int timeoutSeconds = 5);
+	void enumerate(unsigned int timeoutSeconds = 5);
 
-	static APSEthernetPacket create_broadcast_packet();
+	static APSEthernetPacket create_broadcast_packet(const MACAddr &);
 
 #ifdef DEBUGAPS	
 	static void debugAPSEcho(string device, DummyAPS * aps = 0);
 #endif
-
-	static string print_ethernetAddress(const uint8_t * addr);
 
 private:
 
@@ -143,10 +159,10 @@ private:
 
 	EthernetDevInfo *pcapDevice_;
 
+	MACAddr srcMAC_;
 
 	string deviceID_;
 	string filter_;
-	uint8_t apsMac_[MAC_ADDR_LEN];
 	pcap_t *apsHandle_;
 
 	uint16_t seqNum_;
@@ -155,14 +171,14 @@ private:
 
 	static vector<uint8_t> words2bytes(vector<uint32_t> & words);
 
-	vector<APSEthernetPacket> framer(APSCommand_t const & , uint32_t  , const vector<uint8_t> &);
+	vector<APSEthernetPacket> framer(const MACAddr &, APSCommand_t const & , uint32_t  , const vector<uint8_t> &);
 
 	int send_packet(const APSEthernetPacket & );
 	int send_packets(const vector<APSEthernetPacket>::iterator & , const vector<APSEthernetPacket>::iterator & );
 	APSCommand_t wait_for_ack();
 
 	static EthernetDevInfo * findDeviceInfo(string device);
-	static void getMacAddr(struct EthernetDevInfo & devInfo) ;
+	static MACAddr get_MAC_addr(struct EthernetDevInfo &) ;
 
 	static bool pcapRunning;
 

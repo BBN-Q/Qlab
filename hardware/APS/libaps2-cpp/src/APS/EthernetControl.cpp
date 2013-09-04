@@ -28,12 +28,35 @@ vector<EthernetControl::EthernetDevInfo>  EthernetControl::pcapDevices_;
 std::set<string> EthernetControl::APSunits_;
 std::map<string, EthernetControl::EthernetDevInfo> EthernetControl::APS2device_;
 
+MACAddr::MACAddr() : addr(MAC_ADDR_LEN, 0){}
+
+MACAddr::MACAddr(const string & macStr){
+	addr.resize(6,0);
+	for(int cnt = 0; cnt < MAC_ADDR_LEN; cnt++) {
+		// copy mac address from string
+		sscanf(macStr.substr(3*cnt,2).c_str(), "%x", addr.begin()+cnt);
+	}
+}
+
+MACAddr::MACAddr(const int & macAddrInt){
+	//TODO
+}
+
+string MACAddr::to_string() const{
+    ostringstream ss;
+    for(const uint8_t curByte : addr){
+        ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(curByte) << ":";
+    }
+    //remove the trailing ":"
+    string myStr = ss.str();
+    myStr.pop_back();
+    return myStr;
+}
+
 APSEthernetPacket::APSEthernetPacket() : header{{0}, {0}, EthernetControl::APS_PROTO, 0, {0}, 0}, payload(0){};
 
-APSEthernetPacket::APSEthernetPacket(const EthernetControl & controller, APSCommand_t command, const uint32_t & addr) :
-		header{{controller.apsMac_[0],controller.apsMac_[1],controller.apsMac_[2],controller.apsMac_[3],controller.apsMac_[4],controller.apsMac_[5]},
-		       {controller.pcapDevice_->macAddr[0],controller.pcapDevice_->macAddr[1],controller.pcapDevice_->macAddr[2],controller.pcapDevice_->macAddr[3],controller.pcapDevice_->macAddr[4],controller.pcapDevice_->macAddr[5] },
-               EthernetControl::APS_PROTO, controller.seqNum_, command, addr}, payload(0){};
+APSEthernetPacket::APSEthernetPacket(const MACAddr & destMAC, const MACAddr & srcMAC, APSCommand_t command, const uint32_t & addr) :
+		header{destMAC, srcMAC, EthernetControl::APS_PROTO, 0, command, addr}, payload(0){};
 
 vector<uint8_t> APSEthernetPacket::serialize() const {
 	/*
@@ -45,8 +68,8 @@ vector<uint8_t> APSEthernetPacket::serialize() const {
 
 	//Push on the destination and source mac address
 	auto insertPt = outVec.begin();
-	std::copy(header.dest, header.dest+6, insertPt); insertPt += 6;
-	std::copy(header.src, header.src+6, insertPt); insertPt += 6;
+	std::copy(header.dest.addr.begin(), header.dest.addr.end(), insertPt); insertPt += 6;
+	std::copy(header.src.addr.begin(), header.src.addr.end(), insertPt); insertPt += 6;
 
 	//Push on ethernet protocol
 	std::copy(reinterpret_cast<const uint8_t *>(&header.frameType), reinterpret_cast<const uint8_t *>(&header.frameType)+2, insertPt); insertPt += 2;
@@ -68,14 +91,14 @@ vector<uint8_t> APSEthernetPacket::serialize() const {
 
 bool EthernetControl::pcapRunning = false;
 
-APSEthernetPacket EthernetControl::create_broadcast_packet(const MACAddr & srcMac){
+APSEthernetPacket EthernetControl::create_broadcast_packet(const MACAddr & srcMAC){
 	/*
 	 * Helper function to put together a broadcast packet that all APS units should respond to.
 	 */
 	APSEthernetPacket myPacket;
 
 	//Put the broadcast FF:FF:FF:FF:FF:FF in the MAC destination address
-	std::fill(myPacket.header.dest, myPacket.header.dest+6, 0xFF);
+	std::fill(myPacket.header.dest.addr.begin(), myPacket.header.dest.addr.end(), 0xFF);
 
 	//Put the source MAC addresss
 	myPacket.header.src = srcMAC;
@@ -109,12 +132,6 @@ bool EthernetControl::isvalidMACAddress(string deviceID) {
     return true;
 }
 
-void EthernetControl::parseMACAddress(string macString, uint8_t * macBuffer) {
-    for(int cnt = 0; cnt < MAC_ADDR_LEN; cnt++) {
-        // copy mac address from string
-        sscanf(macString.substr(3*cnt,2).c_str(), "%x", macBuffer+cnt);
-    }
-}
 
 EthernetControl::ErrorCodes EthernetControl::connect(string deviceID) {
     FILE_LOG(logDEBUG) << "Connecting to device: " << deviceID;
@@ -136,11 +153,10 @@ EthernetControl::ErrorCodes EthernetControl::connect(string deviceID) {
 
     set_network_device(APS2device_[deviceID].name);
 
-    // set apsMAC to device ID
-    parseMACAddress(deviceID, apsMac_);
 
     // build filter
-    filter_ =  getPointToPointFilter(pcapDevice_->macAddr, apsMac_);
+    //TODO: fix me!
+//    filter_ =  getPointToPointFilter(pcapDevice_->macAddr, apsMac_);
 
     FILE_LOG(logDEBUG1) << "Using filter " << filter_;
 
@@ -154,7 +170,7 @@ EthernetControl::ErrorCodes EthernetControl::connect(string deviceID) {
 	return SUCCESS;
 }
 
-vector<APSEthernetPacket> EthernetControl::framer(const APSCommand_t & command, uint32_t addr, const vector<uint8_t> & data){
+vector<APSEthernetPacket> EthernetControl::framer(const MACAddr & destMAC, const APSCommand_t & command, uint32_t addr, const vector<uint8_t> & data){
     /* Load data into custom UDP ethernet frames.
      Each Ethernet frame carries 1500-10 bytes of payload so may have to split across multiple packets
     */
@@ -167,7 +183,7 @@ vector<APSEthernetPacket> EthernetControl::framer(const APSCommand_t & command, 
 
     while (bytesRemaining > 0){
         //Create a new packet
-        APSEthernetPacket newPacket(*this, command, addr);
+        APSEthernetPacket newPacket(destMAC, srcMAC_, command, addr);
         size_t bytesToSend = min(bytesRemaining, MAX_FRAME_PAYLOAD);
         //TODO: align payload at 32bit boundaries and set count in command
         //Fill the payload
@@ -187,8 +203,8 @@ vector<APSEthernetPacket> EthernetControl::framer(const APSCommand_t & command, 
 int EthernetControl::send_packet(const APSEthernetPacket & packet){
     //Platform independent way to send a single packet
     FILE_LOG(logDEBUG2) << "Write Frame";
-    FILE_LOG(logDEBUG2) << " Src: " << print_ethernetAddress(packet.header.src)
-                        << " Dest: " << print_ethernetAddress(packet.header.dest);
+    FILE_LOG(logDEBUG2) << " Src: " << packet.header.src.to_string()
+                        << " Dest: " << packet.header.dest.to_string();
     FILE_LOG(logDEBUG2) << " Seqnum " << packet.header.seqNum << " Command: " << APS2::printAPSCommand(packet.header.command)
                         << " + " <<  packet.payload.size() << " Bytes";
 
@@ -250,15 +266,15 @@ int EthernetControl::send_packets(const vector<APSEthernetPacket>::iterator & st
     return 0;
 }
 
-size_t EthernetControl::write(APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data ) {
+size_t EthernetControl::write(const MACAddr & destMAC, APSCommand_t & command, uint32_t addr,  vector<uint32_t> & data ) {
     vector<uint8_t> bytes = words2bytes(data);
-    return write(command,addr, bytes );
+    return write(destMAC, command,addr, bytes );
 }
 
-size_t EthernetControl::write(APSCommand_t & command, uint32_t addr, vector<uint8_t> & data) {
+size_t EthernetControl::write(const MACAddr & destMAC, APSCommand_t & command, uint32_t addr, vector<uint8_t> & data) {
 
     //Convert the data to a vector custom ethernet frames
-    vector<APSEthernetPacket> framesToSend = framer(command, addr, data);
+    vector<APSEthernetPacket> framesToSend = framer(destMAC, command, addr, data);
 
     //Send them out. The APS2 has a buffer for 22 frames.  The framer asks for an acknowledge every 11.
     //Send 22 then wait for an acknowledge then send another 11 and repeat. 
@@ -328,9 +344,10 @@ EthernetControl::ErrorCodes EthernetControl::read(void * data, size_t readLength
                 *command = eh->command;
             }
 
-            FILE_LOG(logDEBUG2) << "Read Frame: ";
-            FILE_LOG(logDEBUG2) << " Src: " << print_ethernetAddress(eh->src) 
-                               << " Dest: " << print_ethernetAddress(eh->dest);
+            //TODO: fix
+//            FILE_LOG(logDEBUG2) << "Read Frame: ";
+//            FILE_LOG(logDEBUG2) << " Src: " << print_ethernetAddress(eh->src)
+//                               << " Dest: " << print_ethernetAddress(eh->dest);
             FILE_LOG(logDEBUG2) << " Seqnum " << eh->seqNum << " Command: " << APS2::printAPSCommand(eh->command)
                                 << " + " << copyLen << " bytes";
 
@@ -364,6 +381,7 @@ EthernetControl::ErrorCodes EthernetControl::disconnect() {
 EthernetControl::ErrorCodes EthernetControl::get_device_serials(vector<string> & testSerials) {
     // copy set of APS ethernet addresses as device serial numbers
     testSerials.clear();
+    enumerate();
     for ( string serial : APSunits_) {
         testSerials.push_back(serial);
     }
@@ -371,8 +389,10 @@ EthernetControl::ErrorCodes EthernetControl::get_device_serials(vector<string> &
 }
 
 unsigned int EthernetControl::get_num_devices() {
-    enumerate();
-    return APSunits_.size();
+	//TODO: fix
+	//enumerate();
+    //return APSunits_.size();
+    return 0;
 }
 
 bool EthernetControl::isOpen(int deviceID) {
@@ -409,7 +429,7 @@ void EthernetControl::get_network_devices() {
             devInfo.name = string(d->name);
             if (d->description != NULL) devInfo.description = string(d->description);
             devInfo.isActive = false;
-            if (d->addresses != NULL) getMacAddr(devInfo);
+            if (d->addresses != NULL) devInfo.macAddr = get_MAC_addr(devInfo);
             
 
             pcapDevices_.push_back(devInfo);
@@ -417,7 +437,7 @@ void EthernetControl::get_network_devices() {
             FILE_LOG(logDEBUG2) << "\t" << devInfo.description;
             FILE_LOG(logDEBUG2) << "\t" << devInfo.description2;
             FILE_LOG(logDEBUG2) << "\t" << devInfo.name;
-            FILE_LOG(logDEBUG2) << "\t" << print_ethernetAddress(devInfo.macAddr);
+            FILE_LOG(logDEBUG2) << "\t" << devInfo.macAddr.to_string();
             
             // IP address may be obtained here if interested
             // addr = d->addresses;
@@ -431,16 +451,11 @@ void EthernetControl::get_network_devices() {
     pcap_freealldevs(alldevs);
 }
 
-void EthernetControl::getMacAddr(struct EthernetDevInfo & devInfo) {
+MACAddr EthernetControl::get_MAC_addr(struct EthernetDevInfo & devInfo) {
     /* looks up MAC Address based on device name obtained from winpcap
      * copies mac address into devInfo structure
      * copies a second description string into devInfo structure
-     *
-     * WARNING: Currently implemented only for windows
      */
-
-    // clear address
-    std::fill(devInfo.macAddr,devInfo.macAddr + MAC_ADDR_LEN, 0 );
 
 #ifdef _WIN32
     
@@ -508,7 +523,7 @@ void EthernetControl::getMacAddr(struct EthernetDevInfo & devInfo) {
     std::ifstream devFile(std::string("/sys/class/net/") + devInfo.name + std::string("/address"));
 	std::string macAddrStr;
 	getline(devFile, macAddrStr);
-	parseMACAddress(macAddrStr, devInfo.macAddr);
+	return MACAddr(macAddrStr);
 
 #endif
 
@@ -544,7 +559,7 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds) {
 
 	FILE_LOG(logDEBUG1) << "EthernetControl::enumerate";
 
-    APSEthernetPacket broadcastPacket = create_broadcast_packet();
+    APSEthernetPacket broadcastPacket = create_broadcast_packet(srcMAC_);
 
     //Send out the broadcast packet
     send_packet(broadcastPacket);
@@ -581,14 +596,6 @@ EthernetControl::ErrorCodes EthernetControl::set_device_active(string device, bo
     return SUCCESS;
 }
 
-string EthernetControl::print_ethernetAddress(const uint8_t * addr){
-    ostringstream ss;
-    for(int cnt = 0; cnt < (MAC_ADDR_LEN - 1); cnt++) {
-        ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(addr[cnt]) << ":";
-    }
-    ss <<  std::hex << std::setfill('0') << std::setw(2) <<  static_cast<int>(addr[5]) ;
-    return ss.str();
-}
 
 void EthernetControl::packetHTON(APSEthernetHeader * frame) {
 
@@ -622,8 +629,9 @@ string EthernetControl::getPointToPointFilter(uint8_t * localMacAddr, uint8_t *a
     ostringstream filter;
 
     // build filter
-    filter << "ether src " << print_ethernetAddress(apsMacAddr);
-    filter << " and ether dst " << print_ethernetAddress(localMacAddr);
+    //TODO: fix me!
+    // filter << "ether src " << print_ethernetAddress(apsMacAddr);
+    // filter << " and ether dst " << print_ethernetAddress(localMacAddr);
     filter << " and ether proto " << APS_PROTO;
 
     return filter.str();
@@ -632,7 +640,8 @@ string EthernetControl::getPointToPointFilter(uint8_t * localMacAddr, uint8_t *a
 string EthernetControl::getEnumerateFilter(uint8_t * localMacAddr) {
     ostringstream filter;
     // build filter
-    filter << "ether dst " << print_ethernetAddress(localMacAddr);
+    //TODO: fix me!
+    // filter << "ether dst " << print_ethernetAddress(localMacAddr);
     filter << " and ether proto " << APS_PROTO;
     return filter.str();
 }
@@ -830,7 +839,7 @@ size_t EthernetControl::load_bitfile(vector<uint8_t> fileData, uint32_t addr) {
 
         FILE_LOG(logDEBUG) << "Writing frame " << frameCnt << "/" << numFrames;
 
-        write(command, addr, buffer);
+        write(srcMAC_, command, addr, buffer);
 
         dataRemaining -= copyCount;
         addr += copyCount / sizeof(uint32_t);
@@ -848,7 +857,7 @@ EthernetControl::ErrorCodes EthernetControl::select_FPGA_image(uint32_t addr) {
     command.packed = 0;
     
     command.cmd = APS_COMMAND_FPGACONFIG_CTRL;
-    write(command, addr);
+    write(srcMAC_, command, addr);
 
     // wait for Resetting FPGA acknowlege 
     struct APS_Status_Registers statusRegs;
@@ -872,7 +881,7 @@ EthernetControl::ErrorCodes EthernetControl::write_register(uint32_t addr, uint3
     
     vector<uint32_t> d = {data};
 
-    write(command, addr,  d);
+    write(srcMAC_, command, addr,  d);
     read(nullptr, 0, &response);
 
     if (response.mode_stat == 0x02) {
@@ -896,7 +905,7 @@ EthernetControl::ErrorCodes EthernetControl::read_register(uint32_t addr, uint32
     command.cmd = APS_COMMAND_USERIO_ACK;
     command.cnt = 1;
     command.r_w = 1;
-    write(command, addr);
+    write(srcMAC_, command, addr);
     read(&data, sizeof(uint32_t), &response);
     
     FILE_LOG(logDEBUG) << "ReadRegister " << std::hex << addr << " = " << std::dec << data;
@@ -979,7 +988,7 @@ EthernetControl::ErrorCodes EthernetControl::write_SPI(CHIPCONFIG_IO_TARGET targ
             }
         }
 
-        write(command, 0, writeData);
+        write(srcMAC_, command, 0, writeData);
         //Read(&data, 1, &response); // docs do not specfiy a response
     }
     return SUCCESS;
@@ -1059,7 +1068,7 @@ EthernetControl::ErrorCodes EthernetControl::read_SPI( CHIPCONFIG_IO_TARGET targ
     FILE_LOG(logDEBUG2) << "Chip Config: " << APS2::printAPSChipCommand(cmd);
 
     //TODO: Fix-me properly by deciding whether write should be const
-    const_cast<EthernetControl*>(this)->write(command, 0, writeData);
+    const_cast<EthernetControl*>(this)->write(srcMAC_, command, 0, writeData);
     read(&data, 1, &response);
 
     return SUCCESS;

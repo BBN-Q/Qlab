@@ -16,7 +16,7 @@ APSRack::~APSRack()  {
 }
 
 //Initialize the rack by polling for devices and serial numbers
-int APSRack::init(string NICName) {
+int APSRack::init(const string & NICName) {
 
 	//Create the logger
 	// TODO renable 
@@ -25,7 +25,7 @@ int APSRack::init(string NICName) {
 	//Output2FILE::Stream() = pFile;
 
 	//Activate the NIC connected to the devices
-	EthernetControl::set_device_active(NICName, true);
+	interface_.set_device_active(NICName, true);
 
 	//Enumerate the serial numbers and MAC addresses of the devices attached
 	enumerate_devices();
@@ -40,7 +40,7 @@ int APSRack::initAPS(const int & deviceID, const string & bitFile, const bool & 
 
 int APSRack::get_num_devices()  {
 	int numDevices;
-	numDevices = EthernetControl::get_num_devices();
+	numDevices = interface_.get_num_devices();
 	if (numDevices_ != numDevices) {
 		update_device_enumeration();
 	}
@@ -54,7 +54,7 @@ string APSRack::get_deviceSerial(const int & deviceID) {
 
 	// Get serials from FTDI layer to check for change in devices
 	vector<string> testSerials;
-	EthernetControl::get_device_serials(testSerials);
+	interface_.get_device_serials(testSerials);
 
 	// match serials for each device id to make sure mapping of device count to serial
 	// number is still correct
@@ -75,14 +75,17 @@ string APSRack::get_deviceSerial(const int & deviceID) {
 	return deviceSerials_[deviceID];
 }
 
-//This will reset the APS vector so it really should only be called during initialization
 void APSRack::enumerate_devices() {
+	/*
+	 * Look for all APS devices in this APS Rack.
+	 * This will reset the APS vector so it really should only be called during initialization
+	 */
 
 	//Have to disconnect everything first
 	for (auto & aps : APSs_){
 		aps.disconnect();
 	}
-	EthernetControl::get_device_serials(deviceSerials_);
+	interface_.get_device_serials(deviceSerials_);
 	numDevices_ = deviceSerials_.size();
 
 	APSs_.clear();
@@ -106,7 +109,7 @@ void APSRack::enumerate_devices() {
 void APSRack::update_device_enumeration() {
 
 	vector<string> newSerials;
-	EthernetControl::get_device_serials(newSerials);
+	interface_.get_device_serials(newSerials);
 
 	// construct new APS_ vector & new serial2dev map
 	vector<APS2> newAPS_;

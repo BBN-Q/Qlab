@@ -18,7 +18,7 @@ public:
 
 	map<string, int> serial2dev;
 
-	int init();
+	int init(const string &);
 	int initAPS(const int &, const string &, const bool &);
 	int connect(const int &);
 	int connect(const string &);
@@ -88,6 +88,7 @@ private:
 	int numDevices_;
 	vector<APS2> APSs_;
 	vector<string> deviceSerials_;
+	EthernetControl interface_;
 };
 
 
