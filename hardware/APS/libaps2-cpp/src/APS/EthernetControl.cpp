@@ -36,8 +36,10 @@ APSEthernetPacket::APSEthernetPacket(const EthernetControl & controller, APSComm
                EthernetControl::APS_PROTO, controller.seqNum_, command, addr}, payload(0){};
 
 vector<uint8_t> APSEthernetPacket::serialize() const {
-	//Create a vector bytes for the packet
-	//TODO: sort out byte ordering
+	/*
+	 * Serialize a packet to a vector of bytes for tranmission.
+	 * TODO: handle host to network byte ordering here
+	 */
 	vector<uint8_t> outVec;
 	outVec.resize(NUM_HEADER_BYTES + payload.size());
 
@@ -65,6 +67,24 @@ vector<uint8_t> APSEthernetPacket::serialize() const {
 }
 
 bool EthernetControl::pcapRunning = false;
+
+APSEthernetPacket EthernetControl::create_broadcast_packet(const MACAddr & srcMac){
+	/*
+	 * Helper function to put together a broadcast packet that all APS units should respond to.
+	 */
+	APSEthernetPacket myPacket;
+
+	//Put the broadcast FF:FF:FF:FF:FF:FF in the MAC destination address
+	std::fill(myPacket.header.dest, myPacket.header.dest+6, 0xFF);
+
+	//Put the source MAC addresss
+	myPacket.header.src = srcMAC;
+	myPacket.header.command.cmd = APS_COMMAND_STATUS;
+	myPacket.header.command.mode_stat = APS_STATUS_TEMP;
+	myPacket.header.command.cnt = 0x10; //minimum length packet
+
+	return myPacket;
+}
 
 EthernetControl::EthernetControl() :  seqNum_{0}, apsHandle_{0}{
     FILE_LOG(logINFO) << "New EthernetControl";
@@ -360,10 +380,12 @@ bool EthernetControl::isOpen(int deviceID) {
 }
 
 void EthernetControl::get_network_devices() {
+	/*
+	 * Finds all the devices that the pcap library sees and stores their info in the pcapDevices_ vector
+	 */
 	pcap_if_t *alldevs;
 	pcap_if_t *d;
     char errbuf[PCAP_ERRBUF_SIZE];
-    int i = 0;
     char macAddr[6];
 
     struct pcap_addr *addr;
@@ -537,15 +559,6 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadc
 
         if (!capHandle) continue;
         
-        // build broadcast packet
-        std::fill(broadcastPacket, broadcastPacket + broadcastPacketLen, 0);    
-        bph = reinterpret_cast< APSEthernetHeader * >(broadcastPacket);
-        std::fill(bph->dest, bph->dest + MAC_ADDR_LEN, 0xFF);
-        std::copy(dev.macAddr, dev.macAddr + MAC_ADDR_LEN,  bph->src);
-        bph->frameType = APS_PROTO;
-        bph->command.cmd = APS_COMMAND_STATUS;
-        bph->command.mode_stat = APS_STATUS_TEMP;
-        bph->command.cnt = 0x10;
 
         FILE_LOG(logDEBUG1) << "Enumerate Packet: " << APS2::printAPSCommand(bph->command);
 
@@ -603,7 +616,9 @@ void EthernetControl::enumerate(unsigned int timeoutSeconds, unsigned int broadc
 }
 
 EthernetControl::ErrorCodes EthernetControl::set_device_active(string device, bool isActive) {
-    get_network_devices();
+
+	//List all the devices that pcap sees and get specific info about the one we want to activate
+	get_network_devices();
     EthernetDevInfo * di = findDeviceInfo(device);
     if (!di) {
         FILE_LOG(logERROR) << "Device: " << device << " not found";

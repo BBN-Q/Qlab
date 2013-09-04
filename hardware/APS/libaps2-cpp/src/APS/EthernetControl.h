@@ -129,6 +129,8 @@ public:
 	static ErrorCodes set_device_active(string, bool);
 	static void enumerate(unsigned int timeoutSeconds = 5, unsigned int broadcastPeriodSeconds = 1);
 
+	static APSEthernetPacket create_broadcast_packet();
+
 #ifdef DEBUGAPS	
 	static void debugAPSEcho(string device, DummyAPS * aps = 0);
 #endif
