@@ -3,10 +3,8 @@
 #define APSETHERNET_H
 
 #include "pcap.h"
-
-using std::string;
-using std::vector;
-using std::map;
+#include "MACAddr.h"
+#include "APSEthernetPacket.h"
 
 enum EthernetError {
 	SUCCESS = 0,
@@ -18,12 +16,14 @@ enum EthernetError {
 	INVALID_SPI_TARGET
 };
 
+
 struct EthernetDevInfo {
 	string name;          // device name as set by winpcap
 	string description;   // set by winpcap
 	string description2;  // string MAC address
 	MACAddr macAddr;
 };
+
 
 class APSEthernet {
 	public:
@@ -61,23 +61,6 @@ class APSEthernet {
 
 		static const unsigned int pcapTimeoutMS = 1000;
 		static const uint16_t APS_PROTO = 0xBB4E;
-};
-
-class MACAddr{
-public:
-
-	MACAddr();
-	MACAddr(const int &);
-	MACAddr(const string &);
-	MACAddr(const EthernetDevInfo &);
-
-	string to_string() const;
-
-	static bool is_valid(const string &);
-	static const unsigned int MAC_ADDR_LEN = 6;
-
-	vector<uint8_t> addr;
-
 };
 
 #endif
