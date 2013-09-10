@@ -3,13 +3,16 @@
 /* PUBLIC methods */
 
 APSEthernet::~APSEthernet() {
+    //Stop the receive thread
+    receiving_ = false;
+    receiveThread_.join();
     pcap_close(pcapHandle_);
 }
 
 EthernetError APSEthernet::init(string nic) {
 	vector<EthernetDevInfo> pcapDevices = get_network_devices();
 	set_network_device(pcapDevices, nic);
-    //Create a new pcap filter to capture the replies
+    //Create a new pcap filter to send the packets
     char errbuf[PCAP_ERRBUF_SIZE];
     pcapHandle_ = pcap_open_live(device_.name.c_str(), // name of the device
                                   1500,                      // portion of the packet to capture
@@ -19,14 +22,15 @@ EthernetError APSEthernet::init(string nic) {
                                   );
     // filter for APS protocol and host destination
     string filterStr = create_pcap_filter();
-    apply_filter(filterStr);
+    apply_filter(filterStr, pcapHandle_);
 
     //Setup broadcast mapping 
     serial_to_MAC_["broadcast"] = MACAddr("FF:FF:FF:FF:FF:FF");
 
-    //Setup incoming loop 
+    //Setup incoming loop in a thread
     msgQueues_["unknown"] = queue<APSEthernetPacket>();
-    // pcap_loop(pcapHandle_, -1, wrapper_pcap_callback, nullptr);
+    receiving_ = true;
+    receiveThread_ = std::thread(&APSEthernet::run_receive_thread, this);
 
     return SUCCESS;
 }
@@ -52,12 +56,16 @@ vector<string> APSEthernet::enumerate() {
 }
 
 EthernetError APSEthernet::connect(string serial) {
+    mLock_.lock();
 	msgQueues_[serial] = queue<APSEthernetPacket>();
+    mLock_.unlock();
 	return SUCCESS;
 }
 
 EthernetError APSEthernet::disconnect(string serial) {
+    mLock_.lock();
 	msgQueues_.erase(serial);
+    mLock_.unlock();
 	return SUCCESS;
 }
 
@@ -83,7 +91,6 @@ EthernetError APSEthernet::send(string serial, vector<APSEthernetPacket> msg) {
 
 vector<APSEthernetPacket> APSEthernet::receive(string serial, size_t timeoutSeconds) {
 
-    pcap_dispatch(pcapHandle_, 1, wrapper_pcap_callback, nullptr);
     //Read the packets coming back in up to the timeout
     std::chrono::time_point<std::chrono::steady_clock> start, end;
 
@@ -94,21 +101,18 @@ vector<APSEthernetPacket> APSEthernet::receive(string serial, size_t timeoutSeco
 
     while ( elapsedTime < timeoutSeconds){
         if (!msgQueues_[serial].empty()){
+            mLock_.lock();
             outVec.push_back(msgQueues_[serial].front());
             msgQueues_[serial].pop();
+            mLock_.unlock();
             return outVec;
         }
+        usleep(10000);;
         end = std::chrono::steady_clock::now();
         elapsedTime =  std::chrono::duration_cast<std::chrono::seconds>(end-start).count();
     }
     FILE_LOG(logWARNING) << "Timed out on receive!";
     return outVec;
-}
-
-void APSEthernet::wrapper_pcap_callback(u_char * args, const struct pcap_pkthdr * header, const u_char * packet){
-    //Grab a refernece to our own singleton
-    APSEthernet & myInstance = get_instance();
-    myInstance.pcap_callback(*header, packet);
 }
 
 /* PRIVATE methods */
@@ -177,20 +181,20 @@ string APSEthernet::create_pcap_filter() {
     return filter.str();
 }
 
-EthernetError APSEthernet::apply_filter(string & filter) {
+EthernetError APSEthernet::apply_filter(string & filter, pcap_t * pcapHandle) {
 
     FILE_LOG(logDEBUG3) << "Setting filter to: " << filter << endl;
 
     u_int netmask=0xffffff; // ignore netmask 
     struct bpf_program filterCode;
 
-    if (pcap_compile(pcapHandle_, &filterCode, filter.c_str(), true, netmask) < 0 ) {
+    if (pcap_compile(pcapHandle, &filterCode, filter.c_str(), true, netmask) < 0 ) {
         cout << "Error to compiling enumerate packet filter. Check the syntax" << endl;
         return INVALID_PCAP_FILTER;
     }
 
     // set filter
-    if (pcap_setfilter(pcapHandle_, &filterCode) < 0) {
+    if (pcap_setfilter(pcapHandle, &filterCode) < 0) {
          cout << "Error setting the filter" << endl;
         /* Free the device list */
         return INVALID_PCAP_FILTER;
@@ -198,15 +202,55 @@ EthernetError APSEthernet::apply_filter(string & filter) {
     return SUCCESS;
 }
 
-void APSEthernet::pcap_callback(const struct pcap_pkthdr & header, const u_char * packet){
 
-	APSEthernetPacket myPacket = APSEthernetPacket(packet, header.caplen);
+void APSEthernet::run_receive_thread(){
+    /*
+    * Setup a background thread to pool for packets and parse into appropriate queues.
+    */
+    //Setup a new handle
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_t *recHandle;
+    recHandle = pcap_open_live(device_.name.c_str(), // name of the device
+                                  1522,                      // portion of the packet to capture
+                                  false,                     // promiscuous mode
+                                  pcapTimeoutMS,             // read timeout
+                                  errbuf                     // error buffer
+                                  );
+    // filter for APS protocol and host destination
+    string filterStr = create_pcap_filter();
+    apply_filter(filterStr, recHandle);
 
-    //Now sort out where it's going
-    if(MAC_to_serial_.find(myPacket.header.src) == MAC_to_serial_.end()){
-        msgQueues_["unknown"].emplace(myPacket);
+    // start looping while we're up and running
+    while(receiving_){
+        struct pcap_pkthdr *packetHeader;
+        const u_char *packetData;
+        int result =  pcap_next_ex( recHandle, &packetHeader, &packetData);
+        if (result > 0){
+            //We have a packet so deal with it
+            //First convert the byte stream into a packet
+            APSEthernetPacket myPacket = APSEthernetPacket(packetData, packetHeader->caplen);
+
+            //Now sort out to which queue it's going
+            mLock_.lock();
+            if(MAC_to_serial_.find(myPacket.header.src) == MAC_to_serial_.end()){
+                msgQueues_["unknown"].emplace(myPacket);
+            }
+            else{
+                msgQueues_[MAC_to_serial_[myPacket.header.src]].push(myPacket);
+            }
+            mLock_.unlock();
+        }
+        else if (result == 0) {
+            //We timed out 
+            continue;
+        }
+        else if (result < 0){
+            FILE_LOG(logERROR) << "Error trying to read packets: " << pcap_geterr(recHandle);
+        }
     }
-    else{
-        msgQueues_[MAC_to_serial_[myPacket.header.src]].push(myPacket);
-    }
+
+    //close up
+    pcap_close(recHandle);
+
+
 }

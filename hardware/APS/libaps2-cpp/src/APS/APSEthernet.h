@@ -39,8 +39,6 @@ class APSEthernet {
 
 		static const uint16_t APS_PROTO = 0xBB4E;
 
-		static void wrapper_pcap_callback(u_char *, const struct pcap_pkthdr *, const u_char *);
-
 	private:
 		APSEthernet() {};
 		APSEthernet(APSEthernet const &);
@@ -56,11 +54,15 @@ class APSEthernet {
 		vector<EthernetDevInfo> get_network_devices();
 		EthernetError set_network_device(vector<EthernetDevInfo> pcapDevices, string nic);
 		string create_pcap_filter();
-		EthernetError apply_filter(string & filter);
+		static EthernetError apply_filter(string & filter, pcap_t *);
 
-		static const unsigned int pcapTimeoutMS = 1000;
+		static const unsigned int pcapTimeoutMS = 100;
 
-		void pcap_callback(const struct pcap_pkthdr &, const u_char *);
+		void run_receive_thread();
+
+		std::thread receiveThread_;
+		std::atomic<bool> receiving_;
+		std::mutex mLock_;
 
 
 };
