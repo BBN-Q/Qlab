@@ -18,6 +18,7 @@ APSEthernetPacket::APSEthernetPacket(const u_char * packet, size_t packetLength)
 	header.frameType = bytes2uint16(12);
 	header.seqNum = bytes2uint16(14);
 	header.command.packed = bytes2uint32(16);
+	//TODO: not all packets have an address; if-block on command type
 	header.addr = bytes2uint32(20);
 	payload.resize(packetLength - NUM_HEADER_BYTES,0);
 	std::copy(packet+24, packet+packetLength, payload.begin());
@@ -54,13 +55,22 @@ vector<uint8_t> APSEthernetPacket::serialize() const {
 	std::copy(start, start+4, insertPt); insertPt += 4;
 
 	//Address
-	myuint32 = htonl(header.addr);
-	std::copy(start, start+4, insertPt); insertPt += 4;
+	if (needs_address(APS_COMMANDS(header.command.cmd))){
+		myuint32 = htonl(header.addr);
+		std::copy(start, start+4, insertPt); insertPt += 4;
+	}
+	else{
+		outVec.resize(outVec.size()-4);
+	}
 
 	//Data
 	std::copy(payload.begin(), payload.end(), insertPt);
 
 	return outVec;
+}
+
+size_t APSEthernetPacket::numBytes() const{
+	return needs_address(APS_COMMANDS(header.command.cmd)) ? NUM_HEADER_BYTES + payload.size() : NUM_HEADER_BYTES - 4 + payload.size() ;
 }
 
 APSEthernetPacket APSEthernetPacket::create_broadcast_packet(){
@@ -75,7 +85,7 @@ APSEthernetPacket APSEthernetPacket::create_broadcast_packet(){
 	//Fill out the host register status command
 	myPacket.header.command.ack = 0;
 	myPacket.header.command.r_w = 1;
-	myPacket.header.command.cmd = APS_COMMAND_STATUS;
+	myPacket.header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::STATUS);
 	myPacket.header.command.mode_stat = APS_STATUS_HOST;
 	myPacket.header.command.cnt = 0x10; //minimum length packet
 

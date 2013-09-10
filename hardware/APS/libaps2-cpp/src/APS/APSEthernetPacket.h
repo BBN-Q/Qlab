@@ -34,7 +34,7 @@ public:
 	static const size_t NUM_HEADER_BYTES = 24;
 
 	vector<uint8_t> serialize() const ;
-	inline size_t numBytes() const {return NUM_HEADER_BYTES + payload.size();};
+	size_t numBytes() const; 
 
 	static APSEthernetPacket create_broadcast_packet();
 };

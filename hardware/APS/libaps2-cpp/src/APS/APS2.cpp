@@ -105,7 +105,7 @@ int APS2::reset() {
 	APSCommand_t command;
 	command.packed = 0;
 	
-	command.cmd = APS_COMMAND_RESET;
+	command.cmd = static_cast<uint32_t>(APS_COMMANDS::RESET);
 	command.mode_stat = RESET_RECONFIG_BASELINE_EPROM;
 	//TODO: fix me!
 	// socket_.write(macAddr_, command);

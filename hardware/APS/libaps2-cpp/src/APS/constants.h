@@ -104,18 +104,29 @@ typedef union {
 
 static const uint16_t NUM_STATUS_REGISTERS = 16;
 
-enum APS_COMMANDS {
-	APS_COMMAND_RESET           = 0x0,
-	APS_COMMAND_USERIO_ACK      = 0x1,
-	APS_COMMAND_USERIO_NACK     = 0x9,
-	APS_COMMAND_EPROMIO         = 0x2,
-	APS_COMMAND_CHIPCONFIGIO    = 0x3,
-	APS_COMMAND_RUNCHIPCONFIG   = 0x4,
-	APS_COMMAND_FPGACONFIG_ACK  = 0x5,
-	APS_COMMAND_FPGACONFIG_NACK = 0xD,
-	APS_COMMAND_FPGACONFIG_CTRL = 0x6,
-	APS_COMMAND_STATUS          = 0x7
+enum class APS_COMMANDS : uint32_t {
+	RESET           = 0x0,
+	USERIO_ACK      = 0x1,
+	USERIO_NACK     = 0x9,
+	EPROMIO         = 0x2,
+	CHIPCONFIGIO    = 0x3,
+	RUNCHIPCONFIG   = 0x4,
+	FPGACONFIG_ACK  = 0x5,
+	FPGACONFIG_NACK = 0xD,
+	FPGACONFIG_CTRL = 0x6,
+	STATUS          = 0x7
 };
+
+//Helper function to decide if aps command needs address
+inline bool needs_address(APS_COMMANDS cmd){
+	switch (cmd) {
+		case APS_COMMANDS::RESET:
+		case APS_COMMANDS::STATUS:
+			return false;
+		default:
+			return true;
+	}
+}
 
 enum APS_STATUS {
 	APS_STATUS_HOST   = 0,
