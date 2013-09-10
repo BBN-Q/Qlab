@@ -9,16 +9,18 @@ APSEthernetPacket::APSEthernetPacket(const u_char * packet, size_t packetLength)
 	/*
 	Create a packet from a byte array returned by pcap.
 	*/
-	//TODO: check byte ordering
-	payload.resize(packetLength - NUM_HEADER_BYTES,0);
+	//Helper function to turn two network bytes into a uint16_t assuming big-endian network byte order
+	auto bytes2uint16 = [&packet](size_t offset) -> uint16_t {return (packet[offset] << 8) + packet[offset+1];};
+	auto bytes2uint32 = [&packet](size_t offset) -> uint32_t {return (packet[offset] << 24) + (packet[offset+1] << 16) + (packet[offset+2] << 8) + packet[offset+3] ;};
+
 	std::copy(packet, packet+6, header.dest.addr.begin());
 	std::copy(packet+6, packet+12, header.src.addr.begin());
-	std::copy(packet+12, packet+14, reinterpret_cast<uint8_t*>(&header.frameType));
-	std::copy(packet+14, packet+16, reinterpret_cast<uint8_t*>(&header.seqNum));
-	std::copy(packet+16, packet+20, reinterpret_cast<uint8_t *>(&header.command));
-	std::copy(packet+20, packet+24, reinterpret_cast<uint8_t*>(&header.addr));
+	header.frameType = bytes2uint16(12);
+	header.seqNum = bytes2uint16(14);
+	header.command.packed = bytes2uint32(16);
+	header.addr = bytes2uint32(20);
 	payload.resize(packetLength - NUM_HEADER_BYTES,0);
-	std::copy(reinterpret_cast<const uint8_t*>(packet)+24, reinterpret_cast<const uint8_t*>(packet)+25, payload.begin());
+	std::copy(packet+24, packet+packetLength, payload.begin());
 }
 
 vector<uint8_t> APSEthernetPacket::serialize() const {
