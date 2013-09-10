@@ -8,9 +8,6 @@
 
 #include <concol.h> 
 
-#include "EthernetControl.h"
-
-
 using namespace std;
 
 // command options functions taken from:

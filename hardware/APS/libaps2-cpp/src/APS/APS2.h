@@ -90,7 +90,7 @@ private:
 
 	int deviceID_;
 	string deviceSerial_;
-	EthernetControl handle_;
+	APSEthernet & socket_ = APSEthernet::get_instance();
 	vector<Channel> channels_;
 	int samplingRate_;
 	vector<uint8_t> writeQueue_;

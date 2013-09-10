@@ -88,7 +88,7 @@ private:
 	int numDevices_;
 	vector<APS2> APSs_;
 	vector<string> deviceSerials_;
-	EthernetControl interface_;
+	APSEthernet & socket_ = APSEthernet::get_instance(); 
 };
 
 

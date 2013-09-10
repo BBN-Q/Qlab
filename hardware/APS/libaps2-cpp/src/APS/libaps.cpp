@@ -231,10 +231,6 @@ int program_FPGA(int deviceID, int bitFileNum) {
 	return APSRack_.program_FPGA(deviceID, bitFileNum);
 }
 
-EXPORT int set_ethernet_active(char * name, int active) {
-	 return EthernetControl::set_device_active(string(name),(active != 0));
-}
-
 #ifdef __cplusplus
 }
 #endif

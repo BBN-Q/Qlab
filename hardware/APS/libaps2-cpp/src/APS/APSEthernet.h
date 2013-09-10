@@ -3,8 +3,6 @@
 #define APSETHERNET_H
 
 #include "pcap.h"
-#include "MACAddr.h"
-#include "APSEthernetPacket.h"
 
 enum EthernetError {
 	SUCCESS = 0,
@@ -16,14 +14,12 @@ enum EthernetError {
 	INVALID_SPI_TARGET
 };
 
-
 struct EthernetDevInfo {
 	string name;          // device name as set by winpcap
 	string description;   // set by winpcap
 	string description2;  // string MAC address
 	MACAddr macAddr;
 };
-
 
 class APSEthernet {
 	public:
@@ -37,30 +33,36 @@ class APSEthernet {
 		vector<string> enumerate();
 		EthernetError connect(string serial);
 		EthernetError disconnect(string serial);
-		EthernetError send(vector<APSEthernetPacket> msg);
+		EthernetError send(string serial, APSEthernetPacket msg);
 		EthernetError send(string serial, vector<APSEthernetPacket> msg);
-		vector<APSEthernetPacket> receive();
-		vector<APSEthernetPacket> receive(string serial);
+		vector<APSEthernetPacket> receive(string serial, size_t timeoutSeconds = 1);
+
+		static const uint16_t APS_PROTO = 0xBB4E;
+
+		static void wrapper_pcap_callback(u_char *, const struct pcap_pkthdr *, const u_char *);
+
 	private:
 		APSEthernet() {};
 		APSEthernet(APSEthernet const &);
 		void operator=(APSEthernet const &);
 
-		map<string, MACAddr> serial_to_MAC_;
-		map<MACAddr, string> MAC_to_serial_;
-		pcap_t *pcap_handle_;
+		unordered_map<string, MACAddr> serial_to_MAC_;
+		unordered_map<MACAddr, string> MAC_to_serial_;
+		pcap_t *pcapHandle_;
 		MACAddr srcMAC_;
 		EthernetDevInfo device_;
-		vector<MACAddr> dstMACs_;
-		map<string, vector<APSEthernetPacket>> msgQueues_;
+		map<string, queue<APSEthernetPacket>> msgQueues_;
 
 		vector<EthernetDevInfo> get_network_devices();
 		EthernetError set_network_device(vector<EthernetDevInfo> pcapDevices, string nic);
-		string create_enumerate_filter();
+		string create_pcap_filter();
 		EthernetError apply_filter(string & filter);
 
 		static const unsigned int pcapTimeoutMS = 1000;
-		static const uint16_t APS_PROTO = 0xBB4E;
+
+		void pcap_callback(const struct pcap_pkthdr &, const u_char *);
+
+
 };
 
 #endif

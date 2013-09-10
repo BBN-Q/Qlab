@@ -25,11 +25,11 @@ int APSRack::init(const string & NICName) {
 	//Output2FILE::Stream() = pFile;
 
 	//Setup the NIC connected to the devices
-	interface_.get_network_devices();
-	interface_.set_network_device(NICName);
+	socket_.init(NICName);
 
 	//Enumerate the serial numbers and MAC addresses of the devices attached
-	enumerate_devices();
+	socket_.enumerate();
+	FILE_LOG(logDEBUG) << "Finished enumerate!";
 
 	return 0;
 }
@@ -41,7 +41,8 @@ int APSRack::initAPS(const int & deviceID, const string & bitFile, const bool & 
 
 int APSRack::get_num_devices()  {
 	int numDevices;
-	numDevices = interface_.get_num_devices();
+	vector<string> APSDevices = socket_.enumerate();
+	numDevices = APSDevices.size();
 	if (numDevices_ != numDevices) {
 		update_device_enumeration();
 	}
@@ -55,7 +56,8 @@ string APSRack::get_deviceSerial(const int & deviceID) {
 
 	// Get serials from FTDI layer to check for change in devices
 	vector<string> testSerials;
-	interface_.get_device_serials(testSerials);
+	//TODO: fix me!
+	// interface_.get_device_serials(testSerials);
 
 	// match serials for each device id to make sure mapping of device count to serial
 	// number is still correct
@@ -86,7 +88,8 @@ void APSRack::enumerate_devices() {
 	for (auto & aps : APSs_){
 		aps.disconnect();
 	}
-	interface_.get_device_serials(deviceSerials_);
+	//TODO: fix me!
+	// interface_.get_device_serials(deviceSerials_);
 	numDevices_ = deviceSerials_.size();
 
 	APSs_.clear();
@@ -110,7 +113,8 @@ void APSRack::enumerate_devices() {
 void APSRack::update_device_enumeration() {
 
 	vector<string> newSerials;
-	interface_.get_device_serials(newSerials);
+	//TODO: fix me!
+	// interface_.get_device_serials(newSerials);
 
 	// construct new APS_ vector & new serial2dev map
 	vector<APS2> newAPS_;
@@ -120,7 +124,9 @@ void APSRack::update_device_enumeration() {
 	for (string tmpSerial : newSerials) {
 		
 		// example test to see if APS thinks device is open
-		if (EthernetControl::isOpen(devicect)) {
+	//TODO: fix me!
+		// if (EthernetControl::isOpen(devicect)) {
+		if(true){
 			FILE_LOG(logDEBUG) << "Device " << devicect << " [ " << tmpSerial << " ] is open";
 		}
 
@@ -363,6 +369,7 @@ int APSRack::raw_read(int deviceID) {
 
 int APSRack::read_register(int deviceID, int addr){
 	uint32_t value;
-	APSs_[deviceID].handle_.read_register(addr,value);
+	//TODO: fix me!
+	// APSs_[deviceID].handle_.read_register(addr,value);
 	return value;
 }

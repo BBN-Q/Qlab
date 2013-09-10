@@ -1,7 +1,25 @@
-APSEthernetPacket::APSEthernetPacket() : header{{}, {}, EthernetControl::APS_PROTO, 0, {0}, 0}, payload(0){};
+#include "APSEthernetPacket.h"
+
+APSEthernetPacket::APSEthernetPacket() : header{{}, {}, APSEthernet::APS_PROTO, 0, {0}, 0}, payload(0){};
 
 APSEthernetPacket::APSEthernetPacket(const MACAddr & destMAC, const MACAddr & srcMAC, APSCommand_t command, const uint32_t & addr) :
-		header{destMAC, srcMAC, EthernetControl::APS_PROTO, 0, command, addr}, payload(0){};
+		header{destMAC, srcMAC, APSEthernet::APS_PROTO, 0, command, addr}, payload(0){};
+
+APSEthernetPacket::APSEthernetPacket(const u_char * packet, size_t packetLength){
+	/*
+	Create a packet from a byte array returned by pcap.
+	*/
+	//TODO: check byte ordering
+	payload.resize(packetLength - NUM_HEADER_BYTES,0);
+	std::copy(packet, packet+6, header.dest.addr.begin());
+	std::copy(packet+6, packet+12, header.src.addr.begin());
+	std::copy(packet+12, packet+14, reinterpret_cast<uint8_t*>(&header.frameType));
+	std::copy(packet+14, packet+16, reinterpret_cast<uint8_t*>(&header.seqNum));
+	std::copy(packet+16, packet+20, reinterpret_cast<uint8_t *>(&header.command));
+	std::copy(packet+20, packet+24, reinterpret_cast<uint8_t*>(&header.addr));
+	payload.resize(packetLength - NUM_HEADER_BYTES,0);
+	std::copy(reinterpret_cast<const uint8_t*>(packet)+24, reinterpret_cast<const uint8_t*>(packet)+25, payload.begin());
+}
 
 vector<uint8_t> APSEthernetPacket::serialize() const {
 	/*
@@ -43,7 +61,7 @@ vector<uint8_t> APSEthernetPacket::serialize() const {
 	return outVec;
 }
 
-APSEthernetPacket APSEthernetPacket::create_broadcast_packet(const MACAddr & srcMAC){
+APSEthernetPacket APSEthernetPacket::create_broadcast_packet(){
 	/*
 	 * Helper function to put together a broadcast status packet that all APS units should respond to.
 	 */
@@ -51,8 +69,7 @@ APSEthernetPacket APSEthernetPacket::create_broadcast_packet(const MACAddr & src
 
 	//Put the broadcast FF:FF:FF:FF:FF:FF in the MAC destination address
 	std::fill(myPacket.header.dest.addr.begin(), myPacket.header.dest.addr.end(), 0xFF);
-	//Put the source MAC address
-	myPacket.header.src = srcMAC;
+
 	//Fill out the host register status command
 	myPacket.header.command.ack = 0;
 	myPacket.header.command.r_w = 1;
@@ -62,3 +79,4 @@ APSEthernetPacket APSEthernetPacket::create_broadcast_packet(const MACAddr & src
 
 	return myPacket;
 }
+
