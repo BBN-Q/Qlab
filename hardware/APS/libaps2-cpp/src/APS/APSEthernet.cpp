@@ -36,7 +36,7 @@ EthernetError APSEthernet::init(string nic) {
     return SUCCESS;
 }
 
-vector<string> APSEthernet::enumerate() {
+set<string> APSEthernet::enumerate() {
 	/*
 	 * Look for all APS units that respond to the broadcast packet
 	 */
@@ -47,13 +47,13 @@ vector<string> APSEthernet::enumerate() {
     APSEthernetPacket broadcastPacket = APSEthernetPacket::create_broadcast_packet();
     send("broadcast", broadcastPacket);
     vector<APSEthernetPacket> msgs = receive("unknown");
-    vector<string> deviceSerials;
+    set<string> deviceSerials;
     for (auto m : msgs) {
     	// get src MAC address and serial from each packet and add to the map
     	serial_to_MAC_[m.header.src.to_string()] = m.header.src;
     	MAC_to_serial_[m.header.src] = m.header.src.to_string();
-    	deviceSerials.push_back(m.header.src.to_string());
-    	FILE_LOG(logINFO) << "Found device: " << deviceSerials.back();
+    	deviceSerials.insert(m.header.src.to_string());
+    	FILE_LOG(logINFO) << "Found device: " << m.header.src.to_string();
     }
     return deviceSerials;
 }

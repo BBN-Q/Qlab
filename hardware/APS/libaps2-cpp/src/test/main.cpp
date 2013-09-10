@@ -62,18 +62,18 @@ int main (int argc, char* argv[])
   
   cout << concol::RED << "Attempting to get serials" << concol::RESET << endl;
 
-  char serialBuffer[100];
+  // char serialBuffer[100];
 
-  for (int cnt; cnt < numDevices; cnt++) {
-  	get_deviceSerial(cnt, serialBuffer);
-  	cout << concol::RED << "Device " << cnt << " serial #: " << serialBuffer << concol::RESET << endl;
-  }
+  // for (int cnt; cnt < numDevices; cnt++) {
+  // 	get_deviceSerial(cnt, serialBuffer);
+  // 	cout << concol::RED << "Device " << cnt << " serial #: " << serialBuffer << concol::RESET << endl;
+  // }
 
 
   int rc;
-  rc = connect_by_ID(0);
+  // rc = connect_by_ID(0);
 
-  cout << concol::RED << "connect_by_ID(0) returned " << rc << concol::RESET << endl;
+  // cout << concol::RED << "connect_by_ID(0) returned " << rc << concol::RESET << endl;
 
   rc = initAPS(0, const_cast<char *>("../dummyBitfile.bit"), 0);
 
@@ -129,9 +129,9 @@ int main (int argc, char* argv[])
 
   cout << "get channel(0) enable: " << get_channel_enabled(0,0) << endl;
 
-  rc = disconnect_by_ID(0);
+  // rc = disconnect_by_ID(0);
 
-  cout << "disconnect_by_ID(0) returned " << rc << endl;
+  // cout << "disconnect_by_ID(0) returned " << rc << endl;
 
   return 0;
 }

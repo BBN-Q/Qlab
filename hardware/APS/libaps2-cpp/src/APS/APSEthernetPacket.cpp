@@ -26,7 +26,7 @@ APSEthernetPacket::APSEthernetPacket(const u_char * packet, size_t packetLength)
 	}
 	else{
 		payload.resize(packetLength - (NUM_HEADER_BYTES-4), 0);
-		std::copy(packet+2, packet+packetLength, payload.begin());
+		std::copy(packet+20, packet+packetLength, payload.begin());
 	}
 }
 

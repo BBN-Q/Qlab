@@ -17,71 +17,65 @@ public:
 	APSRack();
 	~APSRack();
 
-	map<string, int> serial2dev;
-
 	int init(const string &);
-	int initAPS(const int &, const string &, const bool &);
-	int connect(const int &);
+	int initAPS(const string &, const string &, const bool &);
 	int connect(const string &);
-	int disconnect(const int &);
 	int disconnect(const string &);
 
 	int get_num_devices() ;
-	string get_deviceSerial(const int &) ;
 	void enumerate_devices();
-	void update_device_enumeration();
-	int get_bitfile_version(const int &);
+	int get_bitfile_version(const string &);
 
-	int program_FPGA(const int &, const int &);
-	int load_bitfile(const int &, const string &, const int &);
+	int program_FPGA(const string &, const int &);
+	int load_bitfile(const string &, const string &, const int &);
 
-	int setup_DACs(const int &);
+	int setup_DACs(const string &);
 
-	int clear_channel_data(const int &);
+	int clear_channel_data(const string &);
 
-	int run(const int &);
-	int stop(const int &);
-	int set_trigger_source(const int &, const TRIGGERSOURCE &);
-	TRIGGERSOURCE get_trigger_source(const int &);
-	int set_trigger_interval(const int &, const double &);
-	double get_trigger_interval(const int &);
+	int run(const string &);
+	int stop(const string &);
+	int set_trigger_source(const string &, const TRIGGERSOURCE &);
+	TRIGGERSOURCE get_trigger_source(const string &);
+	int set_trigger_interval(const string &, const double &);
+	double get_trigger_interval(const string &);
 
-	int get_sampleRate(const int &);
-	int set_sampleRate(const int &, const int &);
+	int get_sampleRate(const string &);
+	int set_sampleRate(const string &, const int &);
 
-	int set_channel_offset(const int &, const int &, const float &);
-	float get_channel_offset(const int &, const int &) const;
-	int set_channel_scale(const int &, const int &, const float &);
-	float get_channel_scale(const int &, const int &) const;
-	int set_channel_enabled(const int &, const int &, const bool &);
-	bool get_channel_enabled(const int &, const int &) const;
+	int set_channel_offset(const string &, const int &, const float &);
+	float get_channel_offset(const string &, const int &) ;
+	int set_channel_scale(const string &, const int &, const float &);
+	float get_channel_scale(const string &, const int &) ;
+	int set_channel_enabled(const string &, const int &, const bool &);
+	bool get_channel_enabled(const string &, const int &) ;
 
-	int get_running(const int &);
+	int get_running(const string &);
 
 	int set_log(FILE *);
 	int set_logging_level(const int &);
 
 	//Pass through both short and float waveforms
 	template <typename T>
-	int set_waveform(const int & deviceID, const int & dac, const vector<T> & data){
-		return APSs_[deviceID].set_waveform(dac, data);
+	int set_waveform(const string & deviceSerial, const int & dac, const vector<T> & data){
+		return APSs_[deviceSerial].set_waveform(dac, data);
 	}
 
-	int set_run_mode(const int &, const int &, const RUN_MODE &);
+	int set_run_mode(const string &, const int &, const RUN_MODE &);
 
-	int set_LL_data(const int &, const int &, const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
-	int set_LL_data(const int &, const int &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
+	int set_LL_data(const string &, const int &, const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
+	int set_LL_data(const string &, const int &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
 
-	int load_sequence_file(const int &, const string &);
+	int load_sequence_file(const string &, const string &);
 
 	int save_state_files();
 	int read_state_files();
 	int save_bulk_state_file(string & );
 	int read_bulk_state_file(string & );
 
-	int raw_write(int, int, uint8_t*);
-	int raw_read(int);
-	int read_register(int, int);
+	int raw_write(const string &, int, uint8_t*);
+	int raw_read(const string &);
+	int read_register(const string &, int);
 
 private:
 	APSRack(const APSRack&) = delete;
@@ -89,7 +83,6 @@ private:
 	int numDevices_;
 	map<string, APS2> APSs_;
 	set<string> deviceSerials_;
-	APSEthernet & socket_ = APSEthernet::get_instance(); 
 };
 
 

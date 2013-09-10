@@ -25,7 +25,7 @@ int APSRack::init(const string & NICName) {
 	//Output2FILE::Stream() = pFile;
 
 	//Setup the NIC connected to the devices
-	socket_.init(NICName);
+	APSEthernet::get_instance().init(NICName);
 
 	//Enumerate the serial numbers and MAC addresses of the devices attached
 	enumerate_devices();
@@ -34,47 +34,13 @@ int APSRack::init(const string & NICName) {
 }
 
 //Initialize a specific APS unit
-int APSRack::initAPS(const int & deviceID, const string & bitFile, const bool & forceReload){
+int APSRack::initAPS(const string & deviceID, const string & bitFile, const bool & forceReload){
 	return APSs_[deviceID].init(forceReload);
 }
 
 int APSRack::get_num_devices()  {
-	int numDevices;
-	vector<string> APSDevices = socket_.enumerate();
-	numDevices = APSDevices.size();
-	if (numDevices_ != numDevices) {
-		update_device_enumeration();
-	}
-	return numDevices;
-}
-
-string APSRack::get_deviceSerial(const int & deviceID) {
-
-	// get current number of devices
-	get_num_devices();
-
-	// Get serials from FTDI layer to check for change in devices
-	vector<string> testSerials;
-	//TODO: fix me!
-	// interface_.get_device_serials(testSerials);
-
-	// match serials for each device id to make sure mapping of device count to serial
-	// number is still correct
-	// if serial number is different re-enumerate
-	for(unsigned int cnt = 0; cnt < testSerials.size(); cnt++) {
-		if (testSerials[cnt].compare(deviceSerials_[cnt]) != 0) {
-			FILE_LOG(logDEBUG) << testSerials[cnt] << " does not match " << deviceSerials_[cnt] << " re-enumerating.";
-			update_device_enumeration();
-			break;
-		}
-	}
-
-	// test to make sure ID is valid relative to vector size
-	if (static_cast<size_t>(deviceID) > deviceSerials_.size()) {
-		return "InvalidID";
-	}
-
-	return deviceSerials_[deviceID];
+	enumerate_devices();
+	return numDevices_;
 }
 
 void APSRack::enumerate_devices() {
@@ -83,140 +49,76 @@ void APSRack::enumerate_devices() {
 	* This will reset the APS vector so it really should only be called during initialization
 	*/
 
-	vector<string> oldSerials = deviceSerials;
-	deviceSerials_ = socket_.enumerate();
+	set<string> oldSerials = deviceSerials_;
+	deviceSerials_ = APSEthernet::get_instance().enumerate();
+	numDevices_ = deviceSerials_.size();
 
 	//See if any devices have been removed
-	vector<string> diffSerials;
-	set_difference(oldSerials.begin(), oldSerials.end(), deviceSerials_.begin(), deviceSerials_.end(), diffSerials.begin());
-	for (auto serial : diffSerials){
-		APSs_.erase(serial);
-	}
+	set<string> diffSerials;
+	set_difference(oldSerials.begin(), oldSerials.end(), deviceSerials_.begin(), deviceSerials_.end(), std::inserter(diffSerials, diffSerials.begin()));
+	for (auto serial : diffSerials) APSs_.erase(serial);
 
 	//Or if any devices have been added
 	diffSerials.clear();
-	set_difference(deviceSerials_.begin(), deviceSerials_.end(), oldSerials.begin(), oldSerials.end(), diffSerials.begin());
-	for (auto serial : diffSerials){
-		APSs_[serial] = APS(serial);
-	}
-}
-
-// This will update enumerate of devices by matching serial numbers
-// If a device is missing it will be removed
-// New devices are added 
-// Old devices are left as is (moved in place to new vector)
-void APSRack::update_device_enumeration() {
-
-	vector<string> newSerials;
-	//TODO: fix me!
-	// interface_.get_device_serials(newSerials);
-
-	// construct new APS_ vector & new serial2dev map
-	vector<APS2> newAPS_;
-	map<string, int> newSerial2dev;
-
-	size_t devicect = 0;
-	for (string tmpSerial : newSerials) {
-		
-		// example test to see if APS thinks device is open
-	//TODO: fix me!
-		// if (EthernetControl::isOpen(devicect)) {
-		if(true){
-			FILE_LOG(logDEBUG) << "Device " << devicect << " [ " << tmpSerial << " ] is open";
-		}
-
-		// does the new serial number exist in the old list? 
-		if ( serial2dev.count(tmpSerial) > 0) {
-			// move from old APSs_ vector to new
-			newAPS_.push_back(std::move(APSs_[serial2dev[tmpSerial]]));
-			newAPS_.back().deviceID_ = devicect;
-			FILE_LOG(logDEBUG) << "Old Device " << devicect << " [ " << tmpSerial << " ] moved";
-		} else {
-			// does not exist so construct it in the new vector
-			newAPS_.emplace_back(devicect, tmpSerial);
-			FILE_LOG(logDEBUG) << "New Device " << devicect << " [ " << tmpSerial << " ]";
-		}
-
-		newSerial2dev[tmpSerial] = devicect;
-		devicect++;
-	}
-
-	// update APSRack members with new lists
-	numDevices_ = newSerials.size();  // number of devices
-	deviceSerials_ = newSerials;		  // device serial vector
-	APSs_ = std::move(newAPS_);           // APS vector
-	serial2dev = newSerial2dev;           // serial to device map
+	set_difference(deviceSerials_.begin(), deviceSerials_.end(), oldSerials.begin(), oldSerials.end(), std::inserter(diffSerials, diffSerials.begin()));
+	for (auto serial : diffSerials) APSs_[serial] = APS2(serial);
 }
 
 
-
-int APSRack::get_bitfile_version(const int & deviceID) {
+int APSRack::get_bitfile_version(const string & deviceID) {
 	return APSs_[deviceID].get_bitfile_version();
-}
-
-int APSRack::connect(const int & deviceID){
-	//Connect to a instrument specified by deviceID
-	return APSs_[deviceID].connect();
-}
-
-int APSRack::disconnect(const int & deviceID){
-	return APSs_[deviceID].disconnect();
 }
 
 int APSRack::connect(const string & deviceSerial){
 	//Look up the associated ID and call the next connect
-	if (serial2dev.count(deviceSerial) > 0) {
-		return APSs_[serial2dev[deviceSerial]].connect();
-	} else {
-		return -1;
-	}
+	return APSs_[deviceSerial].connect();
 }
 
 int APSRack::disconnect(const string & deviceSerial){
 	//Look up the associated ID and call the next connect
-	return APSs_[serial2dev[deviceSerial]].disconnect();
+	return APSs_[deviceSerial].disconnect();
 }
 
-int APSRack::program_FPGA(const int & deviceID, const int & bitFileNum){
+int APSRack::program_FPGA(const string & deviceID, const int & bitFileNum){
 	return APSs_[deviceID].program_FPGA(bitFileNum);
 }
 
-int APSRack::setup_DACs(const int & deviceID) {
+int APSRack::setup_DACs(const string & deviceID) {
 	return APSs_[deviceID].setup_DACs();
 }
 
-int APSRack::set_sampleRate(const int & deviceID, const int & freq) {
+int APSRack::set_sampleRate(const string & deviceID, const int & freq) {
 	return APSs_[deviceID].set_sampleRate(freq);
 }
 
-int APSRack::get_sampleRate(const int & deviceID) {
+int APSRack::get_sampleRate(const string & deviceID) {
 	return APSs_[deviceID].get_sampleRate();
 }
 
-int APSRack::set_run_mode(const int & deviceID, const int & dac, const RUN_MODE & mode){
+int APSRack::set_run_mode(const string & deviceID, const int & dac, const RUN_MODE & mode){
 	return APSs_[deviceID].set_run_mode(dac, mode);
 }
 
-int APSRack::clear_channel_data(const int & deviceID) {
+int APSRack::clear_channel_data(const string & deviceID) {
 	return APSs_[deviceID].clear_channel_data();
 }
 
-int APSRack::run(const int & deviceID) {
+int APSRack::run(const string & deviceID) {
 	return APSs_[deviceID].run();
 }
-int APSRack::stop(const int & deviceID) {
+int APSRack::stop(const string & deviceID) {
 	return APSs_[deviceID].stop();
 }
 
-int APSRack::load_sequence_file(const int & deviceID, const string & seqFile){
+int APSRack::load_sequence_file(const string & deviceID, const string & seqFile){
 	return APSs_[deviceID].load_sequence_file(seqFile);
 }
 
-int APSRack::set_LL_data(const int & deviceID, const int & channelNum, const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat){
+int APSRack::set_LL_data(const string & deviceID, const int & channelNum, const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat){
 	return APSs_[deviceID].set_LLData_IQ(addr, count, trigger1, trigger2, repeat);
 }
 
-int APSRack::get_running(const int & deviceID){
+int APSRack::get_running(const string & deviceID){
 	//TODO:
 //	return APSs_[deviceID].running_;
 	return 0;
@@ -239,43 +141,43 @@ int APSRack::set_logging_level(const int & logLevel){
 	return 0;
 }
 
-int APSRack::set_trigger_source(const int & deviceID, const TRIGGERSOURCE & triggerSource) {
+int APSRack::set_trigger_source(const string & deviceID, const TRIGGERSOURCE & triggerSource) {
 	return APSs_[deviceID].set_trigger_source(triggerSource);
 }
 
-TRIGGERSOURCE APSRack::get_trigger_source(const int & deviceID) {
+TRIGGERSOURCE APSRack::get_trigger_source(const string & deviceID) {
 	return APSs_[deviceID].get_trigger_source();
 }
 
-int APSRack::set_trigger_interval(const int & deviceID, const double & interval){
+int APSRack::set_trigger_interval(const string & deviceID, const double & interval){
 	return APSs_[deviceID].set_trigger_interval(interval);
 }
 
-double APSRack::get_trigger_interval(const int & deviceID) {
+double APSRack::get_trigger_interval(const string & deviceID) {
 	return APSs_[deviceID].get_trigger_interval();
 }
 
-int APSRack::set_channel_enabled(const int & deviceID, const int & channelNum, const bool & enable){
+int APSRack::set_channel_enabled(const string & deviceID, const int & channelNum, const bool & enable){
 	return APSs_[deviceID].set_channel_enabled(channelNum, enable);
 }
 
-bool APSRack::get_channel_enabled(const int & deviceID, const int & channelNum) const{
+bool APSRack::get_channel_enabled(const string & deviceID, const int & channelNum) {
 	return APSs_[deviceID].get_channel_enabled(channelNum);
 }
 
-int APSRack::set_channel_offset(const int & deviceID, const int & channelNum, const float & offset){
+int APSRack::set_channel_offset(const string & deviceID, const int & channelNum, const float & offset){
 	return APSs_[deviceID].set_channel_offset(channelNum, offset);
 }
 
-float APSRack::get_channel_offset(const int & deviceID, const int & channelNum) const{
+float APSRack::get_channel_offset(const string & deviceID, const int & channelNum) {
 	return APSs_[deviceID].get_channel_offset(channelNum);
 }
 
-int APSRack::set_channel_scale(const int & deviceID, const int & channelNum, const float & scale){
+int APSRack::set_channel_scale(const string & deviceID, const int & channelNum, const float & scale){
 	return APSs_[deviceID].set_channel_scale(channelNum, scale);
 }
 
-float APSRack::get_channel_scale(const int & deviceID, const int & channelNum) const{
+float APSRack::get_channel_scale(const string & deviceID, const int & channelNum) {
 	return APSs_[deviceID].get_channel_scale(channelNum);
 }
 
@@ -339,13 +241,13 @@ int APSRack::read_bulk_state_file(string & stateFile){
 	return 0;
 }
 */
-int APSRack::raw_write(int deviceID, int numBytes, uint8_t* data){
+int APSRack::raw_write(const string & deviceID, int numBytes, uint8_t* data){
 	uint16_t bytesWritten;
 	//bytesWritten = APSs_[deviceID].handle_.Write(data, numBytes);
 	return int(bytesWritten);
 }
 
-int APSRack::raw_read(int deviceID) {
+int APSRack::raw_read(const string & deviceID) {
 	uint16_t bytesRead, bytesWritten;
 	uint8_t dataBuffer[2];
 	uint16_t transferSize = 1;
@@ -362,7 +264,7 @@ int APSRack::raw_read(int deviceID) {
 	return int((dataBuffer[0] << 8) | dataBuffer[1]);
 }
 
-int APSRack::read_register(int deviceID, int addr){
+int APSRack::read_register(const string & deviceID, int addr){
 	uint32_t value;
 	//TODO: fix me!
 	// APSs_[deviceID].handle_.read_register(addr,value);

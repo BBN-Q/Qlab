@@ -31,10 +31,11 @@ class APSEthernet {
 			static APSEthernet instance;
 			return instance;
 		}
+		APSEthernet& operator=(APSEthernet &rhs)  { return rhs; };
 
 		~APSEthernet();
 		EthernetError init(string nic);
-		vector<string> enumerate();
+		set<string> enumerate();
 		EthernetError connect(string serial);
 		EthernetError disconnect(string serial);
 		EthernetError send(string serial, APSEthernetPacket msg);
@@ -44,7 +45,6 @@ class APSEthernet {
 	private:
 		APSEthernet() {};
 		APSEthernet(APSEthernet const &) = delete;
-		APSEthernet& operator=(APSEthernet const &) = delete;
 
 		unordered_map<string, MACAddr> serial_to_MAC_;
 		unordered_map<MACAddr, string> MAC_to_serial_;

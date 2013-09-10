@@ -57,12 +57,11 @@ uint32_t * APS2::getPayloadPtr(uint32_t * frame) {
 }
 
 
-APS2::APS2() :  isOpen{false}, deviceID_{-1}, channels_(2), samplingRate_{-1}, writeQueue_(0) {};
+APS2::APS2() :  isOpen{false}, channels_(2), samplingRate_{-1}, writeQueue_(0) {};
 
-APS2::APS2(string deviceSerial) :  isOpen{false}, deviceID_{deviceID}, deviceSerial_{deviceSerial},
-		samplingRate_{-1}, writeQueue_(0) {
-			channels_.reserve(2);
-			for(size_t ct=0; ct<2; ct++) channels_.push_back(Channel(ct));
+APS2::APS2(string deviceSerial) :  isOpen{false}, deviceSerial_{deviceSerial}, samplingRate_{-1}, writeQueue_(0) {
+	channels_.reserve(2);
+	for(size_t ct=0; ct<2; ct++) channels_.push_back(Channel(ct));
 };
 
 APS2::~APS2() = default;
@@ -71,10 +70,10 @@ int APS2::connect(){
 	if (!isOpen) {
 		int success = 0;
 
-		success = socket_.connect(deviceSerial_);
+		success = APSEthernet::get_instance().connect(deviceSerial_);
 
 		if (success == 0) {
-			FILE_LOG(logINFO) << "Opened connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
+			FILE_LOG(logINFO) << "Opened connection to device: " << deviceSerial_;
 			isOpen = true;
 		}
 		// TODO: restore state information from file
@@ -88,9 +87,9 @@ int APS2::connect(){
 int APS2::disconnect(){
 	if (isOpen){
 		int success = 0;
-		success = socket_.disconnect(deviceSerial_);
+		success = APSEthernet::get_instance().disconnect(deviceSerial_);
 		if (success == 0) {
-			FILE_LOG(logINFO) << "Closed connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
+			FILE_LOG(logINFO) << "Closed connection to device: " << deviceSerial_;
 			isOpen = false;
 		}
 		// TODO: save state information to file
@@ -246,7 +245,7 @@ int APS2::get_sampleRate() const {
 }
 
 int APS2::clear_channel_data() {
-	FILE_LOG(logINFO) << "Clearing all channel data for APS2 " << deviceID_;
+	FILE_LOG(logINFO) << "Clearing all channel data for APS2 " << deviceSerial_;
 	for (auto & ch : channels_) {
 		ch.clear_data();
 	}

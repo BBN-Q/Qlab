@@ -18,6 +18,7 @@
 #include <queue>
 #include <unordered_map>
 #include <map>
+#include <set>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -28,11 +29,12 @@
 
 using std::vector;
 using std::queue;
+using std::map;
+using std::unordered_map;
+using std::set;
 using std::string;
 using std::cout;
 using std::endl;
-using std::map;
-using std::unordered_map;
 using std::runtime_error;
 
 #include <thread>

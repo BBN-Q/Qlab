@@ -29,51 +29,46 @@ enum APSErrorCode {
 EXPORT int init(char *);
 
 EXPORT int get_numDevices();
-EXPORT void get_deviceSerial(int, char *);
+EXPORT void get_deviceSerials(char *);
 
-EXPORT int connect_by_ID(int);
-EXPORT int connect_by_serial(char *);
+EXPORT int connect_APS(char *);
+EXPORT int disconnect_APS(char *);
 
-EXPORT int disconnect_by_ID(int);
-EXPORT int disconnect_by_serial(char *);
+EXPORT int initAPS(char *, char*, int);
+EXPORT int get_bitfile_version(char *);
 
-EXPORT int serial2ID(char *);
+EXPORT int set_sampleRate(char *, int);
+EXPORT int get_sampleRate(char *);
 
-EXPORT int initAPS(int, char*, int);
-EXPORT int get_bitfile_version(int);
+EXPORT int set_channel_offset(char *, int, float);
+EXPORT float get_channel_offset(char *, int);
+EXPORT int set_channel_scale(char *, int, float);
+EXPORT float get_channel_scale(char *, int);
+EXPORT int set_channel_enabled(char *, int, int);
+EXPORT int get_channel_enabled(char *, int);
 
-EXPORT int set_sampleRate(int, int);
-EXPORT int get_sampleRate(int);
+EXPORT int set_trigger_source(char *, int);
+EXPORT int get_trigger_source(char *);
+EXPORT int set_trigger_interval(char *, double);
+EXPORT double get_trigger_interval(char *);
 
-EXPORT int set_channel_offset(int, int, float);
-EXPORT float get_channel_offset(int, int);
-EXPORT int set_channel_scale(int, int, float);
-EXPORT float get_channel_scale(int, int);
-EXPORT int set_channel_enabled(int, int, int);
-EXPORT int get_channel_enabled(int, int);
+EXPORT int set_waveform_float(char *, int, float*, int);
+EXPORT int set_waveform_int(char *, int, short*, int);
 
-EXPORT int set_trigger_source(int, int);
-EXPORT int get_trigger_source(int);
-EXPORT int set_trigger_interval(int, double);
-EXPORT double get_trigger_interval(int);
+EXPORT int set_LL_data_IQ(char *, int, int, unsigned short*, unsigned short*, unsigned short*, unsigned short*, unsigned short*);
 
-EXPORT int set_waveform_float(int, int, float*, int);
-EXPORT int set_waveform_int(int, int, short*, int);
+EXPORT int set_run_mode(char *, int, int);
 
-EXPORT int set_LL_data_IQ(int, int, int, unsigned short*, unsigned short*, unsigned short*, unsigned short*, unsigned short*);
+EXPORT int load_sequence_file(char *, const char*);
 
-EXPORT int set_run_mode(int, int, int);
-
-EXPORT int load_sequence_file(int, const char*);
-
-EXPORT int clear_channel_data(int);
+EXPORT int clear_channel_data(char *);
 
 EXPORT int set_ethernet_active(char * , int);
 
-EXPORT int run(int);
-EXPORT int stop(int);
+EXPORT int run(char *);
+EXPORT int stop(char *);
 
-EXPORT int get_running(int);
+EXPORT int get_running(char *);
 
 EXPORT int set_log(char *);
 EXPORT int set_logging_level(int);
@@ -84,10 +79,10 @@ EXPORT int set_logging_level(int);
 //EXPORT int save_bulk_state_file();
 //EXPORT int read_bulk_state_file();
 
-EXPORT int raw_write(int, int, uint8_t*);
-EXPORT int raw_read(int);
-EXPORT int read_register(int, int);
-EXPORT int program_FPGA(int, int);
+EXPORT int raw_write(char *, int, uint8_t*);
+EXPORT int raw_read(char *);
+EXPORT int read_register(char *, int);
+EXPORT int program_FPGA(char *, int);
 
 
 #ifdef __cplusplus

@@ -27,47 +27,30 @@ int get_numDevices(){
 	return APSRack_.get_num_devices();
 }
 
-void get_deviceSerial(int deviceID, char* deviceSerial){
+void get_deviceSerials(char * deviceSerials){
+	//TODO: fix me!
 	//Assumes sufficient memory has been allocated
-	string serialStr = APSRack_.get_deviceSerial(deviceID);
-	size_t strLen = serialStr.copy(deviceSerial, serialStr.size());
-	deviceSerial[strLen] = '\0';
-}
-
-//Connect to a device specified by ID
-int connect_by_ID(int deviceID){
-	return APSRack_.connect(deviceID);
+	string serialStr;
+	size_t strLen = serialStr.copy(deviceSerials, serialStr.size());
+	deviceSerials[strLen] = '\0';
 }
 
 //Connect to a device specified by serial number string
 //Assumes null-terminated deviceSerial
-int connect_by_serial(char * deviceSerial){
+int connect_APS(char * deviceSerial){
 	return APSRack_.connect(string(deviceSerial));
 }
 
-int disconnect_by_ID(int deviceID){
-	return APSRack_.disconnect(deviceID);
-}
-
 //Assumes a null-terminated deviceSerial
-int disconnect_by_serial(char * deviceSerial){
+int disconnect_APS(char * deviceSerial){
 	return APSRack_.disconnect(string(deviceSerial));
-}
-
-int serial2ID(char * deviceSerial){
-	if ( !APSRack_.serial2dev.count(deviceSerial)) {
-		// serial number not in map of known devices
-		return -1;
-	} 
-
-	return APSRack_.serial2dev[string(deviceSerial)];
 }
 
 //Initialize an APS unit
 //Assumes null-terminated bitFile
-int initAPS(int deviceID, char * bitFile, int forceReload){
+int initAPS(char * deviceSerial, char * bitFile, int forceReload){
 	try {
-		return APSRack_.initAPS(deviceID, string(bitFile), forceReload);
+		return APSRack_.initAPS(string(deviceSerial), string(bitFile), forceReload);
 	} catch (std::exception& e) {
 		string error = e.what();
 		if (error.compare("Unable to open bitfile.") == 0) {
@@ -79,31 +62,31 @@ int initAPS(int deviceID, char * bitFile, int forceReload){
 
 }
 
-int get_bitfile_version(int deviceID) {
-	return APSRack_.get_bitfile_version(deviceID);
+int get_bitfile_version(char * deviceSerial) {
+	return APSRack_.get_bitfile_version(string(deviceSerial));
 }
 
-int set_sampleRate(int deviceID, int freq){
-	return APSRack_.set_sampleRate(deviceID, freq);
+int set_sampleRate(char * deviceSerial, int freq){
+	return APSRack_.set_sampleRate(string(deviceSerial), freq);
 }
 
-int get_sampleRate(int deviceID){
-	return APSRack_.get_sampleRate(deviceID);
+int get_sampleRate(char * deviceSerial){
+	return APSRack_.get_sampleRate(string(deviceSerial));
 }
 
 //Load the waveform library as floats
-int set_waveform_float(int deviceID, int channelNum, float* data, int numPts){
-	return APSRack_.set_waveform(deviceID, channelNum, vector<float>(data, data+numPts));
+int set_waveform_float(char * deviceSerial, int channelNum, float* data, int numPts){
+	return APSRack_.set_waveform(string(deviceSerial), channelNum, vector<float>(data, data+numPts));
 }
 
 //Load the waveform library as int16
-int set_waveform_int(int deviceID, int channelNum, short* data, int numPts){
-	return APSRack_.set_waveform(deviceID, channelNum, vector<short>(data, data+numPts));
+int set_waveform_int(char * deviceSerial, int channelNum, short* data, int numPts){
+	return APSRack_.set_waveform(string(deviceSerial), channelNum, vector<short>(data, data+numPts));
 }
 
-int load_sequence_file(int deviceID, const char * seqFile){
+int load_sequence_file(char * deviceSerial, const char * seqFile){
 	try {
-		return APSRack_.load_sequence_file(deviceID, string(seqFile));
+		return APSRack_.load_sequence_file(string(deviceSerial), string(seqFile));
 	} catch (...) {
 		return APS_UNKNOWN_ERROR;
 	}
@@ -111,20 +94,20 @@ int load_sequence_file(int deviceID, const char * seqFile){
 	return APS_UNKNOWN_ERROR;
 }
 
-int clear_channel_data(int deviceID) {
-	return APSRack_.clear_channel_data(deviceID);
+int clear_channel_data(char * deviceSerial) {
+	return APSRack_.clear_channel_data(string(deviceSerial));
 }
 
-int run(int deviceID) {
-	return APSRack_.run(deviceID);
+int run(char * deviceSerial) {
+	return APSRack_.run(string(deviceSerial));
 }
 
-int stop(int deviceID) {
-	return APSRack_.stop(deviceID);
+int stop(char * deviceSerial) {
+	return APSRack_.stop(string(deviceSerial));
 }
 
-int get_running(int deviceID){
-	return APSRack_.get_running(deviceID);
+int get_running(char * deviceSerial){
+	return APSRack_.get_running(string(deviceSerial));
 }
 
 //Expects a null-terminated character array
@@ -152,51 +135,51 @@ int set_logging_level(int logLevel){
 	return APSRack_.set_logging_level(logLevel);
 }
 
-int set_trigger_source(int deviceID, int triggerSource) {
-	return APSRack_.set_trigger_source(deviceID, TRIGGERSOURCE(triggerSource));
+int set_trigger_source(char * deviceSerial, int triggerSource) {
+	return APSRack_.set_trigger_source(string(deviceSerial), TRIGGERSOURCE(triggerSource));
 }
 
-int get_trigger_source(int deviceID) {
-	return int(APSRack_.get_trigger_source(deviceID));
+int get_trigger_source(char * deviceSerial) {
+	return int(APSRack_.get_trigger_source(string(deviceSerial)));
 }
 
-int set_trigger_interval(int deviceID, double interval){
-	return APSRack_.set_trigger_interval(deviceID, interval);
+int set_trigger_interval(char * deviceSerial, double interval){
+	return APSRack_.set_trigger_interval(string(deviceSerial), interval);
 }
 
-double get_trigger_interval(int deviceID){
-	return APSRack_.get_trigger_interval(deviceID);
+double get_trigger_interval(char * deviceSerial){
+	return APSRack_.get_trigger_interval(string(deviceSerial));
 }
 
-int set_channel_offset(int deviceID, int channelNum, float offset){
-	return APSRack_.set_channel_offset(deviceID, channelNum, offset);
+int set_channel_offset(char * deviceSerial, int channelNum, float offset){
+	return APSRack_.set_channel_offset(string(deviceSerial), channelNum, offset);
 }
-int set_channel_scale(int deviceID, int channelNum, float scale){
-	return APSRack_.set_channel_scale(deviceID, channelNum, scale);
+int set_channel_scale(char * deviceSerial, int channelNum, float scale){
+	return APSRack_.set_channel_scale(string(deviceSerial), channelNum, scale);
 }
-int set_channel_enabled(int deviceID, int channelNum, int enable){
-	return APSRack_.set_channel_enabled(deviceID, channelNum, enable);
-}
-
-float get_channel_offset(int deviceID, int channelNum){
-	return APSRack_.get_channel_offset(deviceID, channelNum);
-}
-float get_channel_scale(int deviceID, int channelNum){
-	return APSRack_.get_channel_scale(deviceID, channelNum);
-}
-int get_channel_enabled(int deviceID, int channelNum){
-	return APSRack_.get_channel_enabled(deviceID, channelNum);
+int set_channel_enabled(char * deviceSerial, int channelNum, int enable){
+	return APSRack_.set_channel_enabled(string(deviceSerial), channelNum, enable);
 }
 
-int set_LL_data_IQ(int deviceID, int channelNum, int length, unsigned short* addr, unsigned short* count,
+float get_channel_offset(char * deviceSerial, int channelNum){
+	return APSRack_.get_channel_offset(string(deviceSerial), channelNum);
+}
+float get_channel_scale(char * deviceSerial, int channelNum){
+	return APSRack_.get_channel_scale(string(deviceSerial), channelNum);
+}
+int get_channel_enabled(char * deviceSerial, int channelNum){
+	return APSRack_.get_channel_enabled(string(deviceSerial), channelNum);
+}
+
+int set_LL_data_IQ(char * deviceSerial, int channelNum, int length, unsigned short* addr, unsigned short* count,
 					unsigned short* trigger1, unsigned short * trigger2, unsigned short* repeat){
 	//Convert data pointers to vectors and passed through
-	return APSRack_.set_LL_data(deviceID, channelNum, WordVec(addr, addr+length), WordVec(count, count+length),
+	return APSRack_.set_LL_data(string(deviceSerial), channelNum, WordVec(addr, addr+length), WordVec(count, count+length),
 			WordVec(trigger1, trigger1+length), WordVec(trigger2, trigger2+length), WordVec(repeat, repeat+length));
 }
 
-int set_run_mode(int deviceID, int channelNum, int mode) {
-	return APSRack_.set_run_mode(deviceID, channelNum, RUN_MODE(mode));
+int set_run_mode(char * deviceSerial, int channelNum, int mode) {
+	return APSRack_.set_run_mode(string(deviceSerial), channelNum, RUN_MODE(mode));
 }
 
 //int save_state_files() {
@@ -216,20 +199,20 @@ int set_run_mode(int deviceID, int channelNum, int mode) {
 //	return APSRack_.read_bulk_state_file(fileName);
 //}
 
-int raw_write(int deviceID, int numBytes, uint8_t* data){
-	return APSRack_.raw_write(deviceID, numBytes, data);
+int raw_write(char * deviceSerial, int numBytes, uint8_t* data){
+	return APSRack_.raw_write(string(deviceSerial), numBytes, data);
 }
 
-int raw_read(int deviceID){
-	return APSRack_.raw_read(deviceID);
+int raw_read(char * deviceSerial){
+	return APSRack_.raw_read(string(deviceSerial));
 }
 
-int read_register(int deviceID, int addr){
-	return APSRack_.read_register(deviceID, addr);
+int read_register(char * deviceSerial, int addr){
+	return APSRack_.read_register(string(deviceSerial), addr);
 }
 
-int program_FPGA(int deviceID, int bitFileNum) {
-	return APSRack_.program_FPGA(deviceID, bitFileNum);
+int program_FPGA(char * deviceSerial, int bitFileNum) {
+	return APSRack_.program_FPGA(string(deviceSerial), bitFileNum);
 }
 
 #ifdef __cplusplus
