@@ -87,8 +87,8 @@ private:
 	APSRack(const APSRack&) = delete;
 	APSRack& operator=(const APSRack&) = delete;
 	int numDevices_;
-	vector<APS2> APSs_;
-	vector<string> deviceSerials_;
+	map<string, APS2> APSs_;
+	set<string> deviceSerials_;
 	APSEthernet & socket_ = APSEthernet::get_instance(); 
 };
 

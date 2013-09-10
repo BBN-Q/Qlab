@@ -59,7 +59,7 @@ uint32_t * APS2::getPayloadPtr(uint32_t * frame) {
 
 APS2::APS2() :  isOpen{false}, deviceID_{-1}, channels_(2), samplingRate_{-1}, writeQueue_(0) {};
 
-APS2::APS2(int deviceID, string deviceSerial) :  isOpen{false}, deviceID_{deviceID}, deviceSerial_{deviceSerial},
+APS2::APS2(string deviceSerial) :  isOpen{false}, deviceID_{deviceID}, deviceSerial_{deviceSerial},
 		samplingRate_{-1}, writeQueue_(0) {
 			channels_.reserve(2);
 			for(size_t ct=0; ct<2; ct++) channels_.push_back(Channel(ct));

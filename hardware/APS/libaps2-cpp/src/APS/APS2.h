@@ -29,7 +29,7 @@ public:
 
 	//Constructors
 	APS2();
-	APS2(int, string);
+	APS2(string);
 	~APS2();
 
 	int connect();

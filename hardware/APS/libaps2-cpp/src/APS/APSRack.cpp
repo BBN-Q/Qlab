@@ -28,7 +28,7 @@ int APSRack::init(const string & NICName) {
 	socket_.init(NICName);
 
 	//Enumerate the serial numbers and MAC addresses of the devices attached
-	socket_.enumerate();
+	enumerate_devices();
 
 	return 0;
 }
@@ -79,29 +79,25 @@ string APSRack::get_deviceSerial(const int & deviceID) {
 
 void APSRack::enumerate_devices() {
 	/*
-	 * Look for all APS devices in this APS Rack.
-	 * This will reset the APS vector so it really should only be called during initialization
-	 */
+	* Look for all APS devices in this APS Rack.
+	* This will reset the APS vector so it really should only be called during initialization
+	*/
 
-	//Have to disconnect everything first
-	for (auto & aps : APSs_){
-		aps.disconnect();
+	vector<string> oldSerials = deviceSerials;
+	deviceSerials_ = socket_.enumerate();
+
+	//See if any devices have been removed
+	vector<string> diffSerials;
+	set_difference(oldSerials.begin(), oldSerials.end(), deviceSerials_.begin(), deviceSerials_.end(), diffSerials.begin());
+	for (auto serial : diffSerials){
+		APSs_.erase(serial);
 	}
-	//TODO: fix me!
-	// interface_.get_device_serials(deviceSerials_);
-	numDevices_ = deviceSerials_.size();
 
-	APSs_.clear();
-	APSs_.reserve(numDevices_);
-
-	//	Now setup the map between device serials and number and assign the APS units appropriately
-	//	Also setup the FPGA checksums
-	size_t devicect = 0;
-	for (string tmpSerial : deviceSerials_) {
-		serial2dev[tmpSerial] = devicect;
-		APSs_.emplace_back(devicect, tmpSerial);
-		FILE_LOG(logDEBUG) << "Device " << devicect << " has serial number " << tmpSerial;
-		devicect++;
+	//Or if any devices have been added
+	diffSerials.clear();
+	set_difference(deviceSerials_.begin(), deviceSerials_.end(), oldSerials.begin(), oldSerials.end(), diffSerials.begin());
+	for (auto serial : diffSerials){
+		APSs_[serial] = APS(serial);
 	}
 }
 
