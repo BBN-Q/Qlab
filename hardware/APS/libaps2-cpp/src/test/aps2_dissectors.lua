@@ -31,9 +31,10 @@ a.chipcfgPacked = ProtoField.uint32("aps.chipcfgPacked", "Chip Config I/O Comman
 a.target = ProtoField.uint8("aps.target", "TARGET" , base.HEX)
 a.spicnt = ProtoField.uint8("aps.spicnt", "SPICNT/DATA" , base.HEX)
 a.instr = ProtoField.uint16("aps.instr", "INSTR" , base.HEX)
-a.instrAddr = ProtoField.uint8("aps.instrAddr", "Addr" , base.HEX)
-a.instrData = ProtoField.uint8("aps.instrData", "Data" , base.HEX)
+a.instrAddr = ProtoField.uint32("aps.instrAddr", "Addr" , base.HEX)
+a.payload = ProtoField.bytes("aps.payload", "Data")
 
+a.hostFirmwareVersion = ProtoField.uint32("aps.hostFirmwareVersion", "Host Firmware Version", base.HEX)
 
 -- create a function to dissect it
 function aps_proto.dissector(buffer,pinfo,tree)
@@ -68,8 +69,11 @@ function aps_proto.dissector(buffer,pinfo,tree)
  	offset = offset + 4
 
 	subtree:add( a.addr, buffer(offset,4))
-
 	offset = offset + 4
+	if ((buffer:len() - 24) > 0) then 
+		subtree:add(a.payload, buffer(offset))
+	end
+
 	-- parse chip config
 	if (cmdVal == 0x03) then
 		local chipcfg = subtree:add( a.chipcfgPacked, buffer(offset,4))		
@@ -85,8 +89,11 @@ function aps_proto.dissector(buffer,pinfo,tree)
 
 			pinfo.cols.info:append(" - PLL")
 		end
-
 	end
+
+	-- parse status words
+	-- if (cmdVal == 0x07) then
+	-- 	local 
 
 
 --    subtree = subtree:add(buffer(2,4),"Command")
