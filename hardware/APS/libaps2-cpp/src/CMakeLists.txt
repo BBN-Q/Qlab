@@ -44,6 +44,7 @@ endif(WIN32)
 #Add flags for gcc and C++11
 ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-DGCC")
 ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-std=c++11")
+ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-Wall")
 
 SET ( DLL_SRC 
 	./APS/libaps.cpp
