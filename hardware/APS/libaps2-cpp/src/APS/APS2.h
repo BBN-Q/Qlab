@@ -4,14 +4,12 @@
  * APS2 Specfic Structures and tools
  */
 
-#include "headings.h"
-
 #ifndef APS2_H
 #define APS2_H
 
-#include <string>
-
-using std::string;
+#include "headings.h"
+#include "APSEthernet.h"
+#include "Channel.h"
 
 class APS2 {
 

@@ -1,9 +1,9 @@
 #include "APSEthernetPacket.h"
 
-APSEthernetPacket::APSEthernetPacket() : header{{}, {}, APSEthernet::APS_PROTO, 0, {0}, 0}, payload(0){};
+APSEthernetPacket::APSEthernetPacket() : header{{}, {}, APS_PROTO, 0, {0}, 0}, payload(0){};
 
 APSEthernetPacket::APSEthernetPacket(const MACAddr & destMAC, const MACAddr & srcMAC, APSCommand_t command, const uint32_t & addr) :
-		header{destMAC, srcMAC, APSEthernet::APS_PROTO, 0, command, addr}, payload(0){};
+		header{destMAC, srcMAC, APS_PROTO, 0, command, addr}, payload(0){};
 
 APSEthernetPacket::APSEthernetPacket(const u_char * packet, size_t packetLength){
 	/*

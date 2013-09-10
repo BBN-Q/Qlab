@@ -304,4 +304,9 @@ typedef enum {LED_PLL_SYNC=1, LED_RUNNING} LED_MODE;
 typedef enum {RUN_WAVEFORM=0, RUN_SEQUENCE} RUN_MODE;
 
 
+//APS ethernet type
+static const uint16_t APS_PROTO = 0xBB4E;
+
+
+
 #endif /* CONSTANTS_H_ */

@@ -5,11 +5,12 @@
  *      Author: cryan
  */
 
-#include "headings.h"
-
+ 
 #ifndef APSRACK_H_
 #define APSRACK_H_
 
+#include "headings.h"
+#include "APS2.h"
 
 class APSRack {
 public:

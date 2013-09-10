@@ -22,11 +22,9 @@
 #include <fstream>
 #include <iomanip>
 #include <stdio.h>
-//#include <math.h>
 #include <cmath>
 #include <stdexcept>
 #include <algorithm>
-#include <queue>
 
 using std::vector;
 using std::queue;
@@ -48,12 +46,6 @@ using std::runtime_error;
 typedef vector<uint16_t> WordVec;
 
 
-/*boost thread
-#include <boost/thread.hpp>
-#include <boost/chrono.hpp>
-using boost::thread;
-*/
-
 //HDF5 library
 #include "H5Cpp.h"
 
@@ -63,19 +55,6 @@ using boost::thread;
 //Deal with some Windows/Linux difference
 #ifdef _WIN32
 #include "windows.h"
-//Visual C++ doesn't have a usleep function so define one
-/*
- inline void usleep(int waitTime) {
-    long int time1 = 0, time2 = 0, freq = 0;
-
-    QueryPerformanceCounter((LARGE_INTEGER *) &time1);
-    QueryPerformanceFrequency((LARGE_INTEGER *)&freq);
-
-    do {
-        QueryPerformanceCounter((LARGE_INTEGER *) &time2);
-    } while((time2-time1) < waitTime);
-}
-*/
 #else
 #define EXPORT
 #endif
@@ -84,14 +63,6 @@ using boost::thread;
 
 //Load all the constants
 #include "constants.h"
-#include "MACAddr.h"
-#include "APSEthernetPacket.h"
-#include "APSEthernet.h"
-#include "LLBank.h"
-#include "Channel.h"
-#include "APS2.h"
-#include "APSRack.h"
-
 
 //Helper function for hex formating with the 0x out front
 inline std::ios_base&
@@ -101,10 +72,6 @@ myhex(std::ios_base& __base)
   __base.setf(std::ios::showbase);
   return __base;
 }
-
-
-
-
 
 //Helper function for loading 1D dataset from H5 files
 template <typename T>

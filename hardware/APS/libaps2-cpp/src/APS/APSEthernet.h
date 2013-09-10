@@ -1,8 +1,12 @@
-#include "headings.h"
 #ifndef APSETHERNET_H
 #define APSETHERNET_H
 
+#include "headings.h"
+#include "MACAddr.h"
+#include "APSEthernetPacket.h"
+
 #include "pcap.h"
+
 
 enum EthernetError {
 	SUCCESS = 0,
@@ -37,12 +41,10 @@ class APSEthernet {
 		EthernetError send(string serial, vector<APSEthernetPacket> msg);
 		vector<APSEthernetPacket> receive(string serial, size_t timeoutSeconds = 1);
 
-		static const uint16_t APS_PROTO = 0xBB4E;
-
 	private:
 		APSEthernet() {};
-		APSEthernet(APSEthernet const &);
-		void operator=(APSEthernet const &);
+		APSEthernet(APSEthernet const &) = delete;
+		APSEthernet& operator=(APSEthernet const &) = delete;
 
 		unordered_map<string, MACAddr> serial_to_MAC_;
 		unordered_map<MACAddr, string> MAC_to_serial_;
@@ -58,7 +60,7 @@ class APSEthernet {
 		static EthernetError apply_filter(string & filter, pcap_t *);
 
 		static const unsigned int pcapTimeoutMS = 100;
-
+		
 		void run_receive_thread();
 
 		std::thread receiveThread_;

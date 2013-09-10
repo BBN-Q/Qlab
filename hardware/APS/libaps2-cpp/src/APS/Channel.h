@@ -5,10 +5,12 @@
  *      Author: cryan
  */
 
-#include "headings.h"
 
 #ifndef CHANNEL_H_
 #define CHANNEL_H_
+
+#include "headings.h"
+#include "LLBank.h"
 
 class Channel {
 public:

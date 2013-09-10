@@ -1,7 +1,9 @@
-#include "headings.h"
 
 #ifndef APSETHERNETPACKET_H_
 #define APSETHERNETPACKET_H_
+
+#include "headings.h"
+#include "MACAddr.h"
 
 #ifdef _WIN32
     #include <winsock2.h>
