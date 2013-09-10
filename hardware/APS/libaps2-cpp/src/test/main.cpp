@@ -69,7 +69,7 @@ int main (int argc, char* argv[])
   // 	cout << concol::RED << "Device " << cnt << " serial #: " << serialBuffer << concol::RESET << endl;
   // }
 
-
+/*
   int rc;
   // rc = connect_by_ID(0);
 
@@ -132,6 +132,6 @@ int main (int argc, char* argv[])
   // rc = disconnect_by_ID(0);
 
   // cout << "disconnect_by_ID(0) returned " << rc << endl;
-
+*/
   return 0;
 }

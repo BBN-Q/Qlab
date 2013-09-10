@@ -84,6 +84,8 @@ public:
 	//Whether the APS connection is open
 	bool isOpen;
 
+	bool running;
+
 private:
 
 	string deviceSerial_;

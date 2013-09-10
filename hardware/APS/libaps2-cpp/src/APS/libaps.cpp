@@ -38,19 +38,19 @@ void get_deviceSerials(char * deviceSerials){
 //Connect to a device specified by serial number string
 //Assumes null-terminated deviceSerial
 int connect_APS(char * deviceSerial){
-	return APSRack_.connect(string(deviceSerial));
+	return APSRack_.APSs[string(deviceSerial)].connect();
 }
 
 //Assumes a null-terminated deviceSerial
 int disconnect_APS(char * deviceSerial){
-	return APSRack_.disconnect(string(deviceSerial));
+	return APSRack_.APSs[string(deviceSerial)].disconnect();
 }
 
 //Initialize an APS unit
 //Assumes null-terminated bitFile
-int initAPS(char * deviceSerial, char * bitFile, int forceReload){
+int initAPS(char * deviceSerial, int forceReload){
 	try {
-		return APSRack_.initAPS(string(deviceSerial), string(bitFile), forceReload);
+		return APSRack_.APSs[string(deviceSerial)].init(forceReload);
 	} catch (std::exception& e) {
 		string error = e.what();
 		if (error.compare("Unable to open bitfile.") == 0) {
@@ -63,30 +63,30 @@ int initAPS(char * deviceSerial, char * bitFile, int forceReload){
 }
 
 int get_bitfile_version(char * deviceSerial) {
-	return APSRack_.get_bitfile_version(string(deviceSerial));
+	return APSRack_.APSs[string(deviceSerial)].get_bitfile_version();
 }
 
 int set_sampleRate(char * deviceSerial, int freq){
-	return APSRack_.set_sampleRate(string(deviceSerial), freq);
+	return APSRack_.APSs[string(deviceSerial)].set_sampleRate(freq);
 }
 
 int get_sampleRate(char * deviceSerial){
-	return APSRack_.get_sampleRate(string(deviceSerial));
+	return APSRack_.APSs[string(deviceSerial)].get_sampleRate();
 }
 
 //Load the waveform library as floats
 int set_waveform_float(char * deviceSerial, int channelNum, float* data, int numPts){
-	return APSRack_.set_waveform(string(deviceSerial), channelNum, vector<float>(data, data+numPts));
+	return APSRack_.APSs[string(deviceSerial)].set_waveform( channelNum, vector<float>(data, data+numPts));
 }
 
 //Load the waveform library as int16
 int set_waveform_int(char * deviceSerial, int channelNum, short* data, int numPts){
-	return APSRack_.set_waveform(string(deviceSerial), channelNum, vector<short>(data, data+numPts));
+	return APSRack_.APSs[string(deviceSerial)].set_waveform(channelNum, vector<short>(data, data+numPts));
 }
 
 int load_sequence_file(char * deviceSerial, const char * seqFile){
 	try {
-		return APSRack_.load_sequence_file(string(deviceSerial), string(seqFile));
+		return APSRack_.APSs[string(deviceSerial)].load_sequence_file(string(seqFile));
 	} catch (...) {
 		return APS_UNKNOWN_ERROR;
 	}
@@ -95,19 +95,19 @@ int load_sequence_file(char * deviceSerial, const char * seqFile){
 }
 
 int clear_channel_data(char * deviceSerial) {
-	return APSRack_.clear_channel_data(string(deviceSerial));
+	return APSRack_.APSs[string(deviceSerial)].clear_channel_data();
 }
 
 int run(char * deviceSerial) {
-	return APSRack_.run(string(deviceSerial));
+	return APSRack_.APSs[string(deviceSerial)].run();
 }
 
 int stop(char * deviceSerial) {
-	return APSRack_.stop(string(deviceSerial));
+	return APSRack_.APSs[string(deviceSerial)].stop();
 }
 
 int get_running(char * deviceSerial){
-	return APSRack_.get_running(string(deviceSerial));
+	return APSRack_.APSs[string(deviceSerial)].running;
 }
 
 //Expects a null-terminated character array
@@ -136,50 +136,52 @@ int set_logging_level(int logLevel){
 }
 
 int set_trigger_source(char * deviceSerial, int triggerSource) {
-	return APSRack_.set_trigger_source(string(deviceSerial), TRIGGERSOURCE(triggerSource));
+	return APSRack_.APSs[string(deviceSerial)].set_trigger_source(TRIGGERSOURCE(triggerSource));
 }
 
 int get_trigger_source(char * deviceSerial) {
-	return int(APSRack_.get_trigger_source(string(deviceSerial)));
+	return int(APSRack_.APSs[string(deviceSerial)].get_trigger_source());
 }
 
 int set_trigger_interval(char * deviceSerial, double interval){
-	return APSRack_.set_trigger_interval(string(deviceSerial), interval);
+	return APSRack_.APSs[string(deviceSerial)].set_trigger_interval(interval);
 }
 
 double get_trigger_interval(char * deviceSerial){
-	return APSRack_.get_trigger_interval(string(deviceSerial));
+	return APSRack_.APSs[string(deviceSerial)].get_trigger_interval();
 }
 
 int set_channel_offset(char * deviceSerial, int channelNum, float offset){
-	return APSRack_.set_channel_offset(string(deviceSerial), channelNum, offset);
+	return APSRack_.APSs[string(deviceSerial)].set_channel_offset(channelNum, offset);
 }
 int set_channel_scale(char * deviceSerial, int channelNum, float scale){
-	return APSRack_.set_channel_scale(string(deviceSerial), channelNum, scale);
+	return APSRack_.APSs[string(deviceSerial)].set_channel_scale(channelNum, scale);
 }
 int set_channel_enabled(char * deviceSerial, int channelNum, int enable){
-	return APSRack_.set_channel_enabled(string(deviceSerial), channelNum, enable);
+	return APSRack_.APSs[string(deviceSerial)].set_channel_enabled(channelNum, enable);
 }
 
 float get_channel_offset(char * deviceSerial, int channelNum){
-	return APSRack_.get_channel_offset(string(deviceSerial), channelNum);
+	return APSRack_.APSs[string(deviceSerial)].get_channel_offset(channelNum);
 }
 float get_channel_scale(char * deviceSerial, int channelNum){
-	return APSRack_.get_channel_scale(string(deviceSerial), channelNum);
+	return APSRack_.APSs[string(deviceSerial)].get_channel_scale(channelNum);
 }
 int get_channel_enabled(char * deviceSerial, int channelNum){
-	return APSRack_.get_channel_enabled(string(deviceSerial), channelNum);
+	return APSRack_.APSs[string(deviceSerial)].get_channel_enabled(channelNum);
 }
 
 int set_LL_data_IQ(char * deviceSerial, int channelNum, int length, unsigned short* addr, unsigned short* count,
 					unsigned short* trigger1, unsigned short * trigger2, unsigned short* repeat){
-	//Convert data pointers to vectors and passed through
-	return APSRack_.set_LL_data(string(deviceSerial), channelNum, WordVec(addr, addr+length), WordVec(count, count+length),
-			WordVec(trigger1, trigger1+length), WordVec(trigger2, trigger2+length), WordVec(repeat, repeat+length));
+	//TODO: fix me!
+// 	//Convert data pointers to vectors and passed through
+// 	return APSRack_.APSs[string(deviceSerial)].set_LL_data(channelNum, WordVec(addr, addr+length), WordVec(count, count+length),
+// 			WordVec(trigger1, trigger1+length), WordVec(trigger2, trigger2+length), WordVec(repeat, repeat+length));
+	return 0;
 }
 
 int set_run_mode(char * deviceSerial, int channelNum, int mode) {
-	return APSRack_.set_run_mode(string(deviceSerial), channelNum, RUN_MODE(mode));
+	return APSRack_.APSs[string(deviceSerial)].set_run_mode(channelNum, RUN_MODE(mode));
 }
 
 //int save_state_files() {
@@ -212,7 +214,7 @@ int read_register(char * deviceSerial, int addr){
 }
 
 int program_FPGA(char * deviceSerial, int bitFileNum) {
-	return APSRack_.program_FPGA(string(deviceSerial), bitFileNum);
+	return APSRack_.APSs[string(deviceSerial)].program_FPGA(bitFileNum);
 }
 
 #ifdef __cplusplus
