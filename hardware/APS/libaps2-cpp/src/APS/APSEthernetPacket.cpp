@@ -18,10 +18,16 @@ APSEthernetPacket::APSEthernetPacket(const u_char * packet, size_t packetLength)
 	header.frameType = bytes2uint16(12);
 	header.seqNum = bytes2uint16(14);
 	header.command.packed = bytes2uint32(16);
-	//TODO: not all packets have an address; if-block on command type
-	header.addr = bytes2uint32(20);
-	payload.resize(packetLength - NUM_HEADER_BYTES,0);
-	std::copy(packet+24, packet+packetLength, payload.begin());
+	//not all return packets have an address; if-block on command type
+	if (needs_address(APS_COMMANDS(header.command.cmd))){
+		header.addr = bytes2uint32(20);
+		payload.resize(packetLength - NUM_HEADER_BYTES, 0);
+		std::copy(packet+24, packet+packetLength, payload.begin());
+	}
+	else{
+		payload.resize(packetLength - (NUM_HEADER_BYTES-4), 0);
+		std::copy(packet+2, packet+packetLength, payload.begin());
+	}
 }
 
 vector<uint8_t> APSEthernetPacket::serialize() const {
