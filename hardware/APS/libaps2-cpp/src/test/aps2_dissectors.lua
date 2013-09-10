@@ -35,6 +35,21 @@ a.instrAddr = ProtoField.uint32("aps.instrAddr", "Addr" , base.HEX)
 a.payload = ProtoField.bytes("aps.payload", "Data")
 
 a.hostFirmwareVersion = ProtoField.uint32("aps.hostFirmwareVersion", "Host Firmware Version", base.HEX)
+a.userFirmwareVersion = ProtoField.uint32("aps.userFirmwareVersion", "User Firmware Version", base.HEX)
+a.configSource = ProtoField.uint32("aps.configSource", "Configuration Source", base.HEX)
+a.userStatus = ProtoField.uint32("aps.userStatus", "User Status", base.HEX)
+a.dac0Status = ProtoField.uint32("aps.dac0Status", "DAC 0 Status", base.HEX)
+a.dac1Status = ProtoField.uint32("aps.dac1Status", "DAC 1 Status", base.HEX)
+a.pllStatus = ProtoField.uint32("aps.pllStatus", "PLL Status", base.HEX)
+a.vxcoStatus = ProtoField.uint32("aps.vxcoStatus", "VXCO Status", base.HEX)
+a.sendPacketCount = ProtoField.uint32("aps.sendPacketCount", "Send Packet Count", base.DEC)
+a.recPacketCount = ProtoField.uint32("aps.recPacketCount", "Receive Packet Count", base.DEC)
+a.seqSkipCount = ProtoField.uint32("aps.seqSkipCount", "Sequence Skip Count", base.DEC)
+a.seqDupCount = ProtoField.uint32("aps.seqDupCount", "Sequence Dup. Count", base.DEC)
+a.fcsErrorCount = ProtoField.uint32("aps.fcsErrorCount", "FCS Error Count", base.DEC)
+a.overrunCount = ProtoField.uint32("aps.overrunCount", "Packet Overrun Count", base.DEC)
+a.uptimeSeconds = ProtoField.uint32("aps.uptimeSeconds", "Uptime Seconds", base.DEC)
+a.uptimeNanoSeconds = ProtoField.uint32("aps.uptimeNanoSeconds", "Uptime Nanoseconds", base.DEC)
 
 -- create a function to dissect it
 function aps_proto.dissector(buffer,pinfo,tree)
@@ -68,10 +83,51 @@ function aps_proto.dissector(buffer,pinfo,tree)
 
  	offset = offset + 4
 
-	subtree:add( a.addr, buffer(offset,4))
-	offset = offset + 4
-	if ((buffer:len() - 24) > 0) then 
-		subtree:add(a.payload, buffer(offset))
+ 	if (cmdVal == 0x1 or cmdVal == 0x9) then
+		subtree:add( a.addr, buffer(offset,4))
+		offset = offset + 4
+	end
+
+	--If there is payload then show it
+	if ((buffer:len() - offset) > 0) then 
+		local dataTree = subtree:add(a.payload, buffer(offset))
+
+		-- parse status words
+		if (cmdVal == 0x07) then
+			dataTree:add(a.hostFirmwareVersion, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.userFirmwareVersion, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.configSource, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.userStatus, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.dac0Status, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.dac1Status, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.pllStatus, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.vxcoStatus, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.sendPacketCount, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.recPacketCount, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.seqSkipCount, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.seqDupCount, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.fcsErrorCount, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.overrunCount, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.uptimeSeconds, buffer(offset,4))
+			offset = offset + 4
+			dataTree:add(a.uptimeNanoSeconds, buffer(offset,4))
+
+		end 
+
 	end
 
 	-- parse chip config
@@ -91,9 +147,6 @@ function aps_proto.dissector(buffer,pinfo,tree)
 		end
 	end
 
-	-- parse status words
-	-- if (cmdVal == 0x07) then
-	-- 	local 
 
 
 --    subtree = subtree:add(buffer(2,4),"Command")
