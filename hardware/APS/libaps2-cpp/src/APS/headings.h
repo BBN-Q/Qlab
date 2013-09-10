@@ -15,11 +15,13 @@
 //Standard library includes
 #include <string>
 #include <vector>
+#include <queue>
+#include <unordered_map>
+#include <map>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
 #include <stdio.h>
-#include <map>
 //#include <math.h>
 #include <cmath>
 #include <stdexcept>
@@ -27,10 +29,12 @@
 #include <queue>
 
 using std::vector;
+using std::queue;
 using std::string;
 using std::cout;
 using std::endl;
 using std::map;
+using std::unordered_map;
 using std::runtime_error;
 
 #include <thread>
@@ -80,8 +84,9 @@ using boost::thread;
 
 //Load all the constants
 #include "constants.h"
-
-#include "EthernetControl.h"
+#include "MACAddr.h"
+#include "APSEthernetPacket.h"
+#include "APSEthernet.h"
 #include "LLBank.h"
 #include "Channel.h"
 #include "APS2.h"
@@ -96,6 +101,8 @@ myhex(std::ios_base& __base)
   __base.setf(std::ios::showbase);
   return __base;
 }
+
+
 
 
 
