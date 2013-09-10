@@ -51,8 +51,9 @@ SET ( DLL_SRC
 	./APS/APS2.cpp
 	./APS/APSRack.cpp
 	./APS/LLBank.cpp
-	./APS/EthernetControl.cpp
-	./APS/APS2.cpp
+	./APS/APSEthernet.cpp
+	./APS/MACAddr.cpp
+	./APS/APSEthernetPacket.cpp
 )
 
 
@@ -66,7 +67,7 @@ ADD_EXECUTABLE(test
 
 #ADD_EXECUTABLE(echo
 #	./test/echo.cpp
-#	./APS/EthernetControl.cpp 
+#	./APS/APSEthernet.cpp 
 #	./APS/DummyAPS.cpp
 #	./APS/APS2.cpp
 #)
