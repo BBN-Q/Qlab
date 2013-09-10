@@ -24,13 +24,14 @@ EthernetError APSEthernet::init(string nic) {
     string filterStr = create_pcap_filter();
     apply_filter(filterStr, pcapHandle_);
 
-    //Setup broadcast mapping 
-    serial_to_MAC_["broadcast"] = MACAddr("FF:FF:FF:FF:FF:FF");
+    reset_mac_maps();
 
     //Setup incoming loop in a thread
     msgQueues_["unknown"] = queue<APSEthernetPacket>();
-    receiving_ = true;
     receiveThread_ = std::thread(&APSEthernet::run_receive_thread, this);
+    while (!receiving_){
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
 
     return SUCCESS;
 }
@@ -40,6 +41,8 @@ vector<string> APSEthernet::enumerate() {
 	 * Look for all APS units that respond to the broadcast packet
 	 */
 	FILE_LOG(logDEBUG1) << "APSEthernet::enumerate";
+
+    reset_mac_maps();
 
     APSEthernetPacket broadcastPacket = APSEthernetPacket::create_broadcast_packet();
     send("broadcast", broadcastPacket);
@@ -53,6 +56,12 @@ vector<string> APSEthernet::enumerate() {
     	FILE_LOG(logINFO) << "Found device: " << deviceSerials.back();
     }
     return deviceSerials;
+}
+
+void APSEthernet::reset_mac_maps() {
+    serial_to_MAC_.clear();
+    MAC_to_serial_.clear();
+    serial_to_MAC_["broadcast"] = MACAddr("FF:FF:FF:FF:FF:FF");
 }
 
 EthernetError APSEthernet::connect(string serial) {
@@ -107,7 +116,7 @@ vector<APSEthernetPacket> APSEthernet::receive(string serial, size_t timeoutSeco
             mLock_.unlock();
             return outVec;
         }
-        usleep(10000);;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         end = std::chrono::steady_clock::now();
         elapsedTime =  std::chrono::duration_cast<std::chrono::seconds>(end-start).count();
     }
@@ -221,6 +230,7 @@ void APSEthernet::run_receive_thread(){
     apply_filter(filterStr, recHandle);
 
     // start looping while we're up and running
+    receiving_ = true;
     while(receiving_){
         struct pcap_pkthdr *packetHeader;
         const u_char *packetData;
@@ -240,13 +250,10 @@ void APSEthernet::run_receive_thread(){
             }
             mLock_.unlock();
         }
-        else if (result == 0) {
-            //We timed out 
-            continue;
-        }
         else if (result < 0){
             FILE_LOG(logERROR) << "Error trying to read packets: " << pcap_geterr(recHandle);
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     //close up

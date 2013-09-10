@@ -54,6 +54,7 @@ class APSEthernet {
 		vector<EthernetDevInfo> get_network_devices();
 		EthernetError set_network_device(vector<EthernetDevInfo> pcapDevices, string nic);
 		string create_pcap_filter();
+		void reset_mac_maps();
 		static EthernetError apply_filter(string & filter, pcap_t *);
 
 		static const unsigned int pcapTimeoutMS = 100;

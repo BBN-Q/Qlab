@@ -29,7 +29,6 @@ int APSRack::init(const string & NICName) {
 
 	//Enumerate the serial numbers and MAC addresses of the devices attached
 	socket_.enumerate();
-	FILE_LOG(logDEBUG) << "Finished enumerate!";
 
 	return 0;
 }
