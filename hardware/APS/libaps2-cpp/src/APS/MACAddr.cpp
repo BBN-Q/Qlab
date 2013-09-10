@@ -14,7 +14,7 @@ MACAddr::MACAddr(const int & macAddrInt){
 	//TODO
 }
 
-MACAddr::MACAddr(const EthernetDevInfo &){
+MACAddr MACAddr::MACAddr_from_devName(const string & devName){
 	//Extract a MAC address from the the pcap information. A bit of a cross-platorm pain. 
 #ifdef _WIN32
     
@@ -25,15 +25,15 @@ MACAddr::MACAddr(const EthernetDevInfo &){
     // start by triming input name to only {...}
     size_t start,end;
 
-    start = devInfo.name.find('{');
-    end = devInfo.name.find('}');
+    start = devName.find('{');
+    end = devName.find('}');
 
     if (start == std::string::npos || end == std::string::npos) {
         FILE_LOG(logERROR) << "getMacAddr: Invalid devInfo name";
         return;
     }
 
-    string winName = devInfo.name.substr(start, end-start + 1);
+    string winName = devName.substr(start, end-start + 1);
     
     // look up mac addresses using GetAdaptersInfo
     // http://msdn.microsoft.com/en-us/library/windows/desktop/aa365917%28v=vs.85%29.aspx
@@ -64,8 +64,9 @@ MACAddr::MACAddr(const EthernetDevInfo &){
             string matchName = string(pAdapter->AdapterName);
             if (winName.compare(matchName) == 0) {
                 // copy address
-                std::copy(pAdapter->Address, pAdapter->Address + MAC_ADDR_LEN, devInfo.macAddr);
-                devInfo.description2 = string(pAdapter->Description);
+                //TODO: fix me!
+                // std::copy(pAdapter->Address, pAdapter->Address + MAC_ADDR_LEN, devInfo.macAddr);
+                // devInfo.description2 = string(pAdapter->Description);
                 //cout << "Adapter Name: " << string(pAdapter->AdapterName) << endl;
                 //cout << "Adapter Desc: " << string(pAdapter->Description) << endl;
                 //cout << "Adpater Addr: " << print_ethernetAddress(pAdapter->Address) << endl;
@@ -79,7 +80,7 @@ MACAddr::MACAddr(const EthernetDevInfo &){
         
 #else
     //On Linux we simply look in /sys/class/net/DEVICE_NAME/address
-    std::ifstream devFile(std::string("/sys/class/net/") + devInfo.name + std::string("/address"));
+    std::ifstream devFile(std::string("/sys/class/net/") + devName + std::string("/address"));
 	std::string macAddrStr;
 	getline(devFile, macAddrStr);
 	return MACAddr(macAddrStr);
@@ -89,7 +90,7 @@ MACAddr::MACAddr(const EthernetDevInfo &){
 }
 
 string MACAddr::to_string() const{
-    ostringstream ss;
+    std::ostringstream ss;
     for(const uint8_t curByte : addr){
         ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(curByte) << ":";
     }

@@ -1,3 +1,5 @@
+#include "headings.h"
+
 #ifndef MACADDR_H_
 #define MACADDR_H_
 
@@ -9,8 +11,11 @@ public:
 	MACAddr();
 	MACAddr(const int &);
 	MACAddr(const string &);
-	MACAddr(const EthernetDevInfo &);
+	static MACAddr MACAddr_from_devName(const string &);
 
+	bool operator==(const MACAddr & other) const{
+		return (addr == other.addr);
+	}
 	string to_string() const;
 
 	static bool is_valid(const string &);
@@ -19,5 +24,16 @@ public:
 	vector<uint8_t> addr;
 
 };
+
+namespace std{
+
+	template <>
+	struct hash<MACAddr>
+	{
+		size_t operator()(const MACAddr & m) const{
+			return hash<string>()(m.to_string());
+		}
+	};
+}
 
 #endif
