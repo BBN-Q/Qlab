@@ -54,11 +54,11 @@ int APS2::reset() {
 
 	// get reply with status bytes
 	
-	struct APS_Status_Registers statusRegs;
+	APSStatusBank_t statusRegs;
 	//TODO: fix me!
 	// socket_.read(&statusRegs, sizeof(struct APS_Status_Registers));
  
-	FILE_LOG(logDEBUG1) << 	APS2::printStatusRegisters(statusRegs);
+	FILE_LOG(logDEBUG1) << 	print_status_bank(statusRegs);
 	return 0;
 }
 
@@ -106,6 +106,19 @@ int APS2::setup_DACs() {
 	return 0;
 }
 
+APSStatusBank_t APS2::read_status_registers(){
+	//Query with the status request command
+	APSCommand_t command;
+	command.cmd = static_cast<uint32_t>(APS_COMMANDS::STATUS);
+	command.r_w = 1;
+	command.mode_stat = APS_STATUS_HOST;
+	APSEthernetPacket statusPacket = query(command)[0];
+	//Copy the data back into the status type 
+	APSStatusBank_t result;
+	std::copy(statusPacket.payload.begin(), statusPacket.payload.end(), result.array); 
+	FILE_LOG(logDEBUG) << print_status_bank;
+	return result;
+}
 
 int APS2::program_FPGA(const int & bitFileNum) {
 	/**
@@ -201,7 +214,7 @@ int APS2::clear_channel_data() {
 	// socket_.write_register(FPGA_ADDR_CHA_LL_LENGTH, 0);
 	// socket_.write_register(FPGA_ADDR_CHB_LL_LENGTH, 0);
 	
-	flush();
+	flush_write_queue();
 
 	return 0;
 }
@@ -494,6 +507,20 @@ int APS2::set_LLData_IQ(const WordVec & addr, const WordVec & count, const WordV
  */
 
 
+int APS2::write(const APSCommand_t & command, const bool & queue /* see header for default */){
+	/*
+	* Write a single unaddressed command to the write queue
+	*/
+	//TODO: figure out move constructor
+	APSEthernetPacket newPacket(command);
+	if (queue){
+ 		writeQueue_.push_back(newPacket);
+	}
+	else{
+		APSEthernet::get_instance().send(deviceSerial_, newPacket);
+	}
+}
+
 int APS2::write(const unsigned int & addr, const uint32_t & data, const bool & queue /* see header for default */){
 	//Create the vector and pass through
 	return write(addr, vector<uint32_t>(1, data), queue);
@@ -536,16 +563,22 @@ int APS2::write(const unsigned int & addr, const vector<uint32_t> & data, const 
 	return 0;
 }
 
+vector<APSEthernetPacket> APS2::read(const size_t & numPackets){
+	return APSEthernet::get_instance().receive(deviceSerial_);
+}
 
+vector<APSEthernetPacket> APS2::query(const APSCommand_t & command){
+	//write-read ping-pong
+	write(command, false);
+	return read(1);
+}
 
-int APS2::flush() {
+int APS2::flush_write_queue() {
 	// flush write queue to USB interface
 	FILE_LOG(logERROR) << "Queue flush needs to be implemented for APS2";
-	int bytesWritten = 0;
-	//int bytesWritten = FPGA::write_block(socket_, writeQueue_, offsetQueue_);
-	FILE_LOG(logDEBUG1) << "Flushed " << bytesWritten << " bytes to device";
+	APSEthernet::EthernetError myError = APSEthernet::get_instance().send(deviceSerial_, writeQueue_);
 	writeQueue_.clear();
-	return bytesWritten;
+	return myError;
 }
 
 
@@ -1289,7 +1322,7 @@ int APS2::write_waveform(const int & dac, const vector<short> & wfData) {
 	//Format the data and add to write queue
 	//TODO: check data alignment from 16 to 32 bit
 	write(startAddr, vector<uint32_t>(wfData.begin(), wfData.end()), true);
-	flush();
+	flush_write_queue();
 
 	return 0;
 }
@@ -1342,7 +1375,7 @@ int APS2::write_LL_data_IQ(const uint32_t & startAddr, const size_t & startIdx, 
 	}
 
 	//Flush the queue to the device
-	flush();
+	flush_write_queue();
 	*/
 	return 0;
 }
@@ -1413,7 +1446,7 @@ int APS2::write_LL_data_IQ(const uint32_t & startAddr, const size_t & startIdx, 
 
 	//Write the LL data and flush to device
 	write(fpga, startAddr, channels_[dac].banks_[bankNum].get_packed_data(), true);
-	flush();
+	flush_write_queue();
 
 	// verify the checksum if we are in sufficient debug mode
 	if (FILELog::ReportingLevel() >= logDEBUG) {
@@ -1490,7 +1523,7 @@ int APS2::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootStr)
 
 
 
-string APS2::printStatusRegisters(const APS_Status_Registers & status) {
+string APS2::print_status_bank(const APSStatusBank_t & status) {
 	ostringstream ret;
 
 	ret << "Host Firmware Version = " << std::hex << status.hostFirmwareVersion << endl;
@@ -1504,11 +1537,11 @@ string APS2::printStatusRegisters(const APS_Status_Registers & status) {
 	ret << "Send Packet Count     = " << status.sendPacketCount << endl;
 	ret << "Recv Packet Count     = " << status.receivePacketCount << endl;
 	ret << "Seq Skip Count        = " << status.sequenceSkipCount << endl;
-	ret << "Seq Dup  Count        = " << status.sequenceDupCount << endl;
-	ret << "Uptime                = " << status.uptime << endl;
-	ret << "Reserved 1            = " << status.reserved1 << endl;
-	ret << "Reserved 2            = " << status.reserved2 << endl;
-	ret << "Reserved 3            = " << status.reserved3 << endl;
+	ret << "Seq Dup.  Count       = " << status.sequenceDupCount << endl;
+	ret << "FCS Overrun Count     = " << status.fcsOverrunCount << endl;
+	ret << "Packet Overrun Count  = " << status.packetOverrunCount << endl;
+	ret << "Uptime (s)            = " << status.uptimeSeconds << endl;
+	ret << "Uptime (ns)           = " << status.uptimeNanoSeconds << endl;
 	return ret.str();
 }
 

@@ -36,6 +36,10 @@ public:
 	int setup_PLL() const;
 	int setup_DACs();
 
+	APSStatusBank_t read_status_registers();
+	uint32_t read_status_register(const STATUS_REGISTERS &);
+
+
 	int set_sampleRate(const int &);
 	int get_sampleRate() const;
 
@@ -77,7 +81,7 @@ public:
 	bool running;
 
 	//Pretty printers
-	static string printStatusRegisters(const APS_Status_Registers & status);
+	static string print_status_bank(const APSStatusBank_t & status);
 	static string printAPSCommand(const APSCommand_t & command);
 	static string printAPSChipCommand(APSChipConfigCommand_t & command);
 
@@ -86,14 +90,22 @@ private:
 	string deviceSerial_;
 	vector<Channel> channels_;
 	int samplingRate_;
-	vector<uint8_t> writeQueue_;
+	vector<APSEthernetPacket> writeQueue_;
 	MACAddr macAddr_;
 
 	//Queued writing
+	int write(const APSCommand_t &, const bool & queue = false);
 	int write(const unsigned int & addr, const uint32_t & data, const bool & queue = false);
 	int write(const unsigned int & addr, const vector<uint32_t> & data, const bool & queue = false);
 
-	int flush();
+	vector<APSEthernetPacket> read(const size_t &);
+
+	//Single packet query
+	vector<APSEthernetPacket> query(const APSCommand_t &);
+
+
+
+	int flush_write_queue();
 
 	int setup_PLL();
 	int set_PLL_freq(const int &);
