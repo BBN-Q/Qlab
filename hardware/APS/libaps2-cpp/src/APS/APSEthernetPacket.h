@@ -25,7 +25,7 @@ struct APSEthernetHeader {
 class APSEthernetPacket{
 public:
 	APSEthernetHeader header;
-	vector<uint8_t> payload;
+	vector<uint32_t> payload;
 
 	APSEthernetPacket();
 

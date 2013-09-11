@@ -24,15 +24,21 @@ APSEthernetPacket::APSEthernetPacket(const u_char * packet, size_t packetLength)
 	header.frameType = bytes2uint16(12);
 	header.seqNum = bytes2uint16(14);
 	header.command.packed = bytes2uint32(16);
+
+	size_t myOffset;
 	//not all return packets have an address; if-block on command type
 	if (needs_address(APS_COMMANDS(header.command.cmd))){
 		header.addr = bytes2uint32(20);
-		payload.resize(packetLength - NUM_HEADER_BYTES, 0);
-		std::copy(packet+24, packet+packetLength, payload.begin());
+		myOffset = 24;
 	}
 	else{
-		payload.resize(packetLength - (NUM_HEADER_BYTES-4), 0);
-		std::copy(packet+20, packet+packetLength, payload.begin());
+		myOffset = 20;
+	}
+	payload.clear();
+	payload.reserve((packetLength - myOffset)/4);
+	while(myOffset < packetLength){
+		payload.push_back(bytes2uint32(myOffset));
+		myOffset += 4;
 	}
 }
 
@@ -42,7 +48,7 @@ vector<uint8_t> APSEthernetPacket::serialize() const {
 	 * Handle host to network byte ordering here
 	 */
 	vector<uint8_t> outVec;
-	outVec.resize(NUM_HEADER_BYTES + payload.size());
+	outVec.resize(numBytes());
 
 	//Push on the destination and source mac address
 	auto insertPt = outVec.begin();
@@ -61,6 +67,7 @@ vector<uint8_t> APSEthernetPacket::serialize() const {
 	std::copy(start, start+2, insertPt); insertPt += 2;
 
 	//Command
+	//TODO: command count field
 	uint32_t myuint32;
 	start = reinterpret_cast<uint8_t*>(&myuint32);
 	myuint32 = htonl(header.command.packed);
@@ -71,18 +78,18 @@ vector<uint8_t> APSEthernetPacket::serialize() const {
 		myuint32 = htonl(header.addr);
 		std::copy(start, start+4, insertPt); insertPt += 4;
 	}
-	else{
-		outVec.resize(outVec.size()-4);
-	}
 
 	//Data
-	std::copy(payload.begin(), payload.end(), insertPt);
+	for (auto word : payload){
+		myuint32 = htonl(word);
+		std::copy(start, start+4, insertPt); insertPt += 4;
+	}
 
 	return outVec;
 }
 
 size_t APSEthernetPacket::numBytes() const{
-	return needs_address(APS_COMMANDS(header.command.cmd)) ? NUM_HEADER_BYTES + payload.size() : NUM_HEADER_BYTES - 4 + payload.size() ;
+	return needs_address(APS_COMMANDS(header.command.cmd)) ? NUM_HEADER_BYTES + 4*payload.size() : NUM_HEADER_BYTES - 4 + 4*payload.size() ;
 }
 
 APSEthernetPacket APSEthernetPacket::create_broadcast_packet(){
