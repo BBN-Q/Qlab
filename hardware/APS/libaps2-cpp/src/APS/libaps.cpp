@@ -27,12 +27,13 @@ int get_numDevices(){
 	return APSRack_.get_num_devices();
 }
 
-void get_deviceSerials(char * deviceSerials){
-	//TODO: fix me!
+void get_deviceSerials(const char ** deviceSerials){
 	//Assumes sufficient memory has been allocated
-	string serialStr;
-	size_t strLen = serialStr.copy(deviceSerials, serialStr.size());
-	deviceSerials[strLen] = '\0';
+	size_t ct = 0;
+	for (auto serial : APSRack_.deviceSerials){
+		deviceSerials[ct] = serial.c_str();
+		ct++;
+	}
 }
 
 //Connect to a device specified by serial number string

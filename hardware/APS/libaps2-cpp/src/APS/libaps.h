@@ -29,7 +29,7 @@ enum APSErrorCode {
 EXPORT int init(char *);
 
 EXPORT int get_numDevices();
-EXPORT void get_deviceSerials(char *);
+EXPORT void get_deviceSerials(const char **);
 
 EXPORT int connect_APS(char *);
 EXPORT int disconnect_APS(char *);

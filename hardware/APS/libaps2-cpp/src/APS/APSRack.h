@@ -35,12 +35,12 @@ public:
 	int read_register(const string &, int);
 
 	map<string, APS2> APSs;
+	size_t numDevices;
+	set<string> deviceSerials;
 
 private:
 	APSRack(const APSRack&) = delete;
 	APSRack& operator=(const APSRack&) = delete;
-	int numDevices_;
-	set<string> deviceSerials_;
 };
 
 

@@ -14,6 +14,7 @@
 
 //Standard library includes
 #include <string>
+#include <cstring>
 #include <vector>
 #include <queue>
 #include <unordered_map>

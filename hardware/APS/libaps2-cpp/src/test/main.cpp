@@ -60,21 +60,26 @@ int main (int argc, char* argv[])
   if (numDevices < 1)
   	return 0;
   
+
+
   cout << concol::RED << "Attempting to get serials" << concol::RESET << endl;
 
-  // char serialBuffer[100];
+  const char ** serialBuffer = new const char*[numDevices];
+  get_deviceSerials(serialBuffer);
 
-  // for (int cnt; cnt < numDevices; cnt++) {
-  // 	get_deviceSerial(cnt, serialBuffer);
-  // 	cout << concol::RED << "Device " << cnt << " serial #: " << serialBuffer << concol::RESET << endl;
-  // }
+  for (int cnt; cnt < numDevices; cnt++) {
+  	cout << concol::RED << "Device " << cnt << " serial #: " << serialBuffer[cnt] << concol::RESET << endl;
+  }
 
-/*
-  int rc;
-  // rc = connect_by_ID(0);
 
-  // cout << concol::RED << "connect_by_ID(0) returned " << rc << concol::RESET << endl;
+  connect_APS("00:22:33:44:55:66");
 
+  disconnect_APS("00:22:33:44:55:66");
+
+
+  
+
+  /*
   rc = initAPS(0, const_cast<char *>("../dummyBitfile.bit"), 0);
 
   cout << concol::RED << "initAPS(0) returned " << rc << concol::RESET << endl;

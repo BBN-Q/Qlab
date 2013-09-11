@@ -7,7 +7,7 @@
 
 #include "APSRack.h"
 
-APSRack::APSRack() : numDevices_{0} {
+APSRack::APSRack() : numDevices{0} {
 }
 
 APSRack::~APSRack()  {
@@ -39,25 +39,25 @@ void APSRack::enumerate_devices() {
 	* This will reset the APS vector so it really should only be called during initialization
 	*/
 
-	set<string> oldSerials = deviceSerials_;
-	deviceSerials_ = APSEthernet::get_instance().enumerate();
-	numDevices_ = deviceSerials_.size();
+	set<string> oldSerials = deviceSerials;
+	deviceSerials = APSEthernet::get_instance().enumerate();
+	numDevices = deviceSerials.size();
 
 	//See if any devices have been removed
 	set<string> diffSerials;
-	set_difference(oldSerials.begin(), oldSerials.end(), deviceSerials_.begin(), deviceSerials_.end(), std::inserter(diffSerials, diffSerials.begin()));
+	set_difference(oldSerials.begin(), oldSerials.end(), deviceSerials.begin(), deviceSerials.end(), std::inserter(diffSerials, diffSerials.begin()));
 	for (auto serial : diffSerials) APSs.erase(serial);
 
 	//Or if any devices have been added
 	diffSerials.clear();
-	set_difference(deviceSerials_.begin(), deviceSerials_.end(), oldSerials.begin(), oldSerials.end(), std::inserter(diffSerials, diffSerials.begin()));
+	set_difference(deviceSerials.begin(), deviceSerials.end(), oldSerials.begin(), oldSerials.end(), std::inserter(diffSerials, diffSerials.begin()));
 	for (auto serial : diffSerials) APSs[serial] = APS2(serial);
 }
 
 
 int APSRack::get_num_devices()  {
 	enumerate_devices();
-	return numDevices_;
+	return numDevices;
 }
 
 
