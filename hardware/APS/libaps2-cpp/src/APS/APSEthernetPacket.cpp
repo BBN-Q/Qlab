@@ -2,6 +2,12 @@
 
 APSEthernetPacket::APSEthernetPacket() : header{{}, {}, APS_PROTO, 0, {0}, 0}, payload(0){};
 
+APSEthernetPacket::APSEthernetPacket(const APSCommand_t & command) :
+		header{{}, {}, APS_PROTO, 0, command, 0}, payload(0){};
+
+APSEthernetPacket::APSEthernetPacket(const APSCommand_t & command, const uint32_t & addr) :
+		header{{}, {}, APS_PROTO, 0, command, addr}, payload(0){};
+
 APSEthernetPacket::APSEthernetPacket(const MACAddr & destMAC, const MACAddr & srcMAC, APSCommand_t command, const uint32_t & addr) :
 		header{destMAC, srcMAC, APS_PROTO, 0, command, addr}, payload(0){};
 
