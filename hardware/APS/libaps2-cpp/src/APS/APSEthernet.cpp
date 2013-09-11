@@ -79,7 +79,7 @@ EthernetError APSEthernet::disconnect(string serial) {
 }
 
 EthernetError APSEthernet::send(string serial, APSEthernetPacket msg){
-    send(serial, vector<APSEthernetPacket>(1, msg));
+    return send(serial, vector<APSEthernetPacket>(1, msg));
 }
 
 EthernetError APSEthernet::send(string serial, vector<APSEthernetPacket> msg) {
@@ -98,17 +98,17 @@ EthernetError APSEthernet::send(string serial, vector<APSEthernetPacket> msg) {
     return SUCCESS;
 }
 
-vector<APSEthernetPacket> APSEthernet::receive(string serial, size_t timeoutSeconds) {
+vector<APSEthernetPacket> APSEthernet::receive(string serial, size_t timeoutMS) {
 
     //Read the packets coming back in up to the timeout
     std::chrono::time_point<std::chrono::steady_clock> start, end;
 
     start = std::chrono::steady_clock::now();
-    int elapsedTime = 0;
+    size_t elapsedTime = 0;
 
     vector<APSEthernetPacket> outVec;
 
-    while ( elapsedTime < timeoutSeconds){
+    while ( elapsedTime < timeoutMS){
         if (!msgQueues_[serial].empty()){
             mLock_.lock();
             outVec.push_back(msgQueues_[serial].front());
@@ -118,7 +118,7 @@ vector<APSEthernetPacket> APSEthernet::receive(string serial, size_t timeoutSeco
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         end = std::chrono::steady_clock::now();
-        elapsedTime =  std::chrono::duration_cast<std::chrono::seconds>(end-start).count();
+        elapsedTime =  std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
     }
     FILE_LOG(logWARNING) << "Timed out on receive!";
     return outVec;

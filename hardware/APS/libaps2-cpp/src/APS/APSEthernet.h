@@ -40,7 +40,7 @@ class APSEthernet {
 		EthernetError disconnect(string serial);
 		EthernetError send(string serial, APSEthernetPacket msg);
 		EthernetError send(string serial, vector<APSEthernetPacket> msg);
-		vector<APSEthernetPacket> receive(string serial, size_t timeoutSeconds = 1);
+		vector<APSEthernetPacket> receive(string serial, size_t timeoutMS = 1000);
 
 	private:
 		APSEthernet() {};
