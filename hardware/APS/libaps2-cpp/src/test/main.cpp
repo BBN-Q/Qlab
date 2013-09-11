@@ -51,7 +51,7 @@ int main (int argc, char* argv[])
   
   cout << concol::RED << "Attempting to initialize libaps" << concol::RESET << endl;
 
-  init(const_cast<char*>(dev.c_str()));
+  init(dev.c_str());
 
   int numDevices = get_numDevices();
 
@@ -60,23 +60,24 @@ int main (int argc, char* argv[])
   if (numDevices < 1)
   	return 0;
   
-
-
   cout << concol::RED << "Attempting to get serials" << concol::RESET << endl;
 
   const char ** serialBuffer = new const char*[numDevices];
   get_deviceSerials(serialBuffer);
 
-  for (int cnt; cnt < numDevices; cnt++) {
+  for (int cnt=0; cnt < numDevices; cnt++) {
   	cout << concol::RED << "Device " << cnt << " serial #: " << serialBuffer[cnt] << concol::RESET << endl;
   }
 
 
-  connect_APS("00:22:33:44:55:66");
+  string deviceSerial(serialBuffer[0]);
 
-  disconnect_APS("00:22:33:44:55:66");
+  connect_APS(deviceSerial.c_str());
 
 
+  disconnect_APS(deviceSerial.c_str());
+
+  delete[] serialBuffer;
   
 
   /*
