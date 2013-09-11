@@ -4,10 +4,13 @@ MACAddr::MACAddr() : addr(MAC_ADDR_LEN, 0){}
 
 MACAddr::MACAddr(const string & macStr){
 	addr.resize(6,0);
-	for(int cnt = 0; cnt < MAC_ADDR_LEN; cnt++) {
-		// copy mac address from string
-		sscanf(macStr.substr(3*cnt,2).c_str(), "%x", addr.begin()+cnt);
-	}
+    std::istringstream macStream(macStr);
+    for (uint8_t & macByte : addr){
+        int byte;
+        char colon;
+        macStream >> std::hex >> byte >> colon;
+        macByte = byte;
+    }
 }
 
 MACAddr::MACAddr(const int & macAddrInt){
