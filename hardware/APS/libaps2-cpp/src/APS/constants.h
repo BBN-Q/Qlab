@@ -200,7 +200,7 @@ enum FPGACONFIG_MODE_STAT {
 	FPGACONFIG_INVALID_OFFSET = 2,
 };
 
-enum STATUS_REGISTERS {
+enum class STATUS_REGISTERS {
 	HOST_FIRMWARE_VERSION = 0,
 	USER_FIRMWARE_VERSOIN = 1,
 	CONFIGURATION_SOURCE = 2,
@@ -213,30 +213,33 @@ enum STATUS_REGISTERS {
 	RECEIVE_PACKET_COUNT = 9,
 	SEQUENCE_SKIP_COUNT = 0xA,
 	SEQUENCE_DUP_COUNT = 0xB,
-	UPTIME = 0xC,
-	RESERVED1 = 0xD,
-	RESERVED2 = 0xE,
-	RESERVED3 = 0xF,
+	FCS_OVERRUN_COUNT = 0xC,
+	PACKET_OVERRUN_COUNT = 0xD,
+	UPTIME_SECONDS = 0xE,
+	UPTIME_NANOSECONDS = 0xF,
 };
 
-struct APS_Status_Registers {
-	uint32_t hostFirmwareVersion;
-	uint32_t userFirmwareVersion;
-	uint32_t configurationSource;
-	uint32_t userStatus;
-	uint32_t dac0Status;
-	uint32_t dac1Status;
-	uint32_t pllStatus;
-	uint32_t vcxoStatus;
-	uint32_t sendPacketCount;
-	uint32_t receivePacketCount;
-	uint32_t sequenceSkipCount;
-	uint32_t sequenceDupCount;
-	uint32_t uptime;
-	uint32_t reserved1;
-	uint32_t reserved2;
-	uint32_t reserved3;
-};
+typedef union {
+	struct  {
+		uint32_t hostFirmwareVersion;
+		uint32_t userFirmwareVersion;
+		uint32_t configurationSource;
+		uint32_t userStatus;
+		uint32_t dac0Status;
+		uint32_t dac1Status;
+		uint32_t pllStatus;
+		uint32_t vcxoStatus;
+		uint32_t sendPacketCount;
+		uint32_t receivePacketCount;
+		uint32_t sequenceSkipCount;
+		uint32_t sequenceDupCount;
+		uint32_t fcsOverrunCount;
+		uint32_t packetOverrunCount;
+		uint32_t uptimeSeconds;
+		uint32_t uptimeNanoSeconds;
+	};
+	uint32_t array[16];
+} APSStatusBank_t;
 
 enum CONFIGURATION_SOURCE {
 	BASELINE_IMAGE = 0xBBBBBBBB,
