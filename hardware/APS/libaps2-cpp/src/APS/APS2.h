@@ -15,25 +15,15 @@ class APS2 {
 
 public:
 
-	//
-	uint32_t * getPayloadPtr(uint32_t * frame);
-	
-
-	string printStatusRegisters(const APS_Status_Registers & status);
-
-	static string printAPSCommand(const APSCommand_t & command);
-	static string printAPSChipCommand(APSChipConfigCommand_t & command);
-
 	static const int NUM_CHANNELS = 2;
-
 
 	//Constructors
 	APS2();
 	APS2(string);
 	~APS2();
 
-	int connect();
-	int disconnect();
+	APSEthernet::EthernetError connect();
+	APSEthernet::EthernetError disconnect();
 
 	int init(const bool & = false, const int & bitFileNum = 0);
 	int reset();
@@ -85,6 +75,11 @@ public:
 	bool isOpen;
 
 	bool running;
+
+	//Pretty printers
+	static string printStatusRegisters(const APS_Status_Registers & status);
+	static string printAPSCommand(const APSCommand_t & command);
+	static string printAPSChipCommand(APSChipConfigCommand_t & command);
 
 private:
 

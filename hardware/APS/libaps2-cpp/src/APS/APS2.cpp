@@ -4,57 +4,7 @@
 using std::ostringstream;
 using std::endl;
 
-string APS2::printStatusRegisters(const APS_Status_Registers & status) {
-	ostringstream ret;
 
-	ret << "Host Firmware Version = " << std::hex << status.hostFirmwareVersion << endl;
-	ret << "User Firmware Version = " << std::hex << status.userFirmwareVersion << endl;
-	ret << "Configuration Source  = " << status.configurationSource << endl;
-	ret << "User Status           = " << status.userStatus << endl;
-	ret << "DAC 0 Status          = " << status.dac0Status << endl;
-	ret << "DAC 1 Status          = " << status.dac1Status << endl;
-	ret << "PLL Status            = " << status.pllStatus << endl;
-	ret << "VCXO Status           = " << status.vcxoStatus << endl;
-	ret << "Send Packet Count     = " << status.sendPacketCount << endl;
-	ret << "Recv Packet Count     = " << status.receivePacketCount << endl;
-	ret << "Seq Skip Count        = " << status.sequenceSkipCount << endl;
-	ret << "Seq Dup  Count        = " << status.sequenceDupCount << endl;
-	ret << "Uptime                = " << status.uptime << endl;
-	ret << "Reserved 1            = " << status.reserved1 << endl;
-	ret << "Reserved 2            = " << status.reserved2 << endl;
-	ret << "Reserved 3            = " << status.reserved3 << endl;
-	return ret.str();
-}
-
-string APS2::printAPSCommand(const APSCommand_t & cmd) {
-    ostringstream ret;
-
-    ret << std::hex << cmd.packed << " =";
-    ret << " ACK: " << cmd.ack;
-    ret << " SEQ: " << cmd.seq;
-    ret << " SEL: " << cmd.sel;
-    ret << " R/W: " << cmd.r_w;
-    ret << " CMD: " << cmd.cmd;
-    ret << " MODE/STAT: " << cmd.mode_stat;
-    ret << std::dec << " cnt: " << cmd.cnt;
-    return ret.str();
-}
-
-string APS2::printAPSChipCommand(APSChipConfigCommand_t & cmd) {
-    ostringstream ret;
-
-    ret << std::hex << cmd.packed << " =";
-    ret << " Target: " << cmd.target;
-    ret << " SPICNT_DATA: " << cmd.spicnt_data;
-    ret << " INSTR: " << cmd.instr;
-    return ret.str();
-}
-
-
-uint32_t * APS2::getPayloadPtr(uint32_t * frame) {
-   frame += sizeof(APSEthernetHeader) / sizeof(uint32_t);
-   return frame;
-}
 
 
 APS2::APS2() :  isOpen{false}, channels_(2), samplingRate_{-1}, writeQueue_(0) {};
@@ -66,38 +16,31 @@ APS2::APS2(string deviceSerial) :  isOpen{false}, deviceSerial_{deviceSerial}, s
 
 APS2::~APS2() = default;
 
-int APS2::connect(){
+APSEthernet::EthernetError APS2::connect(){
 	if (!isOpen) {
-		int success = 0;
+		APSEthernet::EthernetError success = APSEthernet::get_instance().connect(deviceSerial_);
 
-		success = APSEthernet::get_instance().connect(deviceSerial_);
-
-		if (success == 0) {
+		if (success == APSEthernet::SUCCESS) {
 			FILE_LOG(logINFO) << "Opened connection to device: " << deviceSerial_;
 			isOpen = true;
 		}
 		// TODO: restore state information from file
 		return success;
 	}
-	else {
-		return 0;
-	}
+	return APSEthernet::SUCCESS;
 }
 
-int APS2::disconnect(){
+APSEthernet::EthernetError APS2::disconnect(){
 	if (isOpen){
-		int success = 0;
-		success = APSEthernet::get_instance().disconnect(deviceSerial_);
-		if (success == 0) {
+		APSEthernet::EthernetError success = APSEthernet::get_instance().disconnect(deviceSerial_);
+		if (success == APSEthernet::SUCCESS) {
 			FILE_LOG(logINFO) << "Closed connection to device: " << deviceSerial_;
 			isOpen = false;
 		}
 		// TODO: save state information to file
 		return success;
 	}
-	else{
-		return 0;
-	}
+	return APSEthernet::SUCCESS;
 }
 
 int APS2::reset() {
@@ -1547,6 +1490,51 @@ int APS2::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootStr)
 
 
 
+string APS2::printStatusRegisters(const APS_Status_Registers & status) {
+	ostringstream ret;
+
+	ret << "Host Firmware Version = " << std::hex << status.hostFirmwareVersion << endl;
+	ret << "User Firmware Version = " << std::hex << status.userFirmwareVersion << endl;
+	ret << "Configuration Source  = " << status.configurationSource << endl;
+	ret << "User Status           = " << status.userStatus << endl;
+	ret << "DAC 0 Status          = " << status.dac0Status << endl;
+	ret << "DAC 1 Status          = " << status.dac1Status << endl;
+	ret << "PLL Status            = " << status.pllStatus << endl;
+	ret << "VCXO Status           = " << status.vcxoStatus << endl;
+	ret << "Send Packet Count     = " << status.sendPacketCount << endl;
+	ret << "Recv Packet Count     = " << status.receivePacketCount << endl;
+	ret << "Seq Skip Count        = " << status.sequenceSkipCount << endl;
+	ret << "Seq Dup  Count        = " << status.sequenceDupCount << endl;
+	ret << "Uptime                = " << status.uptime << endl;
+	ret << "Reserved 1            = " << status.reserved1 << endl;
+	ret << "Reserved 2            = " << status.reserved2 << endl;
+	ret << "Reserved 3            = " << status.reserved3 << endl;
+	return ret.str();
+}
+
+string APS2::printAPSCommand(const APSCommand_t & cmd) {
+    ostringstream ret;
+
+    ret << std::hex << cmd.packed << " =";
+    ret << " ACK: " << cmd.ack;
+    ret << " SEQ: " << cmd.seq;
+    ret << " SEL: " << cmd.sel;
+    ret << " R/W: " << cmd.r_w;
+    ret << " CMD: " << cmd.cmd;
+    ret << " MODE/STAT: " << cmd.mode_stat;
+    ret << std::dec << " cnt: " << cmd.cnt;
+    return ret.str();
+}
+
+string APS2::printAPSChipCommand(APSChipConfigCommand_t & cmd) {
+    ostringstream ret;
+
+    ret << std::hex << cmd.packed << " =";
+    ret << " Target: " << cmd.target;
+    ret << " SPICNT_DATA: " << cmd.spicnt_data;
+    ret << " INSTR: " << cmd.instr;
+    return ret.str();
+}
 
 
 

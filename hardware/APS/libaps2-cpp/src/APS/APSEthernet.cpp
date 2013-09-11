@@ -9,7 +9,7 @@ APSEthernet::~APSEthernet() {
     pcap_close(pcapHandle_);
 }
 
-EthernetError APSEthernet::init(string nic) {
+APSEthernet::EthernetError APSEthernet::init(string nic) {
 	vector<EthernetDevInfo> pcapDevices = get_network_devices();
 	set_network_device(pcapDevices, nic);
     //Create a new pcap filter to send the packets
@@ -64,25 +64,25 @@ void APSEthernet::reset_mac_maps() {
     serial_to_MAC_["broadcast"] = MACAddr("FF:FF:FF:FF:FF:FF");
 }
 
-EthernetError APSEthernet::connect(string serial) {
+APSEthernet::EthernetError APSEthernet::connect(string serial) {
     mLock_.lock();
 	msgQueues_[serial] = queue<APSEthernetPacket>();
     mLock_.unlock();
 	return SUCCESS;
 }
 
-EthernetError APSEthernet::disconnect(string serial) {
+APSEthernet::EthernetError APSEthernet::disconnect(string serial) {
     mLock_.lock();
 	msgQueues_.erase(serial);
     mLock_.unlock();
 	return SUCCESS;
 }
 
-EthernetError APSEthernet::send(string serial, APSEthernetPacket msg){
+APSEthernet::EthernetError APSEthernet::send(string serial, APSEthernetPacket msg){
     return send(serial, vector<APSEthernetPacket>(1, msg));
 }
 
-EthernetError APSEthernet::send(string serial, vector<APSEthernetPacket> msg) {
+APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPacket> msg) {
     //Fill out the destination and source MAC address
     for (auto & packet : msg){
         packet.header.dest = serial_to_MAC_[serial];
@@ -161,7 +161,7 @@ vector<EthernetDevInfo> APSEthernet::get_network_devices() {
     return pcapDevices;
 }
 
-EthernetError APSEthernet::set_network_device(vector<EthernetDevInfo> pcapDevices, string nic) {
+APSEthernet::EthernetError APSEthernet::set_network_device(vector<EthernetDevInfo> pcapDevices, string nic) {
 	/*
 	 * Attach the APSEthernet instance to a particular device.
 	 */
@@ -190,7 +190,7 @@ string APSEthernet::create_pcap_filter() {
     return filter.str();
 }
 
-EthernetError APSEthernet::apply_filter(string & filter, pcap_t * pcapHandle) {
+APSEthernet::EthernetError APSEthernet::apply_filter(string & filter, pcap_t * pcapHandle) {
 
     FILE_LOG(logDEBUG3) << "Setting filter to: " << filter << endl;
 

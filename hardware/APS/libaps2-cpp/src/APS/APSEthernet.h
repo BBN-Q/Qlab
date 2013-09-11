@@ -8,15 +8,6 @@
 #include "pcap.h"
 
 
-enum EthernetError {
-	SUCCESS = 0,
-	NOT_IMPLEMENTED = -1,
-	INVALID_NETWORK_DEVICE = -2,
-	INVALID_PCAP_FILTER = -3,
-	INVALID_APS_ID = -4,
-	TIMEOUT = -5,
-	INVALID_SPI_TARGET
-};
 
 struct EthernetDevInfo {
 	string name;          // device name as set by winpcap
@@ -26,23 +17,34 @@ struct EthernetDevInfo {
 };
 
 class APSEthernet {
-	public:
-		static APSEthernet& get_instance(){
-			static APSEthernet instance;
-			return instance;
-		}
-		APSEthernet& operator=(APSEthernet &rhs)  { return rhs; };
+public:
 
-		~APSEthernet();
-		EthernetError init(string nic);
-		set<string> enumerate();
-		EthernetError connect(string serial);
-		EthernetError disconnect(string serial);
-		EthernetError send(string serial, APSEthernetPacket msg);
-		EthernetError send(string serial, vector<APSEthernetPacket> msg);
-		vector<APSEthernetPacket> receive(string serial, size_t timeoutMS = 1000);
+	enum EthernetError {
+		SUCCESS = 0,
+		NOT_IMPLEMENTED = -1,
+		INVALID_NETWORK_DEVICE = -2,
+		INVALID_PCAP_FILTER = -3,
+		INVALID_APS_ID = -4,
+		TIMEOUT = -5,
+		INVALID_SPI_TARGET
+	};
 
-	private:
+	static APSEthernet& get_instance(){
+		static APSEthernet instance;
+		return instance;
+	}
+	APSEthernet& operator=(APSEthernet &rhs)  { return rhs; };
+
+	~APSEthernet();
+	EthernetError init(string nic);
+	set<string> enumerate();
+	EthernetError connect(string serial);
+	EthernetError disconnect(string serial);
+	EthernetError send(string serial, APSEthernetPacket msg);
+	EthernetError send(string serial, vector<APSEthernetPacket> msg);
+	vector<APSEthernetPacket> receive(string serial, size_t timeoutMS = 1000);
+
+private:
 		APSEthernet() {};
 		APSEthernet(APSEthernet const &) = delete;
 
