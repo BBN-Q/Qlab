@@ -37,6 +37,8 @@ EXPORT int disconnect_APS(const char *);
 EXPORT int initAPS(const char *, int);
 EXPORT int get_bitfile_version(const char *);
 
+EXPORT double get_uptime(const char *);
+
 EXPORT int set_sampleRate(const char *, int);
 EXPORT int get_sampleRate(const char *);
 

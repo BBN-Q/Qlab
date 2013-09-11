@@ -39,6 +39,7 @@ public:
 	APSStatusBank_t read_status_registers();
 	uint32_t read_status_register(const STATUS_REGISTERS &);
 
+	double get_uptime();
 
 	int set_sampleRate(const int &);
 	int get_sampleRate() const;

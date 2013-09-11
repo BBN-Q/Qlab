@@ -67,6 +67,10 @@ int get_bitfile_version(const char * deviceSerial) {
 	return APSRack_.APSs[string(deviceSerial)].get_bitfile_version();
 }
 
+double get_uptime(const char * deviceSerial){
+	return APSRack_.APSs[string(deviceSerial)].get_uptime();
+}
+
 int set_sampleRate(const char * deviceSerial, int freq){
 	return APSRack_.APSs[string(deviceSerial)].set_sampleRate(freq);
 }

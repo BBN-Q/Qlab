@@ -74,6 +74,9 @@ int main (int argc, char* argv[])
 
   connect_APS(deviceSerial.c_str());
 
+  double uptime = get_uptime(deviceSerial.c_str());
+
+  cout << concol::RED << "Uptime for device " << deviceSerial << " is " << uptime << " seconds" << concol::RESET << endl;
 
   disconnect_APS(deviceSerial.c_str());
 

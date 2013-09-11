@@ -114,10 +114,21 @@ APSStatusBank_t APS2::read_status_registers(){
 	command.mode_stat = APS_STATUS_HOST;
 	APSEthernetPacket statusPacket = query(command)[0];
 	//Copy the data back into the status type 
-	APSStatusBank_t result;
-	std::copy(statusPacket.payload.begin(), statusPacket.payload.end(), result.array); 
-	FILE_LOG(logDEBUG) << print_status_bank;
-	return result;
+	APSStatusBank_t statusRegs;
+	std::copy(statusPacket.payload.begin(), statusPacket.payload.end(), statusRegs.array);
+	FILE_LOG(logDEBUG) << print_status_bank(statusRegs);
+	return statusRegs;
+}
+
+double APS2::get_uptime(){
+	/*
+	* Return the board uptime in seconds.
+	*/ 
+	//Read the status registers
+	APSStatusBank_t statusRegs = read_status_registers();
+	//Put together the seconds and nanoseconds parts
+	double intPart;
+	return static_cast<double>(statusRegs.uptimeSeconds) + modf(static_cast<double>(statusRegs.uptimeNanoSeconds)/1e9, &intPart);
 }
 
 int APS2::program_FPGA(const int & bitFileNum) {
@@ -1527,14 +1538,14 @@ string APS2::print_status_bank(const APSStatusBank_t & status) {
 	ostringstream ret;
 
 	ret << "Host Firmware Version = " << std::hex << status.hostFirmwareVersion << endl;
-	ret << "User Firmware Version = " << std::hex << status.userFirmwareVersion << endl;
+	ret << "User Firmware Version = " << status.userFirmwareVersion << endl;
 	ret << "Configuration Source  = " << status.configurationSource << endl;
 	ret << "User Status           = " << status.userStatus << endl;
 	ret << "DAC 0 Status          = " << status.dac0Status << endl;
 	ret << "DAC 1 Status          = " << status.dac1Status << endl;
 	ret << "PLL Status            = " << status.pllStatus << endl;
 	ret << "VCXO Status           = " << status.vcxoStatus << endl;
-	ret << "Send Packet Count     = " << status.sendPacketCount << endl;
+	ret << "Send Packet Count     = " << std::dec << status.sendPacketCount << endl;
 	ret << "Recv Packet Count     = " << status.receivePacketCount << endl;
 	ret << "Seq Skip Count        = " << status.sequenceSkipCount << endl;
 	ret << "Seq Dup.  Count       = " << status.sequenceDupCount << endl;
