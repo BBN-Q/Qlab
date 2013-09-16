@@ -34,6 +34,7 @@ EXPORT void get_deviceSerials(const char **);
 EXPORT int connect_APS(const char *);
 EXPORT int disconnect_APS(const char *);
 
+EXPORT int reset(const char *, int);
 EXPORT int initAPS(const char *, int);
 EXPORT int get_bitfile_version(const char *);
 

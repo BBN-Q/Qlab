@@ -78,6 +78,15 @@ int main (int argc, char* argv[])
 
   cout << concol::RED << "Uptime for device " << deviceSerial << " is " << uptime << " seconds" << concol::RESET << endl;
 
+  //Do a soft reset
+  cout << concol::RED << "Soft reset of all logic..." << concol::RESET << endl;
+
+  reset(deviceSerial.c_str(), static_cast<int>(APS_RESET_MODE_STAT::SOFT_RESET_HOST_USER));
+
+  uptime = get_uptime(deviceSerial.c_str());
+
+  cout << concol::RED << "Uptime for device " << deviceSerial << " is " << uptime << " seconds" << concol::RESET << endl;
+
   disconnect_APS(deviceSerial.c_str());
 
   delete[] serialBuffer;

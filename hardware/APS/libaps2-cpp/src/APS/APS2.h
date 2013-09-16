@@ -26,7 +26,7 @@ public:
 	APSEthernet::EthernetError disconnect();
 
 	int init(const bool & = false, const int & bitFileNum = 0);
-	int reset();
+	int reset(const APS_RESET_MODE_STAT & resetMode = APS_RESET_MODE_STAT::RECONFIG_USER_EPROM);
 
 	int load_bitfile(const string &, const int &);
 	int program_FPGA(const int &);

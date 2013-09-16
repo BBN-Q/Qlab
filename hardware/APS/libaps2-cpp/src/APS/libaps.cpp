@@ -47,6 +47,10 @@ int disconnect_APS(const char * deviceSerial){
 	return APSRack_.APSs[string(deviceSerial)].disconnect();
 }
 
+int reset(const char * deviceSerial, int resetMode){
+	return APSRack_.APSs[string(deviceSerial)].reset(static_cast<APS_RESET_MODE_STAT>(resetMode));
+}
+
 //Initialize an APS unit
 //Assumes null-terminated bitFile
 int initAPS(const char * deviceSerial, int forceReload){

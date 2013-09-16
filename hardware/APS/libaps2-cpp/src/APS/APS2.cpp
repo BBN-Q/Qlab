@@ -43,23 +43,21 @@ APSEthernet::EthernetError APS2::disconnect(){
 	return APSEthernet::SUCCESS;
 }
 
-int APS2::reset() {
-	APSCommand_t command;
-	command.packed = 0;
+int APS2::reset(const APS_RESET_MODE_STAT & resetMode) {
+	
+	APSCommand_t command = { .packed=0 };
 	
 	command.cmd = static_cast<uint32_t>(APS_COMMANDS::RESET);
-	command.mode_stat = RESET_RECONFIG_BASELINE_EPROM;
-	//TODO: fix me!
-	// socket_.write(macAddr_, command);
-
-	// get reply with status bytes
+	command.mode_stat = static_cast<uint32_t>(resetMode);
 	
+	// After being reset the board should send and acknowledge packet with status bytes
+	APSEthernetPacket statusPacket = query(command)[0];
+	//Copy the data back into the status type 
 	APSStatusBank_t statusRegs;
-	//TODO: fix me!
-	// socket_.read(&statusRegs, sizeof(struct APS_Status_Registers));
- 
-	FILE_LOG(logDEBUG1) << 	print_status_bank(statusRegs);
-	return 0;
+	std::copy(statusPacket.payload.begin(), statusPacket.payload.end(), statusRegs.array);
+	FILE_LOG(logDEBUG) << print_status_bank(statusRegs);
+
+	return APSEthernet::SUCCESS;
 }
 
 int APS2::init(const bool & forceReload, const int & bitFileNum){
@@ -108,7 +106,7 @@ int APS2::setup_DACs() {
 
 APSStatusBank_t APS2::read_status_registers(){
 	//Query with the status request command
-	APSCommand_t command;
+	APSCommand_t command = { .packed=0 };
 	command.cmd = static_cast<uint32_t>(APS_COMMANDS::STATUS);
 	command.r_w = 1;
 	command.mode_stat = APS_STATUS_HOST;
