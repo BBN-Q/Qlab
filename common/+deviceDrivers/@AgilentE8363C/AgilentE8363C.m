@@ -45,11 +45,7 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
             gpib_string = '*CLS';
             obj.write(gpib_string);
         end
-        function reset(obj)
-        %RESET
-            gpib_string = '*RST';
-            obj.write(gpib_string);
-        end
+
         function wait(obj)
         %WAIT
             gpib_string = '*WAI';
