@@ -18,8 +18,8 @@
 % limitations under the License.
 classdef HeterodyneFrequency < sweeps.Sweep
     properties
-        Instr1
-        Instr2
+        instr1
+        instr2
         diffFreq
     end
     
@@ -35,9 +35,9 @@ classdef HeterodyneFrequency < sweeps.Sweep
             end
             obj.diffFreq = sweepParams.diffFreq;
             
-            % look for an instrument with the name 'genID'
-            obj.Instr1 = Instrs.(sweepParams.genID1);
-            obj.Instr2 = Instrs.(sweepParams.genID2);
+            % look for the two instruments
+            obj.instr1 = Instrs.(sweepParams.instr1);
+            obj.instr2 = Instrs.(sweepParams.instr2);
             
             % generate frequency points
             obj.points = start:step:stop;
@@ -46,8 +46,8 @@ classdef HeterodyneFrequency < sweeps.Sweep
         
         % frequency stepper
         function step(obj, index)
-            obj.Instr1.frequency = obj.points(index);
-            obj.Instr2.frequency = obj.points(index) + obj.diffFreq;
+            obj.instr1.frequency = obj.points(index);
+            obj.instr2.frequency = obj.points(index) + obj.diffFreq;
         end
     end
 end
