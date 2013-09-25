@@ -23,6 +23,11 @@ classdef GPIBorVISA < hgsetget
         interface
         buffer_size = 1048576 % 1 MB buffer
     end
+
+    properties (SetAccess=private)
+        identity % standard *IDN? response
+    end
+
     methods
         function connect(obj, address)
             % determine whether to use GPIB or VISA by the form of the
