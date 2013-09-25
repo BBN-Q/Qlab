@@ -60,8 +60,8 @@ classdef GPIBorVISA < hgsetget
             fprintf(obj.interface, string);
         end
         
-        function val = query(obj, string)
-            val = query(obj.interface, string);
+        function val = query(obj, varargin)
+            val = query(obj.interface, varargin{:});
         end
         
         function val = read(obj)

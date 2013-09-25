@@ -66,8 +66,8 @@ classdef GPIB < hgsetget
             end
         end
         
-        function write(obj, string)
-            fprintf(obj.interface, string);
+        function write(obj, varargin)
+            fprintf(obj.interface, varargin{:});
         end
         
         function val = query(obj, string)
