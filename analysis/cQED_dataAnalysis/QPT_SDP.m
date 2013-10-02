@@ -71,8 +71,11 @@ end
 optGoal = norm(predictorMat*choiSDP_yalmip(:) - expResults(:),2);
 fprintf('Done!\n.')
 
-% Constrain the Choi matrix to be positive semi-definite
-constraint = choiSDP_yalmip >= 0;
+% Constrain the Choi matrix to be positive semi-definite and
+% trace-preserving
+ptrace = partialTraceOp(nbrQubits);
+I = speye(d);
+constraint = [choiSDP_yalmip >= 0 ptrace*choiSDP_yalmip(:) == 1/d*I(:)];
 
 % Call the solver, minimizing the distance between the vectors of predicted and actual
 % measurements
