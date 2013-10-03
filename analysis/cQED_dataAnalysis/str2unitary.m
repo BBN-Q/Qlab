@@ -13,7 +13,7 @@ switch strIn
     case 'InvCNOT12'
         Uout =  [0,1,0,0;1,0,0,0;0,0,1,0;0,0,0,1];
     case '1QId'
-        Uout = speye(2);
+        Uout = I;
     case '1QX90p'
         Uout = expm(-1i*pi*X/4);
     case '1QX90m'

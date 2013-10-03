@@ -102,7 +102,12 @@ classdef (Sealed) KepcoBOP < deviceDrivers.lib.GPIB
             val = str2double(obj.query('MEAS:VOLT?'));
         end
         
-        
-        
+        %Helper function to ramp the current "slowly" (not well-defined what slowly means)
+        function ramp(obj, startPt, endPt, numPoints)
+            for cur = linspace(startPt, endPt, numPoints)
+                obj.value = cur;
+                pause(0.2);
+            end;
+        end
     end
 end
