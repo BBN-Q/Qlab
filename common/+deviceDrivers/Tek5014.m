@@ -218,7 +218,7 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
             % stitch waveform data with marker data as per progammer manual
             binblock = zeros(1,length(waveform)*5,'uint8'); % real uses 5 bytes per sample
             for k=1:length(waveform)
-                binblock((k-1)*5+1:(k-1)*5+5) = [uint8(waveform(k)) m(k)];
+                binblock((k-1)*5+1:(k-1)*5+5) = [typecast(waveform(k), 'uint8') m(k)];
             end
             
             obj.deleteWaveform(name);
