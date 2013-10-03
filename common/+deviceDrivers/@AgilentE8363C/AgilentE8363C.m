@@ -7,7 +7,6 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
 
     % Device properties correspond to instrument parameters
     properties (Access = public)
-        identity;
         sweep_data;
         marker1_state;		% Values: ['off', 'on']
         marker1_x;		% Values: (numeric)
@@ -172,10 +171,6 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
     end % end methods
 
     methods % Instrument parameter accessors
-        function val = get.identity(obj)
-            gpib_string = '*IDN';
-            val = obj.query([gpib_string '?']);
-        end
         function val = get.sweep_data(obj)
             gpib_string = ':CALCulate:DATA';
             textdata = obj.query([gpib_string '? SDATA;']);
