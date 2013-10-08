@@ -103,8 +103,10 @@ classdef (Sealed) KepcoBOP < deviceDrivers.lib.GPIB
         end
         
         %Helper function to ramp the current "slowly" (not well-defined what slowly means)
-        function ramp(obj, startPt, endPt, numPoints)
-            for cur = linspace(startPt, endPt, numPoints)
+        function ramp(obj, endPt, numPoints)
+            curSweep = linspace(obj.current, endPt, numPoints+1);
+            curSweep = curSweep(2:end);
+            for cur = curSweep;
                 obj.value = cur;
                 pause(0.05);
             end;
