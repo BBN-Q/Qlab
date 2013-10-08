@@ -22,7 +22,14 @@ classdef (Sealed) SRS830 < deviceDrivers.lib.GPIB
         timeConstant % time constant for the filter in seconds
         inputCoupling % 'AC' or 'DC'
     end
-    
+
+    properties (SetAccess=private)
+        R % read magnitude of signal
+        theta % read angle of signal
+        X % read X value of signal
+        Y % read Y value of signal
+    end
+
     properties(Constant)
         timeConstantMap = containers.Map(num2cell(0:19), num2cell(kron(10.^(-6:3), [10, 30])));
         inputCouplingMap = containers.Map({'AC', 'DC'}, {uint32(0), uint32(1)});
@@ -51,7 +58,6 @@ classdef (Sealed) SRS830 < deviceDrivers.lib.GPIB
             obj.write(sprintf('ICPL %d', obj.inputCouplingMap(value)));
         end
         
-        
         %Getter for the current signal level in any flavour
         function [X, Y, R, theta] = get_signal(obj)
             values = textscan(obj.query('SNAP ? 1,2,3,4'), '%f', 'Delimiter', ',');
@@ -61,13 +67,29 @@ classdef (Sealed) SRS830 < deviceDrivers.lib.GPIB
             theta = values{1}(4);
         end
         
+        %Getter for signal magnitude
+        function R = get.R(obj)
+            R = str2double(obj.query('OUTP ? 3'));
+        end
+        
+        %Getter for signal angle
+        function theta = get.theta(obj)
+            theta = str2double(obj.query('OUTP ? 4'));
+        end
+        
+        %Getter for signal X
+        function X = get.X(obj)
+            X = str2double(obj.query('OUTP ? 1'));
+        end
+        
+        %Getter for signal Y
+        function Y = get.Y(obj)
+            Y = str2double(obj.query('OUTP ? 2'));
+        end
+
         function auto_phase(obj)
             obj.write('APHS');
         end
-        
-        
-        
-        
         
     end
     
