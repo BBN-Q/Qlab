@@ -21,6 +21,8 @@ classdef (Sealed) SRS830 < deviceDrivers.lib.GPIB
     properties
         timeConstant % time constant for the filter in seconds
         inputCoupling % 'AC' or 'DC'
+        sineAmp % output amplitude of the sin output (0.004 to 5.000V)
+        sineFreq % reference frequency (Hz)
     end
 
     properties (SetAccess=private)
@@ -45,18 +47,37 @@ classdef (Sealed) SRS830 < deviceDrivers.lib.GPIB
             inverseMap = invertMap(obj.timeConstantMap);
             mapKeys = keys(inverseMap);
             [~, index] = min(abs(value - cell2mat(mapKeys)));
-            obj.write(sprintf('OFLT %d', inverseMap(mapKeys{index})));
+            obj.write('OFLT %d', inverseMap(mapKeys{index}));
         end
         
         %Input coupling
-         function val = get.inputCoupling(obj)
+        function val = get.inputCoupling(obj)
             inverseMap = invertMap(obj.inputCouplingMap);
             val = inverseMap(uint32(obj.query('ICPL?')));
         end
         function obj = set.inputCoupling(obj, value)
             assert(isKey(obj.inputCouplingMap, value), 'Oops! the input coupling must be one of "AC" or "DC"');
-            obj.write(sprintf('ICPL %d', obj.inputCouplingMap(value)));
+            obj.write('ICPL %d', obj.inputCouplingMap(value));
         end
+        
+        %Reference frequency
+        function val = get.sineFreq(obj)
+            val = str2double(obj.query('FREQ?'));
+        end
+        function obj = set.sineFreq(obj, value)
+            assert(isnumeric(value) && (value >= 0.0001) && (value <= 102000), 'Oops! The reference frequency must be between 0.0001Hz and 102kHz');
+            obj.write('FREQ %E',value);
+        end
+        
+        %Sine output amplitude
+        function val = get.sineAmp(obj)
+            val = str2double(obj.query('SLVL?'));
+        end
+        function obj = set.sineAmp(obj, value)
+            assert(isnumeric(value) && (value >= 0.004) && (value <= 5.000), 'Oops! The sine amplitude must be between 0.004V and 5V');
+            obj.write('SLVL %E',value);
+        end
+            
         
         %Getter for the current signal level in any flavour
         function [X, Y, R, theta] = get_signal(obj)
