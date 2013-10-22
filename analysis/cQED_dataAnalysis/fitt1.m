@@ -29,7 +29,7 @@ t1f = inline('p(1)*exp(-tdata/p(2)) + p(3)','p','tdata');
 if length(xdata) == 1
     xdata = 0:xdata:xdata*(length(y)-1);
 end
-p = [max(y)-min(y) max(xdata)/3. 0];
+p = [max(y)-min(y) max(xdata)/3. y(end)];
 %p = max(xdata)/3.;
 
 tic
