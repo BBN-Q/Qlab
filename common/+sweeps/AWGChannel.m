@@ -80,10 +80,12 @@ classdef AWGChannel < sweeps.Sweep
         
         function step(obj, index)
             switch lower(obj.mode)
-                case 'amp'
+                case 'amp.'
                     obj.stepAmplitude(index);
                 case 'offset'
                     obj.stepOffset(index);
+                otherwise
+                    error('Unknown awg stepping mode %s (must be "amp." or "offset").',obj.mode);
             end
         end
     end
