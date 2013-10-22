@@ -1,22 +1,4 @@
-function [choiSDP, choiLSQ] = QPT_SDP(expResults, measOps, measMap, U_preps, U_meas, nbrQubits)
-%QPT_SDP SDP constrained maximum liklihood quantum process tomography. 
-% QPT_SDP finds the closest physical map that minimizes the error between the 
-% predicted and measured results. Trace preservation is not contstrained. We work
-% with the Choi representation of the superoperator because the CP condition is
-% easy to enforce. It also return the direct unconstrained inversion result. 
-%
-% [choiSDP, choiLSQ] = QPT_SDP(expResults, measOps, measMap, U_preps, U_meas, nbrQubits)
-%	expResults: matrix of experimental results (numMeas x numPrep)
-%   measOps: measurement operators in real units e.g. measuring 1V for the ground state and 1.23V for the excited state gives [[1, 0],[0,1.23]] 
-%   measMap: matrix mapping of each experiment to associated measurement operator
-%   U_preps: cell array of the preparation unitaries 
-%   U_meas: cell array of read-out unitaries 
-%   nbrQubits: the number of qubits
-% Returns
-%	choiSDP = the constrained physical process Choi matrix
-% 
-% Authors: Colm Ryan and Blake Johnson 
-% Inspired by code from Jay Gambetta and Seth Merkel.
+function [choiSDP, choiLSQ] = QPT_SDP_Var(expResults, invVarMat, measOps, measMap, U_preps, U_meas, nbrQubits)
 
 %Clear yalmip (why?)
 yalmip('clear')
@@ -62,13 +44,13 @@ for prepct = 1:numPrep
         % We can use the usual trick that trace(A*B) = trace(B*A) = sum(tranpose(B).*A)
         % predictorMat(prepct, measct) = trace(choiSDP*kron(rhoPreps{prepct}.', measurementoptsset{measMap(prepct,measct)}{measct}))*d;
         tmpMat = transpose(kron(rhoPreps{prepct}.', measurementoptsset{measMap(measct,prepct)}{measct}));
-        predictorMat(rowct, :) = d*tmpMat(:); 
+        predictorMat(rowct, :) = d*sqrt(invVarMat(measct, prepct))*tmpMat(:); 
         rowct = rowct+1;
     end
 end
 
 %We want to minimize the difference between predicted results and experimental results
-optGoal = norm(predictorMat*choiSDP_yalmip(:) - expResults(:),2);
+optGoal = norm(predictorMat*choiSDP_yalmip(:) - sqrt(invVarMat(:)).*expResults(:),2);
 fprintf('Done!\n.')
 
 % Constrain the Choi matrix to be positive semi-definite and
@@ -86,7 +68,7 @@ fprintf('Done\n')
 % Extract the matrix values from the result
 choiSDP = double(choiSDP_yalmip);
 
-if (nargout == 2)
-    choiLSQ = predictorMat\expResults(:);
-    choiLSQ = reshape(choiLSQ,d2,d2);
+choiLSQ = predictorMat\(sqrt(invVarMat(:)).*expResults(:));
+% choiLSQ = pinv(predictorMat) * (sqrt(invVarMat(:)).*expResults(:));
+choiLSQ = reshape(choiLSQ,d2,d2);
 end
