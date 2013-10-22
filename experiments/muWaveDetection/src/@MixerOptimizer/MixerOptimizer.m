@@ -73,6 +73,7 @@ classdef MixerOptimizer < handle
             mangledPhysChan = genvarname(obj.channelParams.physChan);
             sourceName = channelLib.channelDict.(mangledPhysChan).generator;
             obj.uwsource = InstrumentFactory(sourceName);
+            obj.uwsource.setAll(instrLib.instruments.(sourceName)); %catch any frequency updates from GUI
             obj.sa = InstrumentFactory(obj.expParams.specAnalyzer);
             
             obj.sa.setAll(instrSettings.(obj.expParams.specAnalyzer));
