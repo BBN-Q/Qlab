@@ -22,22 +22,22 @@ public:
 	int init();
 	int initX6(const int &);
 	int connect(const int &);
-	int connect(const string &);
 	int disconnect(const int &);
 
 	int get_num_devices() ;
-	string get_deviceSerial(const int &) ;
 	void enumerate_devices();
-	void update_device_enumeration();
 	int read_firmware_version(const int &) const;
 
 	int acquire(const int &);
-	int wait_for_acquisition(const int &);
+	int wait_for_acquisition(const int &, const int &);
 	int stop(const int &);
-	int transfer_waveform(const int, const int, unsigned short *);
+	int transfer_waveform(const int &, const int &, unsigned short *);
 
 	int set_trigger_source(const int &, const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source(const int &) const;
+
+	int set_digitzer_mode(const int &, const DIGITIZER_MODE &);
+	DIGITIZER_MODE get_digitizer_mode(const int &) const;
 
 	double get_sampleRate(const int &) const;
 	int set_sampleRate(const int &, const int &);
@@ -47,11 +47,10 @@ public:
 
 	// debug methods
 	int raw_write(int, int, UCHAR*);
-	int raw_read(int, FPGASELECT);
+	int raw_read(int);
 	
 	int read_register(int, int, int);
 	int write_register(int, int, int, int);
-
 
 	// X6-1000M Test interface
 	float get_logic_temperature(int, int);
@@ -59,9 +58,7 @@ public:
 private:
 	X6Rack(const X6Rack&) = delete;
 	X6Rack& operator=(const X6Rack&) = delete;
-	int numDevices_;
 	vector<X6> X6s_;
-	vector<string> deviceSerials_;
 };
 
 

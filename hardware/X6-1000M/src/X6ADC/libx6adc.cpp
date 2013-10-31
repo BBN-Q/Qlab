@@ -28,44 +28,29 @@ int get_numDevices(){
 	return X6Rack_.get_num_devices();
 }
 
-void get_deviceSerial(int deviceID, char* deviceSerial){
-	//Assumes sufficient memory has been allocated
-	string serialStr = X6Rack_.get_deviceSerial(deviceID);
-	size_t strLen = serialStr.copy(deviceSerial, serialStr.size());
-	deviceSerial[strLen] = '\0';
-}
-
-//Connect to a device specified by ID
-int connect_by_ID(int deviceID){
+int connect(int deviceID){
 	return X6Rack_.connect(deviceID);
-}
-
-//Connect to a device specified by serial number string
-//Assumes null-terminated deviceSerial
-int connect_by_serial(char * deviceSerial){
-	return X6Rack_.connect(string(deviceSerial));
 }
 
 int disconnect(int deviceID){
 	return X6Rack_.disconnect(deviceID);
 }
 
-int serial2ID(char * deviceSerial){
-	if ( !X6Rack_.serial2dev.count(deviceSerial)) {
-		// serial number not in map of known devices
-		return -1;
-	} 
-
-	return X6Rack_.serial2dev[string(deviceSerial)];
-}
-
-//Initialize an X6-1000M
+//Initialize an X6-1000M board
 int initX6(int deviceID){
 	return X6Rack_.initX6(deviceID);
 }
 
 int read_firmware_version(int deviceID) {
 	return X6Rack_.read_firmware_version(deviceID);
+}
+
+int set_digitzer_mode(int deviceID, int mode) {
+	return X6Rack_.set_digitzer_mode(deviceID, DIGITIZER_MODE(mode));
+}
+
+int get_digitizer_mode(int deviceID) {
+	return int(X6Rack_.get_digitizer_mode(deviceID));
 }
 
 int set_sampleRate(int deviceID, int freq){
@@ -80,8 +65,8 @@ int acquire(int deviceID) {
 	return X6Rack_.acquire(deviceID);
 }
 
-int wait_for_acquisition(int deviceID) {
-	return X6Rack_.wait_for_acquisition(deviceID);
+int wait_for_acquisition(int deviceID, int timeOut) {
+	return X6Rack_.wait_for_acquisition(deviceID, timeOut);
 }
 
 int stop(int deviceID) {
@@ -129,8 +114,8 @@ int raw_write(int deviceID, int numBytes, UCHAR* data){
 	return X6Rack_.raw_write(deviceID, numBytes, data);
 }
 
-int raw_read(int deviceID, int fpga){
-	return X6Rack_.raw_read(deviceID, FPGASELECT(fpga));
+int raw_read(int deviceID){
+	return X6Rack_.raw_read(deviceID);
 }
 
 int read_register(int deviceID, int wbAddr, int offset){

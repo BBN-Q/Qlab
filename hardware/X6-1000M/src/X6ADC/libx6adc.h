@@ -29,19 +29,14 @@ enum X6ErrorCode {
 
 
 EXPORT int init();
-
-EXPORT int get_numDevices();
-EXPORT void get_deviceSerial(int, char *);
-
-EXPORT int connect_by_ID(int);
-EXPORT int connect_by_serial(char *);
-
+EXPORT int connect(int);
 EXPORT int disconnect(int);
-
-EXPORT int serial2ID(char *);
 
 EXPORT int initX6(int, char*, int);
 EXPORT int read_firmware_version(int);
+
+EXPORT int set_digitzer_mode(int, int);
+EXPORT int get_digitizer_mode(int);
 
 EXPORT int set_sampleRate(int, int);
 EXPORT double get_sampleRate(int);
@@ -51,8 +46,8 @@ EXPORT int get_trigger_source(int);
 
 // TODO method to set 'waveform' properties like numSamples, waveforms, roundRobins, and segments
 
-EXPORT int acquire();
-EXPORT int wait_for_acquisition();
+EXPORT int acquire(int);
+EXPORT int wait_for_acquisition(int, int);
 EXPORT int stop(int);
 EXPORT int transfer_waveform(int, int, unsigned short *);
 
@@ -61,7 +56,7 @@ EXPORT int set_logging_level(int);
 
 /* debug methods */
 EXPORT int raw_write(int, int, unsigned char*);
-EXPORT int raw_read(int, int);
+EXPORT int raw_read(int);
 EXPORT int read_register(int, int, int);
 EXPORT int write_register(int, int, int, int);
 
