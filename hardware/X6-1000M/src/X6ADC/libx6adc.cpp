@@ -53,7 +53,7 @@ int get_digitizer_mode(int deviceID) {
 	return int(X6Rack_.get_digitizer_mode(deviceID));
 }
 
-int set_sampleRate(int deviceID, int freq){
+int set_sampleRate(int deviceID, double freq){
 	return X6Rack_.set_sampleRate(deviceID, freq);
 }
 
@@ -73,8 +73,8 @@ int stop(int deviceID) {
 	return X6Rack_.stop(deviceID);
 }
 
-int transfer_waveform(int deviceID, int channel, unsigned short *buffer) {
-	return X6Rack_.transfer_waveform(deviceID, channel, buffer);
+int transfer_waveform(int deviceID, int channel, unsigned short *buffer, size_t bufferLength) {
+	return X6Rack_.transfer_waveform(deviceID, channel, buffer, bufferLength);
 }
 
 //Expects a null-terminated character array

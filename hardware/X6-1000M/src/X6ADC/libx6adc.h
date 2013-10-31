@@ -38,7 +38,7 @@ EXPORT int read_firmware_version(int);
 EXPORT int set_digitzer_mode(int, int);
 EXPORT int get_digitizer_mode(int);
 
-EXPORT int set_sampleRate(int, int);
+EXPORT int set_sampleRate(int, double);
 EXPORT double get_sampleRate(int);
 
 EXPORT int set_trigger_source(int, int);
@@ -49,7 +49,7 @@ EXPORT int get_trigger_source(int);
 EXPORT int acquire(int);
 EXPORT int wait_for_acquisition(int, int);
 EXPORT int stop(int);
-EXPORT int transfer_waveform(int, int, unsigned short *);
+EXPORT int transfer_waveform(int, int, unsigned short *, size_t);
 
 EXPORT int set_log(char *);
 EXPORT int set_logging_level(int);

@@ -41,8 +41,8 @@ int X6Rack::get_num_devices()  {
 void X6Rack::enumerate_devices() {
 
 	//Have to disconnect everything first
-	for (auto & aps : X6s_){
-		aps.disconnect();
+	for (auto & x6 : X6s_){
+		x6.disconnect();
 	}
 
 	numDevices = get_num_devices();
@@ -81,11 +81,11 @@ int X6Rack::stop(const int & deviceID) {
 	return X6s_[deviceID].stop();
 }
 
-int transfer_waveform(const int & deviceID, const int & channel, unsigned short *buffer) {
-	return 0;
+int transfer_waveform(const int & deviceID, const int & channel, unsigned short *buffer, const size_t & bufferLength) {
+	return X6s[deviceID].transfer_waveform(channel, buffer, bufferLength);
 }
 
-int X6Rack::set_sampleRate(const int & deviceID, const int & freq) {
+int X6Rack::set_sampleRate(const int & deviceID, const double & freq) {
 	return X6s_[deviceID].set_sampleRate(freq);
 }
 

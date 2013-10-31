@@ -3,7 +3,7 @@
 #include <IppMemoryUtils_Mb.h>  // for Init::UsePerformanceMemoryFunctions
 #include <BufferDatagrams_Mb.h> // for ShortDG
 #include <algorithm>            // std::max
-#include <cstdlib>              // for  rand
+#include <cstdlib>              // for rand
 
 /* Provides Main Loop to distribute thunked messages */
 /* Current unncessary as of 3/27/2013 */
@@ -36,17 +36,13 @@ X6_1000::X6_1000(unsigned int target) :
     numBoards_ = getBoardCount();
 
     for(int cnt = 0; cnt < get_num_channels(); cnt++) {
-        activeChannels_[cnt] = false;
+        activeChannels_[cnt] = true;
         chData_[cnt].clear(); // initalize vector
         chStream_[cnt] = -1; // set default stream to -1;
     }
 
     // Use IPP performance memory functions.    
     Init::UsePerformanceMemoryFunctions();
-
-    // Timer Interval in milleseconds
-    set_trigger_interval(triggerInterval_);
-
 }
 
 X6_1000::~X6_1000()
@@ -55,7 +51,7 @@ X6_1000::~X6_1000()
 }
 
 unsigned int X6_1000::get_num_channels() {
-    return module_.Output().Channels();
+    return module_.Input().Channels();
 }
 
 
@@ -71,27 +67,6 @@ X6_1000::ErrorCodes X6_1000::set_deviceID(unsigned int deviceID) {
 unsigned int  X6_1000::getBoardCount() {
     static Innovative::X6_1000M  x6;
     return static_cast<unsigned int>(x6.BoardCount());
-
-}
-
-void X6_1000::get_device_serials(vector<string> & deviceSerials) {
-	deviceSerials.clear();
-
-	int numBoards = getBoardCount();
-
-  	// TODO: Identify a way to get serial number from X6 board if possible otherwise get slot id etc
-	for (int cnt = 0; cnt < numBoards; cnt++) {
-
-		// SNAFU work around for compiler on MQCO11 reporting that to_string is not part of std
-		std::stringstream out;
-		out << "S" << cnt;
-
-		deviceSerials.push_back(out.str());
-	}
-}
-
-bool X6_1000::isOpen() {
-	return isOpened_;
 }
 
 void X6_1000::setHandler(OpenWire::EventHandler<OpenWire::NotifyEvent> & event, 
@@ -103,7 +78,6 @@ void X6_1000::setHandler(OpenWire::EventHandler<OpenWire::NotifyEvent> & event,
         FILE_LOG(logINFO) << "Using event.Unsynchronize";
         event.Unsynchronize();
     } else {
-       
         if (useSyncronizer) {
             FILE_LOG(logINFO) << "Using event.Synchronize";
             event.Synchronize();
@@ -117,7 +91,7 @@ void X6_1000::setHandler(OpenWire::EventHandler<OpenWire::NotifyEvent> & event,
 
 X6_1000::ErrorCodes X6_1000::Open() {
 
-    setHandler(timer_.OnElapsed,  &X6_1000::HandleTimer, false);
+    setHandler(timer_.OnElapsed, &X6_1000::HandleTimer, false);
 
  	// open function based on Innovative Stream Example ApplicationIO.cpp
  	trigger_.OnDisableTrigger.SetEvent(this, &X6_1000::HandleDisableTrigger);
@@ -227,7 +201,7 @@ X6_1000::ErrorCodes X6_1000::set_reference(X6_1000::ExtInt ref, float frequency)
     x6ref = (ref == EXTERNAL) ? IX6ClockIo::rsExternal : IX6ClockIo::rsInternal;
 
     module_.Clock().Reference(x6ref);
-    module_.Clock().ReferenceFrequency(frequency * MHz);
+    module_.Clock().ReferenceFrequency(frequency);
     return SUCCESS;
 }
 
@@ -244,8 +218,12 @@ X6_1000::ErrorCodes X6_1000::set_clock(X6_1000::ExtInt src ,
 
     module_.Clock().ExternalClkSelect(x6extsrc);
     module_.Clock().Source(x6clksrc);
-    module_.Clock().Frequency(frequency * MHz);
+    module_.Clock().Frequency(frequency);
     return SUCCESS;
+}
+
+double X6_1000::get_pll_frequency() {
+    return module_.Clock().FrequencyActual();
 }
 
 X6_1000::ErrorCodes X6_1000::set_ext_trigger_src(X6_1000::ExtSource extSrc) {
@@ -270,9 +248,9 @@ X6_1000::ErrorCodes X6_1000::set_trigger_src(
     trigger_.ExternalTrigger( (trgSrc == EXTERNAL_TRIGGER) ? true : false);
     trigger_.AtConfigure();
 
-    module_.Output().Trigger().FramedMode(framed);
-    module_.Output().Trigger().Edge(edgeTrigger);
-    module_.Output().Trigger().FrameSize(frameSize); 
+    module_.Input().Trigger().FramedMode(framed);
+    module_.Input().Trigger().Edge(edgeTrigger);
+    module_.Input().Trigger().FrameSize(frameSize); 
     return SUCCESS;
 }
 
@@ -285,17 +263,7 @@ X6_1000::TriggerSource X6_1000::get_trigger_src() {
         return SOFTWARE_TRIGGER;
 }
 
-X6_1000::ErrorCodes X6_1000::set_trigger_interval(const double & interval) {
-    if (interval <= 0) return INVALID_INTERVAL; 
-    FILE_LOG(logDEBUG) << "Setting Trigger Interval to: " << interval;
-    triggerInterval_ = interval;
-    timer_.Interval(triggerInterval_); 
-}
-
-double X6_1000::get_trigger_interval() const {return triggerInterval_; }
-
 X6_1000::ErrorCodes X6_1000::set_decimation(bool enabled, int factor) {
-    module_.Output().Decimation( (enabled ) ? factor : 0);
     module_.Input().Decimation((enabled ) ? factor : 0); 
     return SUCCESS;
 }
@@ -313,7 +281,6 @@ bool X6_1000::get_channel_enable(int channel) {
     else return activeChannels_[channel];
 }
 
-
 X6_1000::ErrorCodes X6_1000::set_active_channels() {
     ErrorCodes status = SUCCESS;
 
@@ -322,14 +289,9 @@ X6_1000::ErrorCodes X6_1000::set_active_channels() {
 
     for (int cnt = 0; cnt < get_num_channels(); cnt++) { 
         FILE_LOG(logINFO) << "Channel " << cnt << " Enable = " << activeChannels_[cnt];
-        module_.Output().ChannelEnabled(cnt, activeChannels_[cnt]);
+        module_.Input().ChannelEnabled(cnt, activeChannels_[cnt]);
     }
     return status;
-}
-
-double X6_1000::get_pll_frequency() {
-    double freq = module_.Clock().FrequencyActual();
-    return (freq / MHz);
 }
 
 void X6_1000::set_defaults() {
@@ -346,7 +308,7 @@ void X6_1000::set_defaults() {
 }
 
 X6_1000::ErrorCodes X6_1000::write_waveform(const int & channel, const vector<short> & wfData, const int streamID) {
-    if (channel >= get_num_channels()) return INVALID_CHANNEL;
+    if (channel >= _num_channels()) return INVALID_CHANNEL;
     // copy data replacing existing data
     chData_[channel] = wfData;
     chStream_[channel] = streamID;
@@ -423,12 +385,6 @@ X6_1000::ErrorCodes X6_1000::Start() {
     timer_.Enabled(true);
     
     return SUCCESS;
-}
-
-X6_1000::ErrorCodes X6_1000::disable_test_generator() {
-    enableTestGenerator_ = false;
-    module_.Output().TestModeEnabled( false, wfType_);
-    return Stop();
 }
 
 X6_1000::ErrorCodes X6_1000::Stop() {

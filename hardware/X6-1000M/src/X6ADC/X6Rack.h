@@ -31,7 +31,7 @@ public:
 	int acquire(const int &);
 	int wait_for_acquisition(const int &, const int &);
 	int stop(const int &);
-	int transfer_waveform(const int &, const int &, unsigned short *);
+	int transfer_waveform(const int &, const int &, unsigned short *, const size_t &);
 
 	int set_trigger_source(const int &, const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source(const int &) const;
@@ -40,7 +40,7 @@ public:
 	DIGITIZER_MODE get_digitizer_mode(const int &) const;
 
 	double get_sampleRate(const int &) const;
-	int set_sampleRate(const int &, const int &);
+	int set_sampleRate(const int &, const double &);
 
 	int set_log(FILE *);
 	int set_logging_level(const int &);

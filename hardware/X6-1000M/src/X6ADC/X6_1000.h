@@ -56,11 +56,6 @@ public:
 		EXTERNAL_TRIGGER         /**< External trigger */
 	};
 
-	enum FPGAWaveformType {
-		WAVEFORM_RAMP = 0,    
-		WAVEFORM_SINE         
-	};
-
 	/** Default constructor targets board 0
 	 *
 	 */
@@ -102,7 +97,7 @@ public:
 	 *  \param frequency Frequency in MHz
 	 *  \returns SUCCESS || INVALID_FREQUENCY
 	 */
-	ErrorCodes set_reference(ExtInt ref = INTERNAL, float frequency = 10.0);
+	ErrorCodes set_reference(ExtInt ref = INTERNAL, float frequency = 10e6);
 
 	/** Set clock source and frequency
 	 *  \param ref EXTERNAL || INTERNAL
@@ -123,16 +118,12 @@ public:
     /** Set Trigger source
      *  \param trgSrc SOFTWARE_TRIGGER || EXTERNAL_TRIGGER
      */
-	ErrorCodes set_trigger_src(TriggerSource trgSrc = SOFTWARE_TRIGGER,
-							   bool framed = false,
-							   bool edgeTrigger = false,
-							   unsigned int frameSize = 0x4000);
+	ErrorCodes set_trigger_src(TriggerSource trgSrc = EXTERNAL_TRIGGER,
+							   bool framed = true,
+							   bool edgeTrigger = true,
+							   unsigned int frameSize = 1024);
 
 	TriggerSource get_trigger_src();
-
-	ErrorCodes set_trigger_interval(const double & interval);
-
-	double get_trigger_interval() const; 
 
 	/** Set Decimation Factor (current for both Tx and Rx)
 	 * \params enabled set to true to enable
@@ -160,7 +151,6 @@ public:
 	unsigned int get_num_channels();
 
 	ErrorCodes   Open();
-    bool  isOpen();
     ErrorCodes   Close();
 
     ErrorCodes 	 Start();
@@ -191,12 +181,9 @@ private:
 	// TODO: update wbAPS wishbone offset  
 	const unsigned int wbAPS_offset = 0xc00;   
 
-
-
 	unsigned int numBoards_;      /**< cached number of boards */
 	unsigned int deviceID_;       /**< board ID (aka target number) */
 
-	double triggerDelayPeriod_ = 0;	  /**< Trigger Delay */
 	TriggerSource triggerSource_ = SOFTWARE_TRIGGER; /**< cached trigger source */
 	map<int,bool> activeChannels_;
 
@@ -204,10 +191,6 @@ private:
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
 	static bool enableThreading_;		  /**< enabled threading support */
 
-	bool enableTestGenerator_;		  /**< enabled threading support */
-	bool isRunning_;
-
-	double triggerInterval_; 	  /**< trigger inverval in milliseconds */
 	unsigned int prefillPacketCount_;
 
 	ErrorCodes set_active_channels();
