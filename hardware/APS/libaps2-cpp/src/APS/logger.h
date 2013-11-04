@@ -57,13 +57,12 @@ Log<T>::Log()
 template <typename T>
 std::ostringstream& Log<T>::Get(TLogLevel level)
 {
-    setcolor(white, black);
     cout << "- ";
     cout << NowTime();
-    setcolor(ToColor(level), black);
+    //TOOD: fixme!
+    //setcolor(ToColor(level), black);
     cout << " " << ToString(level) << ": ";
     cout << std::string(level > logDEBUG ? level - logDEBUG : 0, ' ');
-    setcolor(white, black);
     return os;
 }
 

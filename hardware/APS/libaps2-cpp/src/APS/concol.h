@@ -18,8 +18,9 @@ Global variables - textcol,backcol,deftextcol,defbackcol,colorprotect
 
 namespace concol
 {
-
-	enum concol
+#ifndef INNER_CONCOL_H
+#define INNER_CONCOL_H
+	enum colour
 	{
 		BLACK=0,
 		BOLDBLUE=1,
@@ -38,12 +39,12 @@ namespace concol
 		YELLOW=14,
 		WHITE,RESET=15
 	};
-
-	HANDLE std_con_out;
+#endif
+	static HANDLE std_con_out;
 	//Standard Output Handle
-	bool colorprotect=false;
+	static bool colorprotect=false;
 	//If colorprotect is true, background and text colors will never be the same
-	concol textcol,backcol,deftextcol,defbackcol;
+	static colour textcol,backcol,deftextcol,defbackcol;
 	/*textcol - current text color
 	backcol - current back color
 	deftextcol - original text color
@@ -53,11 +54,11 @@ namespace concol
 	{
 		CONSOLE_SCREEN_BUFFER_INFO csbi;
 		GetConsoleScreenBufferInfo(std_con_out,&csbi);
-		textcol = concol(csbi.wAttributes & 15);
-		backcol = concol((csbi.wAttributes & 0xf0)>>4);
+		textcol = colour(csbi.wAttributes & 15);
+		backcol = colour((csbi.wAttributes & 0xf0)>>4);
 	}
 
-	inline void setcolor(concol textcolor,concol backcolor)
+	inline void setcolor(colour textcolor,colour backcolor)
 	{
 		if(colorprotect && textcolor==backcolor)return;
 		textcol=textcolor;backcol=backcolor;
@@ -65,7 +66,7 @@ namespace concol
 		SetConsoleTextAttribute(std_con_out,wAttributes);
 	}
 
-	inline void settextcolor(concol textcolor)
+	inline void settextcolor(colour textcolor)
 	{
 		if(colorprotect && textcolor==backcol)return;
 		textcol=textcolor;
@@ -73,7 +74,7 @@ namespace concol
 		SetConsoleTextAttribute(std_con_out,wAttributes);
 	}
 
-	inline void setbackcolor(concol backcolor)
+	inline void setbackcolor(colour backcolor)
 	{
 		if(colorprotect && textcol==backcolor)return;
 		backcol=backcolor;
@@ -89,11 +90,11 @@ namespace concol
 	}
 
 	template<class elem,class traits>
-	inline std::basic_ostream<elem,traits>& operator<<(std::basic_ostream<elem,traits>& os,concol col)
+	inline std::basic_ostream<elem,traits>& operator<<(std::basic_ostream<elem,traits>& os,colour col)
 	{os.flush();settextcolor(col);return os;}
 
 	template<class elem,class traits>
-	inline std::basic_istream<elem,traits>& operator>>(std::basic_istream<elem,traits>& is,concol col)
+	inline std::basic_istream<elem,traits>& operator>>(std::basic_istream<elem,traits>& is,colour col)
 	{
 		std::basic_ostream<elem,traits>* p=is.tie();
 		if(p!=NULL)p->flush();
