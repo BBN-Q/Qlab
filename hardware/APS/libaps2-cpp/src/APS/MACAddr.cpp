@@ -17,12 +17,15 @@ MACAddr::MACAddr(const string & macStr){
     }
 }
 
-MACAddr::MACAddr(const int & macAddrInt){
-	//TODO
+MACAddr::MACAddr(const uint8_t * macAddrBytes){
+	addr.clear();
+    for (size_t ct=0; ct<6; ct++){
+        addr.push_back(macAddrBytes[ct]);
+    }
 }
 
 MACAddr MACAddr::MACAddr_from_devName(const string & devName){
-	//Extract a MAC address from the the pcap information. A bit of a cross-platorm pain. 
+	//Extract a MAC address from the the pcap information. A bit of a cross-platform pain. 
 #ifdef _WIN32
     
     // winpcap names are different than widows names
@@ -70,22 +73,18 @@ MACAddr MACAddr::MACAddr_from_devName(const string & devName){
         while (pAdapter) {
             string matchName = string(pAdapter->AdapterName);
             if (winName.compare(matchName) == 0) {
-                // copy address
-                //TODO: fix me!
-                // std::copy(pAdapter->Address, pAdapter->Address + MAC_ADDR_LEN, devInfo.macAddr);
-                // devInfo.description2 = string(pAdapter->Description);
-                //cout << "Adapter Name: " << string(pAdapter->AdapterName) << endl;
-                //cout << "Adapter Desc: " << string(pAdapter->Description) << endl;
-                //cout << "Adpater Addr: " << print_ethernetAddress(pAdapter->Address) << endl;
+                myMAC = MACAddr(pAdapter->Address);
+                free(pAdapterInfo);
+                return myMAC;
             }
             pAdapter = pAdapter->Next;
-
         }
     }
 
     if (pAdapterInfo) free(pAdapterInfo);
-
-    return MACAddr("silly");
+    //TODO: throw a proper error
+    logERROR << "Unable to extract MAC address."
+    return MACAddr("ERROR");
         
 #else
     //On Linux we simply look in /sys/class/net/DEVICE_NAME/address
