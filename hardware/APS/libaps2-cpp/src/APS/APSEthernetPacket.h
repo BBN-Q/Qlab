@@ -5,10 +5,7 @@
 #include "headings.h"
 #include "MACAddr.h"
 
-#ifdef _WIN32
-    #include <winsock2.h>
-    #include <iphlpapi.h>
-#else
+#ifndef _WIN32
 	#include <arpa/inet.h>
 #endif
 

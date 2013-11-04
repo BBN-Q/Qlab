@@ -1,5 +1,9 @@
 #include "MACAddr.h"
 
+#ifdef _WIN32
+    #include <iphlpapi.h>
+#endif
+
 MACAddr::MACAddr() : addr(MAC_ADDR_LEN, 0){}
 
 MACAddr::MACAddr(const string & macStr){
@@ -33,7 +37,7 @@ MACAddr MACAddr::MACAddr_from_devName(const string & devName){
 
     if (start == std::string::npos || end == std::string::npos) {
         FILE_LOG(logERROR) << "getMacAddr: Invalid devInfo name";
-        return;
+        return MACAddr();
     }
 
     string winName = devName.substr(start, end-start + 1);
@@ -55,7 +59,7 @@ MACAddr MACAddr::MACAddr_from_devName(const string & devName){
     pAdapterInfo = (IP_ADAPTER_INFO *) malloc(ulOutBufLen);
     if (!pAdapterInfo) {
         FILE_LOG(logERROR) << "Error allocating memory needed to call GetAdaptersinfo" << endl;
-        return;
+        return MACAddr();
     }
     
     // call GetAdaptersInfo a second time to get all adapter information
@@ -80,6 +84,8 @@ MACAddr MACAddr::MACAddr_from_devName(const string & devName){
     }
 
     if (pAdapterInfo) free(pAdapterInfo);
+
+    return MACAddr("silly");
         
 #else
     //On Linux we simply look in /sys/class/net/DEVICE_NAME/address
