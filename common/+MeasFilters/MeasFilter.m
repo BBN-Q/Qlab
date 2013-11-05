@@ -74,6 +74,7 @@ classdef MeasFilter < handle
             obj.avgct = 0;
             obj.varct = 0;
             obj.accumulatedData = [];
+            obj.scopeavgct = 0;
         end
         
         function accumulate(obj)
