@@ -1,15 +1,16 @@
-Qlab measurement and control software
-=====================================
+# Qlab measurement and control software
 
 A MATLAB framework for superconducting qubit systems.
 
-Installation
-------------
+## Installation
+
+### Source Code
+
 To get started, simply download and unzip the latest release. Or, if you want the tip of the development repository, clone a local copy with
 
 	git clone git@github.com:BBN-Q/Qlab.git localname
 
-Navigate to the Qlab folder and run `installQlab` to setup the necessary preferences. The install script will also recommend a list of folders to add to the MATLAB path.
+Navigate to the QLab directory and run the installQLab.m script to setup the preferences.  It will also prompt you with the correct folders to add to the path.
 
 The code is loosely organized into
 
