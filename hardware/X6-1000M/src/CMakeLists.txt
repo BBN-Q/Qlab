@@ -12,18 +12,14 @@ SET (  MALIBUPATH   ${INNOVATIVEPATH}/Malibu )
 
 
 # devel machine path may be removeed if FIND_PACKAGE HDF5 works
-	INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\include\\cpp")
-	INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\include")	
-	LINK_DIRECTORIES( ${LINK_DIRECTORIES} "C:\\MinGW\\msys\\1.0\\local\\lib")
-
-#FIND_PACKAGE(HDF5)
-#INCLUDE_DIRECTORIES( ${HDF5_INCLUDE_DIR} )
-#INCLUDE_DIRECTORIES( ${HDF5_INCLUDE_DIR}/cpp )
+#	INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\include\\cpp")
+#	INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\include")	
+#	LINK_DIRECTORIES( ${LINK_DIRECTORIES} "C:\\MinGW\\msys\\1.0\\local\\lib")
 
 
 INCLUDE_DIRECTORIES(${MALIBUPATH})
 INCLUDE_DIRECTORIES("./innovative/")
-INCLUDE_DIRECTORIES("./APS/")
+INCLUDE_DIRECTORIES("./X6ADC/")
 
 LINK_DIRECTORIES( ${LINK_DIRECTORIES} 
 	"C:\\Innovative\\Lib\\Gcc"

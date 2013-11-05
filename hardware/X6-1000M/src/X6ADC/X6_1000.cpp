@@ -11,9 +11,9 @@ void thunkLooper() {
 while (true) { 
    Innovative::Thunker::MainLoopEvent.WaitFor(); 
    while (!Innovative::Thunker::MainLoopQueue.empty()) { 
-     Innovative::Thunker *thnk = Innovative::Thunker::MainLoopQueue.front(); 
+     Innovative::Thunker *thunk = Innovative::Thunker::MainLoopQueue.front(); 
      Innovative::Thunker::MainLoopQueue.pop(); 
-     thnk->Dispatch(); 
+     thunk->Dispatch(); 
    } 
   }
 }
@@ -24,13 +24,9 @@ using namespace Innovative;
 // threaded operation current not needed
 bool X6_1000::enableThreading_ = false;
 
-// default constructor
-X6_1000::X6_1000() {
-	X6_1000(0);
-}
-
-X6_1000::X6_1000(unsigned int target) :
-    deviceID_(target), isOpened_(false), triggerInterval_(1000.0),
+// constructor
+X6_1000::X6_1000() :
+    isOpened_(false), triggerInterval_(1000.0),
     prefillPacketCount_(0), enableTestGenerator_(false), isRunning_(false)
 {
     numBoards_ = getBoardCount();
@@ -38,7 +34,6 @@ X6_1000::X6_1000(unsigned int target) :
     for(int cnt = 0; cnt < get_num_channels(); cnt++) {
         activeChannels_[cnt] = true;
         chData_[cnt].clear(); // initalize vector
-        chStream_[cnt] = -1; // set default stream to -1;
     }
 
     // Use IPP performance memory functions.    
@@ -53,16 +48,6 @@ X6_1000::~X6_1000()
 unsigned int X6_1000::get_num_channels() {
     return module_.Input().Channels();
 }
-
-
-X6_1000::ErrorCodes X6_1000::set_deviceID(unsigned int deviceID) {
-	if (!isOpened_ && deviceID < numBoards_)
-		deviceID_ = deviceID;
-	else
-		return MODULE_ERROR;
-    return SUCCESS;
-}
-
 
 unsigned int  X6_1000::getBoardCount() {
     static Innovative::X6_1000M  x6;
@@ -89,15 +74,20 @@ void X6_1000::setHandler(OpenWire::EventHandler<OpenWire::NotifyEvent> & event,
 }
 
 
-X6_1000::ErrorCodes X6_1000::Open() {
+X6_1000::ErrorCodes X6_1000::open(const int & deviceID) {
+    /* Connects to the II module with the given device ID returns MODULE_ERROR
+     * if the device cannot be found
+     */
+
+    if (deviceID > numBoards_ || isOpened_) return MODULE_ERROR;
 
     setHandler(timer_.OnElapsed, &X6_1000::HandleTimer, false);
 
  	// open function based on Innovative Stream Example ApplicationIO.cpp
- 	trigger_.OnDisableTrigger.SetEvent(this, &X6_1000::HandleDisableTrigger);
-    trigger_.OnExternalTrigger.SetEvent(this, &X6_1000::HandleExternalTrigger);
-    trigger_.OnSoftwareTrigger.SetEvent(this, &X6_1000::HandleSoftwareTrigger);
-    trigger_.DelayedTrigger(true); // trigger delayed after start
+ 	// trigger_.OnDisableTrigger.SetEvent(this, &X6_1000::HandleDisableTrigger);
+    // trigger_.OnExternalTrigger.SetEvent(this, &X6_1000::HandleExternalTrigger);
+    // trigger_.OnSoftwareTrigger.SetEvent(this, &X6_1000::HandleSoftwareTrigger);
+    // trigger_.DelayedTrigger(true); // trigger delayed after start
         
     setHandler(module_.OnBeforeStreamStart, &X6_1000::HandleBeforeStreamStart);
     setHandler(module_.OnAfterStreamStart, &X6_1000::HandleAfterStreamStart);
@@ -105,23 +95,22 @@ X6_1000::ErrorCodes X6_1000::Open() {
 
 
     //  Alerts
-    module_.Alerts().OnTimeStampRolloverAlert.SetEvent(this, &X6_1000::HandleTimestampRolloverAlert);
+    // module_.Alerts().OnTimeStampRolloverAlert.SetEvent(this, &X6_1000::HandleTimestampRolloverAlert);
     module_.Alerts().OnSoftwareAlert.SetEvent(         this, &X6_1000::HandleSoftwareAlert);
     module_.Alerts().OnWarningTemperature.SetEvent(    this, &X6_1000::HandleWarningTempAlert);
-    module_.Alerts().OnOutputUnderflow.SetEvent(       this, &X6_1000::HandleOutputFifoUnderflowAlert);
+    // module_.Alerts().OnOutputUnderflow.SetEvent(       this, &X6_1000::HandleOutputFifoUnderflowAlert);
     module_.Alerts().OnTrigger.SetEvent(               this, &X6_1000::HandleTriggerAlert);
-    module_.Alerts().OnOutputOverrange.SetEvent(       this, &X6_1000::HandleOutputOverrangeAlert);
+    // module_.Alerts().OnOutputOverrange.SetEvent(       this, &X6_1000::HandleOutputOverrangeAlert);
     // Input 
     module_.Alerts().OnInputOverflow.SetEvent(         this, &X6_1000::HandleInputFifoOverrunAlert);
     module_.Alerts().OnInputOverrange.SetEvent(        this, &X6_1000::HandleInputOverrangeAlert);
 
     //  Configure Stream Event Handlers
-    stream_.OnVeloDataRequired.SetEvent(this, &X6_1000::HandleDataRequired);
     stream_.DirectDataMode(false);
     stream_.OnVeloDataAvailable.SetEvent(this, &X6_1000::HandleDataAvailable);
 
-    stream_.RxLoadBalancing(true);
-    stream_.TxLoadBalancing(true);
+    // stream_.RxLoadBalancing(true);
+    // stream_.TxLoadBalancing(true);
 
 
     // Insure BM size is a multiple of four MB
@@ -129,11 +118,11 @@ X6_1000::ErrorCodes X6_1000::Open() {
     const int TxBmSize = std::max(BusmasterSize/4, 1) * 4;
     module_.IncomingBusMasterSize(RxBmSize * Meg);
     module_.OutgoingBusMasterSize(TxBmSize * Meg);
-    module_.Target(deviceID_);
+    module_.Target(deviceID);
 
     try {
         module_.Open();
-        FILE_LOG(logINFO) << "Opened Device " << deviceID_;
+        FILE_LOG(logINFO) << "Opened Device " << deviceID;
         FILE_LOG(logINFO) << "Bus master size: Input => " << RxBmSize << " MB" << " Output => " << TxBmSize << " MB";
     }
     catch(...) {
@@ -167,13 +156,11 @@ X6_1000::ErrorCodes X6_1000::Open() {
   }
 
  
-X6_1000::ErrorCodes X6_1000::Close() {
+X6_1000::ErrorCodes X6_1000::close() {
     stream_.Disconnect();
     module_.Close();
 
-    isOpened_ = true;
-
-    FILE_LOG(logINFO) << "Closed X6 Board " << deviceID_;
+    isOpened_ = false;
 
 	return SUCCESS;
 }
@@ -263,6 +250,11 @@ X6_1000::TriggerSource X6_1000::get_trigger_src() {
         return SOFTWARE_TRIGGER;
 }
 
+X6_1000::ErrorCodes X6_1000::set_trigger_delay(float delay) {
+    Module().Input().TriggerDelay(delay);
+    return SUCCESS;
+}
+
 X6_1000::ErrorCodes X6_1000::set_decimation(bool enabled, int factor) {
     module_.Input().Decimation((enabled ) ? factor : 0); 
     return SUCCESS;
@@ -294,6 +286,15 @@ X6_1000::ErrorCodes X6_1000::set_active_channels() {
     return status;
 }
 
+int X6_1000::num_active_channels() {
+    int numActiveChannels = 0;
+    for (int i = 0; i < activeChannels_.size(); i++) {
+        numActiveChannels += activeChannels_[i] == true ? 1 : 0;
+    }
+
+    return numActiveChannels;
+}
+
 void X6_1000::set_defaults() {
     set_clock();
     set_reference();
@@ -306,20 +307,6 @@ void X6_1000::set_defaults() {
     module_.Input().TestModeEnabled( false, wfType_);
     module_.Output().TestModeEnabled( false, wfType_);
 }
-
-X6_1000::ErrorCodes X6_1000::write_waveform(const int & channel, const vector<short> & wfData, const int streamID) {
-    if (channel >= _num_channels()) return INVALID_CHANNEL;
-    // copy data replacing existing data
-    chData_[channel] = wfData;
-    chStream_[channel] = streamID;
-    return SUCCESS;
-}
-
-/**************************************************************
-* Waveform source demo code
-* This code is to demo access to default II FGPA wavform source
-* from library.
-***************************************************************/
 
 void X6_1000::log_card_info() {
 
@@ -336,37 +323,16 @@ void X6_1000::log_card_info() {
     FILE_LOG(logINFO)  << "PCI Express Lanes: " << module_.Debug()->LaneCount();
 }
 
-X6_1000::ErrorCodes X6_1000::enable_test_generator(X6_1000::FPGAWaveformType wfType, float frequencyMHz) {
-    // Mimic Test Generater Mode from Stream Example
-
-
-    enableTestGenerator_ = true;
-    wfType_ = wfType;
-   
-   //  Output Test Generator Setup
-    module_.Output().TestModeEnabled( false, wfType_ );  // enable , mode
-    module_.Output().TestFrequency( frequencyMHz * 1e6 ); // frequency in Hz
-
-    return Start();
-}
-
-X6_1000::ErrorCodes X6_1000::Start() {
-    // Mimic Test Generater Mode from Stream Example
-
+X6_1000::ErrorCodes X6_1000::acquire() {
     set_active_channels();
-    stream_.Preconfigure();
-    
-   //  Output Test Generator Setup
-    module_.Output().TestModeEnabled( enableTestGenerator_, wfType_ );  // enable , mode
 
-    // enable software trigger
-    module_.Output().SoftwareTrigger(true);
-
-    module_.Output().Pulse().Reset();
-    module_.Output().Pulse().Enabled(false);
+    // Packets scaled in units of events (samples per each enabled channel)
+    int samplesPerWord = 4 / module_.Input().Info().Channels().BytesPerSample();
+    int packetSize = samplesPerFrame_*num_active_channels()/samplesPerWord + 2; // TODO: update numSamples
+    module_.Input().PacketSize(packetSize);
+    module_.Input().Framed(samplesPerFrame_);
     
     // set prefill to default loaded during open
-
     stream_.PrefillPacketCount(prefillPacketCount_);
     FILE_LOG(logINFO) << "trigger_.AtStreamStart();";
     trigger_.AtStreamStart();
@@ -387,12 +353,13 @@ X6_1000::ErrorCodes X6_1000::Start() {
     return SUCCESS;
 }
 
-X6_1000::ErrorCodes X6_1000::Stop() {
+X6_1000::ErrorCodes X6_1000::stop() {
     isRunning_ = false;
     stream_.Stop();
     timer_.Enabled(false);
     trigger_.AtStreamStop();
     module_.Output().SoftwareTrigger(false);
+    module_.Reset();
     return SUCCESS;
 }
 
@@ -438,117 +405,30 @@ void X6_1000::HandleAfterStreamStop(OpenWire::NotifyEvent & /*Event*/) {
     // Disable external triggering initially
     module_.Input().SoftwareTrigger(false);
     module_.Input().Trigger().External(false);
-    //  Output Remaining Data
-    // VMP.Flush();
-    // VMPLogger.Stop();
-    // InitVMPBddFile(VMPGraph);
-    //Player.Stop();
 }
 
-void X6_1000::HandlePackedDataAvailable(Innovative::VitaPacketPackerDataAvailable & Event) { 
-    outputPacket_ = Event.Data; 
-}
-
-void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event) { }
-
-void  X6_1000::HandleDataRequired(Innovative::VitaPacketStreamDataEvent & Event) {
-
+void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event) {
     if (!isRunning_) return;
 
-    //cout << "HandleDataRequired" << endl;
+    // create a buffer to receive the data
+    VeloBuffer buffer;
+    Event.Sender->Recv(buffer);
 
-    const size_t MAX_VITA_PACKET_DATA_SIZE  = 0xF000;
+    PacketBufferHeader header(buffer);
+    int channel = header.PeripheralId();
 
-    int streamID = module_.VitaOut().VitaStreamId(0);
+    // interpret the data as integers
+    IntegerDG bufferDG(buffer);
 
-    //  We now have the data in an array of scratch buffers.
-    //     We need to copy it into VITA packets, and then pack those VITAs
-    //     into the outbound Waveform packet
-
-    VitaBuffer VBuf;
-    Innovative::ShortDG   VitaDG(VBuf);
-
-    unsigned int numChannels = get_num_channels();
-    for (unsigned int ch = 0; ch < numChannels; ch++) {
-        if (!activeChannels_[ch] || ch >= chData_.size()) continue; // skip inactive channel
-        
-        size_t words_remaining = chData_[ch].size();
-
-        //
-        //  Use a packer to load full VITA packets into a velo packet
-        //  ...Make the packer output size so big, we will not fill it before finishing
-        VitaPacketPacker VPPk(words_remaining+8); // extra 8 bytes required to get output (header?)
-        VPPk.OnDataAvailable.SetEvent(this, &X6_1000::HandlePackedDataAvailable);
-        //
-        //  Bust up the scratch buffer into VITA packets
-        size_t offset = 0;
-        size_t packet = 0;
-        
-        while (words_remaining)
-            {
-            //  calculate size of VITA packet
-            size_t VP_size = std::min(MAX_VITA_PACKET_DATA_SIZE, words_remaining);
-
-            //  Get a properly cleared/inited Vita Header
-            
-            // for some reason the VitDG size is twice the VBuf size so half it here
-            VBuf.Resize( VP_size / 2 );
-            ClearHeader(VBuf);
-            ClearTrailer(VBuf);
-
-            InitHeader(VBuf);
-            InitTrailer(VBuf);
-
-            VitaDG.Resize(VP_size);
-
-            for (unsigned int idx=0; idx < VitaDG.size(); idx++) {
-                if (idx < words_remaining) 
-                    VitaDG[idx] = chData_[ch][idx];
-            }
-
-            //  Init Vita Header
-            VitaHeaderDatagram VitaH( VBuf );
-            VitaH.StreamId((chStream_[ch] >= 0 ) ? chStream_[ch] : streamID );
-            VitaH.PacketCount(static_cast<int>(packet));
-
-            //  Shove in the new VITA packet
-            VPPk.Pack( VBuf );
-            
-            //  fix up buffer counters
-            words_remaining -= VP_size;
-            offset += VP_size;
-
-            packet++;
-            }
-
-        VPPk.Flush();   // outputs the one waveform buffer into WaveformPacket
-
-        ClearHeader(outputPacket_);
-        InitHeader(outputPacket_);   // make sure header packet size is valid...
-
-        // WaveformPacket is now correctly filled with data...
-
-       stream_.Send(0,outputPacket_);  // "return" the waveform
+    // then we had better put that data somewhere...
+    for (int i = 0; i < bufferDG.size(); i++) {
+        chData_[channel].push_back(bufferDG[i]);
     }
-
 }
 
 void X6_1000::HandleTimer(OpenWire::NotifyEvent & /*Event*/) {
     FILE_LOG(logINFO) << "X6_1000::HandleTimer";
     trigger_.AtTimerTick();
-}
-
-void  X6_1000::VMPDataAvailable(VeloMergeParserDataAvailable & Event) {
-    FILE_LOG(logINFO) << "X6_1000::VMPDataAvailable";
-    // VMP_VeloCount++;
-
-    // if (Settings.Rx.LoggerEnable)
-    //     if (FWordCount < WordsToLog)
-    //         {
-    //         //  Log Data To VMP file - oops, use ceiling?
-    //         VMPLogger.LogWithHeader(Event.Data);
-    //         }
-                
 }
 
 void X6_1000::HandleTimestampRolloverAlert(Innovative::AlertSignalEvent & event) {
@@ -598,7 +478,7 @@ X6_1000::ErrorCodes X6_1000::write_wishbone_register(uint32_t baseAddr, uint32_t
 }
 
 X6_1000::ErrorCodes X6_1000::write_wishbone_register(uint32_t offset, uint32_t data) {
-    return write_wishbone_register(wbAPS_offset, offset, data);
+    return write_wishbone_register(wbX6ADC_offset, offset, data);
 }
 
 uint32_t X6_1000::read_wishbone_register(uint32_t baseAddr, uint32_t offset) {
@@ -609,6 +489,6 @@ uint32_t X6_1000::read_wishbone_register(uint32_t baseAddr, uint32_t offset) {
 }
 
 uint32_t X6_1000::read_wishbone_register(uint32_t offset) {
-    return read_wishbone_register(wbAPS_offset, offset);
+    return read_wishbone_register(wbX6ADC_offset, offset);
 }
 

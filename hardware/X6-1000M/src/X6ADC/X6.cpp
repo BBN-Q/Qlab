@@ -25,7 +25,7 @@ int X6::connect(){
 	int success = 0;
 
 	if (!isOpen_) {
-		success = handle_.Open();
+		success = handle_.Open(deviceID_);
 		
 		if (success == 0) {
 			FILE_LOG(logINFO) << "Opened connection to device " << deviceID_;
@@ -133,7 +133,7 @@ TRIGGERSOURCE X6::get_trigger_source() const{
 }
 
 int X6::acquire() {
-	handle_.Start();
+	handle_.acquire();
 	return 0;
 }
 

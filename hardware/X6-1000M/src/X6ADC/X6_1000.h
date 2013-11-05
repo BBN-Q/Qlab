@@ -56,74 +56,50 @@ public:
 		EXTERNAL_TRIGGER         /**< External trigger */
 	};
 
-	/** Default constructor targets board 0
-	 *
-	 */
 	X6_1000();
-
-	/** Alternate constructor with identified target board
-	 */
-	X6_1000(unsigned int);
-
-
-	/** Default destructor.
-	 *  Will close open board.
-	 */
 	~X6_1000();
 
 	/** getBoardCount()
-	 *  \return Number of boards reported by Malibu driver
+	 *  \returns Number of boards reported by Malibu driver
 	 */
-	static unsigned int    getBoardCount();
-
-	/** retrives device serial number
-	 *  currently generates a fake serial number S# where # is the device number
-	 *  \returns device serial numbers
-	 */
-	static void get_device_serials(vector<string> &);
-
-
-	/** Sets device ID number for class to work with.
-	 *  This sets the Malibu module target used during open.
-	 *  \returns SUCCESS || MODULE_ERROR a board is already open
-	 */
-	ErrorCodes set_deviceID(unsigned int deviceID);
+	static unsigned int getBoardCount();
 
 	float get_logic_temperature();
 	float get_logic_temperature_by_reg(); // second test method to get temp using WB register
 
 	/** Set reference source and frequency
 	 *  \param ref EXTERNAL || INTERNAL
-	 *  \param frequency Frequency in MHz
+	 *  \param frequency Frequency in Hz
 	 *  \returns SUCCESS || INVALID_FREQUENCY
 	 */
 	ErrorCodes set_reference(ExtInt ref = INTERNAL, float frequency = 10e6);
 
 	/** Set clock source and frequency
 	 *  \param ref EXTERNAL || INTERNAL
-	 *  \param frequency Frequency in MHz
+	 *  \param frequency Frequency in Hz
 	 *  \param extSrc FRONT_PANEL || P16
 	 *  \returns SUCCESS || INVALID_FREQUENCY
 	 */
 	ErrorCodes set_clock(ExtInt src = INTERNAL, 
-		                 float frequency = 1000.0, 
+		                 float frequency = 1e9, 
 		                 ExtSource extSrc = FRONT_PANEL);
 
 	/** Set External Trigger source for both Input and Output
 	 * \oaram extSrc FRONT_PANEL || P16
-	 * \returns SUCESS
+	 * \returns SUCCESS
 	 */
 	ErrorCodes set_ext_trigger_src(ExtSource extSrc = FRONT_PANEL);
 
-    /** Set Trigger source
-     *  \param trgSrc SOFTWARE_TRIGGER || EXTERNAL_TRIGGER
-     */
+	/** Set Trigger source
+	 *  \param trgSrc SOFTWARE_TRIGGER || EXTERNAL_TRIGGER
+	 */
 	ErrorCodes set_trigger_src(TriggerSource trgSrc = EXTERNAL_TRIGGER,
 							   bool framed = true,
 							   bool edgeTrigger = true,
 							   unsigned int frameSize = 1024);
 
 	TriggerSource get_trigger_src();
+	ErrorCodes set_trigger_delay(float delay = 0.0);
 
 	/** Set Decimation Factor (current for both Tx and Rx)
 	 * \params enabled set to true to enable
@@ -134,40 +110,32 @@ public:
 
 	ErrorCodes set_channel_enable(int channel, bool enabled);
 	bool get_channel_enable(int channel);
-	
 
 	/** retrieve PLL frequnecy
 	 *  \returns Actual PLL frequnecy (in MHz) returned from board
 	 */
 	double get_pll_frequency();
 
-	/** debug example uses FPGA streamer 
-	 */
-	ErrorCodes enable_test_generator(FPGAWaveformType wfType, float frequencyMHz);
-	ErrorCodes disable_test_generator();
-	
-	ErrorCodes write_waveform(const int & channel, const vector<short> & wfData, const int streamID = -1);
-
 	unsigned int get_num_channels();
 
-	ErrorCodes   Open();
-    ErrorCodes   Close();
+	ErrorCodes   open(const int &);
+	ErrorCodes   close();
 
-    ErrorCodes 	 Start();
-    ErrorCodes	 Stop();
+	ErrorCodes 	 acquire();
+	ErrorCodes	 stop();
 
 	ErrorCodes write_wishbone_register(uint32_t baseAddr, uint32_t offset, uint32_t data);
-    ErrorCodes write_wishbone_register(uint32_t offset, uint32_t data);
+	ErrorCodes write_wishbone_register(uint32_t offset, uint32_t data);
 
-    uint32_t read_wishbone_register(uint32_t baseAddr, uint32_t offset);
-    uint32_t read_wishbone_register(uint32_t offset);
+	uint32_t read_wishbone_register(uint32_t baseAddr, uint32_t offset);
+	uint32_t read_wishbone_register(uint32_t offset);
 
 
-    static void set_threading_enable(bool enable) {/*enableThreading_ = enable;*/}
+	static void set_threading_enable(bool enable) {/*enableThreading_ = enable;*/}
 
-    const int BusmasterSize = 4; /**< Rx & Tx BusMaster size in MB */
-    const int MHz = 1e6;         /**< Constant for converting MHz */
-    const int Meg = 1024 * 1024;
+	const int BusmasterSize = 4; /**< Rx & Tx BusMaster size in MB */
+	const int MHz = 1e6;         /**< Constant for converting MHz */
+	const int Meg = 1024 * 1024;
  
 private:
 	Innovative::X6_1000M            module_; /**< Malibu module */
@@ -176,24 +144,27 @@ private:
 	Innovative::SoftwareTimer       timer_;
 	Innovative::VeloBuffer       	outputPacket_;
 
-
 	// WishBone interface
-	// TODO: update wbAPS wishbone offset  
-	const unsigned int wbAPS_offset = 0xc00;   
+	// TODO: update wbX6ADC wishbone offset  
+	const unsigned int wbX6ADC_offset = 0xc00;   
 
 	unsigned int numBoards_;      /**< cached number of boards */
-	unsigned int deviceID_;       /**< board ID (aka target number) */
+	// unsigned int deviceID_;       /**< board ID (aka target number) */
 
 	TriggerSource triggerSource_ = SOFTWARE_TRIGGER; /**< cached trigger source */
 	map<int,bool> activeChannels_;
+	map<int, vector<short>> chData_; // holds the output data
 
 	// State Variables
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
 	static bool enableThreading_;		  /**< enabled threading support */
-
 	unsigned int prefillPacketCount_;
+	unsigned int samplesPerFrame_ = 0;
+
+    thread *threadHandle;
 
 	ErrorCodes set_active_channels();
+	int num_active_channels();
 	void set_defaults();
 	void log_card_info();
 
@@ -229,16 +200,6 @@ private:
     void HandleOutputOverrangeAlert(Innovative::AlertSignalEvent & event);
 
     void LogHandler(string handlerName);
-
-    thread *threadHandle;
-
-	void  VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event);
-
-	FPGAWaveformType wfType_;	 /**< cached test waveform generator */
-
-	// TODO: Replace with Channel objects
-	map<int, vector<short>> chData_;
-	map<int, int> chStream_;
 };
 
 #endif
