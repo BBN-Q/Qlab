@@ -4,7 +4,7 @@
 # cmake -G "MSSYS Makefiles" ../CMake/
 # make
 
-PROJECT( libx6 )
+PROJECT( libx6adc )
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 SET (  INNOVATIVEPATH "C:\\Innovative" )
@@ -35,57 +35,25 @@ ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-DGCC")
 ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-std=c++11")
 
 SET ( DLL_SRC 
-	./APS/libaps.cpp
-	./APS/FPGA.cpp
-	./APS/Channel.cpp
-	./APS/APS.cpp
-	./APS/APSRack.cpp
-	./APS/LLBank.cpp
-	./APS/X6_1000.cpp
+	./X6ADC/libx6adc.cpp
+	./X6ADC/X6.cpp
+	./X6ADC/X6Rack.cpp
+	./X6ADC/X6_1000.cpp
 	./innovative/Thunker_Con.cpp	
 	./innovative/CommandLine_Con.cpp	
 )
-
-#	./innovative/ApplicationIO.cpp
-
 
 SET_SOURCE_FILES_PROPERTIES( ${DLL_SRC} PROPERTIES LANGUAGE CXX )
 
 SET_SOURCE_FILES_PROPERTIES( ${TEST_SRC} PROPERTIES LANGUAGE CXX )
 
 
-ADD_LIBRARY( x6 SHARED ${DLL_SRC} )
-ADD_EXECUTABLE(x6test ./test/main.cpp )
+ADD_LIBRARY( x6adc SHARED ${DLL_SRC} )
+# ADD_EXECUTABLE(x6test ./test/main.cpp )
 
-TARGET_LINK_LIBRARIES(x6test x6)
+# TARGET_LINK_LIBRARIES(x6test x6adc)
 
-ADD_EXECUTABLE(x6test2 
-	./test/main2.cpp 
-	./innovative/ApplicationIO.cpp
-	./innovative/ModuleIO.cpp
-	./innovative/Thunker_Con.cpp	
-	./innovative/CommandLine_Con.cpp	
-	./innovative/StaticWaveform_App.cpp
-	./innovative/TriggerManager_App.cpp
-)
-
-TARGET_LINK_LIBRARIES(x6test2 
-	#Application_Mb
-
-	Pci_Mb
-	Hardware_Mb
-	Analysis_Mb
-	Utility_Mb
-	Framework_Mb
-	Os_Mb
-	Ficl_Mb
-	
-	ipps-7.0  # in Intel IPP directory listed above
-	wdapi # WinDriver library in Innovative\lib\gcc
-
-)
-
-TARGET_LINK_LIBRARIES(x6 
+TARGET_LINK_LIBRARIES(x6adc 
 	Application_Mb
 
 	Pci_Mb
@@ -98,9 +66,6 @@ TARGET_LINK_LIBRARIES(x6
 	
 	ipps-7.0  # in Intel IPP directory listed above
 	wdapi # WinDriver library in Innovative\lib\gcc
-
-	hdf5_cpp
-	hdf5
 	
 	# The following libraries are supplied with Malibu
 	# But not currently required
@@ -110,8 +75,3 @@ TARGET_LINK_LIBRARIES(x6
 	#Poco_Net_Mb ##
 	#Vpx_Mb  ##
 )
-
-
-
-
-
