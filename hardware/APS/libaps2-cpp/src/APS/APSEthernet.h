@@ -7,8 +7,6 @@
 
 #include "pcap.h"
 
-
-
 struct EthernetDevInfo {
 	string name;          // device name as set by winpcap
 	string description;   // set by winpcap

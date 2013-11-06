@@ -9,7 +9,7 @@ class MACAddr{
 public:
 
 	MACAddr();
-	MACAddr(const int &);
+	MACAddr(const uint8_t *);
 	MACAddr(const string &);
 	static MACAddr MACAddr_from_devName(const string &);
 

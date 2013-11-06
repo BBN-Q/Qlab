@@ -48,7 +48,7 @@ MACAddr MACAddr::MACAddr_from_devName(const string & devName){
     // look up mac addresses using GetAdaptersInfo
     // http://msdn.microsoft.com/en-us/library/windows/desktop/aa365917%28v=vs.85%29.aspx
         
-    PIP_ADAPTER_INFO pAdapterInfo;
+    PIP_ADAPTER_INFO pAdapterInfo = NULL;
     PIP_ADAPTER_INFO pAdapter = NULL;
     DWORD dwRetVal = 0;
 
@@ -73,7 +73,7 @@ MACAddr MACAddr::MACAddr_from_devName(const string & devName){
         while (pAdapter) {
             string matchName = string(pAdapter->AdapterName);
             if (winName.compare(matchName) == 0) {
-                myMAC = MACAddr(pAdapter->Address);
+                MACAddr myMAC = MACAddr(pAdapter->Address);
                 free(pAdapterInfo);
                 return myMAC;
             }
@@ -83,8 +83,8 @@ MACAddr MACAddr::MACAddr_from_devName(const string & devName){
 
     if (pAdapterInfo) free(pAdapterInfo);
     //TODO: throw a proper error
-    logERROR << "Unable to extract MAC address."
-    return MACAddr("ERROR");
+    FILE_LOG(logERROR) << "Unable to extract MAC address.";
+    return MACAddr();
         
 #else
     //On Linux we simply look in /sys/class/net/DEVICE_NAME/address
