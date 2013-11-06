@@ -75,7 +75,7 @@ public:
 	ErrorCodes set_reference(ExtInt ref = INTERNAL, float frequency = 10e6);
 
 	/** Set clock source and frequency
-	 *  \param ref EXTERNAL || INTERNAL
+	 *  \param src EXTERNAL || INTERNAL
 	 *  \param frequency Frequency in Hz
 	 *  \param extSrc FRONT_PANEL || P16
 	 *  \returns SUCCESS || INVALID_FREQUENCY
@@ -158,10 +158,10 @@ private:
 	// State Variables
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
 	static bool enableThreading_;		  /**< enabled threading support */
-	unsigned int prefillPacketCount_;
 	unsigned int samplesPerFrame_ = 0;
+	unsigned int samplesToAcquire_ = 0x1000;
 
-    thread *threadHandle;
+    thread *threadHandle_;
 
 	ErrorCodes set_active_channels();
 	int num_active_channels();

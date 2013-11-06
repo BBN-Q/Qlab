@@ -27,7 +27,7 @@ bool X6_1000::enableThreading_ = false;
 // constructor
 X6_1000::X6_1000() :
     isOpened_(false), triggerInterval_(1000.0),
-    prefillPacketCount_(0), enableTestGenerator_(false), isRunning_(false)
+    isRunning_(false)
 {
     numBoards_ = getBoardCount();
 
@@ -109,8 +109,8 @@ X6_1000::ErrorCodes X6_1000::open(const int & deviceID) {
     stream_.DirectDataMode(false);
     stream_.OnVeloDataAvailable.SetEvent(this, &X6_1000::HandleDataAvailable);
 
-    // stream_.RxLoadBalancing(true);
-    // stream_.TxLoadBalancing(true);
+    stream_.RxLoadBalancing(false);
+    stream_.TxLoadBalancing(false);
 
 
     // Insure BM size is a multiple of four MB
@@ -142,16 +142,8 @@ X6_1000::ErrorCodes X6_1000::open(const int & deviceID) {
     //  Connect Stream
     stream_.ConnectTo(&module_);
 
-    prefillPacketCount_ = stream_.PrefillPacketCount();
-    
     FILE_LOG(logINFO) << "Stream Connected..." << endl;
-    FILE_LOG(logINFO) << "PrefillPacketCount = " << stream_.PrefillPacketCount() << endl;
 
-    //  Initialize VeloMergeParse
-    //VMP.OnDataAvailable.SetEvent(this, &ApplicationIo::VMPDataAvailable);
-    //std::vector<int> sids = module_.AllInputVitaStreamIdVector();
-    //VMP.Init( sids );
-    //
     return SUCCESS;
   }
 
@@ -200,12 +192,15 @@ X6_1000::ErrorCodes X6_1000::set_clock(X6_1000::ExtInt src ,
     IX6ClockIo::IIClockSelect x6extsrc; // external clock source
     if (frequency < 0) return INVALID_FREQUENCY;
 
-    x6clksrc = (src ==  EXTERNAL) ? IX6ClockIo::csExternal : IX6ClockIo::csInternal;
+    // Route ext clock source
     x6extsrc = (extSrc == FRONT_PANEL) ? IX6ClockIo::cslFrontPanel : IX6ClockIo::cslP16;
-
     module_.Clock().ExternalClkSelect(x6extsrc);
+
+    // Route clock
+    x6clksrc = (src ==  EXTERNAL) ? IX6ClockIo::csExternal : IX6ClockIo::csInternal;
     module_.Clock().Source(x6clksrc);
     module_.Clock().Frequency(frequency);
+
     return SUCCESS;
 }
 
@@ -256,7 +251,7 @@ X6_1000::ErrorCodes X6_1000::set_trigger_delay(float delay) {
 }
 
 X6_1000::ErrorCodes X6_1000::set_decimation(bool enabled, int factor) {
-    module_.Input().Decimation((enabled ) ? factor : 0); 
+    module_.Input().Decimation((enabled ) ? factor : 0);
     return SUCCESS;
 }
 
@@ -326,27 +321,24 @@ void X6_1000::log_card_info() {
 X6_1000::ErrorCodes X6_1000::acquire() {
     set_active_channels();
 
-    // Packets scaled in units of events (samples per each enabled channel)
-    int samplesPerWord = 4 / module_.Input().Info().Channels().BytesPerSample();
-    int packetSize = samplesPerFrame_*num_active_channels()/samplesPerWord + 2; // TODO: update numSamples
+    int samplesPerWord = module_.Input().Info().SamplesPerWord();
+    int packetSize = samplesPerFrame_*num_active_channels()/samplesPerWord; // TODO: update numSamples
     module_.Input().PacketSize(packetSize);
     module_.Input().Framed(samplesPerFrame_);
     
-    // set prefill to default loaded during open
-    stream_.PrefillPacketCount(prefillPacketCount_);
     FILE_LOG(logINFO) << "trigger_.AtStreamStart();";
     trigger_.AtStreamStart();
-    //  Start Streaming
-    FILE_LOG(logINFO) << "stream_.Start();";
     
     // start threadlooper
     if (enableThreading_) {
-        threadHandle = new thread(thunkLooper);
+        threadHandle_ = new thread(thunkLooper);
     }
 
-    // flag must be est before calling stream start in order to get output
+    // flag must be set before calling stream start
     isRunning_ = true; 
 
+    //  Start Streaming
+    FILE_LOG(logINFO) << "stream_.Start();";
     stream_.Start();
     timer_.Enabled(true);
     
@@ -424,6 +416,9 @@ void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event)
     for (int i = 0; i < bufferDG.size(); i++) {
         chData_[channel].push_back(bufferDG[i]);
     }
+
+    // if we've acquired the requested number of samples, stop streaming
+    if (chData_.size() > samplesToAcquire_) stop();
 }
 
 void X6_1000::HandleTimer(OpenWire::NotifyEvent & /*Event*/) {
