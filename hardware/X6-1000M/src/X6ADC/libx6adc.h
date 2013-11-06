@@ -24,18 +24,19 @@ enum X6ErrorCode {
 	X6_UNKNOWN_ERROR = -1,
 	X6_BUFFER_OVERFLOW = -2,
 	X6_NOT_IMPLEMENTED_ERROR = -3,
-	X6_INVALID_CHANNEL = -4
+	X6_INVALID_CHANNEL = -4,
+	X6_FILE_ERROR = -5
 };
 
 
 EXPORT int init();
-EXPORT int connect(int);
+EXPORT int connect_by_ID(int);
 EXPORT int disconnect(int);
 
-EXPORT int initX6(int, char*, int);
+EXPORT int initX6(int);
 EXPORT int read_firmware_version(int);
 
-EXPORT int set_digitzer_mode(int, int);
+EXPORT int set_digitizer_mode(int, int);
 EXPORT int get_digitizer_mode(int);
 
 EXPORT int set_sampleRate(int, double);

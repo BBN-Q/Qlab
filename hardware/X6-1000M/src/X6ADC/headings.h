@@ -32,7 +32,7 @@ using std::endl;
 using std::map;
 using std::runtime_error;
 
-// #include <thread>
+#include <thread>
 // #include <mutex>
 // #include <atomic>
 #include <utility>
@@ -41,11 +41,7 @@ using std::runtime_error;
 //Needed for usleep on gcc 4.7
 #include <unistd.h>
 
-
 #include "logger.h"
-
-//some vectors
-typedef vector<unsigned short> WordVec;
 
 //Load all the constants
 #include "constants.h"

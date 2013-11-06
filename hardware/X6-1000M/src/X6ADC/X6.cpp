@@ -10,12 +10,10 @@
 X6::X6() : isOpen_{false}, deviceID_{-1}, samplingRate_{-1} {}
 
 X6::X6(int deviceID) : isOpen_{false}, deviceID_{deviceID}, samplingRate_{-1} {
-	// set X6 device ID
-	handle_.set_deviceID(deviceID);
 };
 
 X6::X6(X6 && other) : isOpen_{other.isOpen_}, deviceID_{other.deviceID_}, samplingRate_{other.samplingRate_},
-		handle_{std::move(other.handle_} {
+		handle_{std::move(other.handle_)} {
 };
 
 
@@ -25,7 +23,7 @@ int X6::connect(){
 	int success = 0;
 
 	if (!isOpen_) {
-		success = handle_.Open(deviceID_);
+		success = handle_.open(deviceID_);
 		
 		if (success == 0) {
 			FILE_LOG(logINFO) << "Opened connection to device " << deviceID_;
@@ -39,11 +37,11 @@ int X6::disconnect(){
 	int success = 0;
 
 	if (isOpen_) {
-		success = handle_.Close();
+		success = handle_.close();
 
 		if (success == 0) {
-			FILE_LOG(logINFO) << "Closed connection to device " << deviceID_ << " (Serial: " << deviceSerial_ << ")";
-			isOpen = false;
+			FILE_LOG(logINFO) << "Closed connection to device " << deviceID_;
+			isOpen_ = false;
 		}	
 	}
 	return success;
@@ -122,10 +120,7 @@ int X6::set_trigger_source(const TRIGGERSOURCE & triggerSource){
 }
 
 TRIGGERSOURCE X6::get_trigger_source() const{
-	// work around for const conversion issues
-	X6_1000 *h = const_cast<X6_1000*>(&handle_);
-
-	X6_1000::TriggerSource src = h->get_trigger_src();
+	X6_1000::TriggerSource src = handle_.get_trigger_src();
 	if (src == X6_1000::EXTERNAL_TRIGGER)
 		return EXTERNAL;
 	else
@@ -144,7 +139,7 @@ int X6::wait_for_acquisition(const int & timeOut) {
 }
 
 int X6::stop() {
-	handle_.Stop();
+	handle_.stop();
 	return 0;
 }
 
@@ -157,20 +152,20 @@ int X6::transfer_waveform(const int & channel, unsigned short *buffer, const siz
 }
 
 int X6::set_digitizer_mode(const DIGITIZER_MODE & mode) {
-	FILE_LOG(logINFO) << "Setting ditizier mode to: " << mode;
+	FILE_LOG(logINFO) << "Setting digitizer mode to: " << mode;
 	write_register(WB_ADDR_DIGITIZER_MODE, WB_OFFSET_DIGITIZER_MODE, mode);
 	return 0;
 }
 
 DIGITIZER_MODE X6::get_digitizer_mode() const {
-	return read_register(WB_ADDR_DIGITIZER_MODE, WB_OFFSET_DIGITIZER_MODE);
+	return DIGITIZER_MODE(read_register(WB_ADDR_DIGITIZER_MODE, WB_OFFSET_DIGITIZER_MODE));
 }
 
 int X6::write_register(const uint32_t & address, const uint32_t & offset, const uint32_t & data) {
 	return handle_.write_wishbone_register(address, offset, data);
 }
 
-uint32_t X6::read_register(const uint32_t & address, const uint32_t & offset) {
+uint32_t X6::read_register(const uint32_t & address, const uint32_t & offset) const {
 	return handle_.read_wishbone_register(address, offset);
 }
 

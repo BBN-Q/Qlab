@@ -45,7 +45,7 @@ void X6Rack::enumerate_devices() {
 		x6.disconnect();
 	}
 
-	numDevices = get_num_devices();
+	int numDevices = get_num_devices();
 
 	X6s_.clear();
 	X6s_.reserve(numDevices);
@@ -73,7 +73,7 @@ int X6Rack::acquire(const int & deviceID) {
 	return X6s_[deviceID].acquire();
 }
 
-int X6Rack::wait_for_acquisition(const int & deviceID, int timeOut) {
+int X6Rack::wait_for_acquisition(const int & deviceID, const int & timeOut) {
 	return X6s_[deviceID].wait_for_acquisition(timeOut);
 }
 
@@ -81,8 +81,8 @@ int X6Rack::stop(const int & deviceID) {
 	return X6s_[deviceID].stop();
 }
 
-int transfer_waveform(const int & deviceID, const int & channel, unsigned short *buffer, const size_t & bufferLength) {
-	return X6s[deviceID].transfer_waveform(channel, buffer, bufferLength);
+int X6Rack::transfer_waveform(const int & deviceID, const int & channel, unsigned short *buffer, const size_t & bufferLength) {
+	return X6s_[deviceID].transfer_waveform(channel, buffer, bufferLength);
 }
 
 int X6Rack::set_sampleRate(const int & deviceID, const double & freq) {
@@ -93,14 +93,12 @@ double X6Rack::get_sampleRate(const int & deviceID) const {
 	return X6s_[deviceID].get_sampleRate();
 }
 
-int X6Rack::set_digitzer_mode(const int & deviceID, const DIGITIZER_MODE & mode) {
-	//return X6s_[deviceID].set_digitzer_mode(mode);
-	return 0;
+int X6Rack::set_digitizer_mode(const int & deviceID, const DIGITIZER_MODE & mode) {
+	return X6s_[deviceID].set_digitizer_mode(mode);
 }
 
-DIGITIZER_MODE X6Rack::get_digitzer_mode(const int & deviceID) const {
-	//return X6s_[deviceID].get_digitzer_mode();
-	return DIGITIZE;
+DIGITIZER_MODE X6Rack::get_digitizer_mode(const int & deviceID) const {
+	return X6s_[deviceID].get_digitizer_mode();
 }
 
 int X6Rack::set_trigger_source(const int & deviceID, const TRIGGERSOURCE & triggerSource) {
@@ -143,11 +141,11 @@ int X6Rack::raw_read(int deviceID) {
 }
 
 int X6Rack::read_register(int deviceID, int wbAddr, int offset){
-	return X6s_[deviceID].handle_.read_wishbone_register(wbAddr, offset);
+	return X6s_[deviceID].read_register(wbAddr, offset);
 }
 
 int X6Rack::write_register(int deviceID, int wbAddr, int offset, int data){
-	return X6s_[deviceID].handle_.write_wishbone_register(wbAddr, offset, data);
+	return X6s_[deviceID].write_register(wbAddr, offset, data);
 }
 
 float X6Rack::get_logic_temperature(int deviceID, int method) {

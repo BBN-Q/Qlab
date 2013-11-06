@@ -16,8 +16,10 @@ static const int X6_WRITETIMEOUT = 500;
 static const int LSB_MASK = 0xFF;
 
 //Registers we read from
-static const int  WB_ADDR_VERSION  = 0x10; // UPDATE ME
-static const int  WB_OFFSETR_VERSION  = 0x01; // UPDATE ME
+static const int WB_ADDR_VERSION  = 0x10; // UPDATE ME
+static const int WB_OFFSET_VERSION  = 0x01; // UPDATE ME
+static const int WB_ADDR_DIGITIZER_MODE = 0x11; //update me
+static const int WB_OFFSET_DIGITIZER_MODE = 0x01; //update me
 
 //Expected version
 static const int FIRMWARE_VERSION =  0x1;

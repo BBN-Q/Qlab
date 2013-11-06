@@ -26,9 +26,7 @@ bool X6_1000::enableThreading_ = false;
 
 // constructor
 X6_1000::X6_1000() :
-    isOpened_(false), triggerInterval_(1000.0),
-    isRunning_(false)
-{
+    isOpened_(false), isRunning_(false) {
     numBoards_ = getBoardCount();
 
     for(int cnt = 0; cnt < get_num_channels(); cnt++) {
@@ -40,9 +38,23 @@ X6_1000::X6_1000() :
     Init::UsePerformanceMemoryFunctions();
 }
 
-X6_1000::~X6_1000()
-{
-	if (isOpened_) Close();   
+X6_1000::~X6_1000() {
+	if (isOpened_) close();   
+}
+
+// move constructor
+X6_1000::X6_1000(X6_1000 && other) :
+    module_{std::move(other.module_)},
+    trigger_{std::move(other.trigger_)},
+    stream_{std::move(other.stream_)},
+    timer_{std::move(other.timer_)},
+    outputPacket_{std::move(other.outputPacket_)},
+    threadHandle_{std::move(other.threadHandle_)},
+    isOpened_{std::move(other.isOpened_)},
+    isRunning_{std::move(other.isRunning_)},
+    samplesPerFrame_{std::move(other.samplesPerFrame_)},
+    samplesToAcquire_{std::move(other.samplesToAcquire_)} {
+
 }
 
 unsigned int X6_1000::get_num_channels() {
@@ -226,17 +238,20 @@ X6_1000::ErrorCodes X6_1000::set_trigger_src(
 
     FILE_LOG(logINFO) << "Trigger Source set to " << (trgSrc == EXTERNAL_TRIGGER) ? "External" : "Internal";
 
-    trigger_.DelayedTriggerPeriod(triggerDelayPeriod_);
     trigger_.ExternalTrigger( (trgSrc == EXTERNAL_TRIGGER) ? true : false);
     trigger_.AtConfigure();
 
+    int frameGranularity = module_.Input().Info().TriggerFrameGranularity();
+    if (frameSize % frameGranularity != 0) {
+        return INVALID_FRAMESIZE;
+    }
     module_.Input().Trigger().FramedMode(framed);
     module_.Input().Trigger().Edge(edgeTrigger);
     module_.Input().Trigger().FrameSize(frameSize); 
     return SUCCESS;
 }
 
-X6_1000::TriggerSource X6_1000::get_trigger_src() {
+X6_1000::TriggerSource X6_1000::get_trigger_src() const {
     // return cached trigger source until 
     // TODO: identify method for getting source from card
     if (triggerSource_) 
@@ -246,7 +261,8 @@ X6_1000::TriggerSource X6_1000::get_trigger_src() {
 }
 
 X6_1000::ErrorCodes X6_1000::set_trigger_delay(float delay) {
-    Module().Input().TriggerDelay(delay);
+    // going to require a trigger engine modification to work
+    // leaving as a TODO for now
     return SUCCESS;
 }
 
@@ -299,8 +315,8 @@ void X6_1000::set_defaults() {
     set_active_channels();
 
     // disable test mode 
-    module_.Input().TestModeEnabled( false, wfType_);
-    module_.Output().TestModeEnabled( false, wfType_);
+    module_.Input().TestModeEnabled( false, 0);
+    module_.Output().TestModeEnabled( false, 0);
 }
 
 void X6_1000::log_card_info() {
@@ -323,8 +339,10 @@ X6_1000::ErrorCodes X6_1000::acquire() {
 
     int samplesPerWord = module_.Input().Info().SamplesPerWord();
     int packetSize = samplesPerFrame_*num_active_channels()/samplesPerWord; // TODO: update numSamples
-    module_.Input().PacketSize(packetSize);
-    module_.Input().Framed(samplesPerFrame_);
+    // module_.Input().PacketSize(packetSize);
+    module_.Velo().LoadAll_VeloDataSize(packetSize);
+    module_.Velo().ForceVeloPacketSize(true);
+    // module_.Input().Framed(samplesPerFrame_);
     
     FILE_LOG(logINFO) << "trigger_.AtStreamStart();";
     trigger_.AtStreamStart();
@@ -465,9 +483,9 @@ void X6_1000::LogHandler(string handlerName) {
 
 X6_1000::ErrorCodes X6_1000::write_wishbone_register(uint32_t baseAddr, uint32_t offset, uint32_t data) {
      // Initialize WishboneAddress Space for APS specific firmware
-    Innovative::AddressingSpace & logicMemory = Innovative::LogicMemorySpace(module_);
-    Innovative::WishboneBusSpace WB_APS = Innovative::WishboneBusSpace(logicMemory, baseAddr);
-    Innovative::Register reg = Register(WB_APS, offset);
+    Innovative::AddressingSpace & logicMemory = Innovative::LogicMemorySpace(const_cast<X6_1000M&>(module_));
+    Innovative::WishboneBusSpace WB_X6 = Innovative::WishboneBusSpace(logicMemory, baseAddr);
+    Innovative::Register reg = Register(WB_X6, offset);
     reg.Value(data);
     return SUCCESS;
 }
@@ -476,14 +494,14 @@ X6_1000::ErrorCodes X6_1000::write_wishbone_register(uint32_t offset, uint32_t d
     return write_wishbone_register(wbX6ADC_offset, offset, data);
 }
 
-uint32_t X6_1000::read_wishbone_register(uint32_t baseAddr, uint32_t offset) {
-    Innovative::AddressingSpace & logicMemory = Innovative::LogicMemorySpace(module_);
-    Innovative::WishboneBusSpace WB_APS = Innovative::WishboneBusSpace(logicMemory, baseAddr);
-    Innovative::Register reg = Register(WB_APS, offset);
+uint32_t X6_1000::read_wishbone_register(uint32_t baseAddr, uint32_t offset) const {
+    Innovative::AddressingSpace & logicMemory = Innovative::LogicMemorySpace(const_cast<X6_1000M&>(module_));
+    Innovative::WishboneBusSpace WB_X6 = Innovative::WishboneBusSpace(logicMemory, baseAddr);
+    Innovative::Register reg = Register(WB_X6, offset);
     return reg.Value();
 }
 
-uint32_t X6_1000::read_wishbone_register(uint32_t offset) {
+uint32_t X6_1000::read_wishbone_register(uint32_t offset) const {
     return read_wishbone_register(wbX6ADC_offset, offset);
 }
 

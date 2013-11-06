@@ -36,7 +36,7 @@ public:
 	int set_trigger_source(const int &, const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source(const int &) const;
 
-	int set_digitzer_mode(const int &, const DIGITIZER_MODE &);
+	int set_digitizer_mode(const int &, const DIGITIZER_MODE &);
 	DIGITIZER_MODE get_digitizer_mode(const int &) const;
 
 	double get_sampleRate(const int &) const;

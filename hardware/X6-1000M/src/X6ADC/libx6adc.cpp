@@ -6,7 +6,6 @@
  *      Author: qlab
  */
 
-#include "headings.h"
 #include "X6Rack.h"
 #include "libx6adc.h"
 
@@ -21,14 +20,14 @@ int init(){
 
 	X6Rack_.init();
 
-	return APS_OK;
+	return X6_OK;
 }
 
 int get_numDevices(){
 	return X6Rack_.get_num_devices();
 }
 
-int connect(int deviceID){
+int connect_by_ID(int deviceID){
 	return X6Rack_.connect(deviceID);
 }
 
@@ -37,7 +36,7 @@ int disconnect(int deviceID){
 }
 
 //Initialize an X6-1000M board
-int initX6(int deviceID){
+int initX6(int deviceID) {
 	return X6Rack_.initX6(deviceID);
 }
 
@@ -45,8 +44,8 @@ int read_firmware_version(int deviceID) {
 	return X6Rack_.read_firmware_version(deviceID);
 }
 
-int set_digitzer_mode(int deviceID, int mode) {
-	return X6Rack_.set_digitzer_mode(deviceID, DIGITIZER_MODE(mode));
+int set_digitizer_mode(int deviceID, int mode) {
+	return X6Rack_.set_digitizer_mode(deviceID, DIGITIZER_MODE(mode));
 }
 
 int get_digitizer_mode(int deviceID) {
@@ -91,7 +90,7 @@ int set_log(char * fileNameArr) {
 
 		FILE* pFile = fopen(fileName.c_str(), "a");
 		if (!pFile) {
-			return APS_FILE_ERROR;
+			return X6_FILE_ERROR;
 		}
 
 		return X6Rack_.set_log(pFile);

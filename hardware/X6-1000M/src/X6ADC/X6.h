@@ -50,11 +50,11 @@ public:
 	int set_trigger_source(const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source() const;
 
-	int set_digitzer_mode(const int &, const DIGITIZER_MODE &);
-	DIGITIZER_MODE get_digitzer_mode();
+	int set_digitizer_mode(const DIGITIZER_MODE &);
+	DIGITIZER_MODE get_digitizer_mode() const;
 
 	int write_register(const uint32_t &, const uint32_t &, const uint32_t &);
-	uint32_t read_register(const uint32_t &, const uint32_t &);
+	uint32_t read_register(const uint32_t &, const uint32_t &) const;
 
 	float get_logic_temperature(int method);
 

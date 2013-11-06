@@ -38,7 +38,8 @@ public:
     	NOT_IMPLEMENTED = -2,
     	INVALID_FREQUENCY = -3,
     	INVALID_CHANNEL = -4,
-    	INVALID_INTERVAL = -5
+    	INVALID_INTERVAL = -5,
+    	INVALID_FRAMESIZE = -6
 	};
 
 	enum ExtInt {
@@ -57,6 +58,7 @@ public:
 	};
 
 	X6_1000();
+	X6_1000(X6_1000 &&);
 	~X6_1000();
 
 	/** getBoardCount()
@@ -98,7 +100,7 @@ public:
 							   bool edgeTrigger = true,
 							   unsigned int frameSize = 1024);
 
-	TriggerSource get_trigger_src();
+	TriggerSource get_trigger_src() const;
 	ErrorCodes set_trigger_delay(float delay = 0.0);
 
 	/** Set Decimation Factor (current for both Tx and Rx)
@@ -127,8 +129,8 @@ public:
 	ErrorCodes write_wishbone_register(uint32_t baseAddr, uint32_t offset, uint32_t data);
 	ErrorCodes write_wishbone_register(uint32_t offset, uint32_t data);
 
-	uint32_t read_wishbone_register(uint32_t baseAddr, uint32_t offset);
-	uint32_t read_wishbone_register(uint32_t offset);
+	uint32_t read_wishbone_register(uint32_t baseAddr, uint32_t offset) const;
+	uint32_t read_wishbone_register(uint32_t offset) const;
 
 
 	static void set_threading_enable(bool enable) {/*enableThreading_ = enable;*/}
@@ -138,6 +140,10 @@ public:
 	const int Meg = 1024 * 1024;
  
 private:
+	// disable copying
+	X6_1000(const X6_1000&) = delete;
+	X6_1000& operator=(const X6_1000&) = delete;
+
 	Innovative::X6_1000M            module_; /**< Malibu module */
 	Innovative::TriggerManager      trigger_;   /**< Malibu trigger manager */
 	Innovative::VitaPacketStream    stream_;
@@ -157,6 +163,7 @@ private:
 
 	// State Variables
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
+	bool isRunning_;
 	static bool enableThreading_;		  /**< enabled threading support */
 	unsigned int samplesPerFrame_ = 0;
 	unsigned int samplesToAcquire_ = 0x1000;

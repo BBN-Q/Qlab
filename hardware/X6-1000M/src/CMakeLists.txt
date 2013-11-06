@@ -1,7 +1,7 @@
 # build using
 # mkdir build
 # cd build
-# cmake -G "MSSYS Makefiles" ../CMake/
+# cmake -G "MSYS Makefiles" ../src/
 # make
 
 PROJECT( libx6adc )
