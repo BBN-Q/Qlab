@@ -8,14 +8,14 @@
 /* Provides Main Loop to distribute thunked messages */
 /* Current unncessary as of 3/27/2013 */
 void thunkLooper() {
-while (true) { 
-   Innovative::Thunker::MainLoopEvent.WaitFor(); 
-   while (!Innovative::Thunker::MainLoopQueue.empty()) { 
-     Innovative::Thunker *thunk = Innovative::Thunker::MainLoopQueue.front(); 
-     Innovative::Thunker::MainLoopQueue.pop(); 
-     thunk->Dispatch(); 
-   } 
-  }
+    while (true) { 
+        Innovative::Thunker::MainLoopEvent.WaitFor(); 
+        while (!Innovative::Thunker::MainLoopQueue.empty()) { 
+            Innovative::Thunker *thunk = Innovative::Thunker::MainLoopQueue.front(); 
+            Innovative::Thunker::MainLoopQueue.pop(); 
+            thunk->Dispatch(); 
+        } 
+    }
 }
 
 using namespace Innovative;

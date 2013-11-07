@@ -66,8 +66,8 @@ bool Thunker::Notify()
 
 void Thunker::Dispatch()
 {
-	OpenWire::Event e;
-    OnNotified.Execute(e);
+  OpenWire::Event e;
+  OnNotified.Execute(e);
 }
 
 //---------------------------------------------------------------------------

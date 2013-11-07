@@ -11,7 +11,7 @@ SET (  INNOVATIVEPATH "C:\\Innovative" )
 SET (  MALIBUPATH   ${INNOVATIVEPATH}/Malibu )
 
 
-# devel machine path may be removeed if FIND_PACKAGE HDF5 works
+# devel machine path may be removed if FIND_PACKAGE HDF5 works
 #	INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\include\\cpp")
 #	INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\include")	
 #	LINK_DIRECTORIES( ${LINK_DIRECTORIES} "C:\\MinGW\\msys\\1.0\\local\\lib")
@@ -40,7 +40,6 @@ SET ( DLL_SRC
 	./X6ADC/X6Rack.cpp
 	./X6ADC/X6_1000.cpp
 	./innovative/Thunker_Con.cpp	
-	./innovative/CommandLine_Con.cpp	
 )
 
 SET_SOURCE_FILES_PROPERTIES( ${DLL_SRC} PROPERTIES LANGUAGE CXX )

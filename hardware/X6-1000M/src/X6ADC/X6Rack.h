@@ -17,8 +17,6 @@ public:
 	X6Rack();
 	~X6Rack();
 
-	map<string, int> serial2dev;
-
 	int init();
 	int initX6(const int &);
 	int connect(const int &);
