@@ -42,21 +42,6 @@ X6_1000::~X6_1000() {
 	if (isOpened_) close();   
 }
 
-// move constructor
-X6_1000::X6_1000(X6_1000 && other) :
-    module_{std::move(other.module_)},
-    trigger_{std::move(other.trigger_)},
-    stream_{std::move(other.stream_)},
-    timer_{std::move(other.timer_)},
-    outputPacket_{std::move(other.outputPacket_)},
-    threadHandle_{std::move(other.threadHandle_)},
-    isOpened_{std::move(other.isOpened_)},
-    isRunning_{std::move(other.isRunning_)},
-    samplesPerFrame_{std::move(other.samplesPerFrame_)},
-    samplesToAcquire_{std::move(other.samplesToAcquire_)} {
-
-}
-
 unsigned int X6_1000::get_num_channels() {
     return module_.Input().Channels();
 }

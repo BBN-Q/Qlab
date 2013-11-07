@@ -9,20 +9,13 @@
 
 X6::X6() : isOpen_{false}, deviceID_{-1}, samplingRate_{-1} {}
 
-X6::X6(int deviceID) : isOpen_{false}, deviceID_{deviceID}, samplingRate_{-1} {
-};
-
-X6::X6(X6 && other) : isOpen_{other.isOpen_}, deviceID_{other.deviceID_}, samplingRate_{other.samplingRate_},
-		handle_{std::move(other.handle_)} {
-};
-
-
 X6::~X6() = default;
 
-int X6::connect(){
+int X6::connect(const int & deviceID) {
 	int success = 0;
 
 	if (!isOpen_) {
+		deviceID_ = deviceID;
 		success = handle_.open(deviceID_);
 		
 		if (success == 0) {

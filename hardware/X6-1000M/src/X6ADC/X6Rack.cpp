@@ -37,30 +37,19 @@ int X6Rack::get_num_devices()  {
 	return X6_1000::getBoardCount();
 }
 
-//This will reset the APS vector so it really should only be called during initialization
 void X6Rack::enumerate_devices() {
-
-	//Have to disconnect everything first
-	for (auto & x6 : X6s_){
-		x6.disconnect();
-	}
-
-	int numDevices = get_num_devices();
-
-	X6s_.clear();
-	X6s_.reserve(numDevices);
-
-	for (size_t devicect = 0; devicect < numDevices; devicect++) {
-		X6s_.emplace_back(devicect);
-	}
+	// just set numDevices_ internal variable for later look-up in calls to connect/disconnect
+	numDevices_ = get_num_devices();
 }
 
 int X6Rack::connect(const int & deviceID){
 	//Connect to a instrument specified by deviceID
-	return X6s_[deviceID].connect();
+	if (deviceID >= numDevices_) return X6::X6_INVALID_DEVICEID;
+	return X6s_[deviceID].connect(deviceID);
 }
 
 int X6Rack::disconnect(const int & deviceID){
+	if (deviceID >= numDevices_) return X6::X6_INVALID_DEVICEID;
 	return X6s_[deviceID].disconnect();
 }
 

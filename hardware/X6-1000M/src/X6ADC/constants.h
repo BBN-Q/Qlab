@@ -8,6 +8,8 @@
 #ifndef CONSTANTS_H_
 #define CONSTANTS_H_
 
+static const int MAX_NUM_DEVICES = 5;
+
 //Some maximum sizes of things we can fit
 static const int X6_READTIMEOUT = 1000;
 static const int X6_WRITETIMEOUT = 500;

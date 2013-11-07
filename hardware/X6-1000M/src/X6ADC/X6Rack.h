@@ -58,7 +58,8 @@ public:
 private:
 	X6Rack(const X6Rack&) = delete;
 	X6Rack& operator=(const X6Rack&) = delete;
-	vector<X6> X6s_;
+	X6 X6s_[MAX_NUM_DEVICES];
+	int numDevices_ = 0;
 };
 
 

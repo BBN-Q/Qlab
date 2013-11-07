@@ -12,27 +12,22 @@
 #define X6_H_
 
 class X6 {
-
-// TODO find correct location for error codes and consolidate
-enum X6ErrorCode {
-	X6_OK,
-	X6_UNKNOWN_ERROR = -1,
-	X6_BUFFER_OVERFLOW = -2,
-	X6_NOT_IMPLEMENTED_ERROR = -3,
-	X6_INVALID_CHANNEL = -4
-};
-
-
 public:
-	//Constructors
-	X6();
-	X6(int);
-	//Move-ctor
-	X6(X6&&);
+	// TODO find correct location for error codes and consolidate
+	enum X6ErrorCode {
+		X6_OK,
+		X6_UNKNOWN_ERROR = -1,
+		X6_BUFFER_OVERFLOW = -2,
+		X6_NOT_IMPLEMENTED_ERROR = -3,
+		X6_INVALID_CHANNEL = -4,
+		X6_FILE_ERROR = -5,
+		X6_INVALID_DEVICEID = -6
+	};
 
+	X6();
 	~X6();
 
-	int connect();
+	int connect(const int &);
 	int disconnect();
 	int init();
 
