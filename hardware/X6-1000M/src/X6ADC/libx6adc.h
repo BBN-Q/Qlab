@@ -33,6 +33,7 @@ enum X6ErrorCode {
 EXPORT int init();
 EXPORT int connect_by_ID(int);
 EXPORT int disconnect(int);
+EXPORT int get_num_devices();
 
 EXPORT int initX6(int);
 EXPORT int read_firmware_version(int);

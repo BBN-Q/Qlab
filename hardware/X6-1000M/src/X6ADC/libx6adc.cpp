@@ -23,7 +23,7 @@ int init(){
 	return X6_OK;
 }
 
-int get_numDevices(){
+int get_num_devices(){
 	return X6Rack_.get_num_devices();
 }
 

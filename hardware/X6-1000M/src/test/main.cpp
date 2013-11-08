@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "libaps.h"
+#include "libx6adc.h"
 #include "constants.h"
 
 using namespace std;
@@ -12,7 +12,7 @@ int main ()
   set_logging_level(5);
 
   int numDevices;
-  numDevices = get_numDevices();
+  numDevices = get_num_devices();
 
   cout << numDevices << " X6 device" << (numDevices > 1 ? "s": "")  << " found" << endl;
 
@@ -27,7 +27,7 @@ int main ()
   init();
 
   int rc;
-  rc = connect(0);
+  rc = connect_by_ID(0);
 
   cout << "connect(0) returned " << rc << endl;
 
@@ -58,7 +58,7 @@ int main ()
   wait_for_acquisition(0, 10);
 
   unsigned short buffer[1024];
-  transfer_waveform(0, 1, &buffer, 1024);
+  transfer_waveform(0, 1, buffer, 1024);
 
   cout << "Stopping" << endl;
 
