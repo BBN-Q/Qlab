@@ -166,31 +166,26 @@ classdef MixerOptimizer < handle
         function setup_SSB_AWG(obj, i_offset, q_offset)
             %Helper function to setup the SSB waveforms from the AWGs
             awgfile = obj.expParams.SSBAWGFile;
-            iChan = obj.channelParams.physChan(end-1);
-            qChan = obj.channelParams.physChan(end);
-            
+            iChan = str2double(obj.channelParams.physChan(end-1));
+            qChan = str2double(obj.channelParams.physChan(end));
+            awg_amp = obj.awg.getAmplitude(iChan);
             switch class(obj.awg)
                 case 'deviceDrivers.Tek5014'
                     %Here we just preload a custom special AWG file
-                    awg_amp = obj.awg.(['chan_' iChan]).amplitude;
-                    obj.awg.openConfig(awgfile);
-                    obj.awg.(['chan_' iChan]).offset = i_offset;
-                    obj.awg.(['chan_' qChan]).offset = q_offset;
+                    obj.awg.loadConfig(awgfile);
                     obj.awg.runMode = 'CONT';
-                    obj.awg.(['chan_' iChan]).amplitude = awg_amp;
-                    obj.awg.(['chan_' qChan]).amplitude = awg_amp;
-                    obj.awg.(['chan_' iChan]).skew = 0;
-                    obj.awg.(['chan_' qChan]).skew = 0;
-                    obj.awg.(['chan_' iChan]).enabled = 1;
-                    obj.awg.(['chan_' qChan]).enabled = 1;
+                    obj.awg.setAmplitude(iChan, awg_amp);
+                    obj.awg.setOffset(iChan, i_offset);
+                    obj.awg.setSkew(iChan, 0);
+                    obj.awg.setEnabled(iChan, 1);
+                    
+                    obj.awg.setAmplitude(qChan, awg_amp);
+                    obj.awg.setOffset(qChan, q_offset);
+                    obj.awg.setSkew(qChan, 0);
+                    obj.awg.setEnabled(qChan, 1);
                     obj.awg.run();
                     
                 case 'deviceDrivers.APS'
-                    % convert iChan and qChan to numbers
-                    iChan = str2double(iChan);
-                    qChan = str2double(qChan);
-                    
-                    awg_amp = obj.awg.getAmplitude(iChan);
                     %Here we use waveform mode to put out a continuous
                     %sine wave
                     obj.awg.stop();
