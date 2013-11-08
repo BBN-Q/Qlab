@@ -5,24 +5,7 @@
 #include <algorithm>            // std::max
 #include <cstdlib>              // for rand
 
-/* Provides Main Loop to distribute thunked messages */
-/* Current unncessary as of 3/27/2013 */
-void thunkLooper() {
-    while (true) { 
-        Innovative::Thunker::MainLoopEvent.WaitFor(); 
-        while (!Innovative::Thunker::MainLoopQueue.empty()) { 
-            Innovative::Thunker *thunk = Innovative::Thunker::MainLoopQueue.front(); 
-            Innovative::Thunker::MainLoopQueue.pop(); 
-            thunk->Dispatch(); 
-        } 
-    }
-}
-
 using namespace Innovative;
-
-// flag to enable threaded Malibu opperation with Syncronize and Thunk
-// threaded operation current not needed
-bool X6_1000::enableThreading_ = false;
 
 // constructor
 X6_1000::X6_1000() :
@@ -56,18 +39,7 @@ void X6_1000::setHandler(OpenWire::EventHandler<OpenWire::NotifyEvent> & event,
     bool useSyncronizer) {
 
     event.SetEvent(this, CallBackFunction );
-    if (!enableThreading_) {
-        FILE_LOG(logINFO) << "Using event.Unsynchronize";
-        event.Unsynchronize();
-    } else {
-        if (useSyncronizer) {
-            FILE_LOG(logINFO) << "Using event.Synchronize";
-            event.Synchronize();
-        } else {
-            FILE_LOG(logINFO) << "Using event.Thunk";
-            event.Thunk();
-        }
-    }
+    event.Unsynchronize();
 }
 
 
@@ -331,11 +303,6 @@ X6_1000::ErrorCodes X6_1000::acquire() {
     
     FILE_LOG(logINFO) << "trigger_.AtStreamStart();";
     trigger_.AtStreamStart();
-    
-    // start threadlooper
-    if (enableThreading_) {
-        threadHandle_ = new thread(thunkLooper);
-    }
 
     // flag must be set before calling stream start
     isRunning_ = true; 

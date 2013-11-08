@@ -2,7 +2,6 @@
 
 #include "libaps.h"
 #include "constants.h"
-#include <thread>
 
 using namespace std;
 

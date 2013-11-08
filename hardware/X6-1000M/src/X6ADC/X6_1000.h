@@ -6,8 +6,6 @@
 #include <SoftwareTimer_Mb.h>
 #include <Application/TriggerManager_App.h>
 #include <HardwareRegister_Mb.h>
-#include "Thunker_Con.h"
-// #include <Framework/Console/Thunker_Con.h>
 
 #ifndef X6_1000_H_
 #define X6_1000_H_
@@ -18,10 +16,9 @@ using std::string;
 /**
  * X6_1000 Class: Provides interface to Innovative Illustrations X6_1000 card
  *
- * The expectation is that this class will support a custom FPGA image for APS
- * opperatiions.
+ * The expectation is that this class will support a custom FPGA image for digitzer usage.
  *
- * This interface is utilizes the II [Malibu library](www.innovative-dsp.com/products.php?product=Malibu)
+ * This interface utilizes the II [Malibu library](www.innovative-dsp.com/products.php?product=Malibu)
  */
 
 
@@ -161,11 +158,8 @@ private:
 	// State Variables
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
 	bool isRunning_;
-	static bool enableThreading_;		  /**< enabled threading support */
 	unsigned int samplesPerFrame_ = 0;
 	unsigned int samplesToAcquire_ = 0x1000;
-
-    thread *threadHandle_;
 
 	ErrorCodes set_active_channels();
 	int num_active_channels();
