@@ -52,6 +52,7 @@ classdef SingleShotFidelity < handle
             
             % add instruments
             for instrument = fieldnames(instrSettings)'
+                fprintf('Connecting to %s\n', instrument{1});
                 instr = InstrumentFactory(instrument{1});
                 %If it is an AWG, point it at the correct file
                 if ExpManager.is_AWG(instr)
