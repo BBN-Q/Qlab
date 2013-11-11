@@ -1,8 +1,8 @@
 #!/bin/sh
 
 repository=../../
-util=$repository/common/src/util
-matlabdriver=$repository/common/src/+deviceDrivers/@APS
+util=$repository/common/util
+matlabdriver=$repository/common/+deviceDrivers/@APS
 
 mkdir Standalone
 
@@ -22,7 +22,7 @@ cp -R $util/@PatternGen Standalone/matlab
 cp -R $util/@Pulse Standalone/matlab
 
 # fix APS_ROOT reference
-sed -i "s#APS_ROOT = '../../../../hardware/APS'#APS_ROOT = '../../'#" Standalone/matlab/@APS/APS.m
+sed -i "s#APS_ROOT = '../../../hardware/APS'#APS_ROOT = '../../'#" Standalone/matlab/@APS/APS.m
 
 cp $util/parseargs.m Standalone/matlab
 
