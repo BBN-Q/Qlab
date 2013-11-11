@@ -14,6 +14,7 @@ function data = cal_scale(varargin)
         else
             numRepeats = varargin{2};
         end
+        xlab = ''; ylab = ''; figTitle = '';
     elseif ischar(varargin{1})
         axesHs = findobj(gcf, 'Type', 'Axes');
         switch varargin{1}
@@ -34,7 +35,11 @@ function data = cal_scale(varargin)
         else
             numRepeats = varargin{2};
         end
-
+        
+        % save axis labels and figure title
+        xlab = get(get(axesH, 'XLabel'), 'String');
+        ylab = get(get(axesH, 'YLabel'), 'String');
+        figTitle = get(get(axesH, 'Title'), 'String');
     else
         error('First argument should be data or plotGrab string.')
     end
@@ -50,11 +55,6 @@ function data = cal_scale(varargin)
     
     % rescale
     data = (data - zeroCal)./scaleFactor - 1;
-    
-    % save axis labels and figure title
-    xlab = get(get(axesH, 'XLabel'), 'String');
-    ylab = get(get(axesH, 'YLabel'), 'String');
-    figTitle = get(get(axesH, 'Title'), 'String');
     
     % create the new plot
     figure()
