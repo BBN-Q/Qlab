@@ -126,7 +126,25 @@ int X6::acquire() {
 
 int X6::wait_for_acquisition(const int & timeOut) {
 	// timeOut in seconds
-	// TODO
+	/*
+	I eventually want this to look like:
+	while (handle_.get_is_running() {
+		if (!hanlde_.data_available()) {
+			std::sleep_for(10ms);
+		}
+		else {
+			ch1data = handle_.transfer_waveform(1, buffer, len);
+			avgch1data += ch1data;
+			ch2data = ...
+
+		}
+	}
+	*/
+	auto start = std::chrono::system_clock::now();
+	auto end = start + std::chrono::seconds(timeOut);
+	while (handle_.get_is_running() && (std::chrono::system_clock::now() < end)) {
+		std::this_thread::sleep_for( std::chrono::milliseconds(100) );
+	}
 	return 0;
 }
 
@@ -136,11 +154,8 @@ int X6::stop() {
 }
 
 int X6::transfer_waveform(const int & channel, short *buffer, const size_t & bufferLength) {
-	// TODO
-	for (size_t ct = 0; ct < bufferLength; ct++) {
-		buffer[ct] = ct;
-	}
-	return 0;
+	// TODO: manage averaging of data based on waveforms and round robins
+	return handle_.transfer_waveform(channel, buffer, bufferLength);
 }
 
 int X6::set_digitizer_mode(const DIGITIZER_MODE & mode) {

@@ -328,6 +328,10 @@ X6_1000::ErrorCodes X6_1000::stop() {
     return SUCCESS;
 }
 
+bool X6_1000::get_is_running() {
+    return isRunning_;
+}
+
 X6_1000::ErrorCodes X6_1000::transfer_waveform(int channel, short *buffer, size_t length) {
     // memcpy(buffer, &chData_[channel][0], sizeof(short)*std::min(length, chData_[channel].size()));
     size_t count = std::min(length, chData_[channel].size());

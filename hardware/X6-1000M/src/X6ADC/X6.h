@@ -54,9 +54,6 @@ public:
 
 	float get_logic_temperature(int method);
 
-	//The owning X6Rack needs access to some private members
-	// friend class X6Rack;
-
 private:
 	bool isOpen_ = false;
 
@@ -68,6 +65,7 @@ private:
 	X6_1000 handle_;
 
 	int samplingRate_;
+	
 	// averager settings
 	int recordLength_;
 	int numSegments_;

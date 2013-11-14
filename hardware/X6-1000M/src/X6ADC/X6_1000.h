@@ -121,6 +121,7 @@ public:
 
 	ErrorCodes acquire();
 	ErrorCodes stop();
+	bool       get_is_running();
 
 	ErrorCodes transfer_waveform(int channel, short *buffer, size_t length);
 
@@ -129,9 +130,6 @@ public:
 
 	uint32_t read_wishbone_register(uint32_t baseAddr, uint32_t offset) const;
 	uint32_t read_wishbone_register(uint32_t offset) const;
-
-
-	static void set_threading_enable(bool enable) {/*enableThreading_ = enable;*/}
 
 	const int BusmasterSize = 4; /**< Rx & Tx BusMaster size in MB */
 	const int MHz = 1e6;         /**< Constant for converting MHz */
