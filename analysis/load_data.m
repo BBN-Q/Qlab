@@ -6,7 +6,7 @@ function data = load_data(varargin)
 %   load_data(plotMode)
 %   load_data()
 %
-%   plotMode = 'real/imag', 'amp/phase', 'quad', or '' (no plot)
+%   plotMode = 'real', 'imag', 'amp', 'phase', 'real/imag', 'amp/phase', 'quad', or '' (no plot)
 if nargin == 2
     [fullpath, plotMode] = varargin{:};
     [pathname, filename] = fileparts(fullpath);
@@ -82,6 +82,18 @@ plotMap.real = struct('label','Real Quad.', 'func', @real);
 plotMap.imag = struct('label','Imag. Quad.', 'func', @imag);
 
 switch plotMode
+    case 'real'
+        toPlot = {plotMap.real};
+        numRows = 1; numCols = 1;
+    case 'imag'
+        toPlot = {plotMap.imag};
+        numRows = 1; numCols = 1;
+    case 'amp'
+        toPlot = {plotMap.abs};
+        numRows = 1; numCols = 1;
+    case 'phase'
+        toPlot = {plotMap.phase};
+        numRows = 1; numCols = 1;
     case 'amp/phase'
         toPlot = {plotMap.abs, plotMap.phase};
         numRows = 2; numCols = 1;
