@@ -5,18 +5,12 @@ import MeasFilters.*
 
 exp = ExpManager();
 
-global dataNamer
-deviceName = 'SUCR';
-if ~isa(dataNamer, 'DataNamer')
-    dataNamer = DataNamer(getpref('qlab', 'dataDir'), deviceName);
-end
-if ~strcmp(dataNamer.deviceName, deviceName)
-    dataNamer.deviceName = deviceName;
-    reset(dataNamer);
-end
-exp.dataFileHandler = HDF5DataHandler(dataNamer.get_name(expName));
+deviceName = 'Syracuse_Sideband_b';
+exp.dataFileHandler = HDF5DataHandler(DataNamer.get_data_filename(deviceName, expName));
 
 expSettings = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'tracked_spec.json'));
+exp.dataFileHeader = expSettings;
+
 exp.CWMode = true;
 instrSettings = expSettings.instruments;
 sweepSettings = expSettings.sweeps;
