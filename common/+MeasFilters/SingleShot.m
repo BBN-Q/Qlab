@@ -101,6 +101,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 
                 [maxFidelity_I, intPt] = max(fidelities);
                 obj.bestIntegrationTime = intPt;
+                fprintf('Best integration time found at %d decimated points out of %d\n', intPt, numTimePts);
                 obj.pdfData.bins_I = linspace(min([intGroundIData(intPt,:), intExcitedIData(intPt,:)]), max([intGroundIData(intPt,:), intExcitedIData(intPt,:)]));
                 obj.pdfData.gPDF_I = ksdensity(intGroundIData(intPt,:), obj.pdfData.bins_I);
                 obj.pdfData.ePDF_I = ksdensity(intExcitedIData(intPt,:), obj.pdfData.bins_I);
