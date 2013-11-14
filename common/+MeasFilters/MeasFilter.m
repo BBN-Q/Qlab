@@ -74,6 +74,7 @@ classdef MeasFilter < handle
             obj.avgct = 0;
             obj.varct = 0;
             obj.accumulatedData = [];
+            obj.scopeavgct = 0;
         end
         
         function accumulate(obj)
@@ -135,7 +136,7 @@ classdef MeasFilter < handle
                 end
                 obj.scopeavgct = obj.scopeavgct + 1;
             end
-            if nsdims(data) == 4
+            if ndims(data) == 4 && nsdims(data) > 2
                 %Flatten single shot data into a 2D array
                 dims = size(data);
                 if isempty(prevData)

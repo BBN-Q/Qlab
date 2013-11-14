@@ -97,7 +97,7 @@ static const int FPGA_ADDR_LL_REPEAT = FPGA_BANKSEL_CSR | 0x9;
 //Registers we read from
 static const int  FPGA_ADDR_VERSION  =   FPGA_BANKSEL_CSR | 0x10;
 //Expected version
-static const int FIRMWARE_VERSION =  0x3;
+static const int FIRMWARE_VERSION =  0x4;
 
 static const int FPGA_ADDR_PLL_STATUS = FPGA_BANKSEL_CSR | 0x11;
 static const int FPGA_ADDR_CHA_LL_CURADDR = FPGA_BANKSEL_CSR | 0x12;
