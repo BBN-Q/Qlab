@@ -344,7 +344,7 @@ classdef ExpManager < handle
                 figHandle = figHandles.(measName{1});
 
                 for ct = 1:length(toPlot)
-                    if reset || ~isempty(plotHandles.(measName{1}){ct}) || ~ishandle(plotHandles.(measName{1}){ct})
+                    if reset || isempty(plotHandles.(measName{1}){ct}) || ~ishandle(plotHandles.(measName{1}){ct})
                         axesH = subplot(numRows, numCols, ct, 'Parent', figHandle);
                         sizes = cellfun(@(x) length(x.points), obj.sweeps);
                         switch nsdims(measData)
