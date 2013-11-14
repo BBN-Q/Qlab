@@ -29,7 +29,7 @@ public:
 	int acquire(const int &);
 	int wait_for_acquisition(const int &, const int &);
 	int stop(const int &);
-	int transfer_waveform(const int &, const int &, unsigned short *, const size_t &);
+	int transfer_waveform(const int &, const int &, short *, const size_t &);
 
 	int set_trigger_source(const int &, const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source(const int &) const;
@@ -39,6 +39,8 @@ public:
 
 	double get_sampleRate(const int &) const;
 	int set_sampleRate(const int &, const double &);
+
+	int set_averager_settings(const int &, const int &, const int &, const int &, const int &);
 
 	int set_log(FILE *);
 	int set_logging_level(const int &);

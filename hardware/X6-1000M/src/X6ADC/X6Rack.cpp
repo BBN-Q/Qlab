@@ -70,7 +70,7 @@ int X6Rack::stop(const int & deviceID) {
 	return X6s_[deviceID].stop();
 }
 
-int X6Rack::transfer_waveform(const int & deviceID, const int & channel, unsigned short *buffer, const size_t & bufferLength) {
+int X6Rack::transfer_waveform(const int & deviceID, const int & channel, short *buffer, const size_t & bufferLength) {
 	return X6s_[deviceID].transfer_waveform(channel, buffer, bufferLength);
 }
 
@@ -96,6 +96,15 @@ int X6Rack::set_trigger_source(const int & deviceID, const TRIGGERSOURCE & trigg
 
 TRIGGERSOURCE X6Rack::get_trigger_source(const int & deviceID) const{
 	return X6s_[deviceID].get_trigger_source();
+}
+
+int X6Rack::set_averager_settings(
+	const int & deviceID,
+	const int & recordLength,
+	const int & numSegments,
+	const int & waveforms,
+	const int & roundRobins) {
+	return X6s_[deviceID].set_averager_settings(recordLength, numSegments, waveforms, roundRobins);
 }
 
 int X6Rack::set_log(FILE * pFile) {

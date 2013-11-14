@@ -63,6 +63,8 @@ public:
 	float get_logic_temperature();
 	float get_logic_temperature_by_reg(); // second test method to get temp using WB register
 
+	int read_firmware_version(int &, int &);
+
 	/** Set reference source and frequency
 	 *  \param ref EXTERNAL || INTERNAL
 	 *  \param frequency Frequency in Hz
@@ -89,12 +91,9 @@ public:
 	/** Set Trigger source
 	 *  \param trgSrc SOFTWARE_TRIGGER || EXTERNAL_TRIGGER
 	 */
-	ErrorCodes set_trigger_src(TriggerSource trgSrc = EXTERNAL_TRIGGER,
-							   bool framed = true,
-							   bool edgeTrigger = true,
-							   unsigned int frameSize = 1024);
-
+	ErrorCodes set_trigger_src(TriggerSource trgSrc = EXTERNAL_TRIGGER);
 	TriggerSource get_trigger_src() const;
+
 	ErrorCodes set_trigger_delay(float delay = 0.0);
 
 	/** Set Decimation Factor (current for both Tx and Rx)
@@ -103,6 +102,9 @@ public:
 	 * \returns SUCCESS
 	 */
 	ErrorCodes set_decimation(bool enabled = false, int factor = 1);
+	int get_decimation();
+
+	ErrorCodes set_frame(int recordLength, int numRecords);
 
 	ErrorCodes set_channel_enable(int channel, bool enabled);
 	bool get_channel_enable(int channel);
@@ -114,11 +116,13 @@ public:
 
 	unsigned int get_num_channels();
 
-	ErrorCodes   open(const int &);
-	ErrorCodes   close();
+	ErrorCodes open(int deviceID);
+	ErrorCodes close();
 
-	ErrorCodes 	 acquire();
-	ErrorCodes	 stop();
+	ErrorCodes acquire();
+	ErrorCodes stop();
+
+	ErrorCodes transfer_waveform(int channel, short *buffer, size_t length);
 
 	ErrorCodes write_wishbone_register(uint32_t baseAddr, uint32_t offset, uint32_t data);
 	ErrorCodes write_wishbone_register(uint32_t offset, uint32_t data);
@@ -151,7 +155,7 @@ private:
 	unsigned int numBoards_;      /**< cached number of boards */
 	// unsigned int deviceID_;       /**< board ID (aka target number) */
 
-	TriggerSource triggerSource_ = SOFTWARE_TRIGGER; /**< cached trigger source */
+	TriggerSource triggerSource_ = EXTERNAL_TRIGGER; /**< cached trigger source */
 	map<int,bool> activeChannels_;
 	map<int, vector<short>> chData_; // holds the output data
 
@@ -159,7 +163,8 @@ private:
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
 	bool isRunning_;
 	unsigned int samplesPerFrame_ = 0;
-	unsigned int samplesToAcquire_ = 0x1000;
+	unsigned int samplesToAcquire_ = 0;
+	unsigned int numRecords_ = 1;
 
 	ErrorCodes set_active_channels();
 	int num_active_channels();
@@ -168,8 +173,7 @@ private:
 
 
 	void setHandler(OpenWire::EventHandler<OpenWire::NotifyEvent> &event, 
-    				void (X6_1000:: *CallBackFunction)(OpenWire::NotifyEvent & Event),
-    				bool useSyncronizer = true);
+    				void (X6_1000:: *CallBackFunction)(OpenWire::NotifyEvent & Event));
 
 	// Malibu Event handlers
 	
@@ -181,9 +185,7 @@ private:
     void HandleAfterStreamStart(OpenWire::NotifyEvent & Event);
     void HandleAfterStreamStop(OpenWire::NotifyEvent & Event);
 
-	void HandleDataRequired(Innovative::VitaPacketStreamDataEvent & Event);
     void HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event);
-    void HandlePackedDataAvailable(Innovative::VitaPacketPackerDataAvailable & Event);
 
 	void HandleTimer(OpenWire::NotifyEvent & Event);
 
@@ -193,9 +195,7 @@ private:
     void HandleWarningTempAlert(Innovative::AlertSignalEvent & event);
     void HandleInputFifoOverrunAlert(Innovative::AlertSignalEvent & event);
     void HandleInputOverrangeAlert(Innovative::AlertSignalEvent & event);
-    void HandleOutputFifoUnderflowAlert(Innovative::AlertSignalEvent & event);
     void HandleTriggerAlert(Innovative::AlertSignalEvent & event);
-    void HandleOutputOverrangeAlert(Innovative::AlertSignalEvent & event);
 
     void LogHandler(string handlerName);
 };

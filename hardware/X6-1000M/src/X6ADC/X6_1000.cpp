@@ -35,44 +35,33 @@ unsigned int  X6_1000::getBoardCount() {
 }
 
 void X6_1000::setHandler(OpenWire::EventHandler<OpenWire::NotifyEvent> & event, 
-    void (X6_1000:: *CallBackFunction)(OpenWire::NotifyEvent & Event),
-    bool useSyncronizer) {
+    void (X6_1000:: *CallBackFunction)(OpenWire::NotifyEvent & Event)) {
 
     event.SetEvent(this, CallBackFunction );
     event.Unsynchronize();
 }
 
 
-X6_1000::ErrorCodes X6_1000::open(const int & deviceID) {
+X6_1000::ErrorCodes X6_1000::open(int deviceID) {
     /* Connects to the II module with the given device ID returns MODULE_ERROR
      * if the device cannot be found
      */
 
     if (deviceID > numBoards_ || isOpened_) return MODULE_ERROR;
 
-    setHandler(timer_.OnElapsed, &X6_1000::HandleTimer, false);
+    setHandler(timer_.OnElapsed, &X6_1000::HandleTimer);
 
- 	// open function based on Innovative Stream Example ApplicationIO.cpp
- 	// trigger_.OnDisableTrigger.SetEvent(this, &X6_1000::HandleDisableTrigger);
-    // trigger_.OnExternalTrigger.SetEvent(this, &X6_1000::HandleExternalTrigger);
-    // trigger_.OnSoftwareTrigger.SetEvent(this, &X6_1000::HandleSoftwareTrigger);
-    // trigger_.DelayedTrigger(true); // trigger delayed after start
-        
     setHandler(module_.OnBeforeStreamStart, &X6_1000::HandleBeforeStreamStart);
     setHandler(module_.OnAfterStreamStart, &X6_1000::HandleAfterStreamStart);
-    setHandler(module_.OnAfterStreamStop,  &X6_1000::HandleAfterStreamStop);
+    setHandler(module_.OnAfterStreamStop, &X6_1000::HandleAfterStreamStop);
 
-
-    //  Alerts
-    // module_.Alerts().OnTimeStampRolloverAlert.SetEvent(this, &X6_1000::HandleTimestampRolloverAlert);
-    module_.Alerts().OnSoftwareAlert.SetEvent(         this, &X6_1000::HandleSoftwareAlert);
-    module_.Alerts().OnWarningTemperature.SetEvent(    this, &X6_1000::HandleWarningTempAlert);
-    // module_.Alerts().OnOutputUnderflow.SetEvent(       this, &X6_1000::HandleOutputFifoUnderflowAlert);
-    module_.Alerts().OnTrigger.SetEvent(               this, &X6_1000::HandleTriggerAlert);
-    // module_.Alerts().OnOutputOverrange.SetEvent(       this, &X6_1000::HandleOutputOverrangeAlert);
-    // Input 
-    module_.Alerts().OnInputOverflow.SetEvent(         this, &X6_1000::HandleInputFifoOverrunAlert);
-    module_.Alerts().OnInputOverrange.SetEvent(        this, &X6_1000::HandleInputOverrangeAlert);
+    // General alerts
+    module_.Alerts().OnSoftwareAlert.SetEvent(      this, &X6_1000::HandleSoftwareAlert);
+    module_.Alerts().OnWarningTemperature.SetEvent( this, &X6_1000::HandleWarningTempAlert);
+    module_.Alerts().OnTrigger.SetEvent(            this, &X6_1000::HandleTriggerAlert);
+    // Input alerts
+    module_.Alerts().OnInputOverflow.SetEvent(      this, &X6_1000::HandleInputFifoOverrunAlert);
+    module_.Alerts().OnInputOverrange.SetEvent(     this, &X6_1000::HandleInputOverrangeAlert);
 
     //  Configure Stream Event Handlers
     stream_.DirectDataMode(false);
@@ -124,6 +113,13 @@ X6_1000::ErrorCodes X6_1000::close() {
     isOpened_ = false;
 
 	return SUCCESS;
+}
+
+int X6_1000::read_firmware_version(int & version, int & subrevision) {
+    version = module_.Info().FpgaLogicVersion();
+    subrevision = module_.Info().FpgaLogicSubrevision();
+
+    return SUCCESS;
 }
 
 float X6_1000::get_logic_temperature() {
@@ -185,11 +181,7 @@ X6_1000::ErrorCodes X6_1000::set_ext_trigger_src(X6_1000::ExtSource extSrc) {
     return SUCCESS;
 }
 
-X6_1000::ErrorCodes X6_1000::set_trigger_src(
-                                TriggerSource trgSrc,
-                                bool framed,
-                                bool edgeTrigger,
-                                unsigned int frameSize) {
+X6_1000::ErrorCodes X6_1000::set_trigger_src(TriggerSource trgSrc) {
     // cache trigger source
     triggerSource_ = trgSrc;
 
@@ -198,13 +190,6 @@ X6_1000::ErrorCodes X6_1000::set_trigger_src(
     trigger_.ExternalTrigger( (trgSrc == EXTERNAL_TRIGGER) ? true : false);
     trigger_.AtConfigure();
 
-    int frameGranularity = module_.Input().Info().TriggerFrameGranularity();
-    if (frameSize % frameGranularity != 0) {
-        return INVALID_FRAMESIZE;
-    }
-    module_.Input().Trigger().FramedMode(framed);
-    module_.Input().Trigger().Edge(edgeTrigger);
-    module_.Input().Trigger().FrameSize(frameSize); 
     return SUCCESS;
 }
 
@@ -226,6 +211,23 @@ X6_1000::ErrorCodes X6_1000::set_trigger_delay(float delay) {
 X6_1000::ErrorCodes X6_1000::set_decimation(bool enabled, int factor) {
     module_.Input().Decimation((enabled ) ? factor : 0);
     return SUCCESS;
+}
+
+int X6_1000::get_decimation() {
+    return module_.Input().Decimation();
+}
+
+X6_1000::ErrorCodes X6_1000::set_frame(int recordLength, int numRecords) {
+    samplesPerFrame_ = recordLength;
+    numRecords_ = numRecords;
+
+    int frameGranularity = module_.Input().Info().TriggerFrameGranularity();
+    if (recordLength % frameGranularity != 0) {
+        return INVALID_FRAMESIZE;
+    }
+    module_.Input().Trigger().FramedMode(true);
+    module_.Input().Trigger().Edge(true);
+    module_.Input().Trigger().FrameSize(recordLength); 
 }
 
 X6_1000::ErrorCodes X6_1000::set_channel_enable(int channel, bool enabled) {
@@ -294,21 +296,22 @@ void X6_1000::log_card_info() {
 X6_1000::ErrorCodes X6_1000::acquire() {
     set_active_channels();
 
+    // figure out when to stop
+    samplesToAcquire_ = samplesPerFrame_ * numRecords_ / get_decimation();
+
     int samplesPerWord = module_.Input().Info().SamplesPerWord();
-    int packetSize = samplesPerFrame_*num_active_channels()/samplesPerWord; // TODO: update numSamples
-    // module_.Input().PacketSize(packetSize);
+    int packetSize = num_active_channels()*samplesPerFrame_/samplesPerWord/get_decimation();
+
     module_.Velo().LoadAll_VeloDataSize(packetSize);
     module_.Velo().ForceVeloPacketSize(true);
-    // module_.Input().Framed(samplesPerFrame_);
     
-    FILE_LOG(logINFO) << "trigger_.AtStreamStart();";
     trigger_.AtStreamStart();
 
     // flag must be set before calling stream start
     isRunning_ = true; 
 
     //  Start Streaming
-    FILE_LOG(logINFO) << "stream_.Start();";
+    FILE_LOG(logINFO) << "Arming acquisition";
     stream_.Start();
     timer_.Enabled(true);
     
@@ -325,32 +328,29 @@ X6_1000::ErrorCodes X6_1000::stop() {
     return SUCCESS;
 }
 
+X6_1000::ErrorCodes X6_1000::transfer_waveform(int channel, short *buffer, size_t length) {
+    // memcpy(buffer, &chData_[channel][0], sizeof(short)*std::min(length, chData_[channel].size()));
+    size_t count = std::min(length, chData_[channel].size());
+    std::copy(chData_[channel].begin(), chData_[channel].begin() + count, buffer);
+    return SUCCESS;
+}
+
 /****************************************************************************
  * Event Handlers 
  ****************************************************************************/
 
  void  X6_1000::HandleDisableTrigger(OpenWire::NotifyEvent & /*Event*/) {
     FILE_LOG(logINFO) << "X6_1000::HandleDisableTrigger";
-    module_.Output().Trigger().External(false);
-    module_.Input().Trigger().External(false);
 }
 
 
 void  X6_1000::HandleExternalTrigger(OpenWire::NotifyEvent & /*Event*/) {
     FILE_LOG(logINFO) << "X6_1000::HandleExternalTrigger";
-    //if (Settings.Rx.ExternalTrigger == 1) 
-    // module_.Input().Trigger().External(true);
-    if (triggerSource_ == EXTERNAL_TRIGGER)
-        module_.Output().Trigger().External(true);
 }
 
 
 void  X6_1000::HandleSoftwareTrigger(OpenWire::NotifyEvent & /*Event*/) {
     FILE_LOG(logINFO) << "X6_1000::HandleSoftwareTrigger";
-    //if (Settings.Rx.ExternalTrigger == 0) 
-    //    module_.Input().SoftwareTrigger(true);
-    if (triggerSource_ == SOFTWARE_TRIGGER) 
-        module_.Output().SoftwareTrigger(true);
 }
 
 void X6_1000::HandleBeforeStreamStart(OpenWire::NotifyEvent & /*Event*/) {
@@ -396,10 +396,6 @@ void X6_1000::HandleTimer(OpenWire::NotifyEvent & /*Event*/) {
     trigger_.AtTimerTick();
 }
 
-void X6_1000::HandleTimestampRolloverAlert(Innovative::AlertSignalEvent & event) {
-    LogHandler("HandleTimestampRolloverAlert");
-}
-
 void X6_1000::HandleSoftwareAlert(Innovative::AlertSignalEvent & event) {
     LogHandler("HandleSoftwareAlert");
 }
@@ -416,18 +412,9 @@ void X6_1000::HandleInputOverrangeAlert(Innovative::AlertSignalEvent & event) {
     LogHandler("HandleInputOverrangeAlert");
 }
 
-void X6_1000::HandleOutputFifoUnderflowAlert(Innovative::AlertSignalEvent & event) {
-    LogHandler("HandleOutputFifoUnderflowAlert");
-}
-
 void X6_1000::HandleTriggerAlert(Innovative::AlertSignalEvent & event) {
     LogHandler("HandleTriggerAlert");
 }
-
-void X6_1000::HandleOutputOverrangeAlert(Innovative::AlertSignalEvent & event) {
-    LogHandler("HandleOutputOverrangeAlert");
-}
-
 
 void X6_1000::LogHandler(string handlerName) {
     FILE_LOG(logINFO) << "Alert:" << handlerName;

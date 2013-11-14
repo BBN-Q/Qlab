@@ -60,6 +60,10 @@ double get_sampleRate(int deviceID){
 	return X6Rack_.get_sampleRate(deviceID);
 }
 
+int set_averager_settings(int deviceID, int recordLength, int numSegments, int waveforms, int roundRobins) {
+	return X6Rack_.set_averager_settings(deviceID, recordLength, numSegments, waveforms, roundRobins);
+}
+
 int acquire(int deviceID) {
 	return X6Rack_.acquire(deviceID);
 }
@@ -72,7 +76,7 @@ int stop(int deviceID) {
 	return X6Rack_.stop(deviceID);
 }
 
-int transfer_waveform(int deviceID, int channel, unsigned short *buffer, size_t bufferLength) {
+int transfer_waveform(int deviceID, int channel, short *buffer, size_t bufferLength) {
 	return X6Rack_.transfer_waveform(deviceID, channel, buffer, bufferLength);
 }
 

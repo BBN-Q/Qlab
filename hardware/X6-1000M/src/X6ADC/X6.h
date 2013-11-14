@@ -35,12 +35,13 @@ public:
 
 	int acquire();
 	int wait_for_acquisition(const int &);
-	int trigger();
 	int stop();
-	int transfer_waveform(const int &, unsigned short *, const size_t &);
+	int transfer_waveform(const int &, short *, const size_t &);
 
 	int set_sampleRate(const double &);
 	double get_sampleRate() const;
+
+	int set_averager_settings(const int &, const int &, const int &, const int &);
 
 	int set_trigger_source(const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source() const;
@@ -64,17 +65,14 @@ private:
 	X6& operator=(const X6&) = delete;
 
 	int deviceID_;
-	X6_1000 handle_; 
+	X6_1000 handle_;
+
 	int samplingRate_;
-/*
-	vector<UCHAR> writeQueue_;
-	vector<size_t> offsetQueue_;
-
-	int write(const unsigned int & addr, const USHORT & data, const bool & queue = false);
-	int write(const unsigned int & addr, const vector<USHORT> & data, const bool & queue = false);
-
-	int flush();
-*/
+	// averager settings
+	int recordLength_;
+	int numSegments_;
+	int waveforms_;
+	int roundRobins_;
 };
 
 #endif /* X6_H_ */

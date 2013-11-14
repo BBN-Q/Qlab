@@ -31,12 +31,22 @@ int main ()
 
   cout << "connect(0) returned " << rc << endl;
 
+  cout << "Firmware revision: " << read_firmware_version(0) << endl;
+
   cout << "current logic temperature method 1 = " << get_logic_temperature(0, 0) << endl;
   cout << "current logic temperature method 2 = " << get_logic_temperature(0, 1) << endl;
 
-  cout << "Set sample rate " << endl;
+  cout << "current PLL frequency = " << get_sampleRate(0)/1e6 << " MHz" << endl;
+
+  cout << "Set sample rate to 100 MHz" << endl;
 
   set_sampleRate(0,100e6);
+
+  cout << "current PLL frequency = " << get_sampleRate(0)/1e6 << " MHz" << endl;
+
+  cout << "Set sample rate back to 1000 MHz" << endl;
+
+  set_sampleRate(0,1e9);
 
   cout << "current PLL frequency = " << get_sampleRate(0)/1e6 << " MHz" << endl;
 
@@ -46,19 +56,18 @@ int main ()
 
   cout << "get trigger source returns " << ((get_trigger_source(0) == INTERNAL) ? "INTERNAL" : "EXTERNAL") << endl;
 
-  cout << "setting trigger source = INTERNAL" << endl;
+  cout << "setting averager parameters to record 10 segments of 1024 samples" << endl;
 
-  set_trigger_source(0, INTERNAL);
-
-  cout << "get trigger source returns " << ((get_trigger_source(0) == INTERNAL) ? "INTERNAL" : "EXTERNAL") << endl;
+  set_averager_settings(0, 1024, 10, 1, 1);
 
   cout << "Acquiring" << endl;
 
   acquire(0);
   wait_for_acquisition(0, 10);
 
-  unsigned short buffer[1024];
+  short *buffer = new short[10240];
   transfer_waveform(0, 1, buffer, 1024);
+  delete [] buffer;
 
   cout << "Stopping" << endl;
 

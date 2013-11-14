@@ -47,12 +47,14 @@ EXPORT double get_sampleRate(int);
 EXPORT int set_trigger_source(int, int);
 EXPORT int get_trigger_source(int);
 
+EXPORT int set_averager_settings(int, int, int, int, int);
+
 // TODO method to set 'waveform' properties like numSamples, waveforms, roundRobins, and segments
 
 EXPORT int acquire(int);
 EXPORT int wait_for_acquisition(int, int);
 EXPORT int stop(int);
-EXPORT int transfer_waveform(int, int, unsigned short *, size_t);
+EXPORT int transfer_waveform(int, int, short *, size_t);
 
 EXPORT int set_log(char *);
 EXPORT int set_logging_level(int);
