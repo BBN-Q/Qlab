@@ -113,14 +113,6 @@ int get_trigger_source(int deviceID) {
 	return int(X6Rack_.get_trigger_source(deviceID));
 }
 
-int raw_write(int deviceID, int numBytes, UCHAR* data){
-	return X6Rack_.raw_write(deviceID, numBytes, data);
-}
-
-int raw_read(int deviceID){
-	return X6Rack_.raw_read(deviceID);
-}
-
 int read_register(int deviceID, int wbAddr, int offset){
 	return X6Rack_.read_register(deviceID, wbAddr, offset);
 }
@@ -131,10 +123,6 @@ int write_register(int deviceID, int wbAddr, int offset, int data){
 
 float get_logic_temperature(int deviceID, int method) {
 	return X6Rack_.get_logic_temperature(deviceID, method);
-}
-
-void set_malibu_threading_enable(bool enable) {
-	X6_1000::set_threading_enable(enable);
 }
 
 #ifdef __cplusplus

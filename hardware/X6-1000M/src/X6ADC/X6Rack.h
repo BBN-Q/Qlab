@@ -46,13 +46,9 @@ public:
 	int set_logging_level(const int &);
 
 	// debug methods
-	int raw_write(int, int, UCHAR*);
-	int raw_read(int);
-	
 	int read_register(int, int, int);
 	int write_register(int, int, int, int);
 
-	// X6-1000M Test interface
 	float get_logic_temperature(int, int);
 
 private:

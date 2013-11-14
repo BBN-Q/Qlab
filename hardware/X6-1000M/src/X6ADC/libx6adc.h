@@ -49,8 +49,6 @@ EXPORT int get_trigger_source(int);
 
 EXPORT int set_averager_settings(int, int, int, int, int);
 
-// TODO method to set 'waveform' properties like numSamples, waveforms, roundRobins, and segments
-
 EXPORT int acquire(int);
 EXPORT int wait_for_acquisition(int, int);
 EXPORT int stop(int);
@@ -60,14 +58,11 @@ EXPORT int set_log(char *);
 EXPORT int set_logging_level(int);
 
 /* debug methods */
-EXPORT int raw_write(int, int, unsigned char*);
-EXPORT int raw_read(int);
 EXPORT int read_register(int, int, int);
 EXPORT int write_register(int, int, int, int);
 
 // II X6-1000M Test Interface
 EXPORT float get_logic_temperature(int,int);
-EXPORT void set_malibu_threading_enable(bool);
 
 #ifdef __cplusplus
 }

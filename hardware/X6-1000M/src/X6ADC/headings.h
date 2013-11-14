@@ -32,11 +32,11 @@ using std::endl;
 using std::map;
 using std::runtime_error;
 
-// #include <thread>
+#include <thread>
 // #include <mutex>
 // #include <atomic>
 #include <utility>
-// #include <chrono>
+#include <chrono>
 
 //Needed for usleep on gcc 4.7
 #include <unistd.h>

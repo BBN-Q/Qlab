@@ -124,20 +124,6 @@ int X6Rack::set_logging_level(const int & logLevel){
 	return 0;
 }
 
-int X6Rack::raw_write(int deviceID, int numBytes, UCHAR* data){
-	DWORD bytesWritten;
-	//FT_Write(X6s_[deviceID].handle_, data, numBytes, &bytesWritten);
-	return int(bytesWritten);
-}
-
-int X6Rack::raw_read(int deviceID) {
-	DWORD bytesRead;
-	UCHAR dataBuffer[2];
-	//FT_Read(X6s_[deviceID].handle_, dataBuffer, 2, &bytesRead);
-	FILE_LOG(logDEBUG2) << "Read " << bytesRead << " bytes with value" << myhex << ((dataBuffer[0] << 8) | dataBuffer[1]);
-	return int((dataBuffer[0] << 8) | dataBuffer[1]);
-}
-
 int X6Rack::read_register(int deviceID, int wbAddr, int offset){
 	return X6s_[deviceID].read_register(wbAddr, offset);
 }
