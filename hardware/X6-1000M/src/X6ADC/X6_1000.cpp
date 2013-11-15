@@ -214,7 +214,8 @@ X6_1000::ErrorCodes X6_1000::set_decimation(bool enabled, int factor) {
 }
 
 int X6_1000::get_decimation() {
-    return module_.Input().Decimation();
+    int decimation = module_.Input().Decimation();
+    return (decimation > 0) ? decimation : 1;
 }
 
 X6_1000::ErrorCodes X6_1000::set_frame(int recordLength, int numRecords) {
@@ -298,9 +299,11 @@ X6_1000::ErrorCodes X6_1000::acquire() {
 
     // figure out when to stop
     samplesToAcquire_ = samplesPerFrame_ * numRecords_ / get_decimation();
+    FILE_LOG(logINFO) << "samplesToAcquire = " << samplesToAcquire_;
 
     int samplesPerWord = module_.Input().Info().SamplesPerWord();
     int packetSize = num_active_channels()*samplesPerFrame_/samplesPerWord/get_decimation();
+    FILE_LOG(logINFO) << "packetSize = " << packetSize;
 
     module_.Velo().LoadAll_VeloDataSize(packetSize);
     module_.Velo().ForceVeloPacketSize(true);

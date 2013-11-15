@@ -21,7 +21,8 @@ public:
 		X6_NOT_IMPLEMENTED_ERROR = -3,
 		X6_INVALID_CHANNEL = -4,
 		X6_FILE_ERROR = -5,
-		X6_INVALID_DEVICEID = -6
+		X6_INVALID_DEVICEID = -6,
+		X6_TIMEOUT = -7
 	};
 
 	X6();
@@ -65,7 +66,7 @@ private:
 	X6_1000 handle_;
 
 	int samplingRate_;
-	
+
 	// averager settings
 	int recordLength_;
 	int numSegments_;

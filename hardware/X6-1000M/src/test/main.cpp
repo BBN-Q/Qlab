@@ -63,8 +63,19 @@ int main ()
   cout << "Acquiring" << endl;
 
   acquire(0);
-  wait_for_acquisition(0, 10);
 
+  cout << "Waiting for acquisition to complete" << endl;
+  int success = wait_for_acquisition(0, 1);
+  if (success == X6_OK) {
+    cout << "Acquistion finished" << endl;
+  } else if (success == X6_TIMEOUT) {
+    cout << "Acquisition timed out" << endl;
+  } else {
+    cout << "Unknown error in wait_for_acquisition" << endl;
+  }
+
+
+  cout << "Transferring waveform ch1" << endl;
   short *buffer = new short[10240];
   transfer_waveform(0, 1, buffer, 1024);
   delete [] buffer;

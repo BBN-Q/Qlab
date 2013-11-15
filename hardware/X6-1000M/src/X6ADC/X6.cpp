@@ -142,7 +142,9 @@ int X6::wait_for_acquisition(const int & timeOut) {
 	*/
 	auto start = std::chrono::system_clock::now();
 	auto end = start + std::chrono::seconds(timeOut);
-	while (handle_.get_is_running() && (std::chrono::system_clock::now() < end)) {
+	while (handle_.get_is_running()) {
+		if (std::chrono::system_clock::now() > end)
+			return X6::X6_TIMEOUT;
 		std::this_thread::sleep_for( std::chrono::milliseconds(100) );
 	}
 	return 0;
