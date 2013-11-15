@@ -19,16 +19,16 @@
 extern "C" {
 #endif
 
-// enum X6ErrorCode {
-// 	X6_OK,
-// 	X6_UNKNOWN_ERROR = -1,
-// 	X6_BUFFER_OVERFLOW = -2,
-// 	X6_NOT_IMPLEMENTED_ERROR = -3,
-// 	X6_INVALID_CHANNEL = -4,
-// 	X6_FILE_ERROR = -5,
-// 	X6_INVALID_DEVICEID = -6,
-// 	X6_TIMEOUT = -7
-// };
+enum X6ErrorCode {
+	X6_OK,
+	X6_UNKNOWN_ERROR = -1,
+	X6_BUFFER_OVERFLOW = -2,
+	X6_NOT_IMPLEMENTED_ERROR = -3,
+	X6_INVALID_CHANNEL = -4,
+	X6_FILE_ERROR = -5,
+	X6_INVALID_DEVICEID = -6,
+	X6_TIMEOUT = -7
+};
 
 
 EXPORT int init();

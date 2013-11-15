@@ -37,7 +37,6 @@ ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-std=c++11")
 SET ( DLL_SRC 
 	./X6ADC/libx6adc.cpp
 	./X6ADC/X6.cpp
-	./X6ADC/X6Rack.cpp
 	./X6ADC/X6_1000.cpp
 )
 

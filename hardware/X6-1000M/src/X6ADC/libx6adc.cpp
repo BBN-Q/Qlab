@@ -5,8 +5,8 @@
  *      Author: qlab
  */
 
-#include "libx6adc.h"
 #include "headings.h"
+#include "libx6adc.h"
 #include "X6.h"
 
 // stub class to close the logger file handle when the driver goes out of scope
