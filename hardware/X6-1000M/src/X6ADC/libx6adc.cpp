@@ -104,7 +104,7 @@ int stop(int deviceID) {
 	return X6s_[deviceID].stop();
 }
 
-int transfer_waveform(int deviceID, int channel, short *buffer, size_t bufferLength) {
+int transfer_waveform(int deviceID, int channel, short *buffer, unsigned int bufferLength) {
 	return X6s_[deviceID].transfer_waveform(channel, buffer, bufferLength);
 }
 
