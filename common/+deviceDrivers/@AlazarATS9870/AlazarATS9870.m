@@ -282,14 +282,6 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %Try to abort any in progress acquisitions and transfers
             obj.call_API('AlazarAbortAsyncRead', obj.boardHandle);
 
-            for ct = 1:obj.buffers.numBuffers
-                clear obj.buffers.bufferPtrs{ct}
-            end
-            obj.buffers.bufferPtrs = cell(1, obj.buffers.numBuffers);
-            for ct = 1:obj.buffers.numBuffers
-                obj.buffers.bufferPtrs{ct} = libpointer('uint8Ptr', zeros(obj.buffers.bufferSize,1));
-            end
-
         end
         
         %Dummy function for consistency with Acqiris card where average
