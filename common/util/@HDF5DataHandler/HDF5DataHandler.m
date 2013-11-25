@@ -176,7 +176,7 @@ classdef HDF5DataHandler < handle
             assert(obj.fileOpen == 1, 'File must be open first');
             
             h5writeatt(obj.fileName, '/', 'version', obj.version);
-            obj.writeString('/header', json.dump(headerStruct));
+            obj.writeString('/header', json.dump(headerStruct, 'indent', 2));
             h5writeatt(obj.fileName, '/', 'nbrDataSets', uint16(obj.nbrDataSets));
         end
         
