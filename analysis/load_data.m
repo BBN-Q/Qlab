@@ -46,6 +46,11 @@ info = h5info(fullpath, '/');
 attributeNames = {info.Attributes.Name};
 assert(any(strcmp(attributeNames, 'version')) && h5readatt(fullpath, '/', 'version') == 2, 'Please use an old file loader');
 data.nbrDataSets = h5readatt(fullpath, '/', 'nbrDataSets');
+
+
+headerStr = h5read(fullpath, '/header');
+data.expSettings = json.load(headerStr{1});
+
 for ii = 1:data.nbrDataSets
     rawData = h5read(fullpath, ['/DataSet' num2str(ii) '/real']) + 1i * h5read(fullpath, ['/DataSet' num2str(ii) '/imag']);
     data.data{ii} = rawData;
