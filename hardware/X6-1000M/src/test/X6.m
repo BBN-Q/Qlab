@@ -1,63 +1,100 @@
-classdef X6 < APS
+classdef X6 < hgsetget
     
     properties (Constant)
-        TEST_MODE_RAMP = 0;
-        TEST_MODE_SINE = 1;
+        library_path = '../../build/';
+        samplingRate = 1000;
+        triggerSource
+        bufferSize = 0;
     end
     
     methods
-        function obj = libx6()
-            % call parent contstructor
-            obj.library_path = '../../build/';
-            obj.samplingRate = 1000;
-        end
-        
-        function val = writeRegister(aps, addr, offset, data)
-            % get temprature using method one based on Malibu Objects
-            val = aps.libraryCall('write_register', addr, offset, data);
+        function obj = X6()
         end
 
-        function val = readRegister(aps, addr, offset)
-            % get temprature using method one based on Malibu Objects
-            val = aps.libraryCall('read_register', addr, offset);
-        end
-
-        
-        function val = getLogicTemperature(aps)
-            % get temprature using method one based on Malibu Objects
-            val = aps.libraryCall('get_logic_temperature', 0);
-        end
-        
-        function val = enableTestGenerator(aps,mode,rate)
-            val = aps.libraryCall('enable_test_generator', mode,rate);
-        end
-        
-        function val = disableTestGenerator(aps)
-            val = aps.libraryCall('disable_test_generator');
-        end
-
-        function loadWaveform(obj, ch, waveform, streamID)
-            %loadWaveform - loads a waveform vector into memory
-            % APS.loadWaveform(ch, waveform)
-            %   ch - channel (1-4)
-            %   waveform - int16 format waveform data (-8192, 8191) or
-            %       float data in the range (-1.0, 1.0)
-            assert((ch>0) && (ch<5), 'Oops! The channel must be in the range 1 through 4');
-            assert(length(waveform)<=obj.MAX_WAVFORM_LENGTH, 'Oops! Your waveform must be less than %d points', obj.MAX_WAVFORM_LENGTH+1)
-
-            if ~exist('streamID', 'var')
-                streamID = -1;
+        function val = connect(obj, id)
+            val = obj.libraryCall('connect_by_id', id);
+            if (val == 0)
+                obj.is_open = 1;
             end
+        end
 
-            switch(class(waveform))
-                case 'int16'
-                    obj.libraryCall('set_waveform_int', ch-1, waveform, length(waveform), streamID);
-                case 'double'
-                    obj.libraryCall('set_waveform_float', ch-1, waveform, length(waveform), streamID);
-                otherwise
-                    error('Unhandled waveform data type');
+        function val = disconnect(obj)
+            val = obj.libraryCall('disconnect');
+            obj.is_open = 0;
+        end
+
+        function delete(obj)
+            if (obj.is_open)
+                obj.disconnect();
             end
-            obj.setEnabled(ch, 1);
+        end
+
+        function val = num_devices(obj)
+            val = calllib('libx6', 'get_num_devices');
+        end
+
+        function val = init(obj)
+            val = obj.libraryCall('initX6')
+        end
+
+        function val = get.samplingRate(obj)
+            val = obj.libraryCall('get_sampleRate')
+        end
+
+        function val = set.samplingRate(obj, rate)
+            val = obj.libraryCall('set_sampleRate', rate)
+        end
+
+        function val = get.triggerSource(obj)
+            val = obj.libraryCall('get_trigger_source');
+        end
+
+        function val = set.triggerSource(source)
+            val = obj.libraryCall('set_trigger_source', source);
+        end
+
+        function val = set_averager_settings(recordLength, numSegments, waveforms, roundRobins)
+            val = obj.libraryCall(recordLength, numSegments, waveforms, roundRobins);
+            obj.bufferSize = recordLength * numSegments * waveforms * roundRobins;
+        end
+
+        function val = acquire(obj)
+            val = obj.libraryCall('acquire');
+        end
+
+        function val = wait_for_acquisition(obj, timeout)
+            val = obj.libraryCall('wait_for_acquisition', timeout);
+        end
+
+        function val = stop(obj)
+            val = obj.libraryCall('stop');
+        end
+
+        function wf = transfer_waveform(obj, ch)
+            % possibly more efficient to pass a libpointer, but this is easiest for now
+            [val, wf] = obj.libraryCall('transfer_waveform', ch, zeros(obj.bufferSize, 1, 'int16'), obj.bufferSize);
+        end
+        
+        function val = writeRegister(obj, addr, offset, data)
+            % get temprature using method one based on Malibu Objects
+            val = obj.libraryCall('write_register', addr, offset, data);
+        end
+
+        function val = readRegister(obj, addr, offset)
+            % get temprature using method one based on Malibu Objects
+            val = obj.libraryCall('read_register', addr, offset);
+        end
+
+        
+        function val = getLogicTemperature(obj)
+            % get temprature using method one based on Malibu Objects
+            val = obj.libraryCall('get_logic_temperature', 0);
+        end
+
+        function setDebugLevel(obj, level)
+            % sets logging level in libx6.log
+            % level = {logERROR=0, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4}
+            calllib('libx6', 'set_logging_level', level);
         end
         
     end
@@ -70,25 +107,28 @@ classdef X6 < APS
                 case 'PCWIN64'
                     libfname = 'libx6.dll';
                     libheader = '../APS/libaps.h';
-                    obj.library_name = 'libx6';
                     %protoFile = @obj.libaps64;
-                case 'PCWIN'
-                    error('Currently on Win64 is supported');
-                case 'MACI64'
-                    libfname = 'libaps.dylib';
-                    error('Need prototype file setup for OS X');
-                case 'GLNXA64'
-                    libfname = 'libaps.so';
-                    error('Need prototype file setup for Linux');
                 otherwise
                     error('Unsupported platform.');
             end
-            obj.library_path = '../../build/';
             % build library path and load it if necessary
             if ~libisloaded(obj.library_name)
-                loadlibrary([obj.library_path libfname], libheader );
+                loadlibrary(fullfile(obj.library_path, libfname), libheader );
                 %Initialize the APSRack in the library
-                calllib(obj.library_name, 'init');
+                calllib('libx6', 'init');
+            end
+        end
+
+        function val = libraryCall(obj,func,varargin)
+            %Helper function to pass through to calllib with the X6 device ID first 
+            if ~(obj.is_open)
+                error('X6:libraryCall','X6 is not open');
+            end
+                        
+            if size(varargin,2) == 0
+                val = calllib('libx6', func, obj.deviceID);
+            else
+                val = calllib('libx6', func, obj.deviceID, varargin{:});
             end
         end
     end
@@ -113,50 +153,26 @@ classdef X6 < APS
             
             fprintf('current PLL frequency = %.2f\n', x6.samplingRate);
             
-            fprintf('setting trigger source = INTERNAL\n');
+            % fprintf('setting trigger source = INTERNAL\n');
             
-            x6.triggerSource = 'internal';
+            % x6.triggerSource = 'internal';
             x6.setDebugLevel(5);
             
-            
-            fprintf('set channel(0) enabled = 1\n');
-            
-            x6.setEnabled(1,true);
-            
-            
-            fprintf('enable ramp output\n');
-            x6.samplingRate = 1000;
-            x6.enableTestGenerator(x6.TEST_MODE_RAMP,0.001);
-            
-            pause(5);
-            
-            fprintf('enable sine wave output\n');
-            
-            x6.disableTestGenerator();
-            x6.samplingRate = 100;
-            x6.enableTestGenerator(x6.TEST_MODE_SINE,0.1);
-            
-            pause(5);
-            
-            fprintf('disabling channel\n');
-            x6.disableTestGenerator();
+            fprintf('setting averager parameters to record 10 segments of 1024 samples\n');
+            x6.set_averager_settings(1024, 10, 1, 1);
 
-            fprintf('Load Square Wave\n');
-            %Load a square wave
-            wf = [1*ones([1,500]) -1*ones([1,500])];
-            for ch = 1
-                x6.loadWaveform(ch, wf);
-                x6.setRunMode(ch, x6.RUN_WAVEFORM);
-            end
-            x6.samplingRate = 50;
-            fprintf('Run\n');
-            x6.run();
-            %keyboard
-            pause(10)
-            fprintf('Stop\n');
+            fprintf('Acquiring\n');
+            x6.acquire();
+
+            success = x6.wait_for_acquisition(1);
+
+            fprintf('Wait for acquisition returned %d\n', success);
+
+            fprintf('Stopping\n');
             x6.stop();
-            
-            x6.setEnabled(1,false);
+
+            fprintf('Transferring waveform channel 1\n');
+            wf = x6.transfer_waveform(1);
             
             x6.disconnect();
             unloadlibrary('libx6')
