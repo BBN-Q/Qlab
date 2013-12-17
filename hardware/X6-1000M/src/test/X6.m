@@ -2,19 +2,26 @@ classdef X6 < hgsetget
     
     properties (Constant)
         library_path = '../../build/';
+    end
+    
+    properties
         samplingRate = 1000;
         triggerSource
         bufferSize = 0;
+        is_open = 0;
+        deviceID = 0;
     end
     
     methods
         function obj = X6()
+            obj.load_library();
         end
 
         function val = connect(obj, id)
-            val = obj.libraryCall('connect_by_id', id);
+            val = calllib('libx6adc', 'connect_by_ID', id);
             if (val == 0)
                 obj.is_open = 1;
+                obj.deviceID = id;
             end
         end
 
@@ -30,31 +37,31 @@ classdef X6 < hgsetget
         end
 
         function val = num_devices(obj)
-            val = calllib('libx6', 'get_num_devices');
+            val = calllib('libx6adc', 'get_num_devices');
         end
 
         function val = init(obj)
-            val = obj.libraryCall('initX6')
+            val = obj.libraryCall('initX6');
         end
 
         function val = get.samplingRate(obj)
-            val = obj.libraryCall('get_sampleRate')
+            val = obj.libraryCall('get_sampleRate');
         end
 
-        function val = set.samplingRate(obj, rate)
-            val = obj.libraryCall('set_sampleRate', rate)
+        function set.samplingRate(obj, rate)
+            val = obj.libraryCall('set_sampleRate', rate);
         end
 
         function val = get.triggerSource(obj)
             val = obj.libraryCall('get_trigger_source');
         end
 
-        function val = set.triggerSource(source)
-            val = obj.libraryCall('set_trigger_source', source);
+        function set.triggerSource(obj, source)
+            obj.libraryCall('set_trigger_source', source);
         end
 
-        function val = set_averager_settings(recordLength, numSegments, waveforms, roundRobins)
-            val = obj.libraryCall(recordLength, numSegments, waveforms, roundRobins);
+        function val = set_averager_settings(obj, recordLength, numSegments, waveforms, roundRobins)
+            val = obj.libraryCall('set_averager_settings', recordLength, numSegments, waveforms, roundRobins);
             obj.bufferSize = recordLength * numSegments * waveforms * roundRobins;
         end
 
@@ -90,13 +97,6 @@ classdef X6 < hgsetget
             % get temprature using method one based on Malibu Objects
             val = obj.libraryCall('get_logic_temperature', 0);
         end
-
-        function setDebugLevel(obj, level)
-            % sets logging level in libx6.log
-            % level = {logERROR=0, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4}
-            calllib('libx6', 'set_logging_level', level);
-        end
-        
     end
     
     methods (Access = protected)
@@ -105,17 +105,17 @@ classdef X6 < hgsetget
             %Helper functtion to load the platform dependent library
             switch computer()
                 case 'PCWIN64'
-                    libfname = 'libx6.dll';
-                    libheader = '../APS/libaps.h';
+                    libfname = 'libx6adc.dll';
+                    libheader = '../X6ADC/libx6adc.h';
                     %protoFile = @obj.libaps64;
                 otherwise
                     error('Unsupported platform.');
             end
             % build library path and load it if necessary
-            if ~libisloaded(obj.library_name)
+            if ~libisloaded('libx6adc')
                 loadlibrary(fullfile(obj.library_path, libfname), libheader );
                 %Initialize the APSRack in the library
-                calllib('libx6', 'init');
+                calllib('libx6adc', 'init');
             end
         end
 
@@ -126,14 +126,20 @@ classdef X6 < hgsetget
             end
                         
             if size(varargin,2) == 0
-                val = calllib('libx6', func, obj.deviceID);
+                val = calllib('libx6adc', func, obj.deviceID);
             else
-                val = calllib('libx6', func, obj.deviceID, varargin{:});
+                val = calllib('libx6adc', func, obj.deviceID, varargin{:});
             end
         end
     end
     
     methods (Static)
+        
+        function setDebugLevel(level)
+            % sets logging level in libx6.log
+            % level = {logERROR=0, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4}
+            calllib('libx6adc', 'set_logging_level', level);
+        end
         
         function UnitTest()
             
@@ -175,7 +181,7 @@ classdef X6 < hgsetget
             wf = x6.transfer_waveform(1);
             
             x6.disconnect();
-            unloadlibrary('libx6')
+            unloadlibrary('libx6adc')
         end
         
     end
