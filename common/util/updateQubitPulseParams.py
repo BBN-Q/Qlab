@@ -17,3 +17,5 @@ if args.qubit not in channelLib.channelDict:
 channelLib[args.qubit].pulseParams['piAmp'] = args.piAmp
 channelLib[args.qubit].pulseParams['pi2Amp'] = args.pi2Amp
 channelLib[args.qubit].pulseParams['dragScaling'] = args.dragScaling
+
+channelLib.write_to_file()

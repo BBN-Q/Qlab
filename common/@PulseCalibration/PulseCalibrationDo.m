@@ -53,7 +53,7 @@ if settings.DoRabiAmp
    obj.channelParams.pi2Amp = obj.channelParams.piAmp/2;
    obj.channelParams.i_offset = obj.channelParams.i_offset + obj.channelParams.ampFactor*offsetPhases(1)*amp2offset;
    obj.channelParams.q_offset = obj.channelParams.q_offset + offsetPhases(2)*amp2offset;
-   fprintf('Initial guess for X180Amp: %.0f\n', obj.channelParams.piAmp);
+   fprintf('Initial guess for X180Amp: %.4f\n', obj.channelParams.piAmp);
    fprintf('Shifting i_offset by: %.3f\n', offsetPhases(1)*amp2offset);
    fprintf('Shifting q_offset by: %.3f\n', offsetPhases(2)*amp2offset);
 end
@@ -201,7 +201,6 @@ end
 
 %% Save updated parameters to file
 updateAmpPhase(obj.channelParams.physChan, obj.channelParams.ampFactor, obj.channelParams.phaseSkew);
-updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 
 % update i and q offsets in the instrument library
 instrLib = json.read(getpref('qlab', 'InstrumentLibraryFile'));
@@ -222,6 +221,13 @@ json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
 obj.channelParams
 
 obj.finished = true;
+
+
+    function update_library_files()
+        
+        
+    end
+
 
 end
 
