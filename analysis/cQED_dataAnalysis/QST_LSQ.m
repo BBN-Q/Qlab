@@ -2,10 +2,13 @@ function rhoLSQ = QST_LSQ(expResults, varMat, measPulseMap, measOpMap, measPulse
 
 %Function to perform least-squares inversion of state tomography data
 %
-% expResults : structure array (length total number of experiments)
-%   each structure containts fields data, measPulse, measOperator
-% measPulses : cell array of unitaries of measurment pulses
-% measOps : cell array of measurment operators
+% expResults : data array
+% varmat : convariance matrix for data
+% measPulseMap: array mapping each experiment to a measurement readout
+% pulse
+% measOpMap: array mapping each experiment to a measurement channel
+% measPulseUs : cell array of unitaries of measurement pulses
+% measOps : cell array of measurment operators for each channel
 % n : number of qubits
 
 %Construct the predictor matrix.  Each row is an experiment.  The number of
