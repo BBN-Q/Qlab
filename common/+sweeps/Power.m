@@ -23,7 +23,7 @@ classdef Power < sweeps.Sweep
 	methods
 		% constructor
 		function obj = Power(sweepParams, Instr)
-			obj.label = 'Power';
+			obj.axisLabel = 'Power';
 			
             % look for an instrument with the name 'instr'
             obj.Instr = Instr.(sweepParams.instr);

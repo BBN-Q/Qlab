@@ -22,7 +22,7 @@ classdef Phase < sweeps.Sweep
 	methods
 		% constructor
 		function obj = Phase(sweepParams, Instr)
-			obj.label = 'Phase';
+			obj.axisLabel = 'Phase';
 			
             % look for an instrument with the name 'genID'
             if isfield(Instr, sweepParams.genID)

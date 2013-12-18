@@ -117,7 +117,7 @@ classdef ExpManager < handle
 
             if ~isempty(obj.dataFileHandler)
                 %Construct data file header and info structs
-                labels = cellfun(@(s) s.label, obj.sweeps, 'UniformOutput', false);
+                labels = cellfun(@(s) s.axisLabel, obj.sweeps, 'UniformOutput', false);
                 xyz = {'x', 'y', 'z'};
                 points = cellfun(@(s) s.points, obj.sweeps, 'UniformOutput', false);
                 dataInfo = struct();
@@ -352,7 +352,7 @@ classdef ExpManager < handle
                                 %Find non-singleton sweep dimension
                                 goodSweepIdx = find(sizes ~= 1, 1);
                                 plotHandles.(measName{1}){ct} = plot(axesH, obj.sweeps{goodSweepIdx}.plotPoints, toPlot{ct}.func(measData));
-                                xlabel(axesH, obj.sweeps{goodSweepIdx}.label);
+                                xlabel(axesH, obj.sweeps{goodSweepIdx}.axisLabel);
                                 ylabel(axesH, toPlot{ct}.label)
 
                             case 2
@@ -361,16 +361,16 @@ classdef ExpManager < handle
                                 yPoints = obj.sweeps{goodSweepIdx(1)}.plotPoints;
                                 plotHandles.(measName{1}){ct} = imagesc(xPoints, yPoints, toPlot{ct}.func(measData), 'Parent', axesH);
                                 title(axesH, toPlot{ct}.label)
-                                xlabel(axesH, obj.sweeps{goodSweepIdx(2)}.label);
-                                ylabel(axesH, obj.sweeps{goodSweepIdx(1)}.label);
+                                xlabel(axesH, obj.sweeps{goodSweepIdx(2)}.axisLabel);
+                                ylabel(axesH, obj.sweeps{goodSweepIdx(1)}.axisLabel);
                             case 3
                                 goodSweepIdx = find(sizes ~= 1, 2);
                                 xPoints = obj.sweeps{goodSweepIdx(1)}.plotPoints;
                                 yPoints = obj.sweeps{goodSweepIdx(2)}.plotPoints;
                                 plotHandles.(measName{1}){ct} = imagesc(xPoints, yPoints, toPlot{ct}.func(squeeze(measData(1,:,:))), 'Parent', axesH);
                                 title(axesH, toPlot{ct}.label)
-                                xlabel(axesH, obj.sweeps{goodSweepIdx(1)}.label);
-                                ylabel(axesH, obj.sweeps{goodSweepIdx(2)}.label);
+                                xlabel(axesH, obj.sweeps{goodSweepIdx(1)}.axisLabel);
+                                ylabel(axesH, obj.sweeps{goodSweepIdx(2)}.axisLabel);
                         end
                     else
                         switch nsdims(measData)

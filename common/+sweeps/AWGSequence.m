@@ -24,7 +24,7 @@ classdef AWGSequence < sweeps.Sweep
     methods
         % constructor
         function obj = AWGSequence(sweepParams, Instr)
-            obj.label = 'AWG Sequence Number';
+            obj.axisLabel = 'AWG Sequence Number';
             
             obj.sequenceFile = sweepParams.sequenceFile;
 

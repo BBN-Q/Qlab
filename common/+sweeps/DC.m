@@ -19,7 +19,7 @@ classdef DC < sweeps.Sweep
 	methods
 		% constructor
 		function obj = DC(sweepParams, Instr)
-			obj.label = 'DC';
+			obj.axisLabel = 'DC';
 			
             % look for an instrument with the name 'instr'
             obj.Instr = Instr.(sweepParams.instr);

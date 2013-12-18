@@ -23,9 +23,9 @@ classdef Frequency < sweeps.Sweep
         % constructor
         function obj = Frequency(sweepParams, Instr)
             if isfield(sweepParams, 'label')
-                obj.label = sweepParams.label;
+                obj.axisLabel = sweepParams.axisLabel;
             else
-                obj.label = 'Frequency (GHz)';
+                obj.axisLabel = 'Frequency (GHz)';
             end
             start = sweepParams.start;
             stop = sweepParams.stop;

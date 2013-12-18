@@ -23,7 +23,7 @@ classdef Attenuation < sweeps.Sweep
 	methods
 		% constructor
 		function obj = Attenuation(sweepParams, Instr)
-			obj.label = 'Attenuation';
+			obj.axisLabel = 'Attenuation';
 			
             % look for an instrument with the name 'Instr'
             obj.Instr = Instr.(sweepParams.instr);

@@ -25,7 +25,7 @@ classdef AWGChannel < sweeps.Sweep
     methods
         % constructor
         function obj = AWGChannel(sweepParams, Instr)
-            obj.label = ['AWG Channel(s) ' sweepParams.channel ' ' sweepParams.mode ' (V)'];
+            obj.axisLabel = ['AWG Channel(s) ' sweepParams.channel ' ' sweepParams.mode ' (V)'];
             
             % look for the AWG instrument object
             assert(isfield(Instr, sweepParams.instr), 'Could not find AWG instrument');

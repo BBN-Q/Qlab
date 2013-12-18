@@ -16,7 +16,7 @@
 % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 % See the License for the specific language governing permissions and
 % limitations under the License.
-classdef HetrodyneFrequency < sweeps.Sweep
+classdef FrequencyX2 < sweeps.Sweep
     properties
         Instr1
         Instr2
@@ -27,7 +27,7 @@ classdef HetrodyneFrequency < sweeps.Sweep
     methods
         % constructor
         function obj = FrequencyX2(sweepParams, Instrs)
-            obj.label = 'Frequency (GHz)';
+            obj.axisLabel = 'Frequency (GHz)';
             start1 = sweepParams.start1;
             stop1 = sweepParams.stop1;
             step1 = sweepParams.step1;

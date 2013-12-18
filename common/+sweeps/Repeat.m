@@ -22,7 +22,7 @@ classdef Repeat < sweeps.Sweep
 	methods
 		% constructor
 		function obj = Repeat(sweepParams, ~)
-			obj.label = 'Repeat';
+			obj.axisLabel = 'Repeat';
 			
 			% generate sweep points
             obj.numSteps = sweepParams.numRepeats;
