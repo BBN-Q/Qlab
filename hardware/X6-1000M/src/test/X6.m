@@ -79,7 +79,12 @@ classdef X6 < hgsetget
 
         function wf = transfer_waveform(obj, ch)
             % possibly more efficient to pass a libpointer, but this is easiest for now
-            [val, wf] = obj.libraryCall('transfer_waveform', ch, zeros(obj.bufferSize, 1, 'int16'), obj.bufferSize);
+            bufferPtr = libpointer('int16Ptr', zeros(obj.bufferSize, 1, 'int16'));
+            success = obj.libraryCall('transfer_waveform', ch, bufferPtr, obj.bufferSize);
+            if success ~= 0
+                error('transfer_waveform failed');
+            end
+            wf = bufferPtr.Value;
         end
         
         function val = writeRegister(obj, addr, offset, data)
