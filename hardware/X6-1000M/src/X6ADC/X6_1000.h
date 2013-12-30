@@ -82,11 +82,10 @@ public:
 		                 float frequency = 1e9, 
 		                 ExtSource extSrc = FRONT_PANEL);
 
-	/** Set External Trigger source for both Input and Output
-	 * \oaram extSrc FRONT_PANEL || P16
+	/** Set up clock and trigger routes
 	 * \returns SUCCESS
 	 */
-	ErrorCodes set_ext_trigger_src(ExtSource extSrc = FRONT_PANEL);
+	ErrorCodes set_routes();
 
 	/** Set Trigger source
 	 *  \param trgSrc SOFTWARE_TRIGGER || EXTERNAL_TRIGGER
@@ -160,6 +159,7 @@ private:
 	// State Variables
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
 	bool isRunning_;
+	int prefillPacketCount_;
 	unsigned int samplesPerFrame_ = 0;
 	unsigned int samplesToAcquire_ = 0;
 	unsigned int numRecords_ = 1;
