@@ -19,7 +19,6 @@ int X6::connect(const int & deviceID) {
 		success = handle_.open(deviceID_);
 		
 		if (success == 0) {
-			FILE_LOG(logINFO) << "Opened connection to device " << deviceID_;
 			isOpen_ = true;
 		}
 	}
@@ -33,7 +32,7 @@ int X6::disconnect(){
 		success = handle_.close();
 
 		if (success == 0) {
-			FILE_LOG(logINFO) << "Closed connection to device " << deviceID_;
+			FILE_LOG(logINFO) << "Closed connection to device " << deviceID_ << endl;
 			isOpen_ = false;
 		}	
 	}

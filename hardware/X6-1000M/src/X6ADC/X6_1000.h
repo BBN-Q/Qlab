@@ -144,6 +144,7 @@ private:
 	Innovative::VitaPacketStream    stream_;
 	Innovative::SoftwareTimer       timer_;
 	Innovative::VeloBuffer       	outputPacket_;
+	Innovative::VeloMergeParser     VMP_; /**< Utility for convert Velo stream back into VITA packets*/
 
 	// WishBone interface
 	// TODO: update wbX6ADC wishbone offset  
@@ -162,6 +163,7 @@ private:
 	int prefillPacketCount_;
 	unsigned int samplesPerFrame_ = 0;
 	unsigned int samplesToAcquire_ = 0;
+	unsigned int samplesAcquired_ = 0;
 	unsigned int numRecords_ = 1;
 
 	ErrorCodes set_active_channels();
@@ -184,6 +186,7 @@ private:
     void HandleAfterStreamStop(OpenWire::NotifyEvent & Event);
 
     void HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event);
+    void VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event);
 
 	void HandleTimer(OpenWire::NotifyEvent & Event);
 

@@ -109,7 +109,12 @@ X6_1000::ErrorCodes X6_1000::open(int deviceID) {
     FILE_LOG(logINFO) << "Stream Connected...";
 
     prefillPacketCount_ = stream_.PrefillPacketCount();
-    FILE_LOG(logINFO) << "Stream prefill packet count: " << prefillPacketCount_ << endl;
+    FILE_LOG(logDEBUG) << "Stream prefill packet count: " << prefillPacketCount_;
+
+    //  Initialize VeloMergeParse with stream IDs
+    VMP_.OnDataAvailable.SetEvent(this, &X6_1000::VMPDataAvailable);
+    std::vector<int> streamIDs = {static_cast<int>(module_.VitaIn().VitaStreamId(0)), static_cast<int>(module_.VitaIn().VitaStreamId(1))};
+    VMP_.Init(streamIDs);
 
     return SUCCESS;
   }
@@ -227,6 +232,7 @@ int X6_1000::get_decimation() {
 }
 
 X6_1000::ErrorCodes X6_1000::set_frame(int recordLength, int numRecords) {
+    FILE_LOG(logINFO) << "Setting samplesPerFrame_ = " << recordLength;
     samplesPerFrame_ = recordLength;
     numRecords_ = numRecords;
 
@@ -313,17 +319,24 @@ X6_1000::ErrorCodes X6_1000::acquire() {
     stream_.Preconfigure();
 
     // figure out when to stop
-    samplesToAcquire_ = samplesPerFrame_ * numRecords_ / get_decimation();
-    FILE_LOG(logINFO) << "samplesToAcquire = " << samplesToAcquire_;
+    samplesToAcquire_ = num_active_channels() * samplesPerFrame_ * numRecords_ / get_decimation();
+    FILE_LOG(logDEBUG) << "samplesToAcquire = " << samplesToAcquire_;
+    samplesAcquired_ = 0;
 
     int samplesPerWord = module_.Input().Info().SamplesPerWord();
-    FILE_LOG(logINFO) << "samplesPerWord = " << samplesPerWord;
+    FILE_LOG(logDEBUG) << "samplesPerWord = " << samplesPerWord;
     int packetSize = num_active_channels()*samplesPerFrame_/samplesPerWord/get_decimation();
-    FILE_LOG(logINFO) << "packetSize = " << packetSize;
+    FILE_LOG(logDEBUG) << "packetSize = " << packetSize;
 
     module_.Velo().LoadAll_VeloDataSize(packetSize);
     module_.Velo().ForceVeloPacketSize(true);
 
+    // clear VMP and channel buffers
+    VMP_.Resize(samplesPerFrame_ / samplesPerWord / get_decimation());
+    VMP_.Clear();
+    for(int cnt = 0; cnt < get_num_channels(); cnt++) chData_[cnt].clear();
+
+    // is this necessary??
     stream_.PrefillPacketCount(prefillPacketCount_);
     
     trigger_.AtStreamStart();
@@ -351,7 +364,6 @@ bool X6_1000::get_is_running() {
 }
 
 X6_1000::ErrorCodes X6_1000::transfer_waveform(int channel, short *buffer, size_t length) {
-    // memcpy(buffer, &chData_[channel][0], sizeof(short)*std::min(length, chData_[channel].size()));
     size_t count = std::min(length, chData_[channel].size());
     std::copy(chData_[channel].begin(), chData_[channel].begin() + count, buffer);
     return SUCCESS;
@@ -362,21 +374,21 @@ X6_1000::ErrorCodes X6_1000::transfer_waveform(int channel, short *buffer, size_
  ****************************************************************************/
 
  void  X6_1000::HandleDisableTrigger(OpenWire::NotifyEvent & /*Event*/) {
-    FILE_LOG(logINFO) << "X6_1000::HandleDisableTrigger";
+    FILE_LOG(logDEBUG) << "X6_1000::HandleDisableTrigger";
     module_.Input().Trigger().External(false);
     module_.Output().Trigger().External(false);
 }
 
 
 void  X6_1000::HandleExternalTrigger(OpenWire::NotifyEvent & /*Event*/) {
-    FILE_LOG(logINFO) << "X6_1000::HandleExternalTrigger";
+    FILE_LOG(logDEBUG) << "X6_1000::HandleExternalTrigger";
     module_.Input().Trigger().External(true);
     // module_.Input().Trigger().External( (triggerSource_ == EXTERNAL_TRIGGER) ? true : false );
 }
 
 
 void  X6_1000::HandleSoftwareTrigger(OpenWire::NotifyEvent & /*Event*/) {
-    FILE_LOG(logINFO) << "X6_1000::HandleSoftwareTrigger";
+    FILE_LOG(logDEBUG) << "X6_1000::HandleSoftwareTrigger";
 }
 
 void X6_1000::HandleBeforeStreamStart(OpenWire::NotifyEvent & /*Event*/) {
@@ -392,6 +404,7 @@ void X6_1000::HandleAfterStreamStop(OpenWire::NotifyEvent & /*Event*/) {
     // Disable external triggering initially
     module_.Input().SoftwareTrigger(false);
     module_.Input().Trigger().External(false);
+    VMP_.Flush();
 }
 
 void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event) {
@@ -402,26 +415,37 @@ void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event)
     VeloBuffer buffer;
     Event.Sender->Recv(buffer);
 
-    PacketBufferHeader header(buffer);
+    // interpret the data as shorts to count the number of received samples
+    ShortDG bufferDG(buffer);
+    FILE_LOG(logDEBUG) << "buffer.size() = " << buffer.SizeInInts() << " (" << bufferDG.size() << " samples)";
+
+    VMP_.Append(buffer);
+    VMP_.Parse();
+
+    samplesAcquired_ += bufferDG.size();
+    FILE_LOG(logDEBUG) << "samplesAcquired_ = " << samplesAcquired_;
+    // if we've acquired the requested number of samples, stop streaming
+    if (samplesAcquired_ >= samplesToAcquire_) stop();
+}
+
+void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event) {
+    FILE_LOG(logDEBUG) << "X6_1000::VMPDataAvailable";
+    // StreamID is now encoded in the PeripheralID of the VMP Vita buffer
+    PacketBufferHeader header(Event.Data);
     int channel = header.PeripheralId();
-    FILE_LOG(logDEBUG) << "Packet PeripheralId = " << channel;
+    FILE_LOG(logDEBUG) << "VMP buffer channel = " << channel;
 
     // interpret the data as integers
-    IntegerDG bufferDG(buffer);
+    ShortDG bufferDG(Event.Data);
+    FILE_LOG(logDEBUG) << "VMP buffer size = " << bufferDG.size();
+    // copy the data to the appropriate channel
+    chData_[channel].insert(std::end(chData_[channel]), std::begin(bufferDG), std::end(bufferDG));
 
-    // then we had better put that data somewhere...
-    FILE_LOG(logDEBUG) << "bufferDG.size() = " << bufferDG.size();
-    for (int i = 0; i < bufferDG.size(); i++) {
-        chData_[channel].push_back(bufferDG[i]);
-    }
-
-    // if we've acquired the requested number of samples, stop streaming
-    FILE_LOG(logDEBUG) << "chData_[channel].size() = " << chData_[channel].size();
-    if (chData_[channel].size() > samplesToAcquire_) stop();
+    FILE_LOG(logDEBUG) << "chData_[" << channel << "].size() = " << chData_[channel].size();
 }
 
 void X6_1000::HandleTimer(OpenWire::NotifyEvent & /*Event*/) {
-    FILE_LOG(logINFO) << "X6_1000::HandleTimer";
+    // FILE_LOG(logDEBUG) << "X6_1000::HandleTimer";
     trigger_.AtTimerTick();
 }
 
