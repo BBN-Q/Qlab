@@ -325,13 +325,15 @@ X6_1000::ErrorCodes X6_1000::acquire() {
 
     int samplesPerWord = module_.Input().Info().SamplesPerWord();
     FILE_LOG(logDEBUG) << "samplesPerWord = " << samplesPerWord;
-    int packetSize = num_active_channels()*samplesPerFrame_/samplesPerWord/get_decimation();
+    // pad packets by 8 extra words per channel (VITA packets have 7 word header, 1 word trailer)
+    int packetSize = num_active_channels()*( samplesPerFrame_/samplesPerWord/get_decimation() + 8);
     FILE_LOG(logDEBUG) << "packetSize = " << packetSize;
 
     module_.Velo().LoadAll_VeloDataSize(packetSize);
     module_.Velo().ForceVeloPacketSize(true);
 
     // clear VMP and channel buffers
+    FILE_LOG(logDEBUG) << "Setting VMP buffer size = " << samplesPerFrame_ / samplesPerWord / get_decimation();
     VMP_.Resize(samplesPerFrame_ / samplesPerWord / get_decimation());
     VMP_.Clear();
     for(int cnt = 0; cnt < get_num_channels(); cnt++) chData_[cnt].clear();
@@ -415,14 +417,11 @@ void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event)
     VeloBuffer buffer;
     Event.Sender->Recv(buffer);
 
-    // interpret the data as shorts to count the number of received samples
-    ShortDG bufferDG(buffer);
-    FILE_LOG(logDEBUG) << "buffer.size() = " << buffer.SizeInInts() << " (" << bufferDG.size() << " samples)";
+    FILE_LOG(logDEBUG) << "buffer.size() = " << buffer.SizeInInts();
 
     VMP_.Append(buffer);
     VMP_.Parse();
 
-    samplesAcquired_ += bufferDG.size();
     FILE_LOG(logDEBUG) << "samplesAcquired_ = " << samplesAcquired_;
     // if we've acquired the requested number of samples, stop streaming
     if (samplesAcquired_ >= samplesToAcquire_) stop();
@@ -437,11 +436,13 @@ void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event)
 
     // interpret the data as integers
     ShortDG bufferDG(Event.Data);
-    FILE_LOG(logDEBUG) << "VMP buffer size = " << bufferDG.size();
+    FILE_LOG(logDEBUG) << "VMP buffer size = " << bufferDG.size() << " samples";
     // copy the data to the appropriate channel
     chData_[channel].insert(std::end(chData_[channel]), std::begin(bufferDG), std::end(bufferDG));
 
     FILE_LOG(logDEBUG) << "chData_[" << channel << "].size() = " << chData_[channel].size();
+
+    samplesAcquired_ += bufferDG.size();
 }
 
 void X6_1000::HandleTimer(OpenWire::NotifyEvent & /*Event*/) {
