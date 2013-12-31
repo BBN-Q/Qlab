@@ -160,30 +160,36 @@ classdef X6 < hgsetget
             
             x6.init();
             
-            fprintf('current logic temperature = %.2f\n', x6.getLogicTemperature());
+            fprintf('current logic temperature = %.1f\n', x6.getLogicTemperature());
             
-            fprintf('current PLL frequency = %.2f\n', x6.samplingRate);
+            fprintf('current PLL frequency = %.2f GHz\n', x6.samplingRate/1e9);
             
-            % fprintf('setting trigger source = INTERNAL\n');
-            
-            % x6.triggerSource = 'internal';
             x6.setDebugLevel(5);
             
-            fprintf('setting averager parameters to record 10 segments of 1024 samples\n');
-            x6.set_averager_settings(1024, 10, 1, 1);
+            fprintf('setting averager parameters to record 5 segments of 1024 samples\n');
+            x6.set_averager_settings(1024, 5, 1, 1);
+%             fprintf('setting averager parameters to record 1 segment of 1024 samples\n');
+%             x6.set_averager_settings(1024, 1, 1, 1);
 
             fprintf('Acquiring\n');
             x6.acquire();
 
             success = x6.wait_for_acquisition(1);
-
             fprintf('Wait for acquisition returned %d\n', success);
 
             fprintf('Stopping\n');
             x6.stop();
 
-            fprintf('Transferring waveform channel 1\n');
-            wf = x6.transfer_waveform(1);
+            fprintf('Transferring waveform channels 1 and 2\n');
+            wf1 = x6.transfer_waveform(1);
+            wf2 = x6.transfer_waveform(2);
+            figure();
+            subplot(2,1,1);
+            plot(wf1);
+            title('ch1');
+            subplot(2,1,2);
+            plot(wf2, 'r');
+            title('ch2');
             
             x6.disconnect();
             unloadlibrary('libx6adc')
