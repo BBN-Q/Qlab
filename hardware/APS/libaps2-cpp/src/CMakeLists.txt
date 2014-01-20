@@ -32,6 +32,10 @@ endif()
 #Grab all the header files in the src directory including concol.h
 INCLUDE_DIRECTORIES("./APS/")
 
+#ASIO files
+INCLUDE_DIRECTORIES("../asio/")
+ADD_DEFINITIONS(-DASIO_STANDALONE)
+
 #Check for 32bit or 64 bit platform and link against the appropriate winpcap
 if(WIN32)
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)

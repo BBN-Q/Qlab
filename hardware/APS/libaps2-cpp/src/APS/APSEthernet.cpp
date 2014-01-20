@@ -1,38 +1,59 @@
 #include "APSEthernet.h"
 
+
+class BroadcastServer {
+public:
+    BroadcastServer(asio::io_service& io_service, uint16_t port, vector<asio::ip::address>& IPs) : 
+        socket_(io_service, udp::endpoint(udp::v4(), port)), port_(port) {
+        socket.set_option(asio::socket_base::broadcast(true));
+        setup_receive(IPs);
+    };
+
+    void setup_receive(vector<asio::ip::address>& IPs){
+        //When a packet comes back in from an APS add the IP/MAC address pair to the list
+        socket_.async_receive_from(
+            asio::buffer(data_, max_length), senderEndpoint_,
+            [this](std::error_code ec, std::size_t bytes_recvd)
+            {
+              if (!ec && bytes_recvd > 0)
+              {
+                IPs.push_back(senderEndpoint_.address());
+              }
+              //Start the receiver again
+              setup_receive(IPs)
+        });
+    }
+
+    void send_broadcast(){
+        //Put together the broadcast status request
+        APSEthernetPacket broadcastPacket = APSEthernetPacket::create_broadcast_packet();
+
+        udp::endpoint broadCastEndPoint(asio::ip::address_v4::broadcast(), port_);
+
+
+    }
+
+private:
+    udp::socket socket_;
+    udp::endpoint senderEndpoint_;
+    uint16_t port_
+
+};
+
+
 /* PUBLIC methods */
 
 APSEthernet::~APSEthernet() {
     //Stop the receive thread
     receiving_ = false;
     receiveThread_.join();
-    pcap_close(pcapHandle_);
 }
 
 APSEthernet::EthernetError APSEthernet::init(string nic) {
-	vector<EthernetDevInfo> pcapDevices = get_network_devices();
-	set_network_device(pcapDevices, nic);
-    //Create a new pcap filter to send the packets
-    char errbuf[PCAP_ERRBUF_SIZE];
-    pcapHandle_ = pcap_open_live(device_.name.c_str(), // name of the device
-                                  1500,                      // portion of the packet to capture
-                                  false,                     // promiscuous mode
-                                  pcapTimeoutMS,             // read timeout
-                                  errbuf                     // error buffer
-                                  );
-    // filter for APS protocol and host destination
-    string filterStr = create_pcap_filter();
-    apply_filter(filterStr, pcapHandle_);
-
+    /*
+    --Nothing doing for now
+    */ 
     reset_mac_maps();
-
-    //Setup incoming loop in a thread
-    msgQueues_["unknown"] = queue<APSEthernetPacket>();
-    receiveThread_ = std::thread(&APSEthernet::run_receive_thread, this);
-    while (!receiving_){
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-
     return SUCCESS;
 }
 
@@ -40,11 +61,17 @@ set<string> APSEthernet::enumerate() {
 	/*
 	 * Look for all APS units that respond to the broadcast packet
 	 */
+
 	FILE_LOG(logDEBUG1) << "APSEthernet::enumerate";
 
     reset_mac_maps();
 
-    APSEthernetPacket broadcastPacket = APSEthernetPacket::create_broadcast_packet();
+    try {
+        socket.
+    }
+
+ 
+
     send("broadcast", broadcastPacket);
     vector<APSEthernetPacket> msgs = receive("unknown");
     set<string> deviceSerials;

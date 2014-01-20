@@ -5,7 +5,9 @@
 #include "MACAddr.h"
 #include "APSEthernetPacket.h"
 
-#include "pcap.h"
+#include "asio.hpp"
+
+using asio::ip::udp;
 
 struct EthernetDevInfo {
 	string name;          // device name as set by winpcap
@@ -48,20 +50,12 @@ private:
 
 		unordered_map<string, MACAddr> serial_to_MAC_;
 		unordered_map<MACAddr, string> MAC_to_serial_;
-		pcap_t *pcapHandle_;
 		MACAddr srcMAC_;
-		EthernetDevInfo device_;
 		map<string, queue<APSEthernetPacket>> msgQueues_;
 
-		vector<EthernetDevInfo> get_network_devices();
-		EthernetError set_network_device(vector<EthernetDevInfo> pcapDevices, string nic);
-		string create_pcap_filter();
 		void reset_mac_maps();
-		static EthernetError apply_filter(string & filter, pcap_t *);
-
-		static const unsigned int pcapTimeoutMS = 100;
-		
 		void run_receive_thread();
+		void run_send_thread();
 
 		std::thread receiveThread_;
 		std::atomic<bool> receiving_;
@@ -69,5 +63,6 @@ private:
 
 
 };
+
 
 #endif
