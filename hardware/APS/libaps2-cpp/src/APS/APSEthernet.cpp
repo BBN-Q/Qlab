@@ -8,6 +8,9 @@ public:
         setup_receive(IPs);
     };
 
+    ~BroadcastServer(){
+        socket_.close();
+    }
     void setup_receive(vector<asio::ip::address>& IPs){
         //When a packet comes back in from an APS add the IP/MAC address pair to the list
         socket_.async_receive_from(
@@ -27,6 +30,7 @@ public:
         //Put together the broadcast status request
         APSEthernetPacket broadcastPacket = APSEthernetPacket::create_broadcast_packet();
         udp::endpoint broadCastEndPoint(asio::ip::address_v4::broadcast(), port_);
+        socket_.send_to(asio::buffer(broadcastPacket.serialize()), broadCastEndPoint);
     };
 
 private:
@@ -49,6 +53,7 @@ APSEthernet::~APSEthernet() {
 APSEthernet::EthernetError APSEthernet::init(string nic) {
     /*
     --Nothing doing for now
+    TODO: Should eventually bind to particular NIC here?
     */ 
     reset_mac_maps();
     return SUCCESS;
@@ -146,139 +151,52 @@ vector<APSEthernetPacket> APSEthernet::receive(string serial, size_t timeoutMS) 
 }
 
 /* PRIVATE methods */
-vector<EthernetDevInfo> APSEthernet::get_network_devices() {
-	/*
-	 * Finds all the devices that the pcap library sees and returns their info in the pcapDevices vector
-	 */
-	pcap_if_t *alldevs;
-	pcap_if_t *d;
-    char errbuf[PCAP_ERRBUF_SIZE];
 
-    FILE_LOG(logDEBUG) << "Getting Network Devices";
+// void APSEthernet::run_receive_thread(){
+//     /*
+//     * Setup a background thread to pool for packets and parse into appropriate queues.
+//     */
+//     //Setup a new handle
+//     char errbuf[PCAP_ERRBUF_SIZE];
+//     pcap_t *recHandle;
+//     recHandle = pcap_open_live(device_.name.c_str(), // name of the device
+//                                   1522,                      // portion of the packet to capture
+//                                   false,                     // promiscuous mode
+//                                   pcapTimeoutMS,             // read timeout
+//                                   errbuf                     // error buffer
+//                                   );
+//     // filter for APS protocol and host destination
+//     string filterStr = create_pcap_filter();
+//     apply_filter(filterStr, recHandle);
 
-	/* Retrieve the device list from the local machine */
-    if (pcap_findalldevs(&alldevs, errbuf) == -1) {
-    	string err(errbuf);
-        cout << "Error in pcap_findalldevs_ex: " << err;
-    }
+//     // start looping while we're up and running
+//     receiving_ = true;
+//     while(receiving_){
+//         struct pcap_pkthdr *packetHeader;
+//         const u_char *packetData;
+//         int result =  pcap_next_ex( recHandle, &packetHeader, &packetData);
+//         if (result > 0){
+//             //We have a packet so deal with it
+//             //First convert the byte stream into a packet
+//             APSEthernetPacket myPacket = APSEthernetPacket(packetData, packetHeader->caplen);
 
-    /* build list */
-    FILE_LOG(logDEBUG1) << "Enumerating PCAP Devices:";
-    vector<EthernetDevInfo> pcapDevices;
-    for(d= alldevs; d != NULL; d= d->next) {
-        struct EthernetDevInfo devInfo;
-        devInfo.name = string(d->name);
-        if (d->description != NULL) devInfo.description = string(d->description);
-        if (d->addresses != NULL) devInfo.macAddr = MACAddr::MACAddr_from_devName(devInfo.name);
+//             //Now sort out to which queue it's going
+//             mLock_.lock();
+//             if(MAC_to_serial_.find(myPacket.header.src) == MAC_to_serial_.end()){
+//                 msgQueues_["unknown"].emplace(myPacket);
+//             }
+//             else{
+//                 msgQueues_[MAC_to_serial_[myPacket.header.src]].push(myPacket);
+//             }
+//             mLock_.unlock();
+//         }
+//         else if (result < 0){
+//             FILE_LOG(logERROR) << "Error trying to read packets: " << pcap_geterr(recHandle);
+//         }
+//         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+//     }
 
-        pcapDevices.push_back(devInfo);
-        FILE_LOG(logDEBUG2) << "New PCAP Device:";
-        FILE_LOG(logDEBUG2) << "\t" << devInfo.description;
-        FILE_LOG(logDEBUG2) << "\t" << devInfo.description2;
-        FILE_LOG(logDEBUG2) << "\t" << devInfo.name;
-        FILE_LOG(logDEBUG2) << "\t" << devInfo.macAddr.to_string();
-    }
-    pcap_freealldevs(alldevs);
-    return pcapDevices;
-}
+//     //close up
+//     pcap_close(recHandle);
 
-APSEthernet::EthernetError APSEthernet::set_network_device(vector<EthernetDevInfo> pcapDevices, string nic) {
-	/*
-	 * Attach the APSEthernet instance to a particular device.
-	 */
-    FILE_LOG(logDEBUG1) << "APSEthernet::set_network_device: " << nic;
-    bool foundDev = false;
-    for (auto & dev : pcapDevices) {
-    	if ((dev.name.compare(nic) == 0) || (dev.description.compare(nic) == 0) || (dev.description2.compare(nic) == 0)) {
-    		device_ = dev;
-            foundDev = true;
-	    	break;
-	    }
-    }
-    if (foundDev){
-        srcMAC_ = device_.macAddr;
-        return SUCCESS;
-    }
-    else{
-        return INVALID_NETWORK_DEVICE;
-    } 
-}
-
-string APSEthernet::create_pcap_filter() {
-    std::ostringstream filter;
-    filter << "ether dst " << srcMAC_.to_string();
-    filter << " and ether proto " << APS_PROTO;
-    return filter.str();
-}
-
-APSEthernet::EthernetError APSEthernet::apply_filter(string & filter, pcap_t * pcapHandle) {
-
-    FILE_LOG(logDEBUG3) << "Setting filter to: " << filter << endl;
-
-    u_int netmask=0xffffff; // ignore netmask 
-    struct bpf_program filterCode;
-
-    if (pcap_compile(pcapHandle, &filterCode, filter.c_str(), true, netmask) < 0 ) {
-        cout << "Error to compiling enumerate packet filter. Check the syntax" << endl;
-        return INVALID_PCAP_FILTER;
-    }
-
-    // set filter
-    if (pcap_setfilter(pcapHandle, &filterCode) < 0) {
-         cout << "Error setting the filter" << endl;
-        /* Free the device list */
-        return INVALID_PCAP_FILTER;
-    }
-    return SUCCESS;
-}
-
-
-void APSEthernet::run_receive_thread(){
-    /*
-    * Setup a background thread to pool for packets and parse into appropriate queues.
-    */
-    //Setup a new handle
-    char errbuf[PCAP_ERRBUF_SIZE];
-    pcap_t *recHandle;
-    recHandle = pcap_open_live(device_.name.c_str(), // name of the device
-                                  1522,                      // portion of the packet to capture
-                                  false,                     // promiscuous mode
-                                  pcapTimeoutMS,             // read timeout
-                                  errbuf                     // error buffer
-                                  );
-    // filter for APS protocol and host destination
-    string filterStr = create_pcap_filter();
-    apply_filter(filterStr, recHandle);
-
-    // start looping while we're up and running
-    receiving_ = true;
-    while(receiving_){
-        struct pcap_pkthdr *packetHeader;
-        const u_char *packetData;
-        int result =  pcap_next_ex( recHandle, &packetHeader, &packetData);
-        if (result > 0){
-            //We have a packet so deal with it
-            //First convert the byte stream into a packet
-            APSEthernetPacket myPacket = APSEthernetPacket(packetData, packetHeader->caplen);
-
-            //Now sort out to which queue it's going
-            mLock_.lock();
-            if(MAC_to_serial_.find(myPacket.header.src) == MAC_to_serial_.end()){
-                msgQueues_["unknown"].emplace(myPacket);
-            }
-            else{
-                msgQueues_[MAC_to_serial_[myPacket.header.src]].push(myPacket);
-            }
-            mLock_.unlock();
-        }
-        else if (result < 0){
-            FILE_LOG(logERROR) << "Error trying to read packets: " << pcap_geterr(recHandle);
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-
-    //close up
-    pcap_close(recHandle);
-
-
-}
+// }

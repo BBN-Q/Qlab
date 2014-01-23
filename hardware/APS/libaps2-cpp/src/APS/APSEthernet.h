@@ -54,7 +54,7 @@ private:
 		map<string, queue<APSEthernetPacket>> msgQueues_;
 
 		void reset_mac_maps();
-		void run_receive_thread();
+		// void run_receive_thread();
 		void run_send_thread();
 
 		std::thread receiveThread_;
