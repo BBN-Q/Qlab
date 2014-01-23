@@ -1,42 +1,39 @@
 #include "APSEthernet.h"
 
-
 class BroadcastServer {
 public:
     BroadcastServer(asio::io_service& io_service, uint16_t port, vector<asio::ip::address>& IPs) : 
         socket_(io_service, udp::endpoint(udp::v4(), port)), port_(port) {
-        socket.set_option(asio::socket_base::broadcast(true));
+        socket_.set_option(asio::socket_base::broadcast(true));
         setup_receive(IPs);
     };
 
     void setup_receive(vector<asio::ip::address>& IPs){
         //When a packet comes back in from an APS add the IP/MAC address pair to the list
         socket_.async_receive_from(
-            asio::buffer(data_, max_length), senderEndpoint_,
-            [this](std::error_code ec, std::size_t bytes_recvd)
+            asio::buffer(data_, 2048), senderEndpoint_,
+            [this, &IPs](std::error_code ec, std::size_t bytes_recvd)
             {
               if (!ec && bytes_recvd > 0)
               {
                 IPs.push_back(senderEndpoint_.address());
               }
               //Start the receiver again
-              setup_receive(IPs)
+              setup_receive(IPs);
         });
     }
 
     void send_broadcast(){
         //Put together the broadcast status request
         APSEthernetPacket broadcastPacket = APSEthernetPacket::create_broadcast_packet();
-
         udp::endpoint broadCastEndPoint(asio::ip::address_v4::broadcast(), port_);
-
-
-    }
+    };
 
 private:
     udp::socket socket_;
     udp::endpoint senderEndpoint_;
-    uint16_t port_
+    uint16_t port_;
+    uint8_t data_[2048];
 
 };
 
@@ -66,21 +63,23 @@ set<string> APSEthernet::enumerate() {
 
     reset_mac_maps();
 
-    try {
-        socket.
-    }
 
- 
+    vector<asio::ip::address> IPs;
+    asio::io_service io_service;
+    BroadcastServer bs(io_service, 47950, IPs);
+    bs.send_broadcast();
 
-    send("broadcast", broadcastPacket);
-    vector<APSEthernetPacket> msgs = receive("unknown");
+    std::thread myThread([&io_service](){ io_service.run(); });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+    io_service.stop();
+    myThread.join();
+    
     set<string> deviceSerials;
-    for (auto m : msgs) {
-    	// get src MAC address and serial from each packet and add to the map
-    	serial_to_MAC_[m.header.src.to_string()] = m.header.src;
-    	MAC_to_serial_[m.header.src] = m.header.src.to_string();
-    	deviceSerials.insert(m.header.src.to_string());
-    	FILE_LOG(logINFO) << "Found device: " << m.header.src.to_string();
+    for (auto ip : IPs) {
+        FILE_LOG(logINFO) << "Found device: " << ip.to_string();
+        deviceSerials.insert(ip.to_string());
     }
     return deviceSerials;
 }
@@ -117,11 +116,6 @@ APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPa
     }
 
     //Send a single packet with pcap_sendpacket
-    if (msg.size() == 1){
-        if (pcap_sendpacket(pcapHandle_, msg[0].serialize().data(), msg[0].numBytes()) != 0) {
-            FILE_LOG(logERROR) << "Error sending command: " << string(pcap_geterr(pcapHandle_));
-        }
-    }
     return SUCCESS;
 }
 
