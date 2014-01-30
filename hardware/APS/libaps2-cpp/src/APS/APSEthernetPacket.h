@@ -30,7 +30,7 @@ public:
 	APSEthernetPacket(const APSCommand_t &, const uint32_t &);
 	APSEthernetPacket(const MACAddr &, const MACAddr &, APSCommand_t, const uint32_t &);
 
-	APSEthernetPacket(const u_char *, size_t );
+	APSEthernetPacket(const vector<uint8_t> &);
 	
 	static const size_t NUM_HEADER_BYTES = 24;
 

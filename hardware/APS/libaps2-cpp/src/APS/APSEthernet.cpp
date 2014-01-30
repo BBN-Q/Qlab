@@ -1,61 +1,76 @@
 #include "APSEthernet.h"
 
-class BroadcastServer {
-public:
-    BroadcastServer(asio::io_service& io_service, uint16_t port, vector<asio::ip::address>& IPs) : 
-        socket_(io_service, udp::endpoint(udp::v4(), port)), port_(port) {
-        socket_.set_option(asio::socket_base::broadcast(true));
-        setup_receive(IPs);
-    };
-
-    ~BroadcastServer(){
-        socket_.close();
-    }
-    void setup_receive(vector<asio::ip::address>& IPs){
-        //When a packet comes back in from an APS add the IP address pair to the list
-        socket_.async_receive_from(
-            asio::buffer(data_, 2048), senderEndpoint_,
-            [this, &IPs](std::error_code ec, std::size_t bytes_recvd)
-            {
-              //APS Status command returns containes 84 bytes. Use it to filter out loopback packets  
-              if (!ec && bytes_recvd == 84)
-              {
-                IPs.push_back(senderEndpoint_.address());
-              }
-              //Start the receiver again
-              setup_receive(IPs);
-        });
+APSEthernet::APSEthernet() : socket_(ios_) {
+    //Setup the socket to the APS_PROTO port and enable broadcasting for enumerating
+    std::error_code ec;
+    socket_.open(udp::v4());
+    socket_.bind(udp::endpoint(udp::v4(), APS_PROTO), ec);
+    if (ec) {
+        FILE_LOG(logERROR) << "Failed to bind to socket.";
     }
 
-    void send_broadcast(){
-        //Put together the broadcast status request
-        APSEthernetPacket broadcastPacket = APSEthernetPacket::create_broadcast_packet();
-        udp::endpoint broadCastEndPoint(asio::ip::address_v4::broadcast(), port_);
-        socket_.send_to(asio::buffer(broadcastPacket.serialize()), broadCastEndPoint);
-    };
+    socket_.set_option(asio::socket_base::broadcast(true));
 
-private:
-    udp::socket socket_;
-    udp::endpoint senderEndpoint_;
-    uint16_t port_;
-    uint8_t data_[2048];
+    setup_receive();
+
+    //Setup the asio service to run on a background thread
+    receiveThread_ = std::thread([&](){ ios_.run(); });
+
 };
-
-
-/* PUBLIC methods */
 
 APSEthernet::~APSEthernet() {
     //Stop the receive thread
     receiving_ = false;
+    ios_.stop();
     receiveThread_.join();
 }
+
+void APSEthernet::setup_receive(){
+    udp::endpoint senderEndpoint;
+    uint8_t receivedData[2048];
+    socket_.async_receive_from(
+        asio::buffer(receivedData, 2048), senderEndpoint,
+        [&](std::error_code ec, std::size_t bytesReceived)
+        {
+            //If there is anything to look at hand it off to the sorter
+            if (!ec && bytesReceived > 0)
+            {
+                vector<uint8_t> packetData(receivedData, receivedData + bytesReceived);
+                sort_packet(packetData, senderEndpoint);
+            }
+            //Start the receiver again
+            setup_receive();
+    });
+}
+
+void APSEthernet::sort_packet(const vector<uint8_t> & packetData, const udp::endpoint & sender){
+    //If we have the endpoint address then add it to the queue
+    string senderIP = sender.address().to_string();
+    if(msgQueues_.find(senderIP) == msgQueues_.end()){
+        //We are probably seeing an enumerate status response so add the endpoint to the set
+        if (packetData.size() == 84) {
+            if ( endpoints_.find(senderIP) == endpoints_.end()){
+                endpoints_[senderIP] = sender;
+            }
+        } 
+    }
+    else{
+        APSEthernetPacket packet = APSEthernetPacket(packetData);
+        mLock_.lock();
+        msgQueues_[senderIP].emplace(packet);
+        mLock_.unlock();
+    }
+}
+
+/* PUBLIC methods */
 
 APSEthernet::EthernetError APSEthernet::init(string nic) {
     /*
     --Nothing doing for now
     TODO: Should eventually bind to particular NIC here?
     */ 
-    reset_mac_maps();
+    reset_maps();
+
     return SUCCESS;
 }
 
@@ -66,37 +81,36 @@ set<string> APSEthernet::enumerate() {
 
 	FILE_LOG(logDEBUG1) << "APSEthernet::enumerate";
 
+    reset_maps();
 
-    reset_mac_maps();
-
-    asio::io_service io_service;
+    //Put together the broadcast status request
+    APSEthernetPacket broadcastPacket = APSEthernetPacket::create_broadcast_packet();
+    udp::endpoint broadCastEndPoint(asio::ip::address_v4::broadcast(), APS_PROTO);
+    socket_.send_to(asio::buffer(broadcastPacket.serialize()), broadCastEndPoint);
 
     vector<asio::ip::address> IPs;
-    BroadcastServer bs(io_service, 47950, IPs);
-    bs.send_broadcast();
 
-    std::thread myThread([&io_service](){ io_service.run(); });
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-    io_service.stop();
-    myThread.join();
-    
     set<string> deviceSerials;
-    for (auto ip : IPs) {
-        FILE_LOG(logINFO) << "Found device: " << ip.to_string();
-        deviceSerials.insert(ip.to_string());
+    for (auto & kv : endpoints_) {
+        FILE_LOG(logINFO) << "Found device: " << kv.first;
+        deviceSerials.insert(kv.first);
     }
     return deviceSerials;
 }
 
-void APSEthernet::reset_mac_maps() {
+void APSEthernet::reset_maps() {
     serial_to_MAC_.clear();
     MAC_to_serial_.clear();
     serial_to_MAC_["broadcast"] = MACAddr("FF:FF:FF:FF:FF:FF");
+    msgQueues_.clear();
+    endpoints_.clear();
 }
 
 APSEthernet::EthernetError APSEthernet::connect(string serial) {
+
     mLock_.lock();
 	msgQueues_[serial] = queue<APSEthernetPacket>();
     mLock_.unlock();

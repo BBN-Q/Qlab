@@ -45,17 +45,27 @@ public:
 	vector<APSEthernetPacket> receive(string serial, size_t timeoutMS = 1000);
 
 private:
-		APSEthernet() {};
+		APSEthernet();
 		APSEthernet(APSEthernet const &) = delete;
 
 		unordered_map<string, MACAddr> serial_to_MAC_;
 		unordered_map<MACAddr, string> MAC_to_serial_;
 		MACAddr srcMAC_;
+
+		map<string, udp::endpoint> endpoints_;
 		map<string, queue<APSEthernetPacket>> msgQueues_;
 
-		void reset_mac_maps();
+		void reset_maps();
 		// void run_receive_thread();
 		void run_send_thread();
+
+		void setup_receive();
+		void sort_packet(const vector<uint8_t> &, const udp::endpoint &);
+
+
+		asio::io_service ios_;
+		udp::socket socket_;
+
 
 		std::thread receiveThread_;
 		std::atomic<bool> receiving_;

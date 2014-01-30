@@ -11,16 +11,16 @@ APSEthernetPacket::APSEthernetPacket(const APSCommand_t & command, const uint32_
 APSEthernetPacket::APSEthernetPacket(const MACAddr & destMAC, const MACAddr & srcMAC, APSCommand_t command, const uint32_t & addr) :
 		header{destMAC, srcMAC, APS_PROTO, 0, command, addr}, payload(0){};
 
-APSEthernetPacket::APSEthernetPacket(const u_char * packet, size_t packetLength){
+APSEthernetPacket::APSEthernetPacket(const vector<uint8_t> & packetData){
 	/*
 	Create a packet from a byte array returned by pcap.
 	*/
 	//Helper function to turn two network bytes into a uint16_t assuming big-endian network byte order
-	auto bytes2uint16 = [&packet](size_t offset) -> uint16_t {return (packet[offset] << 8) + packet[offset+1];};
-	auto bytes2uint32 = [&packet](size_t offset) -> uint32_t {return (packet[offset] << 24) + (packet[offset+1] << 16) + (packet[offset+2] << 8) + packet[offset+3] ;};
+	auto bytes2uint16 = [&packetData](size_t offset) -> uint16_t {return (packetData[offset] << 8) + packetData[offset+1];};
+	auto bytes2uint32 = [&packetData](size_t offset) -> uint32_t {return (packetData[offset] << 24) + (packetData[offset+1] << 16) + (packetData[offset+2] << 8) + packetData[offset+3] ;};
 
-	std::copy(packet, packet+6, header.dest.addr.begin());
-	std::copy(packet+6, packet+12, header.src.addr.begin());
+	std::copy(packetData.begin(), packetData.begin()+6, header.dest.addr.begin());
+	std::copy(packetData.begin()+6, packetData.begin()+12, header.src.addr.begin());
 	header.frameType = bytes2uint16(12);
 	header.seqNum = bytes2uint16(14);
 	header.command.packed = bytes2uint32(16);
@@ -35,8 +35,8 @@ APSEthernetPacket::APSEthernetPacket(const u_char * packet, size_t packetLength)
 		myOffset = 20;
 	}
 	payload.clear();
-	payload.reserve((packetLength - myOffset)/4);
-	while(myOffset < packetLength){
+	payload.reserve((packetData.size() - myOffset)/4);
+	while(myOffset < packetData.size()){
 		payload.push_back(bytes2uint32(myOffset));
 		myOffset += 4;
 	}
