@@ -12,12 +12,13 @@ public:
         socket_.close();
     }
     void setup_receive(vector<asio::ip::address>& IPs){
-        //When a packet comes back in from an APS add the IP/MAC address pair to the list
+        //When a packet comes back in from an APS add the IP address pair to the list
         socket_.async_receive_from(
             asio::buffer(data_, 2048), senderEndpoint_,
             [this, &IPs](std::error_code ec, std::size_t bytes_recvd)
             {
-              if (!ec && bytes_recvd > 0)
+              //APS Status command returns containes 84 bytes. Use it to filter out loopback packets  
+              if (!ec && bytes_recvd == 84)
               {
                 IPs.push_back(senderEndpoint_.address());
               }
@@ -38,7 +39,6 @@ private:
     udp::endpoint senderEndpoint_;
     uint16_t port_;
     uint8_t data_[2048];
-
 };
 
 
@@ -66,11 +66,12 @@ set<string> APSEthernet::enumerate() {
 
 	FILE_LOG(logDEBUG1) << "APSEthernet::enumerate";
 
+
     reset_mac_maps();
 
+    asio::io_service io_service;
 
     vector<asio::ip::address> IPs;
-    asio::io_service io_service;
     BroadcastServer bs(io_service, 47950, IPs);
     bs.send_broadcast();
 
