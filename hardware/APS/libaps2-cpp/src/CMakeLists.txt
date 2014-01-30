@@ -54,7 +54,6 @@ SET ( DLL_SRC
 	./APS/libaps.cpp
 	./APS/Channel.cpp
 	./APS/APS2.cpp
-	./APS/APSRack.cpp
 	./APS/LLBank.cpp
 	./APS/APSEthernet.cpp
 	./APS/MACAddr.cpp
