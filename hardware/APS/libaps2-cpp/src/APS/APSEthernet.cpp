@@ -91,9 +91,6 @@ set<string> APSEthernet::enumerate() {
     udp::endpoint broadCastEndPoint(asio::ip::address_v4::broadcast(), APS_PROTO);
     socket_.send_to(asio::buffer(broadcastPacket.serialize()), broadCastEndPoint);
 
-    vector<asio::ip::address> IPs;
-
-
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     set<string> deviceSerials;
@@ -133,11 +130,10 @@ APSEthernet::EthernetError APSEthernet::send(string serial, APSEthernetPacket ms
 APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPacket> msg) {
     //Fill out the destination  MAC address
     for (auto & packet : msg){
-        FILE_LOG(logINFO) << "Sending to MAC addresss: " << serial_to_MAC_[serial].to_string();
         packet.header.dest = serial_to_MAC_[serial];
-        // socket_.send_to(asio::buffer(packet.serialize()), endpoints_[serial]);
-        udp::endpoint broadCastEndPoint(asio::ip::address_v4::broadcast(), APS_PROTO);
-        socket_.send_to(asio::buffer(packet.serialize()), broadCastEndPoint);
+        socket_.send_to(asio::buffer(packet.serialize()), endpoints_[serial]);
+        // udp::endpoint broadCastEndPoint(asio::ip::address_v4::broadcast(), APS_PROTO);
+        // socket_.send_to(asio::buffer(packet.serialize()), broadCastEndPoint);
     }
 
     return SUCCESS;
