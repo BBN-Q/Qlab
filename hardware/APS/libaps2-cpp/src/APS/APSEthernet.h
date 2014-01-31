@@ -49,11 +49,10 @@ private:
 		APSEthernet(APSEthernet const &) = delete;
 
 		unordered_map<string, MACAddr> serial_to_MAC_;
-		unordered_map<MACAddr, string> MAC_to_serial_;
 		MACAddr srcMAC_;
 
-		map<string, udp::endpoint> endpoints_;
-		map<string, queue<APSEthernetPacket>> msgQueues_;
+		unordered_map<string, udp::endpoint> endpoints_;
+		unordered_map<string, queue<APSEthernetPacket>> msgQueues_;
 
 		void reset_maps();
 		// void run_receive_thread();

@@ -3,11 +3,10 @@
 APSEthernet::APSEthernet() : socket_(ios_) {
     //Setup the socket to the APS_PROTO port and enable broadcasting for enumerating
     std::error_code ec;
-    socket_.open(udp::v4());
+    socket_.open(udp::v4(), ec);
+    if (ec) {FILE_LOG(logERROR) << "Failed to open socket.";}
     socket_.bind(udp::endpoint(udp::v4(), APS_PROTO), ec);
-    if (ec) {
-        FILE_LOG(logERROR) << "Failed to bind to socket.";
-    }
+    if (ec) {FILE_LOG(logERROR) << "Failed to bind to socket.";}
 
     socket_.set_option(asio::socket_base::broadcast(true));
 
@@ -51,7 +50,11 @@ void APSEthernet::sort_packet(const vector<uint8_t> & packetData, const udp::end
         if (packetData.size() == 84) {
             if ( endpoints_.find(senderIP) == endpoints_.end()){
                 endpoints_[senderIP] = sender;
+                APSEthernetPacket packet = APSEthernetPacket(packetData);
+                serial_to_MAC_[senderIP] = packet.header.src;
+                FILE_LOG(logINFO) << "Found MAC addresss: " << serial_to_MAC_[senderIP].to_string();
             }
+
         } 
     }
     else{
@@ -103,7 +106,6 @@ set<string> APSEthernet::enumerate() {
 
 void APSEthernet::reset_maps() {
     serial_to_MAC_.clear();
-    MAC_to_serial_.clear();
     serial_to_MAC_["broadcast"] = MACAddr("FF:FF:FF:FF:FF:FF");
     msgQueues_.clear();
     endpoints_.clear();
@@ -129,13 +131,15 @@ APSEthernet::EthernetError APSEthernet::send(string serial, APSEthernetPacket ms
 }
 
 APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPacket> msg) {
-    //Fill out the destination and source MAC address
+    //Fill out the destination  MAC address
     for (auto & packet : msg){
+        FILE_LOG(logINFO) << "Sending to MAC addresss: " << serial_to_MAC_[serial].to_string();
         packet.header.dest = serial_to_MAC_[serial];
-        packet.header.src = srcMAC_;
+        // socket_.send_to(asio::buffer(packet.serialize()), endpoints_[serial]);
+        udp::endpoint broadCastEndPoint(asio::ip::address_v4::broadcast(), APS_PROTO);
+        socket_.send_to(asio::buffer(packet.serialize()), broadCastEndPoint);
     }
 
-    //Send a single packet with pcap_sendpacket
     return SUCCESS;
 }
 
