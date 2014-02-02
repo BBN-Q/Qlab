@@ -7,9 +7,9 @@ using std::endl;
 
 
 
-APS2::APS2() :  isOpen{false}, channels_(2), samplingRate_{-1}, writeQueue_(0) {};
+APS2::APS2() :  isOpen{false}, channels_(2), samplingRate_{-1} {};
 
-APS2::APS2(string deviceSerial) :  isOpen{false}, deviceSerial_{deviceSerial}, samplingRate_{-1}, writeQueue_(0) {
+APS2::APS2(string deviceSerial) :  isOpen{false}, deviceSerial_{deviceSerial}, samplingRate_{-1} {
 	channels_.reserve(2);
 	for(size_t ct=0; ct<2; ct++) channels_.push_back(Channel(ct));
 };
@@ -50,7 +50,7 @@ int APS2::reset(const APS_RESET_MODE_STAT & resetMode) {
 	command.cmd = static_cast<uint32_t>(APS_COMMANDS::RESET);
 	command.mode_stat = static_cast<uint32_t>(resetMode);
 	
-	// After being reset the board should send and acknowledge packet with status bytes
+	// After being reset the board should send an acknowledge packet with status bytes
 	APSEthernetPacket statusPacket = query(command)[0];
 	//Copy the data back into the status type 
 	APSStatusBank_t statusRegs;
@@ -223,8 +223,6 @@ int APS2::clear_channel_data() {
 	// socket_.write_register(FPGA_ADDR_CHA_LL_LENGTH, 0);
 	// socket_.write_register(FPGA_ADDR_CHB_LL_LENGTH, 0);
 	
-	flush_write_queue();
-
 	return 0;
 }
 
@@ -516,80 +514,92 @@ int APS2::set_LLData_IQ(const WordVec & addr, const WordVec & count, const WordV
  */
 
 
-int APS2::write(const APSCommand_t & command, const bool & queue /* see header for default */){
+int APS2::write(const APSCommand_t & command){
 	/*
 	* Write a single unaddressed command to the write queue
 	*/
 	//TODO: figure out move constructor
 	APSEthernetPacket newPacket(command);
-	if (queue){
- 		writeQueue_.push_back(newPacket);
-	}
-	else{
-		APSEthernet::get_instance().send(deviceSerial_, newPacket);
-	}
-}
-
-int APS2::write(const unsigned int & addr, const uint32_t & data, const bool & queue /* see header for default */){
-	//Create the vector and pass through
-	return write(addr, vector<uint32_t>(1, data), queue);
-}
-
-int APS2::write(const unsigned int & addr, const vector<uint32_t> & data, const bool & queue /* see header for default */){
-	/* APS2::write
-	 * fpga = FPAG1, FPGA2, or ALL_FPGAS (for simultaneous writes)
-	 * addr = valid memory address to start to write to
-	 * data = vector<WORD> data
-	 * queue = false - write immediately, true - add write command to output queue
-	 */
-
-	//Pack the data
-	//TODO!
-	/*
-	vector<uint8_t> dataPacket = FPGA::format(addr, data);
-
-	//Update the software checksums
-	//Address checksum is defined as lower word of address
-	checksum_.address += addr & 0xFFFF;
-	for(auto tmpData : data)
-		checksum_.data += tmpData;
-
-	//Push into queue or write to FPGA
-	auto offsets = FPGA::computeCmdByteOffsets(data.size());
-	if (queue) {
-		//Calculate offsets of command bytes
-		for (auto tmpOffset : offsets){
-			offsetQueue_.push_back(tmpOffset + writeQueue_.size());
-		}
-		for (auto tmpByte : dataPacket){
-			writeQueue_.push_back(tmpByte);
-		}
-	}
-	else{
-		FPGA::write_block(socket_, dataPacket, offsets);
-	}
-	*/
+	APSEthernet::get_instance().send(deviceSerial_, newPacket);
 	return 0;
 }
 
-vector<APSEthernetPacket> APS2::read(const size_t & numPackets){
-	return APSEthernet::get_instance().receive(deviceSerial_);
+int APS2::write(const uint32_t & addr, const uint32_t & data){
+	//Create the vector and pass through
+	return write(addr, vector<uint32_t>(1, data));
+}
+
+int APS2::write(const uint32_t & addr, const vector<uint32_t> & data){
+	/* APS2::write
+	 * addr = start byte of address space 
+	 * data = vector<uint43_t> data
+	 * queue = false - write immediately, true - add write command to output queue
+	 */
+
+	//Pack the data into APSEthernetFrames
+	vector<APSEthernetPacket> dataPackets = pack_data(addr, data);
+
+	//Send the packets out 
+	for (auto packet : dataPackets){
+		APSEthernet::get_instance().send(deviceSerial_, packet);
+	}
+
+	//TOOD: - check for acknowledges in correct order
+	return 0;
+}
+
+vector<APSEthernetPacket> APS2::pack_data(const uint32_t & addr, const vector<uint32_t> & data){
+	//Break the data up into ethernet frame sized chunks.   
+	// ethernet frame payload = 1500bytes - 20bytes IPV4 and 8 bytes UDP and 12 bytes APS header = 1460bytes = 365 words 
+	static const size_t maxPayload = 365;
+
+	vector<APSEthernetPacket> packets;
+
+	APSEthernetPacket newPacket;
+	newPacket.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::USERIO_ACK);
+	
+	auto idx = data.begin();
+	uint16_t seqNum = 0;
+	uint32_t curAddr = addr;
+	while (idx != data.end()){
+		if (std::distance(idx, data.end()) > maxPayload){
+			newPacket.header.command.cnt = maxPayload;
+		}
+		else{
+			newPacket.header.command.cnt = std::distance(idx, data.end());
+		}
+		
+		newPacket.header.seqNum = seqNum++;
+		newPacket.header.addr = curAddr; 
+		curAddr += 4*newPacket.header.command.cnt;
+		
+		newPacket.payload.clear();
+		std::copy(idx, idx+newPacket.header.command.cnt, std::back_inserter(newPacket.payload));
+		idx += newPacket.header.command.cnt;
+	}
+
+	return packets;
+}
+
+// vector<APSEthernetPacket> APS2::read(const size_t & numPackets){
+// 	return APSEthernet::get_instance().receive(deviceSerial_);
+// }
+
+vector<uint32_t> APS2::read(const uint32_t & addr, const uint32_t & numWords){
+
+	//Send the read request
+	APSCommand_t readCmd = { .packed=0 };
+	
+	// readCmd.cmd = static_cast<uint32_t>(APS_COMMANDS::RESET);
+	// readCmd.mode_stat = static_cast<uint32_t>(resetMode); readCommand 
+
 }
 
 vector<APSEthernetPacket> APS2::query(const APSCommand_t & command){
 	//write-read ping-pong
-	write(command, false);
-	return read(1);
+	write(command);
+	return read_packets(1);
 }
-
-int APS2::flush_write_queue() {
-	// flush write queue to USB interface
-	FILE_LOG(logERROR) << "Queue flush needs to be implemented for APS2";
-	APSEthernet::EthernetError myError = APSEthernet::get_instance().send(deviceSerial_, writeQueue_);
-	writeQueue_.clear();
-	return myError;
-}
-
 
 int APS2::setup_PLL() {
 	// set the on-board PLL to its default state (two 1.2 GHz outputs, and one 300 MHz output)
@@ -1330,8 +1340,7 @@ int APS2::write_waveform(const int & dac, const vector<short> & wfData) {
 
 	//Format the data and add to write queue
 	//TODO: check data alignment from 16 to 32 bit
-	write(startAddr, vector<uint32_t>(wfData.begin(), wfData.end()), true);
-	flush_write_queue();
+	write(startAddr, vector<uint32_t>(wfData.begin(), wfData.end()));
 
 	return 0;
 }

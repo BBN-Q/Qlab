@@ -15,7 +15,7 @@ APSEthernetPacket::APSEthernetPacket(const vector<uint8_t> & packetData){
 	/*
 	Create a packet from a byte array returned by pcap.
 	*/
-	//Helper function to turn two network bytes into a uint16_t assuming big-endian network byte order
+	//Helper function to turn two network bytes into a uint16_t or uint32_t assuming big-endian network byte order
 	auto bytes2uint16 = [&packetData](size_t offset) -> uint16_t {return (packetData[offset] << 8) + packetData[offset+1];};
 	auto bytes2uint32 = [&packetData](size_t offset) -> uint32_t {return (packetData[offset] << 24) + (packetData[offset+1] << 16) + (packetData[offset+2] << 8) + packetData[offset+3] ;};
 

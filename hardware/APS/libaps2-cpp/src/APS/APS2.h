@@ -86,27 +86,26 @@ public:
 	static string printAPSCommand(const APSCommand_t & command);
 	static string printAPSChipCommand(APSChipConfigCommand_t & command);
 
+	int write(const uint32_t & addr, const vector<uint32_t> & data);
+
 private:
 
 	string deviceSerial_;
 	vector<Channel> channels_;
 	int samplingRate_;
-	vector<APSEthernetPacket> writeQueue_;
 	MACAddr macAddr_;
 
-	//Queued writing
-	int write(const APSCommand_t &, const bool & queue = false);
-	int write(const unsigned int & addr, const uint32_t & data, const bool & queue = false);
-	int write(const unsigned int & addr, const vector<uint32_t> & data, const bool & queue = false);
+	//Writing commands or memory
+	int write(const APSCommand_t &);
+	int write(const uint32_t & addr, const uint32_t & data);
+	vector<APSEthernetPacket> pack_data(const uint32_t &, const vector<uint32_t> &);
 
-	vector<APSEthernetPacket> read(const size_t &);
+	//Memory read
+	vector<APSEthernetPacket> read_packets(const size_t &);
+	vector<uint32_t> read(const uint32_t &, const uint32_t &);
 
 	//Single packet query
 	vector<APSEthernetPacket> query(const APSCommand_t &);
-
-
-
-	int flush_write_queue();
 
 	int setup_PLL();
 	int set_PLL_freq(const int &);

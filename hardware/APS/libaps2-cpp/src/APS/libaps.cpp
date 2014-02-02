@@ -261,12 +261,12 @@ int set_run_mode(const char * deviceSerial, int channelNum, int mode) {
 //	return APSRack_.read_bulk_state_file(fileName);
 //}
 
-int raw_write(const char * deviceSerial, int numBytes, uint8_t* data){
-	// return APSRack_.raw_write(string(deviceSerial), numBytes, data);
-	return 0;
+int memory_write(const char * deviceSerial, uint32_t addr, uint32_t numWords, uint32_t* data){
+	vector<uint32_t> dataVec(data, data+numWords);
+	return APSs[string(deviceSerial)].write(addr, dataVec);
 }
 
-int raw_read(const char * deviceSerial){
+int memory_read(const char * deviceSerial, uint32_t addr, uint32_t numWords, uint32_t* data){
 	// return APSRack_.raw_read(string(deviceSerial));
 	return 0;
 }
