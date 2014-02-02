@@ -516,7 +516,7 @@ int APS2::set_LLData_IQ(const WordVec & addr, const WordVec & count, const WordV
 
 int APS2::write(const APSCommand_t & command){
 	/*
-	* Write a single unaddressed command to the write queue
+	* Write a single unaddressed command 
 	*/
 	//TODO: figure out move constructor
 	APSEthernetPacket newPacket(command);
@@ -581,18 +581,24 @@ vector<APSEthernetPacket> APS2::pack_data(const uint32_t & addr, const vector<ui
 	return packets;
 }
 
-// vector<APSEthernetPacket> APS2::read(const size_t & numPackets){
-// 	return APSEthernet::get_instance().receive(deviceSerial_);
-// }
+
+vector<APSEthernetPacket> APS2::read_packets(const size_t & numPackets){
+	return APSEthernet::get_instance().receive(deviceSerial_);
+}
 
 vector<uint32_t> APS2::read(const uint32_t & addr, const uint32_t & numWords){
+	//TODO: handle numWords that require mulitple packets
 
 	//Send the read request
-	APSCommand_t readCmd = { .packed=0 };
-	
-	// readCmd.cmd = static_cast<uint32_t>(APS_COMMANDS::RESET);
-	// readCmd.mode_stat = static_cast<uint32_t>(resetMode); readCommand 
+	APSEthernetPacket readReq;
+	readReq.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::USERIO_ACK);
+	readReq.header.addr = addr;
+	APSEthernet::get_instance().send(deviceSerial_, readReq);
 
+	//Retrieve the data packet(s)
+	vector<APSEthernetPacket> readData = read_packets(1);
+
+	return readData[0].payload;
 }
 
 vector<APSEthernetPacket> APS2::query(const APSCommand_t & command){
@@ -1264,6 +1270,7 @@ int APS2::disable_DAC_FIFO(const int & dac) {
 	// socket_.read_SPI(CHIPCONFIG_TARGET_PLL, syncAddr, data);
 	mask = (0x1 << 2);
 	// return socket_.write_SPI( CHIPCONFIG_TARGET_PLL, syncAddr, data & ~mask );
+	return 0;
 }
 
 int APS2::set_offset_register(const int & dac, const float & offset) {
