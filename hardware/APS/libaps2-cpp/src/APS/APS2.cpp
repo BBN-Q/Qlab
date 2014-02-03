@@ -592,7 +592,9 @@ vector<uint32_t> APS2::read(const uint32_t & addr, const uint32_t & numWords){
 
 	//Send the read request
 	APSEthernetPacket readReq;
+	readReq.header.command.r_w = 1;
 	readReq.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::USERIO_ACK);
+	readReq.header.command.cnt = numWords;
 	readReq.header.addr = addr;
 	APSEthernet::get_instance().send(deviceSerial_, readReq);
 
