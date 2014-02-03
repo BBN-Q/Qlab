@@ -48,7 +48,7 @@ vector<uint8_t> APSEthernetPacket::serialize() const {
 	 * Handle host to network byte ordering here
 	 */
 	vector<uint8_t> outVec;
-	outVec.resize(numBytes());
+	outVec.resize(numBytes(), 0);
 
 	//Push on the destination and source mac address
 	auto insertPt = outVec.begin();
@@ -89,8 +89,9 @@ vector<uint8_t> APSEthernetPacket::serialize() const {
 }
 
 size_t APSEthernetPacket::numBytes() const{
-	return needs_address(APS_COMMANDS(header.command.cmd)) ? NUM_HEADER_BYTES + 4*payload.size() : NUM_HEADER_BYTES - 4 + 4*payload.size() ;
-}
+	size_t trueSize = needs_address(APS_COMMANDS(header.command.cmd)) ? NUM_HEADER_BYTES + 4*payload.size() : NUM_HEADER_BYTES - 4 + 4*payload.size() ;
+	return std::max(trueSize, static_cast<size_t>(64)); 
+}	
 
 APSEthernetPacket APSEthernetPacket::create_broadcast_packet(){
 	/*
@@ -106,7 +107,7 @@ APSEthernetPacket APSEthernetPacket::create_broadcast_packet(){
 	myPacket.header.command.r_w = 1;
 	myPacket.header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::STATUS);
 	myPacket.header.command.mode_stat = APS_STATUS_HOST;
-	myPacket.header.command.cnt = 0x10; //minimum length packet
+	myPacket.header.command.cnt = 0x00;
 
 	return myPacket;
 }
