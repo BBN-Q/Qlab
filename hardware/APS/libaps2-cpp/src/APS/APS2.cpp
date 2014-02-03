@@ -545,6 +545,9 @@ int APS2::write(const uint32_t & addr, const vector<uint32_t> & data){
 	}
 
 	//TOOD: - check for acknowledges in correct order
+	auto ackPackets = read_packets(dataPackets.size());
+	FILE_LOG(logDEBUG1) << ackPackets[0].payload.size();
+
 	return 0;
 }
 
@@ -552,6 +555,7 @@ vector<APSEthernetPacket> APS2::pack_data(const uint32_t & addr, const vector<ui
 	//Break the data up into ethernet frame sized chunks.   
 	// ethernet frame payload = 1500bytes - 20bytes IPV4 and 8 bytes UDP and 12 bytes APS header = 1460bytes = 365 words 
 	static const size_t maxPayload = 365;
+
 
 	vector<APSEthernetPacket> packets;
 
@@ -575,6 +579,8 @@ vector<APSEthernetPacket> APS2::pack_data(const uint32_t & addr, const vector<ui
 		
 		newPacket.payload.clear();
 		std::copy(idx, idx+newPacket.header.command.cnt, std::back_inserter(newPacket.payload));
+
+		packets.push_back(newPacket);
 		idx += newPacket.header.command.cnt;
 	}
 
@@ -596,7 +602,7 @@ vector<uint32_t> APS2::read(const uint32_t & addr, const uint32_t & numWords){
 	APSEthernet::get_instance().send(deviceSerial_, readReq);
 
 	//Retrieve the data packet(s)
-	vector<APSEthernetPacket> readData = read_packets(1);
+	auto readData = read_packets(1);
 
 	return readData[0].payload;
 }

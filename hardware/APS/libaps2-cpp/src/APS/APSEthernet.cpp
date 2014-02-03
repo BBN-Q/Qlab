@@ -5,11 +5,12 @@ APSEthernet::APSEthernet() : socket_(ios_) {
     std::error_code ec;
     socket_.open(udp::v4(), ec);
     if (ec) {FILE_LOG(logERROR) << "Failed to open socket.";}
-    socket_.bind(udp::endpoint(udp::v4(), APS_PROTO), ec);
+    socket_.bind(udp::endpoint(asio::ip::address::from_string("192.168.5.1"), APS_PROTO), ec);
     if (ec) {FILE_LOG(logERROR) << "Failed to bind to socket.";}
 
     socket_.set_option(asio::socket_base::broadcast(true));
 
+    //io_service will return immediately so post receive task before .run()
     setup_receive();
 
     //Setup the asio service to run on a background thread
@@ -162,56 +163,7 @@ vector<APSEthernetPacket> APSEthernet::receive(string serial, size_t timeoutMS) 
         elapsedTime =  std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
     }
     FILE_LOG(logWARNING) << "Timed out on receive!";
+
     return outVec;
 }
 
-/* PRIVATE methods */
-
-// void APSEthernet::run_receive_thread(){
-//     /*
-//     * Setup a background thread to pool for packets and parse into appropriate queues.
-//     */
-//     //Setup a new handle
-//     char errbuf[PCAP_ERRBUF_SIZE];
-//     pcap_t *recHandle;
-//     recHandle = pcap_open_live(device_.name.c_str(), // name of the device
-//                                   1522,                      // portion of the packet to capture
-//                                   false,                     // promiscuous mode
-//                                   pcapTimeoutMS,             // read timeout
-//                                   errbuf                     // error buffer
-//                                   );
-//     // filter for APS protocol and host destination
-//     string filterStr = create_pcap_filter();
-//     apply_filter(filterStr, recHandle);
-
-//     // start looping while we're up and running
-//     receiving_ = true;
-//     while(receiving_){
-//         struct pcap_pkthdr *packetHeader;
-//         const u_char *packetData;
-//         int result =  pcap_next_ex( recHandle, &packetHeader, &packetData);
-//         if (result > 0){
-//             //We have a packet so deal with it
-//             //First convert the byte stream into a packet
-//             APSEthernetPacket myPacket = APSEthernetPacket(packetData, packetHeader->caplen);
-
-//             //Now sort out to which queue it's going
-//             mLock_.lock();
-//             if(MAC_to_serial_.find(myPacket.header.src) == MAC_to_serial_.end()){
-//                 msgQueues_["unknown"].emplace(myPacket);
-//             }
-//             else{
-//                 msgQueues_[MAC_to_serial_[myPacket.header.src]].push(myPacket);
-//             }
-//             mLock_.unlock();
-//         }
-//         else if (result < 0){
-//             FILE_LOG(logERROR) << "Error trying to read packets: " << pcap_geterr(recHandle);
-//         }
-//         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-//     }
-
-//     //close up
-//     pcap_close(recHandle);
-
-// }

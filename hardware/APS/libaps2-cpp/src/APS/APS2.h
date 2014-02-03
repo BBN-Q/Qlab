@@ -86,7 +86,9 @@ public:
 	static string printAPSCommand(const APSCommand_t & command);
 	static string printAPSChipCommand(APSChipConfigCommand_t & command);
 
+	//Memory read/write
 	int write(const uint32_t & addr, const vector<uint32_t> & data);
+	vector<uint32_t> read(const uint32_t &, const uint32_t &);
 
 private:
 
@@ -100,9 +102,7 @@ private:
 	int write(const uint32_t & addr, const uint32_t & data);
 	vector<APSEthernetPacket> pack_data(const uint32_t &, const vector<uint32_t> &);
 
-	//Memory read
 	vector<APSEthernetPacket> read_packets(const size_t &);
-	vector<uint32_t> read(const uint32_t &, const uint32_t &);
 
 	//Single packet query
 	vector<APSEthernetPacket> query(const APSCommand_t &);
