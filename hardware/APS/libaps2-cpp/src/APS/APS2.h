@@ -83,7 +83,6 @@ public:
 
 	//Pretty printers
 	static string print_status_bank(const APSStatusBank_t & status);
-	static string printAPSCommand(const APSCommand_t & command);
 	static string printAPSChipCommand(APSChipConfigCommand_t & command);
 
 	//Memory read/write

@@ -1,11 +1,4 @@
 #include "APS2.h"
-#include <sstream>
-
-using std::ostringstream;
-using std::endl;
-
-
-
 
 APS2::APS2() :  isOpen{false}, channels_(2), samplingRate_{-1} {};
 
@@ -545,7 +538,9 @@ int APS2::write(const uint32_t & addr, const vector<uint32_t> & data){
 	}
 
 	//TOOD: - check for acknowledges in correct order
+	FILE_LOG(logDEBUG1) << "Got here!";
 	auto ackPackets = read_packets(dataPackets.size());
+	FILE_LOG(logDEBUG1) << ackPackets.size();
 	FILE_LOG(logDEBUG1) << ackPackets[0].payload.size();
 
 	return 0;
@@ -1555,7 +1550,7 @@ int APS2::read_state_from_hdf5(H5::H5File & H5StateFile, const string & rootStr)
 
 
 string APS2::print_status_bank(const APSStatusBank_t & status) {
-	ostringstream ret;
+	std::ostringstream ret;
 
 	ret << "Host Firmware Version = " << std::hex << status.hostFirmwareVersion << endl;
 	ret << "User Firmware Version = " << status.userFirmwareVersion << endl;
@@ -1576,22 +1571,10 @@ string APS2::print_status_bank(const APSStatusBank_t & status) {
 	return ret.str();
 }
 
-string APS2::printAPSCommand(const APSCommand_t & cmd) {
-    ostringstream ret;
 
-    ret << std::hex << cmd.packed << " =";
-    ret << " ACK: " << cmd.ack;
-    ret << " SEQ: " << cmd.seq;
-    ret << " SEL: " << cmd.sel;
-    ret << " R/W: " << cmd.r_w;
-    ret << " CMD: " << cmd.cmd;
-    ret << " MODE/STAT: " << cmd.mode_stat;
-    ret << std::dec << " cnt: " << cmd.cnt;
-    return ret.str();
-}
 
 string APS2::printAPSChipCommand(APSChipConfigCommand_t & cmd) {
-    ostringstream ret;
+    std::ostringstream ret;
 
     ret << std::hex << cmd.packed << " =";
     ret << " Target: " << cmd.target;

@@ -267,7 +267,7 @@ int memory_write(const char * deviceSerial, uint32_t addr, uint32_t numWords, ui
 }
 
 int memory_read(const char * deviceSerial, uint32_t addr, uint32_t numWords, uint32_t* data){
-	readData = APSs[string(deviceSerial)].read(addr, numWords);
+	auto readData = APSs[string(deviceSerial)].read(addr, numWords);
 	std::copy(readData.begin(), readData.end(), data);
 	return 0;
 }

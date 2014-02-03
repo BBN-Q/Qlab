@@ -89,6 +89,18 @@ int main (int argc, char* argv[])
 
   // cout << concol::RED << "Uptime for device " << deviceSerial << " is " << uptime << " seconds" << concol::RESET << endl;
 
+
+  //Try a single word read/write test 
+  cout << concol::RED << "Testing single word write/read" << concol::RESET << endl;;
+
+  uint32_t  testInt = std::stoul("aabbccdd",0 ,16);
+  memory_write(deviceSerial.c_str(), std::stoul("c0000000",0 ,16), 1, &testInt);
+
+  testInt = 0;
+  memory_read(deviceSerial.c_str(), std::stoul("c0000000",0 ,16), 1, &testInt);
+
+  cout << concol::RED << "Wrote: " <<  std::stoul("aabbccdd", 0, 16) << " and read: " << testInt << concol::RESET << endl;
+
   disconnect_APS(deviceSerial.c_str());
 
   delete[] serialBuffer;

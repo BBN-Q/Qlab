@@ -21,6 +21,7 @@
 #include <map>
 #include <set>
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <iomanip>
 #include <stdio.h>
@@ -28,6 +29,7 @@
 #include <stdexcept>
 #include <algorithm>
 
+using std::endl;
 using std::vector;
 using std::queue;
 using std::map;

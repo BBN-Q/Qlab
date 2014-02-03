@@ -1,5 +1,6 @@
 #include "APSEthernetPacket.h"
 
+
 APSEthernetPacket::APSEthernetPacket() : header{{}, {}, APS_PROTO, 0, {0}, 0}, payload(0){};
 
 APSEthernetPacket::APSEthernetPacket(const APSCommand_t & command) :
@@ -25,9 +26,11 @@ APSEthernetPacket::APSEthernetPacket(const vector<uint8_t> & packetData){
 	header.seqNum = bytes2uint16(14);
 	header.command.packed = bytes2uint32(16);
 
+	FILE_LOG(logDEBUG1) << print_APSCommand(header.command);
+
 	size_t myOffset;
-	//not all return packets have an address; if-block on command type
-	if (needs_address(APS_COMMANDS(header.command.cmd))){
+	//not all return packets have an address; if-block on command type and whether it is an acknowledge
+	if (!header.command.ack && needs_address(APS_COMMANDS(header.command.cmd))){
 		header.addr = bytes2uint32(20);
 		myOffset = 24;
 	}
@@ -112,3 +115,18 @@ APSEthernetPacket APSEthernetPacket::create_broadcast_packet(){
 	return myPacket;
 }
 
+
+
+string print_APSCommand(const APSCommand_t & cmd) {
+    std::ostringstream ret;
+
+    ret << std::hex << cmd.packed << " =";
+    ret << " ACK: " << cmd.ack;
+    ret << " SEQ: " << cmd.seq;
+    ret << " SEL: " << cmd.sel;
+    ret << " R/W: " << cmd.r_w;
+    ret << " CMD: " << cmd.cmd;
+    ret << " MODE/STAT: " << cmd.mode_stat;
+    ret << std::dec << " cnt: " << cmd.cnt;
+    return ret.str();
+}
