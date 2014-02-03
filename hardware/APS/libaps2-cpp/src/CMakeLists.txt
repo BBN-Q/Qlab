@@ -9,14 +9,6 @@ PROJECT( libaps2 )
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 
-# define WIN32 for winpcap
-if (WIN32)
-	SET (  WINPCAPPATH "C:\\Apps\\winpcap" )
-	INCLUDE_DIRECTORIES(${WINPCAPPATH}/Include)
-	add_definitions( -DWIN32 )
-endif(WIN32)
-
-
 #look for hdf5 and otherwise hack in mingw64 built one
 FIND_PACKAGE(HDF5)
 if (HDF5_FOUND)
@@ -35,15 +27,6 @@ INCLUDE_DIRECTORIES("./APS/")
 #ASIO files
 INCLUDE_DIRECTORIES("../asio/")
 ADD_DEFINITIONS(-DASIO_STANDALONE)
-
-#Check for 32bit or 64 bit platform and link against the appropriate winpcap
-if(WIN32)
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	LINK_DIRECTORIES( ${LINK_DIRECTORIES} "..\\lib\\winpcap\\x64\\")    
- else()
-     LINK_DIRECTORIES( ${LINK_DIRECTORIES} "..\\lib\\winpcap\\x86\\")  
-endif()
-endif(WIN32)
 
 #Add flags for gcc and C++11
 ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-DGCC")
@@ -76,14 +59,6 @@ ADD_EXECUTABLE(test
 #	./APS/APS2.cpp
 #)
 
-#For Windows pull in some additional libraries for network stuff
-if (WIN32)
-TARGET_LINK_LIBRARIES(echo 
-	wpcap Packet
-	ws2_32
-	iphlpapi 
-)
-endif(WIN32)
 
 #set_target_properties(echo PROPERTIES COMPILE_DEFINITIONS "DEBUGAPS")
 
@@ -93,15 +68,8 @@ endif(WIN32)
 #	./APS/DummyAPS.cpp
 #)
 
-#TARGET_LINK_LIBRARIES(echo32
-#	wpcap Packet
-#	ws2_32
-#	iphlpapi 
-#)
-
 #set_target_properties(echo32 PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
 #set_target_properties(echo32 PROPERTIES COMPILE_DEFINITIONS "DEBUGAPS")
-
 
 TARGET_LINK_LIBRARIES(test aps2)
 
@@ -109,18 +77,6 @@ TARGET_LINK_LIBRARIES(aps2
 	hdf5_cpp
 	hdf5
 )
-
-if (WIN32)
-TARGET_LINK_LIBRARIES(aps2 
-	wpcap Packet
-	ws2_32
-	iphlpapi    # for GetAdaptersInfo
-)
-else()
-TARGET_LINK_LIBRARIES(aps2 
-	pcap
-)
-endif(WIN32)
 
 
 
