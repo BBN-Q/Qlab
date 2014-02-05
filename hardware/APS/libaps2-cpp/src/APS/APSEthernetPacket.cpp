@@ -26,8 +26,6 @@ APSEthernetPacket::APSEthernetPacket(const vector<uint8_t> & packetData){
 	header.seqNum = bytes2uint16(14);
 	header.command.packed = bytes2uint32(16);
 
-	FILE_LOG(logDEBUG1) << print_APSCommand(header.command);
-
 	size_t myOffset;
 	//not all return packets have an address; if-block on command type and whether it is an acknowledge
 	if (!header.command.ack && needs_address(APS_COMMANDS(header.command.cmd))){

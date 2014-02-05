@@ -525,31 +525,26 @@ int APS2::write(const uint32_t & addr, const uint32_t & data){
 int APS2::write(const uint32_t & addr, const vector<uint32_t> & data){
 	/* APS2::write
 	 * addr = start byte of address space 
-	 * data = vector<uint43_t> data
-	 * queue = false - write immediately, true - add write command to output queue
+	 * data = vector<uint32_t> data
 	 */
 
 	//Pack the data into APSEthernetFrames
 	vector<APSEthernetPacket> dataPackets = pack_data(addr, data);
 
 	//Send the packets out 
-	for (auto packet : dataPackets){
-		APSEthernet::get_instance().send(deviceSerial_, packet);
-	}
+	APSEthernet::get_instance().send(deviceSerial_, dataPackets);
 
-	//TOOD: - check for acknowledges in correct order
+	//TOOD: - check for acknowledge in correct order
 	auto ackPackets = read_packets(dataPackets.size());
-	FILE_LOG(logDEBUG1) << ackPackets.size();
-	FILE_LOG(logDEBUG1) << ackPackets[0].payload.size();
+	FILE_LOG(logDEBUG3) << "Got back " << ackPackets.size() << " ACK packets";
 
 	return 0;
 }
 
 vector<APSEthernetPacket> APS2::pack_data(const uint32_t & addr, const vector<uint32_t> & data){
 	//Break the data up into ethernet frame sized chunks.   
-	// ethernet frame payload = 1500bytes - 20bytes IPV4 and 8 bytes UDP and 12 bytes APS header = 1460bytes = 365 words 
-	static const size_t maxPayload = 365;
-
+	// ethernet frame payload = 1500bytes - 20bytes IPV4 and 8 bytes UDP and 24 bytes APS header (with address field) = 1448bytes = 362 words 
+	static const size_t maxPayload = 362;
 
 	vector<APSEthernetPacket> packets;
 
@@ -583,7 +578,7 @@ vector<APSEthernetPacket> APS2::pack_data(const uint32_t & addr, const vector<ui
 
 
 vector<APSEthernetPacket> APS2::read_packets(const size_t & numPackets){
-	return APSEthernet::get_instance().receive(deviceSerial_);
+	return APSEthernet::get_instance().receive(deviceSerial_, numPackets);
 }
 
 vector<uint32_t> APS2::read(const uint32_t & addr, const uint32_t & numWords){

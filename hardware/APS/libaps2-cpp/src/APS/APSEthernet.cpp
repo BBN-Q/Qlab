@@ -130,19 +130,19 @@ APSEthernet::EthernetError APSEthernet::send(string serial, APSEthernetPacket ms
 
 APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPacket> msg) {
     //Fill out the destination  MAC address
+    FILE_LOG(logDEBUG3) << "Sending " << msg.size() << " packets to " << serial;
     for (auto & packet : msg){
+        FILE_LOG(logDEBUG4) << "Packet command: " << print_APSCommand(packet.header.command);
         packet.header.dest = serial_to_MAC_[serial];
         socket_.send_to(asio::buffer(packet.serialize()), endpoints_[serial]);
-        // udp::endpoint broadCastEndPoint(asio::ip::address_v4::broadcast(), APS_PROTO);
-        // socket_.send_to(asio::buffer(packet.serialize()), broadCastEndPoint);
     }
 
     return SUCCESS;
 }
 
-vector<APSEthernetPacket> APSEthernet::receive(string serial, size_t timeoutMS) {
-
+vector<APSEthernetPacket> APSEthernet::receive(string serial, size_t numPackets, size_t timeoutMS) {
     //Read the packets coming back in up to the timeout
+    //Defaults: receive(string serial, size_t numPackets = 1, size_t timeoutMS = 1000);
     std::chrono::time_point<std::chrono::steady_clock> start, end;
 
     start = std::chrono::steady_clock::now();
@@ -150,20 +150,23 @@ vector<APSEthernetPacket> APSEthernet::receive(string serial, size_t timeoutMS) 
 
     vector<APSEthernetPacket> outVec;
 
-    while ( elapsedTime < timeoutMS){
+    while (elapsedTime < timeoutMS){
         if (!msgQueues_[serial].empty()){
             mLock_.lock();
             outVec.push_back(msgQueues_[serial].front());
             msgQueues_[serial].pop();
             mLock_.unlock();
-            return outVec;
+            FILE_LOG(logDEBUG4) << "Received packet for " << serial << " with command header: " << print_APSCommand(outVec.back().header.command);
+            if (outVec.size() == numPackets){
+                FILE_LOG(logDEBUG3) << "Received " << numPackets << " packets for " << serial;
+                return outVec;
+            }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         end = std::chrono::steady_clock::now();
         elapsedTime =  std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
     }
-    FILE_LOG(logWARNING) << "Timed out on receive!";
 
-    return outVec;
+    throw runtime_error("Timed out on receive");
 }
 

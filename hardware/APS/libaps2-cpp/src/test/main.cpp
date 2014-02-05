@@ -91,17 +91,17 @@ int main (int argc, char* argv[])
 
 
   //Test single word read/write
-  size_t numTests = 1000;
-  size_t maxAddress = 131072;
-  vector<uint32_t> testAddresses, testWords;
+  size_t numTests = 100;
+  size_t maxAddr = 131072;
+  vector<uint32_t> testAddrs, testWords;
 
   for (size_t ct = 0; ct < numTests; ++ct)
   {
-    testAddresses.push_back(rand() % maxAddress);
+    testAddrs.push_back(rand() % maxAddr);
     testWords.push_back(rand() % 4294967296);
   }
 
-  cout << concol::RED << "Testing single word write/read on Waveform A" << concol::RESET << endl;;
+  // cout << concol::RED << "Testing single word write/read on Waveform A" << concol::RESET << endl;;
 
   uint32_t offset = std::stoul("c0000000",0 ,16);
   uint32_t testInt;
@@ -109,9 +109,9 @@ int main (int argc, char* argv[])
   size_t numRight = 0;
   for (size_t ct = 0; ct < numTests; ++ct)
   {
-    memory_write(deviceSerial.c_str(), offset + 4*testAddresses[ct], 1, &testWords[ct]);
-    memory_read(deviceSerial.c_str(), offset + 4*testAddresses[ct], 1, &testInt);
-    cout << "Address: " << testAddresses[ct] << " Wrote: " << testWords[ct] << " Read: " << testInt << endl;
+    memory_write(deviceSerial.c_str(), offset + 4*testAddrs[ct], 1, &testWords[ct]);
+    memory_read(deviceSerial.c_str(), offset + 4*testAddrs[ct], 1, &testInt);
+    // cout << "Address: " << testAddrs[ct] << " Wrote: " << testWords[ct] << " Read: " << testInt << endl;
     if (testInt != testWords[ct]){
       cout << concol::RED << "Failed write/read test!" << concol::RESET << endl;
     }
@@ -128,9 +128,9 @@ int main (int argc, char* argv[])
   numRight = 0;
   for (size_t ct = 0; ct < numTests; ++ct)
   {
-    memory_write(deviceSerial.c_str(), offset + 4*testAddresses[ct], 1, &testWords[ct]);
-    memory_read(deviceSerial.c_str(), offset + 4*testAddresses[ct], 1, &testInt);
-    cout << "Address: " << testAddresses[ct] << " Wrote: " << testWords[ct] << " Read: " << testInt << endl;
+    memory_write(deviceSerial.c_str(), offset + 4*testAddrs[ct], 1, &testWords[ct]);
+    memory_read(deviceSerial.c_str(), offset + 4*testAddrs[ct], 1, &testInt);
+    // cout << "Address: " << testAddrs[ct] << " Wrote: " << testWords[ct] << " Read: " << testInt << endl;
     if (testInt != testWords[ct]){
       cout << concol::RED << "Failed write/read test!" << concol::RESET << endl;
     }
@@ -139,6 +139,39 @@ int main (int argc, char* argv[])
     }
   }
   cout << concol::RED << "Waveform B single word write/read " << 100*static_cast<double>(numRight)/numTests << "% correct" << concol::RESET << endl;;
+
+  //Multi-word write/read tests
+  //Start somewhere in the lower half of a memory block and write a random amount from a quarter to half the RAM
+  testWords.clear();
+  // size_t testSize = (maxAddr/4) + rand() % (maxAddr/2);
+  size_t testSize = 65536;
+  testWords.reserve(testSize);
+  for (size_t ct = 0; ct < testSize ; ++ct)
+  {
+    testWords.push_back(rand() % 4294967296);
+  }
+  uint32_t startAddr = rand() % (maxAddr/2);
+
+  std::chrono::time_point<std::chrono::steady_clock> start, end;
+
+  start = std::chrono::steady_clock::now();
+
+  memory_write(deviceSerial.c_str(), offset + 4*startAddr, testSize, testWords.data());
+
+  end = std::chrono::steady_clock::now();
+  size_t elapsedTime =  std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+
+  cout << concol::RED << "Long write took " << static_cast<double>(elapsedTime)/1000 << concol::RESET << endl;
+
+  //Now make a few random reads to confirm
+  for (size_t ct = 0; ct < 100; ++ct)
+  {
+    uint32_t testAddr = startAddr + rand() % testSize;
+    memory_read(deviceSerial.c_str(), offset + 4*testAddr, 1, &testInt);
+    if (testInt != testWords[testAddr-startAddr]){
+      cout << concol::RED << "Failed write/read test!" << concol::RESET << endl;
+    }
+  }
 
   disconnect_APS(deviceSerial.c_str());
 
