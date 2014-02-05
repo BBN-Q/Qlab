@@ -90,16 +90,55 @@ int main (int argc, char* argv[])
   // cout << concol::RED << "Uptime for device " << deviceSerial << " is " << uptime << " seconds" << concol::RESET << endl;
 
 
-  //Try a single word read/write test 
-  cout << concol::RED << "Testing single word write/read" << concol::RESET << endl;;
+  //Test single word read/write
+  size_t numTests = 1000;
+  size_t maxAddress = 131072;
+  vector<uint32_t> testAddresses, testWords;
 
-  uint32_t  testInt = std::stoul("aabbccdd",0 ,16);
-  memory_write(deviceSerial.c_str(), std::stoul("c0000000",0 ,16), 1, &testInt);
+  for (size_t ct = 0; ct < numTests; ++ct)
+  {
+    testAddresses.push_back(rand() % maxAddress);
+    testWords.push_back(rand() % 4294967296);
+  }
 
-  testInt = 0;
-  memory_read(deviceSerial.c_str(), std::stoul("c0000000",0 ,16), 1, &testInt);
+  cout << concol::RED << "Testing single word write/read on Waveform A" << concol::RESET << endl;;
 
-  cout << concol::RED << "Wrote: " <<  std::stoul("aabbccdd", 0, 16) << " and read: " << testInt << concol::RESET << endl;
+  uint32_t offset = std::stoul("c0000000",0 ,16);
+  uint32_t testInt;
+
+  size_t numRight = 0;
+  for (size_t ct = 0; ct < numTests; ++ct)
+  {
+    memory_write(deviceSerial.c_str(), offset + 4*testAddresses[ct], 1, &testWords[ct]);
+    memory_read(deviceSerial.c_str(), offset + 4*testAddresses[ct], 1, &testInt);
+    cout << "Address: " << testAddresses[ct] << " Wrote: " << testWords[ct] << " Read: " << testInt << endl;
+    if (testInt != testWords[ct]){
+      cout << concol::RED << "Failed write/read test!" << concol::RESET << endl;
+    }
+    else{
+      numRight++;
+    }
+  }
+  cout << concol::RED << "Waveform A single word write/read " << 100*static_cast<double>(numRight)/numTests << "% correct" << concol::RESET << endl;;
+  
+  cout << concol::RED << "Testing single word write/read on Waveform B" << concol::RESET << endl;;
+
+  offset = std::stoul("c2000000",0 ,16);
+  
+  numRight = 0;
+  for (size_t ct = 0; ct < numTests; ++ct)
+  {
+    memory_write(deviceSerial.c_str(), offset + 4*testAddresses[ct], 1, &testWords[ct]);
+    memory_read(deviceSerial.c_str(), offset + 4*testAddresses[ct], 1, &testInt);
+    cout << "Address: " << testAddresses[ct] << " Wrote: " << testWords[ct] << " Read: " << testInt << endl;
+    if (testInt != testWords[ct]){
+      cout << concol::RED << "Failed write/read test!" << concol::RESET << endl;
+    }
+    else{
+      numRight++;
+    }
+  }
+  cout << concol::RED << "Waveform B single word write/read " << 100*static_cast<double>(numRight)/numTests << "% correct" << concol::RESET << endl;;
 
   disconnect_APS(deviceSerial.c_str());
 

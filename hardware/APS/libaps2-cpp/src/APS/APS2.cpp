@@ -538,7 +538,6 @@ int APS2::write(const uint32_t & addr, const vector<uint32_t> & data){
 	}
 
 	//TOOD: - check for acknowledges in correct order
-	FILE_LOG(logDEBUG1) << "Got here!";
 	auto ackPackets = read_packets(dataPackets.size());
 	FILE_LOG(logDEBUG1) << ackPackets.size();
 	FILE_LOG(logDEBUG1) << ackPackets[0].payload.size();
