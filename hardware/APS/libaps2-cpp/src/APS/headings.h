@@ -59,8 +59,6 @@ typedef vector<uint16_t> WordVec;
 
 //Deal with some Windows/Linux difference
 #ifdef _WIN32
-#define HAVE_REMOTE
-#define WPCAP
 #include "winsock2.h"
 #include "windows.h"
 #else

@@ -18,7 +18,9 @@ if(NOT DEFINED HDF5_INCLUDE_DIR)
 endif()
 INCLUDE_DIRECTORIES( ${HDF5_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${HDF5_INCLUDE_DIR}/cpp )
-
+if(DEFINED HDF5_INCLUDE_DIR)
+	LINK_DIRECTORIES( ${LINK_DIRECTORIES} ${HDF5_INCLUDE_DIR}/../lib)
+endif()
 
 #Grab all the header files in the src directory including concol.h
 INCLUDE_DIRECTORIES("./APS/")
@@ -76,12 +78,11 @@ ADD_EXECUTABLE(test
 
 TARGET_LINK_LIBRARIES(test aps2)
 
-TARGET_LINK_LIBRARIES(aps2 
-	hdf5_cpp
-	hdf5
-)
-
-
+if(WIN32)
+TARGET_LINK_LIBRARIES(aps2 hdf5	hdf5_cpp ws2_32)
+else(WIN32)
+TARGET_LINK_LIBRARIES(aps2 hdf5	hdf5_cpp)
+endif(WIN32)
 
 
 

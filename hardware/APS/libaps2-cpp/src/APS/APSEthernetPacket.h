@@ -5,8 +5,6 @@
 #include "headings.h"
 #include "MACAddr.h"
 
-#include "arpa/inet.h"
-
 //Some bitfield unions for packing/unpacking the commands words
 //APS Command Protocol 
 //ACK SEQ SEL R/W CMD<3:0> MODE/STAT CNT<15:0>

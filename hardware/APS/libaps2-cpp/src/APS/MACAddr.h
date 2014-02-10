@@ -11,7 +11,6 @@ public:
 	MACAddr();
 	MACAddr(const uint8_t *);
 	MACAddr(const string &);
-	static MACAddr MACAddr_from_devName(const string &);
 
 	bool operator==(const MACAddr & other) const{
 		return (addr == other.addr);

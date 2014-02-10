@@ -1,5 +1,8 @@
 #include "APSEthernetPacket.h"
 
+#ifndef _WIN32
+#include "arpa/inet.h"
+#endif
 
 APSEthernetPacket::APSEthernetPacket() : header{{}, {}, APS_PROTO, 0, {0}, 0}, payload(0){};
 
