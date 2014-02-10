@@ -8,31 +8,33 @@
 PROJECT( libaps2 )
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-
-#look for hdf5 and otherwise hack in mingw64 built one
-FIND_PACKAGE(HDF5)
-if (HDF5_FOUND)
+#Look for hdf5 directly passed; otherwise look for system one
+if(NOT DEFINED HDF5_INCLUDE_DIR)
+	FIND_PACKAGE(HDF5)
+	if (NOT HDF5_FOUND)
+		message("Unable to find HDF5 libraries.")
+		return()
+	endif()
+endif()
 INCLUDE_DIRECTORIES( ${HDF5_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES( ${HDF5_INCLUDE_DIR}/cpp )
-else()
-INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\hdf5\\include")
-INCLUDE_DIRECTORIES("C:\\MinGW\\msys\\1.0\\local\\hdf5\\include\\cpp")
-LINK_DIRECTORIES( ${LINK_DIRECTORIES} "C:\\MinGW\\msys\\1.0\\local\\hdf5\\lib")  
-endif()
 
 
 #Grab all the header files in the src directory including concol.h
 INCLUDE_DIRECTORIES("./APS/")
 
 #ASIO files
-INCLUDE_DIRECTORIES("../asio/")
+if(NOT DEFINED ASIO_INCLUDE_DIR)
+	message("ASIO include directory not defined.")
+	return()
+endif()
+INCLUDE_DIRECTORIES( ${ASIO_INCLUDE_DIR} )
 ADD_DEFINITIONS(-DASIO_STANDALONE)
 
 #Add flags for gcc and C++11
 ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-DGCC")
 ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-std=c++11")
 ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-Wall")
-ADD_DEFINITIONS(${CMAKE_CXX_FLAGS} "-g")
 
 SET ( DLL_SRC 
 	./APS/libaps.cpp
