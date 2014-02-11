@@ -26,7 +26,7 @@ APSEthernet::~APSEthernet() {
 }
 
 void APSEthernet::setup_receive(){
-    udp::endpoint senderEndpoint;
+    udp::endpoint senderEndpoint(udp::v4(), APS_PROTO);
     uint8_t receivedData[2048];
     socket_.async_receive_from(
         asio::buffer(receivedData, 2048), senderEndpoint,
