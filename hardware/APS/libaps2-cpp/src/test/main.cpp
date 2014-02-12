@@ -8,6 +8,15 @@
 
 #include <concol.h> 
 
+
+//Helper function for hex formating with the 0x out front
+inline std::ios_base&
+myhex(std::ios_base& __base)
+{
+  __base.setf(std::ios_base::hex, std::ios_base::basefield);
+  __base.setf(std::ios::showbase);
+  return __base;
+}
 using namespace std;
 
 // command options functions taken from:
@@ -92,7 +101,7 @@ int main (int argc, char* argv[])
 
   //Test single word read/write
   size_t numTests = 100;
-  size_t maxAddr = 131072;
+  size_t maxAddr = 8191;
   vector<uint32_t> testAddrs, testWords;
 
   for (size_t ct = 0; ct < numTests; ++ct)
@@ -101,7 +110,7 @@ int main (int argc, char* argv[])
     testWords.push_back(rand() % 4294967296);
   }
 
-  // cout << concol::RED << "Testing single word write/read on Waveform A" << concol::RESET << endl;;
+  cout << concol::RED << "Testing single word write/read on Waveform A" << concol::RESET << endl;;
 
   uint32_t offset = std::stoul("c0000000",0 ,16);
   uint32_t testInt;
@@ -143,12 +152,12 @@ int main (int argc, char* argv[])
   //Multi-word write/read tests
   //Start somewhere in the lower half of a memory block and write a random amount from a quarter to half the RAM
   testWords.clear();
-  // size_t testSize = (maxAddr/4) + rand() % (maxAddr/2);
-  size_t testSize = 65536;
+  size_t testSize = (maxAddr/4) + rand() % (maxAddr/4);
+  // size_t testSize = 20;
   testWords.reserve(testSize);
   for (size_t ct = 0; ct < testSize ; ++ct)
   {
-    testWords.push_back(rand() % 4294967296);
+    testWords.push_back(rand() % 4294967296U);
   }
   uint32_t startAddr = rand() % (maxAddr/2);
 
@@ -168,6 +177,7 @@ int main (int argc, char* argv[])
   {
     uint32_t testAddr = startAddr + rand() % testSize;
     memory_read(deviceSerial.c_str(), offset + 4*testAddr, 1, &testInt);
+    // cout << "Address: " << myhex << testAddr << " Wrote: " << testWords[testAddr-startAddr] << " Read: " << testInt << endl;
     if (testInt != testWords[testAddr-startAddr]){
       cout << concol::RED << "Failed write/read test!" << concol::RESET << endl;
     }
@@ -177,7 +187,7 @@ int main (int argc, char* argv[])
 
   delete[] serialBuffer;
   
-
+  cout << concol::RED << "Finished!" << concol::RESET << endl;
   /*
   rc = initAPS(0, const_cast<char *>("../dummyBitfile.bit"), 0);
 
