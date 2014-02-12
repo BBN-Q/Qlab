@@ -501,28 +501,14 @@ int APS2::set_LLData_IQ(const WordVec & addr, const WordVec & count, const WordV
 
 }
 
-/*
- *
- * Private Functions
- */
+// FPGA memory read/write
 
-
-int APS2::write(const APSCommand_t & command){
-	/*
-	* Write a single unaddressed command 
-	*/
-	//TODO: figure out move constructor
-	APSEthernetPacket newPacket(command);
-	APSEthernet::get_instance().send(deviceSerial_, newPacket);
-	return 0;
-}
-
-int APS2::write(const uint32_t & addr, const uint32_t & data){
+int APS2::write_memory(const uint32_t & addr, const uint32_t & data){
 	//Create the vector and pass through
-	return write(addr, vector<uint32_t>(1, data));
+	return write_memory(addr, vector<uint32_t>(1, data));
 }
 
-int APS2::write(const uint32_t & addr, const vector<uint32_t> & data){
+int APS2::write_memory(const uint32_t & addr, const vector<uint32_t> & data){
 	/* APS2::write
 	 * addr = start byte of address space 
 	 * data = vector<uint32_t> data
@@ -538,6 +524,133 @@ int APS2::write(const uint32_t & addr, const vector<uint32_t> & data){
 	auto ackPackets = read_packets(dataPackets.size());
 	FILE_LOG(logDEBUG3) << "Got back " << ackPackets.size() << " ACK packets";
 
+	return 0;
+}
+
+vector<uint32_t> APS2::read_memory(const uint32_t & addr, const uint32_t & numWords){
+	//TODO: handle numWords that require mulitple packets
+
+	//Send the read request
+	APSEthernetPacket readReq;
+	readReq.header.command.r_w = 1;
+	readReq.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::USERIO_ACK);
+	readReq.header.command.cnt = numWords;
+	readReq.header.addr = addr;
+	APSEthernet::get_instance().send(deviceSerial_, readReq);
+
+	//Retrieve the data packet(s)
+	auto readData = read_packets(1);
+
+	return readData[0].payload;
+}
+
+//SPI read/write
+vector<uint32_t> build_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const uint16_t & addr, uint16_t & data) {
+	return build_SPI_msg(target, {addr}, {data});
+}
+
+vector<uint32_t> build_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const vector<uint16_t> & addr, vector<uint16_t> & data) {
+	vector<uint32_t> msg;
+	switch (target) {
+		case CHIPCONFIG_IO_TARGET_DAC_0:
+		case CHIPCONFIG_IO_TARGET_DAC_1:
+		case CHIPCONFIG_IO_TARGET_DAC_0_SINGLE:
+		case CHIPCONFIG_IO_TARGET_DAC_1_SINGLE:
+			msg = build_DAC_SPI_msg(target, addr, data);
+			break;
+		case CHIPCONFIG_IO_TARGET_PLL:
+		case CHIPCONFIG_IO_TARGET_PLL_SINGLE:
+			msg = build_PLL_SPI_msg(addr, data);
+			break;
+		case CHIPCONFIG_IO_TARGET_VCXO:
+			msg = build_VCXO_SPI_msg(data);
+			break;
+	}
+	return msg;
+}
+
+int write_SPI(const vector<uint32_t> & msg) {
+	// push on "end of message"
+	msg.push_back(std::stoul("FF000000", 0, 16);)
+
+	// build packet
+	APSEthernetPacket packet;
+	packet.header.command.r_w = 0;
+	packet.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::CHIPCONFIGIO);
+	packet.header.command.cnt = msg.size();
+	packet.payload = msg;
+
+	return APSEthernet::get_instance().send(deviceSerial_, packet);
+}
+
+uint32_t read_SPI(const CHIPCONFIG_IO_TARGET & target, const uint16_t & addr) {
+	// reads a single 32-bit words from the target SPI device
+
+	// build message
+	APSChipConfigCommand_t cmd;
+	cmd.target = target;
+	cmd.spicnt_data = 1;
+	vector<uint32_t> msg = {cmd};
+
+	// build packet
+	APSEthernetPacket packet;
+	packet.header.command.r_w = 1;
+	packet.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::CHIPCONFIGIO);
+	packet.header.command.cnt = msg.size();
+	packet.payload = msg;
+
+	APSEthernet::get_instance().send(deviceSerial_, packet);
+	APSEthernetPacket p = read_packets(1)[0];
+	// TODO: Check status bits
+	return p.payload[0];
+}
+
+//Flash read/write
+int write_flash(const uint32_t & addr, vector<uint32_t> & data) {
+	// erase before write
+	erase_flash(addr, sizeof(uint32_t) * data.size());
+
+	vector<APSEthernetPacket> packets;
+	APSEthernetPacket packet;
+	packet.header.command.r_w = 0;
+	packet.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::EPROMIO);
+	packet.header.command.cnt = 256;
+	packet.payload.resize(256);
+
+	// resize data to a multiple of 256 words (1KB)
+	int padwords = (256 - (data.size() % 256)) % 256;
+	data.resize(data.size() + padwords);
+
+	for (size_t ct = 0; ct < data.size(); ct += 256) {
+		std::copy(data.begin() + ct, data.begin() + ct + 256, packet.payload.begin());
+		packets.push_back(packet);
+	}
+	return APSEthernet::get_instance().send(deviceSerial_, packets);
+
+	// TODO: optionally verify the write
+}
+
+int erase_flash(const uint32_t & addr, const uint32_t numbytes) {
+	// each erase command erases 64 KB of data starting at addr
+}
+
+vector<uint32_t> read_flash(const uint32_t & addr, const uint32_t & data) {
+
+}
+
+
+/*
+ *
+ * Private Functions
+ */
+
+int APS2::write_command(const APSCommand_t & command){
+	/*
+	* Write a single unaddressed command 
+	*/
+	//TODO: figure out move constructor
+	APSEthernetPacket newPacket(command);
+	APSEthernet::get_instance().send(deviceSerial_, newPacket);
 	return 0;
 }
 
@@ -581,27 +694,61 @@ vector<APSEthernetPacket> APS2::read_packets(const size_t & numPackets){
 	return APSEthernet::get_instance().receive(deviceSerial_, numPackets);
 }
 
-vector<uint32_t> APS2::read(const uint32_t & addr, const uint32_t & numWords){
-	//TODO: handle numWords that require mulitple packets
-
-	//Send the read request
-	APSEthernetPacket readReq;
-	readReq.header.command.r_w = 1;
-	readReq.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::USERIO_ACK);
-	readReq.header.command.cnt = numWords;
-	readReq.header.addr = addr;
-	APSEthernet::get_instance().send(deviceSerial_, readReq);
-
-	//Retrieve the data packet(s)
-	auto readData = read_packets(1);
-
-	return readData[0].payload;
-}
-
 vector<APSEthernetPacket> APS2::query(const APSCommand_t & command){
 	//write-read ping-pong
-	write(command);
+	write_command(command);
 	return read_packets(1);
+}
+
+vector<uint32_t> build_DAC_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const vector<uint16_t> & addr, const vector<uint8_t> & data) {
+	vector<uint32_t> msg;
+	APSChipConfigCommand_t cmd;
+	// force SINGLE writes for now
+	switch (target) {
+		case CHIPCONFIG_IO_TARGET_DAC_0:
+		case CHIPCONFIG_IO_TARGET_DAC_0_SINGLE:
+			cmd.target = CHIPCONFIG_IO_TARGET_DAC_0_SINGLE;
+			break;
+		case CHIPCONFIG_IO_TARGET_DAC_1:
+		case CHIPCONFIG_IO_TARGET_DAC_1_SINGLE:
+			cmd.target = CHIPCONFIG_IO_TARGET_DAC_1_SINGLE;
+			break;
+	}
+	for (size_t ct = 0; ct < addr.size(); ct++) {
+		cmd.instr = addr[ct];
+		cmd.spicnt_data = data[ct];
+		msg.push_back(cmd.packed);
+	}
+	return msg;
+}
+
+vector<uint32_t> build_PLL_SPI_msg(const vector<uint16_t> & addr, const vector<uint8_t> & data) {
+	vector<uint32_t> msg;
+	APSChipConfigCommand_t cmd;
+	// force SINGLE writes for now
+	cmd.target = CHIPCONFIG_IO_TARGET_PLL_SINGLE;
+	for (size_t ct = 0; ct < addr.size(); ct++) {
+		cmd.instr = addr[ct];
+		cmd.spicnt_data = data[ct];
+		msg.push_back(cmd.packed);
+	}
+	return msg;
+}
+vector<uint32_t> build_VCXO_SPI_msg(vector<uint8_t> & data) {
+	vector<uint32_t> msg;
+	APSChipConfigCommand_t cmd;
+	cmd.target = CHIPCONFIG_IO_TARGET_VCXO;
+	cmd.spicnt_data = data.size();
+	msg.push_back(cmd);
+
+	// resize data to a multiple of 4 bytes
+	int padbytes = (4 - (data.size() % 4)) % 4;
+	data.resize(data.size() + padbytes);
+	// pack 4 bytes into 1 32-bit word
+	for (size_t ct = 0; ct < data.size(); ct += 4) {
+		msg.push_back( (data[ct] << 24) | (data[ct+1] << 16) | (data[ct+2] << 8) | data[ct+3] );
+	}
+	return msg;
 }
 
 int APS2::setup_PLL() {

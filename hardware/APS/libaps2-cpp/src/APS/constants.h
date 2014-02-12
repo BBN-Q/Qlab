@@ -88,6 +88,8 @@ inline bool needs_address(APS_COMMANDS cmd){
 	switch (cmd) {
 		case APS_COMMANDS::RESET:
 		case APS_COMMANDS::STATUS:
+		case APS_COMMANDS::CHIPCONFIGIO:
+		case APS_COMMANDS::RUNCHIPCONFIG:
 			return false;
 		default:
 			return true;
@@ -144,9 +146,9 @@ enum CHIPCONFIG_IO_TARGET {
 
 enum CHIPCONFIG_IO_TARGET_CMD {
 	CHIPCONFIG_IO_TARGET_PAUSE        = 0,
-	CHIPCONFIG_IO_TARGET_DAC_0_MULTI  = 0xC0, // multiple byte length in SPI cnt
-	CHIPCONFIG_IO_TARGET_DAC_1_MULTI  = 0xC1, // multiple byte length in SPI cnt
-	CHIPCONFIG_IO_TARGET_PLL_MULTI    = 0xD0, // multiple byte length in SPI cnt
+	CHIPCONFIG_IO_TARGET_DAC_0        = 0xC0, // multiple byte length in SPI cnt
+	CHIPCONFIG_IO_TARGET_DAC_1        = 0xC1, // multiple byte length in SPI cnt
+	CHIPCONFIG_IO_TARGET_PLL          = 0xD0, // multiple byte length in SPI cnt
 	CHIPCONFIG_IO_TARGET_DAC_0_SINGLE = 0xC8, // single byte payload
 	CHIPCONFIG_IO_TARGET_DAC_1_SINGLE = 0xC9, // single byte payload
 	CHIPCONFIG_IO_TARGET_PLL_SINGLE   = 0xD8, // single byte payload
@@ -276,8 +278,6 @@ static const int MAX_PHASE_TEST_CNT = 40;
 
 
 typedef enum {INTERNAL=0, EXTERNAL} TRIGGERSOURCE;
-
-typedef enum {INVALID_FPGA=0, FPGA1, FPGA2, ALL_FPGAS} FPGASELECT;
 
 typedef enum {LED_PLL_SYNC=1, LED_RUNNING} LED_MODE;
 

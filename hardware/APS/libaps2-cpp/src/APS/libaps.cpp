@@ -261,13 +261,13 @@ int set_run_mode(const char * deviceSerial, int channelNum, int mode) {
 //	return APSRack_.read_bulk_state_file(fileName);
 //}
 
-int memory_write(const char * deviceSerial, uint32_t addr, uint32_t numWords, uint32_t* data){
+int write_memory(const char * deviceSerial, uint32_t addr, uint32_t numWords, uint32_t* data){
 	vector<uint32_t> dataVec(data, data+numWords);
-	return APSs[string(deviceSerial)].write(addr, dataVec);
+	return APSs[string(deviceSerial)].write_memory(addr, dataVec);
 }
 
-int memory_read(const char * deviceSerial, uint32_t addr, uint32_t numWords, uint32_t* data){
-	auto readData = APSs[string(deviceSerial)].read(addr, numWords);
+int read_memory(const char * deviceSerial, uint32_t addr, uint32_t numWords, uint32_t* data){
+	auto readData = APSs[string(deviceSerial)].read_memory(addr, numWords);
 	std::copy(readData.begin(), readData.end(), data);
 	return 0;
 }
