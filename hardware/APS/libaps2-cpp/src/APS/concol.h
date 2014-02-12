@@ -11,7 +11,7 @@ Global variables - textcol,backcol,deftextcol,defbackcol,colorprotect
 #ifndef CONCOL_H
 #define CONCOL_H
 
-#ifdef WIN32
+#ifdef _WIN32
 
 #include<windows.h>
 #include<iosfwd>
