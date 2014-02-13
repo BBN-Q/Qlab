@@ -58,8 +58,7 @@ public:
 
 	APSEthernetPacket();
 
-	APSEthernetPacket(const APSCommand_t &);
-	APSEthernetPacket(const APSCommand_t &, const uint32_t &);
+	APSEthernetPacket(const APSCommand_t &, const uint32_t & addr=0);
 	APSEthernetPacket(const MACAddr &, const MACAddr &, APSCommand_t, const uint32_t &);
 
 	APSEthernetPacket(const vector<uint8_t> &);

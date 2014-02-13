@@ -676,13 +676,13 @@ vector<uint32_t> APS2::read_flash(const uint32_t & addr, const uint16_t & numWor
  * Private Functions
  */
 
-int APS2::write_command(const APSCommand_t & command){
+int APS2::write_command(const APSCommand_t & command, const uint32_t & addr /* see header for default value = 0 */){
 	/*
 	* Write a single unaddressed command 
 	*/
 	//TODO: figure out move constructor
-	APSEthernetPacket newPacket(command);
-	APSEthernet::get_instance().send(deviceSerial_, newPacket);
+	APSEthernetPacket packet(command, addr);
+	APSEthernet::get_instance().send(deviceSerial_, packet);
 	return 0;
 }
 
