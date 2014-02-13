@@ -613,7 +613,8 @@ int write_flash(const uint32_t & addr, vector<uint32_t> & data) {
 	vector<APSEthernetPacket> packets;
 	APSEthernetPacket packet;
 	packet.header.command.r_w = 0;
-	packet.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::EPROMIO);
+	packet.header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::EPROMIO);
+	packet.header.command.mode_stat = EPROM_RW;
 	packet.header.command.cnt = 256;
 	packet.payload.resize(256);
 
@@ -628,14 +629,45 @@ int write_flash(const uint32_t & addr, vector<uint32_t> & data) {
 	return APSEthernet::get_instance().send(deviceSerial_, packets);
 
 	// TODO: optionally verify the write
+
 }
 
-int erase_flash(const uint32_t & addr, const uint32_t numbytes) {
+int APS2::erase_flash(uint32_t addr, uint32_t numBytes) {
 	// each erase command erases 64 KB of data starting at addr
+	//TODO: check 64KB alignment 
+	if ((addr % 65536) != 0){
+		FILE_LOG(logERROR) << "Flash memory erase command was not 64KB aligned!";
+		return -1;
+	}
+
+	APSCommand_t command = { .packed=0 };
+	command.ack = 1;
+	command.r_w = 0;
+	command.cmd = static_cast<uint32_t>(APS_COMMANDS::EPROMIO);
+	command.mode_stat = EPROM_ERASE;
+
+	while(numBytes > 0){
+		write_command(command, addr);
+		APSEthernetPacket p = read_packets(1)[0];
+		if (p.header.mode_stat == EPROM_OPERATION_FAILED){
+			FILE_LOG(logERROR) << "Flash memory erase command failed!";
+		}
+		numBytes -= 65536;
+	}
+	return 0;
 }
 
-vector<uint32_t> read_flash(const uint32_t & addr, const uint32_t & data) {
-
+vector<uint32_t> APS2::read_flash(const uint32_t & addr, const uint16_t & numWords) {
+	//TODO: handle reads that require multiple packets
+	APSCommand_t command = { .packed=0 };
+	command.r_w = 1;
+	command.cmd = static_cast<uint32_t>(APS_COMMANDS::EPROMIO);
+	command.mode_stat = EPROM_RW;
+	command.cnt = numWords;
+	write_command(command, addr);
+	APSEthernetPacket p = read_packets(1)[0];
+	// TODO: Check status bits
+	return p.payload[0];
 }
 
 
