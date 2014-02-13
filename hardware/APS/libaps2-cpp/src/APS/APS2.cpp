@@ -170,7 +170,7 @@ int APS2::program_FPGA(const int & bitFileNum) {
 int APS2::get_bitfile_version() const {
 	// Reads version information from register 0x8006
 
-	uint32_t version;
+	uint32_t version=0;
 
 	//TODO: fix
 //	socket_.read_register(FPGA_ADDR_VERSION, version);
@@ -312,7 +312,7 @@ float APS2::get_channel_scale(const int & dac) const{
 
 int APS2::set_trigger_source(const TRIGGERSOURCE & triggerSource){
 
-	int returnVal;
+	int returnVal=0;
 	//TODO: implement with new memory map
 	/*
 	switch (triggerSource){
@@ -357,7 +357,7 @@ int APS2::set_trigger_interval(const double & interval){
 double APS2::get_trigger_interval() {
 
 	//Trigger interval is 32bits wide so have to split up into two 16bit words reads
-	uint32_t upperWord, lowerWord;
+	uint32_t upperWord = 0, lowerWord = 0;
 	//TODO: fix me!
 	// socket_.read_register(FPGA_ADDR_TRIG_INTERVAL,upperWord );
 	// socket_.read_register(FPGA_ADDR_TRIG_INTERVAL+1, lowerWord);
@@ -945,14 +945,15 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 	 *         numRetries - number of times to restart the test if the global sync test fails (step 5)
 	 */
 
+/*
 	// Test for DAC clock phase match
 	bool inSync, globalSync;
 	int xorFlagCnts, a_phase, b_phase;
 	int dac02Reset, dac13Reset;
 
 	int pllBit;
-	unsigned int pllEnableAddr, pllEnableAddr2;
-	uint8_t writeByte;
+	// unsigned int pllEnableAddr, pllEnableAddr2;
+	// uint8_t writeByte;
 
 	const vector<int> PLL_XOR_TEST = {PLL_02_XOR_BIT, PLL_13_XOR_BIT,PLL_GLOBAL_XOR_BIT};
 	const vector<int> CH_PHASE_TESTS = {FPGA_ADDR_A_PHASE, FPGA_ADDR_B_PHASE};
@@ -964,8 +965,8 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 	FILE_LOG(logINFO) << "Running channel sync on FPGA ";
 
 	//TODO: fix!
-	pllEnableAddr = 0;
-	pllEnableAddr2 = 0;
+	// pllEnableAddr = 0;
+	// pllEnableAddr2 = 0;
 	
 	// Disable DDRs
 	// int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
@@ -1183,6 +1184,7 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 		//enable_DAC_FIFO(dac);
 
 	FILE_LOG(logINFO) << "Sync test complete";
+	*/
 	return 0;
 }
 
@@ -1202,7 +1204,7 @@ int APS2::read_PLL_status(const int & regAddr /*check header for default*/, cons
 //	pll_bit = FPGA::read_FPGA(socket_, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga); // latched to USB clock (has version 0x020)
 //	pll_bit = FPGA::read_FPGA(socket_, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, fpga); // latched to 200 MHz PLL (has version 0x010)
 
-	uint32_t pllRegister;
+	uint32_t pllRegister = 0;
 	//TODO: fix me!
 	// socket_.read_register(regAddr, pllRegister);
 
@@ -1218,10 +1220,11 @@ int APS2::read_PLL_status(const int & regAddr /*check header for default*/, cons
 int APS2::get_PLL_freq() const {
 	// Poll APS2 PLL chip to determine current frequency
 
+	int freq = 0;
+	/*
 	uint16_t pll_cycles_addr, pll_bypass_addr;
 	uint8_t pll_cycles_val, pll_bypass_val;
 
-	int freq;
 
 	FILE_LOG(logDEBUG2) << "get_PLL_freq";
 
@@ -1255,7 +1258,7 @@ int APS2::get_PLL_freq() const {
 	}
 
 	FILE_LOG(logDEBUG2) << "PLL frequency for FPGA:  Freq: " << freq;
-
+	*/
 	return freq;
 }
 
@@ -1289,6 +1292,8 @@ int APS2::setup_DAC(const int & dac)
  * inputs: dac = 0, 1, 2, or 3
  */
 {
+	/*
+	
 	uint8_t data;
 	uint8_t SD, MSD, MHD;
 	uint8_t edgeMSD, edgeMHD;
@@ -1396,15 +1401,15 @@ int APS2::setup_DAC(const int & dac)
 	// AD9376 data sheet advises us to enable surveilance and auto modes, but this
 	// has introduced output glitches in limited testing
 	// set the filter length, threshold, and enable surveilance mode and auto mode
-	/*int filter_length = 12;
+	int filter_length = 12;
 	int threshold = 1;
 	data = (1 << 7) | (1 << 6) | (filter_length << 2) | (threshold & 0x3);
 	FPGA::write_SPI(socket_, APS2_DAC_SPI, controller_addr, &data);
-	*/
+	
 	
 	// turn on SYNC FIFO
 //	enable_DAC_FIFO(dac);
-
+*/
 	return 0;
 }
 
@@ -1415,7 +1420,7 @@ int APS2::enable_DAC_FIFO(const int & dac) {
 		return -1;
 	}
 
-	uint8_t data;
+	uint8_t data = 0;
 	// uint16_t syncAddr = 0x0 | (dac << 5);
 	// uint16_t fifoStatusAddr = 0x7 | (dac << 5);
 	FILE_LOG(logDEBUG) << "Enabling DAC " << dac << " FIFO";
@@ -1455,6 +1460,7 @@ int APS2::set_offset_register(const int & dac, const float & offset) {
 	 * Write the zero register for the associated channel
 	 * offset - offset in normalized full range (-1, 1)
 	 */
+	 /*
 
 	uint32_t zeroRegisterAddr;
 	uint16_t scaledOffset;
@@ -1478,7 +1484,7 @@ int APS2::set_offset_register(const int & dac, const float & offset) {
 
 	//TODO: fix me!
 	// socket_.write_register(zeroRegisterAddr, scaledOffset);
-
+	*/
 	return 0;
 }
 
