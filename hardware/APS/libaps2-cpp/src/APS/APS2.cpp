@@ -545,33 +545,33 @@ vector<uint32_t> APS2::read_memory(const uint32_t & addr, const uint32_t & numWo
 }
 
 //SPI read/write
-vector<uint32_t> APS2::build_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const uint16_t & addr, uint16_t & data) {
+vector<uint32_t> APS2::build_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const uint16_t & addr, uint8_t & data) {
 	return build_SPI_msg(target, {addr}, {data});
 }
 
-vector<uint32_t> APS2::build_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const vector<uint16_t> & addr, vector<uint16_t> & data) {
+vector<uint32_t> APS2::build_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const vector<uint16_t> & addr, vector<uint8_t> & data) {
 	vector<uint32_t> msg;
 	switch (target) {
-		case CHIPCONFIG_IO_TARGET_DAC_0:
-		case CHIPCONFIG_IO_TARGET_DAC_1:
-		case CHIPCONFIG_IO_TARGET_DAC_0_SINGLE:
-		case CHIPCONFIG_IO_TARGET_DAC_1_SINGLE:
+		case CHIPCONFIG_TARGET_PAUSE:
+			FILE_LOG(logERROR) << "Pause unimplemented";
+			msg = {0};
+		case CHIPCONFIG_TARGET_DAC_0:
+		case CHIPCONFIG_TARGET_DAC_1:
 			msg = build_DAC_SPI_msg(target, addr, data);
 			break;
-		case CHIPCONFIG_IO_TARGET_PLL:
-		case CHIPCONFIG_IO_TARGET_PLL_SINGLE:
+		case CHIPCONFIG_TARGET_PLL:
 			msg = build_PLL_SPI_msg(addr, data);
 			break;
-		case CHIPCONFIG_IO_TARGET_VCXO:
+		case CHIPCONFIG_TARGET_VCXO:
 			msg = build_VCXO_SPI_msg(data);
 			break;
 	}
 	return msg;
 }
 
-int APS2::write_SPI(const vector<uint32_t> & msg) {
+int APS2::write_SPI(vector<uint32_t> & msg) {
 	// push on "end of message"
-	msg.push_back(std::stoul("FF000000", 0, 16);)
+	msg.push_back(std::stoul("FF000000", 0, 16));
 
 	// build packet
 	APSEthernetPacket packet;
@@ -590,7 +590,7 @@ uint32_t APS2::read_SPI(const CHIPCONFIG_IO_TARGET & target, const uint16_t & ad
 	APSChipConfigCommand_t cmd;
 	cmd.target = target;
 	cmd.spicnt_data = 1;
-	vector<uint32_t> msg = {cmd};
+	vector<uint32_t> msg = {cmd.packed};
 
 	// build packet
 	APSEthernetPacket packet;
@@ -649,10 +649,11 @@ int APS2::erase_flash(uint32_t addr, uint32_t numBytes) {
 	while(numBytes > 0){
 		write_command(command, addr);
 		APSEthernetPacket p = read_packets(1)[0];
-		if (p.header.mode_stat == EPROM_OPERATION_FAILED){
+		if (p.header.command.mode_stat == EPROM_OPERATION_FAILED){
 			FILE_LOG(logERROR) << "Flash memory erase command failed!";
 		}
 		numBytes -= 65536;
+		addr += 65536;
 	}
 	return 0;
 }
@@ -667,7 +668,7 @@ vector<uint32_t> APS2::read_flash(const uint32_t & addr, const uint16_t & numWor
 	write_command(command, addr);
 	APSEthernetPacket p = read_packets(1)[0];
 	// TODO: Check status bits
-	return p.payload[0];
+	return p.payload;
 }
 
 
@@ -689,7 +690,7 @@ int APS2::write_command(const APSCommand_t & command, const uint32_t & addr /* s
 vector<APSEthernetPacket> APS2::pack_data(const uint32_t & addr, const vector<uint32_t> & data){
 	//Break the data up into ethernet frame sized chunks.   
 	// ethernet frame payload = 1500bytes - 20bytes IPV4 and 8 bytes UDP and 24 bytes APS header (with address field) = 1448bytes = 362 words 
-	static const size_t maxPayload = 362;
+	static const int maxPayload = 362;
 
 	vector<APSEthernetPacket> packets;
 
@@ -732,19 +733,19 @@ vector<APSEthernetPacket> APS2::query(const APSCommand_t & command){
 	return read_packets(1);
 }
 
-vector<uint32_t> build_DAC_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const vector<uint16_t> & addr, const vector<uint8_t> & data) {
+vector<uint32_t> APS2::build_DAC_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const vector<uint16_t> & addr, const vector<uint8_t> & data) {
 	vector<uint32_t> msg;
 	APSChipConfigCommand_t cmd;
 	// force SINGLE writes for now
 	switch (target) {
-		case CHIPCONFIG_IO_TARGET_DAC_0:
-		case CHIPCONFIG_IO_TARGET_DAC_0_SINGLE:
+		case CHIPCONFIG_TARGET_DAC_0:
 			cmd.target = CHIPCONFIG_IO_TARGET_DAC_0_SINGLE;
 			break;
-		case CHIPCONFIG_IO_TARGET_DAC_1:
-		case CHIPCONFIG_IO_TARGET_DAC_1_SINGLE:
+		case CHIPCONFIG_TARGET_DAC_1:
 			cmd.target = CHIPCONFIG_IO_TARGET_DAC_1_SINGLE;
 			break;
+		default:
+			FILE_LOG(logERROR) << "Unexpected CHIPCONFIG_IO_TARGET";
 	}
 	for (size_t ct = 0; ct < addr.size(); ct++) {
 		cmd.instr = addr[ct];
@@ -754,7 +755,7 @@ vector<uint32_t> build_DAC_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const ve
 	return msg;
 }
 
-vector<uint32_t> build_PLL_SPI_msg(const vector<uint16_t> & addr, const vector<uint8_t> & data) {
+vector<uint32_t> APS2::build_PLL_SPI_msg(const vector<uint16_t> & addr, const vector<uint8_t> & data) {
 	vector<uint32_t> msg;
 	APSChipConfigCommand_t cmd;
 	// force SINGLE writes for now
@@ -766,12 +767,12 @@ vector<uint32_t> build_PLL_SPI_msg(const vector<uint16_t> & addr, const vector<u
 	}
 	return msg;
 }
-vector<uint32_t> build_VCXO_SPI_msg(vector<uint8_t> & data) {
+vector<uint32_t> APS2::build_VCXO_SPI_msg(vector<uint8_t> & data) {
 	vector<uint32_t> msg;
 	APSChipConfigCommand_t cmd;
 	cmd.target = CHIPCONFIG_IO_TARGET_VCXO;
 	cmd.spicnt_data = data.size();
-	msg.push_back(cmd);
+	msg.push_back(cmd.packed);
 
 	// resize data to a multiple of 4 bytes
 	int padbytes = (4 - (data.size() % 4)) % 4;

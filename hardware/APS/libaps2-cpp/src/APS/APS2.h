@@ -93,12 +93,12 @@ public:
 	//SPI read/write
 	vector<uint32_t> build_SPI_msg(const CHIPCONFIG_IO_TARGET &, const uint16_t &, uint8_t &);
 	vector<uint32_t> build_SPI_msg(const CHIPCONFIG_IO_TARGET &, const vector<uint16_t> &, vector<uint8_t> &);
-	int write_SPI(const vector<uint32_t> &);
+	int write_SPI(vector<uint32_t> &);
 	uint32_t read_SPI(const CHIPCONFIG_IO_TARGET &, const uint16_t &);
 
 	//Flash read/write
 	int write_flash(const uint32_t &, vector<uint32_t> &);
-	vector<uint32_t> read_flash(const uint32_t &, const uint32_t &);
+	vector<uint32_t> read_flash(const uint32_t &, const uint16_t &);
 
 	//CLPD DRAM
 	int write_bitfile(const uint32_t &, const string &);
@@ -110,11 +110,12 @@ private:
 	int samplingRate_;
 	MACAddr macAddr_;
 
-	//Writing commands or memory
+	//Read/Write commands 
 	int write_command(const APSCommand_t &, const uint32_t & addr = 0);
 	vector<APSEthernetPacket> pack_data(const uint32_t &, const vector<uint32_t> &);
-
 	vector<APSEthernetPacket> read_packets(const size_t &);
+
+	int erase_flash(uint32_t, uint32_t);
 
 	//Single packet query
 	vector<APSEthernetPacket> query(const APSCommand_t &);
