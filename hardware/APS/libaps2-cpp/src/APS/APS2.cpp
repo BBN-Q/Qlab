@@ -331,10 +331,11 @@ int APS2::set_trigger_source(const TRIGGERSOURCE & triggerSource){
 }
 
 TRIGGERSOURCE APS2::get_trigger_source() {
-	uint32_t regVal;
+//	uint32_t regVal;
 	//TODO: fix me!
 	// socket_.read_register(FPGA_ADDR_CSR, regVal);
-	return TRIGGERSOURCE((regVal & CSRMSK_CHA_TRIGSRC) == CSRMSK_CHA_TRIGSRC ? 1 : 0);
+//	return TRIGGERSOURCE((regVal & CSRMSK_CHA_TRIGSRC) == CSRMSK_CHA_TRIGSRC ? 1 : 0);
+	return TRIGGERSOURCE(0);
 }
 
 int APS2::set_trigger_interval(const double & interval){
@@ -346,8 +347,8 @@ int APS2::set_trigger_interval(const double & interval){
 	FILE_LOG(logDEBUG) << "Setting trigger interval to " << interval << "s (" << clockCycles << " cycles)";
 
 	//Trigger interval is 32bits wide so have to split up into two 16bit words
-	uint16_t upperWord = clockCycles >> 16;
-	uint16_t lowerWord = 0xFFFF  & clockCycles;
+	// uint16_t upperWord = clockCycles >> 16;
+	// uint16_t lowerWord = 0xFFFF  & clockCycles;
 	//TODO: fix me!
 	// return write(FPGA_ADDR_TRIG_INTERVAL, {upperWord, lowerWord}, false);
 	return 0;
@@ -455,21 +456,21 @@ int APS2::set_run_mode(const int & dac, const RUN_MODE & mode) {
  * Returns : 0 on success < 0 on failure
  *
 ********************************************************************/
-	int dacModeMask;
+	// int dacModeMask;
 
-	// setup register addressing based on DAC
-	switch(dac) {
-	  case 0:
-	  case 2:
-	    dacModeMask = CSRMSK_CHA_OUTMODE;
-	    break;
-	  case 1:
-	  case 3:
-	    dacModeMask = CSRMSK_CHB_OUTMODE;
-	    break;
-	  default:
-	    return -2;
-	}
+	// // setup register addressing based on DAC
+	// switch(dac) {
+	//   case 0:
+	//   case 2:
+	//     dacModeMask = CSRMSK_CHA_OUTMODE;
+	//     break;
+	//   case 1:
+	//   case 3:
+	//     dacModeMask = CSRMSK_CHB_OUTMODE;
+	//     break;
+	//   default:
+	//     return -2;
+	// }
 
 	//Set the run mode bit
 	FILE_LOG(logINFO) << "Setting Run Mode ==> DAC: " << dac << " Mode: " << mode;
@@ -783,11 +784,11 @@ vector<uint32_t> build_VCXO_SPI_msg(vector<uint8_t> & data) {
 }
 
 int APS2::setup_PLL() {
-	// set the on-board PLL to its default state (two 1.2 GHz outputs, and one 300 MHz output)
-	FILE_LOG(logINFO) << "Setting up PLL";
+	// set the on-board PLL to its default state (two 1.2 GHz outputs to DAC's, and one 300 MHz output to FPGA)
+	FILE_LOG(logINFO) << "Running base-line setup of PLL";
 
 	// Disable DDRs
-	int ddrMask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
+	// int ddrMask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
 //	FPGA::clear_bit(socket_, FPGA_ADDR_CSR, ddrMask);
 	// disable dac FIFOs
 	for (int dac = 0; dac < NUM_CHANNELS; dac++)
@@ -878,7 +879,7 @@ int APS2::set_PLL_freq(const int & freq) {
 	FILE_LOG(logDEBUG2) << "Setting PLL bypass addr: " << myhex << pllBypassAddr << " val: " << int(pllBypassVal);
 
 	// Disable DDRs
-	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
+	// int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
 	//TODO: fix!
 //	FPGA::clear_bit(socket_, FPGA_ADDR_CSR, ddr_mask);
 	// disable DAC FIFOs
@@ -966,7 +967,7 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 	pllEnableAddr2 = 0;
 	
 	// Disable DDRs
-	int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
+	// int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
 	//TODO: fix!
 //	FPGA::clear_bit(socket_, FPGA_ADDR_CSR, ddr_mask);
 	// disable DAC FIFOs
@@ -1009,8 +1010,8 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 
 	//First a little helper function to update the PLL registers
 	auto update_PLL_register = [this] (){
-		uint32_t address = 0x232;
-		uint8_t data = 0x1;
+		// uint32_t address = 0x232;
+		// uint8_t data = 0x1;
 	//TODO: fix me!
 		// socket_.write_SPI(CHIPCONFIG_TARGET_PLL, address, data);
 	};
@@ -1310,7 +1311,7 @@ int APS2::setup_DAC(const int & dac)
 	
 	const vector<CHIPCONFIG_IO_TARGET> targets = {CHIPCONFIG_TARGET_DAC_0, CHIPCONFIG_TARGET_DAC_1};
 
-	CHIPCONFIG_IO_TARGET target = targets[dac];
+	// CHIPCONFIG_IO_TARGET target = targets[dac];
 
 	//TODO: fix me!
 	// socket_.read_SPI(target, interruptAddr, data);
@@ -1414,11 +1415,11 @@ int APS2::enable_DAC_FIFO(const int & dac) {
 	}
 
 	uint8_t data;
-	uint16_t syncAddr = 0x0 | (dac << 5);
-	uint16_t fifoStatusAddr = 0x7 | (dac << 5);
+	// uint16_t syncAddr = 0x0 | (dac << 5);
+	// uint16_t fifoStatusAddr = 0x7 | (dac << 5);
 	FILE_LOG(logDEBUG) << "Enabling DAC " << dac << " FIFO";
 	const vector<CHIPCONFIG_IO_TARGET> targets = {CHIPCONFIG_TARGET_DAC_0, CHIPCONFIG_TARGET_DAC_1};
-	CHIPCONFIG_IO_TARGET target = targets[dac];
+	// CHIPCONFIG_IO_TARGET target = targets[dac];
 	// set sync bit (Reg 0, bit 2)
 	//TODO: fix me!
 	// socket_.read_SPI(target, syncAddr, data);
@@ -1437,13 +1438,13 @@ int APS2::enable_DAC_FIFO(const int & dac) {
 }
 
 int APS2::disable_DAC_FIFO(const int & dac) {
-	uint8_t data, mask;
-	uint32_t syncAddr = 0x0 | (dac << 5);
+	// uint8_t data, mask;
+	// uint32_t syncAddr = 0x0 | (dac << 5);
 	FILE_LOG(logDEBUG1) << "Disable DAC " << dac << " FIFO";
 	// clear sync bit
 	//TODO: fix me!
 	// socket_.read_SPI(CHIPCONFIG_TARGET_PLL, syncAddr, data);
-	mask = (0x1 << 2);
+	// mask = (0x1 << 2);
 	// return socket_.write_SPI( CHIPCONFIG_TARGET_PLL, syncAddr, data & ~mask );
 	return 0;
 }
@@ -1485,7 +1486,7 @@ int APS2::write_waveform(const int & dac, const vector<short> & wfData) {
 	 * dac = channel (0-3)
 	 * wfData = signed short waveform data
 	 */
-
+/*
 	uint32_t tmpData, wfLength;
 	uint32_t sizeReg, startAddr;
 	//We assume the Channel object has properly formated the waveform
@@ -1523,7 +1524,7 @@ int APS2::write_waveform(const int & dac, const vector<short> & wfData) {
 	//Format the data and add to write queue
 	//TODO: check data alignment from 16 to 32 bit
 	write(startAddr, vector<uint32_t>(wfData.begin(), wfData.end()));
-
+*/
 	return 0;
 }
 
