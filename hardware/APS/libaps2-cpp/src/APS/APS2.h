@@ -91,8 +91,9 @@ public:
 	vector<uint32_t> read_memory(const uint32_t &, const uint32_t &);
 
 	//SPI read/write
-	vector<uint32_t> build_SPI_msg(const CHIPCONFIG_IO_TARGET &, const uint16_t &, uint8_t &);
-	vector<uint32_t> build_SPI_msg(const CHIPCONFIG_IO_TARGET &, const vector<uint16_t> &, vector<uint8_t> &);
+	vector<uint32_t> build_SPI_msg(const CHIPCONFIG_IO_TARGET &, const uint16_t &, const uint8_t &);
+	vector<uint32_t> build_SPI_msg(const CHIPCONFIG_IO_TARGET &, const vector<AddrData> &);
+	vector<uint32_t> build_SPI_msg(const CHIPCONFIG_IO_TARGET &, const vector<uint16_t> &, const vector<uint8_t> &);
 	int write_SPI(vector<uint32_t> &);
 	uint32_t read_SPI(const CHIPCONFIG_IO_TARGET &, const uint16_t &);
 
@@ -103,6 +104,9 @@ public:
 	//CLPD DRAM
 	int write_bitfile(const uint32_t &, const string &);
 	int load_bitfile(const uint32_t &);
+
+	//Create/restore setup SPI sequence
+	int write_SPI_setup();
 private:
 
 	string deviceSerial_;
@@ -122,7 +126,7 @@ private:
 
 	vector<uint32_t> build_DAC_SPI_msg(const CHIPCONFIG_IO_TARGET &, const vector<uint16_t> &, const vector<uint8_t> &);
 	vector<uint32_t> build_PLL_SPI_msg(const vector<uint16_t> &, const vector<uint8_t> &);
-	vector<uint32_t> build_VCXO_SPI_msg(vector<uint8_t> &);
+	vector<uint32_t> build_VCXO_SPI_msg(const vector<uint8_t> &);
 
 	int setup_PLL();
 	int set_PLL_freq(const int &);
