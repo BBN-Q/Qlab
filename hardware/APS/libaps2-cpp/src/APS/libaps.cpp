@@ -280,6 +280,19 @@ int program_FPGA(const char * deviceSerial, int bitFileNum) {
 	return APSs[string(deviceSerial)].program_FPGA(bitFileNum);
 }
 
+int write_flash(const char * deviceSerial, uint32_t addr, uint32_t* data, uint32_t numWords) {
+	vector<uint32_t> writeData(data, data+numWords);
+	return APSs[string(deviceSerial)].write_flash(addr, writeData);
+}
+int read_flash(const char * deviceSerial, uint32_t addr, uint16_t numWords, uint32_t* data) {
+	auto readData = APSs[string(deviceSerial)].read_flash(addr, numWords);
+	std::copy(readData.begin(), readData.end(), data);
+	return 0;
+}
+int write_SPI_setup(const char * deviceSerial) {
+	return APSs[string(deviceSerial)].write_SPI_setup();
+}
+
 #ifdef __cplusplus
 }
 #endif

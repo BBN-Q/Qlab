@@ -86,6 +86,9 @@ EXPORT int read_memory(const char *, uint32_t, uint32_t, uint32_t*);
 EXPORT int read_register(const char *, int);
 EXPORT int program_FPGA(const char *, int);
 
+EXPORT int write_flash(const char *, uint32_t, uint32_t*, uint32_t);
+EXPORT int read_flash(const char *, uint32_t, uint16_t, uint32_t*);
+EXPORT int write_SPI_setup(const char *);
 
 #ifdef __cplusplus
 }
