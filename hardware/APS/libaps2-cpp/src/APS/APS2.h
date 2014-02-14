@@ -91,9 +91,6 @@ public:
 	vector<uint32_t> read_memory(const uint32_t &, const uint32_t &);
 
 	//SPI read/write
-	vector<uint32_t> build_SPI_msg(const CHIPCONFIG_IO_TARGET &, const uint16_t &, const uint8_t &);
-	vector<uint32_t> build_SPI_msg(const CHIPCONFIG_IO_TARGET &, const vector<AddrData> &);
-	vector<uint32_t> build_SPI_msg(const CHIPCONFIG_IO_TARGET &, const vector<uint16_t> &, const vector<uint8_t> &);
 	int write_SPI(vector<uint32_t> &);
 	uint32_t read_SPI(const CHIPCONFIG_IO_TARGET &, const uint16_t &);
 
@@ -124,8 +121,8 @@ private:
 	//Single packet query
 	vector<APSEthernetPacket> query(const APSCommand_t &);
 
-	vector<uint32_t> build_DAC_SPI_msg(const CHIPCONFIG_IO_TARGET &, const vector<uint16_t> &, const vector<uint8_t> &);
-	vector<uint32_t> build_PLL_SPI_msg(const vector<uint16_t> &, const vector<uint8_t> &);
+	vector<uint32_t> build_DAC_SPI_msg(const CHIPCONFIG_IO_TARGET &, const vector<SPI_AddrData_t> &);
+	vector<uint32_t> build_PLL_SPI_msg(const vector<SPI_AddrData_t> &);
 	vector<uint32_t> build_VCXO_SPI_msg(const vector<uint8_t> &);
 
 	int setup_PLL();

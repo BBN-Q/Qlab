@@ -545,41 +545,6 @@ vector<uint32_t> APS2::read_memory(const uint32_t & addr, const uint32_t & numWo
 }
 
 //SPI read/write
-vector<uint32_t> APS2::build_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const uint16_t & addr, const uint8_t & data) {
-	return build_SPI_msg(target, {addr}, {data});
-}
-
-vector<uint32_t> APS2::build_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const vector<AddrData> & addrData) {
-	// separate out address and data vectors
-	vector<uint16_t> addr;
-	vector<uint8_t> data;
-	for (auto kv : addrData) {
-		addr.push_back(kv.first);
-		data.push_back(kv.second);
-	}
-	return build_SPI_msg(target, addr, data);
-}
-
-vector<uint32_t> APS2::build_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const vector<uint16_t> & addr, const vector<uint8_t> & data) {
-	vector<uint32_t> msg;
-	switch (target) {
-		case CHIPCONFIG_TARGET_PAUSE:
-			FILE_LOG(logERROR) << "Pause unimplemented";
-			msg = {0};
-		case CHIPCONFIG_TARGET_DAC_0:
-		case CHIPCONFIG_TARGET_DAC_1:
-			msg = build_DAC_SPI_msg(target, addr, data);
-			break;
-		case CHIPCONFIG_TARGET_PLL:
-			msg = build_PLL_SPI_msg(addr, data);
-			break;
-		case CHIPCONFIG_TARGET_VCXO:
-			msg = build_VCXO_SPI_msg(data);
-			break;
-	}
-	return msg;
-}
-
 int APS2::write_SPI(vector<uint32_t> & msg) {
 	// push on "end of message"
 	APSChipConfigCommand_t cmd = {.packed=0};
@@ -686,8 +651,8 @@ vector<uint32_t> APS2::read_flash(const uint32_t & addr, const uint16_t & numWor
 
 //Create/restore setup SPI sequence
 int APS2::write_SPI_setup() {
-	vector<uint32_t> msg = build_SPI_msg(CHIPCONFIG_TARGET_VCXO, {}, VCXO_INIT);
-	vector<uint32_t> pll_msg = build_SPI_msg(CHIPCONFIG_TARGET_PLL, PLL_INIT);
+	vector<uint32_t> msg = build_VCXO_SPI_msg(VCXO_INIT);
+	vector<uint32_t> pll_msg = build_PLL_SPI_msg(PLL_INIT);
 	msg.insert(msg.end(), pll_msg.begin(), pll_msg.end());
 	// push on "end of message"
 	APSChipConfigCommand_t cmd = {.packed=0};
@@ -758,7 +723,7 @@ vector<APSEthernetPacket> APS2::query(const APSCommand_t & command){
 	return read_packets(1);
 }
 
-vector<uint32_t> APS2::build_DAC_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const vector<uint16_t> & addr, const vector<uint8_t> & data) {
+vector<uint32_t> APS2::build_DAC_SPI_msg(const CHIPCONFIG_IO_TARGET & target, const vector<SPI_AddrData_t> & addrData) {
 	vector<uint32_t> msg;
 	APSChipConfigCommand_t cmd;
 	// force SINGLE writes for now
@@ -771,23 +736,24 @@ vector<uint32_t> APS2::build_DAC_SPI_msg(const CHIPCONFIG_IO_TARGET & target, co
 			break;
 		default:
 			FILE_LOG(logERROR) << "Unexpected CHIPCONFIG_IO_TARGET";
+			throw runtime_error("Unexpected CHIPCONFIG_IO_TARGET");
 	}
-	for (size_t ct = 0; ct < addr.size(); ct++) {
-		cmd.instr = addr[ct];
-		cmd.spicnt_data = data[ct];
+	for (auto ad : addrData) {
+		cmd.instr = ad.first;
+		cmd.spicnt_data = ad.second;
 		msg.push_back(cmd.packed);
 	}
 	return msg;
 }
 
-vector<uint32_t> APS2::build_PLL_SPI_msg(const vector<uint16_t> & addr, const vector<uint8_t> & data) {
+vector<uint32_t> APS2::build_PLL_SPI_msg(const vector<SPI_AddrData_t> & addrData) {
 	vector<uint32_t> msg;
 	APSChipConfigCommand_t cmd;
 	// force SINGLE writes for now
 	cmd.target = CHIPCONFIG_IO_TARGET_PLL_SINGLE;
-	for (size_t ct = 0; ct < addr.size(); ct++) {
-		cmd.instr = addr[ct];
-		cmd.spicnt_data = data[ct];
+	for (auto ad : addrData) {
+		cmd.instr = ad.first;
+		cmd.spicnt_data = ad.second;
 		msg.push_back(cmd.packed);
 	}
 	return msg;
@@ -823,7 +789,7 @@ int APS2::setup_PLL() {
 	for (int dac = 0; dac < NUM_CHANNELS; dac++)
 		disable_DAC_FIFO(dac);
 
-	vector<uint32_t> msg = build_SPI_msg(CHIPCONFIG_TARGET_PLL, PLL_INIT);
+	vector<uint32_t> msg = build_PLL_SPI_msg(PLL_INIT);
 	write_SPI(msg);
 
 	// enable the oscillator
@@ -886,7 +852,7 @@ int APS2::set_PLL_freq(const int & freq) {
 //	if (APS2::clear_status_ctrl() != 1) return -4;
 
 	//Setup of a vector of address-data pairs for all the writes we need for the PLL routine
-	const vector<AddrData> PLL_Routine = {
+	const vector<SPI_AddrData_t> PLL_Routine = {
 		{pllCyclesAddr, pllCyclesVal},
 		{pllBypassAddr, pllBypassVal},
 		{0x18, 0x71}, // Initiate Calibration.  Must be followed by Update Registers Command
@@ -895,7 +861,7 @@ int APS2::set_PLL_freq(const int & freq) {
 		{0x232, 0x1} // Set bit 0 to 1 to simultaneously update all registers with pending writes.
 	};
 
-	vector<uint32_t> msg = build_SPI_msg(CHIPCONFIG_TARGET_PLL, PLL_Routine);
+	vector<uint32_t> msg = build_PLL_SPI_msg(PLL_Routine);
 	write_SPI(msg);
 
 	// Enable Oscillator
@@ -1261,7 +1227,7 @@ int APS2::setup_VCXO() {
 //	if (APS2::clear_status_ctrl() != 1)
 //		return -1;
 
-	vector<uint32_t> msg = build_SPI_msg(CHIPCONFIG_TARGET_VCXO, {}, VCXO_INIT);
+	vector<uint32_t> msg = build_VCXO_SPI_msg(VCXO_INIT);
 	return write_SPI(msg);
 }
 

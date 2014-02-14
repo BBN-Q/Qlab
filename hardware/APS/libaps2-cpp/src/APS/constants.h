@@ -214,9 +214,6 @@ enum CONFIGURATION_SOURCE {
 	USER_EPROM_IMAGE = 0xEEEEEEEE
 };
 
-//PLL routines go through sets of address/data pairs
-typedef std::pair<uint16_t, uint8_t> AddrData;
-
 
 //FPGA registers
 //TODO: update for new memory map
@@ -287,10 +284,13 @@ typedef enum {RUN_WAVEFORM=0, RUN_SEQUENCE} RUN_MODE;
 //APS ethernet type
 static const uint16_t APS_PROTO = 0xBB4E;
 
+//PLL/DAC SPI routines go through sets of address/data pairs
+typedef std::pair<uint16_t, uint8_t> SPI_AddrData_t;
+
 // Startup sequences
 
 // PLL setup sequence (modified for 300 MHz FPGA sys_clk and 1.2 GHz DACs)
-static const vector<AddrData> PLL_INIT = {
+static const vector<SPI_AddrData_t> PLL_INIT = {
 	{0x0,  0x99},  // Use SDO, Long instruction mode
 	{0x10, 0x7C},  // Enable PLL , set charge pump to 4.8ma
 	{0x11, 0x5},   // Set reference divider R to 5 to divide 125 MHz reference to 25 MHz
