@@ -1,22 +1,14 @@
 #include <iostream>
 
+#include "headings.h"
 #include "libaps.h"
 #include "constants.h"
-#include <thread>
-#include <string>
-#include <algorithm>
+// #include <thread>
+// #include <string>
+// #include <algorithm>
 
 #include <concol.h> 
 
-
-//Helper function for hex formating with the 0x out front
-inline std::ios_base&
-myhex(std::ios_base& __base)
-{
-  __base.setf(std::ios_base::hex, std::ios_base::basefield);
-  __base.setf(std::ios::showbase);
-  return __base;
-}
 using namespace std;
 
 // command options functions taken from:

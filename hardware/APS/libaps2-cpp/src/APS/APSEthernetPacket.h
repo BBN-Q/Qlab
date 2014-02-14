@@ -7,9 +7,9 @@
 
 //Some bitfield unions for packing/unpacking the commands words
 //APS Command Protocol 
-//ACK SEQ SEL R/W CMD<3:0> MODE/STAT CNT<15:0>
-//31 30 29 28 27..24 23..16 15..0
-//ACK .......Acknowledge Flag. Set in the Acknowledge Packet returned in response to a
+// ACK SEQ SEL R/W CMD<3:0> MODE/STAT<7:0> CNT<15:0>
+// 31 30 29 28 27..24 23..16 15..0
+// ACK .......Acknowledge Flag. Set in the Acknowledge Packet returned in response to a
 // Command Packet. Must be zero in a Command Packet.
 // SEQ............Set for Sequence Error. MODE/STAT = 0x01 for skip and 0x00 for duplicate.
 // SEL........Channel Select. Selects target for commands with more than one target. Zero
@@ -19,7 +19,7 @@
 // CMD<3:0> ....Specifies the command to perform when the packet is received by the APS
 // module. Unmodified in the Acknowledge Packet. See section 3.8 for
 // information on the supported commands.
-// MODE/STAT....Command Mode or Status. MODE bits modify the operation of some
+// MODE/STAT<7:0> ....Command Mode or Status. MODE bits modify the operation of some
 // commands. STAT bits are returned in the Acknowledge Packet to indicate
 // command completion status. A STAT value of 0xFF indicates an invalid or
 // unrecognized command. See individual command descriptions for more
