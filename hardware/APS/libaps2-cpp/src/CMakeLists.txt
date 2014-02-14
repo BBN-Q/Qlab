@@ -57,6 +57,10 @@ ADD_EXECUTABLE(test
 	./test/main.cpp
 )
 
+ADD_EXECUTABLE(flash
+	./test/flash.cpp
+)
+
 #ADD_EXECUTABLE(echo
 #	./test/echo.cpp
 #	./APS/APSEthernet.cpp 
@@ -77,6 +81,7 @@ ADD_EXECUTABLE(test
 #set_target_properties(echo32 PROPERTIES COMPILE_DEFINITIONS "DEBUGAPS")
 
 TARGET_LINK_LIBRARIES(test aps2)
+TARGET_LINK_LIBRARIES(flash aps2)
 
 if(WIN32)
 TARGET_LINK_LIBRARIES(aps2 hdf5	hdf5_cpp ws2_32)
