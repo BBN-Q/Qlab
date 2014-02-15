@@ -593,18 +593,23 @@ int APS2::write_flash(const uint32_t & addr, vector<uint32_t> & data) {
 	packet.header.command.r_w = 0;
 	packet.header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::EPROMIO);
 	packet.header.command.mode_stat = EPROM_RW;
-	packet.header.command.cnt = 256;
-	packet.payload.resize(256);
+	packet.header.command.cnt = 64;
+	packet.payload.resize(64);
 
-	// resize data to a multiple of 256 words (1KB)
-	int padwords = (256 - (data.size() % 256)) % 256;
+	// resize data to a multiple of 64 words (256 bytes)
+	int padwords = (64 - (data.size() % 64)) % 64;
+	FILE_LOG(logDEBUG3) << "Flash write: padding payload with " << padwords << " words";
 	data.resize(data.size() + padwords);
 
-	for (size_t ct = 0; ct < data.size(); ct += 256) {
-		std::copy(data.begin() + ct, data.begin() + ct + 256, packet.payload.begin());
+	for (size_t ct = 0; ct < data.size(); ct += 64) {
+		std::copy(data.begin() + ct, data.begin() + ct + 64, packet.payload.begin());
+		packet.header.addr = addr + ct*64;
 		packets.push_back(packet);
 	}
-	return APSEthernet::get_instance().send(deviceSerial_, packets);
+	FILE_LOG(logDEBUG2) << "Writing " << packets.size() << " packets of data to flash address " << myhex << addr;
+	APSEthernet::get_instance().send(deviceSerial_, packets);
+	APSEthernetPacket p = read_packets(packets.size())[0];
+	return p.header.command.mode_stat;
 
 	// TODO: optionally verify the write
 
@@ -612,6 +617,7 @@ int APS2::write_flash(const uint32_t & addr, vector<uint32_t> & data) {
 
 int APS2::erase_flash(uint32_t addr, uint32_t numBytes) {
 	// each erase command erases 64 KB of data starting at addr
+	FILE_LOG(logINFO) << "Erasing " << numBytes << " bytes starting at " << myhex << addr;
 	//TODO: check 64KB alignment 
 	if ((addr % 65536) != 0){
 		FILE_LOG(logERROR) << "Flash memory erase command was not 64KB aligned!";
@@ -619,38 +625,46 @@ int APS2::erase_flash(uint32_t addr, uint32_t numBytes) {
 	}
 
 	APSCommand_t command = { .packed=0 };
-	command.ack = 1;
 	command.r_w = 0;
 	command.cmd = static_cast<uint32_t>(APS_COMMANDS::EPROMIO);
 	command.mode_stat = EPROM_ERASE;
 
-	while(numBytes > 0){
+	uint32_t erasedBytes = 0;
+
+	while(erasedBytes < numBytes) {
+		FILE_LOG(logDEBUG2) << "Erasing a 64 KB page at addr: " << myhex << addr;
 		write_command(command, addr);
 		APSEthernetPacket p = read_packets(1)[0];
 		if (p.header.command.mode_stat == EPROM_OPERATION_FAILED){
 			FILE_LOG(logERROR) << "Flash memory erase command failed!";
 		}
-		numBytes -= 65536;
+		erasedBytes += 65536;
 		addr += 65536;
 	}
 	return 0;
 }
 
-vector<uint32_t> APS2::read_flash(const uint32_t & addr, const uint16_t & numWords) {
+vector<uint32_t> APS2::read_flash(const uint32_t & addr, const uint32_t & numWords) {
 	//TODO: handle reads that require multiple packets
 	APSCommand_t command = { .packed=0 };
 	command.r_w = 1;
 	command.cmd = static_cast<uint32_t>(APS_COMMANDS::EPROMIO);
 	command.mode_stat = EPROM_RW;
-	command.cnt = numWords;
+	command.cnt = std::min(numWords, static_cast<const uint32_t>(365));
+
+	vector<uint32_t> data;
+	// TODO: loop sending write and read commands, until received at least numWords
 	write_command(command, addr);
 	APSEthernetPacket p = read_packets(1)[0];
 	// TODO: Check status bits
-	return p.payload;
+	data.insert(data.end(), p.payload.begin(), p.payload.end());
+
+	return data;
 }
 
 //Create/restore setup SPI sequence
 int APS2::write_SPI_setup() {
+	FILE_LOG(logINFO) << "Writing SPI startup sequence";
 	vector<uint32_t> msg = build_VCXO_SPI_msg(VCXO_INIT);
 	vector<uint32_t> pll_msg = build_PLL_SPI_msg(PLL_INIT);
 	msg.insert(msg.end(), pll_msg.begin(), pll_msg.end());

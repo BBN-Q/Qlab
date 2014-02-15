@@ -96,7 +96,7 @@ public:
 
 	//Flash read/write
 	int write_flash(const uint32_t &, vector<uint32_t> &);
-	vector<uint32_t> read_flash(const uint32_t &, const uint16_t &);
+	vector<uint32_t> read_flash(const uint32_t &, const uint32_t &);
 
 	//CLPD DRAM
 	int write_bitfile(const uint32_t &, const string &);

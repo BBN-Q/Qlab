@@ -284,8 +284,9 @@ int write_flash(const char * deviceSerial, uint32_t addr, uint32_t* data, uint32
 	vector<uint32_t> writeData(data, data+numWords);
 	return APSs[string(deviceSerial)].write_flash(addr, writeData);
 }
-int read_flash(const char * deviceSerial, uint32_t addr, uint16_t numWords, uint32_t* data) {
+int read_flash(const char * deviceSerial, uint32_t addr, uint32_t numWords, uint32_t* data) {
 	auto readData = APSs[string(deviceSerial)].read_flash(addr, numWords);
+	cout << endl;
 	std::copy(readData.begin(), readData.end(), data);
 	return 0;
 }
