@@ -79,6 +79,13 @@ myhex(std::ios_base& __base)
   return __base;
 }
 
+// N-wide hex output with 0x
+template <unsigned int N>
+std::ostream& hexn(std::ostream& out)
+{
+    return out << "0x" << std::hex << std::setw(N) << std::setfill('0');
+}
+
 //Helper function for loading 1D dataset from H5 files
 template <typename T>
 vector<T> h5array2vector(const H5::H5File * h5File, const string & dataPath, const H5::DataType & dt = H5::PredType::NATIVE_DOUBLE)

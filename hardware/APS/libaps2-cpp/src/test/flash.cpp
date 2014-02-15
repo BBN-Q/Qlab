@@ -74,14 +74,14 @@ int main (int argc, char* argv[])
 
   // test reading from FLASH
   read_flash(deviceSerial.c_str(), 0x00FF0000, 2, buffer);
-  cout << "Programmed MAC address at 0x00FF0000 is " << endl << myhex << buffer[0] << " " << buffer[1] << endl;
+  cout << "Programmed MAC address at 0x00FF0000 is " << endl << hexn<8> << buffer[0] << " " << buffer[1] << endl;
 
   // read SPI setup sequence
   uint32_t setup[32];
   read_flash(deviceSerial.c_str(), 0x0, 32, setup);
   cout << "Programmed setup SPI sequence:" << endl;
   for (size_t ct=0; ct < 32; ct++) {
-    cout << myhex << setup[ct] << " ";
+    cout << hexn<8> << setup[ct] << " ";
     if (ct % 4 == 3) cout << endl;
   }
 
@@ -90,15 +90,19 @@ int main (int argc, char* argv[])
 
   cout << concol::RED << "Reading flash addr 0x00FA0000" << concol::RESET << endl;
   read_flash(deviceSerial.c_str(), 0x00FA0000, 2, buffer);
-  cout << "Received " << myhex << buffer[0] << " " << buffer[1] << endl;
+  cout << "Received " << hexn<8> << buffer[0] << " " << hexn<8> << buffer[1] << endl;
 
   cout << concol::RED << "Erasing/writing flash addr 0x00FA0000" << concol::RESET << endl;
-  buffer[0] = 0xBADDF00F;
-  write_flash(deviceSerial.c_str(), 0x00FA0000, buffer, 1);
+  vector<uint32_t> testData;
+  for (size_t ct=0; ct<64; ct++){
+    testData.push_back(0x00FA0000 + static_cast<uint32_t>(ct));
+  } 
+  // buffer[0] = 0xBADDF00F;
+  write_flash(deviceSerial.c_str(), 0x00FA0000, testData.data(), testData.size());
 
   cout << concol::RED << "Reading flash addr 0x00FA0000" << concol::RESET << endl;
   read_flash(deviceSerial.c_str(), 0x00FA0000, 2, buffer);
-  cout << "Received " << myhex << buffer[0] << " " << buffer[1] << endl;
+  cout << "Received " << hexn<8> << buffer[0] << " " <<  hexn<8> << buffer[1] << endl;
   
   disconnect_APS(deviceSerial.c_str());
 
