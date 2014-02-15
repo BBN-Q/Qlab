@@ -2,9 +2,11 @@ function switch_marker_state(awgName, ch)
 %Little helper function to put out a single marker blip to switch the state
 %of the flip-flops
 
-                        
-                       
-awg = InstrumentFactory(awgName);
+if ischar(awgName)                                               
+  awg = InstrumentFactory(awgName);
+else
+  awg = awgName;
+end
 
 switch class(awg)
 
