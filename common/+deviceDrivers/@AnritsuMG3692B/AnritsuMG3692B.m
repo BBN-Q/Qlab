@@ -97,7 +97,7 @@ classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.uWSource & deviceDrivers.li
             end
             
             gpib_string = sprintf(gpib_string, value);
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.power(obj, value)
             gpib_string = ':power %ddbm';
@@ -108,7 +108,7 @@ classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.uWSource & deviceDrivers.li
             end
             
             gpib_string = sprintf(gpib_string, value);
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.output(obj, value)
             gpib_string = ':output ';
@@ -124,7 +124,7 @@ classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.uWSource & deviceDrivers.li
             end
             
             gpib_string =[gpib_string checkMapObj(value)];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         % set phase in degrees
         function obj = set.phase(obj, value)
@@ -136,7 +136,7 @@ classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.uWSource & deviceDrivers.li
             end
             
             gpib_string = sprintf(gpib_string, value);
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.mod(obj, value)
             gpib_string = ':pulm:state ';
@@ -152,7 +152,7 @@ classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.uWSource & deviceDrivers.li
             end
             
             gpib_string =[gpib_string checkMapObj(value)];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.alc(obj, value)
             gpib_string = ':power:alc:source ';
@@ -168,7 +168,7 @@ classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.uWSource & deviceDrivers.li
             end
             
             gpib_string =[gpib_string checkMapObj(value)];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.pulse(obj, value)
             gpib_string = ':pulm:state ';
@@ -184,7 +184,7 @@ classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.uWSource & deviceDrivers.li
             end
             
             gpib_string =[gpib_string checkMapObj(value)];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.pulseSource(obj, value)
             gpib_string = ':pulm:source ';
@@ -197,7 +197,7 @@ classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.uWSource & deviceDrivers.li
             end
             
             gpib_string = [gpib_string checkMapObj(value)];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
 
     end % end instrument parameter accessors
