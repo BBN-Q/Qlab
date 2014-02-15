@@ -45,30 +45,32 @@ public:
 	vector<APSEthernetPacket> receive(string serial, size_t numPackets = 1, size_t timeoutMS = 10000);
 
 private:
-		APSEthernet();
-		APSEthernet(APSEthernet const &) = delete;
+	APSEthernet();
+	APSEthernet(APSEthernet const &) = delete;
 
-		unordered_map<string, MACAddr> serial_to_MAC_;
-		MACAddr srcMAC_;
+	unordered_map<string, MACAddr> serial_to_MAC_;
+	MACAddr srcMAC_;
 
-		unordered_map<string, udp::endpoint> endpoints_;
-		unordered_map<string, queue<APSEthernetPacket>> msgQueues_;
+	unordered_map<string, udp::endpoint> endpoints_;
+	unordered_map<string, queue<APSEthernetPacket>> msgQueues_;
 
-		void reset_maps();
-		// void run_receive_thread();
-		void run_send_thread();
+	void reset_maps();
+	// void run_receive_thread();
+	void run_send_thread();
 
-		void setup_receive();
-		void sort_packet(const vector<uint8_t> &, const udp::endpoint &);
+	void setup_receive();
+	void sort_packet(const vector<uint8_t> &, const udp::endpoint &);
 
+	asio::io_service ios_;
+	udp::socket socket_;
 
-		asio::io_service ios_;
-		udp::socket socket_;
+	// storage for received packets
+	udp::endpoint senderEndpoint;
+ 	uint8_t receivedData[2048];
 
-
-		std::thread receiveThread_;
-		std::atomic<bool> receiving_;
-		std::mutex mLock_;
+	std::thread receiveThread_;
+	std::atomic<bool> receiving_;
+	std::mutex mLock_;
 
 
 };

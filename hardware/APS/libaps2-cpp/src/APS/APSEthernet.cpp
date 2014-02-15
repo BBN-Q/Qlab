@@ -26,11 +26,9 @@ APSEthernet::~APSEthernet() {
 }
 
 void APSEthernet::setup_receive(){
-    udp::endpoint senderEndpoint(udp::v4(), APS_PROTO);
-    uint8_t receivedData[2048];
     socket_.async_receive_from(
         asio::buffer(receivedData, 2048), senderEndpoint,
-        [&](std::error_code ec, std::size_t bytesReceived)
+        [this](std::error_code ec, std::size_t bytesReceived)
         {
             //If there is anything to look at hand it off to the sorter
             if (!ec && bytesReceived > 0)
@@ -38,6 +36,7 @@ void APSEthernet::setup_receive(){
                 vector<uint8_t> packetData(receivedData, receivedData + bytesReceived);
                 sort_packet(packetData, senderEndpoint);
             }
+
             //Start the receiver again
             setup_receive();
     });
