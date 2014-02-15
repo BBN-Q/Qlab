@@ -48,9 +48,9 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
                     obj.loadConfig(settings.seqFile);
                     obj.operationComplete(); % wait until we're done with the load to continue
                 end
-            end
             settings = rmfield(settings, 'seqFile');
             settings = rmfield(settings, 'seqForce');
+            end
             
             % set channel settings
             channelStrs = {'chan_1','chan_2','chan_3','chan_4'};
@@ -111,7 +111,11 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
                 error('Invalid file name');
             end
             if ~exist(name, 'file')
-                error('Could not find %s', name);
+                % This is perfectly OK; file only has to be on path as seen
+                % by AWG; OED 2/14/2014.  Path may be different on control
+                % machine
+                fprintf('Warning: file %s not on host path\n',name);
+                %error('Could not find %s', name);
             end
             name = ['"' name '"'];
             gpib_string = ['AWGControl:SREStore ' name];
