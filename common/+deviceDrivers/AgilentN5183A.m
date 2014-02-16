@@ -75,7 +75,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
 
             %mode_string = ':freq:mode fixed'; %set to fixed
             %obj.write(mode_string);
-            obj.write(sprintf(':freq:fixed %dGHz;', value));
+            obj.write(sprintf(':freq:fixed %d GHz;', value));
 
             %Wait for frequency to settle
             pause(0.02);
@@ -129,7 +129,28 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             assert(isnumeric(value), 'Requires numeric input');
             obj.write(sprintf(':dm:iqad:qskew %d;', value));
         end
-
+                
+        function errs=check_errors(obj)
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % Check for errors
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%            
+            first=1;
+            errs=[];
+            while 1
+                a=query(obj,'SYST:ERR?');
+                loc=find(a==',');
+                errflag=str2num(a(1:(loc-1)));
+                if errflag == 0
+                    break;
+                end
+                errs=[errs errflag];
+                if first
+                  fprintf('Error occured on N5183\n')
+                  first=0;
+                end
+                fprintf('  -> "%s"\n',a);
+            end
+        end
     end % end instrument parameter accessors
     
     methods (Static)
