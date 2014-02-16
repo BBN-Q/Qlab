@@ -607,9 +607,14 @@ int APS2::write_flash(const uint32_t & addr, vector<uint32_t> & data) {
 		packets.push_back(packet);
 	}
 	FILE_LOG(logDEBUG2) << "Writing " << packets.size() << " packets of data to flash address " << myhex << addr;
-	APSEthernet::get_instance().send(deviceSerial_, packets);
-	APSEthernetPacket p = read_packets(packets.size())[0];
-	return p.header.command.mode_stat;
+	try {
+		APSEthernet::get_instance().send(deviceSerial_, packets);
+		APSEthernetPacket p = read_packets(packets.size())[0];
+		return p.header.command.mode_stat;	
+	} catch (std::exception &e) {
+		FILE_LOG(logERROR) << "Flash write failed!";
+		return -1;
+	}
 
 	// TODO: optionally verify the write
 
