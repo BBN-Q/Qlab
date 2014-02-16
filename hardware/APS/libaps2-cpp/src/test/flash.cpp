@@ -92,13 +92,21 @@ int main (int argc, char* argv[])
   read_flash(deviceSerial.c_str(), 0x00FA0000, 2, buffer);
   cout << "Received " << hexn<8> << buffer[0] << " " << hexn<8> << buffer[1] << endl;
 
-  cout << concol::RED << "Erasing/writing flash addr 0x00FA0000" << concol::RESET << endl;
+  cout << concol::RED << "Erasing/writing flash addr 0x00FA0000 (64 words)" << concol::RESET << endl;
   vector<uint32_t> testData;
   for (size_t ct=0; ct<64; ct++){
     testData.push_back(0x00FA0000 + static_cast<uint32_t>(ct));
   } 
-  // buffer[0] = 0xBADDF00F;
   write_flash(deviceSerial.c_str(), 0x00FA0000, testData.data(), testData.size());
+
+  cout << concol::RED << "Reading flash addr 0x00FA0000" << concol::RESET << endl;
+  read_flash(deviceSerial.c_str(), 0x00FA0000, 2, buffer);
+  cout << "Received " << hexn<8> << buffer[0] << " " <<  hexn<8> << buffer[1] << endl;
+
+  cout << concol::RED << "Erasing/writing flash addr 0x00FA0000 (2 words)" << concol::RESET << endl;
+  buffer[0] = 0xBADD1234;
+  buffer[1] = 0x1234F00F;
+  write_flash(deviceSerial.c_str(), 0x00FA0000, buffer, 2);
 
   cout << concol::RED << "Reading flash addr 0x00FA0000" << concol::RESET << endl;
   read_flash(deviceSerial.c_str(), 0x00FA0000, 2, buffer);
