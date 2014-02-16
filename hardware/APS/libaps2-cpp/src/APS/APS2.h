@@ -30,7 +30,7 @@ public:
 
 	int load_bitfile(const string &, const int &);
 	int program_FPGA(const int &);
-	int get_bitfile_version() const;
+	int get_bitfile_version();
 
 	int setup_VCXO() const;
 	int setup_PLL() const;
@@ -63,9 +63,9 @@ public:
 		return write_waveform(dac, channels_[dac].prep_waveform());
 	}
 
-	int set_run_mode(const int &, const RUN_MODE &);
+	int set_run_mode(const RUN_MODE &);
 
-	int set_LLData_IQ(const WordVec &, const WordVec &, const WordVec &, const WordVec &, const WordVec &);
+	int set_LLData_IQ(const vector<uint32_t> &);
 	int clear_channel_data();
 
 	int load_sequence_file(const string &);
@@ -119,7 +119,7 @@ private:
 	int erase_flash(uint32_t, uint32_t);
 
 	//Single packet query
-	vector<APSEthernetPacket> query(const APSCommand_t &);
+	vector<APSEthernetPacket> query(const APSCommand_t &, const uint32_t & addr = 0);
 
 	vector<uint32_t> build_DAC_SPI_msg(const CHIPCONFIG_IO_TARGET &, const vector<SPI_AddrData_t> &);
 	vector<uint32_t> build_PLL_SPI_msg(const vector<SPI_AddrData_t> &);

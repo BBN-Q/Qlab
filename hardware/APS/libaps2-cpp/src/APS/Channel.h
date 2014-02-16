@@ -43,7 +43,7 @@ private:
 	float scale_;
 	bool enabled_;
 	vector<float> waveform_;
-	LLBank LLBank_;
+	vector<uint32_t> LLBank_;
 	int trigDelay_;
 };
 

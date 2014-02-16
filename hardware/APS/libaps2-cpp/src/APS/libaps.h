@@ -61,7 +61,7 @@ EXPORT int set_waveform_int(const char *, int, short*, int);
 
 EXPORT int set_LL_data_IQ(const char *, int, int, unsigned short*, unsigned short*, unsigned short*, unsigned short*, unsigned short*);
 
-EXPORT int set_run_mode(const char *, int, int);
+EXPORT int set_run_mode(const char *, int);
 
 EXPORT int load_sequence_file(const char *, const char*);
 

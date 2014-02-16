@@ -64,15 +64,7 @@ int APS2::init(const bool & forceReload, const int & bitFileNum){
 		// this will reconfigure the DACs, PLL and VCX0 with EPROM settings
 		reset();
 
-		
-		//Program the bitfile to the FPGA
-		program_FPGA(bitFileNum);
-
-		//Default to max sample rate
-		set_sampleRate(1200);
-
-		// test PLL sync on each FPGA
-		//int status = test_PLL_sync(FPGA1);
+		// sync DAC clock phase with PLL
 		int status = test_PLL_sync();
 		if (status) {
 			FILE_LOG(logERROR) << "DAC PLLs failed to sync";
@@ -124,8 +116,7 @@ double APS2::get_uptime(){
 
 int APS2::program_FPGA(const int & bitFileNum) {
 	/**
-	 * @param bitFile path to a Lattice bit file
-	 * @param chipSelect which FPGA to write to (FPGA1, FPGA2, BOTH_FGPAS)
+	 * @param bitFile path to a Xilinx bit file
 	 * @param expectedVersion - checks whether version register matches this value after programming. -1 = skip the check
 	 */
 	//TODO: fix and move to load_bitfile
@@ -167,15 +158,12 @@ int APS2::program_FPGA(const int & bitFileNum) {
 	return 0;
 }
 
-int APS2::get_bitfile_version() const {
-	// Reads version information from register 0x8006
+int APS2::get_bitfile_version() {
+	// Reads version information from status registers
+	APSStatusBank_t statusRegs = read_status_registers();
+	uint32_t version = statusRegs.userFirmwareVersion;
 
-	uint32_t version=0;
-
-	//TODO: fix
-//	socket_.read_register(FPGA_ADDR_VERSION, version);
-	version &= 0x1FF; // First 9 bits hold version
-	FILE_LOG(logDEBUG) << "Bitfile version for FPGA is "  << myhex << version;
+	FILE_LOG(logDEBUG) << "Bitfile version for FPGA is " << myhex << version;
 	
 	return version;
 }
@@ -223,6 +211,8 @@ int APS2::load_sequence_file(const string & seqFile){
 	/*
 	 * Load a sequence file from an H5 file
 	 */
+	// TODO: fix me!
+	/*
 	//First open the file
 	try {
 		FILE_LOG(logINFO) << "Opening sequence file: " << seqFile;
@@ -269,6 +259,7 @@ int APS2::load_sequence_file(const string & seqFile){
 	catch (H5::FileIException & e) {
 		return -1;
 	}
+	*/
 	return 0;
 }
 
@@ -368,32 +359,16 @@ double APS2::get_trigger_interval() {
 
 
 int APS2::run() {
-	//Depending on how the channels are enabled, trigger the appropriate FPGA's
+	//Depending on how the channels are enabled, trigger the appropriate modules
 	vector<bool> channelsEnabled;
 	bool allChannels = true;
 	for (const auto tmpChannel : channels_){
 		channelsEnabled.push_back(tmpChannel.enabled_);
 		allChannels &= tmpChannel.enabled_;
 	}
-
-	//If we have more LL entries than we can handle then we need to stream
 	
+	FILE_LOG(logDEBUG1) << "Releasing pulse sequencer state machine...";
 	/*
-	for (int chanct = 0; chanct < 4; ++chanct) {
-		if (channelsEnabled[chanct]){
-			if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH && !myBankBouncerThreads_[chanct].isRunning()){
-				streaming_ = false;
-				//myBankBouncerThreads_[chanct].start();
-				while(!streaming_){
-					usleep(10000);
-				}
-			}
-		}
-	}
-
-	//Grab a lock to pause the streaming threads while writing to the CSR
-	mymutex_->lock();
-	FILE_LOG(logDEBUG1) << "Releasing state machine....";
 	//If all channels are enabled then trigger together
 	if (allChannels) {
 		FPGA::set_bit(socket_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
@@ -409,7 +384,6 @@ int APS2::run() {
 	uint32_t CSR;
 	socket_.read_register(0, CSR);
 	FILE_LOG(logDEBUG2) << "Current CSR: " << CSR;
-	mymutex_->unlock();
 	*/
 	return 0;
 }
@@ -417,17 +391,8 @@ int APS2::run() {
 int APS2::stop() {
 
 	// stop all channels
-	
-	/*
-	for (int chanct = 0; chanct < 4; ++chanct) {
-		if (channels_[chanct].LLBank_.length > MAX_LL_LENGTH){
-			myBankBouncerThreads_[chanct].stop();
-		}
-	}
-	*/
 
 	//Try to stop in a wait for trigger state by making the trigger interval long
-	//This leaves the flip-flops in a known state
 	auto curTriggerInt = get_trigger_interval();
 	auto curTriggerSource = get_trigger_source();
 	set_trigger_interval(1);
@@ -446,34 +411,20 @@ int APS2::stop() {
 
 }
 
-int APS2::set_run_mode(const int & dac, const RUN_MODE & mode) {
+int APS2::set_run_mode(const RUN_MODE & mode) {
 /********************************************************************
  * Description : Sets run mode
  *
- * Inputs :     dac - channel 0-3
- *              mode -  enable link list 1 = LL mode 0 = waveform mode
+ * Inputs :     mode - 1 = LL mode 0 = waveform mode
  *
  * Returns : 0 on success < 0 on failure
  *
 ********************************************************************/
-	// int dacModeMask;
-
-	// // setup register addressing based on DAC
-	// switch(dac) {
-	//   case 0:
-	//   case 2:
-	//     dacModeMask = CSRMSK_CHA_OUTMODE;
-	//     break;
-	//   case 1:
-	//   case 3:
-	//     dacModeMask = CSRMSK_CHB_OUTMODE;
-	//     break;
-	//   default:
-	//     return -2;
-	// }
-
+ 	// TODO: fix me!
+	// int dacModeMask = CSRMSK_CHA_OUTMODE;
+	
 	//Set the run mode bit
-	FILE_LOG(logINFO) << "Setting Run Mode ==> DAC: " << dac << " Mode: " << mode;
+	FILE_LOG(logINFO) << "Setting Run Mode ==> " << mode;
 //	if (mode) {
 //	  FPGA::set_bit(socket_, FPGA_ADDR_CSR, dacModeMask);
 //	} else {
@@ -484,17 +435,14 @@ int APS2::set_run_mode(const int & dac, const RUN_MODE & mode) {
 }
 
 
-int APS2::set_LLData_IQ(const WordVec & addr, const WordVec & count, const WordVec & trigger1, const WordVec & trigger2, const WordVec & repeat){
+int APS2::set_LLData_IQ(const vector<uint32_t> & instructions){
 
-	//We store the IQ linklist data in channels 1 and 3
-	int dataChan;
-
-	dataChan = 0;
-	channels_[dataChan].LLBank_ = LLBank(addr, count, trigger1, trigger2, repeat);
+	//We store the IQ linklist data in channel 1
+	std::copy(instructions.begin(), instructions.end(), channels_[0].LLBank_.begin());
 
 	//If we can fit it on then do so
-	if (addr.size() < MAX_LL_LENGTH){
-		write_LL_data_IQ(0, 0, addr.size(), true );
+	if (instructions.size() < MAX_LL_LENGTH) {
+		write_LL_data_IQ(0, 0, instructions.size(), true );
 	}
 
 	return 0;
@@ -562,7 +510,7 @@ int APS2::write_SPI(vector<uint32_t> & msg) {
 }
 
 uint32_t APS2::read_SPI(const CHIPCONFIG_IO_TARGET & target, const uint16_t & addr) {
-	// reads a single 32-bit words from the target SPI device
+	// reads a single 32-bit word from the target SPI device
 
 	// build message
 	APSChipConfigCommand_t cmd;
@@ -575,6 +523,7 @@ uint32_t APS2::read_SPI(const CHIPCONFIG_IO_TARGET & target, const uint16_t & ad
 	packet.header.command.r_w = 1;
 	packet.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::CHIPCONFIGIO);
 	packet.header.command.cnt = msg.size();
+	packet.header.addr = addr;
 	packet.payload = msg;
 
 	APSEthernet::get_instance().send(deviceSerial_, packet);
@@ -732,13 +681,13 @@ vector<APSEthernetPacket> APS2::pack_data(const uint32_t & addr, const vector<ui
 }
 
 
-vector<APSEthernetPacket> APS2::read_packets(const size_t & numPackets){
+vector<APSEthernetPacket> APS2::read_packets(const size_t & numPackets) {
 	return APSEthernet::get_instance().receive(deviceSerial_, numPackets);
 }
 
-vector<APSEthernetPacket> APS2::query(const APSCommand_t & command){
+vector<APSEthernetPacket> APS2::query(const APSCommand_t & command, const uint32_t & addr /* see header for default value = 0 */) {
 	//write-read ping-pong
-	write_command(command);
+	write_command(command, addr);
 	return read_packets(1);
 }
 
@@ -1253,21 +1202,21 @@ int APS2::setup_VCXO() {
 int APS2::setup_DAC(const int & dac) 
 /*
  * Description: Aligns the data valid window of the DAC with the output of the FPGA.
- * inputs: dac = 0, 1, 2, or 3
+ * inputs: dac = 0 or 1
  */
 {
-	/*
 	
 	uint8_t data;
+	vector<uint32_t> msg;
 	uint8_t SD, MSD, MHD;
 	uint8_t edgeMSD, edgeMHD;
 	uint8_t interruptAddr, controllerAddr, sdAddr, msdMhdAddr;
 
-	// For DAC SPI writes, we put DAC select in bits 6:5 of address
-	interruptAddr = 0x1 | (dac << 5);
-	controllerAddr = 0x6 | (dac << 5);
-	sdAddr = 0x5 | (dac << 5);
-	msdMhdAddr = 0x4 | (dac << 5);
+	// relevant DAC registers
+	interruptAddr = 0x1;
+	controllerAddr = 0x6;
+	sdAddr = 0x5;
+	msdMhdAddr = 0x4;
 
 	if (dac < 0 || dac >= NUM_CHANNELS) {
 		FILE_LOG(logERROR) << "FPGA::setup_DAC: unknown DAC, " << dac;
@@ -1281,45 +1230,38 @@ int APS2::setup_DAC(const int & dac)
 	
 	const vector<CHIPCONFIG_IO_TARGET> targets = {CHIPCONFIG_TARGET_DAC_0, CHIPCONFIG_TARGET_DAC_1};
 
-	// CHIPCONFIG_IO_TARGET target = targets[dac];
-
-	//TODO: fix me!
-	// socket_.read_SPI(target, interruptAddr, data);
-	// FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(interruptAddr & 0x1F) << " Val: " << int(data & 0xFF);
-
-	// socket_.read_SPI(target, msdMhdAddr, data);
-	// FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(msdMhdAddr & 0x1F) << " Val: " << int(data & 0xFF);
-	
-	// socket_.read_SPI(target, sdAddr, data);
-	// FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(sdAddr & 0x1F) << " Val: " << int(data & 0xFF);
-	
-	// socket_.read_SPI(target, controllerAddr, data);
-	// FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(controllerAddr & 0x1F) << " Val: " << int(data & 0xFF);
+	// TODO: remove int(... & 0x1F)
+	data = read_SPI(targets[dac], interruptAddr);
+	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(interruptAddr & 0x1F) << " Val: " << int(data & 0xFF);
+	data = read_SPI(targets[dac], msdMhdAddr);
+	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(msdMhdAddr & 0x1F) << " Val: " << int(data & 0xFF);
+	data = read_SPI(targets[dac], sdAddr);
+	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(sdAddr & 0x1F) << " Val: " << int(data & 0xFF);
+	data = read_SPI(targets[dac], controllerAddr);
+	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(controllerAddr & 0x1F) << " Val: " << int(data & 0xFF);
 	
 	data = 0;
-	//TODO: fix me!
-	// socket_.write_SPI(target, controllerAddr, data);
+	msg = build_DAC_SPI_msg(targets[dac], {{controllerAddr, data}});
+	write_SPI(msg);
 
 	// Slide the data valid window left (with MSD) and check for the interrupt
 	SD = 0;  //(sample delay nibble, stored in Reg. 5, bits 7:4)
 	MSD = 0; //(setup delay nibble, stored in Reg. 4, bits 7:4)
 	MHD = 0; //(hold delay nibble,  stored in Reg. 4, bits 3:0)
 	data = SD << 4;
-	//TODO: fix me!
-	// socket_.write_SPI(target, sdAddr, data);
+
+	msg = build_DAC_SPI_msg(targets[dac], {{sdAddr, data}});
+	write_SPI(msg);
 
 	for (MSD = 0; MSD < 16; MSD++) {
 		FILE_LOG(logDEBUG2) <<  "Setting MSD: " << int(MSD);
 		
 		data = (MSD << 4) | MHD;
-	//TODO: fix me!
-		// socket_.write_SPI(target, msdMhdAddr, data);
+		msg = build_DAC_SPI_msg(targets[dac], {{msdMhdAddr, data}});
+		write_SPI(msg);
 		FILE_LOG(logDEBUG2) <<  "Write Reg: " << myhex << int(msdMhdAddr & 0x1F) << " Val: " << int(data & 0xFF);
 		
-	//TODO: fix me!
-		//FPGA::read_SPI(socket_, APS2_DAC_SPI, msd_mhd_addr, &data);
-		//dlog(DEBUG_VERBOSE2, "Read reg 0x%x, value 0x%x\n", msd_mhd_addr & 0x1F, data & 0xFF);
-		// socket_.read_SPI(target, sdAddr, data);
+		data = read_SPI(targets[dac], sdAddr);
 		FILE_LOG(logDEBUG2) <<  "Read Reg: " << myhex << int(sdAddr & 0x1F) << " Val: " << int(data & 0xFF);
 		
 		bool check = data & 1;
@@ -1336,11 +1278,10 @@ int APS2::setup_DAC(const int & dac)
 		FILE_LOG(logDEBUG2) <<  "Setting MHD: " << int(MHD);
 		
 		data = (MSD << 4) | MHD;
-	//TODO: fix me!
-		// socket_.write_SPI(target, msdMhdAddr, data);
+		msg = build_DAC_SPI_msg(targets[dac], {{msdMhdAddr, data}});
+		write_SPI(msg);
 		
-	//TODO: fix me!
-		// socket_.read_SPI(target, sdAddr, data);
+		data = read_SPI(targets[dac], sdAddr);
 		FILE_LOG(logDEBUG2) << "Read: " << myhex << int(data & 0xFF);
 		bool check = data & 1;
 		FILE_LOG(logDEBUG2) << "Check: " << check;
@@ -1355,25 +1296,26 @@ int APS2::setup_DAC(const int & dac)
 	// Clear MSD and MHD
 	MHD = 0;
 	data = (MSD << 4) | MHD;
-	//TODO: fix me!
-	// socket_.write_SPI(target, msdMhdAddr, data);
+	msg = build_DAC_SPI_msg(targets[dac], {{msdMhdAddr, data}});
+	write_SPI(msg);
+
 	// Set the optimal sample delay (SD)
 	data = SD << 4;
-	//TODO: fix me!
-	// socket_.write_SPI(target, sdAddr, data);
+	msg = build_DAC_SPI_msg(targets[dac], {{sdAddr, data}});
+	write_SPI(msg);
 
 	// AD9376 data sheet advises us to enable surveilance and auto modes, but this
 	// has introduced output glitches in limited testing
 	// set the filter length, threshold, and enable surveilance mode and auto mode
-	int filter_length = 12;
-	int threshold = 1;
-	data = (1 << 7) | (1 << 6) | (filter_length << 2) | (threshold & 0x3);
-	FPGA::write_SPI(socket_, APS2_DAC_SPI, controller_addr, &data);
+	// int filter_length = 12;
+	// int threshold = 1;
+	// data = (1 << 7) | (1 << 6) | (filter_length << 2) | (threshold & 0x3);
+	// msg = build_DAC_SPI_msg(targets[dac], {{controllerAddr, data}});
+	// write_SPI(msg);
 	
-	
-	// turn on SYNC FIFO
-//	enable_DAC_FIFO(dac);
-*/
+	// turn on SYNC FIFO (limited testing doesn't show it to help)
+	// enable_DAC_FIFO(dac);
+
 	return 0;
 }
 
@@ -1385,37 +1327,40 @@ int APS2::enable_DAC_FIFO(const int & dac) {
 	}
 
 	uint8_t data = 0;
-	// uint16_t syncAddr = 0x0 | (dac << 5);
-	// uint16_t fifoStatusAddr = 0x7 | (dac << 5);
+	uint16_t syncAddr = 0x0;
+	uint16_t fifoStatusAddr = 0x7;
 	FILE_LOG(logDEBUG) << "Enabling DAC " << dac << " FIFO";
 	const vector<CHIPCONFIG_IO_TARGET> targets = {CHIPCONFIG_TARGET_DAC_0, CHIPCONFIG_TARGET_DAC_1};
-	// CHIPCONFIG_IO_TARGET target = targets[dac];
+
 	// set sync bit (Reg 0, bit 2)
-	//TODO: fix me!
-	// socket_.read_SPI(target, syncAddr, data);
+	data = read_SPI(targets[dac], syncAddr);
 	data = data | (1 << 2);
-	//TODO: fix me!
-	// int status = socket_.write_SPI(target, syncAddr, data );
+	vector<uint32_t> msg = build_DAC_SPI_msg(targets[dac], {{syncAddr, data}});
+	write_SPI(msg);
+
 	// read back FIFO phase to ensure we are in a safe zone
-	// socket_.read_SPI(target, fifoStatusAddr, data);
+	data = read_SPI(targets[dac], fifoStatusAddr);
+
 	// phase (FIFOSTAT) is in bits <6:4>
 	FILE_LOG(logDEBUG2) << "Read: " << myhex << int(data & 0xFF);
 	FILE_LOG(logDEBUG) << "FIFO phase = " << ((data & 0x70) >> 4);
 
-	//TODO: fix me!
-	int status = 0;
-	return status;
+	//TODO: return an error code if the FIFO phase is bad
+	return 0;
 }
 
 int APS2::disable_DAC_FIFO(const int & dac) {
-	// uint8_t data, mask;
-	// uint32_t syncAddr = 0x0 | (dac << 5);
+	uint8_t data, mask;
+	uint32_t syncAddr = 0x0;
+	const vector<CHIPCONFIG_IO_TARGET> targets = {CHIPCONFIG_TARGET_DAC_0, CHIPCONFIG_TARGET_DAC_1};
+
 	FILE_LOG(logDEBUG1) << "Disable DAC " << dac << " FIFO";
 	// clear sync bit
-	//TODO: fix me!
-	// socket_.read_SPI(CHIPCONFIG_TARGET_PLL, syncAddr, data);
-	// mask = (0x1 << 2);
-	// return socket_.write_SPI( CHIPCONFIG_TARGET_PLL, syncAddr, data & ~mask );
+	data = read_SPI(targets[dac], syncAddr);
+	mask = (0x1 << 2);
+	vector<uint32_t> msg = build_DAC_SPI_msg(targets[dac], {{syncAddr, data & ~mask}});
+	write_SPI(msg);
+
 	return 0;
 }
 

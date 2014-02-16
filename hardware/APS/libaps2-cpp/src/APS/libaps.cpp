@@ -240,8 +240,8 @@ int set_LL_data_IQ(const char * deviceSerial, int channelNum, int length, unsign
 	return 0;
 }
 
-int set_run_mode(const char * deviceSerial, int channelNum, int mode) {
-	return APSs[string(deviceSerial)].set_run_mode(channelNum, RUN_MODE(mode));
+int set_run_mode(const char * deviceSerial, int mode) {
+	return APSs[string(deviceSerial)].set_run_mode(RUN_MODE(mode));
 }
 
 //int save_state_files() {
