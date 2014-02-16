@@ -48,42 +48,42 @@ classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.uWSource & deviceDrivers.li
         % getters
         function val = get.frequency(obj)
             gpib_string = ':freq:fixed?';
-            temp = obj.Query([gpib_string]);
-            val = str2double(temp);
+            temp = obj.query([gpib_string]);
+            val = str2double(temp) * 1e-9;
         end
         function val = get.power(obj)
             gpib_string = ':power?';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = str2double(temp);
         end
         function val = get.phase(obj)
             gpib_string = ':phase?';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = str2double(temp);
         end
         function val = get.output(obj)
             gpib_string = ':output?';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = temp;
         end
         function val = get.mod(obj)
             gpib_string = ':pulm:state?';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = temp;
         end
         function val = get.alc(obj)
             gpib_string = ':power:alc:source?';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = temp;
         end
         function val = get.pulse(obj)
             gpib_string = ':pulm:state?';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = temp;
         end
         function val = get.pulseSource(obj)
             gpib_string = ':pulm:source?';
-            temp = obj.Query([gpib_string]);
+            temp = obj.query([gpib_string]);
             val = temp;
         end
         
