@@ -120,6 +120,7 @@ private:
 
 	//Single packet query
 	vector<APSEthernetPacket> query(const APSCommand_t &, const uint32_t & addr = 0);
+	vector<APSEthernetPacket> query(const APSEthernetPacket &);
 
 	vector<uint32_t> build_DAC_SPI_msg(const CHIPCONFIG_IO_TARGET &, const vector<SPI_AddrData_t> &);
 	vector<uint32_t> build_PLL_SPI_msg(const vector<SPI_AddrData_t> &);

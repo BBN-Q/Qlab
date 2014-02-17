@@ -62,7 +62,7 @@ int APS2::init(const bool & forceReload, const int & bitFileNum){
 
 		// send hard reset to APS2
 		// this will reconfigure the DACs, PLL and VCX0 with EPROM settings
-		reset();
+		// reset();
 
 		// sync DAC clock phase with PLL
 		int status = test_PLL_sync();
@@ -515,6 +515,7 @@ uint32_t APS2::read_SPI(const CHIPCONFIG_IO_TARGET & target, const uint16_t & ad
 	// build message
 	APSChipConfigCommand_t cmd;
 	cmd.target = target;
+	cmd.instr = addr;
 	cmd.spicnt_data = 1;
 	vector<uint32_t> msg = {cmd.packed};
 
@@ -523,11 +524,9 @@ uint32_t APS2::read_SPI(const CHIPCONFIG_IO_TARGET & target, const uint16_t & ad
 	packet.header.command.r_w = 1;
 	packet.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::CHIPCONFIGIO);
 	packet.header.command.cnt = msg.size();
-	packet.header.addr = addr;
 	packet.payload = msg;
 
-	APSEthernet::get_instance().send(deviceSerial_, packet);
-	APSEthernetPacket p = read_packets(1)[0];
+	APSEthernetPacket p = query(packet)[0];
 	// TODO: Check status bits
 	return p.payload[0];
 }
@@ -608,8 +607,7 @@ vector<uint32_t> APS2::read_flash(const uint32_t & addr, const uint32_t & numWor
 
 	vector<uint32_t> data;
 	// TODO: loop sending write and read commands, until received at least numWords
-	write_command(command, addr);
-	APSEthernetPacket p = read_packets(1)[0];
+	APSEthernetPacket p = query(command, addr)[0];
 	// TODO: Check status bits
 	data.insert(data.end(), p.payload.begin(), p.payload.end());
 
@@ -688,6 +686,12 @@ vector<APSEthernetPacket> APS2::read_packets(const size_t & numPackets) {
 vector<APSEthernetPacket> APS2::query(const APSCommand_t & command, const uint32_t & addr /* see header for default value = 0 */) {
 	//write-read ping-pong
 	write_command(command, addr);
+	return read_packets(1);
+}
+
+vector<APSEthernetPacket> APS2::query(const APSEthernetPacket & pkt) {
+	//write-read ping-pong
+	APSEthernet::get_instance().send(deviceSerial_, pkt);
 	return read_packets(1);
 }
 

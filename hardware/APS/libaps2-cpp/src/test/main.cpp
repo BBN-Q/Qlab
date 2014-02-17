@@ -79,6 +79,9 @@ int main (int argc, char* argv[])
 
   cout << concol::RED << "Uptime for device " << deviceSerial << " is " << uptime << " seconds" << concol::RESET << endl;
 
+  // force initialize device
+  initAPS(deviceSerial.c_str(), 1);
+
   //Do a soft reset
   // cout << concol::RED << "Soft reset of all logic..." << concol::RESET << endl;
 
