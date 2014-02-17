@@ -155,9 +155,9 @@ vector<APSEthernetPacket> APSEthernet::receive(string serial, size_t numPackets,
             outVec.push_back(msgQueues_[serial].front());
             msgQueues_[serial].pop();
             mLock_.unlock();
-            FILE_LOG(logDEBUG4) << "Received packet for " << serial << " with command header: " << print_APSCommand(outVec.back().header.command);
+            FILE_LOG(logDEBUG4) << "Received packet command: " << print_APSCommand(outVec.back().header.command);
             if (outVec.size() == numPackets){
-                FILE_LOG(logDEBUG3) << "Received " << numPackets << " packets for " << serial;
+                FILE_LOG(logDEBUG3) << "Received " << numPackets << " packets from " << serial;
                 return outVec;
             }
         }

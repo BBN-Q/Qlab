@@ -539,13 +539,9 @@ uint32_t APS2::read_SPI(const CHIPCONFIG_IO_TARGET & target, const uint16_t & ad
 			pllinstr.r_w = 1; // read
 			cmd.instr = pllinstr.packed;
 			break;
-		case CHIPCONFIG_TARGET_VCXO:
-			cmd.target = CHIPCONFIG_IO_TARGET_VCXO;
-			cmd.instr = 0; // VCXO is data only
-			break;
 		default:
 			FILE_LOG(logERROR) << "Invalid read_SPI target " << myhex << target;
-			return -1;
+			return 0;
 	}
 	cmd.spicnt_data = 1; // request 1 byte
 	vector<uint32_t> msg = {cmd.packed};
