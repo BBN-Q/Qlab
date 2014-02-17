@@ -514,21 +514,70 @@ uint32_t APS2::read_SPI(const CHIPCONFIG_IO_TARGET & target, const uint16_t & ad
 
 	// build message
 	APSChipConfigCommand_t cmd;
-	cmd.target = target;
-	cmd.instr = addr;
-	cmd.spicnt_data = 1;
+	DACCommand_t dacinstr = {.packed = 0};
+	PLLCommand_t pllinstr = {.packed = 0};
+	// config target and instruction
+	switch (target) {
+		case CHIPCONFIG_TARGET_DAC_0:
+			cmd.target = CHIPCONFIG_IO_TARGET_DAC_0;			
+			dacinstr.addr = addr;
+			dacinstr.N = 0; // single-byte read
+			dacinstr.r_w = 1; // read
+			cmd.instr = dacinstr.packed;
+			break;
+		case CHIPCONFIG_TARGET_DAC_1:
+			cmd.target = CHIPCONFIG_IO_TARGET_DAC_1;
+			dacinstr.addr = addr;
+			dacinstr.N = 0; // single-byte read
+			dacinstr.r_w = 1; // read
+			cmd.instr = dacinstr.packed;
+			break;
+		case CHIPCONFIG_TARGET_PLL:
+			cmd.target = CHIPCONFIG_IO_TARGET_PLL;
+			pllinstr.addr = addr;
+			pllinstr.W = 0; // single-byte read
+			pllinstr.r_w = 1; // read
+			cmd.instr = pllinstr.packed;
+			break;
+		case CHIPCONFIG_TARGET_VCXO:
+			cmd.target = CHIPCONFIG_IO_TARGET_VCXO;
+			cmd.instr = 0; // VCXO is data only
+			break;
+		default:
+			FILE_LOG(logERROR) << "Invalid read_SPI target " << myhex << target;
+			return -1;
+	}
+	cmd.spicnt_data = 1; // request 1 byte
 	vector<uint32_t> msg = {cmd.packed};
 
-	// build packet
+	// push on "end of message"
+	cmd.packed = 0;
+	cmd.target = CHIPCONFIG_IO_TARGET_EOL;
+	msg.push_back(cmd.packed);
+
+	// build write packet (we are "writing" a read command to the SPI target)
 	APSEthernetPacket packet;
-	packet.header.command.r_w = 1;
+	packet.header.command.r_w = 0;
 	packet.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::CHIPCONFIGIO);
 	packet.header.command.cnt = msg.size();
 	packet.payload = msg;
 
 	APSEthernetPacket p = query(packet)[0];
+
+	// build read packet
+	packet.header.command.r_w = 1;
+	packet.header.command.cnt = 1; // request 1 32-bit word (our 1 byte will be the MSB)
+	packet.payload.clear();
+
+	p = query(packet)[0];
+	cout << "read_SPI ACK packet size = " << p.payload.size() << endl;
 	// TODO: Check status bits
-	return p.payload[0];
+	if (p.payload.size() == 0) {
+		return 0;
+	} else {
+		cout << "read_SPI packet payload = " << p.payload[0] << endl;
+		return p.payload[0] >> 24;
+	}
 }
 
 //Flash read/write
@@ -1217,10 +1266,10 @@ int APS2::setup_DAC(const int & dac)
 	uint8_t interruptAddr, controllerAddr, sdAddr, msdMhdAddr;
 
 	// relevant DAC registers
-	interruptAddr = 0x1;
-	controllerAddr = 0x6;
-	sdAddr = 0x5;
-	msdMhdAddr = 0x4;
+	interruptAddr = 0x1; // LVDS[7] SYNC[6]
+	controllerAddr = 0x6; // LSURV[7] LAUTO[6] LFLT[5:2] LTRH[1:0]
+	sdAddr = 0x5; // SD[7:4] CHECK[0]
+	msdMhdAddr = 0x4; // MSD[7:4] MHD[3:0]
 
 	if (dac < 0 || dac >= NUM_CHANNELS) {
 		FILE_LOG(logERROR) << "FPGA::setup_DAC: unknown DAC, " << dac;
@@ -1228,12 +1277,11 @@ int APS2::setup_DAC(const int & dac)
 	}
 	FILE_LOG(logINFO) << "Setting up DAC " << dac;
 
+	const vector<CHIPCONFIG_IO_TARGET> targets = {CHIPCONFIG_TARGET_DAC_0, CHIPCONFIG_TARGET_DAC_1};
+	
 	// Step 1: calibrate and set the LVDS controller.
-	// Ensure that surveilance and auto modes are off
 	// get initial states of registers
 	
-	const vector<CHIPCONFIG_IO_TARGET> targets = {CHIPCONFIG_TARGET_DAC_0, CHIPCONFIG_TARGET_DAC_1};
-
 	// TODO: remove int(... & 0x1F)
 	data = read_SPI(targets[dac], interruptAddr);
 	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(interruptAddr & 0x1F) << " Val: " << int(data & 0xFF);
@@ -1241,9 +1289,10 @@ int APS2::setup_DAC(const int & dac)
 	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(msdMhdAddr & 0x1F) << " Val: " << int(data & 0xFF);
 	data = read_SPI(targets[dac], sdAddr);
 	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(sdAddr & 0x1F) << " Val: " << int(data & 0xFF);
+
+	// Ensure that surveilance and auto modes are off
 	data = read_SPI(targets[dac], controllerAddr);
 	FILE_LOG(logDEBUG2) <<  "Reg: " << myhex << int(controllerAddr & 0x1F) << " Val: " << int(data & 0xFF);
-	
 	data = 0;
 	msg = build_DAC_SPI_msg(targets[dac], {{controllerAddr, data}});
 	write_SPI(msg);
@@ -1332,7 +1381,7 @@ int APS2::enable_DAC_FIFO(const int & dac) {
 
 	uint8_t data = 0;
 	uint16_t syncAddr = 0x0;
-	uint16_t fifoStatusAddr = 0x7;
+	uint16_t fifoStatusAddr = 0x7; // FIFOSTAT[7] FIFOPHASE[6:4]
 	FILE_LOG(logDEBUG) << "Enabling DAC " << dac << " FIFO";
 	const vector<CHIPCONFIG_IO_TARGET> targets = {CHIPCONFIG_TARGET_DAC_0, CHIPCONFIG_TARGET_DAC_1};
 
