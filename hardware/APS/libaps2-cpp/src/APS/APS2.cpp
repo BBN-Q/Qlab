@@ -36,20 +36,22 @@ APSEthernet::EthernetError APS2::disconnect(){
 	return APSEthernet::SUCCESS;
 }
 
-int APS2::reset(const APS_RESET_MODE_STAT & resetMode) {
+int APS2::reset(const APS_RESET_MODE_STAT & resetMode /* default SOFT_RESET_HOST_USER */) {
 	
 	APSCommand_t command = { .packed=0 };
 	
 	command.cmd = static_cast<uint32_t>(APS_COMMANDS::RESET);
 	command.mode_stat = static_cast<uint32_t>(resetMode);
-	
+
+	write_command(command);
+	/*	
 	// After being reset the board should send an acknowledge packet with status bytes
 	APSEthernetPacket statusPacket = query(command)[0];
 	//Copy the data back into the status type 
 	APSStatusBank_t statusRegs;
 	std::copy(statusPacket.payload.begin(), statusPacket.payload.end(), statusRegs.array);
 	FILE_LOG(logDEBUG) << print_status_bank(statusRegs);
-
+	*/
 	return APSEthernet::SUCCESS;
 }
 
@@ -183,7 +185,7 @@ int APS2::set_sampleRate(const int & freq){
 	}
 }
 
-int APS2::get_sampleRate() const {
+int APS2::get_sampleRate() {
 	//Pass through to FPGA code
 	FILE_LOG(logDEBUG2) << "get_sampleRate";
 	int freq1 = get_PLL_freq();
@@ -506,7 +508,9 @@ int APS2::write_SPI(vector<uint32_t> & msg) {
 	packet.header.command.cnt = msg.size();
 	packet.payload = msg;
 
-	return APSEthernet::get_instance().send(deviceSerial_, packet);
+	APSEthernetPacket p = query(packet)[0];
+	// TODO: check ACK packet status
+	return 0;
 }
 
 uint32_t APS2::read_SPI(const CHIPCONFIG_IO_TARGET & target, const uint16_t & addr) {
@@ -543,36 +547,25 @@ uint32_t APS2::read_SPI(const CHIPCONFIG_IO_TARGET & target, const uint16_t & ad
 			FILE_LOG(logERROR) << "Invalid read_SPI target " << myhex << target;
 			return 0;
 	}
-	cmd.spicnt_data = 1; // request 1 byte
+	cmd.spicnt_data = 0; // zero indexed, so 0 = request 1 byte
 	vector<uint32_t> msg = {cmd.packed};
 
-	// push on "end of message"
-	cmd.packed = 0;
-	cmd.target = CHIPCONFIG_IO_TARGET_EOL;
-	msg.push_back(cmd.packed);
-
-	// build write packet (we are "writing" a read command to the SPI target)
-	APSEthernetPacket packet;
-	packet.header.command.r_w = 0;
-	packet.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::CHIPCONFIGIO);
-	packet.header.command.cnt = msg.size();
-	packet.payload = msg;
-
-	APSEthernetPacket p = query(packet)[0];
+	// write the SPI read instruction
+	write_SPI(msg);
 
 	// build read packet
+	APSEthernetPacket packet;
 	packet.header.command.r_w = 1;
-	packet.header.command.cnt = 1; // request 1 32-bit word (our 1 byte will be the MSB)
-	packet.payload.clear();
+	packet.header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::CHIPCONFIGIO);
+	packet.header.command.cnt = 1; // single word read
 
-	p = query(packet)[0];
-	cout << "read_SPI ACK packet size = " << p.payload.size() << endl;
+	APSEthernetPacket response = query(packet)[0];
 	// TODO: Check status bits
-	if (p.payload.size() == 0) {
+	if (response.payload.size() == 0) {
 		return 0;
 	} else {
-		cout << "read_SPI packet payload = " << p.payload[0] << endl;
-		return p.payload[0] >> 24;
+		FILE_LOG(logDEBUG4) << "read_SPI response payload = " << hexn<8> << response.payload[0] << endl;
+		return response.payload[0] >> 24; // response is in MSB of 32-bit word
 	}
 }
 
@@ -680,7 +673,7 @@ int APS2::write_SPI_setup() {
 
 int APS2::write_command(const APSCommand_t & command, const uint32_t & addr /* see header for default value = 0 */){
 	/*
-	* Write a single unaddressed command 
+	* Write a single command 
 	*/
 	//TODO: figure out move constructor
 	APSEthernetPacket packet(command, addr);
@@ -835,9 +828,8 @@ int APS2::set_PLL_freq(const int & freq) {
 
 	FILE_LOG(logDEBUG) << "Setting PLL FPGA: Freq.: " << freq;
 
-	//TODO: fix!
-	pllCyclesAddr = 0;
-	pllBypassAddr = 0;
+	pllCyclesAddr = 0x190;
+	pllBypassAddr = 0x191;
 
 	switch(freq) {
 //		case 40: pllCyclesVal = 0xEE; break; // 15 high / 15 low (divide by 30)
@@ -1188,27 +1180,20 @@ int APS2::read_PLL_status(const int & regAddr /*check header for default*/, cons
 	return pllStatus;
 }
 
-int APS2::get_PLL_freq() const {
+int APS2::get_PLL_freq() {
 	// Poll APS2 PLL chip to determine current frequency
 
 	int freq = 0;
-	/*
-	uint16_t pll_cycles_addr, pll_bypass_addr;
-	uint8_t pll_cycles_val, pll_bypass_val;
+	uint16_t pll_cycles_addr = 0x190;
+	uint16_t pll_bypass_addr = 0x191;
 
+	FILE_LOG(logDEBUG3) << "get_PLL_freq";
 
-	FILE_LOG(logDEBUG2) << "get_PLL_freq";
+	uint32_t pll_cycles_val = read_SPI(CHIPCONFIG_TARGET_PLL, pll_cycles_addr);
+	uint32_t pll_bypass_val = read_SPI(CHIPCONFIG_TARGET_PLL, pll_bypass_addr);
 
-	//TODO: get the right address
-	pll_cycles_addr = 0;
-	pll_bypass_addr = 0;
-
-	//TODO: fix me!
-	// socket_.read_SPI(CHIPCONFIG_TARGET_PLL, pll_cycles_addr, pll_cycles_val);
-	// socket_.read_SPI(CHIPCONFIG_TARGET_PLL, pll_bypass_addr, pll_bypass_val);
-
-	FILE_LOG(logDEBUG3) << "pll_cycles_val = " << (int)pll_cycles_val;
-	FILE_LOG(logDEBUG3) << "pll_bypass_val = " << (int)pll_bypass_val;
+	FILE_LOG(logDEBUG3) << "pll_cycles_val = " << hexn<2> << pll_cycles_val;
+	FILE_LOG(logDEBUG3) << "pll_bypass_val = " << hexn<2> << pll_bypass_val;
 
 	// select frequency based on pll cycles setting
 	// the values here should match the reverse lookup in FGPA::set_PLL_freq
@@ -1229,7 +1214,7 @@ int APS2::get_PLL_freq() const {
 	}
 
 	FILE_LOG(logDEBUG2) << "PLL frequency for FPGA:  Freq: " << freq;
-	*/
+
 	return freq;
 }
 

@@ -88,8 +88,6 @@ inline bool needs_address(APS_COMMANDS cmd){
 	switch (cmd) {
 		case APS_COMMANDS::RESET:
 		case APS_COMMANDS::STATUS:
-		case APS_COMMANDS::CHIPCONFIGIO:
-		case APS_COMMANDS::RUNCHIPCONFIG:
 			return false;
 		default:
 			return true;

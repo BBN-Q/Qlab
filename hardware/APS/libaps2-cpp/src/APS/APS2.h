@@ -26,7 +26,7 @@ public:
 	APSEthernet::EthernetError disconnect();
 
 	int init(const bool & = false, const int & bitFileNum = 0);
-	int reset(const APS_RESET_MODE_STAT & resetMode = APS_RESET_MODE_STAT::RECONFIG_USER_EPROM);
+	int reset(const APS_RESET_MODE_STAT & resetMode = APS_RESET_MODE_STAT::SOFT_RESET_HOST_USER);
 
 	int load_bitfile(const string &, const int &);
 	int program_FPGA(const int &);
@@ -42,7 +42,7 @@ public:
 	double get_uptime();
 
 	int set_sampleRate(const int &);
-	int get_sampleRate() const;
+	int get_sampleRate();
 
 	int set_trigger_source(const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source();
@@ -130,7 +130,7 @@ private:
 	int set_PLL_freq(const int &);
 	int test_PLL_sync(const int & numRetries = 2);
 	int read_PLL_status(const int & regAddr = FPGA_ADDR_PLL_STATUS, const vector<int> & pllLockBits = std::initializer_list<int>({PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT}));
-	int get_PLL_freq() const;
+	int get_PLL_freq();
 
 
 	int setup_VCXO();
