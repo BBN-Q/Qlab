@@ -56,7 +56,7 @@ int APS2::reset(const APS_RESET_MODE_STAT & resetMode /* default SOFT_RESET_HOST
 }
 
 int APS2::init(const bool & forceReload, const int & bitFileNum){
-	 //TODO: bitfiles will be stored in flash so all we need to do here is the DAC's
+	 //TODO: bitfiles will be stored in flash so all we need to do here is the DACs
 
 	if (forceReload || !read_PLL_status()) {
 		FILE_LOG(logINFO) << "Resetting instrument";
@@ -64,8 +64,9 @@ int APS2::init(const bool & forceReload, const int & bitFileNum){
 
 		// send hard reset to APS2
 		// this will reconfigure the DACs, PLL and VCX0 with EPROM settings
-		// reset();
-		// setup_PLL(); // not necessary when SPI startup is working
+		// reset(RECONFIG_USER_EPROM);
+		// alternatively, can just reconfigure the PLL and VCX0 from EPROM
+		// run_chip_config();
 
 		// sync DAC clock phase with PLL
 		int status = test_PLL_sync();
@@ -1356,6 +1357,24 @@ int APS2::setup_DAC(const int & dac)
 	// enable_DAC_FIFO(dac);
 
 	return 0;
+}
+
+int APS2::run_chip_config(const uint32_t & addr /* default = 0 */) {
+	FILE_LOG(logINFO) << "Running chip config from address " << hexn<8> << addr;
+	// construct the chip config command
+	APSEthernetPacket packet;
+	packet.header.command.r_w = 0;
+	packet.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::RUNCHIPCONFIG);
+	packet.header.command.cnt = 0;
+	packet.header.addr = addr;
+	APSEthernet::get_instance().send(deviceSerial_, packet);
+
+	//Retrieve the data packet(s)
+	auto response = read_packets(1)[0];
+	if (response.header.command.mode_stat == RUNCHIPCONFIG_SUCCESS) {
+		FILE_LOG(logDEBUG1) << "Chip config successful";
+	}
+	return response.header.command.mode_stat;
 }
 
 int APS2::enable_DAC_FIFO(const int & dac) {

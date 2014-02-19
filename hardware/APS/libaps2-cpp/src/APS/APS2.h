@@ -35,6 +35,7 @@ public:
 	int setup_VCXO() const;
 	int setup_PLL() const;
 	int setup_DACs();
+	int run_chip_config(const uint32_t & addr = 0x0);
 
 	APSStatusBank_t read_status_registers();
 	uint32_t read_status_register(const STATUS_REGISTERS &);
