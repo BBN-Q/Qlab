@@ -82,17 +82,19 @@ int main (int argc, char* argv[])
   // force initialize device
   initAPS(deviceSerial.c_str(), 1);
 
+  // bail here while testing
+  disconnect_APS(deviceSerial.c_str());
+  delete[] serialBuffer;
+  cout << concol::RED << "Finished!" << concol::RESET << endl;
+  return 0;
+
   //Do a soft reset
   // cout << concol::RED << "Soft reset of all logic..." << concol::RESET << endl;
-
   // reset(deviceSerial.c_str(), static_cast<int>(APS_RESET_MODE_STAT::SOFT_RESET_HOST_USER));
-
-  // cout << concol::RED << "Reset finished." << concol::RESET << endl;
 
   // uptime = get_uptime(deviceSerial.c_str());
 
   // cout << concol::RED << "Uptime for device " << deviceSerial << " is " << uptime << " seconds" << concol::RESET << endl;
-
 
   //Test single word read/write
   size_t numTests = 100;

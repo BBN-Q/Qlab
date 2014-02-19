@@ -44,7 +44,7 @@ int APS2::reset(const APS_RESET_MODE_STAT & resetMode /* default SOFT_RESET_HOST
 	command.mode_stat = static_cast<uint32_t>(resetMode);
 
 	write_command(command);
-	/*	
+	/*	TODO: re-enable this when the USER nonvolative image contains the UDP interface
 	// After being reset the board should send an acknowledge packet with status bytes
 	APSEthernetPacket statusPacket = query(command)[0];
 	//Copy the data back into the status type 
@@ -65,6 +65,7 @@ int APS2::init(const bool & forceReload, const int & bitFileNum){
 		// send hard reset to APS2
 		// this will reconfigure the DACs, PLL and VCX0 with EPROM settings
 		// reset();
+		// setup_PLL(); // not necessary when SPI startup is working
 
 		// sync DAC clock phase with PLL
 		int status = test_PLL_sync();
@@ -547,8 +548,12 @@ uint32_t APS2::read_SPI(const CHIPCONFIG_IO_TARGET & target, const uint16_t & ad
 			FILE_LOG(logERROR) << "Invalid read_SPI target " << myhex << target;
 			return 0;
 	}
-	cmd.spicnt_data = 0; // zero indexed, so 0 = request 1 byte
+	cmd.spicnt_data = 1; // request 1 byte
 	vector<uint32_t> msg = {cmd.packed};
+	// interface logic requires at least 3 bytes of data to return anything, so push on the same instruction twice more
+	msg.push_back(cmd.packed);
+	msg.push_back(cmd.packed);
+	msg.push_back(cmd.packed);
 
 	// write the SPI read instruction
 	write_SPI(msg);
@@ -565,7 +570,7 @@ uint32_t APS2::read_SPI(const CHIPCONFIG_IO_TARGET & target, const uint16_t & ad
 		return 0;
 	} else {
 		FILE_LOG(logDEBUG4) << "read_SPI response payload = " << hexn<8> << response.payload[0] << endl;
-		return response.payload[0] >> 24; // response is in MSB of 32-bit word
+		return response.payload[0] >> 24; // first response is in MSB of 32-bit word
 	}
 }
 
@@ -796,8 +801,8 @@ int APS2::setup_PLL() {
 	// int ddrMask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
 //	FPGA::clear_bit(socket_, FPGA_ADDR_CSR, ddrMask);
 	// disable dac FIFOs
-	for (int dac = 0; dac < NUM_CHANNELS; dac++)
-		disable_DAC_FIFO(dac);
+	// for (int dac = 0; dac < NUM_CHANNELS; dac++)
+		// disable_DAC_FIFO(dac);
 
 	vector<uint32_t> msg = build_PLL_SPI_msg(PLL_INIT);
 	write_SPI(msg);
@@ -853,8 +858,8 @@ int APS2::set_PLL_freq(const int & freq) {
 	//TODO: fix!
 //	FPGA::clear_bit(socket_, FPGA_ADDR_CSR, ddr_mask);
 	// disable DAC FIFOs
-	for (int dac = 0; dac < NUM_CHANNELS; dac++)
-		disable_DAC_FIFO(dac);
+	// for (int dac = 0; dac < NUM_CHANNELS; dac++)
+		// disable_DAC_FIFO(dac);
 
 	// Disable oscillator by clearing APS2_STATUS_CTRL register
 	//TODO: fix!
@@ -936,8 +941,8 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 	//TODO: fix!
 //	FPGA::clear_bit(socket_, FPGA_ADDR_CSR, ddr_mask);
 	// disable DAC FIFOs
-	for (int dac = 0; dac < NUM_CHANNELS; dac++)
-		disable_DAC_FIFO(dac);
+	// for (int dac = 0; dac < NUM_CHANNELS; dac++)
+		// disable_DAC_FIFO(dac);
 
 	//A little helper function to wait for the PLL's to lock and reset if necessary
 	auto wait_PLL_relock = [this, &pllResetBit](bool resetPLL, const int & regAddress, const vector<int> & pllBits) -> bool {
@@ -1198,7 +1203,7 @@ int APS2::get_PLL_freq() {
 	// select frequency based on pll cycles setting
 	// the values here should match the reverse lookup in FGPA::set_PLL_freq
 
-	if (pll_bypass_val == 0x80 && pll_cycles_val == 0x00)
+	if ((pll_bypass_val & 0x80) == 0x80 && pll_cycles_val == 0x00)
 		freq =  1200;
 	else {
 		switch(pll_cycles_val) {
