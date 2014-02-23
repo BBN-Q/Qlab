@@ -70,11 +70,12 @@ int main (int argc, char* argv[])
 
   cout << concol::RED << "Uptime for device " << deviceSerial << " is " << uptime << " seconds" << concol::RESET << endl;
 
-  uint32_t buffer[2] = {0, 0};
+  uint32_t buffer[3] = {0, 0, 0};
 
   // test reading from FLASH
-  read_flash(deviceSerial.c_str(), 0x00FF0000, 2, buffer);
-  cout << "Programmed MAC address at 0x00FF0000 is " << endl << hexn<8> << buffer[0] << " " << buffer[1] << endl;
+  read_flash(deviceSerial.c_str(), 0x00FF0000, 3, buffer);
+  cout << "Programmed ZRL MAC and IP address at 0x00FF0000 is " << endl << hexn<8> << buffer[0] << " " << buffer[1] << endl;
+  cout << std::dec << (buffer[2] >> 24) << "." << ((buffer[2] >> 16) & 0xFF) << "." << ((buffer[2] >> 8) & 0xFF) << "." << (buffer[2] & 0xFF) << endl;
 
   // read SPI setup sequence
   uint32_t setup[32];
@@ -88,12 +89,19 @@ int main (int argc, char* argv[])
   // write new SPI setup sequence
   // write_SPI_setup(deviceSerial.c_str());
 
+  // write a new MAC and IP address
+  vector<uint32_t> testData;
+  // testData.push_back(0x00223344);
+  // testData.push_back(0x55660000);
+  // testData.push_back(0xc0a8050a); // 192.168.5.10
+  // write_flash(deviceSerial.c_str(), 0x00FF0000, testData.data(), testData.size());
+  // testData.clear();
+
   cout << concol::RED << "Reading flash addr 0x00FA0000" << concol::RESET << endl;
   read_flash(deviceSerial.c_str(), 0x00FA0000, 2, buffer);
   cout << "Received " << hexn<8> << buffer[0] << " " << hexn<8> << buffer[1] << endl;
 
   cout << concol::RED << "Erasing/writing flash addr 0x00FA0000 (64 words)" << concol::RESET << endl;
-  vector<uint32_t> testData;
   for (size_t ct=0; ct<64; ct++){
     testData.push_back(0x00FA0000 + static_cast<uint32_t>(ct));
   } 
