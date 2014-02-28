@@ -22,6 +22,7 @@
 classdef MeasFilter < handle
     
     properties
+        digitizer_name
         channel
         latestData
         accumulatedData
@@ -53,6 +54,9 @@ classdef MeasFilter < handle
             end
             if isfield(settings, 'plotMode')
                 obj.plotMode = settings.plotMode;
+            end
+            if isfield(settings,'digitizer_name')
+                obj.digitizer_name=settings.digitizer_name;
             end
             if ~isempty(filter)
                 obj.childFilter = filter;

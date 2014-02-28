@@ -9,9 +9,9 @@ classdef uWSource < deviceDrivers.lib.deviceDriverBase
     % Device properties correspond to instrument parameters
     properties (Access = public, Abstract = true)
         output
-        frequency
-        power
-        phase
+        frequency % This is in GHz as of some crazy change.
+        power     % dB
+        phase    
         mod
         alc
         pulse

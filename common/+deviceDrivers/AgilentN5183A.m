@@ -129,7 +129,28 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             assert(isnumeric(value), 'Requires numeric input');
             obj.write(sprintf(':dm:iqad:qskew %d;', value));
         end
-
+                
+        function errs=check_errors(obj)
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % Check for errors
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%            
+            first=1;
+            errs=[];
+            while 1
+                a=query(obj,'SYST:ERR?');
+                loc=find(a==',');
+                errflag=str2num(a(1:(loc-1)));
+                if errflag == 0
+                    break;
+                end
+                errs=[errs errflag];
+                if first
+                  fprintf('Error occured on N5183\n')
+                  first=0;
+                end
+                fprintf('  -> "%s"\n',a);
+            end
+        end
     end % end instrument parameter accessors
     
     methods (Static)

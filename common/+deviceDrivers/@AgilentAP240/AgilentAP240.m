@@ -198,9 +198,16 @@ classdef AgilentAP240 < hgsetget
             else
                 options = 'CAL=FALSE';
             end
-
             [status instrumentID] = Aq_InitWithOptions(obj.resourceName, 0, 0, options);
-            assert(status == 0, 'Error in Aq_InitWithOptions: %d', status);
+            switch status
+                case 0
+                    ;
+                case -1074116402
+                    warning('Acqiris calibration failed.  Continuing\n');
+                otherwise
+                    [st,msg]=Aq_errorMessage(0,status);
+                    error(sprintf('Error in Aq_InitWithOptions (%d): %s\n',status,msg));
+            end
             AcquirisBeenCalibrated = false;
             
             obj.instrID  = instrumentID;
