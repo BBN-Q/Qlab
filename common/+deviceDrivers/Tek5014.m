@@ -28,6 +28,8 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
         triggerInterval % trigger rate for internal trigger
         runMode
         running
+        Length;	
+        
     end
     
     methods
@@ -284,7 +286,7 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
                 numTrys = numTrys+1;
                 t_start = clock;
                 while 1
-                    fprintf('waiting for AWG\n')
+%                    fprintf('waiting for AWG\n')
                     OperationState = obj.running;
                     if  OperationState > 0
                         success = 1;
@@ -377,6 +379,11 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
             val = str2double(temp);
         end
         
+        function val = get.Length(obj)
+            temp = obj.query('SEQ:Length?');
+            val = str2double(temp);
+        end
+
         % property set accessors
         
         function obj = set.triggerInterval(obj, interval)
