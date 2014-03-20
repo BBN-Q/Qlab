@@ -418,7 +418,7 @@ int APS2::set_run_mode(const RUN_MODE & mode) {
 // FPGA memory read/write
 int APS2::write_memory(const uint32_t & addr, const uint32_t & data){
 	//Create the vector and pass through
-	return write_memory(addr, {data});
+	return write_memory(addr, vector<uint32_t>({data}));
 }
 
 int APS2::write_memory(const uint32_t & addr, const vector<uint32_t> & data){
@@ -1457,9 +1457,12 @@ int APS2::write_sequence(const vector<uint32_t> & data) {
 int APS2::write_memory_map(const uint32_t & wfA, const uint32_t & wfB, const uint32_t & seq) { /* see header for defaults */
 	/* Writes the partitioning of external memory to registers. Takes 3 offsets 
 	 * (in bytes) for wfA/B and seq data */
+	FILE_LOG(logDEBUG2) << "Writing memory map with offsets wfA: " << wfA << ", wfB: " << wfB << ", seq: " << seq;
+
 	write_memory(WFA_OFFSET_ADDR, MEMORY_ADDR + wfA);
 	write_memory(WFB_OFFSET_ADDR, MEMORY_ADDR + wfB);
 	write_memory(SEQ_OFFSET_ADDR, MEMORY_ADDR + seq);
+
 	return 0;
 }
 
