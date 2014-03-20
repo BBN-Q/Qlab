@@ -108,8 +108,8 @@ int main (int argc, char* argv[])
   size_t numRight = 0;
   for (size_t ct = 0; ct < numTests; ++ct)
   {
-    write_memory(deviceSerial.c_str(), offset + 4*testAddrs[ct], 1, &testWords[ct]);
-    read_memory(deviceSerial.c_str(), offset + 4*testAddrs[ct], 1, &testInt);
+    write_memory(deviceSerial.c_str(), offset + 4*testAddrs[ct], &testWords[ct], 1);
+    read_memory(deviceSerial.c_str(), offset + 4*testAddrs[ct], &testInt, 1);
     // cout << "Address: " << testAddrs[ct] << " Wrote: " << testWords[ct] << " Read: " << testInt << endl;
     if (testInt != testWords[ct]){
       cout << concol::RED << "Failed write/read test!" << concol::RESET << endl;
@@ -127,8 +127,8 @@ int main (int argc, char* argv[])
   numRight = 0;
   for (size_t ct = 0; ct < numTests; ++ct)
   {
-    write_memory(deviceSerial.c_str(), offset + 4*testAddrs[ct], 1, &testWords[ct]);
-    read_memory(deviceSerial.c_str(), offset + 4*testAddrs[ct], 1, &testInt);
+    write_memory(deviceSerial.c_str(), offset + 4*testAddrs[ct], &testWords[ct], 1);
+    read_memory(deviceSerial.c_str(), offset + 4*testAddrs[ct], &testInt, 1);
     // cout << "Address: " << testAddrs[ct] << " Wrote: " << testWords[ct] << " Read: " << testInt << endl;
     if (testInt != testWords[ct]){
       cout << concol::RED << "Failed write/read test!" << concol::RESET << endl;
@@ -158,7 +158,7 @@ int main (int argc, char* argv[])
 
   start = std::chrono::steady_clock::now();
 
-  write_memory(deviceSerial.c_str(), offset + 4*startAddr, testSize, testWords.data());
+  write_memory(deviceSerial.c_str(), offset + 4*startAddr, testWords.data(), testSize);
 
   end = std::chrono::steady_clock::now();
   size_t elapsedTime =  std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
@@ -169,7 +169,7 @@ int main (int argc, char* argv[])
   for (size_t ct = 0; ct < 1000; ++ct)
   {
     uint32_t testAddr = startAddr + 16*(rand() % (testSize/16));
-    read_memory(deviceSerial.c_str(), offset + 4*testAddr, 1, &testInt);
+    read_memory(deviceSerial.c_str(), offset + 4*testAddr, &testInt, 1);
     // cout << "Address: " << myhex << testAddr << " Wrote: " << testWords[testAddr-startAddr] << " Read: " << testInt << endl;
     if (testInt != testWords[testAddr-startAddr]){
       cout << concol::RED << "Failed write/read test for address " << testAddr << concol::RESET << endl;

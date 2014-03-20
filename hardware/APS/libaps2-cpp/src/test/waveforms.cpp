@@ -105,7 +105,7 @@ int main (int argc, char* argv[])
   size_t numRight = 0;
   for (size_t ct = 0; ct < 64; ct++)
   {
-    read_memory(deviceSerial.c_str(), offset + 4*ct, 1, &testInt);
+    read_memory(deviceSerial.c_str(), offset + 4*ct, &testInt, 1);
     if ( testInt != ((wfmA[ct/2] << 16) & wfmA[ct/2]) ) {
       cout << concol::RED << "Failed read test at offset " << ct << concol::RESET << endl;
     }
@@ -119,7 +119,7 @@ int main (int argc, char* argv[])
   numRight = 0;
   for (size_t ct = 0; ct < 64; ct++)
   {
-    read_memory(deviceSerial.c_str(), offset + 1024 + 4*ct, 1, &testInt);
+    read_memory(deviceSerial.c_str(), offset + 1024 + 4*ct, &testInt, 1);
     if ( testInt != ((wfmB[ct/2] << 16) & wfmB[ct/2]) ) {
       cout << concol::RED << "Failed read test at offset " << ct << concol::RESET << endl;
     }

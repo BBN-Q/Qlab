@@ -81,8 +81,8 @@ EXPORT int set_logging_level(int);
 //EXPORT int save_bulk_state_file();
 //EXPORT int read_bulk_state_file();
 
-EXPORT int write_memory(const char *, uint32_t, uint32_t, uint32_t*);
-EXPORT int read_memory(const char *, uint32_t, uint32_t, uint32_t*);
+EXPORT int write_memory(const char *, uint32_t, uint32_t*, uint32_t);
+EXPORT int read_memory(const char *, uint32_t, uint32_t*, uint32_t);
 EXPORT int read_register(const char *, int);
 EXPORT int program_FPGA(const char *, int);
 
