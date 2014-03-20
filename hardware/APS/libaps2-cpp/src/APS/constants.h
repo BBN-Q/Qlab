@@ -215,21 +215,21 @@ enum CONFIGURATION_SOURCE {
 
 //FPGA registers
 //TODO: update for new memory map
-static const int REGISTER_ADDR      = 0x44A00000;
-static const int PLL_STATUS_ADDR    = REGISTER_ADDR + 0*4;
-static const int CACHE_CONTROL_ADDR = REGISTER_ADDR + 4*4;
-static const int WFA_OFFSET_ADDR    = REGISTER_ADDR + 5*4;
-static const int WFB_OFFSET_ADDR    = REGISTER_ADDR + 6*4;
-static const int SEQ_OFFSET_ADDR    = REGISTER_ADDR + 7*4;
-static const int SEQ_CONTROL_ADDR   = REGISTER_ADDR + 9*4;
-static const int ZERO_OUT_ADDR      = REGISTER_ADDR + 10*4;
-static const int TRIGGER_WORD_ADDR  = REGISTER_ADDR + 11*4;
-static const int TRIGGER_INTERVAL_ADDR = REGISTER_ADDR + 12*4;
+static const uint32_t REGISTER_ADDR      = 0x44A00000;
+static const uint32_t PLL_STATUS_ADDR    = REGISTER_ADDR + 0*4;
+static const uint32_t CACHE_CONTROL_ADDR = REGISTER_ADDR + 4*4;
+static const uint32_t WFA_OFFSET_ADDR    = REGISTER_ADDR + 5*4;
+static const uint32_t WFB_OFFSET_ADDR    = REGISTER_ADDR + 6*4;
+static const uint32_t SEQ_OFFSET_ADDR    = REGISTER_ADDR + 7*4;
+static const uint32_t SEQ_CONTROL_ADDR   = REGISTER_ADDR + 9*4;
+static const uint32_t ZERO_OUT_ADDR      = REGISTER_ADDR + 10*4;
+static const uint32_t TRIGGER_WORD_ADDR  = REGISTER_ADDR + 11*4;
+static const uint32_t TRIGGER_INTERVAL_ADDR = REGISTER_ADDR + 12*4;
 
-static const int MEMORY_ADDR = 0xC6000000;
-static const int WFA_OFFSET  = 0;
-static const int WFB_OFFSET  = 1024;
-static const int SEQ_OFFSET  = 2048;
+static const uint32_t MEMORY_ADDR = 0xC6000000;
+static const uint32_t WFA_OFFSET  = 0;
+static const uint32_t WFB_OFFSET  = 1024;
+static const uint32_t SEQ_OFFSET  = 2048;
 
 //Expected version
 static const int FIRMWARE_VERSION =  0x3;

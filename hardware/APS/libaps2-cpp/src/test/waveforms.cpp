@@ -81,7 +81,7 @@ int main (int argc, char* argv[])
   vector<short> wfmA;
   for (int a = 0; a < 8; a++) {
     for (int ct=0; ct < 16; ct++) {
-      wfmA[a*16 + ct] = (a/8)*8000;
+      wfmA.push_back((a/8)*8000);
     }
   }
   cout << concol::RED << "Uploading square waveforms to Ch A" << concol::RESET << endl;
@@ -90,7 +90,7 @@ int main (int argc, char* argv[])
   // ramp waveform
   vector<short> wfmB;
   for (int ct=0; ct < 128; ct++) {
-    wfmB[ct] = 8000*(ct/128);
+    wfmB.push_back(8000*(ct/128));
   }
   cout << concol::RED << "Uploading ramp waveform to Ch B" << concol::RESET << endl;
   set_waveform_int(deviceSerial.c_str(), 1, &wfmB[0], wfmB.size());
@@ -136,11 +136,11 @@ int main (int argc, char* argv[])
 
   run(deviceSerial.c_str());
 
-  std::this_thread::sleep_for(std::chrono::seconds(10));
+  std::this_thread::sleep_for(std::chrono::seconds(1));
 
   cout << concol::RED << "Stopping" << concol::RESET << endl;
 
-  stop(0);
+  stop(deviceSerial.c_str());
 
   disconnect_APS(deviceSerial.c_str());
   delete[] serialBuffer;

@@ -7,6 +7,7 @@
 
 PROJECT( libaps2 )
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+SET ( CMAKE_BUILD_TYPE Debug )
 
 #Look for hdf5 directly passed; otherwise look for system one
 if(NOT DEFINED HDF5_INCLUDE_DIR)
