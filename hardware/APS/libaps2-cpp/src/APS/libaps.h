@@ -59,7 +59,7 @@ EXPORT double get_trigger_interval(const char *);
 EXPORT int set_waveform_float(const char *, int, float*, int);
 EXPORT int set_waveform_int(const char *, int, short*, int);
 
-EXPORT int set_LL_data_IQ(const char *, int, int, unsigned short*, unsigned short*, unsigned short*, unsigned short*, unsigned short*);
+EXPORT int write_sequence(const char *, uint32_t*, uint32_t);
 
 EXPORT int set_run_mode(const char *, int);
 

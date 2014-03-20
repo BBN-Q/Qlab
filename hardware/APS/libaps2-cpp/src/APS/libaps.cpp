@@ -138,6 +138,11 @@ int set_waveform_int(const char * deviceSerial, int channelNum, short* data, int
 	return APSs[string(deviceSerial)].set_waveform(channelNum, vector<short>(data, data+numPts));
 }
 
+int write_sequence(const char * deviceSerial, uint32_t* data, uint32_t numWords) {
+	vector<uint32_t> dataVec(data, data+numWords);
+	return APSs[string(deviceSerial)].write_sequence(dataVec);
+}
+
 int load_sequence_file(const char * deviceSerial, const char * seqFile){
 	try {
 		return APSs[string(deviceSerial)].load_sequence_file(string(seqFile));
@@ -229,15 +234,6 @@ float get_channel_scale(const char * deviceSerial, int channelNum){
 }
 int get_channel_enabled(const char * deviceSerial, int channelNum){
 	return APSs[string(deviceSerial)].get_channel_enabled(channelNum);
-}
-
-int set_LL_data_IQ(const char * deviceSerial, int channelNum, int length, unsigned short* addr, unsigned short* count,
-					unsigned short* trigger1, unsigned short * trigger2, unsigned short* repeat){
-	//TODO: fix me!
-// 	//Convert data pointers to vectors and passed through
-// 	return APSs[string(deviceSerial)].set_LL_data(channelNum, WordVec(addr, addr+length), WordVec(count, count+length),
-// 			WordVec(trigger1, trigger1+length), WordVec(trigger2, trigger2+length), WordVec(repeat, repeat+length));
-	return 0;
 }
 
 int set_run_mode(const char * deviceSerial, int mode) {

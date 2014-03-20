@@ -215,51 +215,32 @@ enum CONFIGURATION_SOURCE {
 
 //FPGA registers
 //TODO: update for new memory map
-static const int FPGA_BANKSEL_CSR = (0 << 28);
-static const int FPGA_BANKSEL_WF_CHA = (1 << 28);
-static const int FPGA_BANKSEL_WF_CHB = (2 << 28);
-static const int FPGA_BANKSEL_LL_CHA = (3 << 28);
-static const int FPGA_BANKSEL_LL_CHB = (4 << 28);
+static const int REGISTER_ADDR      = 0x44A00000;
+static const int PLL_STATUS_ADDR    = REGISTER_ADDR + 0*4;
+static const int CACHE_CONTROL_ADDR = REGISTER_ADDR + 4*4;
+static const int WFA_OFFSET_ADDR    = REGISTER_ADDR + 5*4;
+static const int WFB_OFFSET_ADDR    = REGISTER_ADDR + 6*4;
+static const int SEQ_OFFSET_ADDR    = REGISTER_ADDR + 7*4;
+static const int SEQ_CONTROL_ADDR   = REGISTER_ADDR + 9*4;
+static const int ZERO_OUT_ADDR      = REGISTER_ADDR + 10*4;
+static const int TRIGGER_WORD_ADDR  = REGISTER_ADDR + 11*4;
+static const int TRIGGER_INTERVAL_ADDR = REGISTER_ADDR + 12*4;
 
-//Registers we write to
-static const int FPGA_ADDR_CSR 	  =   FPGA_BANKSEL_CSR | 0x0;
-static const int FPGA_ADDR_TRIG_INTERVAL = FPGA_BANKSEL_CSR | 0x1;
-static const int FPGA_ADDR_CHA_WF_LENGTH =  FPGA_BANKSEL_CSR | 0x3;
-static const int FPGA_ADDR_CHB_WF_LENGTH =  FPGA_BANKSEL_CSR | 0x4;
-static const int FPGA_ADDR_CHA_LL_LENGTH =  FPGA_BANKSEL_CSR | 0x5;
-static const int FPGA_ADDR_CHB_LL_LENGTH =  FPGA_BANKSEL_CSR | 0x6;
-static const int FPGA_ADDR_CHA_ZERO = FPGA_BANKSEL_CSR | 0x7; // DAC0/2 zero offset register
-static const int FPGA_ADDR_CHB_ZERO = FPGA_BANKSEL_CSR | 0x8; // DAC1/3 zero offset register
-static const int FPGA_ADDR_LL_REPEAT = FPGA_BANKSEL_CSR | 0x9;
+static const int MEMORY_ADDR = 0xC6000000;
+static const int WFA_OFFSET  = 0;
+static const int WFB_OFFSET  = 1024;
+static const int SEQ_OFFSET  = 2048;
 
-
-//Registers we read from
-static const int  FPGA_ADDR_VERSION  =   FPGA_BANKSEL_CSR | 0x10;
 //Expected version
 static const int FIRMWARE_VERSION =  0x3;
 
-static const int FPGA_ADDR_PLL_STATUS = FPGA_BANKSEL_CSR | 0x11;
-static const int FPGA_ADDR_CHA_LL_CURADDR = FPGA_BANKSEL_CSR | 0x12;
-static const int FPGA_ADDR_CHB_LL_CURADDR = FPGA_BANKSEL_CSR | 0x13;
-static const int FPGA_ADDR_CHA_MINILLSTART = FPGA_BANKSEL_CSR | 0x14;
-
-static const int FPGA_ADDR_A_PHASE = FPGA_BANKSEL_CSR | 0x15;
-static const int FPGA_ADDR_B_PHASE = FPGA_BANKSEL_CSR | 0x16;
-
-static const int CSRMSK_CHA_SMRSTN = 0x1; // state machine reset
+static const int CSRMSK_SM_ENABLE = 0x1; // state machine enable
 static const int CSRMSK_CHA_PLLRST = 0x2; // pll reset
-static const int CSRMSK_CHA_DDR = 0x4; // DDR enable
-static const int CSRMSK_CHA_TRIGSRC = 0x10; // trigger source (1 = external, 0 = internal)
-static const int CSRMSK_CHA_OUTMODE = 0x20; // output mode (1 = link list, 0 = waveform)
-static const int CSRMSK_CHA_REPMODE = 0x40; // LL repeat mode (1 = one-shot, 0 = continuous)
-
-static const int CSRMSK_CHB_SMRST = 0x100; // state machine reset
 static const int CSRMSK_CHB_PLLRST = 0x200; // pll reset
+static const int CSRMSK_CHA_DDR = 0x4; // DDR enable
 static const int CSRMSK_CHB_DDR = 0x400; // DDR enable
-static const int CSRMSK_CHB_TRIGSRC = 0x1000;
-static const int CSRMSK_CHB_OUTMODE = 0x2000;
-static const int CSRMSK_CHB_REPMODE = 0x4000;
-
+static const int CSRMSK_TRIGSRC = 0x10; // trigger source (1 = external, 0 = internal)
+static const int CSRMSK_OUTMODE = 0x20; // output mode (1 = link list, 0 = waveform)
 
 //PLL bits
 //TODO: update

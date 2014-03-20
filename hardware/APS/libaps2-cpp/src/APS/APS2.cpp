@@ -79,6 +79,8 @@ int APS2::init(const bool & forceReload, const int & bitFileNum){
 
 		// clear channel data
 		clear_channel_data();
+
+		write_memory_map();
 	}
 	samplingRate_ = get_sampleRate();
 
@@ -363,32 +365,8 @@ double APS2::get_trigger_interval() {
 
 
 int APS2::run() {
-	//Depending on how the channels are enabled, trigger the appropriate modules
-	vector<bool> channelsEnabled;
-	bool allChannels = true;
-	for (const auto tmpChannel : channels_){
-		channelsEnabled.push_back(tmpChannel.enabled_);
-		allChannels &= tmpChannel.enabled_;
-	}
-	
 	FILE_LOG(logDEBUG1) << "Releasing pulse sequencer state machine...";
-	/*
-	//If all channels are enabled then trigger together
-	if (allChannels) {
-		FPGA::set_bit(socket_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
-	}
-	else {
-		if (channelsEnabled[0] || channelsEnabled[1]) {
-			FPGA::set_bit(socket_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
-		}
-		if (channelsEnabled[2] || channelsEnabled[3]) {
-			FPGA::set_bit(socket_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN );
-		}
-	}
-	uint32_t CSR;
-	socket_.read_register(0, CSR);
-	FILE_LOG(logDEBUG2) << "Current CSR: " << CSR;
-	*/
+	write_memory(SEQ_CONTROL_ADDR, 1);
 	return 0;
 }
 
@@ -403,9 +381,8 @@ int APS2::stop() {
 	set_trigger_source(INTERNAL);
 	usleep(1000);
 
-	//Put the state machines back in reset
-//	FPGA::clear_bit(socket_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
-//	FPGA::clear_bit(socket_, FPGA_ADDR_CSR, CSRMSK_CHA_SMRSTN);
+	//Put the state machine back in reset
+	write_memory(SEQ_CONTROL_ADDR, 0);
 
 	// restore trigger state
 	set_trigger_interval(curTriggerInt);
@@ -436,22 +413,6 @@ int APS2::set_run_mode(const RUN_MODE & mode) {
 //	}
 
 	return 0;
-}
-
-
-int APS2::set_LLData_IQ(const vector<uint32_t> & instructions){
-
-	//We store the IQ linklist data in channel 1
-	std::copy(instructions.begin(), instructions.end(), channels_[0].LLBank_.begin());
-
-	//If we can fit it on then do so
-	if (instructions.size() < MAX_LL_LENGTH) {
-		write_LL_data_IQ(0, 0, instructions.size(), true );
-	}
-
-	return 0;
-
-
 }
 
 // FPGA memory read/write
@@ -1455,185 +1416,52 @@ int APS2::set_offset_register(const int & dac, const float & offset) {
 	return 0;
 }
 
-int APS2::write_waveform(const int & dac, const vector<short> & wfData) {
+int APS2::write_waveform(const int & ch, const vector<short> & wfData) {
 	/*Write waveform data to FPGA memory
-	 * dac = channel (0-3)
+	 * ch = channel (0-1)
 	 * wfData = signed short waveform data
 	 */
-/*
-	uint32_t tmpData, wfLength;
-	uint32_t sizeReg, startAddr;
-	//We assume the Channel object has properly formated the waveform
-	// setup register addressing based on DAC
-	switch(dac) {
-		case 0:
-		case 2:
-			sizeReg   = FPGA_ADDR_CHA_WF_LENGTH;
-			startAddr =  FPGA_BANKSEL_WF_CHA;
-			break;
-		case 1:
-		case 3:
-			sizeReg   = FPGA_ADDR_CHB_WF_LENGTH;
-			startAddr =  FPGA_BANKSEL_WF_CHB;
-			break;
-		default:
-			return -2;
-	}
+
+	uint32_t startAddr = (ch == 0) ? MEMORY_ADDR+WFA_OFFSET : MEMORY_ADDR+WFB_OFFSET;
 
 	//Waveform length used by FPGA must be an integer multiple of WF_MODULUS and is 0 counted
-	wfLength = wfData.size() / WF_MODULUS - 1;
-	FILE_LOG(logINFO) << "Loading Waveform length " << wfData.size() << " (FPGA count = " << wfLength << " ) into DAC " << dac;
+	// uint32_t wfLength = wfData.size() / WF_MODULUS - 1;
+	// FILE_LOG(logINFO) << "Loading Waveform length " << wfData.size() << " (FPGA count = " << wfLength << " ) into DAC " << dac;
 
-	//Write the waveform parameters
-	//TODO: fix me!
-	// socket_.write_register(sizeReg, wfLength);
+	// disable cache
+	write_memory(CACHE_CONTROL_ADDR, 0);
 
-	if (FILELog::ReportingLevel() >= logDEBUG2) {
-		//Double check it took
-		// socket_.read_register(sizeReg, tmpData);
-		FILE_LOG(logDEBUG2) << "Size set to: " << tmpData;
-		FILE_LOG(logDEBUG2) << "Loading waveform at " << myhex << startAddr;
-	}
+	FILE_LOG(logDEBUG2) << "Loading waveform at " << myhex << startAddr;
+	write_memory(startAddr, vector<uint32_t>(wfData.begin(), wfData.end()));
 
-	//Format the data and add to write queue
-	//TODO: check data alignment from 16 to 32 bit
-	write(startAddr, vector<uint32_t>(wfData.begin(), wfData.end()));
-*/
+	// enable cache
+	write_memory(CACHE_CONTROL_ADDR, 1);
+
 	return 0;
 }
 
+int APS2::write_sequence(const vector<uint32_t> & data) {
+	FILE_LOG(logDEBUG2) << "Loading sequence of length " << data.size();
 
-int APS2::write_LL_data_IQ(const uint32_t & startAddr, const size_t & startIdx, const size_t & stopIdx, const bool & writeLengthFlag ){
+	// disable cache
+	write_memory(CACHE_CONTROL_ADDR, 0);
 
-	//TODO: this should get much simpler as this was mainly for streaming.
+	write_memory(MEMORY_ADDR+SEQ_OFFSET, data);
 
-	/*
+	// enable cache
+	write_memory(CACHE_CONTROL_ADDR, 1);
 
-	//We store the IQ linklist data in channels 1 and 3
-	int dataChan;
-	dataChan = 0;
-	
-	FILE_LOG(logDEBUG) << "Writing LL Data with Start Addr=" << startAddr << "; startIdx=" << startIdx << "; stopIdx=" << stopIdx;
-	size_t entriesToWrite;
-	if (stopIdx > startIdx){
-		entriesToWrite = stopIdx-startIdx;
-	}
-	else{
-		// must be wrapping around the end, compute the modular distance
-		entriesToWrite = mymod(static_cast<int>(stopIdx)-static_cast<int>(startIdx), static_cast<int>(channels_[dataChan].LLBank_.length));
-	}
-
-	FILE_LOG(logDEBUG1) << "Writing LL Data for Channel: " << dataChan << "; Length: " << entriesToWrite;
-
-	WordVec writeData;
-
-	//Sort out whether we'll have to wrap around the top of the memory
-	if ( (startAddr+entriesToWrite) > MAX_LL_LENGTH){
-		//Pull out the first segment
-		size_t tmpStopIdx = ((MAX_LL_LENGTH-startAddr) + startIdx)%channels_[dataChan].LLBank_.length;
-		writeData = channels_[dataChan].LLBank_.get_packed_data(startIdx, tmpStopIdx);
-		//queue it
-		write(FPGA_BANKSEL_LL_CHA | startAddr, writeData, true);
-		//the second segment is written to the top of the memory (startAddr = 0)
-		writeData = channels_[dataChan].LLBank_.get_packed_data(tmpStopIdx, stopIdx);
-		write(FPGA_BANKSEL_LL_CHA | 0, writeData, true);
-	}
-	else{
-		writeData = channels_[dataChan].LLBank_.get_packed_data(startIdx, stopIdx);
-		write(FPGA_BANKSEL_LL_CHA | startAddr, writeData, true);
-	}
-
-	//If necessary write the LL length register
-	if (writeLengthFlag){
-		FILE_LOG(logDEBUG2) << "Writing Link List Length: " << myhex << stopIdx << " at address: " << FPGA_ADDR_CHA_LL_LENGTH;
-		write(FPGA_ADDR_CHA_LL_LENGTH, stopIdx-1, true);
-	}
-
-	//Flush the queue to the device
-	flush_write_queue();
-	*/
 	return 0;
 }
 
-//int APS2::write_LL_data(const int & dac, const int & bankNum, const int & targetBank) {
-	/*
-	 * write_LL_data
-	 * dac = channel (0-3)
-	 * bankNum = LL bank number to load (having previously been stored in the driver with add_LL_bank()
-	 * targetBank = where to load the bank (0 = bank A, 1 = bank B)
-	 */
-	//TODO: make work
-	/*
-
-	int startAddr;
-	int sizeReg;
-
-	FPGASELECT fpga = dac2fpga(dac);
-	if (fpga == INVALID_FPGA) {
-		return -1;
-	}
-
-	// setup register addressing based on DAC
-	switch(dac) {
-		case 0:
-		case 2:
-			if (targetBank == 0) {
-				startAddr = FPGA_ADDR_CHA_LL_A_WRITE;
-				sizeReg = FPGA_OFF_CHA_LL_A_CTRL;
-			} else {
-				startAddr = FPGA_ADDR_CHA_LL_B_WRITE;
-				sizeReg = FPGA_OFF_CHA_LL_B_CTRL;
-			}
-			break;
-		case 1:
-		case 3:
-			if (targetBank == 0) {
-				startAddr    = FPGA_ADDR_CHB_LL_A_WRITE;
-				sizeReg = FPGA_OFF_CHB_LL_A_CTRL;
-			} else {
-				startAddr = FPGA_ADDR_CHB_LL_B_WRITE;
-				sizeReg = FPGA_OFF_CHB_LL_B_CTRL;
-			}
-			break;
-		default:
-			return -2;
-	}
-
-	size_t bankLength = channels_[dac].banks_[bankNum].length;
-
-	if ( int(bankLength) > MAX_LL_LENGTH)  {
-		return -3;
-	}
-	FILE_LOG(logINFO) << "Loading LinkList length " << bankLength << " into DAC " << dac << " bank " << bankNum << " targetBank " << targetBank;
-
-	//Set the link list size
-	int lastElementOffset = (targetBank==0) ? (bankLength-1) : (bankLength-1) + MAX_LL_LENGTH ;
-
-	FILE_LOG(logDEBUG2) << "Writing Link List Control Reg: " << myhex << sizeReg << " = " << lastElementOffset;
-
-	// clear checksums
-	if (FILELog::ReportingLevel() >= logDEBUG) {
-		reset_checksums(fpga);
-	}
-
-	// write control reg
-	write(fpga, sizeReg, lastElementOffset, true);
-
-	//Write the LL data and flush to device
-	write(fpga, startAddr, channels_[dac].banks_[bankNum].get_packed_data(), true);
-	flush_write_queue();
-
-	// verify the checksum if we are in sufficient debug mode
-	if (FILELog::ReportingLevel() >= logDEBUG) {
-		if (!verify_checksums(fpga)){
-			FILE_LOG(logERROR) << "Checksums didn't match after writing LL data";
-			return -2;
-		}
-	}
+int APS2::write_memory_map(const uint32_t & wfA, const uint32_t & wfB, const uint32_t & seq) { /* see header for defaults */
+	/* Writes the partitioning of external memory to registers. Takes 3 offsets 
+	 * (in bytes) for wfA/B and seq data */
+	write_memory(WFA_OFFSET_ADDR, MEMORY_ADDR + wfA);
+	write_memory(WFB_OFFSET_ADDR, MEMORY_ADDR + wfB);
+	write_memory(SEQ_OFFSET_ADDR, MEMORY_ADDR + seq);
 	return 0;
-
 }
-	*/
 
 //TODO: implement
 /*
