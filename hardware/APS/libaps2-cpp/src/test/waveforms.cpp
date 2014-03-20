@@ -25,6 +25,23 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
   return std::find(begin, end, option) != end;
 }
 
+vector<uint32_t> read_seq_file(string fileName) {
+  std::ifstream FID (fileName, std::ios::in);
+  if (!FID.is_open()){
+    throw runtime_error("Unable to open file.");
+  }
+  vector<uint32_t> data;
+  string line;
+  while (FID >> line) {
+    data.push_back(0);
+    data.push_back(std::stoul(line.substr(0, 8)));
+    data.push_back(std::stoul(line.substr(8, 8)));
+    data.push_back(std::stoul(line.substr(16, 8)));
+  }
+  FID.close();
+  return data;
+}
+
 
 int main (int argc, char* argv[])
 {
@@ -75,38 +92,52 @@ int main (int argc, char* argv[])
   // force initialize device
   initAPS(deviceSerial.c_str(), 1);
 
+  // check that memory map was written
+  uint32_t testInt;
+  read_memory(deviceSerial.c_str(), WFA_OFFSET_ADDR, &testInt, 1);
+  cout << "wfA offset: " << testInt - MEMORY_ADDR << endl;
+  read_memory(deviceSerial.c_str(), WFB_OFFSET_ADDR, &testInt, 1);
+  cout << "wfB offset: " << testInt - MEMORY_ADDR << endl;
+  read_memory(deviceSerial.c_str(), SEQ_OFFSET_ADDR, &testInt, 1);
+  cout << "seq offset: " << testInt - MEMORY_ADDR << endl;
+
   // upload test waveforms to A and B
 
   // square waveforms of increasing amplitude
   vector<short> wfmA;
-  for (int a = 0; a < 8; a++) {
+  for (short a = 0; a < 8; a++) {
     for (int ct=0; ct < 16; ct++) {
-      wfmA.push_back((a/8)*8000);
+      wfmA.push_back(a*1000);
     }
   }
   cout << concol::RED << "Uploading square waveforms to Ch A" << concol::RESET << endl;
-  set_waveform_int(deviceSerial.c_str(), 0, &wfmA[0], wfmA.size());
+  set_waveform_int(deviceSerial.c_str(), 0, wfmA.data(), wfmA.size());
   
   // ramp waveform
   vector<short> wfmB;
-  for (int ct=0; ct < 128; ct++) {
-    wfmB.push_back(8000*(ct/128));
+  for (short ct=0; ct < 128; ct++) {
+    wfmB.push_back(62*ct);
   }
   cout << concol::RED << "Uploading ramp waveform to Ch B" << concol::RESET << endl;
-  set_waveform_int(deviceSerial.c_str(), 1, &wfmB[0], wfmB.size());
+  set_waveform_int(deviceSerial.c_str(), 1, wfmB.data(), wfmB.size());
+
+  // check that cache controller was enabled
+  read_memory(deviceSerial.c_str(), CACHE_CONTROL_ADDR, &testInt, 1);
+  cout << "Cache control reg: " << hexn<8> << testInt << endl;
 
   // this data should appear in the cache a few microseconds later... read back the cache data??
 
-  // uint32_t offset = std::stoul("80000000",0 ,16);
-  uint32_t offset = 0xC6000000;
-  uint32_t testInt;
+  // uint32_t offset = 0xC6000000;
+  uint32_t offset;
 
   // test wfA cache
   size_t numRight = 0;
+  // offset = 0xC6000000u;
+  offset = 0xC0000000u;
   for (size_t ct = 0; ct < 64; ct++)
   {
     read_memory(deviceSerial.c_str(), offset + 4*ct, &testInt, 1);
-    if ( testInt != ((wfmA[ct/2] << 16) & wfmA[ct/2]) ) {
+    if ( testInt != ((wfmA[ct*2] << 16) | wfmA[ct*2+1]) ) {
       cout << concol::RED << "Failed read test at offset " << ct << concol::RESET << endl;
     }
     else{
@@ -116,11 +147,13 @@ int main (int argc, char* argv[])
   cout << concol::RED << "Waveform A single word write/read " << 100*static_cast<double>(numRight)/64 << "% correct" << concol::RESET << endl;;
   
   // test wfB cache
+  offset = 0xC2000000u;
+  // offset = 0xC6000400u;
   numRight = 0;
   for (size_t ct = 0; ct < 64; ct++)
   {
-    read_memory(deviceSerial.c_str(), offset + 1024 + 4*ct, &testInt, 1);
-    if ( testInt != ((wfmB[ct/2] << 16) & wfmB[ct/2]) ) {
+    read_memory(deviceSerial.c_str(), offset + 4*ct, &testInt, 1);
+    if ( testInt != ((wfmB[ct*2] << 16) | wfmB[ct*2+1]) ) {
       cout << concol::RED << "Failed read test at offset " << ct << concol::RESET << endl;
     }
     else{

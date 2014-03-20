@@ -1432,7 +1432,11 @@ int APS2::write_waveform(const int & ch, const vector<short> & wfData) {
 	write_memory(CACHE_CONTROL_ADDR, 0);
 
 	FILE_LOG(logDEBUG2) << "Loading waveform at " << myhex << startAddr;
-	write_memory(startAddr, vector<uint32_t>(wfData.begin(), wfData.end()));
+	vector<uint32_t> packedData;
+	for (size_t ct=0; ct < wfData.size(); ct += 2) {
+		packedData.push_back(((uint32_t)wfData[ct] << 16) | (uint32_t)wfData[ct+1]);
+	}
+	write_memory(startAddr, packedData);
 
 	// enable cache
 	write_memory(CACHE_CONTROL_ADDR, 1);

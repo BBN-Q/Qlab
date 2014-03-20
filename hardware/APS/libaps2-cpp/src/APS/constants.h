@@ -215,7 +215,7 @@ enum CONFIGURATION_SOURCE {
 
 //FPGA registers
 //TODO: update for new memory map
-static const uint32_t REGISTER_ADDR      = 0x44A00000;
+static const uint32_t REGISTER_ADDR      = 0x44A00000u;
 static const uint32_t PLL_STATUS_ADDR    = REGISTER_ADDR + 0*4;
 static const uint32_t CACHE_CONTROL_ADDR = REGISTER_ADDR + 4*4;
 static const uint32_t WFA_OFFSET_ADDR    = REGISTER_ADDR + 5*4;
@@ -226,7 +226,7 @@ static const uint32_t ZERO_OUT_ADDR      = REGISTER_ADDR + 10*4;
 static const uint32_t TRIGGER_WORD_ADDR  = REGISTER_ADDR + 11*4;
 static const uint32_t TRIGGER_INTERVAL_ADDR = REGISTER_ADDR + 12*4;
 
-static const uint32_t MEMORY_ADDR = 0xC6000000;
+static const uint32_t MEMORY_ADDR = 0xC6000000u;
 static const uint32_t WFA_OFFSET  = 0;
 static const uint32_t WFB_OFFSET  = 1024;
 static const uint32_t SEQ_OFFSET  = 2048;
