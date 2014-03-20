@@ -57,6 +57,10 @@ ADD_EXECUTABLE(test
 	./test/main.cpp
 )
 
+ADD_EXECUTABLE(waveforms
+	./test/waveforms.cpp
+)
+
 ADD_EXECUTABLE(flash
 	./test/flash.cpp
 )
@@ -86,6 +90,7 @@ ADD_EXECUTABLE(reset
 
 TARGET_LINK_LIBRARIES(test aps2)
 TARGET_LINK_LIBRARIES(flash aps2)
+TARGET_LINK_LIBRARIES(waveforms aps2)
 TARGET_LINK_LIBRARIES(reset aps2)
 
 if(WIN32)

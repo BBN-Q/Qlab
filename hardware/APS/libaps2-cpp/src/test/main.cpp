@@ -3,9 +3,6 @@
 #include "headings.h"
 #include "libaps.h"
 #include "constants.h"
-// #include <thread>
-// #include <string>
-// #include <algorithm>
 
 #include <concol.h> 
 
@@ -43,11 +40,7 @@ int main (int argc, char* argv[])
 
   set_logging_level(dbgLevel);
 
-  // lookup based on device name
-  //string dev("\\Device\\NPF_{F47ACE9E-1961-4A8E-BA14-2564E3764BFA}");
-  
-  // lookup based on description
-  // string dev("Intel(R) 82579LM Gigabit Network Connection");
+  // init doesn't use this parameter anymore... should really change the interface
   string dev("eth0");
   
   cout << concol::RED << "Attempting to initialize libaps" << concol::RESET << endl;
@@ -82,7 +75,7 @@ int main (int argc, char* argv[])
   // force initialize device
   initAPS(deviceSerial.c_str(), 1);
 
-  // bail here while testing
+  // // bail here while testing
   disconnect_APS(deviceSerial.c_str());
   delete[] serialBuffer;
   cout << concol::RED << "Finished!" << concol::RESET << endl;
@@ -104,12 +97,12 @@ int main (int argc, char* argv[])
   for (size_t ct = 0; ct < numTests; ++ct)
   {
     testAddrs.push_back(rand() % maxAddr);
-    testWords.push_back(rand() % 4294967296);
+    testWords.push_back(rand() % 4294967296U);
   }
 
   cout << concol::RED << "Testing single word write/read on Waveform A" << concol::RESET << endl;;
 
-  uint32_t offset = std::stoul("c0000000",0 ,16);
+  uint32_t offset = std::stoul("80000000",0 ,16);
   uint32_t testInt;
 
   size_t numRight = 0;
@@ -146,6 +139,9 @@ int main (int argc, char* argv[])
   }
   cout << concol::RED << "Waveform B single word write/read " << 100*static_cast<double>(numRight)/numTests << "% correct" << concol::RESET << endl;;
 
+
+  offset = std::stoul("80000000",0 ,16);
+
   //Multi-word write/read tests
   //Start somewhere in the lower half of a memory block and write a random amount from a quarter to half the RAM
   testWords.clear();
@@ -170,13 +166,13 @@ int main (int argc, char* argv[])
   cout << concol::RED << "Long write took " << static_cast<double>(elapsedTime)/1000 << concol::RESET << endl;
 
   //Now make a few random reads to confirm
-  for (size_t ct = 0; ct < 100; ++ct)
+  for (size_t ct = 0; ct < 1000; ++ct)
   {
-    uint32_t testAddr = startAddr + rand() % testSize;
+    uint32_t testAddr = startAddr + 16*(rand() % (testSize/16));
     read_memory(deviceSerial.c_str(), offset + 4*testAddr, 1, &testInt);
     // cout << "Address: " << myhex << testAddr << " Wrote: " << testWords[testAddr-startAddr] << " Read: " << testInt << endl;
     if (testInt != testWords[testAddr-startAddr]){
-      cout << concol::RED << "Failed write/read test!" << concol::RESET << endl;
+      cout << concol::RED << "Failed write/read test for address " << testAddr << concol::RESET << endl;
     }
   }
 
