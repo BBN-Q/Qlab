@@ -217,6 +217,7 @@ enum CONFIGURATION_SOURCE {
 //TODO: update for new memory map
 static const uint32_t REGISTER_ADDR      = 0x44A00000u;
 static const uint32_t PLL_STATUS_ADDR    = REGISTER_ADDR + 0*4;
+static const uint32_t CACHE_STATUS_ADDR  = REGISTER_ADDR + 3*4;
 static const uint32_t CACHE_CONTROL_ADDR = REGISTER_ADDR + 4*4;
 static const uint32_t WFA_OFFSET_ADDR    = REGISTER_ADDR + 5*4;
 static const uint32_t WFB_OFFSET_ADDR    = REGISTER_ADDR + 6*4;

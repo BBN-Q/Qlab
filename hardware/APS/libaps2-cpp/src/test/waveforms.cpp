@@ -101,25 +101,34 @@ int main (int argc, char* argv[])
   read_memory(deviceSerial.c_str(), SEQ_OFFSET_ADDR, &testInt, 1);
   cout << "seq offset: " << testInt - MEMORY_ADDR << endl;
 
+  read_memory(deviceSerial.c_str(), CACHE_STATUS_ADDR, &testInt, 1);
+  cout << "Initial cache status reg: " << hexn<8> << testInt << endl;
+
   // upload test waveforms to A and B
 
   // square waveforms of increasing amplitude
   vector<short> wfmA;
   for (short a = 0; a < 8; a++) {
-    for (int ct=0; ct < 16; ct++) {
+    for (int ct=0; ct < 32; ct++) {
       wfmA.push_back(a*1000);
     }
   }
   cout << concol::RED << "Uploading square waveforms to Ch A" << concol::RESET << endl;
   set_waveform_int(deviceSerial.c_str(), 0, wfmA.data(), wfmA.size());
+
+  read_memory(deviceSerial.c_str(), CACHE_STATUS_ADDR, &testInt, 1);
+  cout << "Cache status reg after wfA write: " << hexn<8> << testInt << endl;
   
   // ramp waveform
   vector<short> wfmB;
-  for (short ct=0; ct < 128; ct++) {
-    wfmB.push_back(62*ct);
+  for (short ct=0; ct < 256; ct++) {
+    wfmB.push_back(31*ct);
   }
   cout << concol::RED << "Uploading ramp waveform to Ch B" << concol::RESET << endl;
   set_waveform_int(deviceSerial.c_str(), 1, wfmB.data(), wfmB.size());
+
+  read_memory(deviceSerial.c_str(), CACHE_STATUS_ADDR, &testInt, 1);
+  cout << "Cache status reg after wfB write: " << hexn<8> << testInt << endl;
 
   // check that cache controller was enabled
   read_memory(deviceSerial.c_str(), CACHE_CONTROL_ADDR, &testInt, 1);
@@ -147,8 +156,8 @@ int main (int argc, char* argv[])
   cout << concol::RED << "Waveform A single word write/read " << 100*static_cast<double>(numRight)/64 << "% correct" << concol::RESET << endl;;
   
   // test wfB cache
-  offset = 0xC2000000u;
   // offset = 0xC6000400u;
+  offset = 0xC2000000u;
   numRight = 0;
   for (size_t ct = 0; ct < 64; ct++)
   {
@@ -162,8 +171,10 @@ int main (int argc, char* argv[])
   }
   cout << concol::RED << "Waveform B single word write/read " << 100*static_cast<double>(numRight)/64 << "% correct" << concol::RESET << endl;;
   
-  // load sequence data
-  // TODO...
+  cout << concol::RED << "Writing sequence data" << concol::RESET << endl;
+  
+  vector<uint32_t> seq = read_seq_file("../../examples/simpleSeq.dat");
+  write_sequence(deviceSerial.c_str(), seq.data(), seq.size());
 
   cout << concol::RED << "Starting" << concol::RESET << endl;
 
