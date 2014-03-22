@@ -272,8 +272,8 @@ int read_memory(const char * deviceSerial, uint32_t addr, uint32_t* data, uint32
 // 	return APSRack_.read_register(string(deviceSerial), addr);
 // }
 
-int program_FPGA(const char * deviceSerial, int bitFileNum) {
-	return APSs[string(deviceSerial)].program_FPGA(bitFileNum);
+int program_FPGA(const char * deviceSerial, const char * bitFile) {
+	return APSs[string(deviceSerial)].program_FPGA(string(bitFile));
 }
 
 int write_flash(const char * deviceSerial, uint32_t addr, uint32_t* data, uint32_t numWords) {

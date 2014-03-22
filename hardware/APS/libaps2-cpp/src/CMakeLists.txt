@@ -70,6 +70,10 @@ ADD_EXECUTABLE(reset
 	./test/reset.cpp
 )
 
+ADD_EXECUTABLE(program
+	./test/program.cpp
+)
+
 #ADD_EXECUTABLE(echo
 #	./test/echo.cpp
 #	./APS/APSEthernet.cpp 
@@ -93,6 +97,7 @@ TARGET_LINK_LIBRARIES(test aps2)
 TARGET_LINK_LIBRARIES(flash aps2)
 TARGET_LINK_LIBRARIES(waveforms aps2)
 TARGET_LINK_LIBRARIES(reset aps2)
+TARGET_LINK_LIBRARIES(program aps2)
 
 if(WIN32)
 TARGET_LINK_LIBRARIES(aps2 hdf5	hdf5_cpp ws2_32)

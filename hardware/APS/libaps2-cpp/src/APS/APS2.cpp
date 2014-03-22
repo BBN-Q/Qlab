@@ -120,48 +120,48 @@ double APS2::get_uptime(){
 	return static_cast<double>(statusRegs.uptimeSeconds) + modf(static_cast<double>(statusRegs.uptimeNanoSeconds)/1e9, &intPart);
 }
 
-int APS2::program_FPGA(const int & bitFileNum) {
-	/**
-	 * @param bitFile path to a Xilinx bit file
-	 * @param expectedVersion - checks whether version register matches this value after programming. -1 = skip the check
-	 */
-	//TODO: fix and move to load_bitfile
-
-	/*
-	//Open the bitfile
-	//
+int APS2::store_image(const string & bitFile, const int & position) { /* see header for position default = 0 */
 	FILE_LOG(logDEBUG) << "Opening bitfile: " << bitFile;
+
 	std::ifstream FID (bitFile, std::ios::in|std::ios::binary);
-	//Get the size
 	if (!FID.is_open()){
 		FILE_LOG(logERROR) << "Unable to open bitfile: " << bitFile;
-		throw runtime_error("Unable to open bitfile.");
+		return -1; // TODO return a proper error code
 	}
 
 	//Copy over the file data to the data vector
 	//The default istreambuf_iterator constructor returns the "end-of-stream" iterator.
-	vector<uint8_t> fileData((std::istreambuf_iterator<char>(FID)), std::istreambuf_iterator<char>());
-	size_t numBytes = fileData.size();
-	FILE_LOG(logDEBUG) << "Read " << numBytes << " bytes from bitfile";
+	vector<uint32_t> fileData((std::istreambuf_iterator<char>(FID)), std::istreambuf_iterator<char>());
 
-	//Pass of the data to a lower-level function to actually push it to the FPGA
-	int bytesProgrammed = socket_.program_FPGA(fileData);
-
-	socket_.select_FPGA_image();
-
-	if (bytesProgrammed == EthernetControl::SUCCESS && expectedVersion != -1) {
-		// Read Bit File Version
-		int version;
-		bool ok = false;
-		for (int ct = 0; ct < 20 && !ok; ct++) {
-			version =  get_bitfile_version();
-			if (version == expectedVersion) ok = true;
-			usleep(1000); // if doesn't match, wait a bit and try again
-		}
-		if (!ok) return -11;
+	uint32_t addr = 0; // todo: make start address depend on position
+	auto packets = pack_data(addr, fileData);
+	for (auto & packet : packets) {
+		packet.header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::FPGACONFIG_NACK);
 	}
-	*/
-	return 0;
+	return APSEthernet::get_instance().send(deviceSerial_, packets);
+}
+
+int APS2::select_image(const int & bitFileNum) {
+	FILE_LOG(logINFO) << "Selecting bitfile number " << bitFileNum;
+
+	uint32_t addr = 0; // todo: make start address depend on bitFileNum
+
+	APSEthernetPacket packet;
+	packet.header.command.r_w = 0;
+	packet.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::FPGACONFIG_CTRL);
+	packet.header.command.cnt = 0;
+	packet.header.addr = addr;
+
+	return APSEthernet::get_instance().send(deviceSerial_, packet);
+}
+
+int APS2::program_FPGA(const string & bitFile) {
+	/**
+	 * @param bitFile path to a Xilinx bit file
+	 * @param expectedVersion - checks whether version register matches this value after programming. -1 = skip the check
+	 */
+	store_image(bitFile);
+	return select_image(0);
 }
 
 int APS2::get_bitfile_version() {

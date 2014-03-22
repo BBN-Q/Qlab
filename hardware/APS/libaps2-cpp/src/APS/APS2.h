@@ -28,8 +28,9 @@ public:
 	int init(const bool & = false, const int & bitFileNum = 0);
 	int reset(const APS_RESET_MODE_STAT & resetMode = APS_RESET_MODE_STAT::SOFT_RESET_HOST_USER);
 
-	int load_bitfile(const string &, const int &);
-	int program_FPGA(const int &);
+	int store_image(const string & bitFile, const int & position = 0);
+	int select_image(const int &);
+	int program_FPGA(const string &);
 	int get_bitfile_version();
 
 	int setup_VCXO() const;
