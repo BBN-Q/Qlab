@@ -33,10 +33,10 @@ vector<uint32_t> read_seq_file(string fileName) {
   vector<uint32_t> data;
   string line;
   while (FID >> line) {
+    data.push_back(std::stoul(line.substr(16, 8), NULL, 16));
+    data.push_back(std::stoul(line.substr(8, 8), NULL, 16));
+    data.push_back(std::stoul(line.substr(0, 8), NULL, 16));
     data.push_back(0);
-    data.push_back(std::stoul(line.substr(0, 8)));
-    data.push_back(std::stoul(line.substr(8, 8)));
-    data.push_back(std::stoul(line.substr(16, 8)));
   }
   FID.close();
   return data;
@@ -101,8 +101,17 @@ int main (int argc, char* argv[])
   read_memory(deviceSerial.c_str(), SEQ_OFFSET_ADDR, &testInt, 1);
   cout << "seq offset: " << testInt - MEMORY_ADDR << endl;
 
+  // stop pulse sequencer and cache controller
+  stop(deviceSerial.c_str());
+  testInt = 0;
+  write_memory(deviceSerial.c_str(), CACHE_CONTROL_ADDR, &testInt, 1);
+
+  read_memory(deviceSerial.c_str(), CACHE_CONTROL_ADDR, &testInt, 1);
+  cout << "Initial cache control reg: " << hexn<8> << testInt << endl;
   read_memory(deviceSerial.c_str(), CACHE_STATUS_ADDR, &testInt, 1);
   cout << "Initial cache status reg: " << hexn<8> << testInt << endl;
+  read_memory(deviceSerial.c_str(), PLL_STATUS_ADDR, &testInt, 1);
+  cout << "Initial DMA status reg: " << hexn<8> << testInt << endl;
 
   // upload test waveforms to A and B
 
@@ -118,6 +127,8 @@ int main (int argc, char* argv[])
 
   read_memory(deviceSerial.c_str(), CACHE_STATUS_ADDR, &testInt, 1);
   cout << "Cache status reg after wfA write: " << hexn<8> << testInt << endl;
+  read_memory(deviceSerial.c_str(), PLL_STATUS_ADDR, &testInt, 1);
+  cout << "DMA status reg after wfA write: " << hexn<8> << testInt << endl;
   
   // ramp waveform
   vector<short> wfmB;
@@ -129,6 +140,8 @@ int main (int argc, char* argv[])
 
   read_memory(deviceSerial.c_str(), CACHE_STATUS_ADDR, &testInt, 1);
   cout << "Cache status reg after wfB write: " << hexn<8> << testInt << endl;
+  read_memory(deviceSerial.c_str(), PLL_STATUS_ADDR, &testInt, 1);
+  cout << "DMA status reg after wfB write: " << hexn<8> << testInt << endl;
 
   // check that cache controller was enabled
   read_memory(deviceSerial.c_str(), CACHE_CONTROL_ADDR, &testInt, 1);
@@ -172,9 +185,30 @@ int main (int argc, char* argv[])
   cout << concol::RED << "Waveform B single word write/read " << 100*static_cast<double>(numRight)/64 << "% correct" << concol::RESET << endl;;
   
   cout << concol::RED << "Writing sequence data" << concol::RESET << endl;
-  
+
   vector<uint32_t> seq = read_seq_file("../../examples/simpleSeq.dat");
   write_sequence(deviceSerial.c_str(), seq.data(), seq.size());
+
+  read_memory(deviceSerial.c_str(), CACHE_STATUS_ADDR, &testInt, 1);
+  cout << "Cache status reg after seq write: " << hexn<8> << testInt << endl;
+  read_memory(deviceSerial.c_str(), PLL_STATUS_ADDR, &testInt, 1);
+  cout << "DMA status reg after seq write: " << hexn<8> << testInt << endl;
+
+  // test sequence cache
+  // offset = 0xC6000400u;
+  offset = 0xC4000000u;
+  numRight = 0;
+  for (size_t ct = 0; ct < seq.size(); ct++)
+  {
+    read_memory(deviceSerial.c_str(), offset + 4*ct, &testInt, 1);
+    if ( testInt != seq[ct] ) {
+      cout << concol::RED << "Failed read test at offset " << ct << concol::RESET << endl;
+    }
+    else{
+      numRight++;
+    }
+  }
+  cout << concol::RED << "Sequence single word write/read " << 100*static_cast<double>(numRight)/seq.size() << "% correct" << concol::RESET << endl;;
 
   cout << concol::RED << "Starting" << concol::RESET << endl;
 
@@ -182,9 +216,20 @@ int main (int argc, char* argv[])
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  cout << concol::RED << "Stopping" << concol::RESET << endl;
+  read_memory(deviceSerial.c_str(), CACHE_STATUS_ADDR, &testInt, 1);
+  cout << "Cache status reg after pulse sequencer enable: " << hexn<8> << testInt << endl;
+  read_memory(deviceSerial.c_str(), PLL_STATUS_ADDR, &testInt, 1);
+  cout << "DMA status reg after pulse sequencer enable: " << hexn<8> << testInt << endl;
 
-  stop(deviceSerial.c_str());
+  read_memory(deviceSerial.c_str(), PHASE_COUNT_A_ADDR, &testInt, 1);
+  cout << "Pulse sequencer command top: " << hexn<8> << testInt << endl;
+  read_memory(deviceSerial.c_str(), PHASE_COUNT_B_ADDR, &testInt, 1);
+  cout << "Pulse sequencer command bottom: " << hexn<8> << testInt << endl;
+
+
+  // cout << concol::RED << "Stopping" << concol::RESET << endl;
+
+  // stop(deviceSerial.c_str());
 
   disconnect_APS(deviceSerial.c_str());
   delete[] serialBuffer;

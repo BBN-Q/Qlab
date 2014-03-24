@@ -133,6 +133,8 @@ int APS2::store_image(const string & bitFile, const int & position) { /* see hea
 	//The default istreambuf_iterator constructor returns the "end-of-stream" iterator.
 	vector<uint32_t> fileData((std::istreambuf_iterator<char>(FID)), std::istreambuf_iterator<char>());
 
+	FILE_LOG(logDEBUG) << "Bit file is " << fileData.size() << " 32-bit words long";
+
 	uint32_t addr = 0; // todo: make start address depend on position
 	auto packets = pack_data(addr, fileData);
 	for (auto & packet : packets) {
