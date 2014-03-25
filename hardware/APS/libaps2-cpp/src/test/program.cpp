@@ -51,11 +51,22 @@ int main (int argc, char* argv[])
 
   program_FPGA(deviceSerial.c_str(), bitFile.c_str());
 
-  std::this_thread::sleep_for(std::chrono::seconds(2));
+  std::this_thread::sleep_for(std::chrono::seconds(4));
 
-  // poll uptime to see device reset
-  double uptime = get_uptime(deviceSerial.c_str());
-  cout << concol::RED << "Uptime for device " << deviceSerial << " is " << uptime << " seconds" << concol::RESET << endl;
+  int retrycnt = 0;
+  bool success = false;
+  while (!success && (retrycnt < 3)) {
+    try {
+      // poll uptime to see device reset
+      double uptime = get_uptime(deviceSerial.c_str());
+      cout << concol::RED << "Uptime for device " << deviceSerial << " is " << uptime << " seconds" << concol::RESET << endl;
+    } catch (std::exception &e) {
+      cout << concol::RED << "Status timeout; retrying..." << concol::RESET << endl;
+      retrycnt++;
+      continue;
+    }
+    success = true;
+  }
 
   disconnect_APS(deviceSerial.c_str());
 

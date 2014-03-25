@@ -155,15 +155,44 @@ int APS2::store_image(const string & bitFile, const int & position) { /* see hea
 
 	uint32_t addr = 0; // todo: make start address depend on position
 	auto packets = pack_data(addr, packedData);
-	for (auto & packet : packets) {
-		packet.header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::FPGACONFIG_NACK);
+	// break packets up into chunks of 20
+	// todo: use this as a prototype for all multi-packet writes
+	for (size_t ct = 0; ct < packets.size(); ct++) {
+		// last packet of every group should acknowledge
+		if ((ct % 20 == 19) || (ct == packets.size()-1)) {
+			packets[ct].header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::FPGACONFIG_ACK);
+		} else {
+			// otherwise, NO ACK
+			packets[ct].header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::FPGACONFIG_NACK);
+		}
 	}
-	// make the final packet return an acknowledge
-	packets[packets.size()-1].header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::FPGACONFIG_ACK);
-	APSEthernet::get_instance().send(deviceSerial_, packets);
-	auto response = read_packets(1)[0];
-	if (response.header.command.mode_stat != FPGACONFIG_SUCCESS) {
-		return -1;
+	// send in groups of 20
+	vector<APSEthernetPacket> subset(20);
+	auto idx = packets.begin();
+	int retrycnt = 0;
+	while (idx != packets.end()) {
+		if (std::distance(idx, packets.end()) >= 20) {
+			std::copy(idx, idx+20, subset.begin());
+		} else {
+			std::copy(idx, packets.end(), subset.begin());
+			subset.resize(std::distance(idx, packets.end()));
+		}
+		APSEthernet::get_instance().send(deviceSerial_, subset);
+		try {
+			auto response = read_packets(1)[0];
+			if (response.header.command.mode_stat != FPGACONFIG_SUCCESS) {
+				return -1;
+			}
+		} catch (std::exception& e) {
+			if (retrycnt++ < 3) {
+				FILE_LOG(logDEBUG) << "No acknowledge received, retrying...";
+				continue;
+			} else {
+				return -2;
+			}
+		}
+		
+		idx += subset.size();
 	}
 	return 0;
 }
@@ -187,7 +216,9 @@ int APS2::program_FPGA(const string & bitFile) {
 	 * @param bitFile path to a Xilinx bit file
 	 * @param expectedVersion - checks whether version register matches this value after programming. -1 = skip the check
 	 */
-	store_image(bitFile);
+	int success = store_image(bitFile);
+	if (success != 0)
+		return success;
 	return select_image(0);
 }
 
@@ -677,8 +708,9 @@ int APS2::write_command(const APSCommand_t & command, const uint32_t & addr /* s
 
 vector<APSEthernetPacket> APS2::pack_data(const uint32_t & addr, const vector<uint32_t> & data){
 	//Break the data up into ethernet frame sized chunks.   
-	// ethernet frame payload = 1500bytes - 20bytes IPV4 and 8 bytes UDP and 24 bytes APS header (with address field) = 1448bytes = 362 words 
-	static const int maxPayload = 362;
+	// ethernet frame payload = 1500bytes - 20bytes IPV4 and 8 bytes UDP and 24 bytes APS header (with address field) = 1448bytes = 362 words
+	// for unknown reasons, we see occasional failures when using packets that large. 256 seems to be more stable.
+	static const int maxPayload = 256;
 
 	vector<APSEthernetPacket> packets;
 
