@@ -62,6 +62,7 @@ typedef vector<uint16_t> WordVec;
 #include "winsock2.h"
 #include "windows.h"
 #else
+#include "arpa/inet.h"
 #define EXPORT
 #endif
 

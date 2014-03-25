@@ -1,9 +1,5 @@
 #include "APSEthernetPacket.h"
 
-#ifndef _WIN32
-#include "arpa/inet.h"
-#endif
-
 APSEthernetPacket::APSEthernetPacket() : header{{}, {}, APS_PROTO, 0, {0}, 0}, payload(0){};
 
 APSEthernetPacket::APSEthernetPacket(const APSCommand_t & command, const uint32_t & addr /*see header for default addr=0 */) :

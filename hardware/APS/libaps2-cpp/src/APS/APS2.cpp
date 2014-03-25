@@ -131,16 +131,41 @@ int APS2::store_image(const string & bitFile, const int & position) { /* see hea
 
 	//Copy over the file data to the data vector
 	//The default istreambuf_iterator constructor returns the "end-of-stream" iterator.
-	vector<uint32_t> fileData((std::istreambuf_iterator<char>(FID)), std::istreambuf_iterator<char>());
+	vector<uint8_t> fileData((std::istreambuf_iterator<char>(FID)), std::istreambuf_iterator<char>());
+	// pack into uint32_t vector
+	vector<uint32_t> packedData;
+	for (size_t ct = 0; ct < fileData.size()/4; ct++) {
+		packedData.push_back( ((uint32_t)fileData[4*ct] << 24) | 
+			                  ((uint32_t)fileData[4*ct+1] << 16) | 
+			                  ((uint32_t)fileData[4*ct+2] << 8) | 
+			                  (uint32_t)fileData[4*ct+3]
+			                );
+	}
+	// make packedData size even to ensure that the payload will be a multiple of 8 bytes
+	if (packedData.size() % 2 != 0) {
+		packedData.push_back(0xffffffffu);
+	}
 
-	FILE_LOG(logDEBUG) << "Bit file is " << fileData.size() << " 32-bit words long";
+	// convert to network byte order
+	// for (size_t ct = 0; ct < packedData.size(); ct++) {
+	// 	packedData[ct] = htonl(packedData[ct]);
+	// }
+
+	FILE_LOG(logDEBUG) << "Bit file is " << packedData.size() << " 32-bit words long";
 
 	uint32_t addr = 0; // todo: make start address depend on position
-	auto packets = pack_data(addr, fileData);
+	auto packets = pack_data(addr, packedData);
 	for (auto & packet : packets) {
 		packet.header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::FPGACONFIG_NACK);
 	}
-	return APSEthernet::get_instance().send(deviceSerial_, packets);
+	// make the final packet return an acknowledge
+	packets[packets.size()-1].header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::FPGACONFIG_ACK);
+	APSEthernet::get_instance().send(deviceSerial_, packets);
+	auto response = read_packets(1)[0];
+	if (response.header.command.mode_stat != FPGACONFIG_SUCCESS) {
+		return -1;
+	}
+	return 0;
 }
 
 int APS2::select_image(const int & bitFileNum) {
