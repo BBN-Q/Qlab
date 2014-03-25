@@ -58,9 +58,11 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
             channelStrs = {'chan_1','chan_2','chan_3','chan_4'};
             for ct = 1:4
                 ch = channelStrs{ct};
-                obj.setAmplitude(ct, settings.(ch).amplitude);
-                obj.setOffset(ct, settings.(ch).offset);
-                obj.setEnabled(ct, settings.(ch).enabled);
+                if isfield(settings,ch)
+                  obj.setAmplitude(ct, settings.(ch).amplitude);
+                  obj.setOffset(ct, settings.(ch).offset);
+                  obj.setEnabled(ct, settings.(ch).enabled);
+                end
             end
             settings = rmfield(settings, channelStrs);
             
