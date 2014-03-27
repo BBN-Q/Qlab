@@ -65,7 +65,7 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
 				end			      
 			end
 			
-            settings = rmfield(settings, channelStrs);
+            settings = rmfield(settings, intersect(fieldnames(settings),channelStrs));
             
             % parse remaining settings
             fields = fieldnames(settings);
