@@ -80,12 +80,12 @@ classdef TekPattern < handle
             fclose(fid);
         end
         
-        function status = exportTek7Sequence(path, basename, patCh1, m11, m12, patCh2, m21, m22,options)
+        function exportTek7Sequence(path, basename,seqData,options)
             % error check
-            dims = size(patCh1);
-            if (~isequal(size(m11), dims) || ~isequal(size(m12), dims) || ~isequal(size(patCh2), dims) || ~isequal(size(m21), dims) || ~isequal(size(m22), dims) )
-                error('inputs must all have the same dimensions');
-            end
+                 dims = structfun(@size, seqData, 'UniformOutput', false);
+            assert(all(TekPattern.range(cell2mat(struct2cell(dims))) == 0), 'All channels must have same dimensions');
+            
+            %Default options structure
             if ~exist('options', 'var')
                 options = struct();
             end
@@ -94,13 +94,15 @@ classdef TekPattern < handle
             end
             
             self = TekPattern;
-            
+						
             % pack patterns and markers into 16-bit binary format
             if options.verbose
                 disp('Packing patterns');
-            end
-            packedCh1 = self.pack7Pattern(patCh1, m11, m12);
-            packedCh2 = self.pack7Pattern(patCh2, m21, m22);
+			end
+			
+			packedCh1 = self.pack7Pattern(seqData.ch1, seqData.ch1m1, seqData.ch1m2);
+            packedCh2 = self.pack7Pattern(seqData.ch2, seqData.ch2m1, seqData.ch2m2);
+			      
             if options.verbose
                 disp('Done packing');
             end
@@ -116,7 +118,7 @@ classdef TekPattern < handle
             fid = fopen(fullpath, 'w');
             
             % write header information
-            numsteps = size(patCh1,1);
+            numsteps = dims.ch1(1);
             self.writeTek7Header(fid, numsteps, basename, options);
             
             % write patterns
