@@ -10,10 +10,9 @@
 using asio::ip::udp;
 
 struct EthernetDevInfo {
-	string name;          // device name as set by winpcap
-	string description;   // set by winpcap
-	string description2;  // string MAC address
 	MACAddr macAddr;
+	udp::endpoint endpoint;
+	uint16_t seqNum;
 };
 
 class APSEthernet {
@@ -29,6 +28,7 @@ public:
 		INVALID_SPI_TARGET
 	};
 
+	//APSEthernet is a singleton instance for the driver
 	static APSEthernet& get_instance(){
 		static APSEthernet instance;
 		return instance;
@@ -48,15 +48,16 @@ private:
 	APSEthernet();
 	APSEthernet(APSEthernet const &) = delete;
 
-	unordered_map<string, MACAddr> serial_to_MAC_;
 	MACAddr srcMAC_;
 
+	//Keep track of all the device info with a map from I.P. addresses to devInfo structs
+	unordered_map<string, EthernetDevInfo> devInfo_;
+
+	unordered_map<string, MACAddr> serial_to_MAC_;
 	unordered_map<string, udp::endpoint> endpoints_;
 	unordered_map<string, queue<APSEthernetPacket>> msgQueues_;
 
 	void reset_maps();
-	// void run_receive_thread();
-	void run_send_thread();
 
 	void setup_receive();
 	void sort_packet(const vector<uint8_t> &, const udp::endpoint &);
@@ -65,8 +66,8 @@ private:
 	udp::socket socket_;
 
 	// storage for received packets
-	udp::endpoint senderEndpoint;
  	uint8_t receivedData[2048];
+	udp::endpoint senderEndpoint;
 
 	std::thread receiveThread_;
 	std::atomic<bool> receiving_;

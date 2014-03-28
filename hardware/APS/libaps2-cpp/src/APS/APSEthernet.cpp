@@ -46,19 +46,21 @@ void APSEthernet::sort_packet(const vector<uint8_t> & packetData, const udp::end
     //If we have the endpoint address then add it to the queue
     string senderIP = sender.address().to_string();
     if(msgQueues_.find(senderIP) == msgQueues_.end()){
-        //We are probably seeing an enumerate status response so add the endpoint to the set
+        //If it isn't in our list of APSs then perhaps we are seeing an enumerate status response
+        //If so add the device info to the set
         if (packetData.size() == 84) {
-            if ( endpoints_.find(senderIP) == endpoints_.end()){
-                endpoints_[senderIP] = sender;
-                APSEthernetPacket packet = APSEthernetPacket(packetData);
-                serial_to_MAC_[senderIP] = packet.header.src;
-                FILE_LOG(logINFO) << "Found MAC addresss: " << serial_to_MAC_[senderIP].to_string();
-            }
-
+            devInfo_[senderIP].endpoint = sender;
+            //Turn the byte array into a packet to extract the MAC address
+            //Not strictly necessary as we could just use the broadcast MAC address
+            APSEthernetPacket packet = APSEthernetPacket(packetData);
+            devInfo_[senderIP].macAddr = packet.header.src;
+            FILE_LOG(logDEBUG1) << "Added device with IP " << senderIP << " and MAC addresss " << devInfo_[senderIP].macAddr.to_string();
         } 
     }
     else{
+        //Turn the byte array into an APSEthernetPacket
         APSEthernetPacket packet = APSEthernetPacket(packetData);
+        //Grab a lock and push the packet into the message queue
         mLock_.lock();
         msgQueues_[senderIP].emplace(packet);
         mLock_.unlock();
@@ -94,7 +96,7 @@ set<string> APSEthernet::enumerate() {
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     set<string> deviceSerials;
-    for (auto & kv : endpoints_) {
+    for (auto kv : devInfo_) {
         FILE_LOG(logINFO) << "Found device: " << kv.first;
         deviceSerials.insert(kv.first);
     }
@@ -102,10 +104,8 @@ set<string> APSEthernet::enumerate() {
 }
 
 void APSEthernet::reset_maps() {
-    serial_to_MAC_.clear();
-    serial_to_MAC_["broadcast"] = MACAddr("FF:FF:FF:FF:FF:FF");
+    devInfo_.clear();
     msgQueues_.clear();
-    endpoints_.clear();
 }
 
 APSEthernet::EthernetError APSEthernet::connect(string serial) {
@@ -132,8 +132,8 @@ APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPa
     FILE_LOG(logDEBUG3) << "Sending " << msg.size() << " packets to " << serial;
     for (auto & packet : msg){
         FILE_LOG(logDEBUG4) << "Packet command: " << print_APSCommand(packet.header.command);
-        packet.header.dest = serial_to_MAC_[serial];
-        socket_.send_to(asio::buffer(packet.serialize()), endpoints_[serial]);
+        packet.header.dest = devInfo_[serial].macAddr;
+        socket_.send_to(asio::buffer(packet.serialize()), devInfo_[serial].endpoint);
     }
 
     return SUCCESS;
