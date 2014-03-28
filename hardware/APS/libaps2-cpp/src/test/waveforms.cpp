@@ -155,7 +155,7 @@ int main (int argc, char* argv[])
   // test wfA cache
   size_t numRight = 0;
   // offset = 0xC6000000u;
-  offset = 0xC0000000u;
+  offset = 0xC4000000u;
   for (size_t ct = 0; ct < 64; ct++)
   {
     read_memory(deviceSerial.c_str(), offset + 4*ct, &testInt, 1);
@@ -170,7 +170,7 @@ int main (int argc, char* argv[])
   
   // test wfB cache
   // offset = 0xC6000400u;
-  offset = 0xC2000000u;
+  offset = 0xC6000000u;
   numRight = 0;
   for (size_t ct = 0; ct < 64; ct++)
   {
@@ -196,7 +196,7 @@ int main (int argc, char* argv[])
 
   // test sequence cache
   // offset = 0xC6000400u;
-  offset = 0xC4000000u;
+  offset = 0xC2000000u;
   numRight = 0;
   for (size_t ct = 0; ct < seq.size(); ct++)
   {
@@ -226,10 +226,17 @@ int main (int argc, char* argv[])
   read_memory(deviceSerial.c_str(), PHASE_COUNT_B_ADDR, &testInt, 1);
   cout << "Pulse sequencer command bottom: " << hexn<8> << testInt << endl;
 
+  cout << concol::RED << "Stopping" << concol::RESET << endl;
+  stop(deviceSerial.c_str());
 
-  // cout << concol::RED << "Stopping" << concol::RESET << endl;
-
-  // stop(deviceSerial.c_str());
+  // write to zero registers to shift outputs up and down
+  // for (short val = 0; val < 8000; val += 1000) {
+  //   testInt = (uint32_t)val << 16 | val;
+  //   write_memory(deviceSerial.c_str(), ZERO_OUT_ADDR, &testInt, 1);
+  //   std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  // }
+  // testInt = 0;
+  // write_memory(deviceSerial.c_str(), ZERO_OUT_ADDR, &testInt, 1);
 
   disconnect_APS(deviceSerial.c_str());
   delete[] serialBuffer;
