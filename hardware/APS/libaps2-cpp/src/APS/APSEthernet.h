@@ -66,14 +66,11 @@ private:
 	udp::socket socket_;
 
 	// storage for received packets
- 	uint8_t receivedData[2048];
-	udp::endpoint senderEndpoint;
+ 	uint8_t receivedData_[2048];
+	udp::endpoint senderEndpoint_;
 
 	std::thread receiveThread_;
-	std::atomic<bool> receiving_;
 	std::mutex mLock_;
-
-
 };
 
 

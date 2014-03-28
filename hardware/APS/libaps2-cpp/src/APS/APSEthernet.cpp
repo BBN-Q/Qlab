@@ -20,21 +20,20 @@ APSEthernet::APSEthernet() : socket_(ios_) {
 
 APSEthernet::~APSEthernet() {
     //Stop the receive thread
-    receiving_ = false;
     ios_.stop();
     receiveThread_.join();
 }
 
 void APSEthernet::setup_receive(){
     socket_.async_receive_from(
-        asio::buffer(receivedData, 2048), senderEndpoint,
+        asio::buffer(receivedData_, 2048), senderEndpoint_,
         [this](std::error_code ec, std::size_t bytesReceived)
         {
             //If there is anything to look at hand it off to the sorter
             if (!ec && bytesReceived > 0)
             {
-                vector<uint8_t> packetData(receivedData, receivedData + bytesReceived);
-                sort_packet(packetData, senderEndpoint);
+                vector<uint8_t> packetData(receivedData_, receivedData_ + bytesReceived);
+                sort_packet(packetData, senderEndpoint_);
             }
 
             //Start the receiver again
