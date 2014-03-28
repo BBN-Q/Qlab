@@ -27,8 +27,8 @@ public:
 	bool get_enabled() const;
 
 	int set_waveform(const vector<float> &);
-	int set_waveform(const vector<short> &);
-	vector<short> prep_waveform() const;
+	int set_waveform(const vector<int16_t> &);
+	vector<int16_t> prep_waveform() const;
 
 	int clear_data();
 

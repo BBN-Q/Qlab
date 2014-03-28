@@ -60,7 +60,7 @@ int Channel::set_waveform(const vector<float> & data) {
 	return 0;
 }
 
-int Channel::set_waveform(const vector<short> & data) {
+int Channel::set_waveform(const vector<int16_t> & data) {
 	//Check whether we need to resize the waveform vector
 	if (data.size() > size_t(MAX_WF_LENGTH)){
 		FILE_LOG(logERROR) << "Tried to update waveform to longer than max allowed: " << data.size();
@@ -76,23 +76,23 @@ int Channel::set_waveform(const vector<short> & data) {
 	return 0;
 }
 
-vector<short> Channel::prep_waveform() const{
+vector<int16_t> Channel::prep_waveform() const{
 	//Apply the scale,offset and covert to integer format
-	vector<short> prepVec(waveform_.size());
+	vector<int16_t> prepVec(waveform_.size());
 	for(size_t ct=0; ct<prepVec.size(); ct++){
-		prepVec[ct] = short(MAX_WF_AMP*(scale_*waveform_[ct]+offset_));
+		prepVec[ct] = int16_t(MAX_WF_AMP*(scale_*waveform_[ct]+offset_));
 	}
 
 	//Clip to the max and min values allowed
 	if (*max_element(prepVec.begin(), prepVec.end()) > MAX_WF_AMP){
 		FILE_LOG(logWARNING) << "Waveform element too positive; clipping to max";
-		for(short & tmpVal : prepVec){
+		for(int16_t & tmpVal : prepVec){
 			if (tmpVal > MAX_WF_AMP) tmpVal = MAX_WF_AMP;
 		}
 	}
 	if (*min_element(prepVec.begin(), prepVec.end()) < -MAX_WF_AMP){
 		FILE_LOG(logWARNING) << "Waveform element too negative; clipping to max";
-		for(short & tmpVal : prepVec){
+		for(int16_t & tmpVal : prepVec){
 			if (tmpVal < -MAX_WF_AMP) tmpVal = -MAX_WF_AMP;
 		}
 	}

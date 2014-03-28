@@ -134,8 +134,8 @@ int set_waveform_float(const char * deviceSerial, int channelNum, float* data, i
 }
 
 //Load the waveform library as int16
-int set_waveform_int(const char * deviceSerial, int channelNum, short* data, int numPts){
-	return APSs[string(deviceSerial)].set_waveform(channelNum, vector<short>(data, data+numPts));
+int set_waveform_int(const char * deviceSerial, int channelNum, int16_t* data, int numPts){
+	return APSs[string(deviceSerial)].set_waveform(channelNum, vector<int16_t>(data, data+numPts));
 }
 
 int write_sequence(const char * deviceSerial, uint32_t* data, uint32_t numWords) {

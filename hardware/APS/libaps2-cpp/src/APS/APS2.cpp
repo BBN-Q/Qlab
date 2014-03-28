@@ -1475,10 +1475,10 @@ int APS2::set_offset_register(const int & dac, const float & offset) {
 	return 0;
 }
 
-int APS2::write_waveform(const int & ch, const vector<short> & wfData) {
+int APS2::write_waveform(const int & ch, const vector<int16_t> & wfData) {
 	/*Write waveform data to FPGA memory
 	 * ch = channel (0-1)
-	 * wfData = signed short waveform data
+	 * wfData = signed int16_t waveform data
 	 */
 
 	uint32_t startAddr = (ch == 0) ? MEMORY_ADDR+WFA_OFFSET : MEMORY_ADDR+WFB_OFFSET;
