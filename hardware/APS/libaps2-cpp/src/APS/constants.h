@@ -229,10 +229,10 @@ static const uint32_t ZERO_OUT_ADDR      = REGISTER_ADDR + 10*4;
 static const uint32_t TRIGGER_WORD_ADDR  = REGISTER_ADDR + 11*4;
 static const uint32_t TRIGGER_INTERVAL_ADDR = REGISTER_ADDR + 12*4;
 
-static const uint32_t MEMORY_ADDR = 0xC0000000u;
+static const uint32_t MEMORY_ADDR = 0x00000000u;
 static const uint32_t WFA_OFFSET  = 0;
 static const uint32_t WFB_OFFSET  = 1024;
-static const uint32_t SEQ_OFFSET  = 2048;
+static const uint32_t SEQ_OFFSET  = 0x20000000u;
 
 //Expected version
 static const int FIRMWARE_VERSION =  0x3;
