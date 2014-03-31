@@ -53,8 +53,6 @@ private:
 	//Keep track of all the device info with a map from I.P. addresses to devInfo structs
 	unordered_map<string, EthernetDevInfo> devInfo_;
 
-	unordered_map<string, MACAddr> serial_to_MAC_;
-	unordered_map<string, udp::endpoint> endpoints_;
 	unordered_map<string, queue<APSEthernetPacket>> msgQueues_;
 
 	void reset_maps();
