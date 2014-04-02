@@ -129,71 +129,34 @@ int APS2::store_image(const string & bitFile, const int & position) { /* see hea
 		return -1; // TODO return a proper error code
 	}
 
+	//Get the file size in bytes
+	FID.seekg(0, std::ios::end);
+	size_t fileSize = FID.tellg();
+	FILE_LOG(logDEBUG1) << "Bitfile is " << fileSize << " bytes";
+	FID.seekg(0, std::ios::beg);
+
 	//Copy over the file data to the data vector
-	//The default istreambuf_iterator constructor returns the "end-of-stream" iterator.
-	vector<uint8_t> fileData((std::istreambuf_iterator<char>(FID)), std::istreambuf_iterator<char>());
-	// pack into uint32_t vector
 	vector<uint32_t> packedData;
-	for (size_t ct = 0; ct < fileData.size()/4; ct++) {
-		packedData.push_back( ((uint32_t)fileData[4*ct] << 24) | 
-			                  ((uint32_t)fileData[4*ct+1] << 16) | 
-			                  ((uint32_t)fileData[4*ct+2] << 8) | 
-			                  (uint32_t)fileData[4*ct+3]
-			                );
-	}
+	packedData.reserve(fileSize/4);
+	FID.read(reinterpret_cast<char *>(packedData.data()), fileSize);
+
 	// make packedData size even to ensure that the payload will be a multiple of 8 bytes
 	if (packedData.size() % 2 != 0) {
 		packedData.push_back(0xffffffffu);
 	}
 
-	// convert to network byte order
-	// for (size_t ct = 0; ct < packedData.size(); ct++) {
-	// 	packedData[ct] = htonl(packedData[ct]);
-	// }
+	//Convert to big endian byte order - basically because it will be byte-swapped again when the packet is serialized
+	for (auto & packet : packedData) {
+		packet = htonl(packet);
+	}
 
-	FILE_LOG(logDEBUG) << "Bit file is " << packedData.size() << " 32-bit words long";
+	FILE_LOG(logDEBUG1) << "Bit file is " << packedData.size() << " 32-bit words long";
 
 	uint32_t addr = 0; // todo: make start address depend on position
 	auto packets = pack_data(addr, packedData);
-	// break packets up into chunks of 20
-	// todo: use this as a prototype for all multi-packet writes
-	for (size_t ct = 0; ct < packets.size(); ct++) {
-		// last packet of every group should acknowledge
-		if ((ct % 20 == 19) || (ct == packets.size()-1)) {
-			packets[ct].header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::FPGACONFIG_ACK);
-		} else {
-			// otherwise, NO ACK
-			packets[ct].header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::FPGACONFIG_NACK);
-		}
-	}
+
 	// send in groups of 20
-	vector<APSEthernetPacket> subset(20);
-	auto idx = packets.begin();
-	int retrycnt = 0;
-	while (idx != packets.end()) {
-		if (std::distance(idx, packets.end()) >= 20) {
-			std::copy(idx, idx+20, subset.begin());
-		} else {
-			std::copy(idx, packets.end(), subset.begin());
-			subset.resize(std::distance(idx, packets.end()));
-		}
-		APSEthernet::get_instance().send(deviceSerial_, subset);
-		try {
-			auto response = read_packets(1)[0];
-			if (response.header.command.mode_stat != FPGACONFIG_SUCCESS) {
-				return -1;
-			}
-		} catch (std::exception& e) {
-			if (retrycnt++ < 3) {
-				FILE_LOG(logDEBUG) << "No acknowledge received, retrying...";
-				continue;
-			} else {
-				return -2;
-			}
-		}
-		
-		idx += subset.size();
-	}
+	APSEthernet::get_instance().send(deviceSerial_, packets, 20);
 	return 0;
 }
 

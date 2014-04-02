@@ -126,13 +126,46 @@ APSEthernet::EthernetError APSEthernet::send(string serial, APSEthernetPacket ms
     return send(serial, vector<APSEthernetPacket>(1, msg));
 }
 
-APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPacket> msg) {
+APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPacket> msg, unsigned ackEvery /* see header for default */) {
     //Fill out the destination  MAC address
     FILE_LOG(logDEBUG3) << "Sending " << msg.size() << " packets to " << serial;
-    for (auto & packet : msg){
-        FILE_LOG(logDEBUG4) << "Packet command: " << print_APSCommand(packet.header.command);
+    unsigned ackct, packetct, retryct = 0;
+
+    while (packetct < msg.size()){
+        auto packet = msg[packetct];
+
+        // insert the target MAC address - not really necessary anymore because UDP does filtering
         packet.header.dest = devInfo_[serial].macAddr;
+        packet.header.seqNum = ackct;
+
+        ackct++;
+        //Apply acknowledge flag if necessary
+        bool ackFlag = (ackct % ackEvery == 0) || (packetct == msg.size()-1);
+        if( ackFlag ){
+            packet.header.command.ack = 1;
+        }
+        FILE_LOG(logDEBUG4) << "Packet command: " << print_APSCommand(packet.header.command);
         socket_.send_to(asio::buffer(packet.serialize()), devInfo_[serial].endpoint);
+
+        //Wait for acknowledge if we need to
+        //TODO: how to check response mode/stat for success?
+        if (ackFlag){
+            try{
+                auto response = receive(serial)[0];
+            }
+            catch (std::exception& e) {
+               if (retryct++ < 3) {
+                    FILE_LOG(logDEBUG) << "No acknowledge received, retrying ...";
+                    //Reset the acknowledge count
+                    ackct = 0;
+                    //Go back to the last acknowledged packet
+                    packetct -= (ackct % ackEvery == 0) ? ackEvery : ackct % ackEvery ;
+                }
+                else {
+                    return TIMEOUT;
+                }
+            }
+        }
     }
 
     return SUCCESS;
