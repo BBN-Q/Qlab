@@ -247,13 +247,12 @@ static const int CSRMSK_OUTMODE = 0x20; // output mode (1 = link list, 0 = wavef
 
 //PLL bits
 //TODO: update
-static const int PLL_GLOBAL_XOR_BIT = 15;
-static const int PLL_02_XOR_BIT = 14;
-static const int PLL_13_XOR_BIT = 13;
-static const int PLL_02_LOCK_BIT = 12;
-static const int PLL_13_LOCK_BIT = 11;
-static const int REFERENCE_PLL_LOCK_BIT = 10;
-static const int MAX_PHASE_TEST_CNT = 40;
+static const int PLL_CHA_RST_BIT = 8;
+static const int PLL_CHB_RST_BIT = 9;
+static const int PLL_SYS_LOCK_BIT = 0;
+static const int PLL_CHA_LOCK_BIT = 1;
+static const int PLL_CHB_LOCK_BIT = 2;
+static const int MAX_PHASE_TEST_CNT = 20;
 
 
 typedef enum {INTERNAL=0, EXTERNAL} TRIGGERSOURCE;

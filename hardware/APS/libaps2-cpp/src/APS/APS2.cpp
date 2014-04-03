@@ -880,263 +880,74 @@ int APS2::set_PLL_freq(const int & freq) {
 
 int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 	/*
-		APS2_TestPllSync synchronized the phases of the DAC clocks with the following procedure:
-		1) Make sure all PLLs have locked.
-		2) Test for sync of 600 MHz clocks from DACs. They must be in sync with each other
-	    and in sync with the 300 MHz reference. This has the test signature of the 600 MHz
-	    XOR being always low and both 300 MHz XORs are low or high.
-			- If either the 600 MHz XOR is high or a 300 MHz XOR is in the middle, disable
-			 and re-enable the PLL output to one of the DACs connected to the FPGA. Reset
-			 the FPGA PLLs, wait for lock, then loop.
-		3) Test channel 0/2 PLL against reference PLL. Reset until in phase.
-		4) Test channel 1/3 PLL against reference PLL. Reset until in phase.
-		5) Verify that sync worked by testing 0/2 XOR 1/3 (global phase).
-	 *
-	 * Inputs: device
-	 *         fpga (1 or 2)
-	 *         numRetries - number of times to restart the test if the global sync test fails (step 5)
+	 * APS2_TestPllSync synchronized the phases of the DAC clocks with the following procedure:
+	 * 1) Test CHA_PHASE:
+	 * 	 a) if close to zero, continue
+	 * 	 b) if close to pi, reset channel PLL
+	 * 	 c) if close to pi/2, reset main PLL and channel PLL
+	 * 2) Repeat for CHB_PHASE
+ 	 *
+	 * Inputs: 
+	 *   numRetries - number of times to restart the test if the global sync test fails (step 5)
 	 */
 
-/*
-	// Test for DAC clock phase match
-	bool inSync, globalSync;
-	int xorFlagCnts, a_phase, b_phase;
-	int dac02Reset, dac13Reset;
+	uint32_t ch_phase, ch_phase_deg;
 
-	int pllBit;
-	// unsigned int pllEnableAddr, pllEnableAddr2;
-	// uint8_t writeByte;
+	const vector<uint32_t> CH_PHASE_ADDR = {PHASE_COUNT_A_ADDR, PHASE_COUNT_B_ADDR};
+	const vector<int> CH_PLL_RESET_BIT = {PLL_CHA_RST_BIT, PLL_CHB_RST_BIT};
 
-	const vector<int> PLL_XOR_TEST = {PLL_02_XOR_BIT, PLL_13_XOR_BIT,PLL_GLOBAL_XOR_BIT};
-	const vector<int> CH_PHASE_TESTS = {FPGA_ADDR_A_PHASE, FPGA_ADDR_B_PHASE};
-	const vector<int> PLL_LOCK_TEST = {PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT};
-	const vector<int> PLL_RESET = {CSRMSK_CHA_PLLRST, CSRMSK_CHB_PLLRST, 0};
-
-	unsigned int pllResetBit  = CSRMSK_CHA_PLLRST | CSRMSK_CHB_PLLRST;
-
-	FILE_LOG(logINFO) << "Running channel sync on FPGA ";
-
-	//TODO: fix!
-	// pllEnableAddr = 0;
-	// pllEnableAddr2 = 0;
+	FILE_LOG(logINFO) << "Running channel sync procedure";
 	
 	// Disable DDRs
-	// int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
-	//TODO: fix!
-//	FPGA::clear_bit(socket_, FPGA_ADDR_CSR, ddr_mask);
-	// disable DAC FIFOs
-	// for (int dac = 0; dac < NUM_CHANNELS; dac++)
-		// disable_DAC_FIFO(dac);
-
-	//A little helper function to wait for the PLL's to lock and reset if necessary
-	auto wait_PLL_relock = [this, &pllResetBit](bool resetPLL, const int & regAddress, const vector<int> & pllBits) -> bool {
-		FILE_LOG(logDEBUG2) << "wait_PLL_relock";
-
-		bool inSync = false;
-		int testct = 0;
-		while (!inSync && (testct < 20)){
-			FILE_LOG(logDEBUG2) << "Reading PLL status for pllBits with size " << pllBits.size() << " and first bit is " << pllBits[0];
-//			inSync = (APS2::read_PLL_status(regAddress, pllBits) == 1);
-			//If we aren't locked then reset for the next try by clearing the PLL reset bits
-			if (resetPLL) {
-//				FPGA::clear_bit(socket_, FPGA_ADDR_CSR, pllResetBit);
-			}
-			//Otherwise just wait
-			else{
-				usleep(1000);
-			}
-			testct++;
-		}
-		return inSync;
-	};
-
-	// Step 1: test for the PLL's being locked to the reference
-	inSync = wait_PLL_relock(true, FPGA_ADDR_PLL_STATUS, PLL_LOCK_TEST);
-	if (!inSync) {
-		FILE_LOG(logERROR) << "Reference PLL failed to lock";
-		return -5;
-	}
-
-	inSync = false; globalSync = false;
-
-	//Step 2:
-	// start by testing for a 600 MHz XOR always low
-
-	//First a little helper function to update the PLL registers
-	auto update_PLL_register = [this] (){
-		// uint32_t address = 0x232;
-		// uint8_t data = 0x1;
-	//TODO: fix me!
-		// socket_.write_SPI(CHIPCONFIG_TARGET_PLL, address, data);
-	};
-
-	auto read_DLL_phase = [this] (int addr) {
-		// The phase register holds a 9-bit value [0, 511] representing the phase shift.
-		// We convert his value to phase in degrees in the range (-180, 180]
-		uint32_t regData;
-	//TODO: fix me!
-		// socket_.read_register(addr, regData);
-		double phase = regData;
-		if (phase > 256) {
-			phase -= 512;
-		}
-		phase *= 180.0/256.0;
-		return phase;
-	};
+	// Currently disabled because we do not pull out separate access to the DDR vs CLK in the SelectIO interface
+	// write_memory(SEQ_CONTROL_ADDR, (1 << PLL_CHA_RST_BIT) | (1 << PLL_CHB_RST_BIT));
 
 	FILE_LOG(logINFO) << "Testing for DAC clock phase sync";
-	//Loop over number of tries
-	static const int xorCounts = 20, lowCutoff = 5, lowPhaseCutoff = 45, highPhaseCutoff = 135;
-	for (int ct = 0; ct < MAX_PHASE_TEST_CNT; ct++) {
-		//Reset the counts
-		xorFlagCnts = 0;
-		dac02Reset = 0;
-		dac13Reset = 0;
-
-		//Take twenty counts of the the xor data
-		for(int xorct = 0; xorct < xorCounts; xorct++) {
-			uint32_t regData;
-	//TODO: fix me!
-			// socket_.read_register(FPGA_ADDR_PLL_STATUS, regData);
-			pllBit = regData;
-			xorFlagCnts += (pllBit >> PLL_GLOBAL_XOR_BIT) & 0x1;
-		}
-
-		// read DACA and DACB phases
-		a_phase = read_DLL_phase(FPGA_ADDR_A_PHASE);
-		b_phase = read_DLL_phase(FPGA_ADDR_B_PHASE);
-
-		FILE_LOG(logDEBUG1) << "DAC A Phase: " << a_phase << ", DAC B Phase: " << b_phase;
-
-		// due to clock skews, need to accept a range of counts as "0" and "1"
-		if ( (xorFlagCnts <= lowCutoff ) &&
-				(abs(a_phase) < lowPhaseCutoff || abs(a_phase) > highPhaseCutoff) &&
-				(abs(b_phase) < lowPhaseCutoff || abs(b_phase) > highPhaseCutoff) ) {
-			// 300 MHz clocks on FPGA are either 0 or 180 degrees out of phase and 600 MHz clocks
-			// are in phase. Move on.
-			FILE_LOG(logDEBUG1) << "DAC clocks in phase with reference, XOR counts : " << xorFlagCnts;
-			//Get out of MAX_PHAST_TEST ct loop
-			break;
-		}
-		// TODO: check that we are dealing with the case of in-phase 600 MHz clocks with BOTH 300 MHz clocks 180 out of phase with the reference
-		else {
-			// 600 MHz clocks out of phase, reset DAC clocks that are 90/270 degrees out of phase with reference
-			FILE_LOG(logDEBUG1) << "DAC clocks out of phase; resetting, XOR init: " << xorFlagCnts;
-			writeByte = 0x2; //disable clock outputs
-			//If ChA is +/-90 degrees out of phase then reset it
-			if (abs(a_phase) >= lowPhaseCutoff && abs(a_phase) <= highPhaseCutoff) {
-				dac02Reset = 1;
-				//TODO: fix me!
-				// socket_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr, writeByte );
-			}
-			//If ChB is +/-90 degrees out of phase then reset it
-			if (abs(b_phase) >= lowPhaseCutoff && abs(b_phase) <= highPhaseCutoff) {
-				dac13Reset = 1;
-		//TODO: fix me!
-				// socket_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr2, writeByte);
-			}
-			//Actually update things
-			update_PLL_register();
-			writeByte = 0x0; // enable clock outputs
-			if (dac02Reset)
-				//TODO: fix me!
-				// socket_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr, writeByte );
-			if (dac13Reset)
-				//TODO: fix me!
-				// socket_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr2, writeByte);
-			update_PLL_register();
-
-			// reset FPGA PLLs
-			//TODO: fix!
-//			FPGA::set_bit(socket_, FPGA_ADDR_CSR, pllResetBit);
-//			FPGA::clear_bit(socket_, FPGA_ADDR_CSR, pllResetBit);
-
-			// wait for the PLL to relock
-			inSync = wait_PLL_relock(false, FPGA_ADDR_PLL_STATUS, PLL_LOCK_TEST);
-			if (!inSync) {
-				FILE_LOG(logERROR) << "PLLs did not re-sync after reset";
-				return -7;
-			}
-		}
-	}
-
-	//Steps 3,4,5
-	const vector<string> chStrs = {"A", "B"};
+	static const int lowPhaseCutoff = 45, highPhaseCutoff = 135;
+	// loop over channels
 	for (int ch = 0; ch < 2; ch++) {
-
-		FILE_LOG(logDEBUG) << "Testing channel " << chStrs[ch];
+		//Loop over number of tries
 		for (int ct = 0; ct < MAX_PHASE_TEST_CNT; ct++) {
+			ch_phase = read_memory(CH_PHASE_ADDR[ch], 1)[0];
+			// register returns a value in [0, 2^16]. Re-interpret as an angle in [0, 180].
+			ch_phase_deg = 180 * ch_phase / (1 << 16);
+			FILE_LOG(logDEBUG1) << "Measured DAC " << ((ch == 0) ? "A" : "B") << " phase of " << ch_phase_deg;
 
-			a_phase = read_DLL_phase(CH_PHASE_TESTS[ch]);
+			if (ch_phase_deg < lowPhaseCutoff) {
+				// done with this channel
+				break;
+			} else {
+				// disable the channel PLL
+				write_memory(SEQ_CONTROL_ADDR, (1 << CH_PLL_RESET_BIT[ch]));
 
-			// here we are looking for in-phase clock
-			if (abs(a_phase) < lowPhaseCutoff) {
-				globalSync = true;
-				break; // passed, move on to next channel
-			}
-			else {
-				// PLLs out of sync, reset
-				FILE_LOG(logDEBUG1) << "Channel " << chStrs[ch] << " PLL not in sync.. resetting (phase " << a_phase << " )";
-				globalSync = false;
-
-				// reset a single channel PLL
-				//TODO: fix!
-//				FPGA::set_bit(socket_, FPGA_ADDR_CSR, PLL_RESET[ch]);
-//				FPGA::clear_bit(socket_, FPGA_ADDR_CSR, PLL_RESET[ch]);
-
-				// wait for lock
-				FILE_LOG(logDEBUG2) << "Waiting for relock of PLL " << ch << " by looking at bit " << PLL_LOCK_TEST[ch];
-				inSync = wait_PLL_relock(false, FPGA_ADDR_PLL_STATUS, {PLL_LOCK_TEST[ch]});
-				if (!inSync) {
-					FILE_LOG(logERROR) << "PLL " << chStrs[ch] << " did not re-sync after reset";
-					return -10;
+				if (ch_phase_deg >= lowPhaseCutoff && ch_phase_deg <= highPhaseCutoff) {
+					// disable then enable the DAC PLL
+					disable_DAC_clock(ch);
+					enable_DAC_clock(ch);
 				}
+
+				// enable the channel pll
+				write_memory(SEQ_CONTROL_ADDR, 0);						
+
+				// wait for the PLL to relock
+				// if (!wait_PLL_relock(CH_PLL_LOCK_BIT) {
+				// 	FILE_LOG(logERROR) << "PLLs did not re-sync after reset";
+				// 	return -2;
+				// }
+			}
+			if (ct == MAX_PHASE_TEST_CNT-1) {
+				FILE_LOG(logINFO) << "DAC " << ((ch==0) ? "A" : "B") << " failed to sync";
+				return -3;
 			}
 		}
 	}
-
-	if (!globalSync) { // failed to sync both channels
-		if (numRetries > 0) {
-			FILE_LOG(logDEBUG) << "Sync failed; retrying.";
-			// restart both DAC clocks and try again
-			//TODO: fix me!
-			// socket_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr, 0x2);  // MAGIC NUMBER
-			// socket_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr2, 0x2); // MAGIC NUMBER
-			// update_PLL_register();
-			// writeByte = 0x0;
-			// socket_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr, 0x0);  // MAGIC NUMBER
-			// socket_.write_SPI(CHIPCONFIG_TARGET_PLL, pllEnableAddr2, 0x0); // MAGIC NUMBER
-			update_PLL_register();
-
-			//TODO: fix!
-//			FPGA::set_bit(socket_, FPGA_ADDR_CSR, pllResetBit);
-//			FPGA::clear_bit(socket_, FPGA_ADDR_CSR, pllResetBit);
-
-			//Try again by recursively calling the same function
-			return test_PLL_sync(numRetries - 1);
-		} else {
-			// we failed, but enable DDRs to get a usable state
-//			FPGA::set_bit(socket_, FPGA_ADDR_CSR, ddr_mask);
-			// enable DAC FIFOs
-			//for (int dac = 0; dac < NUM_CHANNELS; dac++)
-				//enable_DAC_FIFO(dac);
-
-			FILE_LOG(logERROR) << "Error could not sync PLLs";
-			return -9;
-		}
-	}
-
-
 
 	// Enable DDRs
-	//TODO: fix!
-//	FPGA::set_bit(socket_, FPGA_ADDR_CSR, ddr_mask);
-	// enable DAC FIFOs
-	//for (int dac = 0; dac < NUM_CHANNELS; dac++)
-		//enable_DAC_FIFO(dac);
+	// See above comment about why this is not used
+	// write_memory(SEQ_CONTROL_ADDR, 0);
 
 	FILE_LOG(logINFO) << "Sync test complete";
-	*/
+
 	return 0;
 }
 
@@ -1207,6 +1018,28 @@ int APS2::get_PLL_freq() {
 	return freq;
 }
 
+int APS2::enable_DAC_clock(const int & dac) {
+	// enables the PLL output to a DAC (0 or 1)
+	const vector<uint16_t> DAC_PLL_ADDR = {0xF0, 0xF1};
+
+	vector<SPI_AddrData_t> enable_msg = {
+		{DAC_PLL_ADDR[dac], 0x00},
+		{0x232, 0x1}
+	};
+	auto msg = build_PLL_SPI_msg(enable_msg);
+	return write_SPI(msg);
+}
+
+int APS2::disable_DAC_clock(const int & dac) {
+	const vector<uint16_t> DAC_PLL_ADDR = {0xF0, 0xF1};
+
+	vector<SPI_AddrData_t> disable_msg = {
+		{DAC_PLL_ADDR[dac], 0x02},
+		{0x232, 0x1}
+	};
+	auto msg = build_PLL_SPI_msg(disable_msg);
+	return write_SPI(msg);
+}
 
 int APS2::setup_VCXO() {
 	// Write the standard VCXO setup

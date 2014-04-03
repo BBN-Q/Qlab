@@ -128,15 +128,19 @@ private:
 	vector<uint32_t> build_PLL_SPI_msg(const vector<SPI_AddrData_t> &);
 	vector<uint32_t> build_VCXO_SPI_msg(const vector<uint8_t> &);
 
+	// PLL methods
 	int setup_PLL();
 	int set_PLL_freq(const int &);
 	int test_PLL_sync(const int & numRetries = 2);
-	int read_PLL_status(const int & regAddr = PLL_STATUS_ADDR, const vector<int> & pllLockBits = std::initializer_list<int>({PLL_02_LOCK_BIT, PLL_13_LOCK_BIT, REFERENCE_PLL_LOCK_BIT}));
+	int read_PLL_status(const int & regAddr = PLL_STATUS_ADDR, const vector<int> & pllLockBits = std::initializer_list<int>({PLL_CHA_LOCK_BIT, PLL_CHB_LOCK_BIT, PLL_SYS_LOCK_BIT}));
 	int get_PLL_freq();
+	int enable_DAC_clock(const int &);
+	int disable_DAC_clock(const int &);
 
-
+	// VCXO methods
 	int setup_VCXO();
 
+	// DAC methods
 	int setup_DAC(const int &);
 	int enable_DAC_FIFO(const int &);
 	int disable_DAC_FIFO(const int &);
