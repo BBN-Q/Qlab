@@ -130,7 +130,7 @@ APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPa
     //Fill out the destination  MAC address
     FILE_LOG(logDEBUG3) << "Sending " << msg.size() << " packets to " << serial;
     unsigned ackct, retryct = 0;
-    auto iter = packet.begin();
+    auto iter = msg.begin();
 
     while (iter != msg.end()){
         auto packet = *iter;;
