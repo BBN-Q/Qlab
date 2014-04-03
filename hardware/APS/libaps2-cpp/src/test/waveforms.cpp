@@ -95,11 +95,11 @@ int main (int argc, char* argv[])
   // check that memory map was written
   uint32_t testInt;
   read_memory(deviceSerial.c_str(), WFA_OFFSET_ADDR, &testInt, 1);
-  cout << "wfA offset: " << testInt - MEMORY_ADDR << endl;
+  cout << "wfA offset: " << hexn<8> << testInt - MEMORY_ADDR << endl;
   read_memory(deviceSerial.c_str(), WFB_OFFSET_ADDR, &testInt, 1);
-  cout << "wfB offset: " << testInt - MEMORY_ADDR << endl;
+  cout << "wfB offset: " << hexn<8> << testInt - MEMORY_ADDR << endl;
   read_memory(deviceSerial.c_str(), SEQ_OFFSET_ADDR, &testInt, 1);
-  cout << "seq offset: " << testInt - MEMORY_ADDR << endl;
+  cout << "seq offset: " << hexn<8> << testInt - MEMORY_ADDR << endl;
 
   // stop pulse sequencer and cache controller
   stop(deviceSerial.c_str());
@@ -117,10 +117,13 @@ int main (int argc, char* argv[])
 
   // square waveforms of increasing amplitude
   vector<short> wfmA;
-  for (short a = 0; a < 8; a++) {
-    for (int ct=0; ct < 32; ct++) {
-      wfmA.push_back(a*1000);
-    }
+  // for (short a = 0; a < 8; a++) {
+  //   for (int ct=0; ct < 32; ct++) {
+  //     wfmA.push_back(a*1000);
+  //   }
+  // }
+  for (short ct=0; ct < 1024; ct++) {
+    wfmA.push_back(8*ct);
   }
   cout << concol::RED << "Uploading square waveforms to Ch A" << concol::RESET << endl;
   set_waveform_int(deviceSerial.c_str(), 0, wfmA.data(), wfmA.size());
@@ -132,8 +135,8 @@ int main (int argc, char* argv[])
   
   // ramp waveform
   vector<short> wfmB;
-  for (short ct=0; ct < 256; ct++) {
-    wfmB.push_back(31*ct);
+  for (short ct=0; ct < 1024; ct++) {
+    wfmB.push_back(8*ct);
   }
   cout << concol::RED << "Uploading ramp waveform to Ch B" << concol::RESET << endl;
   set_waveform_int(deviceSerial.c_str(), 1, wfmB.data(), wfmB.size());

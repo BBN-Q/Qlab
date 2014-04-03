@@ -103,7 +103,7 @@ end
 
 function simpleSeq()
 	seq = LLentry[]
-	push!(seq, LLdata(0, 63, 0; label=:A))
+	push!(seq, LLdata(0, 255, 0; label=:A))
 	push!(seq, LLdata(0, 7, 0; label=:B))
 	push!(seq, LLdata(8, 7, 0; label=:C))
 	push!(seq, LLdata(16, 7, 0; label=:D))
