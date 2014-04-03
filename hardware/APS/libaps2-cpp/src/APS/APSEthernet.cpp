@@ -122,8 +122,9 @@ APSEthernet::EthernetError APSEthernet::disconnect(string serial) {
 	return SUCCESS;
 }
 
-APSEthernet::EthernetError APSEthernet::send(string serial, APSEthernetPacket msg, unsigned ackEvery){
-    return send(serial, vector<APSEthernetPacket>(1, msg), ackEvery);
+APSEthernet::EthernetError APSEthernet::send(string serial, APSEthernetPacket msg, bool checkResponse) {
+    msg.header.dest = devInfo_[serial].macAddr;
+    return send_chunk(serial, vector<APSEthernetPacket>(1, msg), !checkResponse);
 }
 
 APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPacket> msg, unsigned ackEvery /* see header for default */) {
@@ -147,7 +148,7 @@ APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPa
         } 
         auto chunkSize = std::distance(iter, endPoint);
         buffer.resize(chunkSize);
-        std::copy(buffer.begin(), iter, endPoint);
+        std::copy(iter, endPoint, buffer.begin());
 
         for (auto & packet : buffer ){
             // insert the target MAC address - not really necessary anymore because UDP does filtering

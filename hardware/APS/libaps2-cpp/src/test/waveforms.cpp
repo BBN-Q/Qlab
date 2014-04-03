@@ -221,11 +221,6 @@ int main (int argc, char* argv[])
   read_memory(deviceSerial.c_str(), PLL_STATUS_ADDR, &testInt, 1);
   cout << "DMA status reg after pulse sequencer enable: " << hexn<8> << testInt << endl;
 
-  read_memory(deviceSerial.c_str(), PHASE_COUNT_A_ADDR, &testInt, 1);
-  cout << "Pulse sequencer command top: " << hexn<8> << testInt << endl;
-  read_memory(deviceSerial.c_str(), PHASE_COUNT_B_ADDR, &testInt, 1);
-  cout << "Pulse sequencer command bottom: " << hexn<8> << testInt << endl;
-
   cout << concol::RED << "Stopping" << concol::RESET << endl;
   stop(deviceSerial.c_str());
 

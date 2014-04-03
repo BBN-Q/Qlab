@@ -43,7 +43,7 @@ int APS2::reset(const APS_RESET_MODE_STAT & resetMode /* default SOFT_RESET_HOST
 	command.cmd = static_cast<uint32_t>(APS_COMMANDS::RESET);
 	command.mode_stat = static_cast<uint32_t>(resetMode);
 
-	write_command(command);
+	write_command(command, 0, false);
 	/*	TODO: re-enable this when the USER nonvolative image contains the UDP interface
 	// After being reset the board should send an acknowledge packet with status bytes
 	APSEthernetPacket statusPacket = query(command)[0];
@@ -137,7 +137,7 @@ int APS2::store_image(const string & bitFile, const int & position) { /* see hea
 
 	//Copy over the file data to the data vector
 	vector<uint32_t> packedData;
-	packedData.reserve(fileSize/4);
+	packedData.resize(fileSize/4);
 	FID.read(reinterpret_cast<char *>(packedData.data()), fileSize);
 
 	// make packedData size even to ensure that the payload will be a multiple of 8 bytes
@@ -171,7 +171,7 @@ int APS2::select_image(const int & bitFileNum) {
 	packet.header.command.cnt = 0;
 	packet.header.addr = addr;
 
-	return APSEthernet::get_instance().send(deviceSerial_, packet, 0);
+	return APSEthernet::get_instance().send(deviceSerial_, packet, false);
 }
 
 int APS2::program_FPGA(const string & bitFile) {
@@ -452,11 +452,7 @@ int APS2::write_memory(const uint32_t & addr, const vector<uint32_t> & data){
 	vector<APSEthernetPacket> dataPackets = pack_data(addr, data);
 
 	//Send the packets out 
-	APSEthernet::get_instance().send(deviceSerial_, dataPackets);
-
-	//TOOD: - check for acknowledge in correct order
-	auto ackPackets = read_packets(dataPackets.size());
-	FILE_LOG(logDEBUG3) << "Got back " << ackPackets.size() << " ACK packets";
+	APSEthernet::get_instance().send(deviceSerial_, dataPackets, 20);
 
 	return 0;
 }
@@ -470,7 +466,7 @@ vector<uint32_t> APS2::read_memory(const uint32_t & addr, const uint32_t & numWo
 	readReq.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::USERIO_ACK);
 	readReq.header.command.cnt = numWords;
 	readReq.header.addr = addr;
-	APSEthernet::get_instance().send(deviceSerial_, readReq);
+	APSEthernet::get_instance().send(deviceSerial_, readReq, false);
 
 	//Retrieve the data packet(s)
 	auto readData = read_packets(1);
@@ -583,8 +579,9 @@ int APS2::write_flash(const uint32_t & addr, vector<uint32_t> & data) {
 	FILE_LOG(logDEBUG2) << "Writing " << packets.size() << " packets of data to flash address " << myhex << addr;
 	try {
 		APSEthernet::get_instance().send(deviceSerial_, packets);
-		APSEthernetPacket p = read_packets(packets.size())[0];
-		return p.header.command.mode_stat;	
+		// APSEthernetPacket p = read_packets(packets.size())[0];
+		// return p.header.command.mode_stat;
+		return 0;
 	} catch (std::exception &e) {
 		FILE_LOG(logERROR) << "Flash write failed!";
 		return -1;
@@ -612,7 +609,7 @@ int APS2::erase_flash(uint32_t addr, uint32_t numBytes) {
 
 	while(erasedBytes < numBytes) {
 		FILE_LOG(logDEBUG2) << "Erasing a 64 KB page at addr: " << myhex << addr;
-		write_command(command, addr);
+		write_command(command, addr, false);
 		APSEthernetPacket p = read_packets(1)[0];
 		if (p.header.command.mode_stat == EPROM_OPERATION_FAILED){
 			FILE_LOG(logERROR) << "Flash memory erase command failed!";
@@ -659,13 +656,13 @@ int APS2::write_SPI_setup() {
  * Private Functions
  */
 
-int APS2::write_command(const APSCommand_t & command, const uint32_t & addr /* see header for default value = 0 */){
+int APS2::write_command(const APSCommand_t & command, const uint32_t & addr, const bool & checkResponse /* see header for default values*/){
 	/*
 	* Write a single command 
 	*/
 	//TODO: figure out move constructor
 	APSEthernetPacket packet(command, addr);
-	APSEthernet::get_instance().send(deviceSerial_, packet);
+	APSEthernet::get_instance().send(deviceSerial_, packet, checkResponse);
 	return 0;
 }
 
@@ -712,13 +709,13 @@ vector<APSEthernetPacket> APS2::read_packets(const size_t & numPackets) {
 
 vector<APSEthernetPacket> APS2::query(const APSCommand_t & command, const uint32_t & addr /* see header for default value = 0 */) {
 	//write-read ping-pong
-	write_command(command, addr);
+	write_command(command, addr, false);
 	return read_packets(1);
 }
 
 vector<APSEthernetPacket> APS2::query(const APSEthernetPacket & pkt) {
 	//write-read ping-pong
-	APSEthernet::get_instance().send(deviceSerial_, pkt);
+	APSEthernet::get_instance().send(deviceSerial_, pkt, false);
 	return read_packets(1);
 }
 
@@ -1183,7 +1180,7 @@ int APS2::run_chip_config(const uint32_t & addr /* default = 0 */) {
 	packet.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::RUNCHIPCONFIG);
 	packet.header.command.cnt = 0;
 	packet.header.addr = addr;
-	APSEthernet::get_instance().send(deviceSerial_, packet);
+	APSEthernet::get_instance().send(deviceSerial_, packet, false);
 
 	//Retrieve the data packet(s)
 	auto response = read_packets(1)[0];
