@@ -122,56 +122,85 @@ APSEthernet::EthernetError APSEthernet::disconnect(string serial) {
 	return SUCCESS;
 }
 
-APSEthernet::EthernetError APSEthernet::send(string serial, APSEthernetPacket msg){
-    return send(serial, vector<APSEthernetPacket>(1, msg));
+APSEthernet::EthernetError APSEthernet::send(string serial, APSEthernetPacket msg, unsigned ackEvery){
+    return send(serial, vector<APSEthernetPacket>(1, msg), ackEvery);
 }
 
 APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPacket> msg, unsigned ackEvery /* see header for default */) {
     //Fill out the destination  MAC address
     FILE_LOG(logDEBUG3) << "Sending " << msg.size() << " packets to " << serial;
-    unsigned ackct, retryct = 0;
     auto iter = msg.begin();
+    bool noACK = false;
+    if (ackEvery == 0) {
+        noACK = true;
+        ackEvery = 1;
+    }
+
+    vector<APSEthernetPacket> buffer(ackEvery);
 
     while (iter != msg.end()){
-        auto packet = *iter;;
 
-        // insert the target MAC address - not really necessary anymore because UDP does filtering
-        packet.header.dest = devInfo_[serial].macAddr;
-        packet.header.seqNum = ackct;
+        //Copy the next chunk into a buffer
+        auto endPoint = iter + ackEvery;
+        if (endPoint > msg.end()) {
+            endPoint = msg.end();
+        } 
+        auto chunkSize = std::distance(iter, endPoint);
+        buffer.resize(chunkSize);
+        std::copy(buffer.begin(), iter, endPoint);
 
-        ackct++;
-        //Apply acknowledge flag if necessary
-        bool ackFlag = (ackct % ackEvery == 0) || (std::next(iter) == msg.end());
-        if( ackFlag ){
-            packet.header.command.ack = 1;
+        for (auto & packet : buffer ){
+            // insert the target MAC address - not really necessary anymore because UDP does filtering
+            packet.header.dest = devInfo_[serial].macAddr;
+            //NOACK sets the top bit of the command nibble of the command word
+            packet.header.command.cmd |= (1 << 3);
         }
-        FILE_LOG(logDEBUG4) << "Packet command: " << print_APSCommand(packet.header.command);
-        socket_.send_to(asio::buffer(packet.serialize()), devInfo_[serial].endpoint);
-        iter++;
+        
+        //Apply acknowledge flag to last element of chunk
+        if (!noACK){
+            buffer.back().header.command.cmd &= ~(1 << 3);
+        }
+        
+        auto result = send_chunk(serial, buffer, noACK);
+        if (result != SUCCESS){
+            return result;
+        }
+        std::advance(iter, chunkSize);
+    }
+    return SUCCESS;
+}
 
-        //Wait for acknowledge if we need to
+APSEthernet::EthernetError APSEthernet::send_chunk(string serial, vector<APSEthernetPacket> chunk, bool noACK){
+
+    unsigned seqNum, retryct = 0;
+
+    while( retryct++ < 3){
+        seqNum = 0;
+        for (auto packet : chunk){
+            packet.header.seqNum = seqNum;
+            seqNum++;
+            FILE_LOG(logDEBUG4) << "Packet command: " << print_APSCommand(packet.header.command);
+            socket_.send_to(asio::buffer(packet.serialize()), devInfo_[serial].endpoint);
+        }
+        
+        if(noACK) break;
+        //Wait for acknowledge 
         //TODO: how to check response mode/stat for success?
-        if (ackFlag){
-            try{
-                auto response = receive(serial)[0];
-            }
-            catch (std::exception& e) {
-               if (retryct++ < 3) {
-                    FILE_LOG(logDEBUG) << "No acknowledge received, retrying ...";
-                    //Reset the acknowledge count
-                    ackct = 0;
-                    //Go back to the last acknowledged packet
-                    iter -= (ackct % ackEvery == 0) ? ackEvery : ackct % ackEvery ;
-                }
-                else {
-                    return TIMEOUT;
-                }
-            }
+        try{
+            auto response = receive(serial)[0];
+            break;
+        }
+        catch (std::exception& e) {
+            FILE_LOG(logDEBUG) << "No acknowledge received, retrying ...";
         }
     }
 
+    if (retryct == 3){
+        return TIMEOUT;
+    }
     return SUCCESS;
 }
+
 
 vector<APSEthernetPacket> APSEthernet::receive(string serial, size_t numPackets, size_t timeoutMS) {
     //Read the packets coming back in up to the timeout

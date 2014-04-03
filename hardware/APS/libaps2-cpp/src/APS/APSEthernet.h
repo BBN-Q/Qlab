@@ -40,7 +40,7 @@ public:
 	set<string> enumerate();
 	EthernetError connect(string serial);
 	EthernetError disconnect(string serial);
-	EthernetError send(string serial, APSEthernetPacket msg);
+	EthernetError send(string serial, APSEthernetPacket msg, unsigned ackEvery=1);
 	EthernetError send(string serial, vector<APSEthernetPacket> msg, unsigned ackEvery=1);
 	vector<APSEthernetPacket> receive(string serial, size_t numPackets = 1, size_t timeoutMS = 10000);
 
@@ -59,6 +59,8 @@ private:
 
 	void setup_receive();
 	void sort_packet(const vector<uint8_t> &, const udp::endpoint &);
+
+	EthernetError send_chunk(string, vector<APSEthernetPacket>, bool);
 
 	asio::io_service ios_;
 	udp::socket socket_;

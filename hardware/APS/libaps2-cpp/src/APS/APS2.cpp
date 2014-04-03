@@ -171,7 +171,7 @@ int APS2::select_image(const int & bitFileNum) {
 	packet.header.command.cnt = 0;
 	packet.header.addr = addr;
 
-	return APSEthernet::get_instance().send(deviceSerial_, packet);
+	return APSEthernet::get_instance().send(deviceSerial_, packet, 0);
 }
 
 int APS2::program_FPGA(const string & bitFile) {
