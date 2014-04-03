@@ -58,6 +58,8 @@ int APS2::reset(const APS_RESET_MODE_STAT & resetMode /* default SOFT_RESET_HOST
 int APS2::init(const bool & forceReload, const int & bitFileNum){
 	 //TODO: bitfiles will be stored in flash so all we need to do here is the DACs
 
+	get_sampleRate(); // to update state variable
+
 	if (forceReload || !read_PLL_status()) {
 		FILE_LOG(logINFO) << "Resetting instrument";
 		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << get_bitfile_version() << " PLL status: " << read_PLL_status();
@@ -67,6 +69,8 @@ int APS2::init(const bool & forceReload, const int & bitFileNum){
 		// reset(RECONFIG_USER_EPROM);
 		// alternatively, can just reconfigure the PLL and VCX0 from EPROM
 		// run_chip_config();
+		// this won't be necessary if running the reset above
+		set_sampleRate(1200);
 
 		// sync DAC clock phase with PLL
 		int status = test_PLL_sync();
@@ -82,7 +86,6 @@ int APS2::init(const bool & forceReload, const int & bitFileNum){
 
 		write_memory_map();
 	}
-	samplingRate_ = get_sampleRate();
 
 	return 0;
 }
@@ -197,7 +200,7 @@ int APS2::get_bitfile_version() {
 
 int APS2::set_sampleRate(const int & freq){
 	if (samplingRate_ != freq){
-		//Set PLL frequency for each fpga
+		//Set PLL frequency
 		APS2::set_PLL_freq(freq);
 
 		samplingRate_ = freq;
@@ -213,8 +216,8 @@ int APS2::set_sampleRate(const int & freq){
 int APS2::get_sampleRate() {
 	//Pass through to FPGA code
 	FILE_LOG(logDEBUG2) << "get_sampleRate";
-	int freq1 = get_PLL_freq();
-	return freq1;
+	samplingRate_ = get_PLL_freq();
+	return samplingRate_;
 }
 
 int APS2::clear_channel_data() {
@@ -364,24 +367,14 @@ int APS2::set_trigger_interval(const double & interval){
 
 	FILE_LOG(logDEBUG) << "Setting trigger interval to " << interval << "s (" << clockCycles << " cycles)";
 
-	//Trigger interval is 32bits wide so have to split up into two 16bit words
-	// uint16_t upperWord = clockCycles >> 16;
-	// uint16_t lowerWord = 0xFFFF  & clockCycles;
-	//TODO: fix me!
-	// return write(FPGA_ADDR_TRIG_INTERVAL, {upperWord, lowerWord}, false);
-	return 0;
+	return write_memory(TRIGGER_INTERVAL_ADDR, clockCycles);
 }
 
 double APS2::get_trigger_interval() {
 
-	//Trigger interval is 32bits wide so have to split up into two 16bit words reads
-	uint32_t upperWord = 0, lowerWord = 0;
-	//TODO: fix me!
-	// socket_.read_register(FPGA_ADDR_TRIG_INTERVAL,upperWord );
-	// socket_.read_register(FPGA_ADDR_TRIG_INTERVAL+1, lowerWord);
-	
-	//Put it back together and covert from clock cycles to time (note: trigger interval is zero indexed and has a dead state)
-	return static_cast<double>((upperWord << 16) + lowerWord + 2)/(0.25*samplingRate_*1e6);
+	uint32_t clockCycles = read_memory(TRIGGER_INTERVAL_ADDR, 1)[0];
+	// Convert from clock cycles to time (note: trigger interval is zero indexed and has a dead state)
+	return static_cast<double>(clockCycles + 2)/(0.25*samplingRate_*1e6);
 }
 
 
@@ -838,9 +831,6 @@ int APS2::set_PLL_freq(const int & freq) {
 	// int ddr_mask = CSRMSK_CHA_DDR | CSRMSK_CHB_DDR;
 	//TODO: fix!
 //	FPGA::clear_bit(socket_, FPGA_ADDR_CSR, ddr_mask);
-	// disable DAC FIFOs
-	// for (int dac = 0; dac < NUM_CHANNELS; dac++)
-		// disable_DAC_FIFO(dac);
 
 	// Disable oscillator by clearing APS2_STATUS_CTRL register
 	//TODO: fix!
@@ -850,10 +840,10 @@ int APS2::set_PLL_freq(const int & freq) {
 	const vector<SPI_AddrData_t> PLL_Routine = {
 		{pllCyclesAddr, pllCyclesVal},
 		{pllBypassAddr, pllBypassVal},
-		{0x18, 0x71}, // Initiate Calibration.  Must be followed by Update Registers Command
-		{0x232, 0x1}, // Set bit 0 to 1 to simultaneously update all registers with pending writes.
-		{0x18, 0x70}, // Clear calibration flag so that next set generates 0 to 1.
-		{0x232, 0x1} // Set bit 0 to 1 to simultaneously update all registers with pending writes.
+		// {0x230, 0x01}, // Initiate channel sync
+		// {0x232, 0x1}, // Update registers
+		// {0x230, 0x00}, // Clear SYNC register
+		{0x232, 0x1} // Update registers
 	};
 
 	vector<uint32_t> msg = build_PLL_SPI_msg(PLL_Routine);
@@ -866,9 +856,6 @@ int APS2::set_PLL_freq(const int & freq) {
 	// Enable DDRs
 	//TODO: fix!
 //	FPGA::set_bit(socket_, FPGA_ADDR_CSR, ddr_mask);
-	// Enable DAC FIFOs
-	// for (int dac = 0; dac < NUM_CHANNELS; dac++)
-	// 	enable_DAC_FIFO(dac);
 
 	return 0;
 }
@@ -896,8 +883,7 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 	FILE_LOG(logINFO) << "Running channel sync procedure";
 	
 	// Disable DDRs
-	// Currently disabled because we do not pull out separate access to the DDR vs CLK in the SelectIO interface
-	// write_memory(SEQ_CONTROL_ADDR, (1 << PLL_CHA_RST_BIT) | (1 << PLL_CHB_RST_BIT));
+	set_bit(SEQ_CONTROL_ADDR, {IO_CHA_RST_BIT, IO_CHB_RST_BIT});
 
 	FILE_LOG(logINFO) << "Testing for DAC clock phase sync";
 	static const int lowPhaseCutoff = 45, highPhaseCutoff = 135;
@@ -915,7 +901,7 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 				break;
 			} else {
 				// disable the channel PLL
-				write_memory(SEQ_CONTROL_ADDR, (1 << CH_PLL_RESET_BIT[ch]));
+				set_bit(SEQ_CONTROL_ADDR, {CH_PLL_RESET_BIT[ch]});
 
 				if (ch_phase_deg >= lowPhaseCutoff && ch_phase_deg <= highPhaseCutoff) {
 					// disable then enable the DAC PLL
@@ -924,7 +910,7 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 				}
 
 				// enable the channel pll
-				write_memory(SEQ_CONTROL_ADDR, 0);						
+				clear_bit(SEQ_CONTROL_ADDR, {CH_PLL_RESET_BIT[ch]});
 
 				// wait for the PLL to relock
 				// if (!wait_PLL_relock(CH_PLL_LOCK_BIT) {
@@ -934,14 +920,13 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 			}
 			if (ct == MAX_PHASE_TEST_CNT-1) {
 				FILE_LOG(logINFO) << "DAC " << ((ch==0) ? "A" : "B") << " failed to sync";
-				return -3;
+				// return -3;
 			}
 		}
 	}
 
 	// Enable DDRs
-	// See above comment about why this is not used
-	// write_memory(SEQ_CONTROL_ADDR, 0);
+	clear_bit(SEQ_CONTROL_ADDR, {IO_CHA_RST_BIT, IO_CHB_RST_BIT});
 
 	FILE_LOG(logINFO) << "Sync test complete";
 
@@ -1010,7 +995,7 @@ int APS2::get_PLL_freq() {
 		}
 	}
 
-	FILE_LOG(logDEBUG2) << "PLL frequency for FPGA:  Freq: " << freq;
+	FILE_LOG(logDEBUG) << "PLL frequency for FPGA:  Freq: " << freq;
 
 	return freq;
 }
@@ -1266,6 +1251,22 @@ int APS2::set_offset_register(const int & dac, const float & offset) {
 	// socket_.write_register(zeroRegisterAddr, scaledOffset);
 	*/
 	return 0;
+}
+
+int APS2::set_bit(const uint32_t & addr, std::initializer_list<int> bits) {
+	uint32_t curReg = read_memory(addr, 1)[0];
+	for (int bit : bits) {
+		curReg |= (1 << bit);
+	}
+	return write_memory(addr, curReg);
+}
+
+int APS2::clear_bit(const uint32_t & addr, std::initializer_list<int> bits) {
+	uint32_t curReg = read_memory(addr, 1)[0];
+	for (int bit : bits) {
+		curReg &= ~(1 << bit);
+	}
+	return write_memory(addr, curReg);
 }
 
 int APS2::write_waveform(const int & ch, const vector<int16_t> & wfData) {

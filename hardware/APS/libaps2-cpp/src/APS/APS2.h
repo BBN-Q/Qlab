@@ -148,6 +148,9 @@ private:
 	// int trigger();
 	// int disable();
 
+	int set_bit(const uint32_t &, std::initializer_list<int>);
+	int clear_bit(const uint32_t &, std::initializer_list<int>);
+
 	int write_waveform(const int &, const vector<short> &);
 
 	int write_memory_map(const uint32_t & wfA = WFA_OFFSET, const uint32_t & wfB = WFB_OFFSET, const uint32_t & seq = SEQ_OFFSET);

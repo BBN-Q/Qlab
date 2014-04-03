@@ -231,17 +231,13 @@ static const uint32_t TRIGGER_INTERVAL_ADDR = REGISTER_ADDR + 12*4;
 
 static const uint32_t MEMORY_ADDR = 0x00000000u;
 static const uint32_t WFA_OFFSET  = 0;
-static const uint32_t WFB_OFFSET  = 1024;
+static const uint32_t WFB_OFFSET  = 0x10000000u;
 static const uint32_t SEQ_OFFSET  = 0x20000000u;
 
 //Expected version
 static const int FIRMWARE_VERSION =  0x3;
 
 static const int CSRMSK_SM_ENABLE = 0x1; // state machine enable
-static const int CSRMSK_CHA_PLLRST = 0x2; // pll reset
-static const int CSRMSK_CHB_PLLRST = 0x200; // pll reset
-static const int CSRMSK_CHA_DDR = 0x4; // DDR enable
-static const int CSRMSK_CHB_DDR = 0x400; // DDR enable
 static const int CSRMSK_TRIGSRC = 0x10; // trigger source (1 = external, 0 = internal)
 static const int CSRMSK_OUTMODE = 0x20; // output mode (1 = link list, 0 = waveform)
 
@@ -249,6 +245,8 @@ static const int CSRMSK_OUTMODE = 0x20; // output mode (1 = link list, 0 = wavef
 //TODO: update
 static const int PLL_CHA_RST_BIT = 8;
 static const int PLL_CHB_RST_BIT = 9;
+static const int IO_CHA_RST_BIT = 10;
+static const int IO_CHB_RST_BIT = 11;
 static const int PLL_SYS_LOCK_BIT = 0;
 static const int PLL_CHA_LOCK_BIT = 1;
 static const int PLL_CHB_LOCK_BIT = 2;
