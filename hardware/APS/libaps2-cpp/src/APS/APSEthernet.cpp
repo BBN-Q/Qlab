@@ -129,10 +129,11 @@ APSEthernet::EthernetError APSEthernet::send(string serial, APSEthernetPacket ms
 APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPacket> msg, unsigned ackEvery /* see header for default */) {
     //Fill out the destination  MAC address
     FILE_LOG(logDEBUG3) << "Sending " << msg.size() << " packets to " << serial;
-    unsigned ackct, packetct, retryct = 0;
+    unsigned ackct, retryct = 0;
+    auto iter = packet.begin();
 
-    while (packetct < msg.size()){
-        auto packet = msg[packetct];
+    while (iter != msg.end()){
+        auto packet = *iter;;
 
         // insert the target MAC address - not really necessary anymore because UDP does filtering
         packet.header.dest = devInfo_[serial].macAddr;
@@ -140,12 +141,13 @@ APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPa
 
         ackct++;
         //Apply acknowledge flag if necessary
-        bool ackFlag = (ackct % ackEvery == 0) || (packetct == msg.size()-1);
+        bool ackFlag = (ackct % ackEvery == 0) || (std::next(iter) == msg.end());
         if( ackFlag ){
             packet.header.command.ack = 1;
         }
         FILE_LOG(logDEBUG4) << "Packet command: " << print_APSCommand(packet.header.command);
         socket_.send_to(asio::buffer(packet.serialize()), devInfo_[serial].endpoint);
+        iter++;
 
         //Wait for acknowledge if we need to
         //TODO: how to check response mode/stat for success?
@@ -159,7 +161,7 @@ APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPa
                     //Reset the acknowledge count
                     ackct = 0;
                     //Go back to the last acknowledged packet
-                    packetct -= (ackct % ackEvery == 0) ? ackEvery : ackct % ackEvery ;
+                    iter -= (ackct % ackEvery == 0) ? ackEvery : ackct % ackEvery ;
                 }
                 else {
                     return TIMEOUT;

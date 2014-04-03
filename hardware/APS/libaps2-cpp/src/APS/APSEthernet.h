@@ -41,7 +41,7 @@ public:
 	EthernetError connect(string serial);
 	EthernetError disconnect(string serial);
 	EthernetError send(string serial, APSEthernetPacket msg);
-	EthernetError send(string serial, vector<APSEthernetPacket> msg, unsigned int ackEvery=1);
+	EthernetError send(string serial, vector<APSEthernetPacket> msg, unsigned ackEvery=1);
 	vector<APSEthernetPacket> receive(string serial, size_t numPackets = 1, size_t timeoutMS = 10000);
 
 private:
