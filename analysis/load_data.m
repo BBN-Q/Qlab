@@ -6,28 +6,42 @@ function data = load_data(varargin)
 %   load_data(plotMode)
 %   load_data()
 %
-%   plotMode = 'real', 'imag', 'amp', 'phase', 'real/imag', 'amp/phase', 'quad', or '' (no plot)
+%   path = path to filename to load; special argument 'latest' loads the
+%   last data set taken
+%   plotMode = 'real', 'imag', 'amp', 'phase', 'real/imag', 'amp/phase',
+%        'quad', or '' (no plot)
 if nargin == 2
     [fullpath, plotMode] = varargin{:};
+    if strcmp(fullpath, 'latest')
+        fullpath = get_latest_file();
+    end
     [pathname, filename] = fileparts(fullpath);
+
 elseif nargin == 1
     %exist is too clever by half and searches the whole ruddy Matlab path
     %so it finds a quad.m somewhere on the path and returns 2
     %Hack around with some java
-    javaFile = java.io.File(varargin{1});
-    if javaFile.exists() && javaFile.isFile()
-        fullpath = varargin{1};
+    if strcmp(varargin{1}, 'latest')
+        fullpath = get_latest_file();
         [pathname, filename] = fileparts(fullpath);
-        plotMode = '';
     else
-        fullpath = '';
-        plotMode = varargin{1};
+        javaFile = java.io.File(varargin{1});
+        if javaFile.exists() && javaFile.isFile()
+            fullpath = varargin{1};
+            [pathname, filename] = fileparts(fullpath);
+            plotMode = '';
+        else
+            fullpath = '';
+            plotMode = varargin{1};
+        end
     end
 else
     fullpath = '';
     plotMode = '';
 end
 
+%If we still don't have a file to load the use a ui to get one from the
+%user
 if isempty(fullpath)
     % get path of file to load
     [filename, pathname] = uigetfile(fullfile(getpref('qlab', 'dataDir'), '*.h5'));
@@ -156,5 +170,12 @@ if data.nbrDataSets == 1
     end
     
 end
+
+end
+
+function fullpath = get_latest_file()
+
+namer = DataNamer.get_instance();
+fullpath = namer.lastFileName;
 
 end
