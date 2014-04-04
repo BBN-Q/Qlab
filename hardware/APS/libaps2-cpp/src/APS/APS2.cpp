@@ -334,29 +334,26 @@ float APS2::get_channel_scale(const int & dac) const{
 int APS2::set_trigger_source(const TRIGGERSOURCE & triggerSource){
 
 	int returnVal=0;
-	//TODO: implement with new memory map
-	/*
+
 	switch (triggerSource){
 	case INTERNAL:
-		returnVal = FPGA::clear_bit(socket_, FPGA_ADDR_CSR, CSRMSK_CHA_TRIGSRC);
+		returnVal = set_bit(SEQ_CONTROL_ADDR, {TRIGSRC_BIT});
 		break;
 	case EXTERNAL:
-		returnVal = FPGA::set_bit(socket_, FPGA_ADDR_CSR, CSRMSK_CHA_TRIGSRC);
+		returnVal = clear_bit(SEQ_CONTROL_ADDR, {TRIGSRC_BIT});
 		break;
 	default:
 		returnVal = -1;
 		break;
 	}
-	*/
+
 	return returnVal;
 }
 
 TRIGGERSOURCE APS2::get_trigger_source() {
-//	uint32_t regVal;
-	//TODO: fix me!
-	// socket_.read_register(FPGA_ADDR_CSR, regVal);
-//	return TRIGGERSOURCE((regVal & CSRMSK_CHA_TRIGSRC) == CSRMSK_CHA_TRIGSRC ? 1 : 0);
-	return TRIGGERSOURCE(0);
+	uint32_t regVal;
+	regVal = read_memory(SEQ_CONTROL_ADDR, 1)[0];
+	return TRIGGERSOURCE((regVal & (1 << TRIGSRC_BIT)) != 0 ? INTERNAL : EXTERNAL);
 }
 
 int APS2::set_trigger_interval(const double & interval){
@@ -380,7 +377,7 @@ double APS2::get_trigger_interval() {
 
 int APS2::run() {
 	FILE_LOG(logDEBUG1) << "Releasing pulse sequencer state machine...";
-	write_memory(SEQ_CONTROL_ADDR, 1);
+	set_bit(SEQ_CONTROL_ADDR, {SM_ENABLE_BIT});
 	return 0;
 }
 
@@ -396,7 +393,7 @@ int APS2::stop() {
 	usleep(1000);
 
 	//Put the state machine back in reset
-	write_memory(SEQ_CONTROL_ADDR, 0);
+	clear_bit(SEQ_CONTROL_ADDR, {SM_ENABLE_BIT});
 
 	// restore trigger state
 	set_trigger_interval(curTriggerInt);
@@ -410,21 +407,19 @@ int APS2::set_run_mode(const RUN_MODE & mode) {
 /********************************************************************
  * Description : Sets run mode
  *
- * Inputs :     mode - 1 = LL mode 0 = waveform mode
+ * Inputs :     mode - 0 = LL mode 1 = waveform mode
  *
  * Returns : 0 on success < 0 on failure
  *
 ********************************************************************/
- 	// TODO: fix me!
-	// int dacModeMask = CSRMSK_CHA_OUTMODE;
 	
 	//Set the run mode bit
 	FILE_LOG(logINFO) << "Setting Run Mode ==> " << mode;
-//	if (mode) {
-//	  FPGA::set_bit(socket_, FPGA_ADDR_CSR, dacModeMask);
-//	} else {
-//	  FPGA::clear_bit(socket_, FPGA_ADDR_CSR, dacModeMask);
-//	}
+	if (mode) {
+		set_bit(SEQ_CONTROL_ADDR, {RUNMODE_BIT});
+	} else {
+		clear_bit(SEQ_CONTROL_ADDR, {RUNMODE_BIT});
+	}
 
 	return 0;
 }

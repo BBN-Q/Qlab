@@ -235,13 +235,14 @@ static const uint32_t WFB_OFFSET  = 0x10000000u;
 static const uint32_t SEQ_OFFSET  = 0x20000000u;
 
 //Expected version
-static const int FIRMWARE_VERSION =  0x3;
+static const int FIRMWARE_VERSION =  0xA03;
 
-static const int CSRMSK_SM_ENABLE = 0x1; // state machine enable
-static const int CSRMSK_TRIGSRC = 0x10; // trigger source (1 = external, 0 = internal)
-static const int CSRMSK_OUTMODE = 0x20; // output mode (1 = link list, 0 = waveform)
+// sequencer control bits
+static const int SM_ENABLE_BIT = 0; // state machine enable
+static const int TRIGSRC_BIT = 1; // trigger source (0 = external, 1 = internal)
+static const int RUNMODE_BIT = 2; // run mode (0 = link list, 1 = waveform)
 
-//PLL bits
+// PLL bits
 static const int PLL_CHA_RST_BIT = 8;
 static const int PLL_CHB_RST_BIT = 9;
 static const int IO_CHA_RST_BIT = 10;
@@ -252,11 +253,11 @@ static const int PLL_CHB_LOCK_BIT = 2;
 static const int MAX_PHASE_TEST_CNT = 20;
 
 
-typedef enum {INTERNAL=0, EXTERNAL} TRIGGERSOURCE;
+typedef enum {EXTERNAL=0, INTERNAL} TRIGGERSOURCE;
 
 typedef enum {LED_PLL_SYNC=1, LED_RUNNING} LED_MODE;
 
-typedef enum {RUN_WAVEFORM=0, RUN_SEQUENCE} RUN_MODE;
+typedef enum {RUN_SEQUENCE=0, RUN_WAVEFORM} RUN_MODE;
 
 
 //APS ethernet type
