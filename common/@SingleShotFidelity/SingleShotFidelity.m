@@ -84,7 +84,7 @@ classdef SingleShotFidelity < handle
                 % create a generic SegmentNum sweep
                 %Even though there really is two segments there only one data
                 %point (SS fidelity) being returned at each step.
-                add_sweep(obj.experiment, 1, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 1)));
+                add_sweep(obj.experiment, 1, sweeps.SegmentNum(struct('axisLabel', 'Segment', 'start', 0, 'step', 1, 'numPoints', 1)));
             end
 
             % add single-shot measurement filter
