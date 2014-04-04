@@ -156,7 +156,7 @@ int APS2::store_image(const string & bitFile, const int & position) { /* see hea
 	FILE_LOG(logDEBUG1) << "Bit file is " << packedData.size() << " 32-bit words long";
 
 	uint32_t addr = 0; // todo: make start address depend on position
-	auto packets = pack_data(addr, packedData);
+	auto packets = pack_data(addr, packedData, APS_COMMANDS::FPGACONFIG_ACK);
 
 	// send in groups of 20
 	APSEthernet::get_instance().send(deviceSerial_, packets, 20);
@@ -659,7 +659,7 @@ int APS2::write_command(const APSCommand_t & command, const uint32_t & addr, con
 	return 0;
 }
 
-vector<APSEthernetPacket> APS2::pack_data(const uint32_t & addr, const vector<uint32_t> & data){
+vector<APSEthernetPacket> APS2::pack_data(const uint32_t & addr, const vector<uint32_t> & data, const APS_COMMANDS & cmdtype /* see header for default */) {
 	//Break the data up into ethernet frame sized chunks.   
 	// ethernet frame payload = 1500bytes - 20bytes IPV4 and 8 bytes UDP and 24 bytes APS header (with address field) = 1448bytes = 362 words
 	// for unknown reasons, we see occasional failures when using packets that large. 256 seems to be more stable.
@@ -668,7 +668,7 @@ vector<APSEthernetPacket> APS2::pack_data(const uint32_t & addr, const vector<ui
 	vector<APSEthernetPacket> packets;
 
 	APSEthernetPacket newPacket;
-	newPacket.header.command.cmd =  static_cast<uint32_t>(APS_COMMANDS::USERIO_ACK);
+	newPacket.header.command.cmd =  static_cast<uint32_t>(cmdtype);
 	
 	auto idx = data.begin();
 	uint16_t seqNum = 0;

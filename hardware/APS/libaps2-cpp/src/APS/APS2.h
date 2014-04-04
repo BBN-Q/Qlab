@@ -115,7 +115,7 @@ private:
 
 	//Read/Write commands 
 	int write_command(const APSCommand_t &, const uint32_t & addr = 0, const bool & checkResponse = true);
-	vector<APSEthernetPacket> pack_data(const uint32_t &, const vector<uint32_t> &);
+	vector<APSEthernetPacket> pack_data(const uint32_t &, const vector<uint32_t> &, const APS_COMMANDS & cmdtype = APS_COMMANDS::USERIO_ACK);
 	vector<APSEthernetPacket> read_packets(const size_t &);
 
 	int erase_flash(uint32_t, uint32_t);
