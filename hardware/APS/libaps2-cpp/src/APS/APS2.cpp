@@ -885,7 +885,6 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 	// Disable DDRs
 	set_bit(SEQ_CONTROL_ADDR, {IO_CHA_RST_BIT, IO_CHB_RST_BIT});
 
-	FILE_LOG(logINFO) << "Testing for DAC clock phase sync";
 	static const int lowPhaseCutoff = 45, highPhaseCutoff = 135;
 	// loop over channels
 	for (int ch = 0; ch < 2; ch++) {
@@ -911,12 +910,6 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 
 				// enable the channel pll
 				clear_bit(SEQ_CONTROL_ADDR, {CH_PLL_RESET_BIT[ch]});
-
-				// wait for the PLL to relock
-				// if (!wait_PLL_relock(CH_PLL_LOCK_BIT) {
-				// 	FILE_LOG(logERROR) << "PLLs did not re-sync after reset";
-				// 	return -2;
-				// }
 			}
 			if (ct == MAX_PHASE_TEST_CNT-1) {
 				FILE_LOG(logINFO) << "DAC " << ((ch==0) ? "A" : "B") << " failed to sync";

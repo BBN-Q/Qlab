@@ -242,7 +242,6 @@ static const int CSRMSK_TRIGSRC = 0x10; // trigger source (1 = external, 0 = int
 static const int CSRMSK_OUTMODE = 0x20; // output mode (1 = link list, 0 = waveform)
 
 //PLL bits
-//TODO: update
 static const int PLL_CHA_RST_BIT = 8;
 static const int PLL_CHB_RST_BIT = 9;
 static const int IO_CHA_RST_BIT = 10;
