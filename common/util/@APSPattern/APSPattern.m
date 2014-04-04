@@ -156,7 +156,7 @@ classdef APSPattern < handle
             end
             
             if idx > self.MAX_WAVEFORM_POINTS
-                throw(MException('APS:OutOfMemory',sprintf('Waveform memory %i exceeds APS maximum of %i', idx, self.max_waveform_points)));
+                throw(MException('APS:OutOfMemory',sprintf('Waveform memory %i exceeds APS maximum of %i', idx, self.MAX_WAVEFORM_POINTS)));
             end
             
             % trim data to only points used
@@ -245,7 +245,51 @@ classdef APSPattern < handle
                 paddingLib.(entry.key) = paddings;
             end
         end
+
+        function newLL = splitTAPairs(LL)
+            % split TA-pair entries that are too long into two
+
+            % local constants since class lookup is expensive
+            MAX_TA_COUNT = 2^16;
+            maxLength = MAX_TA_COUNT * APSPattern.ADDRESS_UNIT;
+            MAX_REPEAT_COUNT = APSPattern.MAX_REPEAT_COUNT;
+            
+            % pre-allocate space assuming we only grow (never shrink) a LL
+            newLL = cell(length(LL), 1);
+            idx = 1;
+            for ct = 1:length(LL)
+                entry = LL{ct};
+                totalLength = entry.length * entry.repeat;
+                if (entry.isTimeAmplitude) && (totalLength > maxLength)
+                    % split it
+                    repeat = floor(totalLength / maxLength);
+                    % instead of bailing, could split into more than two...
+                    assert(repeat <= MAX_REPEAT_COUNT, 'entry is too long to split');
+                    residual = mod(totalLength, maxLength);
+                    entry.length = maxLength;
+                    entry.repeat = repeat;
+                    newLL{idx} = entry;
+                    % push on a second entry if there is residual
+                    if residual > 0
+                        entry.length = residual;
+                        entry.repeat = 1;
+                        idx = idx + 1;
+                        newLL{idx} = entry;
+                    end
+                else
+                    newLL{idx} = entry;
+                end
+                idx = idx + 1;
+            end
+        end
         
+        function pattern = preprocessPattern(pattern)
+            self = APSPattern;
+            for ct = 1:length(pattern.linkLists)
+                pattern.linkLists{ct} = self.splitTAPairs(pattern.linkLists{ct});
+            end
+        end
+
         %Main function to parse a set of patterns into link lists
         function [bankData, wfVec_I, wfVec_Q] = convertLinkListFormat(pattern, useVarients, waveformLibrary)
             self = APSPattern;
@@ -253,6 +297,7 @@ classdef APSPattern < handle
                 useVarients = 1;
             end
             
+            pattern = self.preprocessPattern(pattern);
             if ~exist('waveformLibrary','var') || isempty(waveformLibrary)
                 waveformLibrary = self.build_WFLib(pattern, useVarients);
             end
@@ -397,8 +442,7 @@ classdef APSPattern < handle
             count = fix(entryData.length / ADDRESS_UNIT) - 1;
             
             if entry.isTimeAmplitude && (count > MAX_TA_COUNT)
-                %TODO: figure-out new repeat such that repeat*length =
-                %count
+                % shouldn't be able to get here because we split these in preprocessPattern()
                 error('Link List countVal %i is too large', count);
             end
             
@@ -508,6 +552,38 @@ classdef APSPattern < handle
             end
         end
         
+        % unit tests
+        function test_LL_split()
+
+            pg = PatternGen();
+            widths = 100e3 * (1:5);
+            
+            invrepeatmask = bitset(bitset(bitset(bitset(uint16(0), APSPattern.START_MINILL_BIT), APSPattern.WAIT_TRIG_BIT), APSPattern.END_MINILL_BIT), APSPattern.TA_PAIR_BIT);
+            repeatmask = bitxor(2^16-1, invrepeatmask);
+
+            for w = widths
+                pg.cycleLength = w + 2000;
+                seq = {pg.pulse('Xp'), pg.pulse('QId', 'width', w), pg.pulse('Xp')};
+                linkList = pg.build(seq, 1, 0, w+1000, false);
+                channel = struct();
+                channel.linkLists = linkList;
+                channel.waveforms = pg.pulseCollection;
+
+                [apsLL, ~, ~] = APSPattern.convertLinkListFormat(channel);
+
+                if w < 2^18
+                    assert(apsLL.length == 5);
+                    assert(apsLL.count(3) == w/4);
+                else
+                    assert(apsLL.length == 6);
+                    assert(apsLL.count(3) == 2^16 - 1);
+                    repeat = floor(w/2^18);
+                    remainder = mod(w, 2^18-1);
+                    assert(bitand(apsLL.repeat(3), repeatmask) == repeat - 1);
+                    assert(4*(apsLL.count(4)+1) - remainder < 4);
+                end
+            end
+        end
         
     end
     

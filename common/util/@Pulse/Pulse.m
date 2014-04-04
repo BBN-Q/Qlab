@@ -150,6 +150,7 @@ classdef Pulse < handle
        [outx, outy] = hermite(params);
        [outx, outy, frameChange] = arbAxisDRAG(params);
        [outx, outy] = arbitrary(params);
+       [outx,outy,frameChange] = RIP_Spline(params);
        
 
        function h = hash(array)

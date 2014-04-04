@@ -28,6 +28,8 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
         triggerInterval % trigger rate for internal trigger
         runMode
         running
+        Length;	
+        
     end
     
     methods
@@ -48,19 +50,22 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
                     obj.loadConfig(settings.seqFile);
                     obj.operationComplete(); % wait until we're done with the load to continue
                 end
-            end
             settings = rmfield(settings, 'seqFile');
             settings = rmfield(settings, 'seqForce');
+            end
             
             % set channel settings
             channelStrs = {'chan_1','chan_2','chan_3','chan_4'};
-            for ct = 1:4
+            for ct = 1:2
                 ch = channelStrs{ct};
-                obj.setAmplitude(ct, settings.(ch).amplitude);
-                obj.setOffset(ct, settings.(ch).offset);
-                obj.setEnabled(ct, settings.(ch).enabled);
-            end
-            settings = rmfield(settings, channelStrs);
+                if isfield(settings,ch)
+                  obj.setAmplitude(ct, settings.(ch).amplitude);
+                  obj.setOffset(ct, settings.(ch).offset);
+                  obj.setEnabled(ct, settings.(ch).enabled);
+				end			      
+			end
+			
+            settings = rmfield(settings, intersect(fieldnames(settings),channelStrs));
             
             % parse remaining settings
             fields = fieldnames(settings);
@@ -111,7 +116,11 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
                 error('Invalid file name');
             end
             if ~exist(name, 'file')
-                error('Could not find %s', name);
+                % This is perfectly OK; file only has to be on path as seen
+                % by AWG; OED 2/14/2014.  Path may be different on control
+                % machine
+                fprintf('Warning: file %s not on host path\n',name);
+                %error('Could not find %s', name);
             end
             name = ['"' name '"'];
             gpib_string = ['AWGControl:SREStore ' name];
@@ -280,7 +289,7 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
                 numTrys = numTrys+1;
                 t_start = clock;
                 while 1
-                    fprintf('waiting for AWG\n')
+%                    fprintf('waiting for AWG\n')
                     OperationState = obj.running;
                     if  OperationState > 0
                         success = 1;
@@ -373,6 +382,11 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
             val = str2double(temp);
         end
         
+        function val = get.Length(obj)
+            temp = obj.query('SEQ:Length?');
+            val = str2double(temp);
+        end
+
         % property set accessors
         
         function obj = set.triggerInterval(obj, interval)
