@@ -5,7 +5,7 @@ APSEthernet::APSEthernet() : socket_(ios_) {
     std::error_code ec;
     socket_.open(udp::v4(), ec);
     if (ec) {FILE_LOG(logERROR) << "Failed to open socket.";}
-    socket_.bind(udp::endpoint(asio::ip::address::from_string("192.168.5.1"), APS_PROTO), ec);
+    socket_.bind(udp::endpoint(udp::v4(), APS_PROTO), ec);
     if (ec) {FILE_LOG(logERROR) << "Failed to bind to socket.";}
 
     socket_.set_option(asio::socket_base::broadcast(true));
@@ -68,13 +68,8 @@ void APSEthernet::sort_packet(const vector<uint8_t> & packetData, const udp::end
 
 /* PUBLIC methods */
 
-APSEthernet::EthernetError APSEthernet::init(string nic) {
-    /*
-    --Nothing doing for now
-    TODO: Should eventually bind to particular NIC here?
-    */ 
+APSEthernet::EthernetError APSEthernet::init() {
     reset_maps();
-
     return SUCCESS;
 }
 

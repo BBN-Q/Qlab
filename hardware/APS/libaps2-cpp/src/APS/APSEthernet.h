@@ -36,7 +36,7 @@ public:
 	APSEthernet& operator=(APSEthernet &rhs)  { return rhs; };
 
 	~APSEthernet();
-	EthernetError init(string nic);
+	EthernetError init();
 	set<string> enumerate();
 	EthernetError connect(string serial);
 	EthernetError disconnect(string serial);

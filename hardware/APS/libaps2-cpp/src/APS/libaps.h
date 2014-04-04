@@ -26,7 +26,7 @@ enum APSErrorCode {
 };
 
 
-EXPORT int init(const char *);
+EXPORT int init();
 
 EXPORT int enumerate_devices();
 EXPORT int get_numDevices();

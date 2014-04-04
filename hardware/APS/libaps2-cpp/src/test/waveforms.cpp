@@ -56,13 +56,10 @@ int main (int argc, char* argv[])
   }
 
   set_logging_level(dbgLevel);
-
-  // init doesn't use this parameter anymore... should really change the interface
-  string dev("eth0");
   
   cout << concol::RED << "Attempting to initialize libaps" << concol::RESET << endl;
 
-  init(dev.c_str());
+  init();
 
   int numDevices = get_numDevices();
 
