@@ -25,6 +25,9 @@ function exportAPSConfig(path, basename, nbrRepeats, varargin)
             fprintf('Length of LL for pair %d: %d\n', ct, LinkLists{Ich}.length)
             LinkLists{Qch} = [];
             if LinkLists{Ich}.length > APSPattern.MAX_LL_ENTRIES
+                if getpref('Qlab','reliable_aps')
+                    error('Linked list too long; max is %d\n', APSPattern.MAX_LL_ENTRIES);
+                end
                 fprintf('Estimated max rep interval: %g\n', APSPattern.estimateRepInterval(seq.linkLists));
             end
         else
