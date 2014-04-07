@@ -9,7 +9,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         model_number = 'ATS9870';
         
         %Location of the Matlab include files with the SDK
-        includeDir = 'C:\AlazarTech\ATS-SDK\6.0.3\Samples_MATLAB\Include'
+        includeDir = getpref('qlab','AlazarDir','C:\AlazarTech\ATS-SDK\6.0.3\Samples_MATLAB\Include');
         
         %Dictionary of defined variables
         defs = containers.Map()
