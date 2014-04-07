@@ -199,7 +199,8 @@ classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.uWSource & deviceDrivers.li
             gpib_string = [gpib_string checkMapObj(value)];
             obj.write(gpib_string);
         end
-
+        function check_errors(obj)
+        end
     end % end instrument parameter accessors
     
     
