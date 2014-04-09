@@ -331,6 +331,13 @@ float APS2::get_channel_scale(const int & dac) const{
 	return channels_[dac].get_scale();
 }
 
+int APS2::set_markers(const int & dac, const vector<uint8_t> & data) {
+	auto success = channels_[dac].set_markers(data);
+	// write the waveform data again to add packed marker data
+	success |= write_waveform(dac, channels_[dac].prep_waveform());
+	return success;
+}
+
 int APS2::set_trigger_source(const TRIGGERSOURCE & triggerSource){
 
 	int returnVal=0;
@@ -360,7 +367,7 @@ int APS2::set_trigger_interval(const double & interval){
 
 	//SM clock is 1/4 of samplingRate so the trigger interval in SM clock periods is
 	//note: clockCycles is zero-indexed and has a dead state (so subtract 2)
-	int clockCycles = interval*0.25*samplingRate_*1e6 - 2;
+	int clockCycles = interval*0.25*samplingRate_*1e6 - 1;
 
 	FILE_LOG(logDEBUG) << "Setting trigger interval to " << interval << "s (" << clockCycles << " cycles)";
 
@@ -371,7 +378,7 @@ double APS2::get_trigger_interval() {
 
 	uint32_t clockCycles = read_memory(TRIGGER_INTERVAL_ADDR, 1)[0];
 	// Convert from clock cycles to time (note: trigger interval is zero indexed and has a dead state)
-	return static_cast<double>(clockCycles + 2)/(0.25*samplingRate_*1e6);
+	return static_cast<double>(clockCycles + 1)/(0.25*samplingRate_*1e6);
 }
 
 
@@ -1260,7 +1267,7 @@ int APS2::clear_bit(const uint32_t & addr, std::initializer_list<int> bits) {
 int APS2::write_waveform(const int & ch, const vector<int16_t> & wfData) {
 	/*Write waveform data to FPGA memory
 	 * ch = channel (0-1)
-	 * wfData = signed int16_t waveform data
+	 * wfData = bits 0-13: signed 14-bit waveform data, bits 14-15: marker data
 	 */
 
 	uint32_t startAddr = (ch == 0) ? MEMORY_ADDR+WFA_OFFSET : MEMORY_ADDR+WFB_OFFSET;
@@ -1275,7 +1282,7 @@ int APS2::write_waveform(const int & ch, const vector<int16_t> & wfData) {
 	FILE_LOG(logDEBUG2) << "Loading waveform at " << myhex << startAddr;
 	vector<uint32_t> packedData;
 	for (size_t ct=0; ct < wfData.size(); ct += 2) {
-		packedData.push_back(((uint32_t)wfData[ct] << 16) | (uint32_t)wfData[ct+1]);
+		packedData.push_back(((uint32_t)wfData[ct] << 16) | (uint16_t)wfData[ct+1]);
 	}
 	write_memory(startAddr, packedData);
 

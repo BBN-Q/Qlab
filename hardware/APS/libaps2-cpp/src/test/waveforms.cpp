@@ -114,16 +114,25 @@ int main (int argc, char* argv[])
 
   // square waveforms of increasing amplitude
   vector<short> wfmA;
+  // vector<uint16_t> wfmA;
   // for (short a = 0; a < 8; a++) {
   //   for (int ct=0; ct < 32; ct++) {
   //     wfmA.push_back(a*1000);
   //   }
   // }
+  // ramp
   for (short ct=0; ct < 1024; ct++) {
     wfmA.push_back(8*ct);
   }
+  // add some markers
+  vector<uint8_t> markerA(1024);
+  for (unsigned ct=12; ct < 24; ct++){
+    markerA[ct] = 0x02u;
+  }
+
   cout << concol::RED << "Uploading square waveforms to Ch A" << concol::RESET << endl;
   set_waveform_int(deviceSerial.c_str(), 0, wfmA.data(), wfmA.size());
+  set_markers(deviceSerial.c_str(), 0, markerA.data(), markerA.size());
 
   read_memory(deviceSerial.c_str(), CACHE_STATUS_ADDR, &testInt, 1);
   cout << "Cache status reg after wfA write: " << hexn<8> << testInt << endl;
@@ -159,7 +168,11 @@ int main (int argc, char* argv[])
   for (size_t ct = 0; ct < 64; ct++)
   {
     read_memory(deviceSerial.c_str(), offset + 4*ct, &testInt, 1);
-    if ( testInt != ((static_cast<uint32_t>(wfmA[ct*2]) << 16) | static_cast<uint32_t>(wfmA[ct*2+1])) ) {
+    // cout << hexn<8> << testInt << endl;
+    if ( testInt != ((static_cast<uint32_t>(wfmA[ct*2]) << 16) | 
+                     (static_cast<uint32_t>(wfmA[ct*2+1])) | 
+                     (static_cast<uint32_t>(markerA[ct*2]) << 30) | 
+                     (static_cast<uint32_t>(markerA[ct*2+1]) << 14)) ) {
       cout << concol::RED << "Failed read test at offset " << ct << concol::RESET << endl;
     }
     else{
@@ -210,6 +223,11 @@ int main (int argc, char* argv[])
   }
   cout << concol::RED << "Sequence single word write/read " << 100*static_cast<double>(numRight)/seq.size() << "% correct" << concol::RESET << endl;;
 
+  cout << concol::RED << "Set internal trigger interval to 100us" << concol::RESET << endl;
+
+  set_trigger_source(deviceSerial.c_str(), INTERNAL);
+  set_trigger_interval(deviceSerial.c_str(), 200e-6);
+
   cout << concol::RED << "Starting" << concol::RESET << endl;
 
   run(deviceSerial.c_str());
@@ -221,8 +239,8 @@ int main (int argc, char* argv[])
   read_memory(deviceSerial.c_str(), PLL_STATUS_ADDR, &testInt, 1);
   cout << "DMA status reg after pulse sequencer enable: " << hexn<8> << testInt << endl;
 
-  cout << concol::RED << "Stopping" << concol::RESET << endl;
-  stop(deviceSerial.c_str());
+  // cout << concol::RED << "Stopping" << concol::RESET << endl;
+  // stop(deviceSerial.c_str());
 
   // write to zero registers to shift outputs up and down
   // for (short val = 0; val < 8000; val += 1000) {

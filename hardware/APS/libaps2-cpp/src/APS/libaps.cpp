@@ -136,6 +136,10 @@ int set_waveform_int(const char * deviceSerial, int channelNum, int16_t* data, i
 	return APSs[string(deviceSerial)].set_waveform(channelNum, vector<int16_t>(data, data+numPts));
 }
 
+int set_markers(const char * deviceSerial, int channelNum, uint8_t* data, int numPts) {
+	return APSs[string(deviceSerial)].set_markers(channelNum, vector<uint8_t>(data, data+numPts));
+}
+
 int write_sequence(const char * deviceSerial, uint32_t* data, uint32_t numWords) {
 	vector<uint32_t> dataVec(data, data+numWords);
 	return APSs[string(deviceSerial)].write_sequence(dataVec);

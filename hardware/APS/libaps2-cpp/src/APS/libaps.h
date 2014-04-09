@@ -58,6 +58,7 @@ EXPORT double get_trigger_interval(const char *);
 
 EXPORT int set_waveform_float(const char *, int, float*, int);
 EXPORT int set_waveform_int(const char *, int, int16_t*, int);
+EXPORT int set_markers(const char *, int, uint8_t*, int);
 
 EXPORT int write_sequence(const char *, uint32_t*, uint32_t);
 

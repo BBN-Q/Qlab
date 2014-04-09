@@ -28,6 +28,7 @@ public:
 
 	int set_waveform(const vector<float> &);
 	int set_waveform(const vector<int16_t> &);
+	int set_markers(const vector<uint8_t> &);
 	vector<int16_t> prep_waveform() const;
 
 	int clear_data();
@@ -43,6 +44,7 @@ private:
 	float scale_;
 	bool enabled_;
 	vector<float> waveform_;
+	vector<uint8_t> markers_;
 	vector<uint32_t> LLBank_;
 	int trigDelay_;
 };

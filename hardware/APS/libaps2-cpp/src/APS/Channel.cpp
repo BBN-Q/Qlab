@@ -48,31 +48,40 @@ float Channel::get_scale() const{
 int Channel::set_waveform(const vector<float> & data) {
 	//Check whether we need to resize the waveform vector
 	if (data.size() > size_t(MAX_WF_LENGTH)){
-		FILE_LOG(logERROR) << "Tried to update waveform to longer than max allowed: " << data.size();
-		return -1;
+		FILE_LOG(logINFO) << "Warning: waveform too large to fit into cache. Waveform length: " << data.size();
 	}
 
 	//Copy over the waveform data
 	//Waveform length must be a integer multiple of WF_MODULUS so resize to that
 	waveform_.resize(size_t(WF_MODULUS*ceil(float(data.size())/WF_MODULUS)), 0);
+	markers_.resize(waveform_.size());
 	std::copy(data.begin(), data.end(), waveform_.begin());
 
 	return 0;
 }
 
 int Channel::set_waveform(const vector<int16_t> & data) {
-	//Check whether we need to resize the waveform vector
 	if (data.size() > size_t(MAX_WF_LENGTH)){
-		FILE_LOG(logERROR) << "Tried to update waveform to longer than max allowed: " << data.size();
-		return -1;
+		FILE_LOG(logINFO) << "Warning: waveform too large to fit into cache. Waveform length: " << data.size();
 	}
 
-	//Copy over the waveform data and convert to scaled floats
 	//Waveform length must be a integer multiple of WF_MODULUS so resize to that
 	waveform_.resize(size_t(WF_MODULUS*ceil(float(data.size())/WF_MODULUS)), 0);
+	markers_.resize(waveform_.size());
+	//Copy over the waveform data and convert to scaled floats
 	for(size_t ct=0; ct<data.size(); ct++){
 		waveform_[ct] = float(data[ct])/MAX_WF_AMP;
 	}
+	return 0;
+}
+
+int Channel::set_markers(const vector<uint8_t> & data) {
+	if (data.size() > markers_.size()) {
+		FILE_LOG(logDEBUG) << "Marker data length does not match previously uploaded waveform data: " << data.size();
+		markers_.resize(size_t(WF_MODULUS*ceil(float(data.size())/WF_MODULUS)), 0);
+	}
+
+	std::copy(data.begin(), data.end(), markers_.begin());
 	return 0;
 }
 
@@ -95,6 +104,10 @@ vector<int16_t> Channel::prep_waveform() const{
 		for(int16_t & tmpVal : prepVec){
 			if (tmpVal < -MAX_WF_AMP) tmpVal = -MAX_WF_AMP;
 		}
+	}
+	// merge 14-bit DAC data with 2-bit marker data
+	for (size_t ct=0; ct < prepVec.size(); ct++) {
+		prepVec[ct] = (prepVec[ct] & 0x3FFF) | (static_cast<uint16_t>(markers_[ct]) << 14);
 	}
 	return prepVec;
 }
