@@ -23,19 +23,27 @@ CleanUp::~CleanUp() {
 		fclose(Output2FILE::Stream());
 	}
 }
+CleanUp cleanup_;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int init(){
-
+int init() {
 	//Create the logger
-	//TODO: renable 
-	FILE_LOG(logWARNING) << "libaps log file disabled in APSRack::init";
-	//FILE* pFile = fopen("libaps.log", "a");
-	//Output2FILE::Stream() = pFile;
+	FILE* pFile = fopen("libaps.log", "a");
+	Output2FILE::Stream() = pFile;
 
+	//Setup the network interface
+	APSEthernet::get_instance().init();
+
+	//Enumerate the serial numbers and MAC addresses of the devices attached
+	enumerate_devices();
+
+	return APS_OK;
+}
+
+int init_nolog() {
 	//Setup the network interface
 	APSEthernet::get_instance().init();
 

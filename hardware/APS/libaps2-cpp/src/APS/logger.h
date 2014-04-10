@@ -43,27 +43,6 @@ Log<T>::Log()
 {
 }
 
-#ifdef FORCE_CONSOLE
-using std::cout;
-
-template <typename T>
-std::ostringstream& Log<T>::Get(TLogLevel level)
-{
-    cout << "- ";
-    cout << NowTime();
-    cout << " " << ToString(level) << ": ";
-    cout << std::string(level > logDEBUG ? level - logDEBUG : 0, ' ');
-    return os;
-}
-
-template <typename T>
-Log<T>::~Log()
-{
-    cout << os.str() << std::endl;
-}
-
-#else
-
 template <typename T>
 std::ostringstream& Log<T>::Get(TLogLevel level)
 {
@@ -81,8 +60,6 @@ Log<T>::~Log()
     os << std::endl;
     T::Output(os.str());
 }
-
-#endif
 
 template <typename T>
 TLogLevel& Log<T>::ReportingLevel()

@@ -4,7 +4,7 @@
 #include "libaps.h"
 #include "constants.h"
 
-#include <concol.h> 
+#include <concol.h>
 
 using namespace std;
 
@@ -25,7 +25,6 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
   return std::find(begin, end, option) != end;
 }
 
-
 int main (int argc, char* argv[])
 {
 
@@ -42,7 +41,7 @@ int main (int argc, char* argv[])
   
   cout << concol::RED << "Attempting to initialize libaps" << concol::RESET << endl;
 
-  init();
+  init_nolog();
 
   int numDevices = get_numDevices();
 
@@ -77,8 +76,8 @@ int main (int argc, char* argv[])
   cout << "IP addr: " << get_ip_addr(deviceSerial.c_str()) << endl;
 
   // write a new MAC address
-  // cout << concol::RED << "Writing new MAC address" << concol::RESET << endl;
-  // set_mac_addr(deviceSerial.c_str(), 0x4451db112233);
+  cout << concol::RED << "Writing new MAC address" << concol::RESET << endl;
+  set_mac_addr(deviceSerial.c_str(), 0x4451db112233);
   // write a new IP address
   // cout << concol::RED << "Writing new IP address" << concol::RESET << endl;
   // set_ip_addr(deviceSerial.c_str(), 0xc0a80505);

@@ -4,7 +4,7 @@
 #include "libaps.h"
 #include "constants.h"
 
-#include <concol.h> 
+#include <concol.h>
 
 using namespace std;
 
@@ -59,7 +59,7 @@ int main (int argc, char* argv[])
   
   cout << concol::RED << "Attempting to initialize libaps" << concol::RESET << endl;
 
-  init();
+  init_nolog();
 
   int numDevices = get_numDevices();
 
