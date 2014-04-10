@@ -36,23 +36,34 @@ APSEthernet::EthernetError APS2::disconnect(){
 	return APSEthernet::SUCCESS;
 }
 
-int APS2::reset(const APS_RESET_MODE_STAT & resetMode /* default SOFT_RESET_HOST_USER */) {
+int APS2::reset(const APS_RESET_MODE_STAT & resetMode /* default SOFT_RESET */) {
 	
 	APSCommand_t command = { .packed=0 };
 	
 	command.cmd = static_cast<uint32_t>(APS_COMMANDS::RESET);
 	command.mode_stat = static_cast<uint32_t>(resetMode);
 
-	write_command(command, 0, false);
-	/*	TODO: re-enable this when the USER nonvolative image contains the UDP interface
+	uint32_t addr = 0;
+	if (resetMode == APS_RESET_MODE_STAT::RECONFIG_EPROM) {
+		addr = EPROM_USER_IMAGE_ADDR; 
+	}
+
+	write_command(command, addr, false);
 	// After being reset the board should send an acknowledge packet with status bytes
-	APSEthernetPacket statusPacket = query(command)[0];
-	//Copy the data back into the status type 
-	APSStatusBank_t statusRegs;
-	std::copy(statusPacket.payload.begin(), statusPacket.payload.end(), statusRegs.array);
-	FILE_LOG(logDEBUG) << print_status_bank(statusRegs);
-	*/
-	return APSEthernet::SUCCESS;
+	std::this_thread::sleep_for(std::chrono::seconds(4));
+	int retrycnt = 0;
+	while (retrycnt < 3) {
+		try {
+			// poll status to see device reset
+			read_status_registers();
+			return APSEthernet::SUCCESS;
+		} catch (std::exception &e) {
+			cout << concol::RED << "Status timeout; retrying..." << concol::RESET << endl;
+		}
+		retrycnt++;
+	}
+
+	return APSEthernet::TIMEOUT;
 }
 
 int APS2::init(const bool & forceReload, const int & bitFileNum){
@@ -65,11 +76,10 @@ int APS2::init(const bool & forceReload, const int & bitFileNum){
 		FILE_LOG(logINFO) << "Found force: " << forceReload << " bitFile version: " << myhex << get_bitfile_version() << " PLL status: " << read_PLL_status();
 
 		// send hard reset to APS2
-		// this will reconfigure the DACs, PLL and VCX0 with EPROM settings
-		// reset(RECONFIG_USER_EPROM);
-		// alternatively, can just reconfigure the PLL and VCX0 from EPROM
+		// reset(RECONFIG_EPROM);
+		// reconfigure the PLL and VCX0 from EPROM
 		// run_chip_config();
-		// this won't be necessary if running the reset above
+		// this won't be necessary if running the chip config above
 		set_sampleRate(1200);
 
 		// sync DAC clock phase with PLL
@@ -81,7 +91,6 @@ int APS2::init(const bool & forceReload, const int & bitFileNum){
 		// align DAC data clock boundaries
 		setup_DACs();
 
-		// clear channel data
 		clear_channel_data();
 
 		write_memory_map();
@@ -864,7 +873,7 @@ int APS2::set_PLL_freq(const int & freq) {
 
 
 
-int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
+int APS2::test_PLL_sync() {
 	/*
 	 * APS2_TestPllSync synchronized the phases of the DAC clocks with the following procedure:
 	 * 1) Test CHA_PHASE:
@@ -872,9 +881,6 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 	 * 	 b) if close to pi, reset channel PLL
 	 * 	 c) if close to pi/2, reset main PLL and channel PLL
 	 * 2) Repeat for CHB_PHASE
- 	 *
-	 * Inputs: 
-	 *   numRetries - number of times to restart the test if the global sync test fails (step 5)
 	 */
 
 	uint32_t ch_phase, ch_phase_deg;
@@ -929,26 +935,16 @@ int APS2::test_PLL_sync(const int & numRetries /* see header for default */) {
 }
 
 
-int APS2::read_PLL_status(const int & regAddr /*check header for default*/, const vector<int> & pllLockBits  /*check header for default*/ ){
+int APS2::read_PLL_status() {
 	/*
-	 * Helper function to read the status of some PLL bit and whether the main PLL is locked.
-	 * fpga = FPGA1, FPGA2, or ALL_FPGAS
-	 * regAddr = register to poll for PLL sync status (0x8006 or 0xF006)
-	 * PllLockBits = vector of register bit locations to query for lock state
+	 * Helper function to read the status of FPGA PLLs
 	 */
-	
- FILE_LOG(logDEBUG2) << "APS2::read_PLL_status";
 
-	int pllStatus = 1;
-
-//	pll_bit = FPGA::read_FPGA(socket_, FPGA_ADDR_SYNC_REGREAD | FPGA_OFF_VERSION, fpga); // latched to USB clock (has version 0x020)
-//	pll_bit = FPGA::read_FPGA(socket_, FPGA_ADDR_REGREAD | FPGA_OFF_VERSION, fpga); // latched to 200 MHz PLL (has version 0x010)
-
-	uint32_t pllRegister = 0;
-	//TODO: fix me!
-	// socket_.read_register(regAddr, pllRegister);
+	const vector<int> pllLockBits = {PLL_CHA_LOCK_BIT, PLL_CHB_LOCK_BIT, PLL_SYS_LOCK_BIT};	
+	uint32_t pllRegister = read_memory(PLL_STATUS_ADDR, 1)[0];
 
 	//Check each of the clocks in series
+	int pllStatus = 1;
 	for(int tmpBit : pllLockBits){
 		pllStatus &= ((pllRegister >> tmpBit) & 0x1);
 		FILE_LOG(logDEBUG2) << "FPGA PLL status: " << ((pllRegister >> tmpBit) & 0x1) << " (bit " << tmpBit << " of " << myhex << pllRegister << " )";

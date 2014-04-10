@@ -26,7 +26,7 @@ public:
 	APSEthernet::EthernetError disconnect();
 
 	int init(const bool & = false, const int & bitFileNum = 0);
-	int reset(const APS_RESET_MODE_STAT & resetMode = APS_RESET_MODE_STAT::SOFT_RESET_HOST_USER);
+	int reset(const APS_RESET_MODE_STAT & resetMode = APS_RESET_MODE_STAT::SOFT_RESET);
 
 	int store_image(const string & bitFile, const int & position = 0);
 	int select_image(const int &);
@@ -133,8 +133,8 @@ private:
 	// PLL methods
 	int setup_PLL();
 	int set_PLL_freq(const int &);
-	int test_PLL_sync(const int & numRetries = 2);
-	int read_PLL_status(const int & regAddr = PLL_STATUS_ADDR, const vector<int> & pllLockBits = std::initializer_list<int>({PLL_CHA_LOCK_BIT, PLL_CHB_LOCK_BIT, PLL_SYS_LOCK_BIT}));
+	int test_PLL_sync();
+	int read_PLL_status();
 	int get_PLL_freq();
 	int enable_DAC_clock(const int &);
 	int disable_DAC_clock(const int &);

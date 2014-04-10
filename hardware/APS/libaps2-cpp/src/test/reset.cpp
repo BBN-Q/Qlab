@@ -64,7 +64,7 @@ int main (int argc, char* argv[])
 
   connect_APS(deviceSerial.c_str());
 
-  reset(deviceSerial.c_str(), static_cast<int>(APS_RESET_MODE_STAT::RECONFIG_USER_EPROM));
+  reset(deviceSerial.c_str(), static_cast<int>(APS_RESET_MODE_STAT::RECONFIG_EPROM));
 
   disconnect_APS(deviceSerial.c_str());
 

@@ -13,17 +13,15 @@ static const int  MAX_APS_CHANNELS = 2;
 
 static const int  APS_WAVEFORM_UNIT_LENGTH = 4;
 
-static const int  MAX_APS_DEVICES = 10;
-
 static const int MAX_WF_LENGTH = 32768;
 static const int MAX_WF_AMP = 8191;
 static const int WF_MODULUS = 4;
-static const size_t MAX_LL_LENGTH = 8192;
+static const size_t MAX_LL_LENGTH = (1 << 24);
 
 static const int APS_READTIMEOUT = 1000;
 static const int APS_WRITETIMEOUT = 500;
 
-
+static const int MAX_PHASE_TEST_CNT = 20;
 
 //Chip config SPI commands for setting up DAC,PLL,VXCO
 //Possible target bytes
@@ -107,10 +105,8 @@ enum APS_ERROR_CODES {
 };
 
 enum class APS_RESET_MODE_STAT : uint32_t {
-	RECONFIG_BASELINE_EPROM = 0,
-	RECONFIG_USER_EPROM     = 1,
-	SOFT_RESET_HOST_USER    = 2,
-	SOFT_RESET_USER_ONLY    = 3
+	RECONFIG_EPROM = 0,
+	SOFT_RESET     = 1,
 };
 
 enum USERIO_MODE_STAT {
@@ -168,7 +164,7 @@ enum FPGACONFIG_MODE_STAT {
 
 enum class STATUS_REGISTERS {
 	HOST_FIRMWARE_VERSION = 0,
-	USER_FIRMWARE_VERSOIN = 1,
+	USER_FIRMWARE_VERSION = 1,
 	CONFIGURATION_SOURCE = 2,
 	USER_STATUS = 3,
 	DAC0_STATUS = 4,
@@ -214,7 +210,6 @@ enum CONFIGURATION_SOURCE {
 
 
 //FPGA registers
-//TODO: update for new memory map
 static const uint32_t REGISTER_ADDR      = 0x44A00000u;
 static const uint32_t PLL_STATUS_ADDR    = REGISTER_ADDR + 0*4;
 static const uint32_t PHASE_COUNT_A_ADDR = REGISTER_ADDR + 1*4;
@@ -247,18 +242,23 @@ static const int PLL_CHA_RST_BIT = 8;
 static const int PLL_CHB_RST_BIT = 9;
 static const int IO_CHA_RST_BIT = 10;
 static const int IO_CHB_RST_BIT = 11;
+// TODO: implement these in logic?
 static const int PLL_SYS_LOCK_BIT = 0;
 static const int PLL_CHA_LOCK_BIT = 1;
 static const int PLL_CHB_LOCK_BIT = 2;
-static const int MAX_PHASE_TEST_CNT = 20;
 
+// EPROM MEMORY MAP
+static const uint32_t EPROM_SPI_CONFIG_ADDR = 0x0;
+static const uint32_t EPROM_USER_IMAGE_ADDR = 0x00010000;
+static const uint32_t EPROM_BASE_IMAGE_ADDR = 0x01000000;
+static const uint32_t EPROM_MACIP_ADDR      = 0x00FF0000;
 
+// SEQUENCER MODES
 typedef enum {EXTERNAL=0, INTERNAL} TRIGGERSOURCE;
 
 typedef enum {LED_PLL_SYNC=1, LED_RUNNING} LED_MODE;
 
 typedef enum {RUN_SEQUENCE=0, RUN_WAVEFORM} RUN_MODE;
-
 
 //APS ethernet type
 static const uint16_t APS_PROTO = 0xBB4E;
@@ -288,7 +288,8 @@ static const vector<SPI_AddrData_t> PLL_INIT = {
 	{0xF5, 0x00},  // Enable un-inverted 400mV clock on OUT5 (goes to FPGA mem_clk)
 	{0x190, 0x00}, // channel 0: no division
 	{0x191, 0x80}, // Bypass 0 divider
-	{0x193, 0x11}, // channel 1: (2 high, 2 low = 1.2 GHz / 4 = 300 MHz sys_clk)
+	// {0x193, 0x11}, // channel 1: (2 high, 2 low = 1.2 GHz / 4 = 300 MHz sys_clk)
+	{0x193, 0x00}, // channel 1: (1 high, 1 low = 1.2 GHz / 2 = 600 MHz sys_clk)
 	{0x196, 0x10}, // channel 2: (2 high, 1 low = 1.2 GHz / 3 = 400 MHz mem_clk)
 	{0x1E0, 0x0},  // Set VCO post divide to 2
 	{0x1E1, 0x2},  // Select VCO as clock source for VCO divider
