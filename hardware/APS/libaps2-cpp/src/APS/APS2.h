@@ -102,6 +102,12 @@ public:
 	int write_flash(const uint32_t &, vector<uint32_t> &);
 	vector<uint32_t> read_flash(const uint32_t &, const uint32_t &);
 
+	//MAC and IP addresses
+	uint64_t get_mac_addr();
+	int set_mac_addr(const uint64_t &);
+	uint32_t get_ip_addr();
+	int set_ip_addr(const uint32_t &);
+
 	//CLPD DRAM
 	int write_bitfile(const uint32_t &, const string &);
 	int load_bitfile(const uint32_t &);

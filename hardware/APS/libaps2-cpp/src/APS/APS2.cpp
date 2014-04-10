@@ -641,6 +641,41 @@ vector<uint32_t> APS2::read_flash(const uint32_t & addr, const uint32_t & numWor
 	return data;
 }
 
+uint64_t APS2::get_mac_addr() {
+	auto data = read_flash(EPROM_MACIP_ADDR, 2);
+	return (static_cast<uint64_t>(data[0]) << 24) | (data[1] >> 16);
+}
+
+int APS2::set_mac_addr(const uint64_t & mac) {
+	uint32_t ip_addr = get_ip_addr();
+	vector<uint32_t> data = {static_cast<uint32_t>(mac >> 24),
+		                     static_cast<uint32_t>((mac & 0xffff) << 16),
+		                     ip_addr};
+	write_flash(EPROM_MACIP_ADDR, data);
+	// verify
+	if (get_mac_addr() != mac) {
+		return -1;
+	}
+	return 0;
+}
+
+uint32_t APS2::get_ip_addr() {
+	return read_flash(EPROM_MACIP_ADDR+8, 1)[0];
+}
+
+int APS2::set_ip_addr(const uint32_t & ip_addr) {
+	uint64_t mac = get_mac_addr();
+	vector<uint32_t> data = {static_cast<uint32_t>(mac >> 24),
+		                     static_cast<uint32_t>((mac & 0xffff) << 16),
+		                     ip_addr};
+	write_flash(EPROM_MACIP_ADDR, data);
+	// verify
+	if (get_ip_addr() != ip_addr) {
+		return -1;
+	}
+	return 0;
+}
+
 //Create/restore setup SPI sequence
 int APS2::write_SPI_setup() {
 	FILE_LOG(logINFO) << "Writing SPI startup sequence";

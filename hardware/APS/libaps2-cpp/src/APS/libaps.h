@@ -89,7 +89,15 @@ EXPORT int program_FPGA(const char *, const char *);
 
 EXPORT int write_flash(const char *, uint32_t, uint32_t*, uint32_t);
 EXPORT int read_flash(const char *, uint32_t, uint32_t, uint32_t*);
+
+EXPORT uint64_t get_mac_addr(const char *);
+EXPORT int set_mac_addr(const char *, uint64_t);
+EXPORT const char * get_ip_addr(const char *);
+EXPORT int set_ip_addr(const char *, uint32_t);
+
 EXPORT int write_SPI_setup(const char *);
+
+string ip_to_string(const uint32_t &);
 
 #ifdef __cplusplus
 }
