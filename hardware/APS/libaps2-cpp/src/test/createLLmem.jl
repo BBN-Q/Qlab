@@ -103,14 +103,14 @@ end
 
 function simpleSeq()
 	seq = LLentry[]
-	push!(seq, LLdata(0, 255, 0; label=:A))
-	push!(seq, LLdata(0, 7, 0; label=:B))
+	push!(seq, waitTrig!(LLdata(0, 255, 0; label=:A)))
+	push!(seq, LLdata(0, 7, 0, 1; label=:B))
 	push!(seq, LLdata(8, 7, 0; label=:C))
 	push!(seq, LLdata(16, 7, 0; label=:D))
 	push!(seq, LLdata(24, 7, 0; label=:E))
 	push!(seq, LLdata(16, 7, 0))
 	push!(seq, LLdata(8, 7, 0))
-	push!(seq, LLdata(0, 7, 0))
+	push!(seq, LLdata(0, 7, 0, 1))
 	push!(seq, LLgoto(:A))
 	resolve_symbols!(seq)
 end
