@@ -8,6 +8,54 @@
 
 using namespace std;
 
+vector<uint32_t> read_bit_file(string fileName) {
+  std::ifstream FID (fileName, std::ios::in|std::ios::binary);
+  if (!FID.is_open()){
+    throw runtime_error("Unable to open file.");
+  }
+
+  //Get the file size in bytes
+  FID.seekg(0, std::ios::end);
+  size_t fileSize = FID.tellg();
+  FILE_LOG(logDEBUG1) << "Bitfile is " << fileSize << " bytes";
+  FID.seekg(0, std::ios::beg);
+
+  //Copy over the file data to the data vector
+  vector<uint32_t> packedData;
+  packedData.resize(fileSize/4);
+  FID.read(reinterpret_cast<char *>(packedData.data()), fileSize);
+
+  //Convert to big endian byte order - basically because it will be byte-swapped again when the packet is serialized
+  for (auto & packet : packedData) {
+    packet = htonl(packet);
+  }
+
+  cout << "Bit file is " << packedData.size() << " 32-bit words long" << endl;
+  return packedData;
+}
+
+int write_image(string deviceSerial, string fileName) {
+  vector<uint32_t> data = read_bit_file(fileName);
+  write_flash(deviceSerial.c_str(), EPROM_USER_IMAGE_ADDR, data.data(), data.size());
+  //verify the write
+  vector<uint32_t> buffer(256);
+  uint32_t numWords = 256;
+  cout << "Verifying:" << endl;
+  for (size_t ct=0; ct < data.size(); ct+=256) {
+    cout << 100*ct/data.size() << " %\r" << flush;
+    if (std::distance(data.begin() + ct, data.end()) < 256) {
+      numWords = std::distance(data.begin() + ct, data.end());
+    }
+    read_flash(deviceSerial.c_str(), EPROM_USER_IMAGE_ADDR + 4*ct, numWords, buffer.data());
+    if (!std::equal(buffer.begin(), buffer.begin()+numWords, data.begin()+ct)) {
+      cout << endl << "Mismatched data at offset " << hexn<8> << ct << endl;
+      return -1;
+    }
+  }
+  cout << endl;
+  return reset(deviceSerial.c_str(), static_cast<int>(APS_RESET_MODE_STAT::RECONFIG_EPROM));
+}
+
 int main (int argc, char* argv[])
 {
 
