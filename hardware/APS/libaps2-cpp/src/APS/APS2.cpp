@@ -58,7 +58,7 @@ int APS2::reset(const APS_RESET_MODE_STAT & resetMode /* default SOFT_RESET */) 
 			read_status_registers();
 			return APSEthernet::SUCCESS;
 		} catch (std::exception &e) {
-			cout << concol::RED << "Status timeout; retrying..." << concol::RESET << endl;
+			FILE_LOG(logDEBUG) << "Status timeout; retrying...";
 		}
 		retrycnt++;
 	}

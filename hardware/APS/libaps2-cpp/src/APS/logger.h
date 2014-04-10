@@ -16,14 +16,6 @@
 #include <stdio.h>
 #include <iostream>
 
-#include <concol.h>
-#ifdef _WIN32
-#define FORCE_CONSOLE
-#ifdef FORCE_CONSOLE
-using std::cout;
-#endif
-#endif
-
 inline std::string NowTime();
 
 enum TLogLevel {logERROR, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4};
@@ -38,7 +30,6 @@ public:
 public:
     static TLogLevel& ReportingLevel();
     static std::string ToString(TLogLevel level);
-    static int ToColor(TLogLevel level);
     static TLogLevel FromString(const std::string& level);
 protected:
     std::ostringstream os;
@@ -53,14 +44,13 @@ Log<T>::Log()
 }
 
 #ifdef FORCE_CONSOLE
+using std::cout;
 
 template <typename T>
 std::ostringstream& Log<T>::Get(TLogLevel level)
 {
     cout << "- ";
     cout << NowTime();
-    //TOOD: fixme!
-    //setcolor(ToColor(level), black);
     cout << " " << ToString(level) << ": ";
     cout << std::string(level > logDEBUG ? level - logDEBUG : 0, ' ');
     return os;
@@ -106,15 +96,6 @@ std::string Log<T>::ToString(TLogLevel level)
 {
 	static const char* const buffer[] = {"ERROR", "WARNING", "INFO", "DEBUG", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4"};
     return buffer[level];
-}
-
-template <typename T>
-int Log<T>::ToColor(TLogLevel level)
-{
-//    static const int buffer[] = {red, yellow, white, green, aqua, purple, blue, dark_green};
-//    return buffer[level];
-	//hacked out by Colm Ryan 22 Aug. 2013
-	return 1;
 }
 
 template <typename T>
