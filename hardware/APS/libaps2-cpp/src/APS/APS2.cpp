@@ -643,12 +643,12 @@ vector<uint32_t> APS2::read_flash(const uint32_t & addr, const uint32_t & numWor
 
 uint64_t APS2::get_mac_addr() {
 	auto data = read_flash(EPROM_MACIP_ADDR, 2);
-	return (static_cast<uint64_t>(data[0]) << 24) | (data[1] >> 16);
+	return (static_cast<uint64_t>(data[0]) << 16) | (data[1] >> 16);
 }
 
 int APS2::set_mac_addr(const uint64_t & mac) {
 	uint32_t ip_addr = get_ip_addr();
-	vector<uint32_t> data = {static_cast<uint32_t>(mac >> 24),
+	vector<uint32_t> data = {static_cast<uint32_t>(mac >> 16),
 		                     static_cast<uint32_t>((mac & 0xffff) << 16),
 		                     ip_addr};
 	write_flash(EPROM_MACIP_ADDR, data);
@@ -665,7 +665,7 @@ uint32_t APS2::get_ip_addr() {
 
 int APS2::set_ip_addr(const uint32_t & ip_addr) {
 	uint64_t mac = get_mac_addr();
-	vector<uint32_t> data = {static_cast<uint32_t>(mac >> 24),
+	vector<uint32_t> data = {static_cast<uint32_t>(mac >> 16),
 		                     static_cast<uint32_t>((mac & 0xffff) << 16),
 		                     ip_addr};
 	write_flash(EPROM_MACIP_ADDR, data);
