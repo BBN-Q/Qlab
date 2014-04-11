@@ -100,9 +100,9 @@ int main (int argc, char* argv[])
   cout << "Received " << hexn<8> << buffer[0] << " " << hexn<8> << buffer[1];
   cout << " " << hexn<8> << buffer[2] << " " << hexn<8> << buffer[3] << endl;
 
-  cout << concol::RED << "Erasing/writing flash addr 0x00FA0000 (64 words)" << concol::RESET << endl;
+  cout << concol::RED << "Erasing/writing flash addr 0x00FA0000 (128 words)" << concol::RESET << endl;
   vector<uint32_t> testData;
-  for (size_t ct=0; ct<64; ct++){
+  for (size_t ct=0; ct<128; ct++){
     testData.push_back(0x00FA0000 + static_cast<uint32_t>(ct));
   } 
   write_flash(deviceSerial.c_str(), 0x00FA0000, testData.data(), testData.size());

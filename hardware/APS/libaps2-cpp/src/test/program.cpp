@@ -77,7 +77,7 @@ int write_image(string deviceSerial, string fileName) {
     }
     read_flash(deviceSerial.c_str(), EPROM_USER_IMAGE_ADDR + 4*ct, numWords, buffer.data());
     if (!std::equal(buffer.begin(), buffer.begin()+numWords, data.begin()+ct)) {
-      cout << endl << "Mismatched data at offset " << hexn<8> << ct << endl;
+      cout << endl << "Mismatched data at offset " << hexn<6> << ct << endl;
       return -2;
     }
   }

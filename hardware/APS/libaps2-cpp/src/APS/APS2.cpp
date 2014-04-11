@@ -594,7 +594,7 @@ int APS2::write_flash(const uint32_t & addr, vector<uint32_t> & data) {
 
 	for (size_t ct = 0; ct < data.size(); ct += 64) {
 		std::copy(data.begin() + ct, data.begin() + ct + 64, packet.payload.begin());
-		packet.header.addr = addr + ct*64;
+		packet.header.addr = addr + 4*ct;
 		packets.push_back(packet);
 	}
 	FILE_LOG(logDEBUG) << "Writing " << packets.size() << " packets of data to flash address " << myhex << addr;
