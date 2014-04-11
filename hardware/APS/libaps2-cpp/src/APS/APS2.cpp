@@ -579,24 +579,13 @@ int APS2::write_flash(const uint32_t & addr, vector<uint32_t> & data) {
 	// erase before write
 	erase_flash(addr, sizeof(uint32_t) * data.size());
 
-	vector<APSEthernetPacket> packets;
-	APSEthernetPacket packet;
-	packet.header.command.r_w = 0;
-	packet.header.command.cmd = static_cast<uint32_t>(APS_COMMANDS::EPROMIO);
-	packet.header.command.mode_stat = EPROM_RW;
-	packet.header.command.cnt = 64;
-	packet.payload.resize(64);
-
 	// resize data to a multiple of 64 words (256 bytes)
 	int padwords = (64 - (data.size() % 64)) % 64;
 	FILE_LOG(logDEBUG3) << "Flash write: padding payload with " << padwords << " words";
 	data.resize(data.size() + padwords);
 
-	for (size_t ct = 0; ct < data.size(); ct += 64) {
-		std::copy(data.begin() + ct, data.begin() + ct + 64, packet.payload.begin());
-		packet.header.addr = addr + 4*ct;
-		packets.push_back(packet);
-	}
+	vector<APSEthernetPacket> packets = pack_data(addr, data, APS_COMMANDS::EPROMIO);
+
 	FILE_LOG(logDEBUG) << "Writing " << packets.size() << " packets of data to flash address " << myhex << addr;
 	try {
 		APSEthernet::get_instance().send(deviceSerial_, packets);
