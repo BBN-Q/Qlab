@@ -7,6 +7,7 @@
 #include "libaps.h"
 #include "APS2.h"
 #include <sstream>
+#include "asio.hpp"
 
 map<string, APS2> APSs; //map to hold on to the APS instances
 set<string> deviceSerials; // set of APSs that responded to an enumerate broadcast
@@ -306,19 +307,14 @@ int set_mac_addr(const char * deviceSerial, uint64_t mac) {
 }
 const char * get_ip_addr(const char * deviceSerial) {
 	uint32_t ip_addr = APSs[string(deviceSerial)].get_ip_addr();
-	return ip_to_string(ip_addr).c_str();
+	return asio::ip::address_v4(ip_addr).to_string().c_str();
 }
-int set_ip_addr(const char * deviceSerial, uint32_t ip_addr) {
+int set_ip_addr(const char * deviceSerial, const char * ip_addr_str) {
+	uint32_t ip_addr = asio::ip::address_v4::from_string(ip_addr_str).to_ulong();
 	return APSs[string(deviceSerial)].set_ip_addr(ip_addr);
 }
 int write_SPI_setup(const char * deviceSerial) {
 	return APSs[string(deviceSerial)].write_SPI_setup();
-}
-
-string ip_to_string(const uint32_t & ip_addr) {
-	std::ostringstream ss;
-	ss << (ip_addr >> 24) << "." << ((ip_addr >> 16) & 0xFF) << "." << ((ip_addr >> 8) & 0xFF) << "." << (ip_addr & 0xFF);
-	return ss.str();
 }
 
 #ifdef __cplusplus

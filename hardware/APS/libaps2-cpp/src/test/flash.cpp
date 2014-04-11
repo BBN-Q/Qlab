@@ -76,11 +76,11 @@ int main (int argc, char* argv[])
   cout << "IP addr: " << get_ip_addr(deviceSerial.c_str()) << endl;
 
   // write a new MAC address
-  cout << concol::RED << "Writing new MAC address" << concol::RESET << endl;
-  set_mac_addr(deviceSerial.c_str(), 0x4451db112233);
+  // cout << concol::RED << "Writing new MAC address" << concol::RESET << endl;
+  // set_mac_addr(deviceSerial.c_str(), 0x4451db112233);
   // write a new IP address
   // cout << concol::RED << "Writing new IP address" << concol::RESET << endl;
-  // set_ip_addr(deviceSerial.c_str(), 0xc0a80505);
+  // set_ip_addr(deviceSerial.c_str(), "192.168.5.5");
 
   // read SPI setup sequence
   uint32_t setup[32];
