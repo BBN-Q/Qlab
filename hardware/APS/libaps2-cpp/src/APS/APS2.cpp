@@ -194,7 +194,24 @@ int APS2::program_FPGA(const string & bitFile) {
 	int success = store_image(bitFile);
 	if (success != 0)
 		return success;
-	return select_image(0);
+	success = select_image(0);
+	if (success != 0)
+		return success;
+
+	std::this_thread::sleep_for(std::chrono::seconds(4));
+
+	int retrycnt = 0;
+	while (retrycnt < 3) {
+		try {
+			// poll status to see device reset
+			read_status_registers();
+			return APSEthernet::SUCCESS;
+		} catch (std::exception &e) {
+			FILE_LOG(logDEBUG) << "Status timeout; retrying...";
+		}
+		retrycnt++;
+	}
+	return APSEthernet::TIMEOUT;
 }
 
 int APS2::get_bitfile_version() {

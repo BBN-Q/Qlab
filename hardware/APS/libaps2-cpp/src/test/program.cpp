@@ -56,8 +56,14 @@ vector<uint32_t> read_bit_file(string fileName) {
 }
 
 int write_image(string deviceSerial, string fileName) {
-  vector<uint32_t> data = read_bit_file(fileName);
-  // write_flash(deviceSerial.c_str(), EPROM_USER_IMAGE_ADDR, data.data(), data.size());
+  vector<uint32_t> data;
+  try {
+    data = read_bit_file(fileName);
+  } catch (std::exception &e) {
+    cout << concol::RED << "Unable to open file." << concol::RESET << endl;
+    return -1;
+  }
+  write_flash(deviceSerial.c_str(), EPROM_USER_IMAGE_ADDR, data.data(), data.size());
   //verify the write
   vector<uint32_t> buffer(256);
   uint32_t numWords = 256;
@@ -72,12 +78,11 @@ int write_image(string deviceSerial, string fileName) {
     read_flash(deviceSerial.c_str(), EPROM_USER_IMAGE_ADDR + 4*ct, numWords, buffer.data());
     if (!std::equal(buffer.begin(), buffer.begin()+numWords, data.begin()+ct)) {
       cout << endl << "Mismatched data at offset " << hexn<8> << ct << endl;
-      return -1;
+      return -2;
     }
   }
   cout << "\r100%" << endl;
-  return 0;
-  // return reset(deviceSerial.c_str(), static_cast<int>(APS_RESET_MODE_STAT::RECONFIG_EPROM));
+  return reset(deviceSerial.c_str(), static_cast<int>(APS_RESET_MODE_STAT::RECONFIG_EPROM));
 }
 
 int main (int argc, char* argv[])
@@ -128,23 +133,6 @@ int main (int argc, char* argv[])
     case DRAM:
       cout << concol::RED << "Reprogramming DRAM image" << concol::RESET << endl;
       program_FPGA(deviceSerial.c_str(), bitFile.c_str());
-
-      std::this_thread::sleep_for(std::chrono::seconds(4));
-
-      int retrycnt = 0;
-      bool success = false;
-      while (!success && (retrycnt < 3)) {
-        try {
-          // poll uptime to see device reset
-          double uptime = get_uptime(deviceSerial.c_str());
-          cout << concol::RED << "Uptime for device " << deviceSerial << " is " << uptime << " seconds" << concol::RESET << endl;
-        } catch (std::exception &e) {
-          cout << concol::RED << "Status timeout; retrying..." << concol::RESET << endl;
-          retrycnt++;
-          continue;
-        }
-        success = true;
-      }
       break;
   }
 
