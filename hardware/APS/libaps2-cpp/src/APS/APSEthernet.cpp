@@ -131,6 +131,8 @@ APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPa
         noACK = true;
         ackEvery = 1;
     }
+    // it's nice to have extra status on slow EPROM writes
+    bool verbose = (msg[0].header.command.cmd == static_cast<uint32_t>(APS_COMMANDS::EPROMIO));
 
     vector<APSEthernetPacket> buffer(ackEvery);
 
@@ -162,6 +164,10 @@ APSEthernet::EthernetError APSEthernet::send(string serial, vector<APSEthernetPa
             return result;
         }
         std::advance(iter, chunkSize);
+
+        if (verbose && (std::distance(msg.begin(), iter) % 1000 == 0)) {
+            FILE_LOG(logDEBUG) << "Write " << 100*std::distance(msg.begin(), iter)/msg.size() << "% complete";
+        }
     }
     return SUCCESS;
 }

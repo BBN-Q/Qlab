@@ -580,7 +580,7 @@ int APS2::write_flash(const uint32_t & addr, vector<uint32_t> & data) {
 		packet.header.addr = addr + ct*64;
 		packets.push_back(packet);
 	}
-	FILE_LOG(logDEBUG2) << "Writing " << packets.size() << " packets of data to flash address " << myhex << addr;
+	FILE_LOG(logDEBUG) << "Writing " << packets.size() << " packets of data to flash address " << myhex << addr;
 	try {
 		APSEthernet::get_instance().send(deviceSerial_, packets);
 		// APSEthernetPacket p = read_packets(packets.size())[0];
@@ -590,9 +590,6 @@ int APS2::write_flash(const uint32_t & addr, vector<uint32_t> & data) {
 		FILE_LOG(logERROR) << "Flash write failed!";
 		return -1;
 	}
-
-	// TODO: optionally verify the write
-
 }
 
 int APS2::erase_flash(uint32_t addr, uint32_t numBytes) {
@@ -612,7 +609,7 @@ int APS2::erase_flash(uint32_t addr, uint32_t numBytes) {
 	uint32_t erasedBytes = 0;
 
 	while(erasedBytes < numBytes) {
-		FILE_LOG(logDEBUG2) << "Erasing a 64 KB page at addr: " << myhex << addr;
+		FILE_LOG(logDEBUG) << "Erasing a 64 KB page at addr: " << myhex << addr;
 		write_command(command, addr, false);
 		APSEthernetPacket p = read_packets(1)[0];
 		if (p.header.command.mode_stat == EPROM_OPERATION_FAILED){

@@ -4,9 +4,30 @@
 #include "libaps.h"
 #include "constants.h"
 
-#include <concol.h> 
+#include <concol.h>
 
 using namespace std;
+
+enum MODE {DRAM, EPROM};
+
+MODE get_mode() {
+  cout << concol::RED << "Programming options:" << concol::RESET << endl;
+  cout << "1) Upload DRAM image" << endl;
+  cout << "2) Update EPROM image" << endl << endl;
+  cout << "Choose option [1]: ";
+
+  char input;
+  cin.get(input);
+  switch (input) {
+    case '1':
+    default:
+      return DRAM;
+      break;
+    case '2':
+      return EPROM;
+      break;
+  }
+}
 
 vector<uint32_t> read_bit_file(string fileName) {
   std::ifstream FID (fileName, std::ios::in|std::ios::binary);
@@ -36,13 +57,15 @@ vector<uint32_t> read_bit_file(string fileName) {
 
 int write_image(string deviceSerial, string fileName) {
   vector<uint32_t> data = read_bit_file(fileName);
-  write_flash(deviceSerial.c_str(), EPROM_USER_IMAGE_ADDR, data.data(), data.size());
+  // write_flash(deviceSerial.c_str(), EPROM_USER_IMAGE_ADDR, data.data(), data.size());
   //verify the write
   vector<uint32_t> buffer(256);
   uint32_t numWords = 256;
   cout << "Verifying:" << endl;
   for (size_t ct=0; ct < data.size(); ct+=256) {
-    cout << 100*ct/data.size() << " %\r" << flush;
+    if (ct % 1000 == 0) {
+      cout << "\r" << 100*ct/data.size() << "%" << flush;
+    }
     if (std::distance(data.begin() + ct, data.end()) < 256) {
       numWords = std::distance(data.begin() + ct, data.end());
     }
@@ -52,8 +75,9 @@ int write_image(string deviceSerial, string fileName) {
       return -1;
     }
   }
-  cout << endl;
-  return reset(deviceSerial.c_str(), static_cast<int>(APS_RESET_MODE_STAT::RECONFIG_EPROM));
+  cout << "\r100%" << endl;
+  return 0;
+  // return reset(deviceSerial.c_str(), static_cast<int>(APS_RESET_MODE_STAT::RECONFIG_EPROM));
 }
 
 int main (int argc, char* argv[])
@@ -71,6 +95,7 @@ int main (int argc, char* argv[])
   cout << concol::RED << "Attempting to initialize libaps" << concol::RESET << endl;
 
   init();
+  set_log("stdout");
 
   int numDevices = get_numDevices();
 
@@ -92,25 +117,35 @@ int main (int argc, char* argv[])
 
   connect_APS(deviceSerial.c_str());
 
-  cout << concol::RED << "Reprogramming FPGA" << concol::RESET << endl;
+  MODE mode = get_mode();
 
-  program_FPGA(deviceSerial.c_str(), bitFile.c_str());
+  switch (mode) {
+    case EPROM:
+      cout << concol::RED << "Reprogramming EPROM image" << concol::RESET << endl;
+      write_image(deviceSerial, bitFile);
+      break;
 
-  std::this_thread::sleep_for(std::chrono::seconds(4));
+    case DRAM:
+      cout << concol::RED << "Reprogramming DRAM image" << concol::RESET << endl;
+      program_FPGA(deviceSerial.c_str(), bitFile.c_str());
 
-  int retrycnt = 0;
-  bool success = false;
-  while (!success && (retrycnt < 3)) {
-    try {
-      // poll uptime to see device reset
-      double uptime = get_uptime(deviceSerial.c_str());
-      cout << concol::RED << "Uptime for device " << deviceSerial << " is " << uptime << " seconds" << concol::RESET << endl;
-    } catch (std::exception &e) {
-      cout << concol::RED << "Status timeout; retrying..." << concol::RESET << endl;
-      retrycnt++;
-      continue;
-    }
-    success = true;
+      std::this_thread::sleep_for(std::chrono::seconds(4));
+
+      int retrycnt = 0;
+      bool success = false;
+      while (!success && (retrycnt < 3)) {
+        try {
+          // poll uptime to see device reset
+          double uptime = get_uptime(deviceSerial.c_str());
+          cout << concol::RED << "Uptime for device " << deviceSerial << " is " << uptime << " seconds" << concol::RESET << endl;
+        } catch (std::exception &e) {
+          cout << concol::RED << "Status timeout; retrying..." << concol::RESET << endl;
+          retrycnt++;
+          continue;
+        }
+        success = true;
+      }
+      break;
   }
 
   disconnect_APS(deviceSerial.c_str());
