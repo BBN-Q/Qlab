@@ -1,7 +1,7 @@
 # build using
 # mkdir build
 # cd build
-# cmake -G "MSSYS Makefiles" ../CMake/  # -For Windows
+# cmake -G "MSYS Makefiles" -DHDF5_INCLUDE_DIR:string=/path/to/hdf5 -DASIO_INCLUDE_DIR:string=/path/to/asio ../src/  # -For Windows
 # 
 # make
 
