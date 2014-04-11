@@ -279,9 +279,11 @@ int read_memory(const char * deviceSerial, uint32_t addr, uint32_t* data, uint32
 	return 0;
 }
 
-// int read_register(const char * deviceSerial, int addr){
-// 	return APSRack_.read_register(string(deviceSerial), addr);
-// }
+int read_register(const char * deviceSerial, uint32_t addr){
+	uint32_t buffer[1];
+	read_memory(deviceSerial, addr, buffer, 1);
+	return buffer[0];
+}
 
 int program_FPGA(const char * deviceSerial, const char * bitFile) {
 	return APSs[string(deviceSerial)].program_FPGA(string(bitFile));
@@ -293,7 +295,6 @@ int write_flash(const char * deviceSerial, uint32_t addr, uint32_t* data, uint32
 }
 int read_flash(const char * deviceSerial, uint32_t addr, uint32_t numWords, uint32_t* data) {
 	auto readData = APSs[string(deviceSerial)].read_flash(addr, numWords);
-	cout << endl;
 	std::copy(readData.begin(), readData.end(), data);
 	return 0;
 }
