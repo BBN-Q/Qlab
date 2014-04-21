@@ -26,7 +26,7 @@ if ischar(dataObj)
 end
 
 %Save the matlab figure for later editing
-saveas(figHandle, [dataObj.path strrep(dataObj.filename, '.h5', '.fig')]);
+saveas(figHandle, fullfile(dataObj.path, strrep(dataObj.filename, '.h5', '.fig')));
 
 %Modify the font sizes to make the png easier to read on Plone
 axesHandles = findobj(figHandle, 'Type', 'axes');
