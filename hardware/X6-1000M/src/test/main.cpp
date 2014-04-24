@@ -1,9 +1,16 @@
 #include <iostream>
+#include <iomanip>
 
 #include "libx6adc.h"
 #include "constants.h"
 
 using namespace std;
+
+// N-wide hex output with 0x
+template <unsigned int N>
+std::ostream& hexn(std::ostream& out) {
+  return out << "0x" << std::hex << std::setw(N) << std::setfill('0');
+}
 
 int main ()
 {
@@ -35,6 +42,9 @@ int main ()
 
   cout << "current logic temperature method 1 = " << get_logic_temperature(0, 0) << endl;
   cout << "current logic temperature method 2 = " << get_logic_temperature(0, 1) << endl;
+
+  cout << "ADC0 stream ID: " << hexn<8> << read_register(0, 0x0800, 64) << endl;
+  cout << "ADC1 stream ID: " << hexn<8> << read_register(0, 0x0800, 65) << std::dec << endl;
 
   cout << "current PLL frequency = " << get_sampleRate(0)/1e6 << " MHz" << endl;
 
