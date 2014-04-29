@@ -226,7 +226,7 @@ int main (int argc, char* argv[])
   cout << concol::RED << "Set internal trigger interval to 100us" << concol::RESET << endl;
 
   set_trigger_source(deviceSerial.c_str(), INTERNAL);
-  set_trigger_interval(deviceSerial.c_str(), 200e-6);
+  set_trigger_interval(deviceSerial.c_str(), 10e-3);
 
   cout << concol::RED << "Starting" << concol::RESET << endl;
 
@@ -239,17 +239,42 @@ int main (int argc, char* argv[])
   read_memory(deviceSerial.c_str(), PLL_STATUS_ADDR, &testInt, 1);
   cout << "DMA status reg after pulse sequencer enable: " << hexn<8> << testInt << endl;
 
-  // cout << concol::RED << "Stopping" << concol::RESET << endl;
-  // stop(deviceSerial.c_str());
+  cout << concol::RED << "Stopping" << concol::RESET << endl;
+  stop(deviceSerial.c_str());
 
-  // write to zero registers to shift outputs up and down
-  // for (short val = 0; val < 8000; val += 1000) {
-  //   testInt = (uint32_t)val << 16 | val;
-  //   write_memory(deviceSerial.c_str(), ZERO_OUT_ADDR, &testInt, 1);
-  //   std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  // }
-  // testInt = 0;
-  // write_memory(deviceSerial.c_str(), ZERO_OUT_ADDR, &testInt, 1);
+  cout << concol::RED << "Loading Ramsey sequence" << concol::RESET << endl;
+  load_sequence_file(deviceSerial.c_str(), "../../examples/ramsey.h5");
+
+  // read back instruction data
+  offset = 0x20000000u;
+  for (size_t ct = 0; ct < 33*4; ct++)
+  {
+    if (ct % 4 == 0) {
+      cout << endl << "instruction [" << std::dec << ct/4 << "]: ";
+    }
+    read_memory(deviceSerial.c_str(), offset + 4*ct, &testInt, 1);
+    cout << hexn<8> << testInt << " ";
+  }
+  cout << endl;
+
+  cout << concol::RED << "Starting" << concol::RESET << endl;
+  run(deviceSerial.c_str());
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  read_memory(deviceSerial.c_str(), CACHE_STATUS_ADDR, &testInt, 1);
+  cout << "Cache status reg after pulse sequencer enable: " << hexn<8> << testInt << endl;
+  read_memory(deviceSerial.c_str(), PLL_STATUS_ADDR, &testInt, 1);
+  cout << "DMA status reg after pulse sequencer enable: " << hexn<8> << testInt << endl;
+
+  for (size_t ct=0; ct < 70; ct++) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    read_memory(deviceSerial.c_str(), CACHE_STATUS_ADDR, &testInt, 1);
+    cout << "Cache status reg: " << hexn<8> << testInt << endl;
+  }
+  read_memory(deviceSerial.c_str(), PLL_STATUS_ADDR, &testInt, 1);
+  cout << "DMA status reg: " << hexn<8> << testInt << endl;
 
   disconnect_APS(deviceSerial.c_str());
   delete[] serialBuffer;
