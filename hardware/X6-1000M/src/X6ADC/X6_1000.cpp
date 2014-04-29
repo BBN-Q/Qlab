@@ -114,10 +114,10 @@ X6_1000::ErrorCodes X6_1000::open(int deviceID) {
     //  Initialize VeloMergeParse with stream IDs
     VMP_.OnDataAvailable.SetEvent(this, &X6_1000::VMPDataAvailable);
     std::vector<int> streamIDs = {static_cast<int>(module_.VitaIn().VitaStreamId(0)), static_cast<int>(module_.VitaIn().VitaStreamId(1))};
-    // VMP_.Init(streamIDs);
-    FILE_LOG(logDEBUG) << "ADC Stream IDs: " << myhex << streamIDs[0] << ", " << myhex << streamIDs[1];
-    streamIDs = {0xffff};
     VMP_.Init(streamIDs);
+    FILE_LOG(logDEBUG) << "ADC Stream IDs: " << myhex << streamIDs[0] << ", " << myhex << streamIDs[1];
+    // streamIDs = {0xffff};
+    // VMP_.Init(streamIDs);
 
     return SUCCESS;
   }
@@ -422,13 +422,13 @@ void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event)
 
     FILE_LOG(logDEBUG) << "buffer.size() = " << buffer.SizeInInts();
 
-    VMP_.Append(buffer);
-    VMP_.Parse();
-
     AlignedVeloPacketExQ::Range InVelo(buffer);
     unsigned int * pos = InVelo.begin();
     VitaHeaderDatagram vh_dg(pos);
     FILE_LOG(logDEBUG) << "buffer stream ID = " << myhex << vh_dg.StreamId();
+
+    VMP_.Append(buffer);
+    VMP_.Parse();
 
     FILE_LOG(logDEBUG) << "samplesAcquired_ = " << samplesAcquired_;
     // if we've acquired the requested number of samples, stop streaming

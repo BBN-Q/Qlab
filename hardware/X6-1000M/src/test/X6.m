@@ -152,6 +152,8 @@ classdef X6 < hgsetget
             
             x6 = X6();
             
+            x6.setDebugLevel(5);
+            
             x6.connect(0);
             
             if (~x6.is_open)
@@ -163,8 +165,6 @@ classdef X6 < hgsetget
             fprintf('current logic temperature = %.1f\n', x6.getLogicTemperature());
             
             fprintf('current PLL frequency = %.2f GHz\n', x6.samplingRate/1e9);
-            
-            x6.setDebugLevel(5);
             
             fprintf('setting averager parameters to record 5 segments of 1024 samples\n');
             x6.set_averager_settings(1024, 5, 1, 1);
