@@ -75,6 +75,7 @@ switch class(awg)
 		awg.triggerInterval = 0.1;
 		awg.loadConfig(fullfile(tempdir, 'SwitchMarker.h5'));
 		awg.run();
+        pause(0.09);
 		awg.stop();
 
 end

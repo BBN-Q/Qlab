@@ -167,7 +167,7 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
             
             wfName = ['ch' num2str(ch)];
             switch (class(waveform))
-                case 'int16'
+                case {'int16', 'uint16'}
                     obj.sendWaveformInt(wfName, waveform, marker1, marker2)
                 case 'double'
                     obj.sendWaveformReal(wfName, waveform, marker1, marker2)
@@ -185,17 +185,13 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
             
             data = TekPattern.packPattern(waveform, marker1, marker2);
             
-            % pack waveform by separating waveform values into (low-8, high-8)
-            % sequential values, aka LSB format
-            bindata = zeros(2*length(data),1);
-            bindata(1:2:end) = bitand(data,255);
-            bindata(2:2:end) = bitshift(data,-8);
-            bindata = bindata';
-            
             % write
             obj.deleteWaveform(name);
             obj.createWaveform(name, length(waveform), 'integer');
-            obj.binblockwrite(bindata, [':wlist:waveform:data "' name '",']);
+            % Tek needs little endian order
+            obj.binblockwrite(swapbytes(data), 'uint16', [':wlist:waveform:data "' name '",']);
+            % TCPIP seems to need a newline after a binblockwrite
+            obj.write('\n');
         end
         
         function sendWaveformReal(obj, name, waveform, marker1, marker2)
@@ -233,6 +229,8 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
             obj.deleteWaveform(name);
             obj.createWaveform(name, 'real', length(waveform));
             obj.binblockwrite(binblock, [':wlist:waveform:data "' name '",']);
+            % TCPIP seems to need a newline after a binblockwrite
+            obj.write('\n');
         end
         
         function createWaveform(obj, name, size, type)
