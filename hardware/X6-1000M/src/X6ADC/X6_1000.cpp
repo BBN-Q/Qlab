@@ -114,10 +114,9 @@ X6_1000::ErrorCodes X6_1000::open(int deviceID) {
     //  Initialize VeloMergeParse with stream IDs
     VMP_.OnDataAvailable.SetEvent(this, &X6_1000::VMPDataAvailable);
     std::vector<int> streamIDs = {static_cast<int>(module_.VitaIn().VitaStreamId(0)), static_cast<int>(module_.VitaIn().VitaStreamId(1))};
+    streamIDs.push_back(0xffff);
     VMP_.Init(streamIDs);
     FILE_LOG(logDEBUG) << "ADC Stream IDs: " << myhex << streamIDs[0] << ", " << myhex << streamIDs[1];
-    // streamIDs = {0xffff};
-    // VMP_.Init(streamIDs);
 
     return SUCCESS;
   }
@@ -429,18 +428,21 @@ void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event)
 
     VMP_.Append(buffer);
     VMP_.Parse();
-
-    FILE_LOG(logDEBUG) << "samplesAcquired_ = " << samplesAcquired_;
-    // if we've acquired the requested number of samples, stop streaming
-    if (samplesAcquired_ >= samplesToAcquire_) stop();
 }
 
 void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event) {
     FILE_LOG(logDEBUG) << "X6_1000::VMPDataAvailable";
+    if (!isRunning_) {
+        return;
+    }
     // StreamID is now encoded in the PeripheralID of the VMP Vita buffer
     PacketBufferHeader header(Event.Data);
     int channel = header.PeripheralId();
     FILE_LOG(logDEBUG) << "VMP buffer channel = " << channel;
+    if (!activeChannels_[channel]) {
+        FILE_LOG(logDEBUG) << "Received data for inactive channel. Dropping";
+        return;
+    }
 
     // interpret the data as integers
     ShortDG bufferDG(Event.Data);
@@ -451,6 +453,9 @@ void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event)
     FILE_LOG(logDEBUG) << "chData_[" << channel << "].size() = " << chData_[channel].size();
 
     samplesAcquired_ += bufferDG.size();
+    FILE_LOG(logDEBUG) << "samplesAcquired_ = " << samplesAcquired_;
+    // if we've acquired the requested number of samples, stop streaming
+    if (samplesAcquired_ >= samplesToAcquire_) stop();
 }
 
 void X6_1000::HandleTimer(OpenWire::NotifyEvent & /*Event*/) {
