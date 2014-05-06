@@ -267,45 +267,34 @@ int APS2::load_sequence_file(const string & seqFile){
 	/*
 	 * Load a sequence file from an H5 file
 	 */
-	// TODO: fix me!
-	/*
+
 	//First open the file
 	try {
 		FILE_LOG(logINFO) << "Opening sequence file: " << seqFile;
 		H5::H5File H5SeqFile(seqFile, H5F_ACC_RDONLY);
 
-		const vector<string> chanStrs = {"chan_1", "chan_2", "chan_3", "chan_4"};
-		//For now assume 4 channel data
-		//Reset the channel data
+		const vector<string> chanStrs = {"chan_1", "chan_2"};
+		//For now assume 2 channel data, TODO: check the channelDataFor attribute
 		clear_channel_data();
-		//TODO: check the channelDataFor attribute
-		for(int chanct=0; chanct<4; chanct++){
+		for(int chanct=0; chanct<2; chanct++){
 			//Load the waveform library first
 			string chanStr = chanStrs[chanct];
-			vector<short> tmpVec = h5array2vector<short>(&H5SeqFile, chanStr + "/waveformLib", H5::PredType::NATIVE_INT16);
-			set_waveform(chanct, tmpVec);
+			vector<short> waveform = h5array2vector<short>(&H5SeqFile, chanStr + "/waveforms", H5::PredType::NATIVE_INT16);
+			set_waveform(chanct, waveform);
 
-			//Check if there is the linklist data and if it is IQ mode style
-			H5::Group chanGroup = H5SeqFile.openGroup(chanStr);
-			uint16_t isLinkListData, isIQMode;
-			isLinkListData = h5element2element<uint16_t>("isLinkListData", &chanGroup, H5::PredType::NATIVE_UINT16);
-			isIQMode = h5element2element<uint16_t>("isIQMode", &chanGroup, H5::PredType::NATIVE_UINT16);
-			chanGroup.close();
-
-			//Load the linklist data
-			if (isLinkListData){
-				if (isIQMode){
-					channels_[chanct].LLBank_.IQMode = true;
-					channels_[chanct].LLBank_.read_state_from_hdf5(H5SeqFile, chanStrs[chanct]+"/linkListData");
-					//If the length is less than can fit on the chip then write it to the device
-					if (channels_[chanct].LLBank_.length < MAX_LL_LENGTH){
-						write_LL_data_IQ(0, 0, channels_[chanct].LLBank_.length, true );
+			if (chanct % 2 == 0) {
+				// load instruction data
+				vector<uint16_t> instructions = h5array2vector<uint16_t>(&H5SeqFile, chanStr + "/instructions", H5::PredType::NATIVE_UINT16);
+				// pack into uint32_t vector
+				// slurp in six uint16_t's and output 4 uint32_t's per instruction
+				vector<uint32_t> packed_instructions;
+				for (size_t ct = 0; ct < instructions.size(); ct += 2) {
+					packed_instructions.push_back((static_cast<uint32_t>(instructions[ct]) << 16) | instructions[ct+1]);
+					if (ct % 3 == 0) {
+						packed_instructions.push_back(0);
 					}
-
 				}
-				else{
-					channels_[chanct].LLBank_.read_state_from_hdf5(H5SeqFile, chanStrs[chanct]+"/linkListData");
-				}
+				write_sequence(packed_instructions);
 			}
 		}
 		//Close the file
@@ -315,7 +304,6 @@ int APS2::load_sequence_file(const string & seqFile){
 	catch (H5::FileIException & e) {
 		return -1;
 	}
-	*/
 	return 0;
 }
 

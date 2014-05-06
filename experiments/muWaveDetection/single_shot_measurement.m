@@ -17,11 +17,11 @@ ExpParams.cfgFile = getpref('qlab', 'CurScripterFile');
 ExpParams.numShots = 40000;
 
 %Whether to create the sequence (useful for using QGL instead)
-ExpParams.createSequence = true;
+ExpParams.createSequence = false;
 
 ExpParams.sweeps = struct();
-ExpParams.sweeps.AWGChannel = struct('type', 'AWGChannel', 'instr', 'BBNAPS1', 'channel', '3&4', 'mode', 'amp', 'start', 0.125, 'stop', 0.5, 'step', 0.025);
-ExpParams.sweeps.frequency = struct('type','Frequency', 'start', 6.958, 'stop', 6.962, 'step', 200e-6, 'instr', 'Source5');
+%ExpParams.sweeps.AWGChannel = struct('type', 'AWGChannel', 'instr', 'BBNAPS2', 'channel', '1&2', 'mode', 'amp.', 'start', 0.5, 'stop', 0.9, 'step', 0.025);
+%ExpParams.sweeps.frequency = struct('type','Frequency', 'start', 6.958, 'stop', 6.962, 'step', 200e-6, 'instr', 'Source5');
 
 SSMeasurement = SingleShotFidelity();
 
