@@ -73,6 +73,9 @@ classdef (Sealed) SpectrumAnalyzer < deviceDrivers.lib.Serial
                     tryct = tryct+1;
                 end
             end
+            if isempty(out)
+                warning('Failed to get data from spectrum analyzer.');
+            end
         end
         
         function set.LOsource(obj, sourceName)
