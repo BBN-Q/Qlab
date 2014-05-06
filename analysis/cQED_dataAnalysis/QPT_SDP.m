@@ -6,9 +6,9 @@ function [choiSDP, choiLSQ] = QPT_SDP(expResults, measOps, measMap, U_preps, U_m
 % easy to enforce. It also return the direct unconstrained inversion result. 
 %
 % [choiSDP, choiLSQ] = QPT_SDP(expResults, measOps, measMap, U_preps, U_meas, nbrQubits)
-%	expResults: matrix of experimental results (numMeas x numPrep)
+%	expResults: vector of experimental results 
 %   measOps: measurement operators in real units e.g. measuring 1V for the ground state and 1.23V for the excited state gives [[1, 0],[0,1.23]] 
-%   measMap: matrix mapping of each experiment to associated measurement operator
+%   measMap: vector mapping of each experiment to associated measurement operator
 %   U_preps: cell array of the preparation unitaries 
 %   U_meas: cell array of read-out unitaries 
 %   nbrQubits: the number of qubits
@@ -28,24 +28,6 @@ d4 = 16^nbrQubits;
 numPrep = length(U_preps);
 numMeas = length(U_meas);
 
-%Assume perfect preparation in the ground state
-rhoIn = zeros(d,d);
-rhoIn(1,1) = 1;
-
-%Transform the initial state by the preparation pulse
-rhoPreps = cell(numPrep,1);
-for ct = 1:length(U_preps)
-    rhoPreps{ct} = U_preps{ct}*rhoIn*U_preps{ct}';
-end
-
-%Transform the measurement operators by the measurement pulses
-measurementoptsset = cell(numMeas,1);
-for ct=1:length(measOps) 
-    for measPulsect = 1:numMeas
-        measurementoptsset{ct}{measPulsect}= U_meas{measPulsect}'*measOps{ct}*U_meas{measPulsect};
-    end
-end
-
 % Set up the SDP problem with Yalmip
 % First the Choi matrix in square form
 choiSDP_yalmip = sdpvar(d2, d2, 'hermitian', 'complex');
@@ -54,19 +36,37 @@ choiSDP_yalmip = sdpvar(d2, d2, 'hermitian', 'complex');
 % matrix (S) elements: for a given rhoIn and measOp then measResult = Tr(S*kron(rhoIn.', measOp))
 fprintf('Setting up predictor matrix....');
 predictorMat = zeros(numPrep*numMeas, d4, 'double');
-rowct = 1;
-for prepct = 1:numPrep
-    for measct = 1:numMeas
-        % Have to multiply by d to match Jay's convention of dividing the
-        % Choi matrix by d
-        % We can use the usual trick that trace(A*B) = trace(B*A) = sum(tranpose(B).*A)
-        % predictorMat(prepct, measct) = trace(choiSDP*kron(rhoPreps{prepct}.', measurementoptsset{measMap(prepct,measct)}{measct}))*d;
-        tmpMat = transpose(kron(rhoPreps{prepct}.', measurementoptsset{measMap(measct,prepct)}{measct}));
-        predictorMat(rowct, :) = d*tmpMat(:); 
-        rowct = rowct+1;
-    end
-end
+prepIdx = 1;
+measIdx = 1;
 
+for expct = 1:length(expResults)
+    %Assume perfect preparation in the ground state
+    rhoIn = zeros(d,d);
+    rhoIn(1,1) = 1;
+    %Transform the initial state by the preparation pulse
+    rhoIn = U_preps{prepIdx}*rhoIn*U_preps{prepIdx}';
+    
+    %Transform the measurement operators by the measurement pulses
+    measOp = U_meas{measIdx}' * measOps{measMap(expct)} * U_meas{measIdx};
+    
+    % Have to multiply by d to match Jay's convention of dividing the
+    % Choi matrix by d
+    % We can use the usual trick that trace(A*B) = trace(B*A) = sum(tranpose(B).*A)
+    % predictorMat(prepct, measct) = trace(choiSDP*kron(rhoPreps{prepct}.', measurementoptsset{measMap(prepct,measct)}{measct}))*d;
+    tmpMat = transpose(kron(rhoIn.', measOp));
+    predictorMat(expct, :) = d*tmpMat(:); 
+
+    %Roll the counters
+    measIdx = measIdx + 1;
+    if (measIdx > numMeas)
+        measIdx = 1;
+        prepIdx = prepIdx + 1;
+    end
+    if (prepIdx > numPrep)
+        prepIdx = 1;
+    end
+end    
+    
 %We want to minimize the difference between predicted results and experimental results
 optGoal = norm(predictorMat*choiSDP_yalmip(:) - expResults(:),2);
 fprintf('Done!\n.')
