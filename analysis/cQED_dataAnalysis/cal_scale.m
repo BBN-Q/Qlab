@@ -24,8 +24,9 @@ function data = cal_scale(varargin)
             otherwise
                 error('Unknown plot grab command.');
         end
-        % grab the line handle
+        % try to grab a line handle
         lineHandle = findobj(axesH, 'Type', 'Line');
+        
         assert(~isempty(lineHandle), 'NO DATA: Could not find an line object in the figure.')
         xpts = get(lineHandle(1), 'XData');
         data = get(lineHandle(1), 'YData');

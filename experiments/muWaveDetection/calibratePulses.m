@@ -16,11 +16,11 @@ ExpParams.DoPi2Cal = 1;
 ExpParams.NumPis = 11;
 ExpParams.DoPiCal = 1;
 ExpParams.DoDRAGCal = 1;
-ExpParams.DRAGparams = linspace(-1,1,11);
-ExpParams.DoSPAMCal = 1;
+ExpParams.DRAGparams = linspace(1,5,11);
+ExpParams.DoSPAMCal = 0;
 ExpParams.OffsetNorm = 6;
 ExpParams.offset2amp = 1/1; % divisor should be the max output voltage of the AWG
-ExpParams.dataType = 'real'; %'amp', 'phase', 'real', or 'imag';
+ExpParams.dataType = 'amp'; %'amp', 'phase', 'real', or 'imag';
 
 ExpParams.cfgFile = getpref('qlab', 'CurScripterFile');
 ExpParams.SoftwareDevelopmentMode = 0;

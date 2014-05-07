@@ -83,7 +83,7 @@ def generatorString(G):
     generatorStrings = {0:('QId',), 1:('X90p',), 3:('X90m',), 4:('Y90p',), 6:('Y90m',), 2:('Xp','Xm'), 5:('Yp','Ym')}
     return choice(generatorStrings[G])
     
-#Get all generator sequences up to length four TODO: why do we need 4?
+#Get all generator sequences up to length three
 generatorSeqs = [x for x in product(generatorPulses,repeat=1)] + \
                 [x for x in product(generatorPulses,repeat=2)] + \
 		[x for x in product(generatorPulses,repeat=3)]
@@ -123,21 +123,11 @@ IpulseSeqs = [[generatorString(tmpGenCliff) for tmpCliff in tmpSeq for tmpGenCli
 XpulseSeqs = [[generatorString(tmpGenCliff) for tmpCliff in tmpSeq for tmpGenCliff in generatorSeqs[choice(shortestSeqs[tmpCliff])] ] for tmpSeq in randomXSeqs]
 
 #Write out the files now
-with open('RB_ISeqs.txt','wt') as ISeqFID:
+with open('RB_ISeqs.txt','wb') as ISeqFID:
     writer = csv.writer(ISeqFID, delimiter='\t')
     writer.writerows(IpulseSeqs)
 
-with open('RB_XSeqs.txt','wt') as XSeqFID:
+with open('RB_XSeqs.txt','wb') as XSeqFID:
     writer = csv.writer(XSeqFID, delimiter='\t')
     writer.writerows(XpulseSeqs)
 
-
-
-
-
-    
-
-    
-    
-        
-    
