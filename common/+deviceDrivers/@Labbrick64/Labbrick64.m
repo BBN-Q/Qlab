@@ -53,10 +53,12 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         
         SET_BYTE = 8;
         
-        max_power = 10; % dBm
-        min_power = -40; % dBm
-        max_freq = 10; % GHz
-        min_freq = 4; % GHz
+        % Either get these off the brick through the API or don't check.
+        % Hard coding them for your particular brick is not productive.
+        max_power = inf; % dBm
+        min_power = -inf; % dBm
+        max_freq = inf; % GHz
+        min_freq = -inf; % GHz
     end
     
     methods
@@ -257,6 +259,9 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             report = [cmd_id cmd_size value zeros(1,5)];
             obj.write(report);
             assert(obj.output == value, 'Failed to set output');
+        end
+        
+        function check_errors(obj)
         end
     end
     
