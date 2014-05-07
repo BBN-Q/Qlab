@@ -155,20 +155,20 @@ classdef (Sealed) AnritsuMG3692B < deviceDrivers.lib.uWSource & deviceDrivers.li
             obj.write(gpib_string);
         end
         function obj = set.alc(obj, value)
-            gpib_string = ':power:alc:source ';
+            gpib_string = ':power:alc ';
             if isnumeric(value)
                 value = num2str(value);
             end
             
             % Validate input
             checkMapObj = containers.Map({'on','1','off','0'},...
-                {'int','int','fix','fix'});
+                {'int','int','off','off'});
             if not (checkMapObj.isKey( lower(value) ))
                 error('Invalid input');
             end
             
             gpib_string =[gpib_string checkMapObj(value)];
-            obj.write(gpib_string);
+%             obj.write(gpib_string);
         end
         function obj = set.pulse(obj, value)
             gpib_string = ':pulm:state ';
