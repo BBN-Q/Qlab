@@ -558,7 +558,10 @@ classdef AgilentAP240 < hgsetget
                 
         function obj = set.vertical(obj, vertVal)
             couplings=struct('Ground',0,'DC_highZ',1,'AC_highZ',2,'DC',3,'AC',4);
-            bandwidthMap = containers.Map({'Full','25MHz','700MHz','200MHz','20MHz','35MHz'}, {0,1,2,3,4,5});             
+            bandwidthMap = containers.Map({'Full','25MHz','700MHz','200MHz','20MHz','35MHz'}, {0,1,2,3,4,5});          
+			if ~isfield(vertVal,'verticalOffset')
+				vertVal.verticalOffset = 0; % Give reasonable defaults
+			end
             if (isfield(vertVal, 'verticalScale') && isfield(vertVal, 'verticalOffset')&& isfield(vertVal, 'verticalCoupling') && isfield(vertVal, 'bandwidth'))
                 %Configure vertical settings, should vert_channel be obj or vertVal
                 %status = AqD1_configVertical(obj.instrID, obj.channel_on, vertVal.verticalScale, vertVal.offset, vertVal.verticalCoupling, vertVal.bandwidth);
