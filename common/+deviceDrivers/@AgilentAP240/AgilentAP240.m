@@ -294,13 +294,10 @@ classdef AgilentAP240 < hgsetget
             % check every half second and redraw
             
             recheck_time=0.01;
-            numRepeats = max(1, ceil(timeout/recheck_time));
-            if numRepeats > 1
-                timeout = recheck_time;
-            end
+            strt=now();
             %Wait for end of acquisition
-            for n = 1:numRepeats
-                status = AqD1_waitForEndOfAcquisition(obj.instrID, timeout*1000);
+            while now() < strt+timeout
+                status = AqD1_waitForEndOfAcquisition(obj.instrID, min(timeout,recheck_time)*1000);
                 if status == 0
                     break; % we don't have to continue looping if we are already done
                 else
