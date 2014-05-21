@@ -183,7 +183,7 @@ classdef PatternGen < handle
             % if only a width was specified (not a duration), need to update the duration
             % parameter
             if ismember('width', varargin(1:2:end)) && ~ismember('duration', varargin(1:2:end))
-                params.duration = params.width + obj.buffer;
+                params.duration = params.width + params.buffer;
             end
             
             % extract additional parameters from pulse name

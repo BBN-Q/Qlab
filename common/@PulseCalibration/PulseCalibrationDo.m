@@ -170,13 +170,19 @@ if settings.DoDRAGCal
     % analyze for the best value to two digits
     numPsQId = 8; % number pseudoidentities
     
-    obj.channelParams.dragScaling = round(100*obj.analyzeSlopes(data, numPsQId, deltas, obj.numShots))/100;
-    
-    title('DRAG Parameter Calibration');
-    text(10, 0.8, sprintf('Found best DRAG parameter of %.2f', obj.channelParams.dragScaling), 'FontSize', 12);
+    fitDragScaling = round(100*obj.analyzeSlopes(data, numPsQId, deltas, obj.numShots))/100;
 
-    % update QGL library
-    updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
+    title('DRAG Parameter Calibration');
+    text(10, 0.8, sprintf('Found best DRAG parameter of %.2f', fitDragScaling), 'FontSize', 12);
+
+    %Double check the fit was good
+    if ~isnan(fitDragScaling)
+        obj.channelParams.dragScaling = fitDragScaling;
+        % update QGL library
+        updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
+    else
+        warning('Bad fit for the DRAG scaling.  Leaving scaling as it was.');
+    end
 end
 
 %% SPAM calibration    
@@ -193,9 +199,13 @@ if settings.DoSPAMCal
     angleShifts = (-3:0.75:3)';
     phaseSkew = round(100*obj.analyzeSlopes(data, numPsQId, angleShifts, obj.numShots))/100;
     title('SPAM Phase Skew Calibration');
-    text(10, 0.8, sprintf('Found best phase Skew of %.2f', phaseSkew), 'FontSize', 12);
+    text(10, 0.8, sprintf('Found best phase skew adjustment of %.2f', phaseSkew), 'FontSize', 12);
 
-    obj.channelParams.phaseSkew = obj.channelParams.phaseSkew - phaseSkew;
+    if ~isnan(phaseSkew)
+        obj.channelParams.phaseSkew = obj.channelParams.phaseSkew - phaseSkew;
+    else
+        warning('Bad fit for the mixer phase skew. Leaving phase skew as it was.');
+    end
 end
 
 

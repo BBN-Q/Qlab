@@ -15,20 +15,22 @@ if nargin == 2
     if strcmp(fullpath, 'latest')
         fullpath = get_latest_file();
     end
-    [pathname, filename] = fileparts(fullpath);
+    [pathname, filename, ext] = fileparts(fullpath);
 
 elseif nargin == 1
     %exist is too clever by half and searches the whole ruddy Matlab path
     %so it finds a quad.m somewhere on the path and returns 2
     %Hack around with some java
+    %First check for "latest" flag
     if strcmp(varargin{1}, 'latest')
         fullpath = get_latest_file();
-        [pathname, filename] = fileparts(fullpath);
+        [pathname, filename, ext] = fileparts(fullpath);
+        plotMode = '';
     else
         javaFile = java.io.File(varargin{1});
         if javaFile.exists() && javaFile.isFile()
             fullpath = varargin{1};
-            [pathname, filename] = fileparts(fullpath);
+            [pathname, filename, ext] = fileparts(fullpath);
             plotMode = '';
         else
             fullpath = '';
@@ -49,7 +51,8 @@ if isempty(fullpath)
         data = [];
         return
     end
-    fullpath = [pathname '/' filename];
+    fullpath = fullfile(pathname, filename);
+    [pathname, filename, ext] = fileparts(fullpath);
 end
 
 % for backwards compatibility, we assume that files that do not have a
@@ -90,7 +93,7 @@ for ii = 1:data.nbrDataSets
     
 end
 
-data.filename = filename;
+data.filename = [filename, ext];
 data.path = pathname;
 
 % available plotting modes

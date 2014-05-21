@@ -86,7 +86,10 @@ classdef MeasFilter < handle
             % or 4D (time x waveforms x segment x roundRobinsPerBuffer)
             % in the 4D case, we want to average over waveforms and round
             % robins
-            if ndims(obj.latestData) == 4
+            % if there is only 1 roundRobinPerBuffer then Matlab has no
+            % concept of a singleton trailing dimension and so returns a 3D
+            % object
+            if (ndims(obj.latestData) == 4) || (ndims(obj.latestData) == 3)
                 tmpData = squeeze(mean(mean(obj.latestData, 4), 2));
                 tmpVar = struct();
                 tmpVar.real = squeeze(sum(sum(real(obj.latestData).^2, 4), 2));
