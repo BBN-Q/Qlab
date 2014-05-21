@@ -65,6 +65,7 @@ classdef GPIBorEthernet < hgsetget
         function disconnect(obj)
             if ~isempty(obj.interface)
               flushoutput(obj.interface);
+              flushinput(obj.interface);              
               fclose(obj.interface);
               delete(obj.interface);
               obj.interface = [];
