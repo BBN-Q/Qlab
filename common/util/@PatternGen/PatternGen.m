@@ -36,6 +36,8 @@ classdef PatternGen < handle
         pi2Amp = 2000;
         pi4Amp = 1000;
         delta = -0.5;
+        details = struct(); % Detailed pulse specific params.  This probably should replace all of above.
+        params = struct(); % Per-pulse parameters.
         pulseType = 'gaussian';
         buffer = 4;
         SSBFreq = 0; % SSB modulation frequency (sign matters!!)
@@ -86,10 +88,13 @@ classdef PatternGen < handle
                 for ii = 1:length(fnames)
                     paramName = fnames{ii};
                     if ismember(paramName, properties('PatternGen'))
-                        obj.(paramName) = params.(paramName);
+                        obj.(paramName) = params.(paramName);  
+                        params=rmfield(params,paramName);
                     end
+                end                
+                if ~isempty(params)
+                    obj.params = params;
                 end
-                
                 % if there are remaining parameters, assign them
                 if nargin > 1
                     obj.assignFromParamPairs(varargin{2:end});
@@ -140,17 +145,28 @@ classdef PatternGen < handle
             ypat = int16(obj.makePattern(ypat, fixedPoint + delay, [], obj.cycleLength));
         end
         
-        function retVal = pulse(obj, p, varargin)
-            
+        function retVal = pulse(obj, p, varargin)                        
             identityPulses = {'QId' 'MId' 'ZId'};
             qubitPulses = {'Xp' 'Xm' 'X90p' 'X90m' 'X45p' 'X45m' 'Xtheta' 'Yp' 'Ym' 'Y90p' 'Y90m' 'Y45p' 'Y45m' 'Ytheta' 'Up' 'Um' 'U90p' 'U90m' 'Utheta'};
             measurementPulses = {'M'};
             fluxPulses = {'Zf' 'Zp' 'Z90p' 'Zm' 'Z90m'};
             
+            % Handle pulse aliases and merge in per-pulse parameters
+            if isfield(obj.params,p)
+                pp=obj.params.(p);
+                if isfield(pp,'mapto')
+                    p=pp.mapto;
+                    pp=rmfield(pp,'mapto');
+                end
+                varargin=[([fieldnames(pp),struct2cell(pp)]'),varargin'];
+                varargin=varargin(:)';
+            end
             % set default pulse parameters
             params.amp = 0;
+            params.pulse = p;
             params.width = obj.pulseLength;
             params.sigma = obj.sigma;
+            params.details = obj.details;
             params.delta = obj.delta;
             params.angle = 0; % in radians
             params.rotAngle = 0;
@@ -163,6 +179,7 @@ classdef PatternGen < handle
             end
             params.arbfname = obj.arbfname; % for arbitrary pulse shapes
             params = parseargs(params, varargin{:});
+                        
             % if only a width was specified (not a duration), need to update the duration
             % parameter
             if ismember('width', varargin(1:2:end)) && ~ismember('duration', varargin(1:2:end))
