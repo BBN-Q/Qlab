@@ -24,6 +24,10 @@ classdef CryoCon22 < deviceDrivers.lib.GPIB
        temperatureB
        loopTemperature
        overTemp
+       pGain
+       iGain
+       dGain
+       range
    end
    
    methods
@@ -100,6 +104,29 @@ classdef CryoCon22 < deviceDrivers.lib.GPIB
            obj.write(';');
        end
        
+       function set.range(obj,value)
+           %validate input
+           assert(sum(strcmpi(value,{'HI','MID','LOW'}))==1,'Invalid range input: must be HI MID or LOW');
+           obj.write(strjoin({'LOOP 1:RANGE ',value,';'},''));
+       end
+       
+       function set.pGain(obj,value)
+           % Validate input
+           assert(isnumeric(value), 'Invalid input');
+           obj.write(sprintf('LOOP 1:PGAIN %G',value));
+       end
+       
+       function set.iGain(obj,value)
+           % Validate input
+           assert(isnumeric(value), 'Invalid input');
+           obj.write(sprintf('LOOP 1:IGAIN %G',value));
+       end
+       
+       function set.dGain(obj,value)
+           % Validate input
+           assert(isnumeric(value), 'Invalid input');
+           obj.write(sprintf('LOOP 1:DGAIN %G',value));
+       end
        
    end
 end
