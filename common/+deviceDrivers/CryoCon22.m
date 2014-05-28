@@ -107,7 +107,7 @@ classdef CryoCon22 < deviceDrivers.lib.GPIB
        function set.range(obj,value)
            %validate input
            assert(sum(strcmpi(value,{'HI','MID','LOW'}))==1,'Invalid range input: must be HI MID or LOW');
-           obj.write(strjoin({'LOOP 1:RANGE ',value,';'},''));
+           obj.write(horzcat(['LOOP 1:RANGE ' value ';']));
        end
        
        function set.pGain(obj,value)
