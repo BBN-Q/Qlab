@@ -68,29 +68,22 @@ classdef DigitalHomodyne < MeasFilters.MeasFilter
             [demodSignal, decimFactor] = digitalDemod(data, obj.IFfreq, obj.bandwidth, obj.samplingRate);
             
             %Box car the demodulated signal
-            if ndims(demodSignal) == 2
-                demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:);
-            elseif ndims(demodSignal) == 4
-                demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:,:,:);
-                %If we have a file to save to then do so
-                if obj.saveRecords
-                    if ~obj.headerWritten
-                        %Write the first three dimensions of the demodSignal:
-                        %recordLength, numWaveforms, numSegments
-                        sizes = size(demodSignal);
-                        fwrite(obj.fileHandleReal, sizes(1:3), 'int32');
-                        fwrite(obj.fileHandleImag, sizes(1:3), 'int32');
-                        obj.headerWritten = true;
-                    end
-                    
-                    fwrite(obj.fileHandleReal, real(demodSignal), 'single');
-                    fwrite(obj.fileHandleImag, imag(demodSignal), 'single');
+            demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:,:,:);
+            %If we have a file to save to then do so
+            if obj.saveRecords
+                if ~obj.headerWritten
+                    %Write the first three dimensions of the demodSignal:
+                    %recordLength, numWaveforms, numSegments
+                    sizes = size(demodSignal);
+                    fwrite(obj.fileHandleReal, sizes(1:3), 'int32');
+                    fwrite(obj.fileHandleImag, sizes(1:3), 'int32');
+                    obj.headerWritten = true;
                 end
-                
-            else
-                error('Only able to handle 2 and 4 dimensional data.');
+
+                fwrite(obj.fileHandleReal, real(demodSignal), 'single');
+                fwrite(obj.fileHandleImag, imag(demodSignal), 'single');
             end
-            
+                
             %If we have a pre-defined filter use it, otherwise integrate
             %and rotate
             if ~isempty(obj.filter)
