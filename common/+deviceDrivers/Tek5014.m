@@ -34,7 +34,7 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
     
     methods
         function obj = Tek5014()
-            obj.DEFAULT_PORT = 5025;
+            obj.DEFAULT_PORT = 4000;
         end
         
         % instrument meta-setter
