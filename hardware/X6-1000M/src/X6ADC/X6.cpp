@@ -118,6 +118,31 @@ TRIGGERSOURCE X6::get_trigger_source() const{
 		return INTERNAL;
 }
 
+int X6::set_reference_source(const REFERENCESOURCE & reference){
+
+	int returnVal;
+	switch (reference){
+	case INTERNALREF:
+		returnVal = handle_.set_reference(X6_1000::INTERNAL);
+		break;
+	case EXTERNALREF:
+		returnVal = handle_.set_reference(X6_1000::EXTERNAL);
+		break;
+	default:
+		returnVal = X6::X6_UNKNOWN_ERROR;
+		break;
+	}
+	return returnVal;
+}
+
+REFERENCESOURCE X6::get_reference_source() {
+	X6_1000::ExtInt src = handle_.get_reference();
+	if (src == X6_1000::EXTERNAL)
+		return EXTERNALREF;
+	else
+		return INTERNALREF;
+}
+
 int X6::acquire() {
 	handle_.acquire();
 	return 0;

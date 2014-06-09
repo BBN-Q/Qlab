@@ -7,6 +7,7 @@ classdef X6 < hgsetget
     properties
         samplingRate = 1000;
         triggerSource
+        reference
         bufferSize = 0;
         is_open = 0;
         deviceID = 0;
@@ -58,6 +59,15 @@ classdef X6 < hgsetget
 
         function set.triggerSource(obj, source)
             obj.libraryCall('set_trigger_source', source);
+        end
+        
+        function set.reference(obj, reference)
+            valMap = containers.Map({'int', 'internal', 'ext', 'external'}, {0, 0, 1, 1});
+            obj.libraryCall('set_reference_source', valMap(lower(reference)));
+        end
+        
+        function val = get.reference(obj)
+            val = obj.libraryCall('get_reference_source');
         end
 
         function val = set_averager_settings(obj, recordLength, numSegments, waveforms, roundRobins)
@@ -159,15 +169,20 @@ classdef X6 < hgsetget
             if (~x6.is_open)
                 error('Could not open aps')
             end
-            
             x6.init();
-            
+
             fprintf('current logic temperature = %.1f\n', x6.getLogicTemperature());
             
             fprintf('current PLL frequency = %.2f GHz\n', x6.samplingRate/1e9);
+            fprintf('Setting clock reference to external');
+            x6.reference = 'external';
             
-            fprintf('setting averager parameters to record 5 segments of 1024 samples\n');
-            x6.set_averager_settings(1024, 5, 1, 1);
+            phase_increment = 4/50;
+            fprintf('Setting NCO phase offset to %.3f\n', phase_increment);
+            x6.writeRegister(hex2dec('700'), 16, round(4 * phase_increment * 2^16));
+            
+            fprintf('setting averager parameters to record 10 segments of 2048 samples\n');
+            x6.set_averager_settings(2048, 10, 1, 1);
 %             fprintf('setting averager parameters to record 1 segment of 1024 samples\n');
 %             x6.set_averager_settings(1024, 1, 1, 1);
 
@@ -183,13 +198,17 @@ classdef X6 < hgsetget
             fprintf('Transferring waveform channels 1 and 2\n');
             wf1 = x6.transfer_waveform(1);
             wf2 = x6.transfer_waveform(2);
+            wf3 = x6.transfer_waveform(3);
             figure();
-            subplot(2,1,1);
+            subplot(3,1,1);
             plot(wf1);
             title('ch1');
-            subplot(2,1,2);
+            subplot(3,1,2);
             plot(wf2, 'r');
             title('ch2');
+            subplot(3,1,3);
+            plot(wf3, 'r');
+            title('ch3');
             
             x6.disconnect();
             unloadlibrary('libx6adc')

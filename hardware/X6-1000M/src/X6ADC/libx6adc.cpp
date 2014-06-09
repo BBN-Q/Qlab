@@ -88,6 +88,14 @@ int get_trigger_source(int deviceID) {
 	return int(X6s_[deviceID].get_trigger_source());
 }
 
+int set_reference_source(int deviceID, int referenceSource) {
+	return X6s_[deviceID].set_reference_source(REFERENCESOURCE(referenceSource));
+}
+
+int get_reference_source(int deviceID) {
+	return int(X6s_[deviceID].get_reference_source());
+}
+
 int set_averager_settings(int deviceID, int recordLength, int numSegments, int waveforms, int roundRobins) {
 	return X6s_[deviceID].set_averager_settings(recordLength, numSegments, waveforms, roundRobins);
 }

@@ -49,6 +49,9 @@ EXPORT double get_sampleRate(int);
 EXPORT int set_trigger_source(int, int);
 EXPORT int get_trigger_source(int);
 
+EXPORT int set_reference_source(int, int);
+EXPORT int get_reference_source(int);
+
 EXPORT int set_averager_settings(int, int, int, int, int);
 
 EXPORT int acquire(int);

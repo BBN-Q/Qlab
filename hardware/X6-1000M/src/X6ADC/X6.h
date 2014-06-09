@@ -47,6 +47,9 @@ public:
 	int set_trigger_source(const TRIGGERSOURCE &);
 	TRIGGERSOURCE get_trigger_source() const;
 
+	int set_reference_source(const REFERENCESOURCE &);
+	REFERENCESOURCE get_reference_source();
+
 	int set_digitizer_mode(const DIGITIZER_MODE &);
 	DIGITIZER_MODE get_digitizer_mode() const;
 

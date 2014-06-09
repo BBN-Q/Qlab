@@ -72,6 +72,8 @@ public:
 	 */
 	ErrorCodes set_reference(ExtInt ref = INTERNAL, float frequency = 10e6);
 
+	ExtInt get_reference();
+
 	/** Set clock source and frequency
 	 *  \param src EXTERNAL || INTERNAL
 	 *  \param frequency Frequency in Hz

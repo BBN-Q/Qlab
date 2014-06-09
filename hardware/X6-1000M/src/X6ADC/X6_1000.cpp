@@ -26,7 +26,8 @@ X6_1000::~X6_1000() {
 }
 
 unsigned int X6_1000::get_num_channels() {
-    return module_.Input().Channels();
+    // TODO make this depend on some DSP register value;
+    return module_.Input().Channels() * 2;
 }
 
 unsigned int  X6_1000::getBoardCount() {
@@ -113,10 +114,10 @@ X6_1000::ErrorCodes X6_1000::open(int deviceID) {
 
     //  Initialize VeloMergeParse with stream IDs
     VMP_.OnDataAvailable.SetEvent(this, &X6_1000::VMPDataAvailable);
-    std::vector<int> streamIDs = {static_cast<int>(module_.VitaIn().VitaStreamId(0)), static_cast<int>(module_.VitaIn().VitaStreamId(1))};
+    std::vector<int> streamIDs = {static_cast<int>(module_.VitaIn().VitaStreamId(0)), static_cast<int>(module_.VitaIn().VitaStreamId(1)), 0x102};
     streamIDs.push_back(0xffff);
     VMP_.Init(streamIDs);
-    FILE_LOG(logDEBUG) << "ADC Stream IDs: " << myhex << streamIDs[0] << ", " << myhex << streamIDs[1];
+    FILE_LOG(logDEBUG) << "ADC Stream IDs: " << myhex << streamIDs[0] << ", " << myhex << streamIDs[1] << ", " << myhex << streamIDs[2];
 
     return SUCCESS;
   }
@@ -173,6 +174,11 @@ X6_1000::ErrorCodes X6_1000::set_reference(X6_1000::ExtInt ref, float frequency)
     module_.Clock().Reference(x6ref);
     module_.Clock().ReferenceFrequency(frequency);
     return SUCCESS;
+}
+
+X6_1000::ExtInt X6_1000::get_reference() {
+    auto iiref = module_.Clock().Reference();
+    return (iiref == IX6ClockIo::rsExternal) ? EXTERNAL : INTERNAL;
 }
 
 X6_1000::ErrorCodes X6_1000::set_clock(X6_1000::ExtInt src , 
@@ -271,7 +277,7 @@ X6_1000::ErrorCodes X6_1000::set_active_channels() {
     module_.Output().ChannelDisableAll();
     module_.Input().ChannelDisableAll();
 
-    for (int cnt = 0; cnt < get_num_channels(); cnt++) { 
+    for (int cnt = 0; cnt < 2; cnt++) {  // TODO: change loop to num_physical_channels() or the like
         FILE_LOG(logINFO) << "Channel " << cnt << " Enable = " << activeChannels_[cnt];
         module_.Input().ChannelEnabled(cnt, activeChannels_[cnt]);
     }
