@@ -327,6 +327,7 @@ X6_1000::ErrorCodes X6_1000::acquire() {
     stream_.Preconfigure();
 
     // figure out when to stop
+    // TODO: decimation factor is channel dependent, so reduce across active channels
     samplesToAcquire_ = num_active_channels() * samplesPerFrame_ * numRecords_ / get_decimation();
     FILE_LOG(logDEBUG) << "samplesToAcquire = " << samplesToAcquire_;
     samplesAcquired_ = 0;
@@ -334,7 +335,8 @@ X6_1000::ErrorCodes X6_1000::acquire() {
     int samplesPerWord = module_.Input().Info().SamplesPerWord();
     FILE_LOG(logDEBUG) << "samplesPerWord = " << samplesPerWord;
     // pad packets by 8 extra words per channel (VITA packets have 7 word header, 1 word trailer)
-    int packetSize = num_active_channels()*( samplesPerFrame_/samplesPerWord/get_decimation() + 8);
+    // TODO: resize to get all active channels in a single VELO packet
+    int packetSize = (samplesPerFrame_/samplesPerWord/get_decimation() + 8);
     FILE_LOG(logDEBUG) << "packetSize = " << packetSize;
 
     module_.Velo().LoadAll_VeloDataSize(packetSize);
