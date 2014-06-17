@@ -146,32 +146,38 @@ private:
 	Innovative::VitaPacketStream    stream_;
 	Innovative::SoftwareTimer       timer_;
 	Innovative::VeloBuffer       	outputPacket_;
-	Innovative::VeloMergeParser     VMP_; /**< Utility for convert Velo stream back into VITA packets*/
+	vector<Innovative::VeloMergeParser> VMPs_; /**< Utility to convert and filter Velo stream back into VITA packets*/
 
 	// WishBone interface
 	// TODO: update wbX6ADC wishbone offset  
-	const unsigned int wbX6ADC_offset = 0xc00;   
+	const unsigned int wbX6ADC_offset = 0xc00;
 
 	unsigned int numBoards_;      /**< cached number of boards */
 	// unsigned int deviceID_;       /**< board ID (aka target number) */
 
 	TriggerSource triggerSource_ = EXTERNAL_TRIGGER; /**< cached trigger source */
 	map<int,bool> activeChannels_;
-	map<int, vector<short>> chData_; // holds the output data
+
+	/* chData_ map for record storage
+	 * ch  0-9  : physical channels
+	 * ch 10-19 : demodulated channels
+	 * ch 20-29 : integrated channels
+	 * ch 100-199 : correlated channels
+	 */
+	map<int, vector<short>> chData_;
 
 	// State Variables
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
 	bool isRunning_;
 	int prefillPacketCount_;
-	unsigned int samplesPerFrame_ = 0;
-	unsigned int samplesToAcquire_ = 0;
-	unsigned int samplesAcquired_ = 0;
+	unsigned int recordLength_ = 0;
 	unsigned int numRecords_ = 1;
 
 	ErrorCodes set_active_channels();
 	int num_active_channels();
 	void set_defaults();
 	void log_card_info();
+	bool check_done();
 
 
 	void setHandler(OpenWire::EventHandler<OpenWire::NotifyEvent> &event, 
@@ -188,7 +194,13 @@ private:
     void HandleAfterStreamStop(OpenWire::NotifyEvent & Event);
 
     void HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event);
-    void VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event);
+    void VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event, int offset);
+    void HandlePhysicalStream(Innovative::VeloMergeParserDataAvailable & Event) {
+    	VMPDataAvailable(Event, 0);
+    };
+    void HandleVirtualStream(Innovative::VeloMergeParserDataAvailable & Event) {
+    	VMPDataAvailable(Event, 10);
+    };
 
 	void HandleTimer(OpenWire::NotifyEvent & Event);
 

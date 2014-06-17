@@ -69,6 +69,14 @@ classdef X6 < hgsetget
         function val = get.reference(obj)
             val = obj.libraryCall('get_reference_source');
         end
+        
+        function val = set_channel_enable(obj, channel, enable)
+            val = obj.libraryCall('set_channel_enable', channel-1, enable);
+        end
+        
+        function val = get_channel_enable(obj, channel)
+            val = obj.libraryCall('get_channel_enable', channel-1);
+        end
 
         function val = set_averager_settings(obj, recordLength, numSegments, waveforms, roundRobins)
             val = obj.libraryCall('set_averager_settings', recordLength, numSegments, waveforms, roundRobins);
@@ -174,8 +182,10 @@ classdef X6 < hgsetget
             fprintf('current logic temperature = %.1f\n', x6.getLogicTemperature());
             
             fprintf('current PLL frequency = %.2f GHz\n', x6.samplingRate/1e9);
-            fprintf('Setting clock reference to external');
+            fprintf('Setting clock reference to external\n');
             x6.reference = 'external';
+            
+            x6.set_channel_enable(2, 0);
             
             phase_increment = 4/50;
             fprintf('Setting NCO phase offset to %.3f\n', phase_increment);
@@ -197,8 +207,8 @@ classdef X6 < hgsetget
 
             fprintf('Transferring waveform channels 1 and 2\n');
             wf1 = x6.transfer_waveform(1);
-            wf2 = x6.transfer_waveform(2);
-            wf3 = x6.transfer_waveform(3);
+            wf2 = x6.transfer_waveform(11);
+            wf3 = x6.transfer_waveform(12);
             figure();
             subplot(3,1,1);
             plot(wf1);

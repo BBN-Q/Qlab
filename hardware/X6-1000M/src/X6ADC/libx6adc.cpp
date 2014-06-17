@@ -96,6 +96,14 @@ int get_reference_source(int deviceID) {
 	return int(X6s_[deviceID].get_reference_source());
 }
 
+int set_channel_enable(int deviceID, int channel, int enable) {
+	return X6s_[deviceID].set_channel_enable(channel, enable);
+}
+
+int get_channel_enable(int deviceID, int channel) {
+	return X6s_[deviceID].get_channel_enable(channel);
+}
+
 int set_averager_settings(int deviceID, int recordLength, int numSegments, int waveforms, int roundRobins) {
 	return X6s_[deviceID].set_averager_settings(recordLength, numSegments, waveforms, roundRobins);
 }

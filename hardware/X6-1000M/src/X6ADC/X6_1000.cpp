@@ -9,12 +9,11 @@ using namespace Innovative;
 
 // constructor
 X6_1000::X6_1000() :
-    isOpened_(false), isRunning_(false) {
+    isOpened_(false), isRunning_(false), VMPs_(2) {
     numBoards_ = getBoardCount();
 
     for(int cnt = 0; cnt < get_num_channels(); cnt++) {
-        activeChannels_[cnt] = true;
-        chData_[cnt].clear(); // initalize vector
+        set_channel_enable(cnt, true);
     }
 
     // Use IPP performance memory functions.    
@@ -26,8 +25,7 @@ X6_1000::~X6_1000() {
 }
 
 unsigned int X6_1000::get_num_channels() {
-    // TODO make this depend on some DSP register value;
-    return module_.Input().Channels() * 2;
+    return module_.Input().Channels();
 }
 
 unsigned int  X6_1000::getBoardCount() {
@@ -112,12 +110,18 @@ X6_1000::ErrorCodes X6_1000::open(int deviceID) {
     prefillPacketCount_ = stream_.PrefillPacketCount();
     FILE_LOG(logDEBUG) << "Stream prefill packet count: " << prefillPacketCount_;
 
-    //  Initialize VeloMergeParse with stream IDs
-    VMP_.OnDataAvailable.SetEvent(this, &X6_1000::VMPDataAvailable);
-    std::vector<int> streamIDs = {static_cast<int>(module_.VitaIn().VitaStreamId(0)), static_cast<int>(module_.VitaIn().VitaStreamId(1)), 0x102};
-    streamIDs.push_back(0xffff);
-    VMP_.Init(streamIDs);
-    FILE_LOG(logDEBUG) << "ADC Stream IDs: " << myhex << streamIDs[0] << ", " << myhex << streamIDs[1] << ", " << myhex << streamIDs[2];
+    //  Initialize VeloMergeParsers with stream IDs
+    VMPs_[0].OnDataAvailable.SetEvent(this, &X6_1000::HandlePhysicalStream);
+    //std::vector<int> streamIDs = {static_cast<int>(module_.VitaIn().VitaStreamId(0)), static_cast<int>(module_.VitaIn().VitaStreamId(1))};
+    std::vector<int> streamIDs = {static_cast<int>(module_.VitaIn().VitaStreamId(0))};
+    VMPs_[0].Init(streamIDs);
+    FILE_LOG(logDEBUG) << "ADC physical stream IDs: " << myhex << streamIDs[0];// << ", " << myhex << streamIDs[1];
+
+    VMPs_[1].OnDataAvailable.SetEvent(this, &X6_1000::HandleVirtualStream);
+    // TODO: update firmware streamIDs to 0x200, 0x201, etc.
+    streamIDs = {0x101, 0x102};
+    VMPs_[1].Init(streamIDs);
+    FILE_LOG(logDEBUG) << "ADC virtual stream IDs: " << myhex << streamIDs[0] << ", " << myhex << streamIDs[1];
 
     return SUCCESS;
   }
@@ -240,10 +244,12 @@ int X6_1000::get_decimation() {
 }
 
 X6_1000::ErrorCodes X6_1000::set_frame(int recordLength, int numRecords) {
-    FILE_LOG(logINFO) << "Setting samplesPerFrame_ = " << recordLength;
-    samplesPerFrame_ = recordLength;
+    FILE_LOG(logINFO) << "Setting recordLength_ = " << recordLength;
+
+    recordLength_ = recordLength;
     numRecords_ = numRecords;
 
+    // setup the trigger window size
     int frameGranularity = module_.Input().Info().TriggerFrameGranularity();
     if (recordLength % frameGranularity != 0) {
         FILE_LOG(logERROR) << "Invalid frame size: " << recordLength;
@@ -262,6 +268,11 @@ X6_1000::ErrorCodes X6_1000::set_channel_enable(int channel, bool enabled) {
     if (channel >= get_num_channels()) return INVALID_CHANNEL;
     FILE_LOG(logINFO) << "Set Channel " << channel << " Enable = " << enabled;
     activeChannels_[channel] = enabled;
+    if (enabled) {
+        chData_[channel] = vector<short>();
+    } else {
+        chData_.erase(channel);
+    }
     return SUCCESS;
 }
 
@@ -277,7 +288,7 @@ X6_1000::ErrorCodes X6_1000::set_active_channels() {
     module_.Output().ChannelDisableAll();
     module_.Input().ChannelDisableAll();
 
-    for (int cnt = 0; cnt < 2; cnt++) {  // TODO: change loop to num_physical_channels() or the like
+    for (int cnt = 0; cnt < get_num_channels(); cnt++) {
         FILE_LOG(logINFO) << "Channel " << cnt << " Enable = " << activeChannels_[cnt];
         module_.Input().ChannelEnabled(cnt, activeChannels_[cnt]);
     }
@@ -326,27 +337,28 @@ X6_1000::ErrorCodes X6_1000::acquire() {
     // should only need to call this once, but for now we call it every time
     stream_.Preconfigure();
 
-    // figure out when to stop
-    // TODO: decimation factor is channel dependent, so reduce across active channels
-    samplesToAcquire_ = num_active_channels() * samplesPerFrame_ * numRecords_ / get_decimation();
-    FILE_LOG(logDEBUG) << "samplesToAcquire = " << samplesToAcquire_;
-    samplesAcquired_ = 0;
-
     int samplesPerWord = module_.Input().Info().SamplesPerWord();
     FILE_LOG(logDEBUG) << "samplesPerWord = " << samplesPerWord;
+    // calcate packet size for physical and virtual channels
     // pad packets by 8 extra words per channel (VITA packets have 7 word header, 1 word trailer)
-    // TODO: resize to get all active channels in a single VELO packet
-    int packetSize = (samplesPerFrame_/samplesPerWord/get_decimation() + 8);
-    FILE_LOG(logDEBUG) << "packetSize = " << packetSize;
+    int packetSize = recordLength_/samplesPerWord/get_decimation() + 8;
+    FILE_LOG(logDEBUG) << "Physical channel packetSize = " << packetSize;
+    VMPs_[0].Resize(packetSize);
+    VMPs_[0].Clear();
 
-    module_.Velo().LoadAll_VeloDataSize(packetSize);
-    module_.Velo().ForceVeloPacketSize(true);
+    // use this as a template for the VELO packet size
+    module_.Velo().LoadAll_VeloDataSize(2 * packetSize);
+    module_.Velo().ForceVeloPacketSize(false);
 
-    // clear VMP and channel buffers
-    FILE_LOG(logDEBUG) << "Setting VMP buffer size = " << samplesPerFrame_ / samplesPerWord / get_decimation();
-    VMP_.Resize(samplesPerFrame_ / samplesPerWord / get_decimation());
-    VMP_.Clear();
-    for(int cnt = 0; cnt < get_num_channels(); cnt++) chData_[cnt].clear();
+    packetSize = recordLength_/samplesPerWord/get_decimation()/DECIMATION_FACTOR + 8;
+    FILE_LOG(logDEBUG) << "Virtual channel packetSize = " << packetSize;
+    VMPs_[1].Resize(packetSize);
+    VMPs_[1].Clear();
+
+    // clear channel buffers
+    for (auto & kv : chData_) {
+        kv.second.clear();
+    }
 
     // is this necessary??
     stream_.PrefillPacketCount(prefillPacketCount_);
@@ -416,7 +428,8 @@ void X6_1000::HandleAfterStreamStop(OpenWire::NotifyEvent & /*Event*/) {
     // Disable external triggering initially
     module_.Input().SoftwareTrigger(false);
     module_.Input().Trigger().External(false);
-    VMP_.Flush();
+    VMPs_[0].Flush();
+    VMPs_[1].Flush();
 }
 
 void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event) {
@@ -434,23 +447,26 @@ void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event)
     VitaHeaderDatagram vh_dg(pos);
     FILE_LOG(logDEBUG) << "buffer stream ID = " << myhex << vh_dg.StreamId();
 
-    VMP_.Append(buffer);
-    VMP_.Parse();
+    // broadcast to all VMPs
+    for (auto & vmp : VMPs_) {
+        vmp.Append(buffer);
+        vmp.Parse();
+    }
+
+    if (check_done()) {
+        stop();
+    }
 }
 
-void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event) {
+void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event, int offset) {
     FILE_LOG(logDEBUG) << "X6_1000::VMPDataAvailable";
     if (!isRunning_) {
         return;
     }
     // StreamID is now encoded in the PeripheralID of the VMP Vita buffer
     PacketBufferHeader header(Event.Data);
-    int channel = header.PeripheralId();
+    int channel = header.PeripheralId() + offset;
     FILE_LOG(logDEBUG) << "VMP buffer channel = " << channel;
-    if (!activeChannels_[channel]) {
-        FILE_LOG(logDEBUG) << "Received data for inactive channel. Dropping";
-        return;
-    }
 
     // interpret the data as integers
     ShortDG bufferDG(Event.Data);
@@ -459,11 +475,27 @@ void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event)
     chData_[channel].insert(std::end(chData_[channel]), std::begin(bufferDG), std::end(bufferDG));
 
     FILE_LOG(logDEBUG) << "chData_[" << channel << "].size() = " << chData_[channel].size();
+}
 
-    samplesAcquired_ += bufferDG.size();
-    FILE_LOG(logDEBUG) << "samplesAcquired_ = " << samplesAcquired_;
-    // if we've acquired the requested number of samples, stop streaming
-    if (samplesAcquired_ >= samplesToAcquire_) stop();
+bool X6_1000::check_done() {
+    int records;
+    FILE_LOG(logDEBUG) << "chData_.size() = " << chData_.size();
+    for (auto & kv : chData_) {
+        if (kv.first < 10) {// physical channel
+            records = kv.second.size() / recordLength_;
+            FILE_LOG(logDEBUG) << "Channel " << kv.first << " has " << records << " records";
+            if (records < numRecords_) {
+                return false;
+            }
+        } else { // virtual (decimated) channel
+            records = kv.second.size() / (recordLength_ / DECIMATION_FACTOR);
+            FILE_LOG(logDEBUG) << "Channel " << kv.first << " has " << records << " records";
+            if (records < numRecords_) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 void X6_1000::HandleTimer(OpenWire::NotifyEvent & /*Event*/) {

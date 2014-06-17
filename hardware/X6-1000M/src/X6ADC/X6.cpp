@@ -143,6 +143,14 @@ REFERENCESOURCE X6::get_reference_source() {
 		return INTERNALREF;
 }
 
+int X6::set_channel_enable(const int & channel, const bool & enable) {
+	return handle_.set_channel_enable(channel, enable);
+}
+
+bool X6::get_channel_enable(const int & channel) {
+	return handle_.get_channel_enable(channel);
+}
+
 int X6::acquire() {
 	handle_.acquire();
 	return 0;

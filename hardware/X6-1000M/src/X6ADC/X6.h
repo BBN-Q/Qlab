@@ -50,6 +50,9 @@ public:
 	int set_reference_source(const REFERENCESOURCE &);
 	REFERENCESOURCE get_reference_source();
 
+	int set_channel_enable(const int &, const bool &);
+	bool get_channel_enable(const int &);
+
 	int set_digitizer_mode(const DIGITIZER_MODE &);
 	DIGITIZER_MODE get_digitizer_mode() const;
 
