@@ -60,7 +60,7 @@ EXPORT int set_averager_settings(int, int, int, int, int);
 EXPORT int acquire(int);
 EXPORT int wait_for_acquisition(int, int);
 EXPORT int stop(int);
-EXPORT int transfer_waveform(int, int, short *, unsigned int);
+EXPORT int transfer_waveform(int, int, int64_t *, unsigned int);
 
 EXPORT int set_log(char *);
 int update_log(FILE * pFile);

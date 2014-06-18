@@ -193,6 +193,9 @@ classdef X6 < hgsetget
             
             fprintf('setting averager parameters to record 10 segments of 2048 samples\n');
             x6.set_averager_settings(2048, 10, 1, 1);
+            x6.writeRegister(hex2dec('700'), 0, 2048);
+            x6.writeRegister(hex2dec('700'), 1, 512);
+            x6.writeRegister(hex2dec('700'), 2, 512);
 %             fprintf('setting averager parameters to record 1 segment of 1024 samples\n');
 %             x6.set_averager_settings(1024, 1, 1, 1);
 

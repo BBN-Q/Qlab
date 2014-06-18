@@ -6,12 +6,15 @@
 #include <SoftwareTimer_Mb.h>
 #include <Application/TriggerManager_App.h>
 #include <HardwareRegister_Mb.h>
+#include <BufferDatagrams_Mb.h> // for ShortDG
 
 #ifndef X6_1000_H_
 #define X6_1000_H_
 
 using std::vector;
 using std::string;
+
+
 
 /**
  * X6_1000 Class: Provides interface to Innovative Illustrations X6_1000 card
@@ -21,6 +24,7 @@ using std::string;
  * This interface utilizes the II [Malibu library](www.innovative-dsp.com/products.php?product=Malibu)
  */
 
+class Accumulator;
 
 
 class X6_1000 
@@ -105,7 +109,8 @@ public:
 	ErrorCodes set_decimation(bool enabled = false, int factor = 1);
 	int get_decimation();
 
-	ErrorCodes set_frame(int recordLength, int numRecords);
+	ErrorCodes set_frame(int recordLength);
+	ErrorCodes set_averager_settings(const int & recordLength, const int & numSegments, const int & waveforms,  const int & roundRobins);
 
 	ErrorCodes set_channel_enable(int channel, bool enabled);
 	bool get_channel_enable(int channel);
@@ -124,7 +129,7 @@ public:
 	ErrorCodes stop();
 	bool       get_is_running();
 
-	ErrorCodes transfer_waveform(int channel, short *buffer, size_t length);
+	ErrorCodes transfer_waveform(int, int64_t *, size_t);
 
 	ErrorCodes write_wishbone_register(uint32_t baseAddr, uint32_t offset, uint32_t data);
 	ErrorCodes write_wishbone_register(uint32_t offset, uint32_t data);
@@ -158,20 +163,24 @@ private:
 	TriggerSource triggerSource_ = EXTERNAL_TRIGGER; /**< cached trigger source */
 	map<int,bool> activeChannels_;
 
-	/* chData_ map for record storage
+	/* map for record storage
 	 * ch  0-9  : physical channels
 	 * ch 10-19 : demodulated channels
 	 * ch 20-29 : integrated channels
 	 * ch 100-199 : correlated channels
 	 */
-	map<int, vector<short>> chData_;
+	//Some auxiliary accumlator data
+	map<int, Accumulator> accumulators_;
 
 	// State Variables
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
 	bool isRunning_;
 	int prefillPacketCount_;
-	unsigned int recordLength_ = 0;
-	unsigned int numRecords_ = 1;
+	unsigned recordLength_ = 0;
+	unsigned numRecords_ = 1;
+	unsigned numSegments_;
+	unsigned waveforms_;
+	unsigned roundRobins_;
 
 	ErrorCodes set_active_channels();
 	int num_active_channels();
@@ -214,5 +223,33 @@ private:
 
     void LogHandler(string handlerName);
 };
+
+class Accumulator{
+friend X6_1000;
+
+public:
+	/* Helper class to accumulate/average data */
+	Accumulator();
+	Accumulator(const size_t &, const size_t &, const size_t &);
+	//TODO: Template this for multiple return types?  
+	void accumulate(const Innovative::ShortDG &);
+
+	void init(const size_t &, const size_t &, const size_t &);
+	void reset();
+	void snapshot(int64_t *);
+
+private:
+	size_t idx_;
+	size_t wfmCt_;
+	size_t numSegments_;
+	size_t numWaveforms_;
+	size_t recordLength_;
+	size_t recordsTaken_;
+
+	vector<int64_t> data_;
+
+};
+
+
 
 #endif

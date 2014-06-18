@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <vector>
 
 #include "libx6adc.h"
 #include "constants.h"
@@ -86,9 +87,8 @@ int main ()
 
 
   cout << "Transferring waveform ch1" << endl;
-  short *buffer = new short[10240];
-  transfer_waveform(0, 1, buffer, 1024);
-  delete [] buffer;
+  vector<int64_t> buffer(10240);
+  transfer_waveform(0, 1, buffer.data(), 1024);
 
   cout << "Stopping" << endl;
 

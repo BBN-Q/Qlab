@@ -86,11 +86,7 @@ double X6::get_sampleRate() const {
 }
 
 int X6::set_averager_settings(const int & recordLength, const int & numSegments, const int & waveforms,	const int & roundRobins) {
-	recordLength_ = recordLength;
-	numSegments_ = numSegments;
-	waveforms_ = waveforms;
-	roundRobins_ = roundRobins;
-	handle_.set_frame(recordLength, numSegments*waveforms*roundRobins);
+	handle_.set_averager_settings(recordLength, numSegments, waveforms, roundRobins);
 }
 
 int X6::set_trigger_source(const TRIGGERSOURCE & triggerSource){
@@ -187,7 +183,7 @@ int X6::stop() {
 	return 0;
 }
 
-int X6::transfer_waveform(const int & channel, short *buffer, const size_t & bufferLength) {
+int X6::transfer_waveform(const int & channel, int64_t *buffer, const size_t & bufferLength) {
 	// TODO: manage averaging of data based on waveforms and round robins
 	return handle_.transfer_waveform(channel, buffer, bufferLength);
 }

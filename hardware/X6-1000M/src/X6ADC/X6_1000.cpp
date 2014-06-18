@@ -243,11 +243,10 @@ int X6_1000::get_decimation() {
     return (decimation > 0) ? decimation : 1;
 }
 
-X6_1000::ErrorCodes X6_1000::set_frame(int recordLength, int numRecords) {
+X6_1000::ErrorCodes X6_1000::set_frame(int recordLength) {
     FILE_LOG(logINFO) << "Setting recordLength_ = " << recordLength;
 
     recordLength_ = recordLength;
-    numRecords_ = numRecords;
 
     // setup the trigger window size
     int frameGranularity = module_.Input().Info().TriggerFrameGranularity();
@@ -264,14 +263,33 @@ X6_1000::ErrorCodes X6_1000::set_frame(int recordLength, int numRecords) {
     module_.Input().Pulse().Enabled(false);
 }
 
+X6_1000::ErrorCodes X6_1000::set_averager_settings(const int & recordLength, const int & numSegments, const int & waveforms,  const int & roundRobins) {
+    set_frame(recordLength);
+    numSegments_ = numSegments;
+    waveforms_ = waveforms;
+    roundRobins_ = roundRobins;
+    numRecords_ = numSegments * waveforms * roundRobins;
+
+    //Setup the accumulators
+    for (auto & kv : accumulators_) {
+        ssize_t recLength = recordLength;
+        if (kv.first >= 10) {
+            recLength /= DECIMATION_FACTOR;
+        }
+        kv.second.init(kv.first > 10 ? recordLength : recordLength/DECIMATION_FACTOR, numSegments, waveforms);
+    }
+
+    return SUCCESS;
+}
+
 X6_1000::ErrorCodes X6_1000::set_channel_enable(int channel, bool enabled) {
     if (channel >= get_num_channels()) return INVALID_CHANNEL;
     FILE_LOG(logINFO) << "Set Channel " << channel << " Enable = " << enabled;
     activeChannels_[channel] = enabled;
     if (enabled) {
-        chData_[channel] = vector<short>();
+        accumulators_[channel] = Accumulator(channel > 10 ? recordLength_ : recordLength_/DECIMATION_FACTOR, numSegments_, waveforms_);
     } else {
-        chData_.erase(channel);
+        accumulators_.erase(channel);
     }
     return SUCCESS;
 }
@@ -347,6 +365,7 @@ X6_1000::ErrorCodes X6_1000::acquire() {
     VMPs_[0].Clear();
 
     // use this as a template for the VELO packet size
+    // the card seems to stall out with all 0xffff stream IDs without the factor of 2 below
     module_.Velo().LoadAll_VeloDataSize(2 * packetSize);
     module_.Velo().ForceVeloPacketSize(false);
 
@@ -355,10 +374,11 @@ X6_1000::ErrorCodes X6_1000::acquire() {
     VMPs_[1].Resize(packetSize);
     VMPs_[1].Clear();
 
-    // clear channel buffers
-    for (auto & kv : chData_) {
-        kv.second.clear();
+    // reset the accumulators
+    for (auto & kv : accumulators_) {
+        kv.second.reset();
     }
+
 
     // is this necessary??
     stream_.PrefillPacketCount(prefillPacketCount_);
@@ -387,9 +407,10 @@ bool X6_1000::get_is_running() {
     return isRunning_;
 }
 
-X6_1000::ErrorCodes X6_1000::transfer_waveform(int channel, short *buffer, size_t length) {
-    size_t count = std::min(length, chData_[channel].size());
-    std::copy(chData_[channel].begin(), chData_[channel].begin() + count, buffer);
+X6_1000::ErrorCodes X6_1000::transfer_waveform(int channel, int64_t * buffer, size_t length) {
+    //Don't copy more than we have
+    if (length < accumulators_[channel].data_.size() ) FILE_LOG(logERROR) << "Not enough memory allocated in buffer to transfer waveform.";
+    accumulators_[channel].snapshot(buffer);
     return SUCCESS;
 }
 
@@ -471,30 +492,30 @@ void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event,
     // interpret the data as integers
     ShortDG bufferDG(Event.Data);
     FILE_LOG(logDEBUG) << "VMP buffer size = " << bufferDG.size() << " samples";
-    // copy the data to the appropriate channel
-    chData_[channel].insert(std::end(chData_[channel]), std::begin(bufferDG), std::end(bufferDG));
+    // accumulate the data in the appropriate channel
+    // chData_[channel].insert(std::end(chData_[channel]), std::begin(bufferDG), std::end(bufferDG));
+    accumulators_[channel].accumulate(bufferDG);
 
-    FILE_LOG(logDEBUG) << "chData_[" << channel << "].size() = " << chData_[channel].size();
 }
 
 bool X6_1000::check_done() {
-    int records;
-    FILE_LOG(logDEBUG) << "chData_.size() = " << chData_.size();
-    for (auto & kv : chData_) {
-        if (kv.first < 10) {// physical channel
-            records = kv.second.size() / recordLength_;
-            FILE_LOG(logDEBUG) << "Channel " << kv.first << " has " << records << " records";
-            if (records < numRecords_) {
-                return false;
-            }
-        } else { // virtual (decimated) channel
-            records = kv.second.size() / (recordLength_ / DECIMATION_FACTOR);
-            FILE_LOG(logDEBUG) << "Channel " << kv.first << " has " << records << " records";
-            if (records < numRecords_) {
-                return false;
-            }
-        }
-    }
+    // int records;
+    // FILE_LOG(logDEBUG) << "chData_.size() = " << chData_.size();
+    // for (auto & kv : chData_) {
+    //     if (kv.first < 10) {// physical channel
+    //         records = kv.second.size() / recordLength_;
+    //         FILE_LOG(logDEBUG) << "Channel " << kv.first << " has " << records << " records";
+    //         if (records < numRecords_) {
+    //             return false;
+    //         }
+    //     } else { // virtual (decimated) channel
+    //         records = kv.second.size() / (recordLength_ / DECIMATION_FACTOR);
+    //         FILE_LOG(logDEBUG) << "Channel " << kv.first << " has " << records << " records";
+    //         if (records < numRecords_) {
+    //             return false;
+    //         }
+    //     }
+    // }
     return true;
 }
 
@@ -559,4 +580,56 @@ uint32_t X6_1000::read_wishbone_register(uint32_t baseAddr, uint32_t offset) con
 
 uint32_t X6_1000::read_wishbone_register(uint32_t offset) const {
     return read_wishbone_register(wbX6ADC_offset, offset);
+}
+
+Accumulator::Accumulator() : 
+    idx_{0}, wfmCt_{0}, recordLength_{0}, numSegments_{0}, numWaveforms_{0}, recordsTaken_{0} {}; 
+
+Accumulator::Accumulator(const size_t & recordLength, const size_t & numSegments, const size_t & numWaveforms) : 
+    idx_{0}, wfmCt_{0}, recordLength_{recordLength}, numSegments_{numSegments}, numWaveforms_{numWaveforms}, recordsTaken_{0} {}; 
+
+void Accumulator::init(const size_t & recordLength, const size_t & numSegments, const size_t & numWaveforms){
+    data_.assign(recordLength*numSegments, 0);
+    idx_ = 0;
+    wfmCt_ = 0;
+    recordLength_  = recordLength;
+    numSegments_ = numSegments;
+    numWaveforms_ = numWaveforms;
+    recordsTaken_ = 0;
+}
+
+void Accumulator::reset(){
+    data_.assign(recordLength_*numSegments_, 0);
+    idx_ = 0;
+    wfmCt_ = 0;
+    recordsTaken_ = 0;
+}
+
+void Accumulator::snapshot(int64_t * buf){
+    /* Copies current data into a *preallocated* buffer.*/
+    std::copy(data_.begin(), data_.end(), buf);
+}
+
+
+void Accumulator::accumulate(const ShortDG & buffer){
+    //TODO: worry about performance, cache-friendly etc.
+    //TODO: logging
+    for (size_t ct; ct < buffer.size(); ct++){
+        data_[idx_++] += buffer[ct];
+        //At the end of the record sort out where to jump to 
+        if (idx_ % recordLength_ == 0){
+            recordsTaken_++;
+            //If we've filled up the number of waveforms move onto the next segment, otherwise jump back to the beginning of the record
+            if (++wfmCt_ == numWaveforms_){
+                wfmCt_ = 0;
+            } else{
+                idx_ -= recordLength_;
+            }
+
+            //Final check if we're at the end
+            if (idx_ == data_.size()){
+                idx_ = 0;
+            }
+        }
+    }   
 }
