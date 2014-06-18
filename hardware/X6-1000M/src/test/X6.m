@@ -13,6 +13,10 @@ classdef X6 < hgsetget
         deviceID = 0;
     end
     
+    properties(Constant)
+        DECIM_FACTOR = 4;
+    end
+    
     methods
         function obj = X6()
             obj.load_library();
@@ -80,7 +84,7 @@ classdef X6 < hgsetget
 
         function val = set_averager_settings(obj, recordLength, numSegments, waveforms, roundRobins)
             val = obj.libraryCall('set_averager_settings', recordLength, numSegments, waveforms, roundRobins);
-            obj.bufferSize = recordLength * numSegments * waveforms * roundRobins;
+            obj.bufferSize = recordLength * numSegments;
         end
 
         function val = acquire(obj)
@@ -97,12 +101,17 @@ classdef X6 < hgsetget
 
         function wf = transfer_waveform(obj, ch)
             % possibly more efficient to pass a libpointer, but this is easiest for now
-            bufferPtr = libpointer('int16Ptr', zeros(obj.bufferSize, 1, 'int16'));
-            success = obj.libraryCall('transfer_waveform', ch, bufferPtr, obj.bufferSize);
+            if ch < 10
+                bufSize = obj.bufferSize;
+            else
+                bufSize = obj.bufferSize/obj.DECIM_FACTOR;
+            end
+            wfPtr = libpointer('int64Ptr', zeros(bufSize, 1, 'int64'));
+            success = obj.libraryCall('transfer_waveform', ch, wfPtr, bufSize);
             if success ~= 0
                 error('transfer_waveform failed');
             end
-            wf = bufferPtr.Value;
+            wf = wfPtr.Value;
         end
         
         function val = writeRegister(obj, addr, offset, data)
