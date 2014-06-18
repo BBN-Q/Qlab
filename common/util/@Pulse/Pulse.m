@@ -72,7 +72,11 @@ classdef Pulse < handle
                    %non frame-change version
                    if strcmp(exception.identifier,'MATLAB:maxlhs')
                        [xpulse, ypulse] = pf(elementParams);
-                       obj.frameChanges(n) = 0;
+                       if isfield(elementParams,'framechange')
+                         obj.frameChanges(n) = elementParams.framechange(mod(n-1,length(elementParams.framechange))+1);
+                       else
+                         obj.frameChanges(n) = 0;
+                       end
                    else
                        rethrow(exception);
                    end
@@ -84,8 +88,8 @@ classdef Pulse < handle
                if (duration > width)
                    padleft = floor((duration - width)/2);
                    padright = ceil((duration - width)/2);
-                   xpulse = [zeros(padleft,1); xpulse; zeros(padright,1)];
-                   ypulse = [zeros(padleft,1); ypulse; zeros(padright,1)];
+                   xpulse = [zeros(padleft,1); xpulse(:); zeros(padright,1)];
+                   ypulse = [zeros(padleft,1); ypulse(:); zeros(padright,1)];
                end
                
                % store the pulse
@@ -150,9 +154,13 @@ classdef Pulse < handle
        [outx, outy] = hermite(params);
        [outx, outy, frameChange] = arbAxisDRAG(params);
        [outx, outy] = arbitrary(params);
+       [outx, outy] = wahwah(params);
+       [outx, outy] = cosinePulse(params);
+       % RIP related
        [outx,outy,frameChange] = RIP_Spline(params);
+       [outx,outy,frameChange] = RIP_MultiSpline(params);
+       [outx,outy,frameChange] = RIP_Kaiser(params);
        
-
        function h = hash(array)
            persistent sha
            if isempty(sha)

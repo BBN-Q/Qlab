@@ -4,7 +4,7 @@ function exportAPSConfig(path, basename, nbrRepeats, varargin)
     VersionNum = 2;
         
     % construct filename
-    disp('Writing APS file');
+    % disp('Writing APS file');
     fileName = strcat(path, basename, '.h5');
     if ~exist(path, 'dir')
         mkdir(path);

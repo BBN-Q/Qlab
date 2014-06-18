@@ -36,7 +36,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         % application is busy or suspended, and not consuming buffers.
         
         %A structure for the buffers and info
-        buffers = struct('guessBufferSize',4e6, 'bufferSize', 0, 'maxBufferSize', 0, 'recordsPerBuffer', 0,...
+        buffers = struct('guessBufferSize',4*(2^20), 'bufferSize', 0, 'maxBufferSize', 0, 'recordsPerBuffer', 0,...
             'roundRobinsPerBuffer', 0, 'numBuffers', 0, 'bufferPtrs',cell(1));
         
         %The single-shot or averaged data (depending on the acquireMode)
@@ -202,10 +202,6 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         function acquire(obj)
             %Zero the stored data
             obj.data = cell(2);
-            if strcmp(obj.acquireMode, 'averager')
-                obj.data{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
-                obj.data{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
-            end
             
             %Setup the dual-port asynchronous AutoDMA with NPT mode
             %The acquisition starts automatically because I don't set the
@@ -240,23 +236,26 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 sumDataB = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
             end
             
+            %If we are only getting partial round robins per buffer
+            %initialize some indices
+            if (obj.buffers.roundRobinsPerBuffer < 1)
+                partialBufs = true;
+                idx = 1;
+                bufStride = obj.buffers.recordsPerBuffer*obj.settings.averager.recordLength;
+                obj.data{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, 1], 'single');
+                obj.data{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, 1], 'single');
+
+            else
+                partialBufs = false;
+            end
+            
             %Loop until all are processed
             while bufferct < totNumBuffers
                 
                 %Move to the next buffer
                 bufferNum = mod(bufferct, obj.buffers.numBuffers) + 1;
                 
-                % Wait for the first available buffer to be filled by the board
-                [retCode, ~, bufferOut] = ...
-                    calllib('ATSApi', 'AlazarWaitAsyncBufferComplete', obj.boardHandle, obj.buffers.bufferPtrs{bufferNum}, timeOut*1000);
-                if retCode == obj.defs('ApiWaitTimeout');
-                    % The wait timeout expired before this buffer was filled.
-                    % The board may not be triggering, or the timeout period may be too short.
-                    error('Error: AlazarWaitAsyncBufferComplete timeout -- Verify trigger!\n');
-                elseif retCode ~= obj.defs('ApiSuccess')
-                    % The acquisition failed
-                    error('Error: AlazarWaitAsyncBufferComplete failed -- %s\n', errorToText(retCode));
-                end
+                bufferOut = wait_for_buffer(obj, bufferNum, timeOut);
                 
                 %If we have a full buffer then map the data and add it
                 % Since we have turned off interleaving, records are arranged in the buffer as follows:
@@ -270,24 +269,32 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 
                 %scale data to floating point using MEX function, i.e. map (0,255) to (-Vs,Vs)
                 if strcmp(obj.acquireMode, 'digitizer')
-                    [obj.data{1}, obj.data{2}] = obj.processBuffer(bufferOut.Value, obj.verticalScale);
-                    obj.data{1} = reshape(obj.data{1}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
-                    obj.data{2} = reshape(obj.data{2}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
+                    if partialBufs
+                        [obj.data{1}(idx:idx+bufStride-1), obj.data{2}(idx:idx+bufStride-1)] = ...
+                            obj.processBuffer(bufferOut.Value, obj.verticalScale);
+                        idx = idx + bufStride;
+                        if ((idx-1) == numel(obj.data{1}))
+                            idx = 1;
+                            notify(obj, 'DataReady');
+                        end
+                    else
+                        [obj.data{1}, obj.data{2}] = obj.processBuffer(bufferOut.Value, obj.verticalScale);
+                        obj.data{1} = reshape(obj.data{1}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
+                        obj.data{2} = reshape(obj.data{2}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
+                        notify(obj, 'DataReady');
+                    end
                 else
                     %scale with averaging over repeats (waveforms and round robins)
                     [obj.data{1}, obj.data{2}] = obj.processBufferAvg(bufferOut.Value, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer], obj.verticalScale);
                     sumDataA = sumDataA + obj.data{1};
                     sumDataB = sumDataB + obj.data{2};
+                    notify(obj, 'DataReady');
                 end
                 
-                notify(obj, 'DataReady');
-                
                 % Make the buffer available to be filled again by the board
-                obj.call_API('AlazarPostAsyncBuffer', obj.boardHandle, obj.buffers.bufferPtrs{bufferNum}, obj.buffers.bufferSize);
+                post_buffer(obj, bufferNum);
                 
-                %Increment the buffer ct and see if it was the last one
                 bufferct = bufferct+1;
-                
             end
             
             if strcmp(obj.acquireMode, 'averager')
@@ -296,18 +303,11 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 obj.data{2} = sumDataB/totNumBuffers;
             end
 
-            %Clear and reallocate the buffer ptrs
             %Try to abort any in progress acquisitions and transfers
             obj.call_API('AlazarAbortAsyncRead', obj.boardHandle);
-
-            for ct = 1:obj.buffers.numBuffers
-                clear obj.buffers.bufferPtrs{ct}
-            end
-            obj.buffers.bufferPtrs = cell(1, obj.buffers.numBuffers);
-            for ct = 1:obj.buffers.numBuffers
-                obj.buffers.bufferPtrs{ct} = libpointer('uint8Ptr', zeros(obj.buffers.bufferSize,1));
-            end
-
+            
+            %Clear and reallocate the buffer ptrs
+            cleanup_buffers(obj);
         end
         
         %Dummy function for consistency with Acqiris card where average
@@ -317,13 +317,9 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             times = (1/obj.horizontal.samplingRate)*(0:obj.averager.recordLength-1);
         end
         
-        function download_buffer(obj, timeOut,bufferNum)
-            if ~exist('timeOut','var')
-                timeOut = obj.timeOut;
-            end
-            
-            % Wait for the first available buffer to be filled by the board
-            [retCode, ~, bufferOut] = ...
+        function buffer = wait_for_buffer(obj, bufferNum, timeOut)
+            % Wait for the buffer to be filled by the board
+            [retCode, ~, buffer] = ...
                 calllib('ATSApi', 'AlazarWaitAsyncBufferComplete', obj.boardHandle, obj.buffers.bufferPtrs{bufferNum}, timeOut*1000);
             if retCode == obj.defs('ApiWaitTimeout');
                 % The wait timeout expired before this buffer was filled.
@@ -333,6 +329,15 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 % The acquisition failed
                 error('Error: AlazarWaitAsyncBufferComplete failed -- %s\n', errorToText(retCode));
             end
+        end
+        
+        function download_buffer(obj, timeOut,bufferNum)
+            if ~exist('timeOut','var')
+                timeOut = obj.timeOut;
+            end
+            
+            % Wait for the first available buffer to be filled by the board
+            bufferOut = wait_for_buffer(obj, bufferNum, timeOut);
             
             %If we have a full buffer then map the data and add it
             % Since we have turned off interleaving, records are arranged in the buffer as follows:
@@ -355,16 +360,13 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             end
         end
       
-        function clear_buffer(obj,bufferNum)
+        function post_buffer(obj, bufferNum)
             % Make the buffer available to be filled again by the board
             obj.call_API('AlazarPostAsyncBuffer', obj.boardHandle, obj.buffers.bufferPtrs{bufferNum}, obj.buffers.bufferSize);
         end
         
         function cleanup_buffers(obj)
             %Clear and reallocate the buffer ptrs
-            %Try to abort any in progress acquisitions and transfers
-            obj.call_API('AlazarAbortAsyncRead', obj.boardHandle);
-            
             for ct = 1:obj.buffers.numBuffers
                 clear obj.buffers.bufferPtrs{ct}
             end
@@ -400,7 +402,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                     sumDataB = sumDataB + obj.data{2};
                 end
                 notify(obj, 'DataReady');
-                clear_buffer(obj,bufferNum);
+                post_buffer(obj,bufferNum);
                 
                 %Increment the buffer ct and see if it was the last one
                 bufferct = bufferct+1;
@@ -412,6 +414,9 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 obj.data{1} = sumDataA/totNumBuffers;
                 obj.data{2} = sumDataB/totNumBuffers;
             end
+            %Try to abort any in progress acquisitions and transfers
+            obj.call_API('AlazarAbortAsyncRead', obj.boardHandle);
+            
             cleanup_buffers(obj);
             
         end
@@ -499,49 +504,66 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         end
         
         function set.averager(obj, avgSet)
-            %Most of the processing is done in software but we'll use this
+            %The averaging processing is done in software but we'll use this
             %to allocate the buffers and set the record size etc.
-            %Do some error checking here
+
+            %Some parameter checking 
             assert(avgSet.recordLength > 256, 'Alazar 9870 requires more than 256 samples.')
             assert(mod(avgSet.recordLength,64) == 0, 'Alazar 9870 requires record length be multiple of 64.')
+           
             obj.call_API('AlazarSetRecordSize', obj.boardHandle, 0, avgSet.recordLength);
             
             %Sort out how to allocate the buffer memory
-            %This is a bit of a hassle but basically we need to align the
-            %buffer size with the experiment size such that n round robins fit into a
-            %a buffer and that n is a factor of the total number of round
-            %robins
-            %This is just to make summing the data convenient; otherwise, if
-            %buffers half-cover a round-robin or a number of waveforms loop
-            %it is a hassle to keep track of where to put the data.
-            numChannels = 2;
+            %Plan is to 
+            % 1) See how many records fit into the ideal buffer size. 
+            % 2) If this is greater than the number of records in a round
+            % robin this is easy as we can then work out an integer number
+            % of complete round robins in a buffer.
+            % 3) Otherwise, we work out a number of records close to the
+            % guess such that an integral number of buffers will give a
+            % full round robin.
             
+            %The minimum unit we want to deal with is 1 record
+            %Since this is a 8 bit digitizer there is one bytes per sample
+            %Assume for now we'll always record both channels
+            numChannels = 2;
+            bytesPerRecord =  numChannels*avgSet.recordLength;
+
+            %See roughly how many records fit into a buffer
+            guessRecsPerBuffer = obj.buffers.guessBufferSize / bytesPerRecord;
+            
+            %Sort out whether we can fit full round robins into the buffer
+            recordsPerRoundRobin = avgSet.nbrSegments*avgSet.nbrWaveforms;
+
+            if (guessRecsPerBuffer > recordsPerRoundRobin)
+                %Our first guess is just the rounded division
+                %However, we also need it to divide into the total number
+                %of round robins
+                %So find the integer factors of the total (see
+                %http://www.mathworks.com/matlabcentral/fileexchange/18364-list-factors)
+                factorNumRoundRobins = avgSet.nbrRoundRobins./(1:ceil(sqrt(avgSet.nbrRoundRobins)));
+                factorNumRoundRobins = factorNumRoundRobins(factorNumRoundRobins==fix(factorNumRoundRobins)).';
+                factorNumRoundRobins  = unique([factorNumRoundRobins; avgSet.nbrRoundRobins./factorNumRoundRobins]);
+                
+                obj.buffers.roundRobinsPerBuffer = round(guessRecsPerBuffer / recordsPerRoundRobin);
+                obj.buffers.roundRobinsPerBuffer = factorNumRoundRobins(find(factorNumRoundRobins < round(guessRecsPerBuffer / recordsPerRoundRobin), 1,  'last'));
+
+                %But make sure we have enough round robins to need at least one
+                obj.buffers.roundRobinsPerBuffer = min(obj.buffers.roundRobinsPerBuffer, avgSet.nbrRoundRobins);
+                obj.buffers.recordsPerBuffer = recordsPerRoundRobin*obj.buffers.roundRobinsPerBuffer;
+            else
+                factorRecs = recordsPerRoundRobin./(1:ceil(sqrt(recordsPerRoundRobin)));
+                factorRecs = factorRecs(factorRecs==fix(factorRecs)).';
+                factorRecs  = unique([factorRecs; recordsPerRoundRobin./factorRecs]);
+                
+                obj.buffers.recordsPerBuffer = factorRecs( find(factorRecs < guessRecsPerBuffer, 1, 'last'));
+                obj.buffers.roundRobinsPerBuffer = obj.buffers.recordsPerBuffer / recordsPerRoundRobin;
+            end
+                
             %The total number of records we want to record
             numRecords = avgSet.nbrSegments*avgSet.nbrWaveforms*avgSet.nbrRoundRobins;
             obj.buffers.recordsPerAcquisition = numRecords;
             
-            %The number of bytes per round robin
-            bytesPerRecord =  numChannels*avgSet.recordLength;
-            recordsPerRoundRobin = avgSet.nbrSegments*avgSet.nbrWaveforms;
-            bytesPerRoundRobin = bytesPerRecord*recordsPerRoundRobin;
-            
-            %Make sure we can fit at least 2 buffers in the card memory
-            assert(bytesPerRoundRobin < obj.buffers.maxBufferSize, ['Oops! The memory required by one round robin ' , ...
-                'is too big. Try reducing the number of waveforms and increasing the number of round robins.']);
-            
-            %Find the factors of the number of round robins as possible roundRobinsPerBuffer (see
-            %http://www.mathworks.com/matlabcentral/fileexchange/18364-list-factors)
-            factorNumRoundRobins = avgSet.nbrRoundRobins./(1:ceil(sqrt(avgSet.nbrRoundRobins)));
-            factorNumRoundRobins = factorNumRoundRobins(factorNumRoundRobins==fix(factorNumRoundRobins)).';
-            factorNumRoundRobins  = unique([factorNumRoundRobins; avgSet.nbrRoundRobins./factorNumRoundRobins]);
-            
-            %Find the best factor to fit in the desired buffer size
-            obj.buffers.roundRobinsPerBuffer = factorNumRoundRobins(find(factorNumRoundRobins*bytesPerRoundRobin < obj.buffers.guessBufferSize, 1,  'last'));
-            %Make sure we have at least one
-            if(isempty(obj.buffers.roundRobinsPerBuffer))
-                obj.buffers.roundRobinsPerBuffer = 1;
-            end
-            obj.buffers.recordsPerBuffer = recordsPerRoundRobin*obj.buffers.roundRobinsPerBuffer;
             %Update the buffer size from the guess
             obj.buffers.bufferSize = bytesPerRecord*obj.buffers.recordsPerBuffer;
             

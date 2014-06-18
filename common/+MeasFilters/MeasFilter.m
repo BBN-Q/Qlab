@@ -86,7 +86,10 @@ classdef MeasFilter < handle
             % or 4D (time x waveforms x segment x roundRobinsPerBuffer)
             % in the 4D case, we want to average over waveforms and round
             % robins
-            if ndims(obj.latestData) == 4
+            % if there is only 1 roundRobinPerBuffer then Matlab has no
+            % concept of a singleton trailing dimension and so returns a 3D
+            % object
+            if (ndims(obj.latestData) == 4) || (ndims(obj.latestData) == 3)
                 tmpData = squeeze(mean(mean(obj.latestData, 4), 2));
                 tmpVar = struct();
                 tmpVar.real = squeeze(sum(sum(real(obj.latestData).^2, 4), 2));
@@ -95,7 +98,10 @@ classdef MeasFilter < handle
                 obj.varct = obj.varct + size(obj.latestData,2)*size(obj.latestData,4);
             else
                 tmpData = obj.latestData;
-                tmpVar = [];
+                tmpVar.real = real(obj.latestData).^2;
+                tmpVar.imag = imag(obj.latestData).^2;
+                tmpVar.prod = imag(obj.latestData).*real(obj.latestData);
+                obj.varct = obj.varct + 1;
             end
             
             if isempty(obj.accumulatedData)
@@ -103,11 +109,9 @@ classdef MeasFilter < handle
                 obj.accumulatedVar = tmpVar;
             else
                 obj.accumulatedData = obj.accumulatedData + tmpData;
-                if ndims(obj.latestData) == 4
-                    obj.accumulatedVar.real = obj.accumulatedVar.real + tmpVar.real;
-                    obj.accumulatedVar.imag = obj.accumulatedVar.imag + tmpVar.imag;
-                    obj.accumulatedVar.prod = obj.accumulatedVar.prod + tmpVar.prod;
-                end
+                obj.accumulatedVar.real = obj.accumulatedVar.real + tmpVar.real;
+                obj.accumulatedVar.imag = obj.accumulatedVar.imag + tmpVar.imag;
+                obj.accumulatedVar.prod = obj.accumulatedVar.prod + tmpVar.prod;
             end
             obj.avgct = obj.avgct + 1;
         end
@@ -116,12 +120,13 @@ classdef MeasFilter < handle
             out = obj.accumulatedData / obj.avgct;
         end
         
+        % For averager mode, this returns the variance of mean
         function out = get_var(obj)
             out = struct();
             if ~isempty(obj.accumulatedVar)
-                out.realvar = (obj.accumulatedVar.real - real(get_data(obj)).^2)/(obj.varct-1);
-                out.imagvar = (obj.accumulatedVar.imag - imag(get_data(obj)).^2)/(obj.varct-1);
-                out.prodvar = (obj.accumulatedVar.prod - real(get_data(obj)).*imag(get_data(obj)))/(obj.varct-1);
+                out.realvar = (obj.accumulatedVar.real/(obj.varct) - real(get_data(obj)).^2)/(obj.varct-1);
+                out.imagvar = (obj.accumulatedVar.imag/(obj.varct) - imag(get_data(obj)).^2)/(obj.varct-1);
+                out.prodvar = (obj.accumulatedVar.prod/(obj.varct) - real(get_data(obj)).*imag(get_data(obj)))/(obj.varct-1);
             end
         end
         
