@@ -276,7 +276,7 @@ X6_1000::ErrorCodes X6_1000::set_averager_settings(const int & recordLength, con
         if (kv.first >= 10) {
             recLength /= DECIMATION_FACTOR;
         }
-        kv.second.init(kv.first > 10 ? recordLength : recordLength/DECIMATION_FACTOR, numSegments, waveforms);
+        kv.second.init(kv.first < 10 ? recordLength : recordLength/DECIMATION_FACTOR, numSegments, waveforms);
     }
 
     return SUCCESS;
@@ -287,7 +287,7 @@ X6_1000::ErrorCodes X6_1000::set_channel_enable(int channel, bool enabled) {
     FILE_LOG(logINFO) << "Set Channel " << channel << " Enable = " << enabled;
     activeChannels_[channel] = enabled;
     if (enabled) {
-        accumulators_[channel] = Accumulator(channel > 10 ? recordLength_ : recordLength_/DECIMATION_FACTOR, numSegments_, waveforms_);
+        accumulators_[channel] = Accumulator(channel < 10 ? recordLength_ : recordLength_/DECIMATION_FACTOR, numSegments_, waveforms_);
     } else {
         accumulators_.erase(channel);
     }
@@ -475,6 +475,7 @@ void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event)
     }
 
     if (check_done()) {
+        FILE_LOG(logINFO) << "check_done() returned true. Stopping...";
         stop();
     }
 }
@@ -493,9 +494,13 @@ void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event,
     ShortDG bufferDG(Event.Data);
     FILE_LOG(logDEBUG) << "VMP buffer size = " << bufferDG.size() << " samples";
     // accumulate the data in the appropriate channel
-    // chData_[channel].insert(std::end(chData_[channel]), std::begin(bufferDG), std::end(bufferDG));
-    accumulators_[channel].accumulate(bufferDG);
-
+    // first check if is there
+    if(accumulators_.find(channel) != accumulators_.end()){
+        accumulators_[channel].accumulate(bufferDG);
+    } else{
+        accumulators_[channel] = Accumulator(channel < 10 ? recordLength_ : recordLength_/DECIMATION_FACTOR, numSegments_, waveforms_);
+        accumulators_[channel].accumulate(bufferDG);
+    }
 }
 
 bool X6_1000::check_done() {
@@ -576,7 +581,9 @@ Accumulator::Accumulator() :
     idx_{0}, wfmCt_{0}, recordLength_{0}, numSegments_{0}, numWaveforms_{0}, recordsTaken{0} {}; 
 
 Accumulator::Accumulator(const size_t & recordLength, const size_t & numSegments, const size_t & numWaveforms) : 
-    idx_{0}, wfmCt_{0}, recordLength_{recordLength}, numSegments_{numSegments}, numWaveforms_{numWaveforms}, recordsTaken{0} {}; 
+    idx_{0}, wfmCt_{0}, recordLength_{recordLength}, numSegments_{numSegments}, numWaveforms_{numWaveforms}, recordsTaken{0} {
+        data_.assign(recordLength*numSegments, 0);
+    }; 
 
 void Accumulator::init(const size_t & recordLength, const size_t & numSegments, const size_t & numWaveforms){
     data_.assign(recordLength*numSegments, 0);
@@ -603,7 +610,10 @@ void Accumulator::snapshot(int64_t * buf){
 
 void Accumulator::accumulate(const ShortDG & buffer){
     //TODO: worry about performance, cache-friendly etc.
-    //TODO: logging
+    FILE_LOG(logDEBUG4) << "Accumulating data for unknown channel...";
+    FILE_LOG(logDEBUG4) << "recordLength_ = " << recordLength_ << "; idx_ = " << idx_ << "; recordsTaken = " << recordsTaken;
+    FILE_LOG(logDEBUG4) << "New buffer size is " << buffer.size();
+    FILE_LOG(logDEBUG4) << "Accumulator buffer size is " << data_.size();
     for (size_t ct; ct < buffer.size(); ct++){
         data_[idx_++] += buffer[ct];
         //At the end of the record sort out where to jump to 
