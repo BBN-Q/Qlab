@@ -238,13 +238,14 @@ public:
 	void reset();
 	void snapshot(int64_t *);
 
+	size_t recordsTaken;
+
 private:
 	size_t idx_;
 	size_t wfmCt_;
 	size_t numSegments_;
 	size_t numWaveforms_;
 	size_t recordLength_;
-	size_t recordsTaken_;
 
 	vector<int64_t> data_;
 

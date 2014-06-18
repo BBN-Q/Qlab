@@ -499,23 +499,13 @@ void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event,
 }
 
 bool X6_1000::check_done() {
-    // int records;
-    // FILE_LOG(logDEBUG) << "chData_.size() = " << chData_.size();
-    // for (auto & kv : chData_) {
-    //     if (kv.first < 10) {// physical channel
-    //         records = kv.second.size() / recordLength_;
-    //         FILE_LOG(logDEBUG) << "Channel " << kv.first << " has " << records << " records";
-    //         if (records < numRecords_) {
-    //             return false;
-    //         }
-    //     } else { // virtual (decimated) channel
-    //         records = kv.second.size() / (recordLength_ / DECIMATION_FACTOR);
-    //         FILE_LOG(logDEBUG) << "Channel " << kv.first << " has " << records << " records";
-    //         if (records < numRecords_) {
-    //             return false;
-    //         }
-    //     }
-    // }
+    int records;
+    for (auto & kv : accumulators_) {
+        FILE_LOG(logDEBUG2) << "Channel " << kv.first << " has taken " << kv.second.recordsTaken << " records.";
+            if (kv.second.recordsTaken < numRecords_) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -583,10 +573,10 @@ uint32_t X6_1000::read_wishbone_register(uint32_t offset) const {
 }
 
 Accumulator::Accumulator() : 
-    idx_{0}, wfmCt_{0}, recordLength_{0}, numSegments_{0}, numWaveforms_{0}, recordsTaken_{0} {}; 
+    idx_{0}, wfmCt_{0}, recordLength_{0}, numSegments_{0}, numWaveforms_{0}, recordsTaken{0} {}; 
 
 Accumulator::Accumulator(const size_t & recordLength, const size_t & numSegments, const size_t & numWaveforms) : 
-    idx_{0}, wfmCt_{0}, recordLength_{recordLength}, numSegments_{numSegments}, numWaveforms_{numWaveforms}, recordsTaken_{0} {}; 
+    idx_{0}, wfmCt_{0}, recordLength_{recordLength}, numSegments_{numSegments}, numWaveforms_{numWaveforms}, recordsTaken{0} {}; 
 
 void Accumulator::init(const size_t & recordLength, const size_t & numSegments, const size_t & numWaveforms){
     data_.assign(recordLength*numSegments, 0);
@@ -595,14 +585,14 @@ void Accumulator::init(const size_t & recordLength, const size_t & numSegments, 
     recordLength_  = recordLength;
     numSegments_ = numSegments;
     numWaveforms_ = numWaveforms;
-    recordsTaken_ = 0;
+    recordsTaken = 0;
 }
 
 void Accumulator::reset(){
     data_.assign(recordLength_*numSegments_, 0);
     idx_ = 0;
     wfmCt_ = 0;
-    recordsTaken_ = 0;
+    recordsTaken = 0;
 }
 
 void Accumulator::snapshot(int64_t * buf){
@@ -618,7 +608,7 @@ void Accumulator::accumulate(const ShortDG & buffer){
         data_[idx_++] += buffer[ct];
         //At the end of the record sort out where to jump to 
         if (idx_ % recordLength_ == 0){
-            recordsTaken_++;
+            recordsTaken++;
             //If we've filled up the number of waveforms move onto the next segment, otherwise jump back to the beginning of the record
             if (++wfmCt_ == numWaveforms_){
                 wfmCt_ = 0;
