@@ -170,20 +170,23 @@ classdef APS < hgsetget
             %           chan_x.offset
             %           chan_x.enabled
             %  settings.seqFile - hdf5 sequence file
-            %  settings.seqforce - force reload of file
+            %  settings.seqForce - force reload of file
             
             obj.init();
 
             %Setup some defaults 
-            if(~isfield(settings, 'seqforce'))
-                settings.seqforce = 0;
+            if isfield(settings,'seqforce')
+                error('Case changed to match tek');
+            end
+            if(~isfield(settings, 'seqForce'))
+                settings.seqForce = 0;
             end
             if(~isfield(settings, 'lastseqFile'))
                 settings.lastseqFile = '';
             end
             
             %If we are going to call loadConfig below, we can clear all channel data first
-            if (~strcmp(settings.lastseqFile, settings.seqFile) || settings.seqforce)
+            if (~strcmp(settings.lastseqFile, settings.seqFile) || settings.seqForce)
 				obj.libraryCall('clear_channel_data');
             end
 			
@@ -201,20 +204,20 @@ classdef APS < hgsetget
             
 			% load AWG file before doing anything else
 			if isfield(settings, 'seqFile')
-				if ~isfield(settings, 'seqforce')
-					settings.seqforce = false;
+				if ~isfield(settings, 'seqForce')
+					settings.seqForce = false;
                 end
                 if ~isfield(settings, 'lastseqFile')
                     settings.lastseqFile = '';
                 end
 				
 				% load an AWG file if the settings file is changed or if force == true
-				if (~strcmp(settings.lastseqFile, settings.seqFile) || settings.seqforce)
+				if (~strcmp(settings.lastseqFile, settings.seqFile) || settings.seqForce)
 					obj.loadConfig(settings.seqFile);
                     obj.setRunMode(1,1); obj.setRunMode(3,1);
 				end
 			end
-			settings = rmfield(settings, {'lastseqFile', 'seqFile', 'seqforce'});
+			settings = rmfield(settings, {'lastseqFile', 'seqFile', 'seqForce'});
 			
             % parse remaining settings
 			fields = fieldnames(settings);

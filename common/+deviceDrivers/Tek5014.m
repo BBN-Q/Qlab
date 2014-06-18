@@ -20,7 +20,7 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
-classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
+classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet   
     
     properties (Access = public)
         samplingRate = 1e9
@@ -145,9 +145,19 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
         function operationComplete(obj)
             val = 0;
             max_count = 3;
-            count = 1;
+            count = 1;            
             while ~(val == 1 || count > max_count)
-                val = str2double(obj.query('*OPC?'));
+                obj.write('*OPC?')
+                while 1
+                    str=obj.read();
+                    if isempty(str)
+                        fprintf('Waiting for op complete');
+                        continue;
+                    else
+                        val=str2double(str);
+                        break;
+                    end
+                end
                 count = count + 1;
             end
         end

@@ -53,10 +53,12 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
         
         SET_BYTE = 8;
         
-        max_power = 10; % dBm
-        min_power = -40; % dBm
-        max_freq = 10; % GHz
-        min_freq = 4; % GHz
+        % Either get these off the brick through the API or don't check.
+        % Hard coding them for your particular brick is not productive.
+        max_power = 10; % dBm 
+        min_power = -inf; % dBm
+        max_freq = inf; % GHz, filled in after open
+        min_freq = -inf; % GHz, filled in after open
     end
     
     methods
@@ -85,13 +87,12 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             [serial_nums, product_ids] = obj.enumerate();
             idx = find(strcmp(serial_nums, serialNum), 1);
             if isempty(idx)
-                error('Could not find a Labbrick with serial %i', serialNum);
+                error('Could not find a Labbrick with serial %s', serialNum);
             end
             obj.hid = calllib('hidapi', 'hid_open', obj.vendor_id, product_ids(idx), uint16(['SN:0' serialNum 0]));
             if obj.hid.isNull
                 error('Could not open device serial %s', serialNum);
             end
-            
             obj.open = 1;
         end
         
@@ -113,10 +114,13 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             cur_device = device_info;
             
             while ~isempty(cur_device) && ~cur_device.isNull
-                snum = cur_device.value.serial_number;
-                setdatatype(snum, 'uint16Ptr', 8);
-                serials = [serials char(snum.value(5:end)')];
-                product_ids(end+1) = cur_device.value.product_id;
+                % filter on the vendor id
+                if cur_device.value.vendor_id == obj.vendor_id
+                    snum = cur_device.value.serial_number;
+                    setdatatype(snum, 'uint16Ptr', 8);
+                    serials = [serials char(snum.value(5:end)')];
+                    product_ids(end+1) = cur_device.value.product_id;
+                end
                 cur_device = cur_device.value.next;
                 if ~isempty(cur_device)
                     setdatatype(cur_device, 'hid_device_infoPtr');
@@ -162,7 +166,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             report = [cmd_id cmd_size 66 85 49 zeros(1,3)];
             obj.write(report);
         end
-        
+
         % Instrument parameter accessors
         function val = get.frequency(obj)
             cmd_id = obj.FREQ_CMD;
@@ -171,6 +175,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             % return value is in 10's of Hz -> convert to GHz
             val = double(typecast(result(3:6), 'uint32'))*1e-8;
         end
+
         function val = get.power(obj)
             % returns power as attenuation from the max output power, in integer multiples of 0.25dBm.
             cmd_id = obj.POWER_CMD;
@@ -257,6 +262,9 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             report = [cmd_id cmd_size value zeros(1,5)];
             obj.write(report);
             assert(obj.output == value, 'Failed to set output');
+        end
+        
+        function check_errors(obj)
         end
     end
     
