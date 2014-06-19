@@ -241,13 +241,13 @@ public:
 	size_t recordsTaken;
 
 private:
-	size_t idx_;
 	size_t wfmCt_;
 	size_t numSegments_;
 	size_t numWaveforms_;
 	size_t recordLength_;
 
 	vector<int64_t> data_;
+	vector<int64_t>::iterator idx_;
 
 };
 

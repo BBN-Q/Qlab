@@ -574,16 +574,17 @@ uint32_t X6_1000::read_wishbone_register(uint32_t offset) const {
 }
 
 Accumulator::Accumulator() : 
-    idx_{0}, wfmCt_{0}, recordLength_{0}, numSegments_{0}, numWaveforms_{0}, recordsTaken{0} {}; 
+    wfmCt_{0}, recordLength_{0}, numSegments_{0}, numWaveforms_{0}, recordsTaken{0} {}; 
 
 Accumulator::Accumulator(const size_t & recordLength, const size_t & numSegments, const size_t & numWaveforms) : 
-    idx_{0}, wfmCt_{0}, recordLength_{recordLength}, numSegments_{numSegments}, numWaveforms_{numWaveforms}, recordsTaken{0} {
+    wfmCt_{0}, recordLength_{recordLength}, numSegments_{numSegments}, numWaveforms_{numWaveforms}, recordsTaken{0} {
         data_.assign(recordLength*numSegments, 0);
+        idx_ = data_.begin();
     }; 
 
 void Accumulator::init(const size_t & recordLength, const size_t & numSegments, const size_t & numWaveforms){
     data_.assign(recordLength*numSegments, 0);
-    idx_ = 0;
+    idx_ = data_.begin();
     wfmCt_ = 0;
     recordLength_  = recordLength;
     numSegments_ = numSegments;
@@ -593,7 +594,7 @@ void Accumulator::init(const size_t & recordLength, const size_t & numSegments, 
 
 void Accumulator::reset(){
     data_.assign(recordLength_*numSegments_, 0);
-    idx_ = 0;
+    idx_ = data_.begin();
     wfmCt_ = 0;
     recordsTaken = 0;
 }
@@ -608,25 +609,23 @@ void Accumulator::snapshot(int64_t * buf){
 void Accumulator::accumulate(const ShortDG & buffer){
     //TODO: worry about performance, cache-friendly etc.
     FILE_LOG(logDEBUG4) << "Accumulating data for unknown channel...";
-    FILE_LOG(logDEBUG4) << "recordLength_ = " << recordLength_ << "; idx_ = " << idx_ << "; recordsTaken = " << recordsTaken;
+    FILE_LOG(logDEBUG4) << "recordLength_ = " << recordLength_ << "; idx_ = " << std::distance(data_.begin(), idx_) << "; recordsTaken = " << recordsTaken;
     FILE_LOG(logDEBUG4) << "New buffer size is " << buffer.size();
     FILE_LOG(logDEBUG4) << "Accumulator buffer size is " << data_.size();
-    for (size_t ct = 0; ct < buffer.size(); ct++){
-        data_[idx_++] += buffer[ct];
-        //At the end of the record sort out where to jump to 
-        if (idx_ % recordLength_ == 0){
-            recordsTaken++;
-            //If we've filled up the number of waveforms move onto the next segment, otherwise jump back to the beginning of the record
-            if (++wfmCt_ == numWaveforms_){
-                wfmCt_ = 0;
-            } else{
-                idx_ -= recordLength_;
-            }
 
-            //Final check if we're at the end
-            if (idx_ == data_.size()){
-                idx_ = 0;
-            }
-        }
-    }   
+    //The assumption is that this will be called with a full record size
+    std::transform(idx_, idx_+recordLength_, buffer.begin(), idx_, std::plus<int>());
+    recordsTaken++;
+
+    //If we've filled up the number of waveforms move onto the next segment, otherwise jump back to the beginning of the record
+    if (++wfmCt_ == numWaveforms_){
+        wfmCt_ = 0;
+        std::advance(idx_, recordLength_);
+    }
+
+    //Final check if we're at the end
+    if (idx_ == data_.end()){
+        idx_ = data_.begin();
+    }
+
 }
