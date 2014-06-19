@@ -9,7 +9,7 @@ using namespace Innovative;
 
 // constructor
 X6_1000::X6_1000() :
-    isOpened_(false), isRunning_(false), VMPs_(2) {
+    isOpened_(false), isRunning_(false) {
     numBoards_ = getBoardCount();
 
     for(int cnt = 0; cnt < get_num_channels(); cnt++) {
@@ -110,18 +110,14 @@ X6_1000::ErrorCodes X6_1000::open(int deviceID) {
     prefillPacketCount_ = stream_.PrefillPacketCount();
     FILE_LOG(logDEBUG) << "Stream prefill packet count: " << prefillPacketCount_;
 
-    //  Initialize VeloMergeParsers with stream IDs
-    VMPs_[0].OnDataAvailable.SetEvent(this, &X6_1000::HandlePhysicalStream);
-    //std::vector<int> streamIDs = {static_cast<int>(module_.VitaIn().VitaStreamId(0)), static_cast<int>(module_.VitaIn().VitaStreamId(1))};
-    std::vector<int> streamIDs = {static_cast<int>(module_.VitaIn().VitaStreamId(0))};
-    VMPs_[0].Init(streamIDs);
-    FILE_LOG(logDEBUG) << "ADC physical stream IDs: " << myhex << streamIDs[0];// << ", " << myhex << streamIDs[1];
-
-    VMPs_[1].OnDataAvailable.SetEvent(this, &X6_1000::HandleVirtualStream);
     // TODO: update firmware streamIDs to 0x200, 0x201, etc.
-    streamIDs = {0x101, 0x102};
-    VMPs_[1].Init(streamIDs);
-    FILE_LOG(logDEBUG) << "ADC virtual stream IDs: " << myhex << streamIDs[0] << ", " << myhex << streamIDs[1];
+    streamIDs_ = {0x100, 0x101, 0x102};
+    sid2ch_[0x100] = 0;
+    sid2ch_[0x101] = 10;
+    sid2ch_[0x102] = 11;    
+    VMP_.Init(streamIDs_);
+    VMP_.OnDataAvailable.SetEvent(this, &X6_1000::VMPDataAvailable);
+    FILE_LOG(logDEBUG) << "Capturing stream IDs: " << myhex << streamIDs_[0] << ", " << myhex << streamIDs_[1] << ", " << myhex << streamIDs_[2];
 
     return SUCCESS;
   }
@@ -359,26 +355,23 @@ X6_1000::ErrorCodes X6_1000::acquire() {
     FILE_LOG(logDEBUG) << "samplesPerWord = " << samplesPerWord;
     // calcate packet size for physical and virtual channels
     // pad packets by 8 extra words per channel (VITA packets have 7 word header, 1 word trailer)
-    int packetSize = recordLength_/samplesPerWord/get_decimation() + 8;
+    int packetSize = recordLength_/samplesPerWord/get_decimation();
     FILE_LOG(logDEBUG) << "Physical channel packetSize = " << packetSize;
-    VMPs_[0].Resize(packetSize);
-    VMPs_[0].Clear();
 
-    // use this as a template for the VELO packet size
-    // the card seems to stall out with all 0xffff stream IDs without the factor of 2 below
-    module_.Velo().LoadAll_VeloDataSize(2 * packetSize);
+    //Give the Velopackets some breathing room
+    module_.Velo().LoadAll_VeloDataSize(0x1000);
     module_.Velo().ForceVeloPacketSize(false);
 
-    packetSize = recordLength_/samplesPerWord/get_decimation()/DECIMATION_FACTOR + 8;
+    packetSize = recordLength_/samplesPerWord/get_decimation()/DECIMATION_FACTOR;
     FILE_LOG(logDEBUG) << "Virtual channel packetSize = " << packetSize;
-    VMPs_[1].Resize(packetSize);
-    VMPs_[1].Clear();
+    //Handle VMP data every virtual packetsize
+    VMP_.Resize(packetSize);
+    VMP_.Clear();
 
     // reset the accumulators
     for (auto & kv : accumulators_) {
         kv.second.reset();
     }
-
 
     // is this necessary??
     stream_.PrefillPacketCount(prefillPacketCount_);
@@ -449,8 +442,8 @@ void X6_1000::HandleAfterStreamStop(OpenWire::NotifyEvent & /*Event*/) {
     // Disable external triggering initially
     module_.Input().SoftwareTrigger(false);
     module_.Input().Trigger().External(false);
-    VMPs_[0].Flush();
-    VMPs_[1].Flush();
+    VMP_.Flush();
+    VMP_.Flush();
 }
 
 void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event) {
@@ -468,11 +461,9 @@ void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event)
     VitaHeaderDatagram vh_dg(pos);
     FILE_LOG(logDEBUG3) << "buffer stream ID = " << myhex << vh_dg.StreamId();
 
-    // broadcast to all VMPs
-    for (auto & vmp : VMPs_) {
-        vmp.Append(buffer);
-        vmp.Parse();
-    }
+    // send to VMP
+    VMP_.Append(buffer);
+    VMP_.Parse();
 
     if (check_done()) {
         FILE_LOG(logINFO) << "check_done() returned true. Stopping...";
@@ -480,14 +471,15 @@ void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event)
     }
 }
 
-void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event, int offset) {
+void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event) {
     FILE_LOG(logDEBUG4) << "X6_1000::VMPDataAvailable";
     if (!isRunning_) {
         return;
     }
     // StreamID is now encoded in the PeripheralID of the VMP Vita buffer
     PacketBufferHeader header(Event.Data);
-    int channel = header.PeripheralId() + offset;
+    FILE_LOG(logDEBUG3) << "VMP peripheral ID = " << header.PeripheralId();
+    int channel = sid2ch_[streamIDs_[header.PeripheralId()]];
     FILE_LOG(logDEBUG3) << "VMP buffer channel = " << channel;
 
     // interpret the data as integers

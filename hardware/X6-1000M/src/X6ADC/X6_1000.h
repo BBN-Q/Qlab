@@ -151,7 +151,7 @@ private:
 	Innovative::VitaPacketStream    stream_;
 	Innovative::SoftwareTimer       timer_;
 	Innovative::VeloBuffer       	outputPacket_;
-	vector<Innovative::VeloMergeParser> VMPs_; /**< Utility to convert and filter Velo stream back into VITA packets*/
+	Innovative::VeloMergeParser VMP_; /**< Utility to convert and filter Velo stream back into VITA packets*/
 
 	// WishBone interface
 	// TODO: update wbX6ADC wishbone offset  
@@ -171,6 +171,8 @@ private:
 	 */
 	//Some auxiliary accumlator data
 	map<int, Accumulator> accumulators_;
+	vector<int> streamIDs_;
+	map<int, int> sid2ch_;
 
 	// State Variables
 	bool isOpened_;				  /**< cached flag indicaing board was openned */
@@ -203,13 +205,7 @@ private:
     void HandleAfterStreamStop(OpenWire::NotifyEvent & Event);
 
     void HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event);
-    void VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event, int offset);
-    void HandlePhysicalStream(Innovative::VeloMergeParserDataAvailable & Event) {
-    	VMPDataAvailable(Event, 0);
-    };
-    void HandleVirtualStream(Innovative::VeloMergeParserDataAvailable & Event) {
-    	VMPDataAvailable(Event, 10);
-    };
+    void VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event);
 
 	void HandleTimer(OpenWire::NotifyEvent & Event);
 
