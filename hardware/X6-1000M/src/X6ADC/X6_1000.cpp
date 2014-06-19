@@ -615,7 +615,7 @@ void Accumulator::accumulate(const ShortDG & buffer){
     FILE_LOG(logDEBUG4) << "recordLength_ = " << recordLength_ << "; idx_ = " << idx_ << "; recordsTaken = " << recordsTaken;
     FILE_LOG(logDEBUG4) << "New buffer size is " << buffer.size();
     FILE_LOG(logDEBUG4) << "Accumulator buffer size is " << data_.size();
-    for (size_t ct; ct < buffer.size(); ct++){
+    for (size_t ct = 0; ct < buffer.size(); ct++){
         data_[idx_++] += buffer[ct];
         //At the end of the record sort out where to jump to 
         if (idx_ % recordLength_ == 0){
