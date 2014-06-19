@@ -358,18 +358,12 @@ X6_1000::ErrorCodes X6_1000::acquire() {
     int samplesPerWord = module_.Input().Info().SamplesPerWord();
     FILE_LOG(logDEBUG) << "samplesPerWord = " << samplesPerWord;
     // calcate packet size for physical and virtual channels
-    // pad packets by 8 extra words per channel (VITA packets have 7 word header, 1 word trailer)
-    int packetSize = recordLength_/samplesPerWord/get_decimation() + 8;
+    int packetSize = recordLength_/samplesPerWord/get_decimation();
     FILE_LOG(logDEBUG) << "Physical channel packetSize = " << packetSize;
     VMPs_[0].Resize(packetSize);
     VMPs_[0].Clear();
 
-    // use this as a template for the VELO packet size
-    // the card seems to stall out with all 0xffff stream IDs without the factor of 2 below
-    module_.Velo().LoadAll_VeloDataSize(2 * packetSize);
-    module_.Velo().ForceVeloPacketSize(false);
-
-    packetSize = recordLength_/samplesPerWord/get_decimation()/DECIMATION_FACTOR + 8;
+    packetSize = recordLength_/samplesPerWord/get_decimation()/DECIMATION_FACTOR;
     FILE_LOG(logDEBUG) << "Virtual channel packetSize = " << packetSize;
     VMPs_[1].Resize(packetSize);
     VMPs_[1].Clear();
@@ -379,6 +373,8 @@ X6_1000::ErrorCodes X6_1000::acquire() {
         kv.second.reset();
     }
 
+    module_.Velo().LoadAll_VeloDataSize(0x1000);
+    module_.Velo().ForceVeloPacketSize(false);
 
     // is this necessary??
     stream_.PrefillPacketCount(prefillPacketCount_);
