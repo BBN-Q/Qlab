@@ -454,19 +454,19 @@ void X6_1000::HandleAfterStreamStop(OpenWire::NotifyEvent & /*Event*/) {
 }
 
 void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event) {
-    FILE_LOG(logDEBUG) << "X6_1000::HandleDataAvailable";
+    FILE_LOG(logDEBUG4) << "X6_1000::HandleDataAvailable";
     if (!isRunning_) return;
 
     // create a buffer to receive the data
     VeloBuffer buffer;
     Event.Sender->Recv(buffer);
 
-    FILE_LOG(logDEBUG) << "buffer.size() = " << buffer.SizeInInts();
+    FILE_LOG(logDEBUG3) << "buffer.size() = " << buffer.SizeInInts();
 
     AlignedVeloPacketExQ::Range InVelo(buffer);
     unsigned int * pos = InVelo.begin();
     VitaHeaderDatagram vh_dg(pos);
-    FILE_LOG(logDEBUG) << "buffer stream ID = " << myhex << vh_dg.StreamId();
+    FILE_LOG(logDEBUG3) << "buffer stream ID = " << myhex << vh_dg.StreamId();
 
     // broadcast to all VMPs
     for (auto & vmp : VMPs_) {
@@ -481,18 +481,18 @@ void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event)
 }
 
 void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event, int offset) {
-    FILE_LOG(logDEBUG) << "X6_1000::VMPDataAvailable";
+    FILE_LOG(logDEBUG4) << "X6_1000::VMPDataAvailable";
     if (!isRunning_) {
         return;
     }
     // StreamID is now encoded in the PeripheralID of the VMP Vita buffer
     PacketBufferHeader header(Event.Data);
     int channel = header.PeripheralId() + offset;
-    FILE_LOG(logDEBUG) << "VMP buffer channel = " << channel;
+    FILE_LOG(logDEBUG3) << "VMP buffer channel = " << channel;
 
     // interpret the data as integers
     ShortDG bufferDG(Event.Data);
-    FILE_LOG(logDEBUG) << "VMP buffer size = " << bufferDG.size() << " samples";
+    FILE_LOG(logDEBUG3) << "VMP buffer size = " << bufferDG.size() << " samples";
     // accumulate the data in the appropriate channel
     // first check if is there
     if(accumulators_.find(channel) != accumulators_.end()){
@@ -604,6 +604,7 @@ void Accumulator::reset(){
 
 void Accumulator::snapshot(int64_t * buf){
     /* Copies current data into a *preallocated* buffer.*/
+    // TODO: copy with appropriate scaling into a float32 buffer
     std::copy(data_.begin(), data_.end(), buf);
 }
 
