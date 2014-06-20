@@ -118,8 +118,7 @@ X6_1000::ErrorCodes X6_1000::open(int deviceID) {
     FILE_LOG(logDEBUG) << "ADC physical stream IDs: " << myhex << streamIDs[0];// << ", " << myhex << streamIDs[1];
 
     VMPs_[1].OnDataAvailable.SetEvent(this, &X6_1000::HandleVirtualStream);
-    // TODO: update firmware streamIDs to 0x200, 0x201, etc.
-    streamIDs = {0x101, 0x102};
+    streamIDs = {0x200, 0x201};
     VMPs_[1].Init(streamIDs);
     FILE_LOG(logDEBUG) << "ADC virtual stream IDs: " << myhex << streamIDs[0] << ", " << myhex << streamIDs[1];
 
