@@ -179,7 +179,7 @@ classdef X6 < hgsetget
             
             x6 = X6();
             
-            x6.setDebugLevel(5);
+            x6.setDebugLevel(6);
             
             x6.connect(0);
             
@@ -201,10 +201,10 @@ classdef X6 < hgsetget
             x6.writeRegister(hex2dec('700'), 16, round(4 * phase_increment * 2^16));
             
             fprintf('setting averager parameters to record 10 segments of 2048 samples\n');
-            x6.set_averager_settings(2048, 10, 1, 1);
-            x6.writeRegister(hex2dec('700'), 0, 2048);
-            x6.writeRegister(hex2dec('700'), 1, 512);
-            x6.writeRegister(hex2dec('700'), 2, 512);
+            x6.set_averager_settings(2048, 5, 1, 10);
+            x6.writeRegister(hex2dec('700'), 0, 1024);
+            x6.writeRegister(hex2dec('700'), 1, 256);
+            x6.writeRegister(hex2dec('700'), 2, 256);
 %             fprintf('setting averager parameters to record 1 segment of 1024 samples\n');
 %             x6.set_averager_settings(1024, 1, 1, 1);
 
