@@ -372,7 +372,7 @@ X6_1000::ErrorCodes X6_1000::acquire() {
         kv.second.reset();
     }
 
-    module_.Velo().LoadAll_VeloDataSize(0x1000);
+    module_.Velo().LoadAll_VeloDataSize(0x4000);
     module_.Velo().ForceVeloPacketSize(false);
 
     // is this necessary??
@@ -449,19 +449,17 @@ void X6_1000::HandleAfterStreamStop(OpenWire::NotifyEvent & /*Event*/) {
 }
 
 void X6_1000::HandleDataAvailable(Innovative::VitaPacketStreamDataEvent & Event) {
-    FILE_LOG(logDEBUG4) << "X6_1000::HandleDataAvailable";
     if (!isRunning_) return;
 
     // create a buffer to receive the data
     VeloBuffer buffer;
     Event.Sender->Recv(buffer);
 
-    FILE_LOG(logDEBUG3) << "buffer.size() = " << buffer.SizeInInts();
 
     AlignedVeloPacketExQ::Range InVelo(buffer);
     unsigned int * pos = InVelo.begin();
     VitaHeaderDatagram vh_dg(pos);
-    FILE_LOG(logDEBUG3) << "buffer stream ID = " << myhex << vh_dg.StreamId();
+    FILE_LOG(logDEBUG3) << "[HandleDataAvailable] buffer.size() = " << buffer.SizeInInts() << "; buffer stream ID = " << myhex << vh_dg.StreamId();
 
     // broadcast to all VMPs
     for (auto & vmp : VMPs_) {
@@ -483,16 +481,15 @@ void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event,
     // StreamID is now encoded in the PeripheralID of the VMP Vita buffer
     PacketBufferHeader header(Event.Data);
     int channel = header.PeripheralId() + offset;
-    FILE_LOG(logDEBUG3) << "VMP buffer channel = " << channel;
 
     // interpret the data as integers
     ShortDG bufferDG(Event.Data);
-    FILE_LOG(logDEBUG3) << "VMP buffer size = " << bufferDG.size() << " samples";
+    FILE_LOG(logDEBUG3) << "[VMPDataAvailable] buffer channel = " << channel << "; buffer.size = " << bufferDG.size() << " samples";
     // accumulate the data in the appropriate channel
     // first check if is there
-    if(accumulators_.find(channel) != accumulators_.end()){
+    if (accumulators_.find(channel) != accumulators_.end()) {
         accumulators_[channel].accumulate(bufferDG);
-    } else{
+    } else {
         accumulators_[channel] = Accumulator(channel < 10 ? recordLength_ : recordLength_/DECIMATION_FACTOR, numSegments_, waveforms_);
         accumulators_[channel].accumulate(bufferDG);
     }
@@ -502,6 +499,8 @@ bool X6_1000::check_done() {
     int records;
     for (auto & kv : accumulators_) {
         FILE_LOG(logDEBUG2) << "Channel " << kv.first << " has taken " << kv.second.recordsTaken << " records.";
+    }
+    for (auto & kv : accumulators_) {
             if (kv.second.recordsTaken < numRecords_) {
             return false;
         }
