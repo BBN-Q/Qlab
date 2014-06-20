@@ -17,11 +17,17 @@ static const int X6_WRITETIMEOUT = 500;
 //Command byte bits
 static const int LSB_MASK = 0xFF;
 
+// WishBone interface
+const unsigned int BASE_DSP = 0x700;
+
 //Registers we read from
 static const int WB_ADDR_VERSION  = 0x10; // UPDATE ME
 static const int WB_OFFSET_VERSION  = 0x01; // UPDATE ME
 static const int WB_ADDR_DIGITIZER_MODE = 0x11; //update me
 static const int WB_OFFSET_DIGITIZER_MODE = 0x01; //update me
+
+static const int WB_FRAME_SIZE_OFFSET = 0x00;
+static const int WB_PHASE_INC_OFFSET = 0x10;
 
 //Expected version
 static const int FIRMWARE_VERSION =  0x1;

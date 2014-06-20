@@ -153,10 +153,6 @@ private:
 	Innovative::VeloBuffer       	outputPacket_;
 	vector<Innovative::VeloMergeParser> VMPs_; /**< Utility to convert and filter Velo stream back into VITA packets*/
 
-	// WishBone interface
-	// TODO: update wbX6ADC wishbone offset  
-	const unsigned int wbX6ADC_offset = 0xc00;
-
 	unsigned int numBoards_;      /**< cached number of boards */
 	// unsigned int deviceID_;       /**< board ID (aka target number) */
 

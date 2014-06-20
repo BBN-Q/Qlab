@@ -260,6 +260,14 @@ X6_1000::ErrorCodes X6_1000::set_frame(int recordLength) {
     // (some of?) the following seems to be necessary to get external triggering to work
     module_.Input().Pulse().Reset();
     module_.Input().Pulse().Enabled(false);
+
+    // set frame sizes (2 samples per word)
+    int samplesPerWord = module_.Input().Info().SamplesPerWord();
+    write_wishbone_register(WB_FRAME_SIZE_OFFSET, recordLength/samplesPerWord);
+    write_wishbone_register(WB_FRAME_SIZE_OFFSET+1, recordLength/DECIMATION_FACTOR/samplesPerWord);
+    write_wishbone_register(WB_FRAME_SIZE_OFFSET+2, recordLength/DECIMATION_FACTOR/samplesPerWord);
+
+    return SUCCESS;
 }
 
 X6_1000::ErrorCodes X6_1000::set_averager_settings(const int & recordLength, const int & numSegments, const int & waveforms,  const int & roundRobins) {
@@ -557,7 +565,7 @@ X6_1000::ErrorCodes X6_1000::write_wishbone_register(uint32_t baseAddr, uint32_t
 }
 
 X6_1000::ErrorCodes X6_1000::write_wishbone_register(uint32_t offset, uint32_t data) {
-    return write_wishbone_register(wbX6ADC_offset, offset, data);
+    return write_wishbone_register(BASE_DSP, offset, data);
 }
 
 uint32_t X6_1000::read_wishbone_register(uint32_t baseAddr, uint32_t offset) const {
@@ -568,7 +576,7 @@ uint32_t X6_1000::read_wishbone_register(uint32_t baseAddr, uint32_t offset) con
 }
 
 uint32_t X6_1000::read_wishbone_register(uint32_t offset) const {
-    return read_wishbone_register(wbX6ADC_offset, offset);
+    return read_wishbone_register(BASE_DSP, offset);
 }
 
 Accumulator::Accumulator() : 
