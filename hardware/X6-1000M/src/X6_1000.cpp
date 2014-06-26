@@ -261,11 +261,13 @@ X6_1000::ErrorCodes X6_1000::set_frame(int recordLength) {
     module_.Input().Pulse().Reset();
     module_.Input().Pulse().Enabled(false);
 
-    // set frame sizes (2 samples per word)
+    // set frame sizes (2 samples per word), virtual channels are complex so 2*
     int samplesPerWord = module_.Input().Info().SamplesPerWord();
     write_wishbone_register(WB_FRAME_SIZE_OFFSET, recordLength/samplesPerWord);
-    write_wishbone_register(WB_FRAME_SIZE_OFFSET+1, recordLength/DECIMATION_FACTOR/samplesPerWord);
-    write_wishbone_register(WB_FRAME_SIZE_OFFSET+2, recordLength/DECIMATION_FACTOR/samplesPerWord);
+    write_wishbone_register(WB_FRAME_SIZE_OFFSET+1, 2*recordLength/DECIMATION_FACTOR/samplesPerWord);
+    write_wishbone_register(WB_FRAME_SIZE_OFFSET+2, 2*recordLength/DECIMATION_FACTOR/samplesPerWord);
+    write_wishbone_register(WB_FRAME_SIZE_OFFSET+3, 2*recordLength/DECIMATION_FACTOR/samplesPerWord);
+    write_wishbone_register(WB_FRAME_SIZE_OFFSET+4, 2*recordLength/DECIMATION_FACTOR/samplesPerWord);
 
     return SUCCESS;
 }
@@ -294,7 +296,7 @@ X6_1000::ErrorCodes X6_1000::set_channel_enable(int channel, bool enabled) {
     FILE_LOG(logINFO) << "Set Channel " << channel << " Enable = " << enabled;
     activeChannels_[channel] = enabled;
     if (enabled) {
-        accumulators_[channel] = Accumulator(channel < 10 ? recordLength_ : recordLength_/DECIMATION_FACTOR, numSegments_, waveforms_);
+        accumulators_[channel] = Accumulator(channel < 10 ? recordLength_ : 2*recordLength_/DECIMATION_FACTOR, numSegments_, waveforms_);
     } else {
         accumulators_.erase(channel);
     }
@@ -370,7 +372,7 @@ X6_1000::ErrorCodes X6_1000::acquire() {
     VMPs_[0].Resize(packetSize);
     VMPs_[0].Clear();
 
-    packetSize = recordLength_/samplesPerWord/get_decimation()/DECIMATION_FACTOR;
+    packetSize = 2*recordLength_/samplesPerWord/get_decimation()/DECIMATION_FACTOR;
     FILE_LOG(logDEBUG) << "Virtual channel packetSize = " << packetSize;
     VMPs_[1].Resize(packetSize);
     VMPs_[1].Clear();
@@ -410,7 +412,7 @@ bool X6_1000::get_is_running() {
     return isRunning_;
 }
 
-X6_1000::ErrorCodes X6_1000::transfer_waveform(int channel, int64_t * buffer, size_t length) {
+X6_1000::ErrorCodes X6_1000::transfer_waveform(int channel, double * buffer, size_t length) {
     //Don't copy more than we have
     if (length < accumulators_[channel].data_.size() ) FILE_LOG(logERROR) << "Not enough memory allocated in buffer to transfer waveform.";
     accumulators_[channel].snapshot(buffer);
@@ -446,8 +448,8 @@ void X6_1000::HandleAfterStreamStart(OpenWire::NotifyEvent & /*Event*/) {
     FILE_LOG(logINFO) << "Analog I/O started";
     timer_.Enabled(true);
 }
-
-void X6_1000::HandleAfterStreamStop(OpenWire::NotifyEvent & /*Event*/) {
+void
+ X6_1000::HandleAfterStreamStop(OpenWire::NotifyEvent & /*Event*/) {
     FILE_LOG(logINFO) << "Analog I/O stopped";
     // Disable external triggering initially
     module_.Input().SoftwareTrigger(false);
@@ -498,7 +500,7 @@ void X6_1000::VMPDataAvailable(Innovative::VeloMergeParserDataAvailable & Event,
     if (accumulators_.find(channel) != accumulators_.end()) {
         accumulators_[channel].accumulate(bufferDG);
     } else {
-        accumulators_[channel] = Accumulator(channel < 10 ? recordLength_ : recordLength_/DECIMATION_FACTOR, numSegments_, waveforms_);
+        accumulators_[channel] = Accumulator(channel < 10 ? recordLength_ : 2*recordLength_/DECIMATION_FACTOR, numSegments_, waveforms_);
         accumulators_[channel].accumulate(bufferDG);
     }
 }
@@ -605,12 +607,13 @@ void Accumulator::reset(){
     recordsTaken = 0;
 }
 
-void Accumulator::snapshot(int64_t * buf){
-    /* Copies current data into a *preallocated* buffer.*/
-    // TODO: copy with appropriate scaling into a float32 buffer
-    std::copy(data_.begin(), data_.end(), buf);
+void Accumulator::snapshot(double * buf){
+    /* Copies current data into a *preallocated* buffer*/
+    double scale = recordsTaken / (numSegments_*numWaveforms_) * 2048;
+    for(size_t ct=0; ct < data_.size(); ct++){
+        buf[ct] = static_cast<double>(data_[ct]) / scale;
+    }
 }
-
 
 void Accumulator::accumulate(const ShortDG & buffer){
     //TODO: worry about performance, cache-friendly etc.

@@ -120,9 +120,8 @@ int stop(int deviceID) {
 	return X6s_[deviceID].stop();
 }
 
-int transfer_waveform(int deviceID, int channel, long long *buffer, unsigned int bufferLength) {
-	// convert from MATLAB 1-based indexing to C 0-based indexing
-	return X6s_[deviceID].transfer_waveform(channel-1, buffer, bufferLength);
+int transfer_waveform(int deviceID, int channel, double *buffer, unsigned bufferLength) {
+	return X6s_[deviceID].transfer_waveform(channel, buffer, bufferLength);
 }
 
 //Expects a null-terminated character array

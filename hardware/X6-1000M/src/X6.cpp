@@ -183,7 +183,7 @@ int X6::stop() {
 	return 0;
 }
 
-int X6::transfer_waveform(const int & channel, int64_t *buffer, const size_t & bufferLength) {
+int X6::transfer_waveform(const int & channel, double * buffer, const size_t & bufferLength) {
 	// TODO: manage averaging of data based on waveforms and round robins
 	return handle_.transfer_waveform(channel, buffer, bufferLength);
 }

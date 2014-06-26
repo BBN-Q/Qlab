@@ -37,7 +37,7 @@ public:
 	int acquire();
 	int wait_for_acquisition(const int &);
 	int stop();
-	int transfer_waveform(const int &, int64_t *, const size_t &);
+	int transfer_waveform(const int &, double *, const size_t &);
 
 	int set_sampleRate(const double &);
 	double get_sampleRate() const;

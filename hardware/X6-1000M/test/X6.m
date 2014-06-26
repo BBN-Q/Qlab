@@ -101,17 +101,20 @@ classdef X6 < hgsetget
 
         function wf = transfer_waveform(obj, ch)
             % possibly more efficient to pass a libpointer, but this is easiest for now
-            if ch < 10
+            if mod(ch,16) == 0
                 bufSize = obj.bufferSize;
             else
-                bufSize = obj.bufferSize/obj.DECIM_FACTOR;
+                bufSize = 2*obj.bufferSize/obj.DECIM_FACTOR;
             end
-            wfPtr = libpointer('int64Ptr', zeros(bufSize, 1, 'int64'));
+            wfPtr = libpointer('doublePtr', zeros(bufSize, 1, 'int64'));
             success = obj.libraryCall('transfer_waveform', ch, wfPtr, bufSize);
-            if success ~= 0
-                error('transfer_waveform failed');
+            assert(success == 0, 'transfer_waveform failed');
+
+            if mod(ch,16) == 0
+                wf = wfPtr.Value;
+            else
+                wf = wfPtr.Value(1:2:end) +1i*wfPtr.Value(2:2:end);
             end
-            wf = wfPtr.Value;
         end
         
         function val = writeRegister(obj, addr, offset, data)
@@ -179,7 +182,7 @@ classdef X6 < hgsetget
             
             x6 = X6();
             
-            x6.setDebugLevel(6);
+            x6.setDebugLevel(8);
             
             x6.connect(0);
             
@@ -199,9 +202,12 @@ classdef X6 < hgsetget
             phase_increment = 4/50;
             fprintf('Setting NCO phase offset to %.3f\n', phase_increment);
             x6.writeRegister(hex2dec('700'), 16, round(4 * phase_increment * 2^16));
+            x6.writeRegister(hex2dec('700'), 17, round(4 * phase_increment * 2^16));
+            x6.writeRegister(hex2dec('700'), 35, hex2dec('00020202'));
+            x6.writeRegister(hex2dec('700'), 36, hex2dec('00020203'));
             
             fprintf('setting averager parameters to record 10 segments of 2048 samples\n');
-            x6.set_averager_settings(2048, 5, 1, 10);
+            x6.set_averager_settings(2048, 50, 1, 1);
 %             x6.writeRegister(hex2dec('700'), 0, 1024);
 %             x6.writeRegister(hex2dec('700'), 1, 256);
 %             x6.writeRegister(hex2dec('700'), 2, 256);
@@ -216,19 +222,23 @@ classdef X6 < hgsetget
             x6.stop();
 
             fprintf('Transferring waveform channels 1 and 2\n');
-            wf1 = x6.transfer_waveform(1);
-            wf2 = x6.transfer_waveform(11);
-            wf3 = x6.transfer_waveform(12);
+            wf1 = x6.transfer_waveform(0);
+            wf2 = x6.transfer_waveform(10);
+            wf3 = x6.transfer_waveform(11);
             figure();
             subplot(3,1,1);
             plot(wf1);
-            title('ch1');
+            title('Raw Channel 1');
             subplot(3,1,2);
-            plot(wf2, 'r');
-            title('ch2');
+            plot(real(wf2), 'b');
+            hold on
+            plot(imag(wf2), 'r');
+            title('Virtual Channel 1');
             subplot(3,1,3);
-            plot(wf3, 'r');
-            title('ch3');
+            plot(real(wf3), 'b');
+            hold on
+            plot(imag(wf3), 'r');
+            title('Virtual Channel 2');
             
             x6.disconnect();
             unloadlibrary('libx6adc')

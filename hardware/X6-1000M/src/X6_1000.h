@@ -129,7 +129,7 @@ public:
 	ErrorCodes stop();
 	bool       get_is_running();
 
-	ErrorCodes transfer_waveform(int, int64_t *, size_t);
+	ErrorCodes transfer_waveform(int, double *, size_t);
 
 	ErrorCodes write_wishbone_register(uint32_t baseAddr, uint32_t offset, uint32_t data);
 	ErrorCodes write_wishbone_register(uint32_t offset, uint32_t data);
@@ -232,7 +232,7 @@ public:
 
 	void init(const size_t &, const size_t &, const size_t &);
 	void reset();
-	void snapshot(int64_t *);
+	void snapshot(double *);
 
 	size_t recordsTaken;
 
