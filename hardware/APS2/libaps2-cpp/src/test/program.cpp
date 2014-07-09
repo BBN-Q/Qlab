@@ -29,6 +29,14 @@ MODE get_mode() {
   }
 }
 
+int get_device_id() {
+  cout << "Choose device ID [0]: ";
+  int device_id = 0;
+
+  cin >> device_id;
+  return device_id;
+}
+
 vector<uint32_t> read_bit_file(string fileName) {
   std::ifstream FID (fileName, std::ios::in|std::ios::binary);
   if (!FID.is_open()){
@@ -96,7 +104,7 @@ int main (int argc, char* argv[])
   set_logging_level(dbgLevel);
 
   string bitFile(argv[1]);
-  
+
   cout << concol::RED << "Attempting to initialize libaps" << concol::RESET << endl;
 
   init();
@@ -108,7 +116,7 @@ int main (int argc, char* argv[])
 
   if (numDevices < 1)
   	return 0;
-  
+
   cout << concol::RED << "Attempting to get serials" << concol::RESET << endl;
 
   const char ** serialBuffer = new const char*[numDevices];
@@ -118,7 +126,13 @@ int main (int argc, char* argv[])
   	cout << concol::RED << "Device " << cnt << " serial #: " << serialBuffer[cnt] << concol::RESET << endl;
   }
 
-  string deviceSerial(serialBuffer[0]);
+  string deviceSerial;
+
+  if (numDevices == 1) {
+    deviceSerial = string(serialBuffer[0]);
+  } else {
+    deviceSerial = string(serialBuffer[get_device_id()]);
+  }
 
   connect_APS(deviceSerial.c_str());
 
@@ -139,7 +153,7 @@ int main (int argc, char* argv[])
   disconnect_APS(deviceSerial.c_str());
 
   delete[] serialBuffer;
-  
+
   cout << concol::RED << "Finished!" << concol::RESET << endl;
 
   return 0;
