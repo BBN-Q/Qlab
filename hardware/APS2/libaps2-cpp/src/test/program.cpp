@@ -34,6 +34,7 @@ int get_device_id() {
   int device_id = 0;
 
   cin >> device_id;
+  cin.clear(); cin.ignore(INT_MAX, '\n');
   return device_id;
 }
 
