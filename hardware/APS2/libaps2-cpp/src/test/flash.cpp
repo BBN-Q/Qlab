@@ -20,12 +20,11 @@ int get_device_id() {
   stringstream mystream(input);
 
   mystream >> device_id;
-  // cin.clear(); cin.ignore(INT_MAX, '\n');
   return device_id;
 }
 
 uint64_t get_mac_input() {
-  cout << "New MAC address [blank to skip]: ";
+  cout << "New MAC address [ENTER to skip]: ";
   string input = "";
   getline(cin, input);
 
@@ -41,10 +40,32 @@ uint64_t get_mac_input() {
 }
 
 string get_ip_input() {
-  cout << "New IP address [blank to skip]: ";
+  cout << "New IP address [ENTER to skip]: ";
   string input = "";
   getline(cin, input);
   return input;
+}
+
+bool spi_prompt() {
+  cout << "Do you want to program the SPI startup sequence? [y/N]: ";
+  string input = "";
+  getline(cin, input);
+  if (input.length() == 0) {
+    return false;
+  }
+  stringstream mystream(input);
+  char response;
+  mystream >> response;
+  switch (response) {
+    case 'y':
+    case 'Y':
+      return true;
+      break;
+    case 'n':
+    case 'N':
+    default:
+      return false;
+  }
 }
 
 int main (int argc, char* argv[])
@@ -125,7 +146,10 @@ int main (int argc, char* argv[])
   }
 
   // write new SPI setup sequence
-  // write_SPI_setup(deviceSerial.c_str());
+  if (spi_prompt()) {
+    cout << concol::RED << "Writing SPI startup sequence" << concol::RESET << endl;
+    write_SPI_setup(deviceSerial.c_str());
+  }
   /*
   cout << concol::RED << "Reading flash addr 0x00FA0000" << concol::RESET << endl;
   uint32_t buffer[4] = {0, 0, 0, 0};
