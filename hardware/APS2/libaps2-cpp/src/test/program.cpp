@@ -31,10 +31,16 @@ MODE get_mode() {
 
 int get_device_id() {
   cout << "Choose device ID [0]: ";
-  int device_id = 0;
+  string input = "";
+  getline(cin, input);
 
-  cin >> device_id;
-  cin.clear(); cin.ignore(INT_MAX, '\n');
+  if (input.length() == 0) {
+    return 0;
+  }
+  int device_id;
+  stringstream mystream(input);
+
+  mystream >> device_id;
   return device_id;
 }
 
