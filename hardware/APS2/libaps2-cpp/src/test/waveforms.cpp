@@ -25,6 +25,21 @@ bool cmdOptionExists(char** begin, char** end, const std::string& option)
   return std::find(begin, end, option) != end;
 }
 
+int get_device_id() {
+  cout << "Choose device ID [0]: ";
+  string input = "";
+  getline(cin, input);
+
+  if (input.length() == 0) {
+    return 0;
+  }
+  int device_id;
+  stringstream mystream(input);
+
+  mystream >> device_id;
+  return device_id;
+}
+
 vector<uint32_t> read_seq_file(string fileName) {
   std::ifstream FID (fileName, std::ios::in);
   if (!FID.is_open()){
@@ -77,8 +92,13 @@ int main (int argc, char* argv[])
   	cout << concol::RED << "Device " << cnt << " serial #: " << serialBuffer[cnt] << concol::RESET << endl;
   }
 
+  string deviceSerial;
 
-  string deviceSerial(serialBuffer[0]);
+  if (numDevices == 1) {
+    deviceSerial = string(serialBuffer[0]);
+  } else {
+    deviceSerial = string(serialBuffer[get_device_id()]);
+  }
 
   connect_APS(deviceSerial.c_str());
 
