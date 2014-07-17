@@ -284,15 +284,12 @@ int APS2::load_sequence_file(const string & seqFile){
 
 			if (chanct % 2 == 0) {
 				// load instruction data
-				vector<uint16_t> instructions = h5array2vector<uint16_t>(&H5SeqFile, chanStr + "/instructions", H5::PredType::NATIVE_UINT16);
+				vector<uint64_t> instructions = h5array2vector<uint64_t>(&H5SeqFile, chanStr + "/instructions", H5::PredType::NATIVE_UINT64);
 				// pack into uint32_t vector
-				// slurp in six uint16_t's and output 4 uint32_t's per instruction
 				vector<uint32_t> packed_instructions;
-				for (size_t ct = 0; ct < instructions.size(); ct += 6) {
-					packed_instructions.push_back((static_cast<uint32_t>(instructions[ct+4]) << 16) | instructions[ct+5]);
-					packed_instructions.push_back((static_cast<uint32_t>(instructions[ct+2]) << 16) | instructions[ct+3]);
-					packed_instructions.push_back((static_cast<uint32_t>(instructions[ct]) << 16) | instructions[ct+1]);
-					packed_instructions.push_back(0);
+				for (size_t ct = 0; ct < instructions.size(); ct++) {
+					packed_instructions.push_back(static_cast<uint32_t>(instructions[ct] >> 32));
+					packed_instructions.push_back(static_cast<uint32_t>(instructions[ct] & 0xffffffff));
 				}
 				// pad to a multiple of 256 (hack around some message processor bug)
 				size_t padwords = (256 - (packed_instructions.size() % 256)) % 256;

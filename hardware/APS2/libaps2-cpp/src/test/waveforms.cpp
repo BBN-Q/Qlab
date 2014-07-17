@@ -48,10 +48,8 @@ vector<uint32_t> read_seq_file(string fileName) {
   vector<uint32_t> data;
   string line;
   while (FID >> line) {
-    data.push_back(std::stoul(line.substr(16, 8), NULL, 16));
     data.push_back(std::stoul(line.substr(8, 8), NULL, 16));
     data.push_back(std::stoul(line.substr(0, 8), NULL, 16));
-    data.push_back(0);
   }
   FID.close();
   return data;
