@@ -4,27 +4,24 @@
 #include "libaps.h"
 #include "constants.h"
 
-#include <concol.h> 
+#include <concol.h>
 
 using namespace std;
 
-// command options functions taken from:
-// http://stackoverflow.com/questions/865668/parse-command-line-arguments
-string getCmdOption(char ** begin, char ** end, const std::string & option)
-{
-  char ** itr = std::find(begin, end, option);
-  if (itr != end && ++itr != end)
-  {
-    return string(*itr);
+int get_device_id() {
+  cout << "Choose device ID [0]: ";
+  string input = "";
+  getline(cin, input);
+
+  if (input.length() == 0) {
+    return 0;
   }
-  return "";
-}
+  int device_id;
+  stringstream mystream(input);
 
-bool cmdOptionExists(char** begin, char** end, const std::string& option)
-{
-  return std::find(begin, end, option) != end;
+  mystream >> device_id;
+  return device_id;
 }
-
 
 int main (int argc, char* argv[])
 {
@@ -39,7 +36,7 @@ int main (int argc, char* argv[])
   }
 
   set_logging_level(dbgLevel);
-  
+
   cout << concol::RED << "Attempting to initialize libaps" << concol::RESET << endl;
 
   init();
@@ -50,7 +47,7 @@ int main (int argc, char* argv[])
 
   if (numDevices < 1)
   	return 0;
-  
+
   cout << concol::RED << "Attempting to get serials" << concol::RESET << endl;
 
   const char ** serialBuffer = new const char*[numDevices];
@@ -60,7 +57,15 @@ int main (int argc, char* argv[])
   	cout << concol::RED << "Device " << cnt << " serial #: " << serialBuffer[cnt] << concol::RESET << endl;
   }
 
-  string deviceSerial(serialBuffer[0]);
+  string deviceSerial;
+
+  if (numDevices == 1) {
+    deviceSerial = string(serialBuffer[0]);
+  } else {
+    deviceSerial = string(serialBuffer[get_device_id()]);
+  }
+
+  cout << concol::RED << "Connecting to device serial #: " << deviceSerial << concol::RESET << endl;
 
   connect_APS(deviceSerial.c_str());
 
@@ -69,7 +74,7 @@ int main (int argc, char* argv[])
   disconnect_APS(deviceSerial.c_str());
 
   delete[] serialBuffer;
-  
+
   cout << concol::RED << "Finished!" << concol::RESET << endl;
 
   return 0;
