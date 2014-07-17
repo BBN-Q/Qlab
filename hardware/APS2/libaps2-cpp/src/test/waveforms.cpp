@@ -265,10 +265,10 @@ int main (int argc, char* argv[])
 
   // read back instruction data
   offset = 0x20000000u;
-  for (size_t ct = 0; ct < 33*4; ct++)
+  for (size_t ct = 0; ct < 33*2; ct++)
   {
-    if (ct % 4 == 0) {
-      cout << endl << "instruction [" << std::dec << ct/4 << "]: ";
+    if (ct % 2 == 0) {
+      cout << endl << "instruction [" << std::dec << ct/2 << "]: ";
     }
     read_memory(deviceSerial.c_str(), offset + 4*ct, &testInt, 1);
     cout << hexn<8> << testInt << " ";

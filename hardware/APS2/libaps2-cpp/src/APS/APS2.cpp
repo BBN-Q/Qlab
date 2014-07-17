@@ -288,8 +288,8 @@ int APS2::load_sequence_file(const string & seqFile){
 				// pack into uint32_t vector
 				vector<uint32_t> packed_instructions;
 				for (size_t ct = 0; ct < instructions.size(); ct++) {
-					packed_instructions.push_back(static_cast<uint32_t>(instructions[ct] >> 32));
 					packed_instructions.push_back(static_cast<uint32_t>(instructions[ct] & 0xffffffff));
+					packed_instructions.push_back(static_cast<uint32_t>(instructions[ct] >> 32));
 				}
 				// pad to a multiple of 256 (hack around some message processor bug)
 				size_t padwords = (256 - (packed_instructions.size() % 256)) % 256;
