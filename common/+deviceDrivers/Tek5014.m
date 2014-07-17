@@ -176,6 +176,7 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
             end
             
             wfName = ['ch' num2str(ch)];
+
             switch (class(waveform))
                 case {'int16', 'uint16'}
                     obj.sendWaveformInt(wfName, waveform, marker1, marker2)
@@ -451,20 +452,22 @@ classdef Tek5014 < deviceDrivers.lib.GPIBorEthernet
             obj.write(['SEQuence:LENGth ', num2str(value)]);
         end
         
-        function setSeqloopCount(obj, value)
-            optionString = 'LoopCount';
-            
-            if (~isnumeric(value) || value > 65536 || value < 1)
-                error(['AWG Property: ', 'Invalid ', optionString, ' value: ', num2str(value)]);
-            end
-            gpib_string = ['SEQuence:ELEMent:LOOP:COUNt ', num2str(value)];
-            obj.write(gpib_string);
+        function setSeqloopCount(obj, seqct, value)
+            assert( value > 0 && value < 655536, 'Oops!');
+            obj.write('SEQuence:ELEMent%d:LOOP:COUNt %d', seqct, value);
         end
         
-        function setSeqWaveformName(obj, n, name)
-            gpib_string = ['SEQuence:ELEMent1:WAVeform', ...
-                num2str(n),' "', name, '"'];
-            obj.write(gpib_string);
+        function setSeqWaveformName(obj, seqct, ch, name)
+            obj.write('SEQuence:ELEMent%d:WAVeform%d "%s"', seqct, ch, name);
+        end
+        
+        function setSeqWait(obj, seqct, wait)
+            obj.write('SEQuence:ELEMent%d:TWait %d', seqct, logical(wait));
+        end
+        
+        function setSeqGoto(obj, seqct, idx)
+            obj.write('SEQuence:ELEMent%d:GOTO:STATE 1', seqct);
+            obj.write('SEQuence:ELEMent%d:GOTO:INDex %d', seqct, idx);
         end
     end
 end
