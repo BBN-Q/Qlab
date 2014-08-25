@@ -11,8 +11,9 @@ function device = InstrumentFactory(name, instrSettings)
     else
         deviceClass = instrSettings.deviceName;
     end
-        
-    device = deviceDrivers.(deviceClass);
+
+    import deviceDrivers.*
+    device = eval(name);
     device.connect(instrSettings.address);
 
 end
