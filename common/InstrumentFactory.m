@@ -13,7 +13,7 @@ function device = InstrumentFactory(name, instrSettings)
     end
 
     import deviceDrivers.*
-    device = eval(name);
+    device = eval(deviceClass);
     device.connect(instrSettings.address);
 
 end
