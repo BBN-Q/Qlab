@@ -195,6 +195,9 @@ classdef ExpManager < handle
                         stepData = structfun(@(m) m.get_data(), obj.measurements, 'UniformOutput', false);
                         stepVar = structfun(@(m) m.get_var(), obj.measurements, 'UniformOutput', false);
                         for measName = fieldnames(stepData)'
+                            if ~obj.measurements.(measName{1}).saved
+                                continue
+                            end
                             if isa(obj.sweeps{end}, 'sweeps.SegmentNum')
                                 % we are sweeping segment number, so we
                                 % have an entire row of data
@@ -235,6 +238,8 @@ classdef ExpManager < handle
         end
         
         function cleanUp(obj)
+            % stop the scopes
+            cellfun(@(scope) stop(scope), obj.scopes);
             % stop AWGs
             cellfun(@(awg) stop(awg), obj.AWGs);
             % stop plot timer and clear it
@@ -285,6 +290,9 @@ classdef ExpManager < handle
             end
             measNames = fieldnames(stepData)';
             for ct = 1:length(measNames)
+                if ~obj.measurements.(measNames{ct}).saved
+                    continue
+                end
                 measData = squeeze(stepData.(measNames{ct}));
                 obj.dataFileHandler.write(measData, ct);
                 if obj.saveVariances

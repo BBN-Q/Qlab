@@ -36,7 +36,7 @@ classdef MeasFilter < handle
         plotMode = 'amp/phase' %allowed enums are 'amp/phase', 'real/imag', 'quad'
         axesHandles
         plotHandles
-        
+        saved = true
     end
     
     methods
@@ -55,8 +55,11 @@ classdef MeasFilter < handle
             if isfield(settings, 'plotMode')
                 obj.plotMode = settings.plotMode;
             end
-            if isfield(settings,'digitizer_name')
-                obj.digitizer_name=settings.digitizer_name;
+            if isfield(settings, 'digitizer_name')
+                obj.digitizer_name = settings.digitizer_name;
+            end
+            if isfield(settings, 'saved')
+                obj.saved = settings.saved;
             end
             if ~isempty(filter)
                 obj.childFilter = filter;
@@ -208,14 +211,24 @@ classdef MeasFilter < handle
             end
             
             measData = obj.get_data();
+            dims = nsdims(measData);
             if ~isempty(measData)
                 for ct = 1:length(toPlot)
                     if isempty(obj.axesHandles{ct}) || ~ishandle(obj.axesHandles{ct})
                         obj.axesHandles{ct} = subplot(numRows, numCols, ct, 'Parent', figH);
-                        obj.plotHandles{ct} = plot(obj.axesHandles{ct}, toPlot{ct}.func(measData));
+                        if dims < 2
+                            obj.plotHandles{ct} = plot(obj.axesHandles{ct}, toPlot{ct}.func(measData));
+                        else
+                            obj.plotHandles{ct} = imagesc(toPlot{ct}.func(measData), 'Parent', obj.axesHandles{ct});
+                        end
                         ylabel(obj.axesHandles{ct}, toPlot{ct}.label)
                     else
-                        set(obj.plotHandles{ct}, 'YData', toPlot{ct}.func(measData));
+                        if dims < 2
+                            prop = 'YData';
+                        else
+                            prop = 'CData';
+                        end
+                        set(obj.plotHandles{ct}, prop, toPlot{ct}.func(measData));
                     end
                 end
             end
