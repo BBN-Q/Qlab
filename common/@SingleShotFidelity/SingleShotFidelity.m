@@ -103,7 +103,8 @@ classdef SingleShotFidelity < handle
         end
         
         function SSData = Do(obj)
-            obj.SingleShotFidelityDo();
+            obj.experiment.run();
+            drawnow();
             SSData = obj.experiment.data.single_shot;
         end
         
