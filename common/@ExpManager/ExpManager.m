@@ -141,7 +141,7 @@ classdef ExpManager < handle
         
         %Runner
         function run(obj)
-            %Connect measurment data to processing callbacks
+            %Connect measurement data to processing callbacks
             obj.listeners{1} = addlistener(obj.scopes{1}, 'DataReady', @obj.process_data);
             obj.plotScopeTimer = timer('TimerFcn', @obj.plot_scope_callback, 'StopFcn', @obj.plot_scope_callback, 'Period', 0.5, 'ExecutionMode', 'fixedSpacing');
             
