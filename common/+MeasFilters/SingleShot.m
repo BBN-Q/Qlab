@@ -38,16 +38,17 @@ classdef SingleShot < MeasFilters.MeasFilter
         function out = apply(obj, data)
             % just grab (and sort) latest data from child filter
             data = apply@MeasFilters.MeasFilter(obj, data);
-            %Assume that the data is recordLength x 1 (waveforms) x 2
-            %(segments ground/excited) x roundRobinsPerBuffer
-            obj.groundData = cat(2, obj.groundData, squeeze(data(:,1,1,:)));
-            obj.excitedData = cat(2, obj.excitedData, squeeze(data(:,1,2,:)));
+            % data comes recordsLength x numShots segments
+            obj.groundData = data(:,1:2:end);
+            obj.excitedData = data(:,2:2:end);
             out = [];
         end
         
         function out = get_data(obj)
             %If we don't have all the data yet return empty
-            if size(obj.groundData,2) ~= obj.numShots/2
+            %Since we only have one round robin the ground data is either
+            %unset or NaN
+            if isempty(obj.groundData) || isnan(obj.groundData(1))
                 out = [];
                 return
             end
@@ -84,7 +85,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 intGroundQData = cumsum(groundQData, 1);
                 intExcitedQData = cumsum(excitedQData, 1);
                 
-                %Loop through each intergration point; esimtate the CDF and
+                %Loop through each intergration point; estimate the CDF and
                 %then calculate best measurement fidelity
                 numTimePts = size(intGroundIData,1);
                 fidelities = zeros(numTimePts,1);

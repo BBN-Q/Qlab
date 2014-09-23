@@ -28,7 +28,7 @@ classdef SingleShotFidelity < handle
     end
     
     methods
-        %% Class constructor
+        %Class constructor
         function obj = SingleShotFidelity()
         end
         
@@ -42,7 +42,7 @@ classdef SingleShotFidelity < handle
             obj.experiment.dataFileHandler = HDF5DataHandler(settings.fileName);
             
             % load ExpManager settings
-            expSettings = jsonlab.loadjson(obj.settings.cfgFile);
+            expSettings = json.read(obj.settings.cfgFile);
             instrSettings = expSettings.instruments;
             
             % construct data file header
@@ -53,7 +53,7 @@ classdef SingleShotFidelity < handle
             % add instruments
             for instrument = fieldnames(instrSettings)'
                 fprintf('Connecting to %s\n', instrument{1});
-                instr = InstrumentFactory(instrument{1});
+                instr = InstrumentFactory(instrument{1}, instrSettings.(instrument{1}));
                 %If it is an AWG, point it at the correct file
                 if ExpManager.is_AWG(instr)
                     if isa(instr, 'deviceDrivers.APS')
@@ -63,16 +63,19 @@ classdef SingleShotFidelity < handle
                     end
                     instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-' instrument{1} '.' ext]);
                 end
+                if ExpManager.is_scope(instr)
+                    scopeName = instrument{1};
+                end
                 add_instrument(obj.experiment, instrument{1}, instr, instrSettings.(instrument{1}));
             end
             
             % set scope to digitizer mode
-            obj.experiment.instrSettings.scope.acquireMode = 'digitizer';
+            obj.experiment.instrSettings.(scopeName).acquireMode = 'digitizer';
             
             % set digitizer with the appropriate number of segments and
             % round robins
-            obj.experiment.instrSettings.scope.averager.nbrSegments = 2;
-            obj.experiment.instrSettings.scope.averager.nbrRoundRobins = settings.numShots/2;
+            obj.experiment.instrSettings.(scopeName).averager.nbrSegments = settings.numShots;
+            obj.experiment.instrSettings.(scopeName).averager.nbrRoundRobins = 1;
             
             %Add the instrument sweeps
             sweepSettings = settings.sweeps;
@@ -88,10 +91,10 @@ classdef SingleShotFidelity < handle
             end
 
             % add single-shot measurement filter
-            import MeasFilters.*
             measSettings = expSettings.measurements;
-            dh = DigitalHomodyneSS(measSettings.(obj.settings.measurement));
-            add_measurement(obj.experiment, 'single_shot', SingleShot(dh, obj.settings.numShots));
+            measParams = measSettings.(obj.settings.measurement);
+            dh = MeasFilters.(measParams.filterType)(measParams);
+            add_measurement(obj.experiment, 'single_shot', MeasFilters.SingleShot(dh, obj.settings.numShots));
             
             %Create the sequence of alternating QId, 180 inversion pulses
             if obj.settings.createSequence
