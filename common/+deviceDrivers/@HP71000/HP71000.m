@@ -80,7 +80,7 @@ classdef HP71000 < deviceDrivers.lib.GPIB
         
         function val = get.centerFreq(obj)
             temp = obj.query('CF?;');
-            val = str2double(temp)/1e9;
+            val = str2double(temp);
         end
         
         function val = get.span(obj)
