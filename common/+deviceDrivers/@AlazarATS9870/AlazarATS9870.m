@@ -421,6 +421,73 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
         end
         
+        function acquireStream(obj, samples, triggered)
+            c = onCleanup(@() stop(obj));
+            %Setup the dual-port asynchronous AutoDMA with triggered
+            %streaming mode.
+            obj.data = {zeros(samples,1), zeros(samples,1)};
+            obj.buffers.bufferSize = min(2*samples, 16*2^20);
+            fprintf('Using bufferSize = %d\n', obj.buffers.bufferSize);
+            samplesPerBuffer = obj.buffers.bufferSize / 2;
+            fprintf('Samples per buffer = %d\n', samplesPerBuffer);
+            buffersPerAcquisition = ceil(samples/samplesPerBuffer);
+            fprintf('Buffers per acquisition = %d\n', buffersPerAcquisition);
+            obj.call_API('AlazarBeforeAsyncRead',...
+                         obj.boardHandle, ...
+                         obj.defs('CHANNEL_A') + obj.defs('CHANNEL_B'), ...
+                         0, ...
+                         samplesPerBuffer, ...
+                         1, ...
+                         buffersPerAcquisition, ...
+                         obj.defs('ADMA_EXTERNAL_STARTCAPTURE') + obj.defs('ADMA_TRIGGERED_STREAMING'));
+            % allocate and post 16 buffers
+            for ct = 1:length(obj.buffers.bufferPtrs)
+                clear obj.buffers.bufferPtrs{ct}
+            end
+            
+            obj.buffers.numBuffers = 16;
+            obj.buffers.bufferPtrs = cell(1,16);
+            for ct = 1:16
+                obj.buffers.bufferPtrs{ct} = libpointer('uint8Ptr', zeros(obj.buffers.bufferSize,1));
+                post_buffer(obj, ct);
+            end
+            
+            %Arm the board
+            obj.call_API('AlazarStartCapture', obj.boardHandle);
+            
+            idx = 1;
+            bufferct = 0;
+            stride = samplesPerBuffer;
+
+            disp('Starting');
+            while bufferct < buffersPerAcquisition
+                bufferNum = mod(bufferct, 16) + 1;
+                try
+                    bufferOut = wait_for_buffer(obj, bufferNum, 1);
+                catch exception
+                    stop(obj);
+                    rethrow(exception);
+                end
+                setdatatype(bufferOut, 'uint8Ptr', 1, obj.buffers.bufferSize);
+                
+                if (idx + stride - 1 > samples)
+                    [fullBufferA, fullBufferB] = obj.processBuffer(bufferOut.Value, obj.verticalScale);
+                    obj.data{1}(idx:end) = fullBufferA(1:(samples-idx+1));
+                    obj.data{2}(idx:end) = fullBufferB(1:(samples-idx+1));
+                else
+                    [obj.data{1}(idx:idx+stride-1), obj.data{2}(idx:idx+stride-1)] = ...
+                        obj.processBuffer(bufferOut.Value, obj.verticalScale);
+%                     obj.data{1}(idx:idx+stride-1) = bufferOut.Value(1:end/2);
+%                     obj.data{2}(idx:idx+stride-1) = bufferOut.Value(end/2+1:end);
+                end
+                idx = idx + stride;
+                bufferct = bufferct + 1;
+                post_buffer(obj, bufferNum);
+%                 disp(bufferNum);
+            end
+            disp('Finished');
+        end
+        
     end %methods
     %Getter/setters must be in an methods block without attributes
     methods

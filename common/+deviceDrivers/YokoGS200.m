@@ -27,7 +27,7 @@ classdef (Sealed) YokoGS200 < deviceDrivers.lib.deviceDriverBase & deviceDrivers
     methods
         function obj = YokoGS200()
         end
-
+        
         % getters
         function val = get.value(obj)
             val = str2double(obj.query(':SOURCE:LEVEL?'));
@@ -63,6 +63,19 @@ classdef (Sealed) YokoGS200 < deviceDrivers.lib.deviceDriverBase & deviceDrivers
             end
             
             obj.write([':OUTPUT ' value]);
+        end
+        function flag = ramp2V(obj,Vset)
+            CurrentV = str2double(obj.query(':SOURCE:LEVEL?'));
+            DeltaV = Vset-CurrentV;
+            %if the difference is greater than 1mv, ramp slowly
+            if abs(DeltaV)>0.001
+                for j=1:floor(abs(DeltaV*1000))                   
+                    CurrentV=CurrentV+0.001*sign(DeltaV);
+                    obj.write([':SOURCE:LEVEL ' num2str(CurrentV)]);
+                end
+            end
+            obj.write([':SOURCE:LEVEL ' num2str(Vset)]);
+            flag = true;
         end
         function obj = set.range(obj, range)
             valid_ranges = [1e-3, 10e-3, 100e-3, 200e-3, 1, 10, 30];

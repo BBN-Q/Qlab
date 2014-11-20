@@ -16,117 +16,134 @@
 % Author: Jesse Crossno (Crossno@seas.harvard.edu)
 %
 % Description: Instrument driver for the CryoCon 22 Temperature Controller.
-
+% 
 classdef CryoCon22 < deviceDrivers.lib.GPIB
     
-   properties
-       temperatureA
-       temperatureB
-       loopTemperature
-       overTemp
-       pGain
-       iGain
-       dGain
-       range
-   end
-   
-   methods
-       function obj = CryoCon22()
-       end
-       
-       % clear error status
-       function clear(obj)
-           obj.write('CLS;');
-       end
-       
-       % reset instrument hardware
-       function reset(obj)
-           obj.write('RST;');
-       end
-       
-       % stop all heaters and loops
-       function loopStop(obj)
-           obj.write('STOP;');
-       end
-       
-       % start control loop
-       function loopStart(obj)
-           obj.write('CONT;');
-       end
-       
-       % set temperature units to Kelvin
-       function setUnitsKelvin(obj)
-           obj.write('INPUT A:UNITS K;');
-       end
-       
-       % read out channel A temperature
-       function val = get.temperatureA(obj)
-           tmp = obj.query('INPUT? A;');
-           val = str2double(tmp);
-       end
-       
-       % read out channel B temperature
-       function val = get.temperatureB(obj)
-           tmp = obj.query('INPUT? B;');
-           val = str2double(tmp);
-       end
-       
-       % set channel A set point
-       function set.loopTemperature(obj, value)
-           % Validate input
-           assert(isnumeric(value), 'Invalid input');
-           obj.write(sprintf('LOOP 1:SETPT %G;',value));
-       end
-
-       function loopInitialize(obj)
-           obj.write('LOOP 1:SOURCE A;LOOP 1:TYPE PID;OVERTEMP:SOURCE A');
-       end
-       
-       function set.overTemp(obj,value)
-           % Validate input
-           assert(isnumeric(value), 'Invalid input');
-           obj.write(sprintf('OVERTEMP:TEMP %G',value));
-       end
-       
-       function calibrateD6004541(obj,file)
-           obj.write('CALCUR 1;');
-           obj.write('D6004541;');
-           obj.write('Diode;');
-           obj.write('-1.0;');
-           obj.write('volts;');
-           calibration= readtable(file);
-           s=size(calibration);
-           for i=1:s(1)
-               t = calibration.Temperature(i);
-               v = calibration.Voltage(i);
-               obj.write(sprintf('%G %G;',v,t));
-           end
-           obj.write(';');
-       end
-       
-       function set.range(obj,value)
-           %validate input
-           assert(sum(strcmpi(value,{'HI','MID','LOW'}))==1,'Invalid range input: must be HI MID or LOW');
-           obj.write(horzcat(['LOOP 1:RANGE ' value ';']));
-       end
-       
-       function set.pGain(obj,value)
-           % Validate input
-           assert(isnumeric(value), 'Invalid input');
-           obj.write(sprintf('LOOP 1:PGAIN %G',value));
-       end
-       
-       function set.iGain(obj,value)
-           % Validate input
-           assert(isnumeric(value), 'Invalid input');
-           obj.write(sprintf('LOOP 1:IGAIN %G',value));
-       end
-       
-       function set.dGain(obj,value)
-           % Validate input
-           assert(isnumeric(value), 'Invalid input');
-           obj.write(sprintf('LOOP 1:DGAIN %G',value));
-       end
-       
-   end
+    properties
+        temperatureA
+        temperatureB
+        loopTemperature
+        overTemp
+        pGain
+        iGain
+        dGain
+        range
+    end
+    
+    methods
+        function obj = CryoCon22()
+        end
+        
+        % clear error status
+        function clear(obj)
+            obj.write('CLS;');
+        end
+        
+        % reset instrument hardware
+        function reset(obj)
+            obj.write('RST;');
+        end
+        
+        % stop all heaters and loops
+        function loopStop(obj)
+            obj.write('STOP;');
+        end
+        
+        % start control loop
+        function loopStart(obj)
+            obj.write('CONT;');
+        end
+        
+        % set temperature units to Kelvin
+        function setUnitsKelvin(obj)
+            obj.write('INPUT A:UNITS K;');
+        end
+        
+        % read out channel A temperature
+        function val = get.temperatureA(obj)
+            tmp = obj.query('INPUT? A;');
+            val = str2double(tmp);
+        end
+        
+        % read out channel B temperature
+        function val = get.temperatureB(obj)
+            tmp = obj.query('INPUT? B;');
+            val = str2double(tmp);
+        end
+        
+        % set channel A set point
+        function set.loopTemperature(obj, value)
+            % Validate input
+            assert(isnumeric(value), 'Invalid input');
+            obj.write(sprintf('LOOP 1:SETPT %G;',value));
+        end
+        
+        function loopInitialize(obj)
+            obj.write('LOOP 1:SOURCE A;LOOP 1:TYPE PID;OVERTEMP:SOURCE A');
+        end
+        
+        function set.overTemp(obj,value)
+            % Validate input
+            assert(isnumeric(value), 'Invalid input');
+            obj.write(sprintf('OVERTEMP:TEMP %G',value));
+        end
+        
+        function ramp2T(obj,Tset,SecPerK)
+            oldstate=pause('query');
+            pause on;
+            CurrentT=str2double(obj.query('INPUT? A;'));
+            DeltaT=Tset-CurrentT;
+            if abs(DeltaT)>1
+                for j=1:floor(abs(DeltaT))
+                    CurrentT=CurrentT+sign(DeltaT);
+                    obj.write(sprintf('LOOP 1:SETPT %G;',CurrentT));
+                    pause(SecPerK)
+                end
+            end
+            obj.write(sprintf('LOOP 1:SETPT %G;',Tset));
+            pause(oldstate);
+        end
+        
+        
+        function calibrateD6004541(obj,file)
+            obj.write('CALCUR 1;');
+            obj.write('D6004541;');
+            obj.write('Diode;');
+            obj.write('-1.0;');
+            obj.write('volts;');
+            calibration= readtable(file);
+            s=size(calibration);
+            for i=1:s(1)
+                t = calibration.Temperature(i);
+                v = calibration.Voltage(i);
+                obj.write(sprintf('%G %G;',v,t));
+            end
+            obj.write(';');
+        end
+        
+        function set.range(obj,value)
+            %validate input
+            assert(sum(strcmpi(value,{'HI','MID','LOW'}))==1,'Invalid range input: must be HI MID or LOW');
+            obj.write(horzcat(['LOOP 1:RANGE ' value ';']));
+        end
+        
+        function set.pGain(obj,value)
+            % Validate input
+            assert(isnumeric(value), 'Invalid input');
+            obj.write(sprintf('LOOP 1:PGAIN %G',value));
+        end
+        
+        function set.iGain(obj,value)
+            % Validate input
+            assert(isnumeric(value), 'Invalid input');
+            obj.write(sprintf('LOOP 1:IGAIN %G',value));
+        end
+        
+        function set.dGain(obj,value)
+            % Validate input
+            assert(isnumeric(value), 'Invalid input');
+            obj.write(sprintf('LOOP 1:DGAIN %G',value));
+        end
+        
+    end
 end
