@@ -612,8 +612,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 factorNumRoundRobins = factorNumRoundRobins(factorNumRoundRobins==fix(factorNumRoundRobins)).';
                 factorNumRoundRobins  = unique([factorNumRoundRobins; avgSet.nbrRoundRobins./factorNumRoundRobins]);
                 
-                obj.buffers.roundRobinsPerBuffer = round(guessRecsPerBuffer / recordsPerRoundRobin);
-                obj.buffers.roundRobinsPerBuffer = factorNumRoundRobins(find(factorNumRoundRobins < round(guessRecsPerBuffer / recordsPerRoundRobin), 1,  'last'));
+                obj.buffers.roundRobinsPerBuffer = factorNumRoundRobins(find(factorNumRoundRobins <= round(guessRecsPerBuffer / recordsPerRoundRobin), 1,  'last'));
 
                 %But make sure we have enough round robins to need at least one
                 obj.buffers.roundRobinsPerBuffer = min(obj.buffers.roundRobinsPerBuffer, avgSet.nbrRoundRobins);
