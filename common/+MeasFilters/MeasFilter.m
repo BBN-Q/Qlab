@@ -23,14 +23,12 @@ classdef MeasFilter < handle
     
     properties
         digitizer_name
-        channel
         latestData
         accumulatedData
         accumulatedVar
         avgct = 0
         varct = 0
         scopeavgct = 0
-        childFilter
         plotScope = false
         scopeHandle
         plotMode = 'amp/phase' %allowed enums are 'amp/phase', 'real/imag', 'quad'
@@ -39,16 +37,18 @@ classdef MeasFilter < handle
         saved = true
     end
     
+    events
+        DataReady
+    end
+
+    methods (Abstract)
+        %Consume a DataReady event
+        apply(obj, src, ~)
+    end
+    
     methods
-        function obj = MeasFilter(varargin)
-            % MeasFilter(filter, settings) or MeasFilter(settings)
-            if nargin == 1
-                settings = varargin{1};
-                obj.channel = sprintf('ch%d',settings.channel);
-                filter = [];
-            elseif nargin == 2
-                [filter, settings] = varargin{:};
-            end
+        function obj = MeasFilter(settings)
+            % MeasFilter(settings)
             if isfield(settings, 'plotScope')
                 obj.plotScope = settings.plotScope;
             end
@@ -60,20 +60,6 @@ classdef MeasFilter < handle
             end
             if isfield(settings, 'saved')
                 obj.saved = settings.saved;
-            end
-            if ~isempty(filter)
-                obj.childFilter = filter;
-            end
-        end
-        
-        function out = apply(obj, data)
-            if ~isempty(obj.childFilter)
-                out = apply(obj.childFilter, data);
-            else
-                out = data.(obj.channel);
-            end
-            if obj.plotScope
-                obj.plot_scope(out);
             end
         end
         
