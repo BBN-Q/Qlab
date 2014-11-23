@@ -137,6 +137,22 @@ classdef ExpManager < handle
                 obj.dataFileHandler.open(obj.dataFileHeader, dataInfos, obj.saveVariances);
             end
             
+            %Connect measurement consumers to producers
+%             structfun(@(x) obj.connect_meas_to_source(x), obj.measurements);
+            
+        end
+        
+        function connect_meas_to_source(obj, meas)
+            
+            %First look for an instrument (scope)
+            if (~isempty(find(strcmp(meas.dataSource, instrNames))))
+                obj.listeners{end+1} = addlistener(obj.instruments.(meas.dataSource), 'DataReady', @meas.apply);
+            
+            %Otherwise assume another measurement
+            else
+                obj.listeners{end+1} = addlistener(obj.measurements.(meas.dataSource), 'DataReady', @meas.apply);
+            end
+                
         end
         
         %Runner
