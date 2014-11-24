@@ -72,7 +72,7 @@ classdef DigitalDemod < MeasFilters.MeasFilter
             end
             
             %Get butterworth low-pass filter coefficients from a pre-computed lookup table
-            [b,a] = my_butter(nbandwidth);
+            [b,a] = MeasFilters.DigitalDemod.my_butter(nbandwidth);
             % low-pass filter
             demodSignal = filter(b,a, prodSignal);
             
@@ -100,9 +100,6 @@ classdef DigitalDemod < MeasFilters.MeasFilter
     end
     
     methods(Static)
-        
-        function [demodSignal, decimFactor] = digitalDemod(data, IFfreq, bandwidth, samplingRate)
-        end
         
         function [b,a] = my_butter(normIFFreq)
             %Steal variable-order butter-worth filter design from scipy in a table
