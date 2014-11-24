@@ -32,6 +32,7 @@ classdef DigitalDemod < MeasFilters.MeasFilter
     methods
         function obj = DigitalDemod(settings)
             obj = obj@MeasFilters.MeasFilter(settings);
+            obj.saved = false; %until we figure out a new data format then we don't save the raw streams
             obj.IFfreq = settings.IFfreq;
             obj.bandwidth = settings.bandwidth;
             obj.samplingRate = settings.samplingRate;
