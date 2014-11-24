@@ -18,6 +18,7 @@ classdef KernelIntegration < MeasFilters.MeasFilter
     
     properties
         kernel
+        bias
     end
     
     methods
@@ -29,14 +30,15 @@ classdef KernelIntegration < MeasFilters.MeasFilter
             tmp = typecast(org.apache.commons.codec.binary.Base64.decodeBase64(uint8(settings.kernel)), 'uint8');
             tmp = typecast(tmp, 'double');
             obj.kernel = tmp(1:2:end) + 1j*tmp(2:2:end);
+            obj.bias = settings.bias;
         end
         
         function apply(obj, src, ~)
             
-            %obj.latestData = sum(bsxfun(@times, demodSignal, obj.filter.filterCoeffs')) + obj.filter.bias;
-            obj.latestData = dotFirstDim(src.latestData, obj.kernel);
-            obj.latestData = obj.latestData + obj.filter.bias;
-            
+            obj.latestData = sum(bsxfun(@times, src.latestData, conj(obj.kernel))) + obj.bias;
+%             obj.latestData = dotFirstDim(src.latestData, obj.kernel);
+%             obj.latestData = obj.latestData + obj.bias;
+             
             accumulate(obj);
             notify(obj, 'DataReady');
         end
