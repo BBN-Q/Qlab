@@ -23,7 +23,12 @@ classdef KernelIntegration < MeasFilters.MeasFilter
     methods
         function obj = KernelIntegration(settings)
             obj = obj@MeasFilters.MeasFilter(settings);
-            obj.kernel = settings.kernel;
+            %decode kernel
+            %decode base64 then cast to byte array and then to float64
+            %array
+            tmp = typecast(org.apache.commons.codec.binary.Base64.decodeBase64(uint8(settings.kernel)), 'uint8');
+            tmp = typecast(tmp, 'double');
+            obj.kernel = tmp(1:2:end) + 1j*tmp(2:2:end);
         end
         
         function apply(obj, src, ~)
