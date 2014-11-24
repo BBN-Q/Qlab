@@ -27,13 +27,13 @@ classdef RawStream < MeasFilters.MeasFilter
     methods
         function obj = RawStream(settings)
             obj = obj@MeasFilters.MeasFilter(settings);
-            obj.kernel = settings.kernel;
+            obj.channel = str2double(settings.channel);
         end
         
         function apply(obj, src, ~)
             
             %Pull the raw stream from the digitizer
-            obj.latestData = src.(obj.channel);
+            obj.latestData = src.data{obj.channel};
             
             accumulate(obj);
             notify(obj, 'DataReady');

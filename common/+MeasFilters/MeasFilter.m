@@ -22,7 +22,7 @@
 classdef MeasFilter < handle
     
     properties
-        digitizer_name
+        dataSource
         latestData
         accumulatedData
         accumulatedVar
@@ -55,8 +55,8 @@ classdef MeasFilter < handle
             if isfield(settings, 'plotMode')
                 obj.plotMode = settings.plotMode;
             end
-            if isfield(settings, 'digitizer_name')
-                obj.digitizer_name = settings.digitizer_name;
+            if isfield(settings, 'dataSource')
+                obj.dataSource = settings.dataSource;
             end
             if isfield(settings, 'saved')
                 obj.saved = settings.saved;
