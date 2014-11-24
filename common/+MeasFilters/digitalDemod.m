@@ -22,6 +22,11 @@ classdef DigitalDemod < MeasFilters.MeasFilter
         bandwidth
         phase
         samplingRate
+        decimFactor1
+        decimFactor2
+        decimFactor3
+        nBandwidth
+        nIFfreq
     end
     
     methods
@@ -30,7 +35,30 @@ classdef DigitalDemod < MeasFilters.MeasFilter
             obj.IFfreq = settings.IFfreq;
             obj.bandwidth = settings.bandwidth;
             obj.samplingRate = settings.samplingRate;
+
+            %normalize frequencies to Nyquist
+            obj.nBandwidth= obj.bandwidth/(obj.samplingRate/2);
+            obj.nIFfreq = obj.IFfreq/(obj.samplingRate/2);
+
+            obj.decimFactor1 = settings.decimFactor1;
+            if ( obj.decimFactor1 > floor(0.45/(2*obj.nIFfreq + obj.nBandwidth/2)) )
+                warning('First stage decimation factor is too high and 2*omega signal will alias.');
+            end
+            obj.nBandwidth = obj.nBandwidth * obj.decimFactor1;
+            obj.nIFfreq = obj.nIFfreq * obj.decimFactor1;
+
+            
+            obj.decimFactor2 = settings.decimFactor2;
+            obj.nBandwidth = obj.nBandwidth * obj.decimFactor2;
+            obj.nIFfreq = obj.nIFfreq * obj.decimFactor2;
+            if ( obj.nBandwidth < 0.05 )
+                warning('Insufficient first and second stage decimation. IIR filter will be unstable.');
+            end
+            
+            obj.decimFactor3 = settings.decimFactor3;
+
             obj.phase = settings.phase;
+
         end
         
         function apply(obj, src, ~)
@@ -40,59 +68,35 @@ classdef DigitalDemod < MeasFilters.MeasFilter
             %Digitally demodulates a signal at frequency IFfreq down to DC. Does this
             %by moving to the IFfreq rotating frame and low-passing the result.
             
-            %normalize frequencies to Nyquist
-            nbandwidth= obj.bandwidth/(obj.samplingRate/2);
-            nIFfreq = obj.IFfreq/(obj.samplingRate/2);
-            
             % If the IFfreq is too small, the resulting IIR lowpass is unstable. So, we
             % use a first stage of decimation as long as the 2*omega signal won't alias
             % when we digitally downconvert
-            decimFactor1 = max(1, floor(0.45/(2*nIFfreq + nbandwidth/2)));
-            if decimFactor1 > 1
-                data = MeasFilters.polyDecimator(data, decimFactor1);
-                nbandwidth = nbandwidth * decimFactor1;
-                nIFfreq = nIFfreq * decimFactor1;
+            if obj.decimFactor1 > 1
+                data = MeasFilters.polyDecimator(data, obj.decimFactor1);
             end
             
             %Create the weighted reference signal (the size of a single acquisition is
             %given by the first dimension of data)
-            refSignal = single(exp(1i*pi*nIFfreq*(1:size(data,1)))');
+            refSignal = single(exp(1i*pi*obj.nIFfreq*(1:size(data,1)))');
             % efficiently compute data .* refSignal (with singleton dimension
             % expansion)
             prodSignal = bsxfun(@times, data, refSignal);
             
             % We next want to low-pass filter the result, but if nbandwidth < 0.05, the
             % IIR filter will be unstable, so check if we need to decimate first.
-            if nbandwidth < 0.05
-                decimFactor2 = ceil(0.05/nbandwidth);
-                prodSignal = MeasFilters.polyDecimator(real(prodSignal), decimFactor2) + 1i*MeasFilters.polyDecimator(imag(prodSignal), decimFactor2);
-                nbandwidth = nbandwidth * decimFactor2;
-            else
-                decimFactor2 = 1;
+            if obj.decimFactor2 > 1
+                prodSignal = MeasFilters.polyDecimator(real(prodSignal), obj.decimFactor2) + 1i*MeasFilters.polyDecimator(imag(prodSignal), obj.decimFactor2);
             end
             
             %Get butterworth low-pass filter coefficients from a pre-computed lookup table
-            [b,a] = MeasFilters.DigitalDemod.my_butter(nbandwidth);
+            [b,a] = MeasFilters.DigitalDemod.my_butter(obj.nBandwidth);
             % low-pass filter
             demodSignal = filter(b,a, prodSignal);
             
-            %optionally decimate by some factor of 2 close to the ratio of the IFfreq to the
-            %samplingRate
-            % decimFactor = 2^floor(log2(samplingRate/IFfreq));
-            decimFactor3 = 8;
-            
-            if decimFactor3 > 1
-                % no longer need to be careful about decimating... we can just pick
-                % points.
-                if ndims(demodSignal) == 2
-                    demodSignal = demodSignal(1:decimFactor3:end,:);
-                else
-                    demodSignal = demodSignal(1:decimFactor3:end,:,:,:);
-                end
+            if obj.decimFactor3 > 1
+                demodSignal = MeasFilters.polyDecimator(real(demodSignal), obj.decimFactor3) +1i*MeasFilters.polyDecimator(imag(demodSignal), obj.decimFactor3);
             end
             
-            decimFactor = decimFactor1 * decimFactor2 * decimFactor3;
-           
             obj.latestData = demodSignal;
             accumulate(obj);
             notify(obj, 'DataReady');
