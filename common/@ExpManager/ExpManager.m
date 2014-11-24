@@ -138,16 +138,15 @@ classdef ExpManager < handle
             end
             
             %Connect measurement consumers to producers
-%             structfun(@(x) obj.connect_meas_to_source(x), obj.measurements);
+            structfun(@(x) obj.connect_meas_to_source(x), obj.measurements);
             
         end
         
         function connect_meas_to_source(obj, meas)
-            
+            instrNames = fieldnames(obj.instruments);
             %First look for an instrument (scope)
             if (~isempty(find(strcmp(meas.dataSource, instrNames))))
-                obj.listeners{end+1} = addlistener(obj.instruments.(meas.dataSource), 'DataReady', @meas.apply);
-            
+                obj.listeners{end+1} = addlistener(obj.instruments.(meas.dataSource), 'DataReady', @meas.apply);          
             %Otherwise assume another measurement
             else
                 obj.listeners{end+1} = addlistener(obj.measurements.(meas.dataSource), 'DataReady', @meas.apply);
@@ -157,8 +156,7 @@ classdef ExpManager < handle
         
         %Runner
         function run(obj)
-            %Connect measurement data to processing callbacks
-            obj.listeners{1} = addlistener(obj.scopes{1}, 'DataReady', @obj.process_data);
+            %Connect a polling scope plotter
             obj.plotScopeTimer = timer('TimerFcn', @obj.plot_scope_callback, 'StopFcn', @obj.plot_scope_callback, 'Period', 0.5, 'ExecutionMode', 'fixedSpacing');
             
             %Set the cleanup function so that even if we ctrl-c out we
@@ -290,14 +288,6 @@ classdef ExpManager < handle
                 %Stop all the AWGs
                 cellfun(@(awg) stop(awg), obj.AWGs);
             end
-        end
-        
-        %Helper function to apply measurement filters and store data
-        function process_data(obj, src, ~)
-            % download data from src
-            measData = struct('ch1', src.transfer_waveform(1), 'ch2', src.transfer_waveform(2));
-            %Apply measurment filters in turn
-            structfun(@(m) apply(m, measData), obj.measurements, 'UniformOutput', false);
         end
         
         function save_data(obj, stepData, stepVar)
