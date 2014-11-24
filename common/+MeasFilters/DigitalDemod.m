@@ -18,6 +18,10 @@
 classdef DigitalDemod < MeasFilters.MeasFilter
     
     properties
+        saveRecords
+        fileHandleReal
+        fileHandleImag
+        headerWritten = false;
         IFfreq
         bandwidth
         phase
@@ -33,21 +37,28 @@ classdef DigitalDemod < MeasFilters.MeasFilter
         function obj = DigitalDemod(settings)
             obj = obj@MeasFilters.MeasFilter(settings);
             obj.saved = false; %until we figure out a new data format then we don't save the raw streams
+            
+            obj.saveRecords = settings.saveRecords;
+            if obj.saveRecords
+                obj.fileHandleReal = fopen([settings.recordsFilePath, '.real'], 'wb');
+                obj.fileHandleImag = fopen([settings.recordsFilePath, '.imag'], 'wb');
+            end
+            
             obj.IFfreq = settings.IFfreq;
             obj.bandwidth = settings.bandwidth;
             obj.samplingRate = settings.samplingRate;
-
+            
             %normalize frequencies to Nyquist
             obj.nBandwidth= obj.bandwidth/(obj.samplingRate/2);
             obj.nIFfreq = obj.IFfreq/(obj.samplingRate/2);
-
+            
             obj.decimFactor1 = settings.decimFactor1;
             if ( obj.decimFactor1 > floor(0.45/(2*obj.nIFfreq + obj.nBandwidth/2)) )
                 warning('First stage decimation factor is too high and 2*omega signal will alias.');
             end
             obj.nBandwidth = obj.nBandwidth * obj.decimFactor1;
             obj.nIFfreq = obj.nIFfreq * obj.decimFactor1;
-
+            
             
             obj.decimFactor2 = settings.decimFactor2;
             obj.nBandwidth = obj.nBandwidth * obj.decimFactor2;
@@ -57,10 +68,18 @@ classdef DigitalDemod < MeasFilters.MeasFilter
             end
             
             obj.decimFactor3 = settings.decimFactor3;
-
+            
             obj.phase = settings.phase;
-
+            
         end
+        
+        function delete(obj)
+            if obj.saveRecords
+                fclose(obj.fileHandleReal);
+                fclose(obj.fileHandleImag);
+            end
+        end
+        
         
         function apply(obj, src, ~)
             
@@ -99,6 +118,25 @@ classdef DigitalDemod < MeasFilters.MeasFilter
             end
             
             obj.latestData = demodSignal;
+            
+            %If we have a file to save to then do so
+            if obj.saveRecords
+                if ~obj.headerWritten
+                    %Write the first three dimensions of the signal:
+                    %recordLength, numWaveforms, numSegments
+                    sizes = size(obj.latestData);
+                    if length(sizes) == 2
+                        sizes = [sizes(1), 1, sizes(2)];
+                    end
+                    fwrite(obj.fileHandleReal, sizes(1:3), 'int32');
+                    fwrite(obj.fileHandleImag, sizes(1:3), 'int32');
+                    obj.headerWritten = true;
+                end
+                
+                fwrite(obj.fileHandleReal, real(obj.latestData), 'single');
+                fwrite(obj.fileHandleImag, imag(obj.latestData), 'single');
+            end
+            
             accumulate(obj);
             notify(obj, 'DataReady');
         end
