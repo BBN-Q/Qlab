@@ -414,11 +414,13 @@ classdef ExpManager < handle
             end
             
             for measName = fieldnames(obj.measurements)'
-                if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
-                    figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Scope']);
+                if obj.measurements.(measName{1}).plotScope
+                    if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
+                        figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Scope']);
+                    end
+                    figHandle = figHandles.(measName{1});
+                    obj.measurements.(measName{1}).plot(figHandle);
                 end
-                figHandle = figHandles.(measName{1});
-                obj.measurements.(measName{1}).plot(figHandle);
             end
             drawnow()
         end

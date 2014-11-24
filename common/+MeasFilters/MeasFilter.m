@@ -119,55 +119,6 @@ classdef MeasFilter < handle
             end
         end
         
-        function plot_scope(obj, data)
-            %Helper function to plot raw data to check timing and what not
-            if isempty(obj.scopeHandle)
-                fh = figure('HandleVisibility', 'callback', 'Name', 'MeasFilter Scope');
-                obj.scopeHandle = axes('Parent', fh);
-                prevData = [];
-                obj.scopeavgct = 1;
-            else
-                if nsdims(data) > 1
-                    prevData = get(get(obj.scopeHandle, 'Children'), 'CData');
-                else
-                    prevData = get(get(obj.scopeHandle, 'Children'), 'YData')';
-                end
-                obj.scopeavgct = obj.scopeavgct + 1;
-            end
-            if ndims(data) == 4 && nsdims(data) > 2
-                %Flatten single shot data into a 2D array
-                dims = size(data);
-                if isempty(prevData)
-                    imagesc(reshape(data, dims(1), prod(dims(2:end))), 'Parent', obj.scopeHandle);
-                    xlabel(obj.scopeHandle, 'Segment');
-                    ylabel(obj.scopeHandle, 'Time');
-                else
-                    data = (prevData*(obj.scopeavgct-1) + reshape(data, dims(1), prod(dims(2:end)))) / obj.scopeavgct;
-                    set(get(obj.scopeHandle, 'Children'), 'CData', data);
-                end
-            elseif nsdims(data) == 2
-                %Simply image plot 2D averaged data
-                if isempty(prevData)
-                    imagesc(squeeze(data), 'Parent', obj.scopeHandle);
-                    xlabel(obj.scopeHandle, 'Segment');
-                    ylabel(obj.scopeHandle, 'Time');
-                else
-                    set(get(obj.scopeHandle, 'Children'), 'CData', (prevData*(obj.scopeavgct-1) + squeeze(data))/obj.scopeavgct);
-                end
-            elseif nsdims(data) == 1
-                %Plot single shot data
-                if isempty(prevData)
-                    plot(squeeze(data), 'Parent', obj.scopeHandle);
-                    xlabel(obj.scopeHandle, 'Time')
-                    ylabel(obj.scopeHandle, 'Voltage');
-                else
-                    set(get(obj.scopeHandle, 'Children'), 'YData', (prevData*(obj.scopeavgct-1) + squeeze(data))/obj.scopeavgct);
-                end
-            else
-                error('Unable to handle data with these dimensions.')
-            end
-        end
-        
         function plot(obj, figH)
             %Given a figure handle plot the most recent data
             plotMap = struct();
