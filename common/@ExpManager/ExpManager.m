@@ -127,11 +127,14 @@ classdef ExpManager < handle
                     dataInfo.([xyz{xyzIdx}, 'points']) = points{ct};
                 end
                 dataInfo.dimension = length(obj.sweeps);
-                dataInfos = repmat({dataInfo}, 1, length(fieldnames(obj.measurements)));
                 % add measurement names to dataInfo structs
                 measNames = fieldnames(obj.measurements);
+                dataInfos = {};
                 for ct = 1:length(measNames)
-                    dataInfos{ct}.name = measNames{ct};
+                    if obj.measurements.(measNames{ct}).saved
+                        dataInfos{end+1} = dataInfo;
+                        dataInfos{end}.name = measNames{ct};
+                    end
                 end
                 %Open data file
                 obj.dataFileHandler.open(obj.dataFileHeader, dataInfos, obj.saveVariances);
@@ -295,15 +298,17 @@ classdef ExpManager < handle
                 return
             end
             measNames = fieldnames(stepData)';
+            savect = 1;
             for ct = 1:length(measNames)
                 if ~obj.measurements.(measNames{ct}).saved
                     continue
                 end
                 measData = squeeze(stepData.(measNames{ct}));
-                obj.dataFileHandler.write(measData, ct);
+                obj.dataFileHandler.write(measData, savect);
                 if obj.saveVariances
-                    obj.dataFileHandler.writevar(stepVar.(measNames{ct}), ct);
+                    obj.dataFileHandler.writevar(stepVar.(measNames{ct}), savect);
                 end
+                savect = savect + 1;
             end
         end
         
