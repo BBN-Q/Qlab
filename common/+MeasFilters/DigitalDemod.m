@@ -111,7 +111,8 @@ classdef DigitalDemod < MeasFilters.MeasFilter
             %Get butterworth low-pass filter coefficients from a pre-computed lookup table
             [b,a] = MeasFilters.DigitalDemod.my_butter(obj.nBandwidth);
             % low-pass filter
-            demodSignal = filter(b,a, prodSignal);
+            % factor of 2 to recover half of signal we filtered away
+            demodSignal = 2*filter(b,a, prodSignal);
             
             if obj.decimFactor3 > 1
                 demodSignal = MeasFilters.polyDecimator(real(demodSignal), obj.decimFactor3) +1i*MeasFilters.polyDecimator(imag(demodSignal), obj.decimFactor3);
