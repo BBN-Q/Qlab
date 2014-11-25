@@ -21,26 +21,21 @@ classdef SingleShot < MeasFilters.MeasFilter
         groundData
         excitedData
         pdfData
-        numShots = -1
         analysed = false
         analysing = false
         bestIntegrationTime
     end
     
     methods
-        function obj = SingleShot(childFilter, varargin)
-            obj = obj@MeasFilters.MeasFilter(childFilter, struct('plotMode', 'real/imag'));
-            if length(varargin) == 1
-                obj.numShots = varargin{1};
-            end
+        function obj = SingleShot(settings)
+            obj = obj@MeasFilters.MeasFilter(settings);
         end
         
-        function out = apply(obj, data)
-            % just grab (and sort) latest data from child filter
-            data = apply@MeasFilters.MeasFilter(obj, data);
+        function out = apply(obj, src, ~)
+            % just grab (and sort) latest data from source 
             % data comes recordsLength x numShots segments
-            obj.groundData = data(:,1:2:end);
-            obj.excitedData = data(:,2:2:end);
+            obj.groundData = src.latestData(:,1:2:end);
+            obj.excitedData = src.latestData(:,2:2:end);
             out = [];
         end
         
@@ -63,10 +58,6 @@ classdef SingleShot < MeasFilters.MeasFilter
                 excitedMean = mean(obj.excitedData, 2);
                 centre = 0.5*(groundMean+excitedMean);
                 rotAngle = angle(excitedMean-groundMean);
-%                 groundData = obj.groundData;
-%                 excitedData = obj.excitedData;
-%                 save('SSData.mat', 'excitedData', 'groundData')
-%                 clear groundData excitedData
                 unwoundGroundData = bsxfun(@times, bsxfun(@minus, obj.groundData, centre), exp(-1j*rotAngle));
                 unwoundExcitedData = bsxfun(@times, bsxfun(@minus, obj.excitedData, centre), exp(-1j*rotAngle));
                 
@@ -77,7 +68,6 @@ classdef SingleShot < MeasFilters.MeasFilter
                 excitedIData = bsxfun(@times, real(unwoundExcitedData), weights);
                 groundQData = bsxfun(@times, imag(unwoundGroundData), weights);
                 excitedQData = bsxfun(@times, imag(unwoundExcitedData), weights);
-                clear unwoundGroundData unwoundExcitedData
                 
                 %Take cummulative sum up to each timestep
                 intGroundIData = cumsum(groundIData, 1);
@@ -113,7 +103,6 @@ classdef SingleShot < MeasFilters.MeasFilter
                 tmpData = intExcitedIData(intPt,:);
                 [mu, sigma] = normfit(tmpData(tmpData>0));
                 obj.pdfData.e_gaussPDF_I = normpdf(obj.pdfData.bins_I, mu, sigma);
-                clear groundIData intGroundIData excitedIData intExcitedIData
                 
                 %Calculate the kernel density estimates for the other
                 %quadrature too
@@ -127,7 +116,6 @@ classdef SingleShot < MeasFilters.MeasFilter
                 obj.pdfData.e_gaussPDF_Q = normpdf(obj.pdfData.bins_Q, mu, sigma);
 
                 out = maxFidelity_I + 1j*obj.pdfData.maxFidelity_Q;
-                clear groundQData intGroundQData excitedQData intExcitedQData
 
                 obj.analysed = true;
                 

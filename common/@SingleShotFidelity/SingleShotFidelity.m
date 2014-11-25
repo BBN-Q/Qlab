@@ -92,9 +92,18 @@ classdef SingleShotFidelity < handle
 
             % add single-shot measurement filter
             measSettings = expSettings.measurements;
-            measParams = measSettings.(obj.settings.measurement);
-            dh = MeasFilters.(measParams.filterType)(measParams);
-            add_measurement(obj.experiment, 'single_shot', MeasFilters.SingleShot(dh, obj.settings.numShots));
+            add_measurement(obj.experiment, 'SingleShot',...
+                MeasFilters.SingleShot(struct('dataSource', obj.settings.dataSource, 'plotMode', 'real/imag', 'plotScope', true)));
+            curSource = obj.settings.dataSource;
+            while (true)
+               sourceParams = measSettings.(curSource);
+               curFilter = MeasFilters.(sourceParams.filterType)(sourceParams);
+               add_measurement(obj.experiment, curSource, curFilter);
+               if isa(curFilter, 'MeasFilters.RawStream')
+                   break;
+               end
+               curSource = sourceParams.dataSource;
+            end
             
             %Create the sequence of alternating QId, 180 inversion pulses
             if obj.settings.createSequence
@@ -108,7 +117,7 @@ classdef SingleShotFidelity < handle
         function SSData = Do(obj)
             obj.experiment.run();
             drawnow();
-            SSData = obj.experiment.data.single_shot;
+            SSData = obj.experiment.data.SingleShot;
         end
         
     end
