@@ -140,9 +140,6 @@ classdef ExpManager < handle
                 obj.dataFileHandler.open(obj.dataFileHeader, dataInfos, obj.saveVariances);
             end
             
-            %Connect measurement consumers to producers
-            structfun(@(x) obj.connect_meas_to_source(x), obj.measurements);
-            
         end
         
         function connect_meas_to_source(obj, meas)
@@ -161,6 +158,9 @@ classdef ExpManager < handle
         function run(obj)
             %Connect a polling scope plotter
             obj.plotScopeTimer = timer('TimerFcn', @obj.plot_scope_callback, 'StopFcn', @obj.plot_scope_callback, 'Period', 0.5, 'ExecutionMode', 'fixedSpacing');
+
+            %Connect measurement consumers to producers
+            structfun(@(x) obj.connect_meas_to_source(x), obj.measurements);
             
             %Set the cleanup function so that even if we ctrl-c out we
             %correctly cleanup
