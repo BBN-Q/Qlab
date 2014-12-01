@@ -166,25 +166,29 @@ classdef SingleShot < MeasFilters.MeasFilter
             if obj.analysed
                 clf(figH);
                 axes1 = subplot(2,1,1, 'Parent', figH);
-                plot(axes1, obj.pdfData.bins_I, obj.pdfData.gPDF_I, 'b');
+                semilogy(axes1, obj.pdfData.bins_I, obj.pdfData.gPDF_I, 'b');
                 hold(axes1, 'on');
-                plot(axes1, obj.pdfData.bins_I, obj.pdfData.g_gaussPDF_I, 'b--')
-                plot(axes1, obj.pdfData.bins_I, obj.pdfData.ePDF_I, 'r');
-                plot(axes1, obj.pdfData.bins_I, obj.pdfData.e_gaussPDF_I, 'r--')
-                legend(axes1, {'Ground', 'Excited'})
+                semilogy(axes1, obj.pdfData.bins_I, obj.pdfData.g_gaussPDF_I, 'b--')
+                semilogy(axes1, obj.pdfData.bins_I, obj.pdfData.ePDF_I, 'r');
+                semilogy(axes1, obj.pdfData.bins_I, obj.pdfData.e_gaussPDF_I, 'r--')
+                allData = [obj.pdfData.gPDF_I(:); obj.pdfData.ePDF_I(:)];
+                ylim(axes1, [1e-3*max(allData), 2*max(allData)]); 
+                legend(axes1, {'Ground', 'Ground Gaussian Fit', 'Excited', 'Excited Gaussian Fit'})
                 snrFidelity = 100-0.5*(100-0.5*100*(obj.pdfData.bins_I(2)-obj.pdfData.bins_I(1))*sum(abs(obj.pdfData.g_gaussPDF_I - obj.pdfData.e_gaussPDF_I)));
                 text(0.1, 0.75, sprintf('Fidelity: %.1f%% (SNR Fidelity: %.1f%%)',100*obj.pdfData.maxFidelity_I, snrFidelity),...
                     'Units', 'normalized', 'FontSize', 14, 'Parent', axes1)
                 
-                %Fit gaussian to both peaks and return the esitmat
+                %Fit gaussian to both peaks and return the esitmate
                     
                 axes2 = subplot(2,1,2, 'Parent', figH);
-                plot(axes2, obj.pdfData.bins_Q, obj.pdfData.gPDF_Q, 'b');
+                semilogy(axes2, obj.pdfData.bins_Q, obj.pdfData.gPDF_Q, 'b');
                 hold(axes2, 'on');
-                plot(axes2, obj.pdfData.bins_Q, obj.pdfData.g_gaussPDF_Q, 'b--')
-                plot(axes2, obj.pdfData.bins_Q, obj.pdfData.ePDF_Q, 'r');
-                plot(axes2, obj.pdfData.bins_Q, obj.pdfData.e_gaussPDF_Q, 'r--')
-                legend(axes2, {'Ground','Excited'})
+                semilogy(axes2, obj.pdfData.bins_Q, obj.pdfData.g_gaussPDF_Q, 'b--')
+                semilogy(axes2, obj.pdfData.bins_Q, obj.pdfData.ePDF_Q, 'r');
+                semilogy(axes2, obj.pdfData.bins_Q, obj.pdfData.e_gaussPDF_Q, 'r--')
+                allData = [obj.pdfData.gPDF_Q(:); obj.pdfData.ePDF_Q(:)];
+                ylim(axes2, [1e-3*max(allData), 2*max(allData)]); 
+                legend(axes2, {'Ground', 'Ground Gaussian Fit', 'Excited', 'Excited Gaussian Fit'})
                 text(0.1, 0.75, sprintf('Fidelity: %.1f%%\nIntegration time: %d',100*obj.pdfData.maxFidelity_Q, obj.bestIntegrationTime), 'Units', 'normalized', 'FontSize', 14, 'Parent', axes2)
                 drawnow();
             end
