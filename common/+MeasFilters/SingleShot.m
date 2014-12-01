@@ -87,7 +87,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                     gPDF = ksdensity(intGroundIData(intPt,:), bins);
                     ePDF = ksdensity(intExcitedIData(intPt,:), bins);
                     
-                    fidelities(intPt) = 0.5*(bins(2)-bins(1))*sum(abs(gPDF-ePDF));
+                    fidelities(intPt) = 1-0.5*(1-0.5*(bins(2)-bins(1))*sum(abs(gPDF-ePDF)));
                 end
                 
                 [maxFidelity_I, intPt] = max(fidelities);
@@ -142,14 +142,13 @@ classdef SingleShot < MeasFilters.MeasFilter
                 end
                 model = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -q -s 0',bestC));
                 [predictedState, accuracy, ~] = predict(prepStates, sparse(double(allData)), model);
-                fidelity = 2*accuracy(1)/100-1;
                 c = 0.95;
                 N = length(predictedState);
                 S = sum(predictedState == prepStates);
                 flo = betaincinv((1-c)/2.,S+1,N-S+1);
                 fup = betaincinv((1+c)/2.,S+1,N-S+1);
                 fprintf('Cross-validated logistic regression accuracy: %.2f\n', bestAccuracy);
-                fprintf('In-place logistic regression fidelity %.2f, (%.2f, %.2f).\n', 100*fidelity, 200*flo-100, 200*fup-100);
+                fprintf('In-place logistic regression fidelity %.2f, (%.2f, %.2f).\n', accuracy(1), 100*flo, 100*fup);
 
             else
                 out = obj.pdfData.maxFidelity_I + 1j*obj.pdfData.maxFidelity_Q;
@@ -172,8 +171,8 @@ classdef SingleShot < MeasFilters.MeasFilter
                 plot(axes1, obj.pdfData.bins_I, obj.pdfData.g_gaussPDF_I, 'b--')
                 plot(axes1, obj.pdfData.bins_I, obj.pdfData.ePDF_I, 'r');
                 plot(axes1, obj.pdfData.bins_I, obj.pdfData.e_gaussPDF_I, 'r--')
-                legend(axes1, {'Ground','Excited'})
-                snrFidelity = 100*0.5*(obj.pdfData.bins_I(2)-obj.pdfData.bins_I(1))*sum(abs(obj.pdfData.g_gaussPDF_I - obj.pdfData.e_gaussPDF_I));
+                legend(axes1, {'Ground', 'Excited'})
+                snrFidelity = 100-0.5*(100-0.5*100*(obj.pdfData.bins_I(2)-obj.pdfData.bins_I(1))*sum(abs(obj.pdfData.g_gaussPDF_I - obj.pdfData.e_gaussPDF_I)));
                 text(0.1, 0.75, sprintf('Fidelity: %.1f%% (SNR Fidelity: %.1f%%)',100*obj.pdfData.maxFidelity_I, snrFidelity),...
                     'Units', 'normalized', 'FontSize', 14, 'Parent', axes1)
                 
