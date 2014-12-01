@@ -35,9 +35,9 @@ classdef KernelIntegration < MeasFilters.MeasFilter
         
         function apply(obj, src, ~)
             
-            obj.latestData = sum(bsxfun(@times, src.latestData, conj(obj.kernel))) + obj.bias;
-%             obj.latestData = dotFirstDim(src.latestData, obj.kernel);
-%             obj.latestData = obj.latestData + obj.bias;
+%             obj.latestData = sum(bsxfun(@times, src.latestData, conj(obj.kernel))) + obj.bias;
+            obj.latestData = MeasFilters.dotFirstDim(src.latestData, obj.kernel);
+            obj.latestData = obj.latestData + obj.bias;
              
             accumulate(obj);
             notify(obj, 'DataReady');
