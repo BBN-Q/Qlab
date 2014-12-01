@@ -18,6 +18,7 @@
 classdef StreamSelector < MeasFilters.MeasFilter
     
     properties
+        channel
         stream
     end
     
@@ -27,15 +28,37 @@ classdef StreamSelector < MeasFilters.MeasFilter
             % convert round brackets to square brackets
             streamVec = eval(strrep(strrep(settings.stream, '(', '['), ')', ']'));
             % first index is the physical channel
-            obj.channel = sprintf('ch%d', streamVec(1));
-            obj.stream = ['s' sprintf('%d',streamVec)];
+            obj.channel = streamVec(1);
+            obj.stream = streamVec;
         end
         
-        function out = apply(obj, data)
-            import MeasFilters.*
-            data = apply@MeasFilters.MeasFilter(obj, data);
-            obj.accumulatedData = data.(obj.stream);
-            out = obj.accumulatedData;
+        function apply(obj, src, ~)
+            
+            %Pull the raw stream from the digitizer
+            obj.latestData = src.transfer_stream(obj.stream(1), obj.stream(2), obj.stream(3));
+            
+%             %If we have a file to save to then do so
+%             if obj.saveRecords
+%                 if ~obj.headerWritten
+%                     %Write the first three dimensions of the signal:
+%                     %recordLength, numWaveforms, numSegments
+%                     sizes = size(obj.latestData);
+%                     if length(sizes) == 2
+%                         sizes = [sizes(1), 1, sizes(2)];
+%                     end
+%                     fwrite(obj.fileHandleReal, sizes(1:3), 'int32');
+%                     fwrite(obj.fileHandleImag, sizes(1:3), 'int32');
+%                     obj.headerWritten = true;
+%                 end
+%                 
+%                 fwrite(obj.fileHandleReal, real(obj.latestData), 'single');
+%                 fwrite(obj.fileHandleImag, imag(obj.latestData), 'single');
+%             end
+            
+
+            %Data accumulated in driver
+            obj.accumulatedData = obj.latestData;
+            notify(obj, 'DataReady');
         end
         
         function out = get_data(obj)
