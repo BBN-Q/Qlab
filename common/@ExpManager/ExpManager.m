@@ -181,6 +181,8 @@ classdef ExpManager < handle
             obj.data = structfun(@(x) struct('mean', complex(nan(sizes),nan(sizes)), 'realvar', nan(sizes), 'imagvar', nan(sizes), 'prodvar', nan(sizes)),...
                 obj.measurements, 'UniformOutput', false);
             
+            fprintf('Taking data....\n');
+            
             % generic nested loop sweeper through "stack"
             while idx > 0 && ct(1) <= stops(1)
                 if ct(idx) < stops(idx)
