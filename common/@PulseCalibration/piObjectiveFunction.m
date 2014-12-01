@@ -23,7 +23,7 @@ function [cost, J] = piObjectiveFunction(obj, x, direction)
     
     % measure
     if ~obj.testMode
-        data = obj.homodyneMeasurement(segmentPoints);
+        data = obj.take_data(segmentPoints);
     else
         data = simulateMeasurement(x, obj.settings.offset2amp, obj.settings.OffsetNorm);
         plot(data);

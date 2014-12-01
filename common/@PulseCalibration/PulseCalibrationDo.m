@@ -41,7 +41,7 @@ if settings.DoRabiAmp
    offsetPhases = zeros([3,1]);
    
    %Run a sequence and fit it
-   data = obj.homodyneMeasurement(segmentPoints);
+   data = obj.take_data(segmentPoints);
    % analyze X data
    [piAmpGuesses(1), offsetPhases(1)] = obj.analyzeRabiAmp(data(1:end/2));
    % analyze Y data
@@ -73,7 +73,7 @@ if settings.DoRamsey
     qubitSource.frequency = origFreq - 0.001;
 
     % measure
-    data = obj.homodyneMeasurement(segmentPoints);
+    data = obj.take_data(segmentPoints);
 
     quick_scale = @(d) 2*(d-mean(d))/(max(d)-min(d));
     
@@ -84,7 +84,7 @@ if settings.DoRamsey
     qubitSource.frequency = origFreq - 0.001 + detuningA/2;
 
     % measure
-    data = obj.homodyneMeasurement(segmentPoints);
+    data = obj.take_data(segmentPoints);
 
     % analyze
     [~, detuningB] = fitramsey(segmentPoints, quick_scale(data));
@@ -165,7 +165,7 @@ if settings.DoDRAGCal
     obj.loadSequence(filenames, 1);
 
     % measure
-    data = obj.homodyneMeasurement(segmentPoints);
+    data = obj.take_data(segmentPoints);
 
     % analyze for the best value to two digits
     numPsQId = 8; % number pseudoidentities
@@ -192,7 +192,7 @@ if settings.DoSPAMCal
     obj.loadSequence(filenames, 1);
 
     % measure
-    data = obj.homodyneMeasurement(segmentPoints);
+    data = obj.take_data(segmentPoints);
     
     % analyze for the best value to two digits
     numPsQId = 10; % number pseudoidentities

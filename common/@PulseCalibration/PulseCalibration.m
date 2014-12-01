@@ -36,7 +36,7 @@ classdef PulseCalibration < handle
         function obj = PulseCalibration()
         end
 
-        function out = homodyneMeasurement(obj, segmentPoints)
+        function out = take_data(obj, segmentPoints)
             % runs the pulse sequence and returns the data
             
             % set number of segments in the sweep
@@ -49,9 +49,8 @@ classdef PulseCalibration < handle
             
             obj.experiment.run();
             
-            % pull out data from the first measurement
-            measNames = fieldnames(obj.experiment.measurements);
-            data = obj.experiment.data.(measNames{1}).mean;
+            % pull out data from the specified
+            data = obj.experiment.data.(obj.settings.measurement).mean;
             
             % return amplitude or phase data
             switch obj.settings.dataType
@@ -136,12 +135,21 @@ classdef PulseCalibration < handle
             % create a generic SegmentNum sweep
             add_sweep(obj.experiment, 1, sweeps.SegmentNum(struct('axisLabel', 'Segment', 'start', 0, 'step', 1, 'numPoints', 2)));
             
-            % add measurement M1
-            import MeasFilters.*
-            measSettings = expSettings.measurements;
-            dh = DigitalHomodyne(measSettings.(obj.settings.measurement));
-            add_measurement(obj.experiment, obj.settings.measurement, dh);
-            
+            % add the appropriate measurement stack
+            measSettings = expSettings.measurements.(obj.settings.measurement);
+            add_measurement(obj.experiment, obj.settings.measurement,...
+                MeasFilters.(measSettings.filterType)(measSettings));
+            curSource = measSettings.dataSource;
+            while (true)
+               sourceParams = expSettings.measurements.(curSource);
+               curFilter = MeasFilters.(sourceParams.filterType)(sourceParams);
+               add_measurement(obj.experiment, curSource, curFilter);
+               if isa(curFilter, 'MeasFilters.RawStream')
+                   break;
+               end
+               curSource = sourceParams.dataSource;
+            end
+
             % intialize the ExpManager
             init(obj.experiment);
             
