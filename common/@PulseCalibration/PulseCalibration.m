@@ -43,9 +43,17 @@ classdef PulseCalibration < handle
             obj.experiment.sweeps{1}.points = segmentPoints;
 
             % set digitizer with the appropriate number of segments
-            averagerSettings = obj.experiment.scopes{1}.averager;
-            averagerSettings.nbrSegments = length(segmentPoints);
-            obj.experiment.scopes{1}.averager = averagerSettings;
+            switch class(obj.experiment.scopes{1})
+                case 'deviceDrivers.AlazarATS9870'
+                    averagerSettings = obj.experiment.scopes{1}.averager;
+                    averagerSettings.nbrSegments = length(segmentPoints);
+                    obj.experiment.scopes{1}.averager = averagerSettings;
+                case 'X6'
+                    x6 = obj.experiment.scopes{1};
+                    set_averager_settings(x6, x6.recordLength, length(segmentPoints), x6.nbrWaveforms, x6.nbrRoundRobins);
+                otherwise
+                    error('Unknown scope type.');
+            end
             
             obj.experiment.run();
             
@@ -124,7 +132,15 @@ classdef PulseCalibration < handle
             % load ExpManager settings
             expSettings = json.read(obj.settings.cfgFile);
             instrSettings = expSettings.instruments;
-            obj.numShots = instrSettings.scope.averager.nbrRoundRobins * instrSettings.scope.averager.nbrWaveforms;
+            instrNames = fieldnames(instrSettings);
+            ct = 0;
+            while (true)
+                ct = ct+1;
+                if strcmp(instrSettings.(instrNames{ct}).deviceName, 'AlazarATS9870') || strcmp(instrSettings.(instrNames{ct}).deviceName, 'X6')
+                    obj.numShots = instrSettings.(instrNames{ct}).averager.nbrRoundRobins * instrSettings.(instrNames{ct}).averager.nbrWaveforms;
+                    break;
+                end
+            end
             
             % add instruments
             for instrument = fieldnames(instrSettings)'
@@ -137,16 +153,15 @@ classdef PulseCalibration < handle
             
             % add the appropriate measurement stack
             measSettings = expSettings.measurements.(obj.settings.measurement);
-            add_measurement(obj.experiment, obj.settings.measurement,...
-                MeasFilters.(measSettings.filterType)(measSettings));
-            curSource = measSettings.dataSource;
+            curSource = obj.settings.measurement;
+            curFilter = MeasFilters.(measSettings.filterType)(measSettings);
             while (true)
-               sourceParams = expSettings.measurements.(curSource);
-               curFilter = MeasFilters.(sourceParams.filterType)(sourceParams);
                add_measurement(obj.experiment, curSource, curFilter);
-               if isa(curFilter, 'MeasFilters.RawStream')
+               if isa(curFilter, 'MeasFilters.RawStream') || isa(curFilter, 'MeasFilters.StreamSelector')
                    break;
                end
+               sourceParams = expSettings.measurements.(curSource);
+               curFilter = MeasFilters.(sourceParams.filterType)(sourceParams);
                curSource = sourceParams.dataSource;
             end
 

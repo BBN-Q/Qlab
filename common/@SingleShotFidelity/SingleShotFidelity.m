@@ -99,7 +99,7 @@ classdef SingleShotFidelity < handle
                sourceParams = measSettings.(curSource);
                curFilter = MeasFilters.(sourceParams.filterType)(sourceParams);
                add_measurement(obj.experiment, curSource, curFilter);
-               if isa(curFilter, 'MeasFilters.RawStream')
+               if isa(curFilter, 'MeasFilters.RawStream') || isa(curFilter, 'MeasFilters.StreamSelector')
                    break;
                end
                curSource = sourceParams.dataSource;
