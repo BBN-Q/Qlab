@@ -24,5 +24,5 @@ for d in args.deltas:
 # just a pi pulse for scaling
 seqs += [[X(q), MEAS(q)]]
 
-fileNames = compile_to_hardware(seqs, fileName='APE/APE', nbrRepeats=1)
+fileNames = compile_to_hardware(seqs, fileName='APE/APE')
 # plot_pulse_files(fileNames)

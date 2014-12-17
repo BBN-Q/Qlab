@@ -214,7 +214,7 @@ classdef PulseCalibration < handle
                 switch class(obj.AWGs.(awgNames{awgct}))
                     case 'deviceDrivers.Tek5014'
                         filenames{awgct} = fullfile(pathAWG, [basename '-' awgNames{awgct}, '.awg']);
-                    case 'deviceDrivers.APS'
+                    case {'deviceDrivers.APS', 'APS2'}
                         filenames{awgct} = fullfile(pathAWG, [basename '-' awgNames{awgct}, '.h5']);
                     otherwise
                         error('Unknown AWG type.');

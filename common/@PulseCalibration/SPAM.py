@@ -21,5 +21,5 @@ for angle in angleShifts:
 # pi pulse for scaling
 seqs += [[X(q), MEAS(q)]]
 
-fileNames = compile_to_hardware(seqs, fileName='SPAM/SPAM', nbrRepeats=1)
+fileNames = compile_to_hardware(seqs, fileName='SPAM/SPAM')
 # plot_pulse_files(fileNames)
