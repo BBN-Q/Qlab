@@ -5,6 +5,7 @@ function data = cal_scale(varargin)
     % (data/plotGrab) - raw data set to calibrate or choose the "one", "top" or "bottom" to grab from current figure 
     % (numRepeats) - number of times calibration experiments are repeated (default: 2)
     
+    
     %Check if we have data in or whether we are grabbing from a plot
     if isnumeric(varargin{1})
         data = varargin{1};
@@ -65,7 +66,7 @@ function data = cal_scale(varargin)
             error('Unable to handle dimensions of data')
     end
     
-    if exist('axesH', 'var')
+    if exist('axesH', 'var') 
         xpts = xpts(1:end-2*numRepeats);
 
         % save axis labels and figure title
@@ -73,18 +74,20 @@ function data = cal_scale(varargin)
         ylab = get(get(axesH, 'YLabel'), 'String');
         figTitle = get(get(axesH, 'Title'), 'String');
 
-        % create the new plot
-        figure()
-        plot(xpts, data);
-        set(gca, 'YDir', 'normal');
-        if ~isempty(xlab)
-            xlabel(xlab)
-        end
-        if ~isempty(ylab)
-            ylabel(ylab)
-        end
-        if ~isempty(figTitle)
-            title(figTitle)
+        % create the new plot is doplots = 1
+        if getpref('plots','doplots')
+            figure()
+            plot(xpts, data);
+            set(gca, 'YDir', 'normal');
+            if ~isempty(xlab)
+                xlabel(xlab)
+            end
+            if ~isempty(ylab)
+                ylabel(ylab)
+            end
+            if ~isempty(figTitle)
+                title(figTitle)
+            end
         end
     end
     
