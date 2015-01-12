@@ -41,7 +41,7 @@ classdef (Sealed) BNC845 < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBor
         end
         
         function val = get.phase(obj)
-            val = str2double(obj.query('SOURCE:PHASE:ADJUST'));
+            val = str2double(obj.query('SOURCE:PHASE:ADJUST?'));
         end
         
         function val = get.output(obj)
