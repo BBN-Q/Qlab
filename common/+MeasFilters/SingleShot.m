@@ -75,7 +75,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 intGroundQData = cumsum(groundQData, 1);
                 intExcitedQData = cumsum(excitedQData, 1);
                 
-                %Loop through each intergration point; estimate the CDF and
+                %Loop through each integration point; estimate the CDF and
                 %then calculate best measurement fidelity
                 numTimePts = size(intGroundIData,1);
                 fidelities = zeros(numTimePts,1);
@@ -90,7 +90,19 @@ classdef SingleShot < MeasFilters.MeasFilter
                     fidelities(intPt) = 1-0.5*(1-0.5*(bins(2)-bins(1))*sum(abs(gPDF-ePDF)));
                 end
                 
-                [maxFidelity_I, intPt] = max(fidelities);
+                %reduce fidelities so that it doesn't integrate longer than
+                %necessary, DR 150112 
+                dfid = zeros(length(fidelities)/2);
+                dfid = diff(fidelities(1:2:end));
+                for kk=1:2:length(fidelities)
+                    if abs(dfid((kk+1)/2))<0.001 && fidelities(kk)>0.6  %set some threshold to prevent noise giving false steady state
+                        break
+                    end
+                end
+              
+                kk
+                
+                [maxFidelity_I, intPt] = max(fidelities(1:kk));
                 obj.bestIntegrationTime = intPt;
                 fprintf('Best integration time found at %d decimated points out of %d\n', intPt, numTimePts);
                 obj.pdfData.bins_I = linspace(min([intGroundIData(intPt,:), intExcitedIData(intPt,:)]), max([intGroundIData(intPt,:), intExcitedIData(intPt,:)]));
@@ -131,24 +143,26 @@ classdef SingleShot < MeasFilters.MeasFilter
 %                 fidelity = 2*sum(guessStates == prepStates)/size(allData,1) - 1 
 
                 %Fortunately, liblinear is great!
-                bestAccuracy = 0;
-                bestC = 0;
-                for c = logspace(0,2,5);
-                    accuracy = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -v 3 -q -s 0',c));
-                    if accuracy > bestAccuracy
-                        bestAccuracy = accuracy;
-                        bestC = c;
-                    end
-                end
-                model = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -q -s 0',bestC));
-                [predictedState, accuracy, ~] = predict(prepStates, sparse(double(allData)), model);
-                c = 0.95;
-                N = length(predictedState);
-                S = sum(predictedState == prepStates);
-                flo = betaincinv((1-c)/2.,S+1,N-S+1);
-                fup = betaincinv((1+c)/2.,S+1,N-S+1);
-                fprintf('Cross-validated logistic regression accuracy: %.2f\n', bestAccuracy);
-                fprintf('In-place logistic regression fidelity %.2f, (%.2f, %.2f).\n', accuracy(1), 100*flo, 100*fup);
+               
+% temporarily commented to speed up sweep 15/01/12               
+%                 bestAccuracy = 0;
+%                 bestC = 0;
+%                 for c = logspace(0,2,5);
+%                     accuracy = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -v 3 -q -s 0',c));
+%                     if accuracy > bestAccuracy
+%                         bestAccuracy = accuracy;
+%                         bestC = c;
+%                     end
+%                 end
+%                 model = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -q -s 0',bestC));
+%                 [predictedState, accuracy, ~] = predict(prepStates, sparse(double(allData)), model);
+%                 c = 0.95;
+%                 N = length(predictedState);
+%                 S = sum(predictedState == prepStates);
+%                 flo = betaincinv((1-c)/2.,S+1,N-S+1);
+%                 fup = betaincinv((1+c)/2.,S+1,N-S+1);
+%                 fprintf('Cross-validated logistic regression accuracy: %.2f\n', bestAccuracy);
+%                 fprintf('In-place logistic regression fidelity %.2f, (%.2f, %.2f).\n', accuracy(1), 100*flo, 100*fup);
 
             else
                 out = obj.pdfData.maxFidelity_I + 1j*obj.pdfData.maxFidelity_Q;
@@ -166,7 +180,8 @@ classdef SingleShot < MeasFilters.MeasFilter
             if obj.analysed
                 clf(figH);
                 axes1 = subplot(2,1,1, 'Parent', figH);
-                semilogy(axes1, obj.pdfData.bins_I, obj.pdfData.gPDF_I, 'b');
+%                 semilogy(axes1, obj.pdfData.bins_I, obj.pdfData.gPDF_I, 'b');
+                plot(axes1, obj.pdfData.bins_I, obj.pdfData.gPDF_I, 'b');
                 hold(axes1, 'on');
                 semilogy(axes1, obj.pdfData.bins_I, obj.pdfData.g_gaussPDF_I, 'b--')
                 semilogy(axes1, obj.pdfData.bins_I, obj.pdfData.ePDF_I, 'r');
