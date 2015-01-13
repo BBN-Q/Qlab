@@ -56,12 +56,17 @@ classdef SingleShotFidelity < handle
                 instr = InstrumentFactory(instrument{1}, instrSettings.(instrument{1}));
                 %If it is an AWG, point it at the correct file
                 if ExpManager.is_AWG(instr)
-                    if isa(instr, 'deviceDrivers.APS')
+                    if isa(instr, 'deviceDrivers.APS') || isa(instr, 'APS2')
                         ext = 'h5';
                     else
                         ext = 'awg';
                     end
-                    instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-' instrument{1} '.' ext]);
+                %To get a different sequence loaded into the APS1 when used as a slave for the msm't only.
+                    if isa(instr,'deviceDrivers.APS') && instrSettings.(instrument{1}).isMaster == 0
+                        instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), 'Reset', ['MeasReset-' instrument{1} '.' ext]);
+                    else
+                        instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-' instrument{1} '.' ext]);
+                    end
                 end
                 if ExpManager.is_scope(instr)
                     scopeName = instrument{1};
