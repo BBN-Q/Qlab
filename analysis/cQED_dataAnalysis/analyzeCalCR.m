@@ -30,6 +30,11 @@ optphase = xpoints(indmax);
 fprintf('Phase index for maximum contrast = %f\n', indmax)
 fprintf('Optimum phase = %f\n', optphase)
 
+figure(getpref('plots','CRHandle'));
+plot(xpoints, data0, 'b.', xpoints, data1, 'r.', xpoints, yfit0, 'b-', xpoints, yfit1, 'r-');
+legend('ctrlQ in |0>','ctrlQ in |1>');
+ylim([-1,1]); ylabel('<Z>'); xlabel ('Phase (deg)');
+
 %update phase in CR pulse parameters
 warning('off', 'json:fieldNameConflict');
 channelLib = json.read(getpref('qlab','ChannelParamsFile'));
