@@ -18,7 +18,7 @@ function [cost, J] = pi2ObjectiveFunction(obj, x, direction)
     if ~obj.testMode
         obj.channelParams.(chan) = offset;
         % load sequence
-        obj.loadSequence(filenames, 2);
+        obj.loadSequence(filenames, 1);  
     end
     
     % measure
