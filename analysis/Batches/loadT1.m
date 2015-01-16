@@ -1,4 +1,4 @@
-setpref('plots','doplots',0) %disable plots
+%load T1 in multiple, consecutive files
 
 numcal = 4; %number of normalization points
 datestr = '150108';
@@ -25,11 +25,11 @@ end
 
 xaxis = startnum:stopnum;
 figure()
-errorbar(xaxis,T1/1000,dT1/1000,'.-','MarkerSize',15);
+errorbar(xaxis,T1/1000,dT1/1000,'.-','MarkerSize',12);
 ylim([0,inf]);
 xlim([startnum,stopnum]);
 xlabel('File number');
 ylabel('T1 (us)');
 annotation('textbox','string',datestr)
 
-fprintf('Average T1 = %.1f us', mean(T1/1000));
+fprintf('Average T1 = %.1f us\n', mean(T1/1000));

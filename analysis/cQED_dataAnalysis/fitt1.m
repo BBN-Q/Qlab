@@ -11,10 +11,8 @@ if nargin < 2
     % save figure title
     plotTitle = get(get(gca, 'Title'), 'String');
 else
-    if getpref('plots','doplots')
     h = figure;
     plotTitle = '';
-    end
 end
 xdata = xdata(:);
 y = ydata(:);
@@ -46,29 +44,29 @@ t1error = (ci(2,2)-ci(2,1))/2;
 %fprintf('Covariancdae matrix:\n');
 %disp(cov)
 
-if getpref('plots','doplots')
-    figure(h)
-    clf
-    subplot(3,1,2:3)
-    plot(xdata/1e3,y,'o')
-    hold on
-    plot(xdata/1e3,t1f(beta,xdata),'-r')
-    xlabel('Time [\mus]')
-    ylabel('<\sigma_z>')
-    hold off
-    %plot residuals
-    subplot(3,1,1)
-    bar(xdata/1e3, r)
-    axis tight
-    ylabel('<\sigma_z>')
-    xlabel('Time [\mus]')
-    title(plotTitle)
-    
-    % annotate the graph with T_1 result
-    subplot(3,1,2:3)
-    text(xdata(end-1)/1e3, 0.9*max(y), sprintf('T_1 = %.1f +/- %.1f us', t1/1e3, t1error/1e3), ...
-        'HorizontalAlignment', 'right', 'FontSize',12);
-end
+
+figure(h)
+clf
+subplot(3,1,2:3)
+plot(xdata/1e3,y,'o')
+hold on
+plot(xdata/1e3,t1f(beta,xdata),'-r')
+xlabel('Time [\mus]')
+ylabel('<\sigma_z>')
+hold off
+%plot residuals
+subplot(3,1,1)
+bar(xdata/1e3, r)
+axis tight
+ylabel('<\sigma_z>')
+xlabel('Time [\mus]')
+title(plotTitle)
+
+% annotate the graph with T_1 result
+subplot(3,1,2:3)
+text(xdata(end-1)/1e3, 0.9*max(y), sprintf('T_1 = %.1f +/- %.1f us', t1/1e3, t1error/1e3), ...
+    'HorizontalAlignment', 'right', 'FontSize',12);
+
 % if you want confidence bands, use something like:
 % ci = nlparci(beta,r,j);
 % [ypred,delta] = nlpredci(rabif,x,beta,r,j);

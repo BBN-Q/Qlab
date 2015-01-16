@@ -1,4 +1,4 @@
-function analyzeCalCR(caltype, CRdata,channel)
+function analyzeCalCR(caltype, CRdata,channel,fighandle)
 %simple fit function to get optimum length/phase in a CR calibration
 %and set in pulse params
 
@@ -55,10 +55,17 @@ else
     return
 end
 
-figure(getpref('plots','CRHandle'));
-plot(xpoints, data0, 'b.', xpoints, data1, 'r.', xpoints, yfit0, 'b-', xpoints, yfit1, 'r-');
+figure(fighandle);  %I need to find a consistent way to deal with plots, DR
+plot(xpoints, data0, 'b.', xpoints, data1, 'r.', xpoints, yfit0, 'b-', xpoints, yfit1, 'r-','MarkerSize',16);
 legend('ctrlQ in |0>','ctrlQ in |1>');
-ylim([-1,1]); ylabel('<Z>'); xlabel ('Phase (deg)');
+ylim([-1,1]); ylabel('<Z>'); 
+
+if(caltype==1)
+    xlabel ('CR flat pulse length (ns)');
+else
+    xlabel ('Phase (deg)');
+end
+title(strrep(CRdata.filename, '_', '\_'));
 
 %update length/phase in CR pulse parameters
 warning('off', 'json:fieldNameConflict');
