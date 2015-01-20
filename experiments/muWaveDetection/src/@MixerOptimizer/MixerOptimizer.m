@@ -250,7 +250,7 @@ classdef MixerOptimizer < handle
                     obj.awg.load_waveform(qChan, qwf);
                     
                     obj.awg.set_trigger_source('internal');
-                    obj.awg.set_run_mode(obj.awg.CW_WAVEFORM);
+                    obj.awg.set_run_mode('CW_WAVEFORM');
                     
                     for ct = 1:2
                         obj.awg.set_channel_enabled(ct, true);
