@@ -50,17 +50,17 @@ function data = cal_scale(varargin)
         case 1
             zeroCal = mean(data(end-2*numRepeats+1:end-numRepeats));
             piCal = mean(data(end-numRepeats+1:end));
-            scaleFactor = (piCal - zeroCal)/2;
+            scaleFactor = -(piCal - zeroCal)/2;
             data = data(1:end-2*numRepeats);
-            data = (data - zeroCal)./scaleFactor - 1;
+            data = (data - zeroCal)./scaleFactor + 1;
     
         case 2
             zeroCal = mean(data(:, end-2*numRepeats+1:end-numRepeats), 2);
             piCal = mean(data(:, end-numRepeats+1:end), 2);
-            scaleFactor = (piCal - zeroCal)/2;
+            scaleFactor = -(piCal - zeroCal)/2;
 
             data = data(:, 1:end-2*numRepeats);
-            data = bsxfun(@rdivide, bsxfun(@minus, data, zeroCal), scaleFactor) - 1;
+            data = bsxfun(@rdivide, bsxfun(@minus, data, zeroCal), scaleFactor) + 1;
             
         otherwise
             error('Unable to handle dimensions of data')
@@ -73,22 +73,20 @@ function data = cal_scale(varargin)
         xlab = get(get(axesH, 'XLabel'), 'String');
         ylab = get(get(axesH, 'YLabel'), 'String');
         figTitle = get(get(axesH, 'Title'), 'String');
-
-        % create the new plot is doplots = 1
-        if getpref('plots','doplots')
-            figure()
-            plot(xpts, data);
-            set(gca, 'YDir', 'normal');
-            if ~isempty(xlab)
-                xlabel(xlab)
-            end
-            if ~isempty(ylab)
-                ylabel(ylab)
-            end
-            if ~isempty(figTitle)
-                title(figTitle)
-            end
+  
+        figure()
+        plot(xpts, data,'.-');
+        set(gca, 'YDir', 'normal');
+        if ~isempty(xlab)
+            xlabel(xlab)
         end
+        if ~isempty(ylab)
+            ylabel(ylab)
+        end
+        if ~isempty(figTitle)
+            title(figTitle)
+        end
+       
     end
     
 end
