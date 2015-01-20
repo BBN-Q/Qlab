@@ -79,6 +79,14 @@ classdef (Sealed) BNC845 < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBor
         end
         
         function obj = set.output(obj, value)
+            % test if value is a logical
+            if islogical(value)
+                if value
+                    value = '1';
+                else
+                    value = '0';
+                end
+            end
             if isnumeric(value)
                 value = num2str(value);
             end
@@ -97,6 +105,14 @@ classdef (Sealed) BNC845 < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBor
         end
         
         function obj = set.alc(obj, value)
+            % test if value is a logical
+            if islogical(value)
+                if value
+                    value = '1';
+                else
+                    value = '0';
+                end
+            end
             if isnumeric(value)
                 value = num2str(value);
             end
@@ -110,6 +126,14 @@ classdef (Sealed) BNC845 < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBor
         end
         
         function obj = set.pulse(obj, value)
+            % test if value is a logical
+            if islogical(value)
+                if value
+                    value = '1';
+                else
+                    value = '0';
+                end
+            end
             if isnumeric(value)
                 value = num2str(value);
             end
