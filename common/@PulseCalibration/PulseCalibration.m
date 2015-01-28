@@ -153,16 +153,18 @@ classdef PulseCalibration < handle
             
             % add the appropriate measurement stack
             measSettings = expSettings.measurements.(obj.settings.measurement);
-            curSource = obj.settings.measurement;
+            measName = obj.settings.measurement;
             curFilter = MeasFilters.(measSettings.filterType)(measSettings);
             while (true)
-               add_measurement(obj.experiment, curSource, curFilter);
+               %add the current filter
+               add_measurement(obj.experiment, measName, curFilter);
                if isa(curFilter, 'MeasFilters.RawStream') || isa(curFilter, 'MeasFilters.StreamSelector')
                    break;
                end
-               sourceParams = expSettings.measurements.(curSource);
-               curFilter = MeasFilters.(sourceParams.filterType)(sourceParams);
-               curSource = sourceParams.dataSource;
+               %setup for the data source filter
+               measName = measSettings.dataSource;
+               measSettings = expSettings.measurements.(measName);
+               curFilter = MeasFilters.(measSettings.filterType)(measSettings);
             end
 
             % intialize the ExpManager
