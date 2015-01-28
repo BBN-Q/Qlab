@@ -59,10 +59,8 @@ classdef DigitalDemod < MeasFilters.MeasFilter
             obj.nBandwidth = obj.nBandwidth * obj.decimFactor1;
             obj.nIFfreq = obj.nIFfreq * obj.decimFactor1;
             
-            
             obj.decimFactor2 = settings.decimFactor2;
             obj.nBandwidth = obj.nBandwidth * obj.decimFactor2;
-            obj.nIFfreq = obj.nIFfreq * obj.decimFactor2;
             if ( obj.nBandwidth < 0.05 )
                 warning('Insufficient first and second stage decimation. IIR filter will be unstable.');
             end
