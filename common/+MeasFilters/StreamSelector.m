@@ -33,7 +33,7 @@ classdef StreamSelector < MeasFilters.MeasFilter
             streamVec = eval(strrep(strrep(settings.stream, '(', '['), ')', ']'));
             % first index is the physical channel
             obj.channel = streamVec(1);
-            obj.stream = streamVec;
+            obj.stream = struct('a', streamVec(1), 'b', streamVec(2), 'c', streamVec(3));
             obj.saveRecords = settings.saveRecords;
             if obj.saveRecords
                 obj.fileHandleReal = fopen([settings.recordsFilePath, '.real'], 'wb');
@@ -44,7 +44,8 @@ classdef StreamSelector < MeasFilters.MeasFilter
         function apply(obj, src, ~)
             
             %Pull the raw stream from the digitizer
-            obj.latestData = src.transfer_stream(obj.stream(1), obj.stream(2), obj.stream(3));
+            obj.latestData = src.transfer_stream(obj.stream);
+            obj.accumulatedVar = src.transfer_stream_variance(obj.stream);
             
 %           %If we have a file to save to then do so
             if obj.saveRecords
@@ -72,6 +73,13 @@ classdef StreamSelector < MeasFilters.MeasFilter
         
         function out = get_data(obj)
             out = obj.accumulatedData;
+        end
+
+        function out = get_var(obj)
+            out = struct();
+            out.realvar = obj.accumulatedVar.real;
+            out.imagvar = obj.accumulatedVar.imag;
+            out.prodvar = obj.accumulatedVar.prod;
         end
     end
     
