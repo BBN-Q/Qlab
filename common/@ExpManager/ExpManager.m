@@ -110,9 +110,11 @@ classdef ExpManager < handle
             %Rearrange the AWG list to put the Master first
             obj.AWGs([1, masterAWGIndex]) = obj.AWGs([masterAWGIndex, 1]);
             
-            %Stop all the AWGs
+            %Stop all the AWGs if not in CWMode
             if(~obj.CWMode)
                 cellfun(@(awg) stop(awg), obj.AWGs);
+            else
+                cellfun(@(awg) run(awg), obj.AWGs);
             end
 
             if ~isempty(obj.dataFileHandler)
