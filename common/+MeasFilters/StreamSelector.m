@@ -18,7 +18,7 @@
 classdef StreamSelector < MeasFilters.MeasFilter
     
     properties
-        stream
+        stream=struct()
         saveRecords
         fileHandleReal
         fileHandleImag
@@ -33,8 +33,12 @@ classdef StreamSelector < MeasFilters.MeasFilter
             tokens = regexp(settings.stream, '(\([\d\w,]+\))', 'tokens');
             for ct = 1:length(tokens)
                 % convert round brackets to square brackets so that it becomes a vector
-                streamVec = eval(strrep(strrep(tokens{ct}, '(', '['), ')', ']'));
-                obj.stream(ct) = struct('a', streamVec(1), 'b', streamVec(2), 'c', streamVec(3));
+                streamVec = eval(strrep(strrep(tokens{ct}{1}, '(', '['), ')', ']'));
+                if ct==1
+                    obj.stream = struct('a', streamVec(1), 'b', streamVec(2), 'c', streamVec(3));
+                else
+                    obj.stream(ct) = struct('a', streamVec(1), 'b', streamVec(2), 'c', streamVec(3));
+                end
             end
 
             obj.saveRecords = settings.saveRecords;
