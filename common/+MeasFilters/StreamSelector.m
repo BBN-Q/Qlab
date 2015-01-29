@@ -18,8 +18,7 @@
 classdef StreamSelector < MeasFilters.MeasFilter
     
     properties
-        channel
-        stream
+        stream=struct()
         saveRecords
         fileHandleReal
         fileHandleImag
@@ -29,11 +28,19 @@ classdef StreamSelector < MeasFilters.MeasFilter
     methods
         function obj = StreamSelector(settings)
             obj = obj@MeasFilters.MeasFilter(settings);
-            % convert round brackets to square brackets
-            streamVec = eval(strrep(strrep(settings.stream, '(', '['), ')', ']'));
-            % first index is the physical channel
-            obj.channel = streamVec(1);
-            obj.stream = struct('a', streamVec(1), 'b', streamVec(2), 'c', streamVec(3));
+            
+            % stream property is a list of stream tuples of the form: (a,b,c), (u,v,w), ...
+            tokens = regexp(settings.stream, '(\([\d\w,]+\))', 'tokens');
+            for ct = 1:length(tokens)
+                % convert round brackets to square brackets so that it becomes a vector
+                streamVec = eval(strrep(strrep(tokens{ct}{1}, '(', '['), ')', ']'));
+                if ct==1
+                    obj.stream = struct('a', streamVec(1), 'b', streamVec(2), 'c', streamVec(3));
+                else
+                    obj.stream(ct) = struct('a', streamVec(1), 'b', streamVec(2), 'c', streamVec(3));
+                end
+            end
+
             obj.saveRecords = settings.saveRecords;
             if obj.saveRecords
                 obj.fileHandleReal = fopen([settings.recordsFilePath, '.real'], 'wb');
@@ -47,7 +54,7 @@ classdef StreamSelector < MeasFilters.MeasFilter
             obj.latestData = src.transfer_stream(obj.stream);
             obj.accumulatedVar = src.transfer_stream_variance(obj.stream);
             
-%           %If we have a file to save to then do so
+            %If we have a file to save to then do so
             if obj.saveRecords
                 if ~obj.headerWritten
                     %Write the first three dimensions of the signal:
