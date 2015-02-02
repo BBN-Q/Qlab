@@ -92,17 +92,15 @@ classdef SingleShot < MeasFilters.MeasFilter
                 
                 %reduce fidelities so that it doesn't integrate longer than
                 %necessary, DR 150112 
-                dfid = zeros(length(fidelities)/2);
-                dfid = diff(fidelities(1:2:end));
-                for kk=1:2:length(fidelities)
-                    if abs(dfid((kk+1)/2))<0.001 && fidelities(kk)>0.6  %set some threshold to prevent noise giving false steady state
-                        break
-                    end
-                end
-              
-                kk
-                
-                [maxFidelity_I, intPt] = max(fidelities(1:kk));
+%                 dfid = diff(fidelities(1:2:end));
+%                 for kk=1:2:length(fidelities)-2
+%                     if abs(dfid((kk+1)/2))<0.001 && fidelities(kk)>0.6  %set some threshold to prevent noise giving false steady state
+%                         break
+%                     end
+%                 end
+%                 
+%                 [maxFidelity_I, intPt] = max(fidelities(1:kk));
+                [maxFidelity_I, intPt] = max(fidelities);
                 obj.bestIntegrationTime = intPt;
                 fprintf('Best integration time found at %d decimated points out of %d\n', intPt, numTimePts);
                 obj.pdfData.bins_I = linspace(min([intGroundIData(intPt,:), intExcitedIData(intPt,:)]), max([intGroundIData(intPt,:), intExcitedIData(intPt,:)]));
@@ -121,7 +119,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 obj.pdfData.bins_Q = linspace(min([intGroundQData(intPt,:), intExcitedQData(intPt,:)]), max([intGroundQData(intPt,:), intExcitedQData(intPt,:)]));
                 obj.pdfData.gPDF_Q = ksdensity(intGroundQData(intPt,:), obj.pdfData.bins_Q);
                 obj.pdfData.ePDF_Q = ksdensity(intExcitedQData(intPt,:), obj.pdfData.bins_Q);
-                obj.pdfData.maxFidelity_Q = 0.5*(obj.pdfData.bins_Q(2)-obj.pdfData.bins_Q(1))*sum(abs(obj.pdfData.gPDF_Q-obj.pdfData.ePDF_Q));
+                obj.pdfData.maxFidelity_Q = 1-0.5*(1-0.5*(obj.pdfData.bins_Q(2)-obj.pdfData.bins_Q(1))*sum(abs(obj.pdfData.gPDF_Q-obj.pdfData.ePDF_Q)));
                 [mu, sigma] = normfit(intGroundQData(intPt,:));
                 obj.pdfData.g_gaussPDF_Q = normpdf(obj.pdfData.bins_Q, mu, sigma);
                 [mu, sigma] = normfit(intExcitedQData(intPt,:));
