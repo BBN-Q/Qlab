@@ -58,7 +58,7 @@ classdef AWGChannel < sweeps.Sweep
         function stepAmplitude(obj, index)
             for ch = obj.channelList
                 switch class(obj.Instr)
-                    case {'TekAWG', 'deviceDrivers.APS'}
+                    case {'TekAWG', 'deviceDrivers.APS', 'APS'}
                         obj.Instr.setAmplitude(ch, obj.points(index));
                     case 'APS2'
                         stop(obj.Instr);
@@ -73,7 +73,7 @@ classdef AWGChannel < sweeps.Sweep
         function stepOffset(obj, index)
             for ch = obj.channelList
                 switch class(obj.Instr)
-                    case {'TekAWG', 'deviceDrivers.APS'}
+                    case {'TekAWG', 'deviceDrivers.APS', 'APS'}
                         obj.Instr.setOffset(ch, obj.points(index));
                     case 'APS2'
                         obj.Instr.set_channel_offset(ch, obj.points(index));

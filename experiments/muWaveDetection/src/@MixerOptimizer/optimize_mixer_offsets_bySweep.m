@@ -118,7 +118,7 @@ drawnow()
                 obj.awg.(['chan_' num2str(awg_I_channel)]).offset = vertex.a;
                 obj.awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
                 obj.awg.operationComplete();
-            case 'deviceDrivers.APS'
+            case {'deviceDrivers.APS', 'APS'}
                 obj.awg.setOffset(awg_I_channel, vertex.a);
                 obj.awg.setOffset(awg_Q_channel, vertex.b);
             case 'APS2'
