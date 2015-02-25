@@ -60,7 +60,7 @@ classdef HP71000 < deviceDrivers.lib.GPIB
 		   
 		   center_freq = obj.centerFreq;
 		   span = obj.span;
-		   xpts = linspace(center_freq - span/2, center_freq + span/2, length(ypts));
+		   xpts = linspace(center_freq*1e9 - span/2, center_freq*1e9 + span/2, length(ypts));
        end
        
        % instrument meta-setter
