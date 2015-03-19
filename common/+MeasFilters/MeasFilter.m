@@ -22,6 +22,7 @@
 classdef MeasFilter < handle
     
     properties
+        label
         dataSource
         latestData
         accumulatedData
@@ -47,7 +48,8 @@ classdef MeasFilter < handle
     end
     
     methods
-        function obj = MeasFilter(settings)
+        function obj = MeasFilter(label, settings)
+            obj.label = label;
             % MeasFilter(settings)
             if isfield(settings, 'plotScope')
                 obj.plotScope = settings.plotScope;

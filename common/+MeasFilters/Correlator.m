@@ -24,23 +24,37 @@ classdef Correlator < MeasFilters.MeasFilter
    
     properties
         filters = {}
+        data
     end
     
     methods
-        function obj = Correlator(varargin)
-            obj = obj@MeasFilters.MeasFilter(struct('channel', []));
+        function obj = Correlator(label, settings, varargin)
+            obj = obj@MeasFilters.MeasFilter(label, settings);
             obj.filters = varargin;
+            obj.data = cell2struct(cell(length(obj.filters),1), cellfun(@(x) x.label, obj.filters, 'UniformOutput', false));
         end
         
-        function out = apply(obj, ~)
-            filterData = cellfun(@(x) x.latestData, obj.filters, 'UniformOutput', false);
+        function apply(obj, src, ~)
+            %queue up latest src data
             % stack latestData's and convert to array
-            filterData = cat(ndims(filterData{1})+1, filterData{:});
-            % take the product along the stacked dimension
-            obj.latestData = prod(filterData, ndims(filterData));
-
-            obj.accumulate();
-            out = obj.latestData;
+            obj.data.(src.label) = cat(4, obj.data.(src.label), src.latestData);
+            
+            minSize = min(structfun(@(x) (ndims(x) > 2)*size(x,4), obj.data));
+            
+            if minSize > 0
+                % take the product along the stacked dimension
+                sizes = size(obj.data.(obj.filters{1}.label));
+                sizes(end) = minSize;
+                sizes = [sizes, length(obj.filters)];
+                filterData = zeros(sizes);
+                for ct = 1:length(obj.filters)
+                    filterData(:,:,:,:,ct) = obj.data.(obj.filters{ct}.label)(:,:,:,1:minSize);
+                    obj.data.(obj.filters{ct}.label)(:,:,:,1:minSize) = [];
+                end
+                obj.latestData = prod(filterData, ndims(filterData));
+                obj.accumulate();
+                notify(obj, 'DataReady');
+            end
         end
     end
 end

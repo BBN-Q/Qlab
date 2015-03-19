@@ -27,8 +27,8 @@ classdef RawStream < MeasFilters.MeasFilter
     end
     
     methods
-        function obj = RawStream(settings)
-            obj = obj@MeasFilters.MeasFilter(settings);
+        function obj = RawStream(label, settings)
+            obj = obj@MeasFilters.MeasFilter(label, settings);
             obj.channel = str2double(settings.channel);
             obj.saved = false; %until we figure out a new data format then we don't save the raw streams
             

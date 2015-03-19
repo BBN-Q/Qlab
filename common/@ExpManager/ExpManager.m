@@ -146,14 +146,21 @@ classdef ExpManager < handle
         
         function connect_meas_to_source(obj, meas)
             instrNames = fieldnames(obj.instruments);
-            %First look for an instrument (scope)
-            if (~isempty(find(strcmp(meas.dataSource, instrNames))))
-                obj.listeners{end+1} = addlistener(obj.instruments.(meas.dataSource), 'DataReady', @meas.apply);          
-            %Otherwise assume another measurement
-            else
-                obj.listeners{end+1} = addlistener(obj.measurements.(meas.dataSource), 'DataReady', @meas.apply);
+            function connect_to_source(meas, src)
+                %First look for an instrument (scope)
+                if (~isempty(find(strcmp(src, instrNames))))
+                    obj.listeners{end+1} = addlistener(obj.instruments.(src), 'DataReady', @meas.apply);          
+                %Otherwise assume another measurement
+                else
+                    obj.listeners{end+1} = addlistener(obj.measurements.(src), 'DataReady', @meas.apply);
+                end
             end
-                
+            %Correlators have mulitple sources
+            if isa(meas, 'MeasFilters.Correlator')
+                cellfun(@(x) connect_to_source(meas, x), strsplit(meas.dataSource, ','))
+            else
+                connect_to_source(meas, meas.dataSource);
+            end
         end
         
         %Runner

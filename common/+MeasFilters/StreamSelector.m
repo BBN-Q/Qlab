@@ -26,8 +26,8 @@ classdef StreamSelector < MeasFilters.MeasFilter
     end
     
     methods
-        function obj = StreamSelector(settings)
-            obj = obj@MeasFilters.MeasFilter(settings);
+        function obj = StreamSelector(label, settings)
+            obj = obj@MeasFilters.MeasFilter(label, settings);
             
             % stream property is a list of stream tuples of the form: (a,b,c), (u,v,w), ...
             tokens = regexp(settings.stream, '(\([\d\w,]+\))', 'tokens');

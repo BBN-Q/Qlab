@@ -56,17 +56,17 @@ classdef SingleShotFidelity < handle
                 instr = InstrumentFactory(instrument{1}, instrSettings.(instrument{1}));
                 %If it is an AWG, point it at the correct file
                 if ExpManager.is_AWG(instr)
-                    if isa(instr, 'deviceDrivers.APS') || isa(instr, 'APS2')
+                    if isa(instr, 'deviceDrivers.APS') || isa(instr, 'APS2') || isa(instr, 'APS')
                         ext = 'h5';
                     else
                         ext = 'awg';
                     end
                 %To get a different sequence loaded into the APS1 when used as a slave for the msm't only.
-                    if isa(instr,'deviceDrivers.APS') && instrSettings.(instrument{1}).isMaster == 0
-                        instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), 'Reset', ['MeasReset-' instrument{1} '.' ext]);
-                    else
+                    %if isa(instr,'deviceDrivers.APS') && instrSettings.(instrument{1}).isMaster == 0
+                    %    instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), 'Reset', ['MeasReset-' instrument{1} '.' ext]);
+                    %else
                         instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-' instrument{1} '.' ext]);
-                    end
+                    %end
                 end
                 if ExpManager.is_scope(instr)
                     scopeName = instrument{1};
@@ -98,11 +98,11 @@ classdef SingleShotFidelity < handle
             % add single-shot measurement filter
             measSettings = expSettings.measurements;
             add_measurement(obj.experiment, 'SingleShot',...
-                MeasFilters.SingleShot(struct('dataSource', obj.settings.dataSource, 'plotMode', 'real/imag', 'plotScope', true)));
+                MeasFilters.SingleShot('SingleShot', struct('dataSource', obj.settings.dataSource, 'plotMode', 'real/imag', 'plotScope', true)));
             curSource = obj.settings.dataSource;
             while (true)
                sourceParams = measSettings.(curSource);
-               curFilter = MeasFilters.(sourceParams.filterType)(sourceParams);
+               curFilter = MeasFilters.(sourceParams.filterType)(curSource, sourceParams);
                add_measurement(obj.experiment, curSource, curFilter);
                if isa(curFilter, 'MeasFilters.RawStream') || isa(curFilter, 'MeasFilters.StreamSelector')
                    break;

@@ -27,8 +27,8 @@ classdef SingleShot < MeasFilters.MeasFilter
     end
     
     methods
-        function obj = SingleShot(settings)
-            obj = obj@MeasFilters.MeasFilter(settings);
+        function obj = SingleShot(label, settings)
+            obj = obj@MeasFilters.MeasFilter(label, settings);
         end
         
         function out = apply(obj, src, ~)

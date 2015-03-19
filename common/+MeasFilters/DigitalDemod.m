@@ -34,8 +34,8 @@ classdef DigitalDemod < MeasFilters.MeasFilter
     end
     
     methods
-        function obj = DigitalDemod(settings)
-            obj = obj@MeasFilters.MeasFilter(settings);
+        function obj = DigitalDemod(label, settings)
+            obj = obj@MeasFilters.MeasFilter(label, settings);
             obj.saved = false; %until we figure out a new data format then we don't save the raw streams
             
             obj.saveRecords = settings.saveRecords;

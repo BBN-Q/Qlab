@@ -22,8 +22,8 @@ classdef KernelIntegration < MeasFilters.MeasFilter
     end
     
     methods
-        function obj = KernelIntegration(settings)
-            obj = obj@MeasFilters.MeasFilter(settings);
+        function obj = KernelIntegration(label, settings)
+            obj = obj@MeasFilters.MeasFilter(label, settings);
             %decode kernel
             %decode base64 then cast to byte array and then to float64
             %array
