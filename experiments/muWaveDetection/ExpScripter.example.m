@@ -6,7 +6,7 @@ exp = ExpManager();
 deviceName = 'IBM_PhaseII';
 exp.dataFileHandler = HDF5DataHandler(DataNamer.get_data_filename(deviceName, expName));
 
-expSettings = jsonlab.loadjson(getpref('qlab', 'CurScripterFile'));
+expSettings = json.read(getpref('qlab', 'CurScripterFile'));
 exp.dataFileHeader = expSettings;
 exp.CWMode = expSettings.CWMode;
 instrSettings = expSettings.instruments;
