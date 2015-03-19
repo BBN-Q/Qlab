@@ -8,7 +8,7 @@ function analyzeCalCR(caltype, CRdata,channel, varargin)
 
 %channel: channel with the target data
 
-CRpulsename = 'CR12';
+CRpulsename = 'CR';
 
 data = real(CRdata.data{channel});   
 xpoints = CRdata.xpoints{channel}(1:(length(data)-8)/2);
@@ -28,8 +28,8 @@ yfit0 = sinf(beta0,xpoints);
 yfit1 = sinf(beta1,xpoints);
 
 if(caltype==1) 
-    yfit0c = yfit0(1:round(beta0(2)/2/(xpoints(2)-xpoints(1)))); %select the first half period 
-    yfit1c = yfit1(1:round(beta1(2)/2/(xpoints(2)-xpoints(1))));
+    yfit0c = yfit0(1:min(round(abs(beta0(2))/2/(xpoints(2)-xpoints(1))),end)); %select the first half period or less
+    yfit1c = yfit1(1:min(round(abs(beta1(2))/2/(xpoints(2)-xpoints(1))),end));
     [~, indmin0] = min(abs(yfit0c(:)));  %min returns the index of the first zero crossing
     [~, indmin1] = min(abs(yfit1c(:)));  %min returns the index of the first zero crossing
     optlen = mean([xpoints(indmin0),xpoints(indmin1)]);
