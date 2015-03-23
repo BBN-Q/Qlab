@@ -36,7 +36,7 @@ for meas = measNames'
         correlators{end+1} = measName;
     else
         %Otherwise load it and keep a reference to it
-        measFilters.(measName) = MeasFilters.(params.filterType)(params);
+        measFilters.(measName) = MeasFilters.(params.filterType)(measName,params);
         add_measurement(exp, measName, measFilters.(measName));
     end
 end
