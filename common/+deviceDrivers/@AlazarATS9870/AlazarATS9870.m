@@ -5,24 +5,37 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
     % Code started: 29 November 2011
     
     properties (Access = public)
-        
-        model_number = 'ATS9870';
-        
-        %Location of the Matlab include files with the SDK
-        includeDir = getpref('qlab','AlazarDir','C:\AlazarTech\ATS-SDK\6.0.3\Samples_MATLAB\Include');
-        
-        %Dictionary of defined variables
-        defs = containers.Map()
-        
         %Assume for now we have only one board in the computer so hardcode
         %the system and board identifiers
         systemId = 1
         address = 1
         name = '';
         
+        %The single-shot or averaged data (depending on the acquireMode)
+        data
+        
+        %Acquire mode controls whether we return single-shot results or
+        %averaged data
+        acquireMode = 'averager';
+        
+        %How long to wait for a buffer to fill (seconds)
+        timeOut = 30;
+        
+        %All the settings for the device
+        settings
+        
+        %Vertical scale
+        verticalScale
+    end
+    
+    properties (Access = private)
         %Handle to the board for the C API
         boardHandle
         
+        %Dictionary of defined enums
+        defs = containers.Map()
+        
+        %Buffer properties
         %Rough estimate of the buffer size in bytes
         %Notes from Alazar ATS_Average_Sample_0.0.4.pdf
         % Each DMA buffer should be between about 1MB and 16MB to allow for efficient DMA
@@ -39,27 +52,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         buffers = struct('guessBufferSize',4*(2^20), 'bufferSize', 0, 'maxBufferSize', 0, 'recordsPerBuffer', 0,...
             'roundRobinsPerBuffer', 0, 'numBuffers', 0, 'bufferPtrs',cell(1));
         
-        %The single-shot or averaged data (depending on the acquireMode)
-        data
-        
-        %Acquire mode controls whether we return single-shot results or
-        %averaged data
-        acquireMode = 'averager';
-        
-        %The size of the memory of the card
-        onBoardMemory = 256e6;
-        
-        %How long to wait for a buffer to fill (seconds)
-        timeOut = 30;
-        
-        %All the settings for the device
-        settings
-        
-        %Vertical scale
-        verticalScale
-    end
-    
-    properties (Access = private)
+        %variables used by process_buffer
         initializeProcessing
         done
         processingTimer
@@ -74,6 +67,16 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         
         averager;  
         %ditherRange %needs to be implemented in software
+    end
+    
+    properties (Constant = true)
+        model_number = 'ATS9870';
+        
+        %Location of the Matlab include files with the SDK
+        includeDir = getpref('qlab','AlazarDir','C:\AlazarTech\ATS-SDK\6.0.3\Samples_MATLAB\Include');
+        
+        % The size of the memory of the card
+        onBoardMemory = 256e6;
     end
     
     events
@@ -111,7 +114,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %Parse the definition file and return everything in a structure
             %This is a bit of a hack but I want to leave the defs file
             %untounched so we can easily update the SDK.
-            %Basically we call the scipt and then save every variable in a
+            %Basically we call the script and then save every variable in a
             %dictionary
             AlazarDefs
             defNames = who();
