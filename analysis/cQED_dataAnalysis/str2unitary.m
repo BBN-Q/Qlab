@@ -70,8 +70,6 @@ switch strIn
         Uout =  [1,0,0,0;0,1,0,0;0,0,-1i,0;0,0,0,1i];
     case 'X90ZX90'
         Uout = [1,0,0,0;0,0,0,-i;0,0,1,0;0,-i,0,0];
-    case 'ZX90'
-        Uout = [1 0 i 0;0 1 0 -i;i 0 1 0;0 -i 0 1]/sqrt(2);
     otherwise
         error('Unrecognized gate');
 end
