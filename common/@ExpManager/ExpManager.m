@@ -265,15 +265,15 @@ classdef ExpManager < handle
             end
             
             if obj.saveAllSettings
-                fileName = obj.dataFileHandler.fileName;
-                strvec = strfind(fileName,'\');
-                dirname = strrep(fileName,'.h5','_cfg');
-                mkdir(dirname);
-                basename = strrep(fileName(strvec(end)+1:end),'.h5','');
-                copyfile(getpref('qlab','CurScripterFile'),strcat(dirname,'\',basename,'_DefaultExpSettings.json'));
-                copyfile(getpref('qlab','ChannelParamsFile'),strcat(dirname,'\',basename,'_ChannelParams.json'));
-                copyfile(getpref('qlab','InstrumentLibraryFile'),strcat(dirname,'\',basename,'_Instruments.json'));
-                copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Measurements'),strcat(dirname,'\',basename,'_Measurements.json'));
+               %saves json settings files
+               fileName = obj.dataFileHandler.fileName;
+               [pathname,basename,~] = fileparts(fileName);
+               mkdir(fullfile(pathname,strcat(basename,'_cfg')));
+               copyfile(getpref('qlab','CurScripterFile'),fullfile(pathname,strcat(basename,'_cfg'),'DefaultExpSettings.json'));
+               copyfile(getpref('qlab','ChannelParamsFile'),fullfile(pathname,strcat(basename,'_cfg'),'ChannelParams.json'));
+               copyfile(getpref('qlab','InstrumentLibraryFile'),fullfile(pathname,strcat(basename,'_cfg'),'Instruments.json'));
+               copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Measurements'),fullfile(pathname,strcat(basename,'_cfg'),'Measurements.json'));
+               copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Sweeps'),fullfile(pathname,strcat(basename,'_cfg'),'Sweeps.json'));
             end
         end
         
