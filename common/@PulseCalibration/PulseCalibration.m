@@ -154,7 +154,7 @@ classdef PulseCalibration < handle
             % add the appropriate measurement stack
             measSettings = expSettings.measurements.(obj.settings.measurement);
             measName = obj.settings.measurement;
-            curFilter = MeasFilters.(measSettings.filterType)(measSettings);
+            curFilter = MeasFilters.(measSettings.filterType)(measName, measSettings);
             while (true)
                %add the current filter
                add_measurement(obj.experiment, measName, curFilter);
@@ -164,7 +164,7 @@ classdef PulseCalibration < handle
                %setup for the data source filter
                measName = measSettings.dataSource;
                measSettings = expSettings.measurements.(measName);
-               curFilter = MeasFilters.(measSettings.filterType)(measSettings);
+               curFilter = MeasFilters.(measSettings.filterType)(measName, measSettings);
             end
 
             % intialize the ExpManager
@@ -216,7 +216,7 @@ classdef PulseCalibration < handle
                 switch class(obj.AWGs.(awgNames{awgct}))
                     case 'deviceDrivers.Tek5014'
                         filenames{awgct} = fullfile(pathAWG, [basename '-' awgNames{awgct}, '.awg']);
-                    case {'deviceDrivers.APS', 'APS2'}
+                    case {'deviceDrivers.APS', 'APS2','APS'}
                         filenames{awgct} = fullfile(pathAWG, [basename '-' awgNames{awgct}, '.h5']);
                     otherwise
                         error('Unknown AWG type.');
