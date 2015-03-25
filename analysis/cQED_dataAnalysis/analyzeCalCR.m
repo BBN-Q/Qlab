@@ -18,7 +18,12 @@ data0 = data(1:length(data)/2);
 data1 = data(length(data)/2+1:end);
 
 sinf = @(p,t) p(1)*cos(2*pi/p(2)*t+p(3))+p(4);
-p=[1,xpoints(end),0,0];
+
+if(caltype==1)
+    p=[1,4*xpoints(end),0,0];
+else
+    p=[1,xpoints(end),0,0];
+end
 
 %fit sine curves
 [beta0,~,~] = nlinfit(xpoints, data0(:),sinf,p);
