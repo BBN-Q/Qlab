@@ -1,4 +1,4 @@
-function analyzeCalCR(caltype, CRdata,channel, varargin)
+function optvalue = analyzeCalCR(caltype, CRdata,channel, varargin)
 %simple fit function to get optimum length/phase in a CR calibration
 %and set in pulse params
 
@@ -77,9 +77,11 @@ chDict = channelLib.channelDict;
 if(caltype==1)
     outlen = optlen*1e-9;
     outphase = chDict.(CRpulsename).pulseParams.phase;
+    optvalue = optlen;
 else
     outlen = chDict.(CRpulsename).pulseParams.length;
     outphase = optphase;
+    optvalue = optphase;
 end
 updateLengthPhase(CRpulsename, outlen, outphase);
 end
