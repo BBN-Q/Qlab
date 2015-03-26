@@ -25,7 +25,8 @@ end
 
 %magic number cutoff to try and catch where unwrap goes back in between the
 %bare and dressed states
-delayedPhases(delayedPhases > 0.05) = delayedPhases(delayedPhases > 0.05)-2*pi;
+c = 0.2;
+delayedPhases(delayedPhases > c) = delayedPhases(delayedPhases > c)-2*pi;
 
 figure()
 imagesc(freqs/1e9, powerScan-fixedAtten, delayedPhases);
@@ -38,7 +39,7 @@ modelF = @(beta, f) 2*beta(1)*atan2(f - beta(2), beta(3)/2) + beta(4);
 [~, peakIndex] = min(diff(unwrap(delayedPhases(1,:))));
 betas = nlinfit(freqs/1e6, unwrap(delayedPhases(1,:)), modelF, [-1, freqs(peakIndex)/1e6, 1, -3]);
 kappa = betas(3);
-text(freqs(end/4)/1e9, powerScan(1)-fixedAtten+5, ['$\kappa = ', num2str(kappa, '%1.2f'), ' MHz$'], 'Color', 'white', 'interpreter', 'latex', 'FontSize', 14)
+text(freqs(floor(end/4))/1e9, powerScan(1)-fixedAtten+5, ['$\kappa/2\pi = ', num2str(kappa, '%1.2f'), '\, \mathrm{MHz}$'], 'Color', 'white', 'interpreter', 'latex', 'FontSize', 14)
 
 end
 

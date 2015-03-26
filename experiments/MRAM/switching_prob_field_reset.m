@@ -1,4 +1,4 @@
-function transitionMat = switching_prob_field_reset(bop, ppl, srs, H_ResetLow, H_ResetHigh, H_SetPoint, threshold)
+function [transitionMat, meanP, meanAP] = switching_prob_field_reset(bop, ppl, srs, H_ResetLow, H_ResetHigh, H_SetPoint, threshold)
 
 %Plan is to measure the transition matrix at each pulse level by repeatedly
 %pulsing. Andy and Li suggested reseting the device with field every N
@@ -6,15 +6,20 @@ function transitionMat = switching_prob_field_reset(bop, ppl, srs, H_ResetLow, H
 %alternate which side we reset from 
 
 transitionMat = zeros(2);
-numResets = 120;
+numResets = 100; %should be even
 multiWaitbar('Reset Loop', 'Reset');
+multiWaitbar('Reset Loop', 'Color', 'g');
+
+Ps = zeros(numResets/2, 1);
+APs = zeros(numResets/2, 1);
+
 for resetct = 1:numResets
-    multiWaitbar('Reset Loop', resetct/numResets);
     %Use the field to reset 
     if mod(resetct,2) == 0
         ramp(bop, H_ResetLow, 4);
         ramp(bop, H_SetPoint, 4);
         pause(.1); curVal = srs.R;
+        Ps(resetct/2) = curVal;
 %             assert(curVal<threshold, 'Oops! did not reset with field to P state');
         prevState = 'P';
         if(curVal > threshold)
@@ -25,6 +30,7 @@ for resetct = 1:numResets
         ramp(bop, H_ResetHigh, 4);
         ramp(bop, H_SetPoint, 4);
         pause(.1); curVal = srs.R;
+        APs(floor(resetct/2)+1) = curVal;
 %             assert(curVal>threshold, 'Oops! did not reset with field to AP state');
         prevState = 'AP';
         if(curVal < threshold)
@@ -39,7 +45,7 @@ for resetct = 1:numResets
         srs.sineAmp = 0.004; pause(0.2);
         ppl.trigger();
         srs.sineAmp = 2;
-        pause(.2); curVal = srs.R;
+        pause(.4); curVal = srs.R;
         if curVal < threshold
             curState = 'P';
         else 
@@ -58,4 +64,9 @@ for resetct = 1:numResets
         end
         prevState = curState;
     end
+    multiWaitbar('Reset Loop', resetct/numResets);
 end   
+
+meanP = mean(Ps);
+meanAP = mean(APs);
+

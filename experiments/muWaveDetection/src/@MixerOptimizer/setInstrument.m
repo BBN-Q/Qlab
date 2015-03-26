@@ -20,7 +20,7 @@ function setInstrument(obj, amp, phase)
             end
             obj.awg.(['chan_' num2str(Q_channel)]).skew = skew;
             obj.awg.operationComplete()
-        case 'deviceDrivers.APS'
+        case {'deviceDrivers.APS', 'APS'}
             % on the APS we generate a new waveform and upload it
             waveform_length = 1200;
             timeStep = 1/samplingRate;
@@ -33,7 +33,22 @@ function setInstrument(obj, amp, phase)
             qwf = -0.5 * sin(fssb.*tpts + phase);
 
             obj.awg.loadWaveform(Q_channel, qwf);
+            
+        case 'APS2'
+            % on the APS we generate a new waveform and upload it
+            waveform_length = 1200;
+            timeStep = 1/samplingRate;
+            tpts = timeStep*(0:(waveform_length-1));
 
-            pause(0.1);
+            % scale I waveform
+            obj.awg.stop();
+            obj.awg.set_channel_scale(I_channel, amp);
+            
+            % generate new Q waveform with phase shift
+            qwf = -0.5 * sin(fssb.*tpts + phase);
+            
+            obj.awg.load_waveform(Q_channel, qwf);
+            obj.awg.run();
+
     end
 end

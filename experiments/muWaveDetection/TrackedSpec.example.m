@@ -5,18 +5,12 @@ import MeasFilters.*
 
 exp = ExpManager();
 
-global dataNamer
-deviceName = 'SUCR';
-if ~isa(dataNamer, 'DataNamer')
-    dataNamer = DataNamer(getpref('qlab', 'dataDir'), deviceName);
-end
-if ~strcmp(dataNamer.deviceName, deviceName)
-    dataNamer.deviceName = deviceName;
-    reset(dataNamer);
-end
-exp.dataFileHandler = HDF5DataHandler(dataNamer.get_name(expName));
+deviceName = 'Syracuse_Sideband_b';
+exp.dataFileHandler = HDF5DataHandler(DataNamer.get_data_filename(deviceName, expName));
 
 expSettings = jsonlab.loadjson(fullfile(getpref('qlab', 'cfgDir'), 'tracked_spec.json'));
+exp.dataFileHeader = expSettings;
+
 exp.CWMode = true;
 instrSettings = expSettings.instruments;
 sweepSettings = expSettings.sweeps;
@@ -37,8 +31,30 @@ cavitySweepSettings = struct(...
 add_sweep(exp, 1, SweepFactory(sweepSettings.DC, exp.instruments), rebias_cavity_callback(cavitySweepSettings));
 add_sweep(exp, 2, SweepFactory(sweepSettings.Frequency, exp.instruments));
 
-dh1 = DigitalHomodyne(measSettings.M1);
-add_measurement(exp, 'M1', dh1);
+%Loop over the measurments: insert the single channel measurements, keep
+%back the correlators and then apply them
+correlators = {};
+measFilters = struct();
+measNames = fieldnames(measSettings);
+for meas = measNames'
+    measName = meas{1};
+    params = measSettings.(measName);
+    if strcmp(params.filterType,'Correlator')
+        %If it is a correlator than hold it back
+        correlators{end+1} = measName;
+    else
+        %Otherwise load it and keep a reference to it
+        measFilters.(measName) = MeasFilters.(params.filterType)(params);
+        add_measurement(exp, measName, measFilters.(measName));
+    end
+end
+
+%Loop back and apply any correlators
+for meas = correlators
+    measName = meas{1};
+    childFilters = cellfun(@(x) measFilters.(x), measSettings.(measName).filters, 'UniformOutput', false);
+    add_measurement(exp, measName, MeasFilters.Correlator(childFilters{:}));
+end
 
 exp.init();
 exp.run();

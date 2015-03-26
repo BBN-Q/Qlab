@@ -42,7 +42,7 @@ classdef GPIBorEthernet < hgsetget
             % address
             if ~obj.isConnected
                 ip_re = '\d+\.\d+\.\d+\.\d+';
-                gpib_re = '\d+';
+                gpib_re = '^\d+$';
 
                 if ischar(address) && ~isempty(regexp(address, ip_re, 'once'))
                     % Create a TCPIP object.
@@ -52,8 +52,8 @@ classdef GPIBorEthernet < hgsetget
                     obj.interface = gpib('ni', 0, str2double(address));
                 elseif isnumeric(address)
                     obj.interface = gpib('ni', 0, address);
-                else
-                    error(['connect: Invalid address: ', address]);
+                else % Probably a hostname
+                    obj.interface = tcpip(address, obj.DEFAULT_PORT);
                 end
 
                 obj.interface.InputBufferSize = obj.buffer_size;
@@ -63,10 +63,13 @@ classdef GPIBorEthernet < hgsetget
         end
         
         function disconnect(obj)
-            flushoutput(obj.interface);
-            fclose(obj.interface);
-            delete(obj.interface);
-            obj.interface = [];
+            if ~isempty(obj.interface)
+              flushoutput(obj.interface);
+              flushinput(obj.interface);              
+              fclose(obj.interface);
+              delete(obj.interface);
+              obj.interface = [];
+            end
         end
         
         function val = get.isConnected(obj)
@@ -74,7 +77,7 @@ classdef GPIBorEthernet < hgsetget
         end
         
         function write(obj, varargin)
-            fprintf(obj.interface, varargin{:});
+            fprintf(obj.interface, sprintf(varargin{:}));
         end
         
         function val = query(obj, string)

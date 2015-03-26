@@ -51,13 +51,7 @@ classdef DigitalHomodyneSS < MeasFilters.MeasFilter
             [demodSignal, decimFactor] = digitalDemod(data, obj.IFfreq, obj.bandwidth, obj.samplingRate);
             
             % Use box car start/stop just to select a time span
-            if ndims(demodSignal) == 2
-                demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:);
-            elseif ndims(demodSignal) == 4
-                demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:,:,:);
-            else
-                error('Only able to handle 2 and 4 dimensional data.');
-            end
+            demodSignal = demodSignal(max(1,floor(obj.boxCarStart/decimFactor)):floor(obj.boxCarStop/decimFactor),:,:,:);
             
             %If we have a pre-defined filter use it, otherwise just update
             %latestData

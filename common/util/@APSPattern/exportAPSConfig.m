@@ -2,11 +2,9 @@ function exportAPSConfig(path, basename, nbrRepeats, varargin)
     %varargin is the IQ pairs of channels e.g. ch56seq
     %pass an empty array to skip a pair of channels
     VersionNum = 2;
-    
-    useVarients = 1;
-    
+        
     % construct filename
-    disp('Writing APS file');
+    % disp('Writing APS file');
     fileName = strcat(path, basename, '.h5');
     if ~exist(path, 'dir')
         mkdir(path);
@@ -21,13 +19,15 @@ function exportAPSConfig(path, basename, nbrRepeats, varargin)
         Qch = 2*ct;
         if ~isempty(varargin{ct})
             seq = varargin{ct};
-            wfLibrary = APSPattern.build_WFLib(seq, useVarients);
-            [LinkLists{Ich}, WaveformLibs{Ich}, WaveformLibs{Qch}] = APSPattern.convertLinkListFormat(seq, useVarients, wfLibrary);
+            [LinkLists{Ich}, WaveformLibs{Ich}, WaveformLibs{Qch}] = APSPattern.convertLinkListFormat(seq);
 
             %Setup the structures for the linkList data
             fprintf('Length of LL for pair %d: %d\n', ct, LinkLists{Ich}.length)
             LinkLists{Qch} = [];
             if LinkLists{Ich}.length > APSPattern.MAX_LL_ENTRIES
+                if getpref('Qlab','reliable_aps')
+                    error('Linked list too long; max is %d\n', APSPattern.MAX_LL_ENTRIES);
+                end
                 fprintf('Estimated max rep interval: %g\n', APSPattern.estimateRepInterval(seq.linkLists));
             end
         else

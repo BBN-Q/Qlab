@@ -71,12 +71,12 @@ classdef (Sealed) Yoko7651 < deviceDrivers.lib.GPIB
         % getters
         function val = get.value(obj)
             gpib_string = 'OD';
-            temp = obj.Query(gpib_string);
+            temp = obj.query(gpib_string);
             val = str2double(temp(5:end));
         end
         function val = get.output(obj)
             gpib_string = 'OC';
-            result = obj.Query(gpib_string);
+            result = obj.query(gpib_string);
             expr = 'STS1=(\d*)';
             tokens = regexp(result, expr, 'tokens');
             temp = uint16(str2double(tokens{1}));
@@ -89,11 +89,11 @@ classdef (Sealed) Yoko7651 < deviceDrivers.lib.GPIB
             % the foo's are to take up useless buffer for the reading of
             % the output range.
             gpib_string = 'OS';
-            foo = obj.Query(gpib_string);
-            result = obj.Read;
-            foo = obj.Read;
-            foo = obj.Read;
-            foo = obj.Read;
+            foo = obj.query(gpib_string);
+            result = obj.read;
+            foo = obj.read;
+            foo = obj.read;
+            foo = obj.read;
             expr = 'F(\d)R(\d)';
             tokens = regexp(result, expr, 'tokens');
             %val = temp;
@@ -113,7 +113,7 @@ classdef (Sealed) Yoko7651 < deviceDrivers.lib.GPIB
             end
             
             gpib_string = sprintf(gpib_string, value);
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         function obj = set.output(obj, value)
             gpib_string = 'O%d;E;';
@@ -129,7 +129,7 @@ classdef (Sealed) Yoko7651 < deviceDrivers.lib.GPIB
             end
             
             gpib_string = sprintf(gpib_string, checkMapObj(lower(value)));
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         % valid ranges: 2 = 10 mV, 3 = 100 mV, 4 = 1V, 5 = 10V,6 = 30V
         function obj = set.range(obj, value)
@@ -143,7 +143,7 @@ classdef (Sealed) Yoko7651 < deviceDrivers.lib.GPIB
             end
             
             gpib_string = sprintf(gpib_string, checkMapObj(lower(value)));
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
 
     end % end instrument parameter accessors

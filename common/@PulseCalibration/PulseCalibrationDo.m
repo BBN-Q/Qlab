@@ -41,7 +41,7 @@ if settings.DoRabiAmp
    offsetPhases = zeros([3,1]);
    
    %Run a sequence and fit it
-   data = obj.homodyneMeasurement(segmentPoints);
+   data = obj.take_data(segmentPoints);
    % analyze X data
    [piAmpGuesses(1), offsetPhases(1)] = obj.analyzeRabiAmp(data(1:end/2));
    % analyze Y data
@@ -53,7 +53,7 @@ if settings.DoRabiAmp
    obj.channelParams.pi2Amp = obj.channelParams.piAmp/2;
    obj.channelParams.i_offset = obj.channelParams.i_offset + obj.channelParams.ampFactor*offsetPhases(1)*amp2offset;
    obj.channelParams.q_offset = obj.channelParams.q_offset + offsetPhases(2)*amp2offset;
-   fprintf('Initial guess for X180Amp: %.0f\n', obj.channelParams.piAmp);
+   fprintf('Initial guess for X180Amp: %.4f\n', obj.channelParams.piAmp);
    fprintf('Shifting i_offset by: %.3f\n', offsetPhases(1)*amp2offset);
    fprintf('Shifting q_offset by: %.3f\n', offsetPhases(2)*amp2offset);
 end
@@ -73,7 +73,7 @@ if settings.DoRamsey
     qubitSource.frequency = origFreq - 0.001;
 
     % measure
-    data = obj.homodyneMeasurement(segmentPoints);
+    data = obj.take_data(segmentPoints);
 
     quick_scale = @(d) 2*(d-mean(d))/(max(d)-min(d));
     
@@ -84,7 +84,7 @@ if settings.DoRamsey
     qubitSource.frequency = origFreq - 0.001 + detuningA/2;
 
     % measure
-    data = obj.homodyneMeasurement(segmentPoints);
+    data = obj.take_data(segmentPoints);
 
     % analyze
     [~, detuningB] = fitramsey(segmentPoints, quick_scale(data));
@@ -165,18 +165,24 @@ if settings.DoDRAGCal
     obj.loadSequence(filenames, 1);
 
     % measure
-    data = obj.homodyneMeasurement(segmentPoints);
+    data = obj.take_data(segmentPoints);
 
     % analyze for the best value to two digits
     numPsQId = 8; % number pseudoidentities
     
-    obj.channelParams.dragScaling = round(100*obj.analyzeSlopes(data, numPsQId, deltas, obj.numShots))/100;
-    
-    title('DRAG Parameter Calibration');
-    text(10, 0.8, sprintf('Found best DRAG parameter of %.2f', obj.channelParams.dragScaling), 'FontSize', 12);
+    fitDragScaling = round(100*obj.analyzeSlopes(data, numPsQId, deltas, obj.numShots))/100;
 
-    % update QGL library
-    updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
+    title('DRAG Parameter Calibration');
+    text(10, 0.8, sprintf('Found best DRAG parameter of %.2f', fitDragScaling), 'FontSize', 12);
+
+    %Double check the fit was good
+    if ~isnan(fitDragScaling)
+        obj.channelParams.dragScaling = fitDragScaling;
+        % update QGL library
+        updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
+    else
+        warning('Bad fit for the DRAG scaling.  Leaving scaling as it was.');
+    end
 end
 
 %% SPAM calibration    
@@ -186,22 +192,25 @@ if settings.DoSPAMCal
     obj.loadSequence(filenames, 1);
 
     % measure
-    data = obj.homodyneMeasurement(segmentPoints);
+    data = obj.take_data(segmentPoints);
     
     % analyze for the best value to two digits
     numPsQId = 10; % number pseudoidentities
     angleShifts = (-3:0.75:3)';
     phaseSkew = round(100*obj.analyzeSlopes(data, numPsQId, angleShifts, obj.numShots))/100;
     title('SPAM Phase Skew Calibration');
-    text(10, 0.8, sprintf('Found best phase Skew of %.2f', phaseSkew), 'FontSize', 12);
+    text(10, 0.8, sprintf('Found best phase skew adjustment of %.2f', phaseSkew), 'FontSize', 12);
 
-    obj.channelParams.phaseSkew = obj.channelParams.phaseSkew - phaseSkew;
+    if ~isnan(phaseSkew)
+        obj.channelParams.phaseSkew = obj.channelParams.phaseSkew - phaseSkew;
+    else
+        warning('Bad fit for the mixer phase skew. Leaving phase skew as it was.');
+    end
 end
 
 
 %% Save updated parameters to file
 updateAmpPhase(obj.channelParams.physChan, obj.channelParams.ampFactor, obj.channelParams.phaseSkew);
-updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 
 % update i and q offsets in the instrument library
 instrLib = json.read(getpref('qlab', 'InstrumentLibraryFile'));
@@ -222,6 +231,13 @@ json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
 obj.channelParams
 
 obj.finished = true;
+
+
+    function update_library_files()
+        
+        
+    end
+
 
 end
 

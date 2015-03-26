@@ -3,7 +3,7 @@ function [t1, t1error] = fitt1(xdata, ydata)
 % usage: [t1, t1error] = fitt1(data, xstart, xend)
 
 % if no input arguments, try to get the data from the current figure
-if nargin < 2
+if nargin < 2 
     h = gcf;
     line = findall(h, 'Type', 'Line');
     xdata = get(line(1), 'xdata');
@@ -36,6 +36,15 @@ tic
 [beta,r,j,cov] = nlinfit(xdata, y, t1f, p);
 toc
 
+t1 = beta(2);
+%t1 = beta(1);
+ci = nlparci(beta,r,j);
+t1error = (ci(2,2)-ci(2,1))/2;
+%t1error = (ci(1,2)-ci(1,1))/2;
+%fprintf('Covariancdae matrix:\n');
+%disp(cov)
+
+
 figure(h)
 clf
 subplot(3,1,2:3)
@@ -52,14 +61,6 @@ axis tight
 ylabel('<\sigma_z>')
 xlabel('Time [\mus]')
 title(plotTitle)
-
-t1 = beta(2);
-%t1 = beta(1);
-ci = nlparci(beta,r,j);
-t1error = (ci(2,2)-ci(2,1))/2;
-%t1error = (ci(1,2)-ci(1,1))/2;
-%fprintf('Covariance matrix:\n');
-%disp(cov)
 
 % annotate the graph with T_1 result
 subplot(3,1,2:3)

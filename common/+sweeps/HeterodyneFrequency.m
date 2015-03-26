@@ -26,7 +26,7 @@ classdef HeterodyneFrequency < sweeps.Sweep
     methods
         % constructor
         function obj = HeterodyneFrequency(sweepParams, Instrs)
-            obj.label = 'Frequency (GHz)';
+            obj.axisLabel = 'Frequency (GHz)';
             start = sweepParams.start;
             stop = sweepParams.stop;
             step = sweepParams.step;

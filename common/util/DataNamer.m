@@ -3,6 +3,7 @@ classdef DataNamer < handle
         fileCount
         deviceName
         dataDir
+        lastFileName
     end
     methods
         function obj = DataNamer(dataDir, deviceName)
@@ -40,28 +41,29 @@ classdef DataNamer < handle
                 end
             end
 
-            obj.fileCount = newval+1;
+            obj.fileCount = newval;
         end
         
         function increment(obj)
             obj.fileCount = obj.fileCount + 1;
         end
         
-        function out = get_name(obj, expName)
+        function update_name(obj, expName)
             %Check if we have a folder for today
             todaysFolder = fullfile(obj.dataDir, obj.deviceName, datestr(now(), 'yymmdd'));
             if ~exist(todaysFolder, 'dir')
                 % make a folder for today
                 mkdir(todaysFolder);
             end
-            out = fullfile(todaysFolder, [num2str(obj.fileCount) '_' obj.deviceName '_' expName '.h5']);
             increment(obj);
+            obj.lastFileName = fullfile(todaysFolder, [num2str(obj.fileCount) '_' obj.deviceName '_' expName '.h5']);
         end
             
     end
     methods (Static)
-        function name = get_data_filename(deviceName, expName)
-            % implements a Singleton DataNamer and updates it appropriately
+        
+        function instance = get_instance(deviceName)
+             % implements a Singleton DataNamer 
             persistent dataNamer
             if isempty(dataNamer)
                 dataNamer = DataNamer(getpref('qlab', 'dataDir'), deviceName);
@@ -70,11 +72,19 @@ classdef DataNamer < handle
                 dataNamer.dataDir = getpref('qlab', 'dataDir');
                 reset(dataNamer);
             end
-            if ~strcmp(dataNamer.deviceName, deviceName)
+            if nargin == 1 && ~strcmp(dataNamer.deviceName, deviceName)
                 dataNamer.deviceName = deviceName;
                 reset(dataNamer);
             end
-            name = dataNamer.get_name(expName);
+            instance = dataNamer;
+        end
+        
+        function name = get_data_filename(deviceName, expName)
+            
+            namer = DataNamer.get_instance(deviceName);
+            update_name(namer, expName);
+            name = namer.lastFileName;
+
         end
     end
 end

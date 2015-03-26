@@ -22,7 +22,7 @@
 	methods
 		% constructor
 		function obj = SegmentNum(sweepParams, ~)
-			obj.label = sweepParams.label;
+			obj.axisLabel = sweepParams.axisLabel;
 			start = sweepParams.start;
 			step = sweepParams.step;
             stop = start+step*(sweepParams.numPoints-1);

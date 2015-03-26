@@ -7,6 +7,8 @@ deviceName = 'IBM_PhaseII';
 exp.dataFileHandler = HDF5DataHandler(DataNamer.get_data_filename(deviceName, expName));
 
 expSettings = json.read(getpref('qlab', 'CurScripterFile'));
+exp.dataFileHeader = expSettings;
+exp.CWMode = expSettings.CWMode;
 instrSettings = expSettings.instruments;
 sweepSettings = expSettings.sweeps;
 measSettings = expSettings.measurements;
@@ -21,8 +23,8 @@ for sweep = fieldnames(sweepSettings)'
     add_sweep(exp, sweepSettings.(sweep{1}).order, SweepFactory(sweepSettings.(sweep{1}), exp.instruments));
 end
 
-%Loop over the measurments: insert the non-dependent single channel measurements, keep
-%back the correlators and then apply them,
+%Loop over the measurments: insert the single channel measurements, keep
+%back the correlators and then apply them
 correlators = {};
 measFilters = struct();
 measNames = fieldnames(measSettings);
@@ -32,16 +34,9 @@ for meas = measNames'
     if strcmp(params.filterType,'Correlator')
         %If it is a correlator than hold it back
         correlators{end+1} = measName;
-    elseif ~params.dependent
+    else
         %Otherwise load it and keep a reference to it
-        % look for children
-        if ~isempty(params.childFilter)
-            childParams = measSettings.(params.childFilter);
-            childFilter = MeasFilters.(childParams.filterType)(childParams);
-            measFilters.(measName) = MeasFilters.(params.filterType)(childFilter, params);
-        else
-            measFilters.(measName) = MeasFilters.(params.filterType)(params);
-        end
+        measFilters.(measName) = MeasFilters.(params.filterType)(measName,params);
         add_measurement(exp, measName, measFilters.(measName));
     end
 end

@@ -56,6 +56,7 @@ classdef ExpManager < handle
         saveVariances = false
         dataFileHeader = struct();
         dataTimeout = 60 % timeout in seconds
+        saveAllSettings = true;
     end
     
     methods
@@ -110,14 +111,16 @@ classdef ExpManager < handle
             %Rearrange the AWG list to put the Master first
             obj.AWGs([1, masterAWGIndex]) = obj.AWGs([masterAWGIndex, 1]);
             
-            %Stop all the AWGs
+            %Stop all the AWGs if not in CWMode
             if(~obj.CWMode)
                 cellfun(@(awg) stop(awg), obj.AWGs);
+            else
+                cellfun(@(awg) run(awg), obj.AWGs);
             end
 
             if ~isempty(obj.dataFileHandler)
                 %Construct data file header and info structs
-                labels = cellfun(@(s) s.label, obj.sweeps, 'UniformOutput', false);
+                labels = cellfun(@(s) s.axisLabel, obj.sweeps, 'UniformOutput', false);
                 xyz = {'x', 'y', 'z'};
                 points = cellfun(@(s) s.points, obj.sweeps, 'UniformOutput', false);
                 dataInfo = struct();
@@ -127,11 +130,14 @@ classdef ExpManager < handle
                     dataInfo.([xyz{xyzIdx}, 'points']) = points{ct};
                 end
                 dataInfo.dimension = length(obj.sweeps);
-                dataInfos = repmat({dataInfo}, 1, length(fieldnames(obj.measurements)));
                 % add measurement names to dataInfo structs
                 measNames = fieldnames(obj.measurements);
+                dataInfos = {};
                 for ct = 1:length(measNames)
-                    dataInfos{ct}.name = measNames{ct};
+                    if obj.measurements.(measNames{ct}).saved
+                        dataInfos{end+1} = dataInfo;
+                        dataInfos{end}.name = measNames{ct};
+                    end
                 end
                 %Open data file
                 obj.dataFileHandler.open(obj.dataFileHeader, dataInfos, obj.saveVariances);
@@ -139,11 +145,32 @@ classdef ExpManager < handle
             
         end
         
+        function connect_meas_to_source(obj, meas)
+            instrNames = fieldnames(obj.instruments);
+            function connect_to_source(meas, src)
+                %First look for an instrument (scope)
+                if (~isempty(find(strcmp(src, instrNames))))
+                    obj.listeners{end+1} = addlistener(obj.instruments.(src), 'DataReady', @meas.apply);          
+                %Otherwise assume another measurement
+                else
+                    obj.listeners{end+1} = addlistener(obj.measurements.(src), 'DataReady', @meas.apply);
+                end
+            end
+            %Correlators have mulitple sources
+            if isa(meas, 'MeasFilters.Correlator')
+                cellfun(@(x) connect_to_source(meas, x), strsplit(meas.dataSource, ','))
+            else
+                connect_to_source(meas, meas.dataSource);
+            end
+        end
+        
         %Runner
         function run(obj)
-            %Connect measurment data to processing callbacks
-            obj.listeners{1} = addlistener(obj.scopes{1}, 'DataReady', @obj.process_data);
+            %Connect a polling scope plotter
             obj.plotScopeTimer = timer('TimerFcn', @obj.plot_scope_callback, 'StopFcn', @obj.plot_scope_callback, 'Period', 0.5, 'ExecutionMode', 'fixedSpacing');
+
+            %Connect measurement consumers to producers
+            structfun(@(x) obj.connect_meas_to_source(x), obj.measurements);
             
             %Set the cleanup function so that even if we ctrl-c out we
             %correctly cleanup
@@ -163,6 +190,8 @@ classdef ExpManager < handle
             % initialize data storage
             obj.data = structfun(@(x) struct('mean', complex(nan(sizes),nan(sizes)), 'realvar', nan(sizes), 'imagvar', nan(sizes), 'prodvar', nan(sizes)),...
                 obj.measurements, 'UniformOutput', false);
+            
+            fprintf('Taking data....\n');
             
             % generic nested loop sweeper through "stack"
             while idx > 0 && ct(1) <= stops(1)
@@ -195,6 +224,9 @@ classdef ExpManager < handle
                         stepData = structfun(@(m) m.get_data(), obj.measurements, 'UniformOutput', false);
                         stepVar = structfun(@(m) m.get_var(), obj.measurements, 'UniformOutput', false);
                         for measName = fieldnames(stepData)'
+                            if ~obj.measurements.(measName{1}).saved
+                                continue
+                            end
                             if isa(obj.sweeps{end}, 'sweeps.SegmentNum')
                                 % we are sweeping segment number, so we
                                 % have an entire row of data
@@ -232,9 +264,22 @@ classdef ExpManager < handle
                 obj.dataFileHandler.close();
             end
             
+            if obj.saveAllSettings
+               %saves json settings files
+               fileName = obj.dataFileHandler.fileName;
+               [pathname,basename,~] = fileparts(fileName);
+               mkdir(fullfile(pathname,strcat(basename,'_cfg')));
+               copyfile(getpref('qlab','CurScripterFile'),fullfile(pathname,strcat(basename,'_cfg'),'DefaultExpSettings.json'));
+               copyfile(getpref('qlab','ChannelParamsFile'),fullfile(pathname,strcat(basename,'_cfg'),'ChannelParams.json'));
+               copyfile(getpref('qlab','InstrumentLibraryFile'),fullfile(pathname,strcat(basename,'_cfg'),'Instruments.json'));
+               copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Measurements'),fullfile(pathname,strcat(basename,'_cfg'),'Measurements.json'));
+               copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Sweeps'),fullfile(pathname,strcat(basename,'_cfg'),'Sweeps.json'));
+            end
         end
         
         function cleanUp(obj)
+            % stop the scopes
+            cellfun(@(scope) stop(scope), obj.scopes);
             % stop AWGs
             cellfun(@(awg) stop(awg), obj.AWGs);
             % stop plot timer and clear it
@@ -271,25 +316,22 @@ classdef ExpManager < handle
             end
         end
         
-        %Helper function to apply measurement filters and store data
-        function process_data(obj, src, ~)
-            % download data from src
-            measData = struct('ch1', src.transfer_waveform(1), 'ch2', src.transfer_waveform(2));
-            %Apply measurment filters in turn
-            structfun(@(m) apply(m, measData), obj.measurements, 'UniformOutput', false);
-        end
-        
         function save_data(obj, stepData, stepVar)
             if isempty(obj.dataFileHandler) || obj.dataFileHandler.fileOpen == 0
                 return
             end
             measNames = fieldnames(stepData)';
+            savect = 1;
             for ct = 1:length(measNames)
-                measData = squeeze(stepData.(measNames{ct}));
-                obj.dataFileHandler.write(measData, ct);
-                if obj.saveVariances
-                    obj.dataFileHandler.writevar(stepVar.(measNames{ct}), ct);
+                if ~obj.measurements.(measNames{ct}).saved
+                    continue
                 end
+                measData = squeeze(stepData.(measNames{ct}));
+                obj.dataFileHandler.write(measData, savect);
+                if obj.saveVariances
+                    obj.dataFileHandler.writevar(stepVar.(measNames{ct}), savect);
+                end
+                savect = savect + 1;
             end
         end
         
@@ -344,7 +386,7 @@ classdef ExpManager < handle
                 figHandle = figHandles.(measName{1});
 
                 for ct = 1:length(toPlot)
-                    if reset || ~isempty(plotHandles.(measName{1}){ct}) || ~ishandle(plotHandles.(measName{1}){ct})
+                    if reset || isempty(plotHandles.(measName{1}){ct}) || ~ishandle(plotHandles.(measName{1}){ct})
                         axesH = subplot(numRows, numCols, ct, 'Parent', figHandle);
                         sizes = cellfun(@(x) length(x.points), obj.sweeps);
                         switch nsdims(measData)
@@ -352,7 +394,7 @@ classdef ExpManager < handle
                                 %Find non-singleton sweep dimension
                                 goodSweepIdx = find(sizes ~= 1, 1);
                                 plotHandles.(measName{1}){ct} = plot(axesH, obj.sweeps{goodSweepIdx}.plotPoints, toPlot{ct}.func(measData));
-                                xlabel(axesH, obj.sweeps{goodSweepIdx}.label);
+                                xlabel(axesH, obj.sweeps{goodSweepIdx}.axisLabel);
                                 ylabel(axesH, toPlot{ct}.label)
 
                             case 2
@@ -361,16 +403,16 @@ classdef ExpManager < handle
                                 yPoints = obj.sweeps{goodSweepIdx(1)}.plotPoints;
                                 plotHandles.(measName{1}){ct} = imagesc(xPoints, yPoints, toPlot{ct}.func(measData), 'Parent', axesH);
                                 title(axesH, toPlot{ct}.label)
-                                xlabel(axesH, obj.sweeps{goodSweepIdx(2)}.label);
-                                ylabel(axesH, obj.sweeps{goodSweepIdx(1)}.label);
+                                xlabel(axesH, obj.sweeps{goodSweepIdx(2)}.axisLabel);
+                                ylabel(axesH, obj.sweeps{goodSweepIdx(1)}.axisLabel);
                             case 3
                                 goodSweepIdx = find(sizes ~= 1, 2);
                                 xPoints = obj.sweeps{goodSweepIdx(1)}.plotPoints;
                                 yPoints = obj.sweeps{goodSweepIdx(2)}.plotPoints;
                                 plotHandles.(measName{1}){ct} = imagesc(xPoints, yPoints, toPlot{ct}.func(squeeze(measData(1,:,:))), 'Parent', axesH);
                                 title(axesH, toPlot{ct}.label)
-                                xlabel(axesH, obj.sweeps{goodSweepIdx(1)}.label);
-                                ylabel(axesH, obj.sweeps{goodSweepIdx(2)}.label);
+                                xlabel(axesH, obj.sweeps{goodSweepIdx(1)}.axisLabel);
+                                ylabel(axesH, obj.sweeps{goodSweepIdx(2)}.axisLabel);
                         end
                     else
                         switch nsdims(measData)
@@ -400,11 +442,13 @@ classdef ExpManager < handle
             end
             
             for measName = fieldnames(obj.measurements)'
-                if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
-                    figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Scope']);
+                if obj.measurements.(measName{1}).plotScope
+                    if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
+                        figHandles.(measName{1}) = figure('WindowStyle', 'docked', 'HandleVisibility', 'callback', 'NumberTitle', 'off', 'Name', [measName{1} ' - Scope']);
+                    end
+                    figHandle = figHandles.(measName{1});
+                    obj.measurements.(measName{1}).plot(figHandle);
                 end
-                figHandle = figHandles.(measName{1});
-                obj.measurements.(measName{1}).plot(figHandle);
             end
             drawnow()
         end

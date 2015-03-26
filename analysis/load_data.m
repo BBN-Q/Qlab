@@ -6,28 +6,44 @@ function data = load_data(varargin)
 %   load_data(plotMode)
 %   load_data()
 %
-%   plotMode = 'real/imag', 'amp/phase', 'quad', or '' (no plot)
+%   path = path to filename to load; special argument 'latest' loads the
+%   last data set taken
+%   plotMode = 'real', 'imag', 'amp', 'phase', 'real/imag', 'amp/phase',
+%        'quad', or '' (no plot)
 if nargin == 2
     [fullpath, plotMode] = varargin{:};
-    [pathname, filename] = fileparts(fullpath);
+    if strcmp(fullpath, 'latest')
+        fullpath = get_latest_file();
+    end
+    [pathname, filename, ext] = fileparts(fullpath);
+
 elseif nargin == 1
     %exist is too clever by half and searches the whole ruddy Matlab path
     %so it finds a quad.m somewhere on the path and returns 2
     %Hack around with some java
-    javaFile = java.io.File(varargin{1});
-    if javaFile.exists() && javaFile.isFile()
-        fullpath = varargin{1};
-        [pathname, filename] = fileparts(fullpath);
+    %First check for "latest" flag
+    if strcmp(varargin{1}, 'latest')
+        fullpath = get_latest_file();
+        [pathname, filename, ext] = fileparts(fullpath);
         plotMode = '';
     else
-        fullpath = '';
-        plotMode = varargin{1};
+        javaFile = java.io.File(varargin{1});
+        if javaFile.exists() && javaFile.isFile()
+            fullpath = varargin{1};
+            [pathname, filename, ext] = fileparts(fullpath);
+            plotMode = '';
+        else
+            fullpath = '';
+            plotMode = varargin{1};
+        end
     end
 else
     fullpath = '';
     plotMode = '';
 end
 
+%If we still don't have a file to load the use a ui to get one from the
+%user
 if isempty(fullpath)
     % get path of file to load
     [filename, pathname] = uigetfile(fullfile(getpref('qlab', 'dataDir'), '*.h5'));
@@ -35,7 +51,8 @@ if isempty(fullpath)
         data = [];
         return
     end
-    fullpath = [pathname '/' filename];
+    fullpath = fullfile(pathname, filename);
+    [pathname, filename, ext] = fileparts(fullpath);
 end
 
 % for backwards compatibility, we assume that files that do not have a
@@ -46,6 +63,11 @@ info = h5info(fullpath, '/');
 attributeNames = {info.Attributes.Name};
 assert(any(strcmp(attributeNames, 'version')) && h5readatt(fullpath, '/', 'version') == 2, 'Please use an old file loader');
 data.nbrDataSets = h5readatt(fullpath, '/', 'nbrDataSets');
+
+
+headerStr = h5read(fullpath, '/header');
+data.expSettings = json.load(headerStr{1});
+
 for ii = 1:data.nbrDataSets
     rawData = h5read(fullpath, ['/DataSet' num2str(ii) '/real']) + 1i * h5read(fullpath, ['/DataSet' num2str(ii) '/imag']);
     data.data{ii} = rawData;
@@ -69,9 +91,13 @@ for ii = 1:data.nbrDataSets
         data.prodvar{ii} = h5read(fullpath, ['/DataSet' num2str(ii) '/prodvar']);
     end
     
+    %Check for measurement name
+    if any(strcmp({groupInfo.Attributes.Name}, 'name'))
+        data.measNames{ii} = h5readatt(fullpath, ['/DataSet' num2str(ii)], 'name');
+    end
 end
 
-data.filename = filename;
+data.filename = [filename, ext];
 data.path = pathname;
 
 % available plotting modes
@@ -82,6 +108,18 @@ plotMap.real = struct('label','Real Quad.', 'func', @real);
 plotMap.imag = struct('label','Imag. Quad.', 'func', @imag);
 
 switch plotMode
+    case 'real'
+        toPlot = {plotMap.real};
+        numRows = 1; numCols = 1;
+    case 'imag'
+        toPlot = {plotMap.imag};
+        numRows = 1; numCols = 1;
+    case 'amp'
+        toPlot = {plotMap.abs};
+        numRows = 1; numCols = 1;
+    case 'phase'
+        toPlot = {plotMap.phase};
+        numRows = 1; numCols = 1;
     case 'amp/phase'
         toPlot = {plotMap.abs, plotMap.phase};
         numRows = 2; numCols = 1;
@@ -104,7 +142,7 @@ if ~isempty(plotMode)
             axesH = subplot(numRows, numCols, ct, 'Parent', figH);
                 switch data.dimension{ii}
                     case 1
-                        plot(axesH, data.xpoints{ii}, toPlot{ct}.func(data.data{ii}));
+                        plot(axesH, data.xpoints{ii}, toPlot{ct}.func(data.data{ii}),'.-');
                         xlabel(axesH, data.xlabel{ii});
                         ylabel(axesH, toPlot{ct}.label)
                         title(sanitizedFileName);
@@ -139,5 +177,12 @@ if data.nbrDataSets == 1
     end
     
 end
+
+end
+
+function fullpath = get_latest_file()
+
+namer = DataNamer.get_instance();
+fullpath = namer.lastFileName;
 
 end

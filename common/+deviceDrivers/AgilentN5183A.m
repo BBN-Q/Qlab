@@ -8,18 +8,16 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
     % Device properties correspond to instrument parameters
     properties (Access = public)
         output
-        frequency
+        frequency        
         power
         phase
         mod
+        sweep
+        sweepTrig
+        pointTrig
         alc
         pulse
         pulseSource
-        IQ
-        IQ_Adjust
-        IQ_IOffset
-        IQ_QOffset
-        IQ_Skew
     end % end device properties
     
     methods
@@ -53,32 +51,39 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
         function val = get.pulseSource(obj)
             val = obj.query(':pulm:source?;');
         end
-        function val = get.IQ(obj)
-            val = obj.query(':dm:state?;');
-        end
-        function val = get.IQ_Adjust(obj)
-            val = obj.query(':dm:IQAD?;');
-        end
-        function val = get.IQ_IOffset(obj)
-            val = str2double(obj.query(':dm:iqad:ioff?;'));
-        end
-        function val = get.IQ_QOffset(obj)
-            val = str2double(obj.query(':dm:iqad:qoff?;'));
-        end
-        function val = get.IQ_Skew(obj)
-            val = str2double(obj.query(':dm:iqad:qskew?;'));
-        end
         
         % property setters
+        function armsweep(obj)
+            obj.write('INIT;');
+        end
+        function obj = set.sweep(obj, value)
+            value=def(value,'dwell',0.001);
+            obj.write(sprintf(':freq:start %f GHz;', value.start));
+            obj.write(sprintf(':freq:stop %f GHz;', value.stop));
+            obj.write(sprintf(':swe:poin %i;',value.points));
+            obj.write(sprintf(':swe:dwel %g;', value.dwell));
+            obj.write(':FREQ:MODE LIST;');
+            obj.write(':INIT:CONT 1;');
+            obj.check_errors();
+        end
+        function obj = set.pointTrig(obj, value)
+            % Good choices are BUS, IMM, EXT, INT, KEY, TIM
+            obj.write(sprintf(':list:trig:sour %s;', value));
+        end
+        function obj = set.sweepTrig(obj, value)
+            % Good choices are BUS, IMM, EXT, INT, KEY, TIM
+            obj.write(sprintf(':trig:sour %s;', value));
+        end
+        
         function obj = set.frequency(obj, value)
             assert(isnumeric(value), 'Requires numeric input');
 
             %mode_string = ':freq:mode fixed'; %set to fixed
             %obj.write(mode_string);
-            obj.write(sprintf(':freq:fixed %d GHz;', value));
-
+            obj.write(sprintf(':freq:fixed %20.10f Hz;', value*1e9));
+            obj.query('*OPC?');
             %Wait for frequency to settle
-            pause(0.02);
+            pause(0.005);
         end
         function obj = set.power(obj, value)
             assert(isnumeric(value), 'Requires numeric input');
@@ -110,24 +115,6 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
                 error('Invalid input');
             end
             obj.write([':pulm:source ' checkMapObj(value) ';']);
-        end
-        function obj = set.IQ(obj, value)
-            obj.write([':dm:state ' obj.cast_boolean(value) ';']);
-        end
-        function obj = set.IQ_Adjust(obj, value)
-            obj.write([':dm:IQAD ' obj.cast_boolean(value) ';']);
-        end
-        function obj = set.IQ_IOffset(obj, value)
-            assert(isnumeric(value), 'Requires numeric input');
-            obj.write(sprintf(':dm:iqad:ioff %d;', value));
-        end
-        function obj = set.IQ_QOffset(obj, value)
-            assert(isnumeric(value), 'Requires numeric input');
-            obj.write(sprintf(':dm:iqad:qoff %d;', value));
-        end
-        function obj = set.IQ_Skew(obj, value)
-            assert(isnumeric(value), 'Requires numeric input');
-            obj.write(sprintf(':dm:iqad:qskew %d;', value));
         end
                 
         function errs=check_errors(obj)
@@ -163,7 +150,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             if islogical(in)
                 if in
                     in = 'on';
-                else 
+                else
                     in = 'off';
                 end
             end
@@ -173,6 +160,12 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             assert(checkMapObj.isKey(lower(in)), 'Invalid input');
             out = checkMapObj(lower(in));
         end
-        
+        function s=def(s,opt,def)
+            % function s=def(s,opt,def)
+            %% Utility functions
+            if ~isfield(s,opt)
+                s.(opt)=def;
+            end
+        end
     end
 end % end class definition

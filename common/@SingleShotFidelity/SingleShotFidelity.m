@@ -28,7 +28,7 @@ classdef SingleShotFidelity < handle
     end
     
     methods
-        %% Class constructor
+        %Class constructor
         function obj = SingleShotFidelity()
         end
         
@@ -42,7 +42,7 @@ classdef SingleShotFidelity < handle
             obj.experiment.dataFileHandler = HDF5DataHandler(settings.fileName);
             
             % load ExpManager settings
-            expSettings = jsonlab.loadjson(obj.settings.cfgFile);
+            expSettings = json.read(obj.settings.cfgFile);
             instrSettings = expSettings.instruments;
             
             % construct data file header
@@ -52,26 +52,35 @@ classdef SingleShotFidelity < handle
             
             % add instruments
             for instrument = fieldnames(instrSettings)'
-                instr = InstrumentFactory(instrument{1});
+                fprintf('Connecting to %s\n', instrument{1});
+                instr = InstrumentFactory(instrument{1}, instrSettings.(instrument{1}));
                 %If it is an AWG, point it at the correct file
                 if ExpManager.is_AWG(instr)
-                    if isa(instr, 'deviceDrivers.APS')
+                    if isa(instr, 'deviceDrivers.APS') || isa(instr, 'APS2') || isa(instr, 'APS')
                         ext = 'h5';
                     else
                         ext = 'awg';
                     end
-                    instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-' instrument{1} '.' ext]);
+                %To get a different sequence loaded into the APS1 when used as a slave for the msm't only.
+                    %if isa(instr,'deviceDrivers.APS') && instrSettings.(instrument{1}).isMaster == 0
+                    %    instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), 'Reset', ['MeasReset-' instrument{1} '.' ext]);
+                    %else
+                        instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), 'SingleShot', ['SingleShot-' instrument{1} '.' ext]);
+                    %end
+                end
+                if ExpManager.is_scope(instr)
+                    scopeName = instrument{1};
                 end
                 add_instrument(obj.experiment, instrument{1}, instr, instrSettings.(instrument{1}));
             end
             
             % set scope to digitizer mode
-            obj.experiment.instrSettings.scope.acquireMode = 'digitizer';
+            obj.experiment.instrSettings.(scopeName).acquireMode = 'digitizer';
             
             % set digitizer with the appropriate number of segments and
             % round robins
-            obj.experiment.instrSettings.scope.averager.nbrSegments = 2;
-            obj.experiment.instrSettings.scope.averager.nbrRoundRobins = settings.numShots/2;
+            obj.experiment.instrSettings.(scopeName).averager.nbrSegments = settings.numShots;
+            obj.experiment.instrSettings.(scopeName).averager.nbrRoundRobins = 1;
             
             %Add the instrument sweeps
             sweepSettings = settings.sweeps;
@@ -83,14 +92,23 @@ classdef SingleShotFidelity < handle
                 % create a generic SegmentNum sweep
                 %Even though there really is two segments there only one data
                 %point (SS fidelity) being returned at each step.
-                add_sweep(obj.experiment, 1, sweeps.SegmentNum(struct('label', 'Segment', 'start', 0, 'step', 1, 'numPoints', 1)));
+                add_sweep(obj.experiment, 1, sweeps.SegmentNum(struct('axisLabel', 'Segment', 'start', 0, 'step', 1, 'numPoints', 1)));
             end
 
             % add single-shot measurement filter
-            import MeasFilters.*
             measSettings = expSettings.measurements;
-            dh = DigitalHomodyneSS(measSettings.(obj.settings.measurement));
-            add_measurement(obj.experiment, 'single_shot', SingleShot(dh, obj.settings.numShots));
+            add_measurement(obj.experiment, 'SingleShot',...
+                MeasFilters.SingleShot('SingleShot', struct('dataSource', obj.settings.dataSource, 'plotMode', 'real/imag', 'plotScope', true)));
+            curSource = obj.settings.dataSource;
+            while (true)
+               sourceParams = measSettings.(curSource);
+               curFilter = MeasFilters.(sourceParams.filterType)(curSource, sourceParams);
+               add_measurement(obj.experiment, curSource, curFilter);
+               if isa(curFilter, 'MeasFilters.RawStream') || isa(curFilter, 'MeasFilters.StreamSelector')
+                   break;
+               end
+               curSource = sourceParams.dataSource;
+            end
             
             %Create the sequence of alternating QId, 180 inversion pulses
             if obj.settings.createSequence
@@ -102,8 +120,9 @@ classdef SingleShotFidelity < handle
         end
         
         function SSData = Do(obj)
-            obj.SingleShotFidelityDo();
-            SSData = obj.experiment.data.single_shot;
+            obj.experiment.run();
+            drawnow();
+            SSData = obj.experiment.data.SingleShot;
         end
         
     end

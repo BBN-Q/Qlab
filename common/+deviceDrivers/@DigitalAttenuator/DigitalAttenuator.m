@@ -65,10 +65,15 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
             end
         end
         
+        function out = query(obj, msg)
+            flushinput(obj.interface);
+            write(obj, msg);
+            out = readUntilEND(obj);
+        end
+        
         function val = get.serial(obj)
             % poll device for its serial number
-            obj.write('ID?');
-            val = obj.readUntilEND();
+            val = query(obj, 'ID?');
             val = str2double(val);
             obj.serial = val;
         end
@@ -96,8 +101,7 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
                 error('DigitalAttenuator:getAttenuation:channel', 'Invalid channel number %d', channel);
             end
             cmd = sprintf('GET %d', channel);
-            obj.write(cmd);
-            out = obj.readUntilEND();
+            out = obj.query(cmd);
         end
 
         function zeroAll(obj)
@@ -106,14 +110,6 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
                 obj.setAttenuation(channel, 0);
             end
         end
-        
-        function pendingArduino(obj)
-            % pendingArduino - clear the serial interface
-            if ( obj.interface.BytesAvailable > 0)
-                flushinput(obj.interface);
-            end
-        end
-        
 
     end % Methods
     

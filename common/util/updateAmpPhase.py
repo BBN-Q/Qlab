@@ -15,3 +15,5 @@ if args.physChan not in channelLib.channelDict:
 
 channelLib[args.physChan].ampFactor = args.ampFactor
 channelLib[args.physChan].phaseSkew = args.phaseSkew
+
+channelLib.write_to_file()

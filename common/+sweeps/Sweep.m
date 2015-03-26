@@ -16,7 +16,7 @@
 % limitations under the License.
 classdef Sweep < handle
 	properties
-		label = 'Sweep'
+		axisLabel = 'Sweep'
 		plotPoints
 		points
         numSteps

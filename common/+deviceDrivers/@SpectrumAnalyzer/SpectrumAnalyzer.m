@@ -48,6 +48,15 @@ classdef (Sealed) SpectrumAnalyzer < deviceDrivers.lib.Serial
             obj = obj@deviceDrivers.lib.Serial();
         end
         
+        %Override the delete to turn off the LO so it doesn't leak into
+        %system
+        function delete(obj)
+            if(~isempty(obj.LOsource))
+                obj.LOsource.output = false;
+            end
+            delete@deviceDrivers.lib.Serial(obj);
+        end
+        
         %Override the connect method to set a shorter timeout becaues the
         %Arduino flakes out sometimes
         function connect(obj, address)
@@ -72,6 +81,9 @@ classdef (Sealed) SpectrumAnalyzer < deviceDrivers.lib.Serial
                 else
                     tryct = tryct+1;
                 end
+            end
+            if isempty(out)
+                warning('Failed to get data from spectrum analyzer.');
             end
         end
         

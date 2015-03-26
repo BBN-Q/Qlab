@@ -139,6 +139,7 @@ classdef MixerOptimizer < handle
                 updateAmpPhase(obj.channelParams.physChan, obj.results.ampFactor, obj.results.phaseSkew);
 
                 % update i and q offsets in the instrument library
+                
                 instrLib = json.read(getpref('qlab', 'InstrumentLibraryFile'));
                 tmpStr = regexp(obj.channelParams.physChan, '-', 'split');
                 awgName = tmpStr{1};
@@ -166,34 +167,30 @@ classdef MixerOptimizer < handle
         function setup_SSB_AWG(obj, i_offset, q_offset)
             %Helper function to setup the SSB waveforms from the AWGs
             awgfile = obj.expParams.SSBAWGFile;
-            iChan = obj.channelParams.physChan(end-1);
-            qChan = obj.channelParams.physChan(end);
-            
+            iChan = str2double(obj.channelParams.physChan(end-1));
+            qChan = str2double(obj.channelParams.physChan(end));
             switch class(obj.awg)
                 case 'deviceDrivers.Tek5014'
                     %Here we just preload a custom special AWG file
-                    awg_amp = obj.awg.(['chan_' iChan]).amplitude;
-                    obj.awg.openConfig(awgfile);
-                    obj.awg.(['chan_' iChan]).offset = i_offset;
-                    obj.awg.(['chan_' qChan]).offset = q_offset;
+                    awg_amp = obj.awg.getAmplitude(iChan);
+                    obj.awg.loadConfig(awgfile);
                     obj.awg.runMode = 'CONT';
-                    obj.awg.(['chan_' iChan]).amplitude = awg_amp;
-                    obj.awg.(['chan_' qChan]).amplitude = awg_amp;
-                    obj.awg.(['chan_' iChan]).skew = 0;
-                    obj.awg.(['chan_' qChan]).skew = 0;
-                    obj.awg.(['chan_' iChan]).enabled = 1;
-                    obj.awg.(['chan_' qChan]).enabled = 1;
+                    obj.awg.setAmplitude(iChan, awg_amp);
+                    obj.awg.setOffset(iChan, i_offset);
+                    obj.awg.setSkew(iChan, 0);
+                    obj.awg.setEnabled(iChan, 1);
+                    
+                    obj.awg.setAmplitude(qChan, awg_amp);
+                    obj.awg.setOffset(qChan, q_offset);
+                    obj.awg.setSkew(qChan, 0);
+                    obj.awg.setEnabled(qChan, 1);
                     obj.awg.run();
                     
-                case 'deviceDrivers.APS'
-                    % convert iChan and qChan to numbers
-                    iChan = str2double(iChan);
-                    qChan = str2double(qChan);
-                    
-                    awg_amp = obj.awg.getAmplitude(iChan);
+                case {'deviceDrivers.APS', 'APS'}
                     %Here we use waveform mode to put out a continuous
                     %sine wave
                     obj.awg.stop();
+                    awg_amp = obj.awg.getAmplitude(iChan);
                     %Setup a SSB waveform with a 1200 pt sinusoid for both
                     %channels
                     waveformLength = 1200;
@@ -230,6 +227,38 @@ classdef MixerOptimizer < handle
                     
                     %Get the AWG going
                     obj.awg.run();
+                case 'APS2'
+                    obj.awg.stop();
+                    awg_amp = obj.awg.get_channel_scale(iChan);
+                    
+                    %Setup a SSB waveform with a 1200 pt sinusoid for both
+                    %channels
+                    waveformLength = 1200;
+                    tpts = (1/obj.awg.samplingRate)*(0:(waveformLength-1));
+                    
+                    % i waveform
+                    iwf = 0.5 * cos(2*pi*obj.expParams.SSBFreq*tpts);
+                    obj.awg.set_channel_scale(iChan, awg_amp);
+                    obj.awg.set_channel_offset(iChan, i_offset);
+                    % waveforms in the range (-1, 1)
+                    obj.awg.load_waveform(iChan, iwf);
+                    
+                    % q waveform
+                    qwf = -0.5 * sin(2*pi*obj.expParams.SSBFreq*tpts);
+                    obj.awg.set_channel_scale(qChan, awg_amp);
+                    obj.awg.set_channel_offset(qChan, q_offset);
+                    obj.awg.load_waveform(qChan, qwf);
+                    
+                    obj.awg.set_trigger_source('internal');
+                    obj.awg.set_run_mode('CW_WAVEFORM');
+                    
+                    for ct = 1:2
+                        obj.awg.set_channel_enabled(ct, true);
+                    end
+                    
+                    %Get the AWG going
+                    obj.awg.run();
+                    
             end
             obj.awgAmp = awg_amp;
         end

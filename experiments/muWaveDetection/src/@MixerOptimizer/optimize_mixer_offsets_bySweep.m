@@ -28,7 +28,6 @@ awg_I_channel = str2double(obj.channelParams.physChan(end-1));
 awg_Q_channel = str2double(obj.channelParams.physChan(end));
 
 obj.awg.run();
-obj.awg.waitForAWGtoStartRunning();
 
 offsetPts = linspace(ExpParams.Sweep.offset.start, ExpParams.Sweep.offset.stop, ExpParams.Sweep.offset.numPoints);
 vertex = struct();
@@ -119,13 +118,16 @@ drawnow()
                 obj.awg.(['chan_' num2str(awg_I_channel)]).offset = vertex.a;
                 obj.awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
                 obj.awg.operationComplete();
-                pause(0.1);
-            case 'deviceDrivers.APS'
+            case {'deviceDrivers.APS', 'APS'}
                 obj.awg.setOffset(awg_I_channel, vertex.a);
                 obj.awg.setOffset(awg_Q_channel, vertex.b);
-                pause(0.1);
+            case 'APS2'
+                obj.awg.stop();
+                obj.awg.set_channel_offset(awg_I_channel, vertex.a);
+                obj.awg.set_channel_offset(awg_Q_channel, vertex.b);
+                obj.awg.run();
         end
-        
+        pause(0.1)
     end
 
 end

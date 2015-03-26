@@ -31,7 +31,7 @@ classdef (Sealed) AgilentE8267D < deviceDrivers.lib.uWSource & deviceDrivers.lib
         function val = get.frequency(obj)
             gpib_string = ':freq:fixed?';
             temp = obj.query([gpib_string]);
-            val = str2double(temp);
+            val = str2double(temp) * 1e-9;
         end
         function val = get.power(obj)
             gpib_string = ':power?';
@@ -96,7 +96,7 @@ classdef (Sealed) AgilentE8267D < deviceDrivers.lib.uWSource & deviceDrivers.lib
         
         % property setters
         function obj = set.frequency(obj, value)
-            gpib_string = ':freq:fixed %d';
+            gpib_string = ':freq:fixed %d GHz';
 
             % Validate input
             if ~isnumeric(value)
@@ -271,6 +271,28 @@ classdef (Sealed) AgilentE8267D < deviceDrivers.lib.uWSource & deviceDrivers.lib
             gpib_string = sprintf(gpib_string, value);
             obj.write(gpib_string);
         end
+        function errs=check_errors(obj)
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % Check for errors
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%            
+            first=1;
+            errs=[];
+            while 1
+                a=query(obj,'SYST:ERR?');
+                loc=find(a==',');
+                errflag=str2num(a(1:(loc-1)));
+                if errflag == 0
+                    break;
+                end
+                errs=[errs errflag];
+                if first
+                  fprintf('Error occured on E8267D\n')
+                  first=0;
+                end
+                fprintf('  -> "%s"\n',a);
+            end
+        end
+        
     end % end instrument parameter accessors
     
     

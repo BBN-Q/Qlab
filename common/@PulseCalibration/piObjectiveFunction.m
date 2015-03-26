@@ -18,12 +18,12 @@ function [cost, J] = piObjectiveFunction(obj, x, direction)
     if ~obj.testMode
         obj.channelParams.(chan) = offset;
         % load sequence
-        obj.loadSequence(filenames, 2);
+        obj.loadSequence(filenames, 1);  
     end
     
     % measure
     if ~obj.testMode
-        data = obj.homodyneMeasurement(segmentPoints);
+        data = obj.take_data(segmentPoints);
     else
         data = simulateMeasurement(x, obj.settings.offset2amp, obj.settings.OffsetNorm);
         plot(data);
