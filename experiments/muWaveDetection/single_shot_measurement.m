@@ -8,6 +8,7 @@ ExpParams.dataSource = 'M1_demod';
 ExpParams.cfgFile = getpref('qlab', 'CurScripterFile');
 %Update some relevant parameters
 ExpParams.numShots = 40000;
+ExpParams.logisticRegression = false;
 
 %Whether to create the sequence (useful for using QGL instead)
 ExpParams.createSequence = false;

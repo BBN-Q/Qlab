@@ -24,11 +24,15 @@ classdef SingleShot < MeasFilters.MeasFilter
         analysed = false
         analysing = false
         bestIntegrationTime
+        logisticRegression = false
     end
     
     methods
         function obj = SingleShot(label, settings)
             obj = obj@MeasFilters.MeasFilter(label, settings);
+            if isfield(settings, 'logisticRegression')
+                obj.logisticRegression = settings.logisticRegression;
+            end
         end
         
         function out = apply(obj, src, ~)
@@ -130,38 +134,37 @@ classdef SingleShot < MeasFilters.MeasFilter
                 obj.analysed = true;
                 
                 %Logistic regression
-                allData = cat(1, cat(2, real(obj.groundData)', imag(obj.groundData)'), cat(2, real(obj.excitedData)', imag(obj.excitedData)'));
-                prepStates = [zeros(size(obj.groundData,2),1); ones(size(obj.excitedData,2),1)];
-                %Matlab's logistic regression support is quite weak.  The
-                %code below takes forever and overfits.  It looks like in
-                %more recent versions lassoglm might provide some
-                %regularization
-%                 betas = glmfit(allData, prepStates, 'binomial');
-%                 guessStates = glmval(betas, allData, 'logit');
-%                 fidelity = 2*sum(guessStates == prepStates)/size(allData,1) - 1 
+                if obj.logisticRegression
+                    allData = cat(1, cat(2, real(obj.groundData)', imag(obj.groundData)'), cat(2, real(obj.excitedData)', imag(obj.excitedData)'));
+                    prepStates = [zeros(size(obj.groundData,2),1); ones(size(obj.excitedData,2),1)];
+                    %Matlab's logistic regression support is quite weak.  The
+                    %code below takes forever and overfits.  It looks like in
+                    %more recent versions lassoglm might provide some
+                    %regularization
+                    % betas = glmfit(allData, prepStates, 'binomial');
+                    % guessStates = glmval(betas, allData, 'logit');
+                    % fidelity = 2*sum(guessStates == prepStates)/size(allData,1) - 1 
 
-                %Fortunately, liblinear is great!
-               
-% temporarily commented to speed up sweep 15/01/12               
-%                 bestAccuracy = 0;
-%                 bestC = 0;
-%                 for c = logspace(0,2,5);
-%                     accuracy = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -v 3 -q -s 0',c));
-%                     if accuracy > bestAccuracy
-%                         bestAccuracy = accuracy;
-%                         bestC = c;
-%                     end
-%                 end
-%                 model = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -q -s 0',bestC));
-%                 [predictedState, accuracy, ~] = predict(prepStates, sparse(double(allData)), model);
-%                 c = 0.95;
-%                 N = length(predictedState);
-%                 S = sum(predictedState == prepStates);
-%                 flo = betaincinv((1-c)/2.,S+1,N-S+1);
-%                 fup = betaincinv((1+c)/2.,S+1,N-S+1);
-%                 fprintf('Cross-validated logistic regression accuracy: %.2f\n', bestAccuracy);
-%                 fprintf('In-place logistic regression fidelity %.2f, (%.2f, %.2f).\n', accuracy(1), 100*flo, 100*fup);
-
+                    %Fortunately, liblinear is great!
+                    bestAccuracy = 0;
+                    bestC = 0;
+                    for c = logspace(0,2,5);
+                        accuracy = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -v 3 -q -s 0',c));
+                        if accuracy > bestAccuracy
+                            bestAccuracy = accuracy;
+                            bestC = c;
+                        end
+                    end
+                    model = train(prepStates, sparse(double(allData)), sprintf('-c %f -B 1.0 -q -s 0',bestC));
+                    [predictedState, accuracy, ~] = predict(prepStates, sparse(double(allData)), model);
+                    c = 0.95;
+                    N = length(predictedState);
+                    S = sum(predictedState == prepStates);
+                    flo = betaincinv((1-c)/2.,S+1,N-S+1);
+                    fup = betaincinv((1+c)/2.,S+1,N-S+1);
+                    fprintf('Cross-validated logistic regression accuracy: %.2f\n', bestAccuracy);
+                    fprintf('In-place logistic regression fidelity %.2f, (%.2f, %.2f).\n', accuracy(1), 100*flo, 100*fup);
+                end
             else
                 out = obj.pdfData.maxFidelity_I + 1j*obj.pdfData.maxFidelity_Q;
             end
