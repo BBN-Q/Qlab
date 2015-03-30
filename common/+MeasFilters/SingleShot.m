@@ -124,11 +124,13 @@ classdef SingleShot < MeasFilters.MeasFilter
                 obj.pdfData.gPDF_I = gPDF;
                 obj.pdfData.ePDF_I = ePDF;
                 
-                tmpData = intGroundIData(intPt,:);
-                [mu, sigma] = normfit(tmpData(tmpData<0));
+%                 tmpData = intGroundIData(intPt,:);
+%                 [mu, sigma] = normfit(tmpData(tmpData<0));
+                [mu, sigma] = normfit(intGroundIData(intPt,:));
                 obj.pdfData.g_gaussPDF_I = normpdf(obj.pdfData.bins_I, mu, sigma);
-                tmpData = intExcitedIData(intPt,:);
-                [mu, sigma] = normfit(tmpData(tmpData>0));
+%                 tmpData = intExcitedIData(intPt,:);
+%                 [mu, sigma] = normfit(tmpData(tmpData>0));
+                [mu, sigma] = normfit(intExcitedIData(intPt,:));
                 obj.pdfData.e_gaussPDF_I = normpdf(obj.pdfData.bins_I, mu, sigma);
                 
                 %Calculate the kernel density estimates for the other
@@ -194,12 +196,12 @@ classdef SingleShot < MeasFilters.MeasFilter
             if obj.analysed
                 clf(figH);
                 axes1 = subplot(2,1,1, 'Parent', figH);
-%                 semilogy(axes1, obj.pdfData.bins_I, obj.pdfData.gPDF_I, 'b');
-                plot(axes1, obj.pdfData.bins_I, obj.pdfData.gPDF_I, 'b');
+                plt_fcn = @plot; %@semilogy
+                plt_fcn(axes1, obj.pdfData.bins_I, obj.pdfData.gPDF_I, 'b');
                 hold(axes1, 'on');
-                semilogy(axes1, obj.pdfData.bins_I, obj.pdfData.g_gaussPDF_I, 'b--')
-                semilogy(axes1, obj.pdfData.bins_I, obj.pdfData.ePDF_I, 'r');
-                semilogy(axes1, obj.pdfData.bins_I, obj.pdfData.e_gaussPDF_I, 'r--')
+                plt_fcn(axes1, obj.pdfData.bins_I, obj.pdfData.g_gaussPDF_I, 'b--')
+                plt_fcn(axes1, obj.pdfData.bins_I, obj.pdfData.ePDF_I, 'r');
+                plt_fcn(axes1, obj.pdfData.bins_I, obj.pdfData.e_gaussPDF_I, 'r--')
                 allData = [obj.pdfData.gPDF_I(:); obj.pdfData.ePDF_I(:)];
                 ylim(axes1, [1e-3*max(allData), 2*max(allData)]); 
                 legend(axes1, {'Ground', 'Ground Gaussian Fit', 'Excited', 'Excited Gaussian Fit'})
