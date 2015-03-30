@@ -78,20 +78,22 @@ classdef SingleShot < MeasFilters.MeasFilter
                 intExcitedIData = cumsum(excitedIData, 1);
                 intGroundQData = cumsum(groundQData, 1);
                 intExcitedQData = cumsum(excitedQData, 1);
+                Imins = min(min(intGroundIData, intExcitedIData), [], 2);
+                Imaxes = max(max(intGroundIData, intExcitedIData), [], 2);
                 
                 %Loop through each integration point; estimate the CDF and
                 %then calculate best measurement fidelity
                 numTimePts = size(intGroundIData,1);
                 fidelities = zeros(numTimePts,1);
-                for intPt = 1:2:numTimePts
+                for intPt = 2:2:numTimePts
                     %Setup bins from the minimum to maximum measured voltage
-                    bins = linspace(min([intGroundIData(intPt,:), intExcitedIData(intPt,:)]), max([intGroundIData(intPt,:), intExcitedIData(intPt,:)]));
+                    bins = linspace(Imins(intPt), Imaxes(intPt));
                     
-                    %Estimate the PDF for the ground and excited states
-                    gPDF = ksdensity(intGroundIData(intPt,:), bins);
-                    ePDF = ksdensity(intExcitedIData(intPt,:), bins);
+                    %Use cheap histogramming to estimate the PDF for the ground and excited states
+                    gPDF = hist(intGroundIData(intPt,:), bins);
+                    ePDF = hist(intExcitedIData(intPt,:), bins);
                     
-                    fidelities(intPt) = 1-0.5*(1-0.5*(bins(2)-bins(1))*sum(abs(gPDF-ePDF)));
+                    fidelities(intPt) = sum(abs(gPDF-ePDF))/sum(gPDF + ePDF);
                 end
                 
                 %reduce fidelities so that it doesn't integrate longer than
@@ -102,15 +104,21 @@ classdef SingleShot < MeasFilters.MeasFilter
 %                         break
 %                     end
 %                 end
-%                 
 %                 [maxFidelity_I, intPt] = max(fidelities(1:kk));
                 [maxFidelity_I, intPt] = max(fidelities);
                 obj.bestIntegrationTime = intPt;
                 fprintf('Best integration time found at %d decimated points out of %d\n', intPt, numTimePts);
-                obj.pdfData.bins_I = linspace(min([intGroundIData(intPt,:), intExcitedIData(intPt,:)]), max([intGroundIData(intPt,:), intExcitedIData(intPt,:)]));
-                obj.pdfData.gPDF_I = ksdensity(intGroundIData(intPt,:), obj.pdfData.bins_I);
-                obj.pdfData.ePDF_I = ksdensity(intExcitedIData(intPt,:), obj.pdfData.bins_I);
-                obj.pdfData.maxFidelity_I = maxFidelity_I;
+                % now redo the calculation with KDEs to get a more accurate
+                % estimate
+                bins = linspace(Imins(intPt), Imaxes(intPt));
+                gPDF = ksdensity(intGroundIData(intPt,:), bins);
+                ePDF = ksdensity(intExcitedIData(intPt,:), bins);
+                % report "assignment fidelity" = 1-0.5*(1-F)
+                obj.pdfData.maxFidelity_I =  1-0.5*(1-0.5*(bins(2)-bins(1))*sum(abs(gPDF-ePDF)));
+                obj.pdfData.bins_I = bins;
+                obj.pdfData.gPDF_I = gPDF;
+                obj.pdfData.ePDF_I = ePDF;
+                
                 tmpData = intGroundIData(intPt,:);
                 [mu, sigma] = normfit(tmpData(tmpData<0));
                 obj.pdfData.g_gaussPDF_I = normpdf(obj.pdfData.bins_I, mu, sigma);
