@@ -60,24 +60,29 @@ classdef SingleShot < MeasFilters.MeasFilter
                 
                 groundMean = mean(obj.groundData, 2);
                 excitedMean = mean(obj.excitedData, 2);
-                centre = 0.5*(groundMean+excitedMean);
-                rotAngle = angle(excitedMean-groundMean);
-                unwoundGroundData = bsxfun(@times, bsxfun(@minus, obj.groundData, centre), exp(-1j*rotAngle));
-                unwoundExcitedData = bsxfun(@times, bsxfun(@minus, obj.excitedData, centre), exp(-1j*rotAngle));
+                distance = mean(groundMean - excitedMean);
+                fprintf('distance: %g\n', distance);
+                bias = mean(groundMean + excitedMean)/distance;
+                fprintf('bias: %g\n', bias(end));
                 
-                %Use the difference magnitude as a weight function
-                diffMag = abs(excitedMean-groundMean);
-                weights = diffMag/sum(diffMag);
-                groundIData = bsxfun(@times, real(unwoundGroundData), weights);
-                excitedIData = bsxfun(@times, real(unwoundExcitedData), weights);
-                groundQData = bsxfun(@times, imag(unwoundGroundData), weights);
-                excitedQData = bsxfun(@times, imag(unwoundExcitedData), weights);
+                % construct matched filter kernel and apply it
+                kernel = conj(groundMean - excitedMean) ./ var(obj.groundData,0,2);
+                fprintf('norm: %g\n', sum(abs(kernel)));
+                % normalize
+                kernel = abs(2.0/distance) * kernel / sum(abs(kernel));
+                
+                weightedGround = bsxfun(@times, obj.groundData, kernel);
+                weightedExited = bsxfun(@times, obj.excitedData, kernel);
+                groundIData = real(weightedGround);
+                excitedIData = real(weightedExited);
+                groundQData = imag(weightedGround);
+                excitedQData = imag(weightedExited);
                 
                 %Take cummulative sum up to each timestep
-                intGroundIData = cumsum(groundIData, 1);
-                intExcitedIData = cumsum(excitedIData, 1);
-                intGroundQData = cumsum(groundQData, 1);
-                intExcitedQData = cumsum(excitedQData, 1);
+                intGroundIData = cumsum(groundIData, 1) - bias;
+                intExcitedIData = cumsum(excitedIData, 1) - bias;
+                intGroundQData = cumsum(groundQData, 1) - bias;
+                intExcitedQData = cumsum(excitedQData, 1) - bias;
                 Imins = min(min(intGroundIData, intExcitedIData), [], 2);
                 Imaxes = max(max(intGroundIData, intExcitedIData), [], 2);
                 
