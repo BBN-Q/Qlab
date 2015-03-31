@@ -25,6 +25,7 @@ classdef SingleShot < MeasFilters.MeasFilter
         analysing = false
         bestIntegrationTime
         logisticRegression = false
+        saveKernel = true
     end
     
     methods
@@ -70,6 +71,15 @@ classdef SingleShot < MeasFilters.MeasFilter
                 fprintf('norm: %g\n', sum(abs(kernel)));
                 % normalize
                 kernel = abs(2.0/distance) * kernel / sum(abs(kernel));
+                
+                if sum(abs(imag(kernel)))==0
+                    kernel = myhilbert(kernel);
+                end
+                
+                if obj.saveKernel
+                    dlmwrite(strcat('kernel_',obj.dataSource,'_real.csv'), real(kernel));
+                    dlmwrite(strcat('kernel_',obj.dataSource,'_imag.csv'), imag(kernel));
+                end
                 
                 weightedGround = bsxfun(@times, obj.groundData, kernel);
                 weightedExited = bsxfun(@times, obj.excitedData, kernel);

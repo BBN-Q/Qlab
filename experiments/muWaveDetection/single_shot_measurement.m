@@ -1,14 +1,15 @@
 function SSData = single_shot_measurement(qubit, expName)
 
-deviceName = 'IBM_v7_a2';
+deviceName = 'IBM_v112037W3';
 ExpParams.fileName = DataNamer.get_data_filename(deviceName, expName);
 
 ExpParams.qubit = qubit;
-ExpParams.dataSource = 'M1_demod';
+ExpParams.dataSource = 'Ch1Raw'; %'M1Demod';
 ExpParams.cfgFile = getpref('qlab', 'CurScripterFile');
 %Update some relevant parameters
-ExpParams.numShots = 40000;
+ExpParams.numShots = 10000;
 ExpParams.logisticRegression = false;
+ExpParams.saveKernel = true;
 
 %Whether to create the sequence (useful for using QGL instead)
 ExpParams.createSequence = false;
