@@ -72,7 +72,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 % normalize
                 kernel = abs(2.0/distance) * kernel / sum(abs(kernel));
                 
-                if sum(abs(imag(kernel)))==0
+                if isreal(kernel)
                     kernel = myhilbert(kernel);
                 end
                 
