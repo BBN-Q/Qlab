@@ -1,28 +1,30 @@
 function [optlen, optphase] = calibrateCR()
-%function to calibrate length and phase of CR pulse. 
+%function to calibrate length and phase of CR pulse. It assumes that the
+%sequence EchoCR is loaded
 CalParams = struct();
-CalParams.control = 'q2';
-CalParams.target = 'q1';
-CalParams.CR = 'CR';
+CalParams.control = 'q3';
+CalParams.target = 'q5';
+CalParams.CR = 'CR5';
 CalParams.channel = 2; %meas. channel for target qubit
-CalParams.lenstep = 30; %step in length calibration (in ns)
+CalParams.lenstep = 10; %step in length calibration (in ns)
 
-cfgpath=(getpref('qlab','ChannelParamsFile'));
-sweepPath=strrep(cfgpath,'ChannelParams','Sweeps');
+cfgpath=getpref('qlab','CurScripterFile');
+%sweepPath=strrep(cfgpath,'ChannelParams','Sweeps');
 
 %create a sequence with desired range of CR pulse lengths
 
 CRCalSequence(CalParams.control, CalParams.target, CalParams.CR, 1, CalParams.lenstep)
 
 %updates sweep settings 
-sweepLib = json.read(sweepPath);
-%sweepLib.sweepOrder='SegmentNumWithCals';
-sweepLib.sweepDict.SegmentNumWithCals.start = CalParams.lenstep*2;
-sweepLib.sweepDict.SegmentNumWithCals.stop = CalParams.lenstep*40;
-sweepLib.sweepDict.SegmentNumWithCals.numPoints = 38;
-sweepLib.sweepDict.SegmentNumWithCals.numCals = 8;
-sweepLib.sweepDict.SegmentNumWithCals.axisLabel = 'Pulse top length (ns)';
-json.write(sweepLib, sweepPath, 'indent', 2);
+cfgLib = json.read(cfgpath);
+%cfgLib.sweepOrder='SegmentNumWithCals';
+cfgLib.sweeps.SegmentNumWithCals.start = CalParams.lenstep*2;
+cfgLib.sweeps.SegmentNumWithCals.stop = CalParams.lenstep*40;
+cfgLib.sweeps.SegmentNumWithCals.numPoints = 46;
+cfgLib.sweeps.SegmentNumWithCals.numCals = 8;
+cfgLib.sweeps.SegmentNumWithCals.step = (cfgLib.sweeps.SegmentNumWithCals.stop-cfgLib.sweeps.SegmentNumWithCals.start)/(cfgLib.sweeps.SegmentNumWithCals.numPoints-cfgLib.sweeps.SegmentNumWithCals.numCals-1);
+cfgLib.sweeps.SegmentNumWithCals.axisLabel = 'Pulse top length (ns)';
+json.write(cfgLib, cfgpath, 'indent', 2);  
 
 %run the sequence
 ExpScripter('CRcal_len');
@@ -33,21 +35,22 @@ optlen = analyzeCalCR(1,data,CalParams.channel);
 
 %create a sequence with calibrated length and variable phase
 
-CRCalSequence(CalParams.control, CalParams.target, CalParams.CR, 2, optlen)
+CRCalSequence(CalParams.control, CalParams.target, CalParams.CR, 2, optlen) 
 
 %updates sweep settings
 
-sweepLib = json.read(sweepPath);
-sweepLib.sweepDict.SegmentNumWithCals.start = 0;
-sweepLib.sweepDict.SegmentNumWithCals.stop = 720;
-sweepLib.sweepDict.SegmentNumWithCals.numPoints = 38;
-sweepLib.sweepDict.SegmentNumWithCals.numCals = 8;
-sweepLib.sweepDict.SegmentNumWithCals.axisLabel = 'Pulse phase (deg)';
-json.write(sweepLib, sweepPath, 'indent', 2);
+cfgLib = json.read(cfgpath);
+cfgLib.sweeps.SegmentNumWithCals.start = 0;
+cfgLib.sweeps.SegmentNumWithCals.stop = 720;
+cfgLib.sweeps.SegmentNumWithCals.numPoints = 46;
+cfgLib.sweeps.SegmentNumWithCals.numCals = 8;
+cfgLib.sweeps.SegmentNumWithCals.step = (cfgLib.sweeps.SegmentNumWithCals.stop-cfgLib.sweeps.SegmentNumWithCals.start)/(cfgLib.sweeps.SegmentNumWithCals.numPoints-cfgLib.sweeps.SegmentNumWithCals.numCals-1);
+cfgLib.sweeps.SegmentNumWithCals.axisLabel = 'Pulse phase (deg)';
+json.write(cfgLib, cfgpath, 'indent', 2);
 
 %run the sequence
 ExpScripter('CRcal_ph');
 
 %analyze the sequence and updates CR pulse
 data=load_data('latest');
-optphase = analyzeCalCR(2,data,CalParams.channel);
+optphase = analyzeCalCR(2,data,CalParams.channel,102);
