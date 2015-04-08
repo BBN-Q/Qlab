@@ -246,6 +246,7 @@ classdef PulseCalibration < handle
         
         % externally defined static methods
         [cost, J, noiseVar] = RepPulseCostFunction(data, angle, numPulses);
+        [phase, sigma] = PhaseEstimation(data, verbose);
         [amp, offsetPhase]  = analyzeRabiAmp(data);
         bestParam = analyzeSlopes(data, numPsQIds, paramRange, numShots);
         
@@ -253,14 +254,16 @@ classdef PulseCalibration < handle
             % construct settings struct
             ExpParams = struct();
             ExpParams.Qubit = 'q1';
-            ExpParams.measurement = 'M1';
+            ExpParams.measurement = 'KernelM1';
             ExpParams.DoMixerCal = 0;
             ExpParams.DoRabiAmp = 0;
             ExpParams.DoRamsey = 0;
             ExpParams.NumPi2s = 9;
             ExpParams.DoPi2Cal = 1;
+            ExpParams.DoPi2PhaseCal = 0;
             ExpParams.NumPis = 9;
             ExpParams.DoPiCal = 1;
+            ExpParams.DoPiPhaseCal = 0;
             ExpParams.DoDRAGCal = 0;
             ExpParams.DoSPAMCal = 0;
             ExpParams.OffsetNorm = 2;
@@ -299,6 +302,11 @@ classdef PulseCalibration < handle
             %fprintf('Pi2Cost for more realistic data. Cost: %.4f, Jacobian: (%.4f, %.4f)\n', sum(cost.^2/length(cost)), sum(J(:,1)), sum(J(:,2)));
             %cost = pulseCal.PiCostFunction(data);
             %fprintf('PiCost for more realistic data: %f\n', cost);
+
+            % phase estimation
+            % pulseCal.settings = ExpParams;
+            % pulseCal.testMode = true;
+            % pulseCal.optimize_amplitude(0.55, 'X', pi);
             
             pulseCal.Init(ExpParams);
             pulseCal.Do();

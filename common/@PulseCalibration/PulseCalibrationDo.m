@@ -134,6 +134,26 @@ if settings.DoPi2Cal
     updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 end
 
+%% Pi/2 calibration via phase estimation
+if settings.DoPi2PhaseCal
+    % calibrate amplitude for X90
+    X90Amp = obj.optimize_amplitude(obj.channelParams.pi2Amp, 'X', pi/2);
+    obj.channelParams.pi2Amp = X90Amp;
+    fprintf('Found X90Amp: %.4f\n', X90Amp);
+
+    % calibrate Y90 if not using SSB
+    if obj.channelParams.SSBFreq == 0
+        Y90Amp = obj.optimize_amplitude(X90Amp, 'Y', pi/2);
+        fprintf('Found Y90Amp: %.4f\n', Y90Amp);
+
+        obj.channelParams.pi2Amp = Y90Amp;
+        % update T matrix with ratio X90Amp/Y90Amp
+        obj.channelParams.ampFactor = obj.channelParams.ampFactor*X90Amp/Y90Amp;
+        fprintf('ampFactor: %.3f\n', obj.channelParams.ampFactor);
+    end
+    updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
+end
+
 %% Pi Calibration
 if settings.DoPiCal
     % calibrate amplitude and offset for +/- X180
@@ -150,6 +170,15 @@ if settings.DoPiCal
     % update channelParams
     obj.channelParams.piAmp = X180Amp;
     obj.channelParams.i_offset = i_offset;
+    updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
+end
+
+%% Pi calibration via phase estimation
+if settings.DoPiPhaseCal
+    % calibrate amplitude for X90
+    X180Amp = obj.optimize_amplitude(obj.channelParams.piAmp, 'X', pi);
+    obj.channelParams.piAmp = X180Amp;
+    fprintf('Found X180Amp: %.4f\n', X180Amp);
     updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 end
 
