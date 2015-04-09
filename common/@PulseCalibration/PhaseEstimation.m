@@ -1,9 +1,9 @@
-function [phase, sigma] = PhaseEstimation(data, verbose)
+function [phase, sigma] = PhaseEstimation(data, vardata, verbose)
     % Estimates pulse rotation angle from a sequence of P^k experiments, where k is 
     % of the form 2^n. Uses the modified phase estimation algorithm from 
     % Kimmel et al, quant-ph/1502.02677 (2015).
     % Every experiment is doubled.
-    if nargin < 2
+    if nargin < 3
         verbose = false;
     end
     
@@ -15,13 +15,26 @@ function [phase, sigma] = PhaseEstimation(data, verbose)
     zdata = data(1:2:end);
     xdata = data(2:2:end);
 
-    phases = arrayfun(@(x,z) atan2(x,z), xdata, zdata);
+    % similar scaling with variances
+    vardata = (vardata(1:2:end) + vardata(2:2:end))/2;
+    vardata = vardata(3:end) * 2/(avgdata(1) - avgdata(2));
+
+    phases = atan2(xdata, zdata);
+    distances = sqrt(xdata.^2 + zdata.^2);
 
     curGuess = phases(1);
+    phase = curGuess;
+    sigma = pi;
     if verbose
         curGuess
     end
     for k = 2:length(phases)
+        % require that (x,z) corresponds to a vector at least twice as long as a
+        % noise vector
+        if distances(k) < 2*vardata(2*k)
+            fprintf(2, '%dth pulse ignored because its distance is too small\n', k);
+            break
+        end
         if verbose
             k
         end

@@ -36,7 +36,7 @@ classdef PulseCalibration < handle
         function obj = PulseCalibration()
         end
 
-        function out = take_data(obj, segmentPoints)
+        function out, outvar = take_data(obj, segmentPoints)
             % runs the pulse sequence and returns the data
             
             % set number of segments in the sweep
@@ -59,20 +59,26 @@ classdef PulseCalibration < handle
             
             % pull out data from the specified
             data = obj.experiment.data.(obj.settings.measurement).mean;
+            realvar = obj.experiment.data.(obj.settings.measurement).realvar;
+            imagvar = obj.experiment.data.(obj.settings.measurement).imagvar;
             
             % return amplitude or phase data
             switch obj.settings.dataType
                 case 'amp'
                     out = abs(data);
+                    outvar = sqrt(realvar.^2 + imagvar.^2);
                 case 'phase'
                     % unwrap phase jumps
                     out = 180/pi * unwrap(angle(data));
+                    outvar = 180/pi * atan(imagvar ./ realvar);
                 case 'real'
                     out = real(data);
+                    outvar = realvar;
                 case 'imag'
                     out = imag(data);
+                    outvar = imagvar;
                 otherwise
-                    error('Unknown dataType can only be "amp" or "phase"');
+                    error('Unknown dataType can only be "real", "imag", "amp" or "phase"');
             end
         end
 
@@ -246,7 +252,7 @@ classdef PulseCalibration < handle
         
         % externally defined static methods
         [cost, J, noiseVar] = RepPulseCostFunction(data, angle, numPulses);
-        [phase, sigma] = PhaseEstimation(data, verbose);
+        [phase, sigma] = PhaseEstimation(data, vardata, verbose);
         [amp, offsetPhase]  = analyzeRabiAmp(data);
         bestParam = analyzeSlopes(data, numPsQIds, paramRange, numShots);
         

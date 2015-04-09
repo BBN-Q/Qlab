@@ -27,16 +27,16 @@ function [phase, sigma] = measure_rotation_angle(obj, amp, direction, target)
     if ~obj.testMode
         [filenames, segmentPoints] = obj.PulsePhaseEstimate(obj.settings.Qubit, direction, numPulses, amp);
         obj.loadSequence(filenames, 1);
-        data = obj.take_data(segmentPoints);
+        [data, vardata] = obj.take_data(segmentPoints);
     else
-        data = simulateMeasurement(amp, target);
+        [data, vardata] = simulateMeasurement(amp, target);
         plot(data);
         ylim([-1.1 1.1])
         drawnow()
         pause(.1);
     end
     
-    [phase, sigma] = obj.PhaseEstimation(data);
+    [phase, sigma] = obj.PhaseEstimation(data, vardata);
     % correct for some errors related to 2pi uncertainties
     if sign(phase) ~= sign(amp)
         phase = phase + sign(amp)*2*pi;
@@ -45,16 +45,17 @@ function [phase, sigma] = measure_rotation_angle(obj, amp, direction, target)
     fprintf('Angle error: %.4f\n', angleError);
 end
 
-function data = simulateMeasurement(amp, target)
+function [data, vardata] = simulateMeasurement(amp, target)
     idealAmp = 0.34;
-    noiseScale = 0.1;
+    noiseScale = 0.05;
+    polarization = 0.99; % residual polarization after each pulse
 
     % data representing over/under rotation of pi/2 pulse
     % theta = pi/2 * (amp/idealAmp);
     theta = target * (amp/idealAmp);
     ks = arrayfun(@(k) 2^k, 0:8);
-    xdata = arrayfun(@(x) sin(x*theta), ks);
-    zdata = arrayfun(@(x) cos(x*theta), ks);
+    xdata = arrayfun(@(x) polarization^x * sin(x*theta), ks);
+    zdata = arrayfun(@(x) polarization^x * cos(x*theta), ks);
     data = [1  zdata;
             -1 xdata];
     data = data(:);
@@ -63,4 +64,5 @@ function data = simulateMeasurement(amp, target)
     data = data(:);
     % add noise
     data = data + noiseScale * randn(size(data));
+    vardata = noiseScale * ones(size(data));
 end
