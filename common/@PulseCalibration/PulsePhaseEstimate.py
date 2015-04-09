@@ -1,6 +1,7 @@
 import argparse
 import sys, os
 import numpy as np
+from copy import copy
 parser = argparse.ArgumentParser()
 parser.add_argument('pyqlabpath', help='path to PyQLab directory')
 parser.add_argument('qubit', help='qubit name')
@@ -33,7 +34,7 @@ seqs = [s + m for s in seqs for m in [ [MEAS(q)], [mPulse, MEAS(q)] ]]
 seqs = [[Id(q), MEAS(q)], [X(q), MEAS(q)]] + seqs
 
 # repeat each
-repeated_seqs = [s for s in seqs for _ in range(2)]
+repeated_seqs = [copy(s) for s in seqs for _ in range(2)]
 
 fileNames = compile_to_hardware(repeated_seqs, fileName='RepeatCal/RepeatCal')
 # plot_pulse_files(fileNames)
