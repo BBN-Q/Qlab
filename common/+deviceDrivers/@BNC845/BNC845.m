@@ -24,8 +24,25 @@ classdef (Sealed) BNC845 < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBor
             connect@deviceDrivers.lib.GPIBorEthernet(obj, address);
             
             %Setup the reference every time
-            obj.write('SOUR:ROSC:EXT:FREQ 10E6');
-            obj.write('SOUR:ROSC:SOUR EXT');
+            %Output 10MHz for daisy-chaining and lock to 10MHz external
+            %reference
+            write(obj, 'SOURCE:ROSC:OUTPUT:STATE ON');
+            write(obj, 'SOURCE:ROSC:EXT:FREQ 10E6');
+            write(obj, 'SOUR:ROSC:SOUR EXT');
+            
+            %Check that it locked
+            ct = 0;
+            while ct < 10
+                locked = query(obj, 'SOURCE:ROSC:LOCKED?');
+                if locked == '1'
+                    break;
+                end
+                pause(0.5);
+            end
+            if locked ~= '1'
+                warning('BNC %s unlocked.', address);
+            end
+
         end
         
         % Instrument parameter accessors
