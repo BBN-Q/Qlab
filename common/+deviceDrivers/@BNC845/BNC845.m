@@ -45,6 +45,16 @@ classdef (Sealed) BNC845 < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBor
 
         end
         
+        %Override setAll to workaround a BNC issue
+        %Below 10GHz the BNC's put out broadband noise the first time the
+        %RF is turned on after toggling modulation.
+        function setAll(obj, settings)
+            setAll@deviceDrivers.lib.deviceDriverBase(obj, settings);
+            %Toggle output
+            obj.output = false;
+            obj.output = settings.output;
+        end
+            
         % Instrument parameter accessors
         % getters
         function val = get.frequency(obj)
