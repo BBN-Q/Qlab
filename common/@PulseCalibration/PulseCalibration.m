@@ -36,7 +36,7 @@ classdef PulseCalibration < handle
         function obj = PulseCalibration()
         end
 
-        function out, outvar = take_data(obj, segmentPoints)
+        function [out, outvar] = take_data(obj, segmentPoints)
             % runs the pulse sequence and returns the data
             
             % set number of segments in the sweep
@@ -150,6 +150,9 @@ classdef PulseCalibration < handle
                     break;
                 end
             end
+            
+            % turn on variances
+            obj.experiment.saveVariances = true;
             
             % add instruments
             for instrument = fieldnames(instrSettings)'
