@@ -114,7 +114,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                     
                     fidelities(intPt) = sum(abs(gPDF-ePDF))/sum(gPDF + ePDF);
                 end
-                
+           
                 %reduce fidelities so that it doesn't integrate longer than
                 %necessary, DR 150112 
 %                 dfid = diff(fidelities(1:2:end));
@@ -132,8 +132,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 bins = linspace(Imins(intPt), Imaxes(intPt));
                 gPDF = ksdensity(intGroundIData(intPt,:), bins);
                 ePDF = ksdensity(intExcitedIData(intPt,:), bins);
-                % report "assignment fidelity" = 1-0.5*(1-F)
-                obj.pdfData.maxFidelity_I =  1-0.5*(1-0.5*(bins(2)-bins(1))*sum(abs(gPDF-ePDF)));
+                obj.pdfData.maxFidelity_I =  max(sum(abs(gPDF-ePDF))/sum(gPDF + ePDF)); %1-0.5*(1-0.5*(bins(2)-bins(1))*sum(abs(gPDF-ePDF)));
                 obj.pdfData.bins_I = bins;
                 obj.pdfData.gPDF_I = gPDF;
                 obj.pdfData.ePDF_I = ePDF;
