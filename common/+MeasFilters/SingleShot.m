@@ -68,6 +68,10 @@ classdef SingleShot < MeasFilters.MeasFilter
                 
                 % construct matched filter kernel and apply it
                 kernel = conj(groundMean - excitedMean) ./ var(obj.groundData,0,2);
+                %need a criterion to set kernel to  zero when the difference is
+                %too small (also prevents kernel from diverging when var->0
+                %at the beginning of the record
+                kernel = kernel.*(abs(groundMean-excitedMean)>(1e-3*distance));
                 fprintf('norm: %g\n', sum(abs(kernel)));
                 % normalize
                 kernel = abs(2.0/distance) * kernel / sum(abs(kernel));
@@ -89,10 +93,10 @@ classdef SingleShot < MeasFilters.MeasFilter
                 excitedQData = imag(weightedExited);
                 
                 %Take cummulative sum up to each timestep
-                intGroundIData = cumsum(groundIData, 1) - bias;
-                intExcitedIData = cumsum(excitedIData, 1) - bias;
-                intGroundQData = cumsum(groundQData, 1) - bias;
-                intExcitedQData = cumsum(excitedQData, 1) - bias;
+                intGroundIData = cumsum(groundIData, 1) - real(bias);
+                intExcitedIData = cumsum(excitedIData, 1) - real(bias);
+                intGroundQData = cumsum(groundQData, 1) - imag(bias);
+                intExcitedQData = cumsum(excitedQData, 1) - imag(bias);
                 Imins = min(min(intGroundIData, intExcitedIData), [], 2);
                 Imaxes = max(max(intGroundIData, intExcitedIData), [], 2);
                 
