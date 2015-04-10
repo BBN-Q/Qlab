@@ -132,7 +132,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 bins = linspace(Imins(intPt), Imaxes(intPt));
                 gPDF = ksdensity(intGroundIData(intPt,:), bins);
                 ePDF = ksdensity(intExcitedIData(intPt,:), bins);
-                obj.pdfData.maxFidelity_I =  max(sum(abs(gPDF-ePDF))/sum(gPDF + ePDF)); %1-0.5*(1-0.5*(bins(2)-bins(1))*sum(abs(gPDF-ePDF)));
+                obj.pdfData.maxFidelity_I = 1-0.5*(1-0.5*(bins(2)-bins(1))*sum(abs(gPDF-ePDF)));
                 obj.pdfData.bins_I = bins;
                 obj.pdfData.gPDF_I = gPDF;
                 obj.pdfData.ePDF_I = ePDF;
@@ -157,7 +157,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 [mu, sigma] = normfit(intExcitedQData(intPt,:));
                 obj.pdfData.e_gaussPDF_Q = normpdf(obj.pdfData.bins_Q, mu, sigma);
 
-                out = maxFidelity_I + 1j*obj.pdfData.maxFidelity_Q;
+                out = obj.pdfData.maxFidelity_I + 1j*obj.pdfData.maxFidelity_Q;
 
                 obj.analysed = true;
                 
