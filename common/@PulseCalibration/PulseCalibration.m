@@ -66,11 +66,14 @@ classdef PulseCalibration < handle
             switch obj.settings.dataType
                 case 'amp'
                     out = abs(data);
-                    outvar = sqrt(realvar.^2 + imagvar.^2);
+                    outvar = realvar + imagvar;
                 case 'phase'
                     % unwrap phase jumps
                     out = 180/pi * unwrap(angle(data));
-                    outvar = 180/pi * atan(imagvar ./ realvar);
+                    % This is a bit messy to do precisely. Let's approximate the noise as 'circular'.
+                    stddata = sqrt(realvar + imagvar);
+                    stdtheta = 180/pi * 2 * atan(stddata ./ abs(data));
+                    outvar = stdtheta .^ 2;
                 case 'real'
                     out = real(data);
                     outvar = realvar;

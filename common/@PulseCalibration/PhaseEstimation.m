@@ -18,6 +18,8 @@ function [phase, sigma] = PhaseEstimation(data, vardata, verbose)
     % similar scaling with variances
     vardata = (vardata(1:2:end) + vardata(2:2:end))/2;
     vardata = vardata(3:end) * 2/(avgdata(1) - avgdata(2));
+    zvar = vardata(1:2:end);
+    xvar = vardata(2:2:end);
 
     phases = atan2(xdata, zdata);
     distances = sqrt(xdata.^2 + zdata.^2);
@@ -29,14 +31,16 @@ function [phase, sigma] = PhaseEstimation(data, vardata, verbose)
         curGuess
     end
     for k = 2:length(phases)
-        % require that (x,z) corresponds to a vector at least twice as long as a
-        % noise vector
-        if distances(k) < 2*vardata(2*k)
-            fprintf(2, '%dth pulse ignored because its distance is too small\n', k);
-            break
-        end
         if verbose
             k
+        end
+        % Each step of phase estimation needs to assign the measured phase to
+        % the correct half circle. We will conservatively require that the
+        % (x,z) tuple is long enough that we can assign it to the correct
+        % quadrant of the circle with 2σ confidence
+        if distances(k) < 2*sqrt(xvar(k) + zvar(k))
+            fprintf(2, 'Phase estimation terminated at %dth pulse because the (x,z) vector is too short\n', k);
+            break
         end
         lowerBound = restrict(curGuess - pi/2^(k-1));
         upperBound = restrict(curGuess + pi/2^(k-1));

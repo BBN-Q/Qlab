@@ -29,8 +29,8 @@ function [phase, sigma] = measure_rotation_angle(obj, amp, direction, target)
         obj.loadSequence(filenames, 1);
         [data, vardata] = obj.take_data(segmentPoints);
     else
-        [data, vardata] = simulateMeasurement(amp, target);
-        plot(data);
+        [data, vardata] = simulateMeasurement(amp, target, numPulses);
+        plot(-1:0.25:numPulses+0.75, data);
         ylim([-1.1 1.1])
         drawnow()
         pause(.1);
@@ -45,7 +45,7 @@ function [phase, sigma] = measure_rotation_angle(obj, amp, direction, target)
     fprintf('Angle error: %.4f\n', angleError);
 end
 
-function [data, vardata] = simulateMeasurement(amp, target)
+function [data, vardata] = simulateMeasurement(amp, target, numPulses)
     idealAmp = 0.34;
     noiseScale = 0.05;
     polarization = 0.99; % residual polarization after each pulse
@@ -53,7 +53,7 @@ function [data, vardata] = simulateMeasurement(amp, target)
     % data representing over/under rotation of pi/2 pulse
     % theta = pi/2 * (amp/idealAmp);
     theta = target * (amp/idealAmp);
-    ks = arrayfun(@(k) 2^k, 0:8);
+    ks = arrayfun(@(k) 2^k, 0:numPulses);
     xdata = arrayfun(@(x) polarization^x * sin(x*theta), ks);
     zdata = arrayfun(@(x) polarization^x * cos(x*theta), ks);
     data = [1  zdata;
@@ -64,5 +64,5 @@ function [data, vardata] = simulateMeasurement(amp, target)
     data = data(:);
     % add noise
     data = data + noiseScale * randn(size(data));
-    vardata = noiseScale * ones(size(data));
+    vardata = noiseScale^2 * ones(size(data));
 end
