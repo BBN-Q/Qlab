@@ -17,7 +17,7 @@ function [phase, sigma] = PhaseEstimation(data, vardata, verbose)
 
     % similar scaling with variances
     vardata = (vardata(1:2:end) + vardata(2:2:end))/2;
-    vardata = vardata(3:end) * 2/abs(avgdata(1) - avgdata(2));
+    vardata = vardata(3:end) * 2/abs(avgdata(1) - avgdata(2))^2;
     zvar = vardata(1:2:end);
     xvar = vardata(2:2:end);
 
