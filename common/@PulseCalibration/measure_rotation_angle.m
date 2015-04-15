@@ -25,7 +25,7 @@ function [phase, sigma] = measure_rotation_angle(obj, amp, direction, target)
     
     % create sequence and measure
     if ~obj.testMode
-        [filenames, segmentPoints] = obj.PulsePhaseEstimate(obj.settings.Qubit, direction, numPulses, amp);
+        [filenames, segmentPoints] = obj.PhaseEstimationSequence(obj.settings.Qubit, direction, numPulses, amp);
         obj.loadSequence(filenames, 1);
         [data, vardata] = obj.take_data(segmentPoints);
     else
