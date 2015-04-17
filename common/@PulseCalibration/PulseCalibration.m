@@ -36,7 +36,7 @@ classdef PulseCalibration < handle
         function obj = PulseCalibration()
         end
 
-        function out = take_data(obj, segmentPoints)
+        function [out, outvar] = take_data(obj, segmentPoints)
             % runs the pulse sequence and returns the data
             
             % set number of segments in the sweep
@@ -59,20 +59,29 @@ classdef PulseCalibration < handle
             
             % pull out data from the specified
             data = obj.experiment.data.(obj.settings.measurement).mean;
+            realvar = obj.experiment.data.(obj.settings.measurement).realvar;
+            imagvar = obj.experiment.data.(obj.settings.measurement).imagvar;
             
             % return amplitude or phase data
             switch obj.settings.dataType
                 case 'amp'
                     out = abs(data);
+                    outvar = realvar + imagvar;
                 case 'phase'
                     % unwrap phase jumps
                     out = 180/pi * unwrap(angle(data));
+                    % This is a bit messy to do precisely. Let's approximate the noise as 'circular'.
+                    stddata = sqrt(realvar + imagvar);
+                    stdtheta = 180/pi * 2 * atan(stddata ./ abs(data));
+                    outvar = stdtheta .^ 2;
                 case 'real'
                     out = real(data);
+                    outvar = realvar;
                 case 'imag'
                     out = imag(data);
+                    outvar = imagvar;
                 otherwise
-                    error('Unknown dataType can only be "amp" or "phase"');
+                    error('Unknown dataType can only be "real", "imag", "amp" or "phase"');
             end
         end
 
@@ -142,6 +151,9 @@ classdef PulseCalibration < handle
                 end
             end
             
+            % turn on variances
+            obj.experiment.saveVariances = true;
+            
             % add instruments
             for instrument = fieldnames(instrSettings)'
                 instr = InstrumentFactory(instrument{1});
@@ -154,7 +166,7 @@ classdef PulseCalibration < handle
             % add the appropriate measurement stack
             measSettings = expSettings.measurements.(obj.settings.measurement);
             measName = obj.settings.measurement;
-            curFilter = MeasFilters.(measSettings.filterType)(measSettings);
+            curFilter = MeasFilters.(measSettings.filterType)(measName, measSettings);
             while (true)
                %add the current filter
                add_measurement(obj.experiment, measName, curFilter);
@@ -164,7 +176,7 @@ classdef PulseCalibration < handle
                %setup for the data source filter
                measName = measSettings.dataSource;
                measSettings = expSettings.measurements.(measName);
-               curFilter = MeasFilters.(measSettings.filterType)(measSettings);
+               curFilter = MeasFilters.(measSettings.filterType)(measName, measSettings);
             end
 
             % intialize the ExpManager
@@ -216,7 +228,7 @@ classdef PulseCalibration < handle
                 switch class(obj.AWGs.(awgNames{awgct}))
                     case 'deviceDrivers.Tek5014'
                         filenames{awgct} = fullfile(pathAWG, [basename '-' awgNames{awgct}, '.awg']);
-                    case {'deviceDrivers.APS', 'APS2'}
+                    case {'deviceDrivers.APS', 'APS2','APS'}
                         filenames{awgct} = fullfile(pathAWG, [basename '-' awgNames{awgct}, '.h5']);
                     otherwise
                         error('Unknown AWG type.');
@@ -246,6 +258,7 @@ classdef PulseCalibration < handle
         
         % externally defined static methods
         [cost, J, noiseVar] = RepPulseCostFunction(data, angle, numPulses);
+        [phase, sigma] = PhaseEstimation(data, vardata, verbose);
         [amp, offsetPhase]  = analyzeRabiAmp(data);
         bestParam = analyzeSlopes(data, numPsQIds, paramRange, numShots);
         
@@ -253,14 +266,16 @@ classdef PulseCalibration < handle
             % construct settings struct
             ExpParams = struct();
             ExpParams.Qubit = 'q1';
-            ExpParams.measurement = 'M1';
+            ExpParams.measurement = 'KernelM1';
             ExpParams.DoMixerCal = 0;
             ExpParams.DoRabiAmp = 0;
             ExpParams.DoRamsey = 0;
             ExpParams.NumPi2s = 9;
             ExpParams.DoPi2Cal = 1;
+            ExpParams.DoPi2PhaseCal = 0;
             ExpParams.NumPis = 9;
             ExpParams.DoPiCal = 1;
+            ExpParams.DoPiPhaseCal = 0;
             ExpParams.DoDRAGCal = 0;
             ExpParams.DoSPAMCal = 0;
             ExpParams.OffsetNorm = 2;
@@ -299,6 +314,11 @@ classdef PulseCalibration < handle
             %fprintf('Pi2Cost for more realistic data. Cost: %.4f, Jacobian: (%.4f, %.4f)\n', sum(cost.^2/length(cost)), sum(J(:,1)), sum(J(:,2)));
             %cost = pulseCal.PiCostFunction(data);
             %fprintf('PiCost for more realistic data: %f\n', cost);
+
+            % phase estimation
+            % pulseCal.settings = ExpParams;
+            % pulseCal.testMode = true;
+            % pulseCal.optimize_amplitude(0.55, 'X', pi);
             
             pulseCal.Init(ExpParams);
             pulseCal.Do();

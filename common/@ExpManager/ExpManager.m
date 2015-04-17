@@ -56,6 +56,7 @@ classdef ExpManager < handle
         saveVariances = false
         dataFileHeader = struct();
         dataTimeout = 60 % timeout in seconds
+        saveAllSettings = true;
     end
     
     methods
@@ -258,11 +259,24 @@ classdef ExpManager < handle
                 end
             end
             
-            % close data file
             if ~isempty(obj.dataFileHandler)
+                % close data file
                 obj.dataFileHandler.close();
+                
+                if obj.saveAllSettings
+                   %saves json settings files
+                   fileName = obj.dataFileHandler.fileName;
+                   [pathname,basename,~] = fileparts(fileName);
+                   mkdir(fullfile(pathname,strcat(basename,'_cfg')));
+                   copyfile(getpref('qlab','CurScripterFile'),fullfile(pathname,strcat(basename,'_cfg'),'DefaultExpSettings.json'));
+                   copyfile(getpref('qlab','ChannelParamsFile'),fullfile(pathname,strcat(basename,'_cfg'),'ChannelParams.json'));
+                   copyfile(getpref('qlab','InstrumentLibraryFile'),fullfile(pathname,strcat(basename,'_cfg'),'Instruments.json'));
+                   copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Measurements'),fullfile(pathname,strcat(basename,'_cfg'),'Measurements.json'));
+                   copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Sweeps'),fullfile(pathname,strcat(basename,'_cfg'),'Sweeps.json'));
+                end
             end
             
+           
         end
         
         function cleanUp(obj)

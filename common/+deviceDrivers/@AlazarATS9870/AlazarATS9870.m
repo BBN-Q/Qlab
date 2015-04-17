@@ -5,24 +5,37 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
     % Code started: 29 November 2011
     
     properties (Access = public)
-        
-        model_number = 'ATS9870';
-        
-        %Location of the Matlab include files with the SDK
-        includeDir = getpref('qlab','AlazarDir','C:\AlazarTech\ATS-SDK\6.0.3\Samples_MATLAB\Include');
-        
-        %Dictionary of defined variables
-        defs = containers.Map()
-        
         %Assume for now we have only one board in the computer so hardcode
         %the system and board identifiers
         systemId = 1
         address = 1
         name = '';
         
+        %The single-shot or averaged data (depending on the acquireMode)
+        data
+        
+        %Acquire mode controls whether we return single-shot results or
+        %averaged data
+        acquireMode = 'averager';
+        
+        %How long to wait for a buffer to fill (seconds)
+        timeOut = 30;
+        
+        %All the settings for the device
+        settings
+        
+        %Vertical scale
+        verticalScale
+    end
+    
+    properties (Access = private)
         %Handle to the board for the C API
         boardHandle
         
+        %Dictionary of defined enums
+        defs = containers.Map()
+        
+        %Buffer properties
         %Rough estimate of the buffer size in bytes
         %Notes from Alazar ATS_Average_Sample_0.0.4.pdf
         % Each DMA buffer should be between about 1MB and 16MB to allow for efficient DMA
@@ -39,30 +52,10 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         buffers = struct('guessBufferSize',4*(2^20), 'bufferSize', 0, 'maxBufferSize', 0, 'recordsPerBuffer', 0,...
             'roundRobinsPerBuffer', 0, 'numBuffers', 0, 'bufferPtrs',cell(1));
         
-        %The single-shot or averaged data (depending on the acquireMode)
-        data
-        
-        %Acquire mode controls whether we return single-shot results or
-        %averaged data
-        acquireMode = 'averager';
-        
-        %The size of the memory of the card
-        onBoardMemory = 256e6;
-        
-        %How long to wait for a buffer to fill (seconds)
-%         timeOut = 10;
-        timeOut = 30;
-        % timeout increased from 10 seconds to 30 seconds on 1/30/14
-        % overnight scans of repeated T1 crapped out, with the error 
-        % Error: AlazarWaitAsyncBufferComplete timeout -- Verify trigger!
-        % this is an attempt to fix this issue
-        
-        %All the settings for the device
-        settings
-        
-        %Vertical scale
-        verticalScale
-        
+        %variables used by process_buffer
+        initializeProcessing
+        done
+        processingTimer
     end
     
     properties (Dependent = true)
@@ -70,13 +63,20 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         
         vertical;   
         
-        trigger;   
-        
+        trigger;
         
         averager;  
         %ditherRange %needs to be implemented in software
+    end
+    
+    properties (Constant = true)
+        model_number = 'ATS9870';
         
+        %Location of the Matlab include files with the SDK
+        includeDir = getpref('qlab','AlazarDir','C:\AlazarTech\ATS-SDK\6.0.3\Samples_MATLAB\Include');
         
+        % The size of the memory of the card
+        onBoardMemory = 256e6;
     end
     
     events
@@ -104,27 +104,17 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             obj.buffers.maxBufferSize = obj.onBoardMemory/2;
         end
         
-        %Stopper for OnCleanUp
-        function stop(obj)
-            obj.call_API('AlazarAbortAsyncRead', obj.boardHandle);
-            %Release any buffers
-            for ct = 1:obj.buffers.numBuffers
-                clear obj.buffers.bufferPtrs{ct}
-            end
-        end
-        
         %Destructor
         function delete(obj)
             obj.stop();
             obj.disconnect();
         end
         
-        
         function load_defs(obj)
             %Parse the definition file and return everything in a structure
             %This is a bit of a hack but I want to leave the defs file
             %untounched so we can easily update the SDK.
-            %Basically we call the scipt and then save every variable in a
+            %Basically we call the script and then save every variable in a
             %dictionary
             AlazarDefs
             defNames = who();
@@ -151,7 +141,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         end
         
         %Helper function to make an API call and error check
-        function call_API(obj, functionName, varargin)
+        function retCode = call_API(obj, functionName, varargin)
             %Make the call
             retCode = calllib('ATSApi', functionName, varargin{:});
             %Check for success
@@ -209,73 +199,104 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             obj.call_API('AlazarBeforeAsyncRead', obj.boardHandle, obj.defs('CHANNEL_A') + obj.defs('CHANNEL_B'), ...
                 -int32(0), obj.settings.averager.recordLength, obj.buffers.recordsPerBuffer, obj.buffers.recordsPerAcquisition, obj.defs('ADMA_NPT') + obj.defs('ADMA_EXTERNAL_STARTCAPTURE'));
             
-            %Post all the buffers to the board
+            %Allocate buffers and post them to the board
+            obj.allocate_buffers();
             for ct = 1:obj.buffers.numBuffers
-                obj.call_API('AlazarPostAsyncBuffer', obj.boardHandle, obj.buffers.bufferPtrs{ct}, obj.buffers.bufferSize)
+                obj.post_buffer(ct);
             end
             
             %Arm the board
             obj.call_API('AlazarStartCapture', obj.boardHandle);
             
+            obj.initializeProcessing = true;
+            obj.done = false;
+            obj.processingTimer = timer('TimerFcn', @obj.process_buffer, 'StopFcn', @(~,~)obj.stop, 'Period', 0.01, 'ExecutionMode', 'fixedDelay');
+            start(obj.processingTimer);
         end
         
-        %Wait for the acquisition to complete and average in software
-        function status = wait_for_acquisition(obj, timeOut)
-            %Dummy status for compatiblity with AP240 driver
-            status = 0;
-            if ~exist('timeOut','var')
-                timeOut = obj.timeOut;
+        function stop(obj)
+            delete(obj.processingTimer);
+            obj.call_API('AlazarAbortAsyncRead', obj.boardHandle);
+            obj.cleanup_buffers();
+            obj.done = true;
+        end
+        
+        function process_buffer(obj, ~, ~)
+            persistent bufferct idx partialBufs bufStride
+            persistent sumDataA sumDataB
+            % first call initialization
+            if obj.initializeProcessing
+                obj.initializeProcessing = false;
+                bufferct = 0;
+                
+                if strcmp(obj.acquireMode, 'averager')
+                    sumDataA = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
+                    sumDataB = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
+                else
+                    sumDataA = [];
+                    sumDataB = [];
+                end
+                
+                %If we are only getting partial round robins per buffer
+                %initialize some indices
+                if (obj.buffers.roundRobinsPerBuffer < 1)
+                    partialBufs = true;
+                    idx = 1;
+                    bufStride = obj.buffers.recordsPerBuffer*obj.settings.averager.recordLength;
+                    switch obj.acquireMode
+                        case 'digitizer'
+                            obj.data{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments], 'single');
+                            obj.data{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments], 'single');
+
+                        case 'averager'
+                            obj.data{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments], 'single');
+                            obj.data{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments], 'single');
+                    end
+                else
+                    partialBufs = false;
+                end
             end
             
             %Total number of buffers to process
-            bufferct = 0;
             totNumBuffers = round(obj.settings.averager.nbrRoundRobins/obj.buffers.roundRobinsPerBuffer);
-            
-            if strcmp(obj.acquireMode, 'averager')
-                sumDataA = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
-                sumDataB = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
-            end
-            
-            %If we are only getting partial round robins per buffer
-            %initialize some indices
-            if (obj.buffers.roundRobinsPerBuffer < 1)
-                partialBufs = true;
-                idx = 1;
-                bufStride = obj.buffers.recordsPerBuffer*obj.settings.averager.recordLength;
-                switch obj.acquireMode
-
-                    case 'digitizer'
-                        obj.data{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments], 'single');
-                        obj.data{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments], 'single');
-
-                    case 'averager'
-                        obj.data{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments], 'single');
-                        obj.data{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments], 'single');
+            if bufferct >= totNumBuffers
+                if strcmp(obj.acquireMode, 'averager')
+                    %Average the summed data
+                    obj.data{1} = sumDataA/totNumBuffers;
+                    obj.data{2} = sumDataB/totNumBuffers;
                 end
-
-            else
-                partialBufs = false;
+                obj.done = true;
+                stop(obj.processingTimer);
+                return
             end
             
-            %Loop until all are processed
-            while bufferct < totNumBuffers
-                
-                %Move to the next buffer
+            % continue checking for new data until there are no more
+            % waiting buffers to process
+            while true
                 bufferNum = mod(bufferct, obj.buffers.numBuffers) + 1;
-                
-                bufferOut = wait_for_buffer(obj, bufferNum, timeOut);
-                
-                %If we have a full buffer then map the data and add it
+                [retCode, ~, bufferOut] = ...
+                    calllib('ATSApi', 'AlazarWaitAsyncBufferComplete', obj.boardHandle, obj.buffers.bufferPtrs{bufferNum}, 0);
+                if retCode == obj.defs('ApiWaitTimeout')
+                    % no data waiting, bail out
+                    return
+                elseif retCode ~= obj.defs('ApiSuccess')
+                    % The acquisition failed
+                    stop(obj.processingTimer);
+                    error('Error: AlazarWaitAsyncBufferComplete failed -- %s\n', errorToText(retCode));
+                end
+            
+                % we have a new buffer to process
+                % convert from DAC values to reals and accumulate
                 % Since we have turned off interleaving, records are arranged in the buffer as follows:
                 % R0A, R1A, R2A ... RnA, R0B, R1B, R2B ...
                 %
                 % Samples values are arranged contiguously in each record.
                 % An 8-bit sample code is stored in each 8-bit sample value.
-                
-                %Cast the pointer to the right type
+
+                % Cast the pointer to the right type
                 setdatatype(bufferOut, 'uint8Ptr', 1, obj.buffers.bufferSize);
-                
-                %scale data to floating point using MEX function, i.e. map (0,255) to (-Vs,Vs)
+
+                % scale data to floating point using MEX function, i.e. map (0,255) to (-Vs,Vs)
                 if strcmp(obj.acquireMode, 'digitizer')
                     if partialBufs
                         [obj.data{1}(idx:idx+bufStride-1), obj.data{2}(idx:idx+bufStride-1)] = ...
@@ -292,7 +313,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                         notify(obj, 'DataReady');
                     end
                 else
-                    %scale with averaging over repeats (waveforms and round robins)
+                    % scale with averaging over repeats (waveforms and round robins)
                     if partialBufs
                         [obj.data{1}(idx:idx+bufStride-1), obj.data{2}(idx:idx+bufStride-1)] = obj.processBufferAvg(bufferOut.Value, [obj.settings.averager.recordLength,...
                             obj.settings.averager.nbrWaveforms, round(obj.settings.averager.nbrSegments*obj.buffers.roundRobinsPerBuffer), 1], obj.verticalScale);
@@ -311,31 +332,62 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                         notify(obj, 'DataReady');
                     end
                 end
-                
+
                 % Make the buffer available to be filled again by the board
-                post_buffer(obj, bufferNum);
-                
+                status = post_buffer(obj, bufferNum);
+                if status ~= obj.defs('ApiSuccess');
+                    stop(obj.processingTimer);
+                end
+
                 bufferct = bufferct+1;
             end
-            
-            if strcmp(obj.acquireMode, 'averager')
-                %Average the summed data
-                obj.data{1} = sumDataA/totNumBuffers;
-                obj.data{2} = sumDataB/totNumBuffers;
-            end
-
-            %Try to abort any in progress acquisitions and transfers
-            obj.call_API('AlazarAbortAsyncRead', obj.boardHandle);
-            
-            %Clear and reallocate the buffer ptrs
-            cleanup_buffers(obj);
         end
         
-        %Dummy function for consistency with Acqiris card where average
-        %data is stored on card
+        %Wait for the acquisition to complete and average in software
+        function status = wait_for_acquisition(obj, timeOut)
+            if ~exist('timeOut','var')
+                timeOut = obj.timeOut;
+            end
+            
+            %Loop until all are processed
+            t = tic();
+            while toc(t) < timeOut
+                if obj.done
+                    status = 0;
+                    return
+                else
+                    pause(0.2);
+                end
+            end
+            status = -1;
+            warning('AlazarATS9870:TIMEOUT', 'AlazarATS9870 timed out while waiting for acquisition');
+        end
+        
+        % Dummy function for consistency with Acqiris card where average
+        % data is stored on card
         function [avgWaveform, times] = transfer_waveform(obj, channel)
             avgWaveform = obj.data{channel};
             times = (1/obj.horizontal.samplingRate)*(0:obj.averager.recordLength-1);
+        end
+        
+        function allocate_buffers(obj)
+            obj.cleanup_buffers();
+            obj.buffers.bufferPtrs = cell(1,obj.buffers.numBuffers);
+            for ct = 1:obj.buffers.numBuffers
+                obj.buffers.bufferPtrs{ct} = libpointer('uint8Ptr', zeros(obj.buffers.bufferSize,1));
+            end
+        end
+      
+        function status = post_buffer(obj, bufferNum)
+            % Make the buffer available to be filled again by the board
+            status = obj.call_API('AlazarPostAsyncBuffer', obj.boardHandle, obj.buffers.bufferPtrs{bufferNum}, obj.buffers.bufferSize);
+        end
+        
+        function cleanup_buffers(obj)
+            %Clear the buffer ptrs
+            for ct = 1:length(obj.buffers.bufferPtrs)
+                clear obj.buffers.bufferPtrs{ct}
+            end
         end
         
         function buffer = wait_for_buffer(obj, bufferNum, timeOut)
@@ -350,96 +402,6 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 % The acquisition failed
                 error('Error: AlazarWaitAsyncBufferComplete failed -- %s\n', errorToText(retCode));
             end
-        end
-        
-        function download_buffer(obj, timeOut,bufferNum)
-            if ~exist('timeOut','var')
-                timeOut = obj.timeOut;
-            end
-            
-            % Wait for the first available buffer to be filled by the board
-            bufferOut = wait_for_buffer(obj, bufferNum, timeOut);
-            
-            %If we have a full buffer then map the data and add it
-            % Since we have turned off interleaving, records are arranged in the buffer as follows:
-            % R0A, R1A, R2A ... RnA, R0B, R1B, R2B ...
-            %
-            % Samples values are arranged contiguously in each record.
-            % An 8-bit sample code is stored in each 8-bit sample value.
-            
-            %Cast the pointer to the right type
-            setdatatype(bufferOut, 'uint8Ptr', 1, obj.buffers.bufferSize);
-            
-            %scale data to floating point using MEX function, i.e. map (0,255) to (-Vs,Vs)
-            if strcmp(obj.acquireMode, 'digitizer')
-                [obj.data{1}, obj.data{2}] = obj.processBuffer(bufferOut.Value, obj.verticalScale);
-                obj.data{1} = reshape(obj.data{1}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
-                obj.data{2} = reshape(obj.data{2}, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer]);
-            else
-                %scale with averaging over repeats (waveforms and round robins)
-                [obj.data{1}, obj.data{2}] = obj.processBufferAvg(bufferOut.Value, [obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer], obj.verticalScale);
-            end
-        end
-      
-        function post_buffer(obj, bufferNum)
-            % Make the buffer available to be filled again by the board
-            obj.call_API('AlazarPostAsyncBuffer', obj.boardHandle, obj.buffers.bufferPtrs{bufferNum}, obj.buffers.bufferSize);
-        end
-        
-        function cleanup_buffers(obj)
-            %Clear and reallocate the buffer ptrs
-            for ct = 1:obj.buffers.numBuffers
-                clear obj.buffers.bufferPtrs{ct}
-            end
-            obj.buffers.bufferPtrs = cell(1, obj.buffers.numBuffers);
-            for ct = 1:obj.buffers.numBuffers
-                obj.buffers.bufferPtrs{ct} = libpointer('uint8Ptr', zeros(obj.buffers.bufferSize,1));
-            end
-        end
-            
-        function status = wait_for_acquisition2(obj, timeOut)
-            %Dummy status for compatiblity with AP240 driver
-            status = 0;
-            if ~exist('timeOut','var')
-                timeOut = obj.timeOut;
-            end
-            
-            %Total number of buffers to process
-            bufferct = 0;
-            totNumBuffers = round(obj.settings.averager.nbrRoundRobins/obj.buffers.roundRobinsPerBuffer);
-            
-            if strcmp(obj.acquireMode, 'averager')
-                sumDataA = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
-                sumDataB = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
-            end
-            
-            while bufferct < totNumBuffers
-                
-                %Move to the next buffer
-                bufferNum = mod(bufferct, obj.buffers.numBuffers) + 1;
-                download_buffer(obj, timeOut,bufferNum);
-                if strcmp(obj.acquireMode, 'averager')
-                    sumDataA = sumDataA + obj.data{1};
-                    sumDataB = sumDataB + obj.data{2};
-                end
-                notify(obj, 'DataReady');
-                post_buffer(obj,bufferNum);
-                
-                %Increment the buffer ct and see if it was the last one
-                bufferct = bufferct+1;
-                
-            end
-            
-            if strcmp(obj.acquireMode, 'averager')
-                %Average the summed data
-                obj.data{1} = sumDataA/totNumBuffers;
-                obj.data{2} = sumDataB/totNumBuffers;
-            end
-            %Try to abort any in progress acquisitions and transfers
-            obj.call_API('AlazarAbortAsyncRead', obj.boardHandle);
-            
-            cleanup_buffers(obj);
-            
         end
         
         function acquireStream(obj, samples, triggered)
@@ -654,13 +616,9 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %Update the buffer size from the guess
             obj.buffers.bufferSize = bytesPerRecord*obj.buffers.recordsPerBuffer;
             
-            %Initialize the memory buffers
-            %We shouldn't need more than 16 buffers
+            %Record the number of buffers to use
             obj.buffers.numBuffers = min(numRecords/obj.buffers.recordsPerBuffer, 32);
-            obj.buffers.bufferPtrs = cell(1,obj.buffers.numBuffers);
-            for ct = 1:obj.buffers.numBuffers
-                obj.buffers.bufferPtrs{ct} = libpointer('uint8Ptr', zeros(obj.buffers.bufferSize,1));
-            end
+            
             obj.settings.averager = avgSet;
         end
         
@@ -682,5 +640,27 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         % externally defined methdos
         [dataA, dataB] = processBuffer(buffer, verticalScale);
         [dataA, dataB] = processBufferAvg(buffer, bufferDims, verticalScale);
+        
+        function unit_test()
+            scope = deviceDrivers.AlazarATS9870();
+            scope.connect(0);
+
+            scope.horizontal = struct('samplingRate', 500e6, 'delayTime', 0);
+            scope.vertical = struct('verticalScale', 1.0, 'verticalCoupling', 'AC', 'bandwidth', 'Full');
+            scope.trigger = struct('triggerLevel', 100, 'triggerSource', 'ext', 'triggerCoupling', 'DC', 'triggerSlope', 'rising');
+            scope.averager = struct('recordLength', 4096, 'nbrSegments', 1, 'nbrWaveforms', 1, 'nbrRoundRobins', 1000, 'ditherRange', 0);
+            
+            scope.acquire();
+            success = scope.wait_for_acquisition(10);
+            scope.stop();
+            
+            if success == 0
+                [wfm, tpts] = scope.transfer_waveform(1);
+                figure();
+                plot(tpts, wfm);
+            end
+            
+            scope.disconnect();
+        end
     end
 end %classdef
