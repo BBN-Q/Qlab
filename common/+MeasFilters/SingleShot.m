@@ -68,10 +68,11 @@ classdef SingleShot < MeasFilters.MeasFilter
                 
                 % construct matched filter kernel and apply it
                 kernel = conj(groundMean - excitedMean) ./ var(obj.groundData,0,2);
+                kernel(isnan(kernel)) = 0;  %replace NaN with 0
                 %need a criterion to set kernel to  zero when the difference is
                 %too small (also prevents kernel from diverging when var->0
                 %at the beginning of the record
-                kernel = kernel.*(abs(groundMean-excitedMean)>(1e-3*distance));
+                kernel = kernel.*(abs(groundMean-excitedMean)>(1e-3*abs(distance)));
                 fprintf('norm: %g\n', sum(abs(kernel)));
                 % normalize
                 kernel = abs(2.0/distance) * kernel / sum(abs(kernel));
