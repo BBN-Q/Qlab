@@ -61,7 +61,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 
                 groundMean = mean(obj.groundData, 2);
                 excitedMean = mean(obj.excitedData, 2);
-                distance = mean(groundMean - excitedMean);
+                distance = abs(mean(groundMean - excitedMean));
                 fprintf('distance: %g\n', distance);
                 bias = mean(groundMean + excitedMean)/distance;
                 fprintf('bias: %g\n', bias(end));
@@ -72,7 +72,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 %need a criterion to set kernel to  zero when the difference is
                 %too small (also prevents kernel from diverging when var->0
                 %at the beginning of the record
-                kernel = kernel.*(abs(groundMean-excitedMean)>(1e-3*abs(distance)));
+                kernel = kernel.*(abs(groundMean-excitedMean)>(1e-3*distance));
                 fprintf('norm: %g\n', sum(abs(kernel)));
                 % normalize
                 kernel = abs(2.0/distance) * kernel / sum(abs(kernel));
