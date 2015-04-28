@@ -5,8 +5,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
     % Code started: 29 November 2011
     
     properties (Access = public)
-        %Assume for now we have only one board in the computer so hardcode
-        %the system and board identifiers
+        %Assume un-synced boards so that address = 1
         systemId = 1
         address = 1
         name = '';
@@ -133,7 +132,8 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             if ~isnumeric(address)
                 address = str2double(address);
             end
-            obj.boardHandle = calllib('ATSApi','AlazarGetBoardBySystemID', obj.systemId, address);
+            obj.systemId = address;
+            obj.boardHandle = calllib('ATSApi','AlazarGetBoardBySystemID', obj.systemId, obj.address);
         end
         
         function disconnect(obj)
