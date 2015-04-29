@@ -116,20 +116,23 @@ if settings.DoPi2Cal
     fprintf('Found I offset: %.4f\n\n\n', i_offset);
     
     % calibrate amplitude and offset for +/- Y90
-    x0(2) = obj.channelParams.q_offset;
+    if obj.channelParams.SSBFreq==0
+        x0(2) = obj.channelParams.q_offset;
+        
+        x0 = lsqnonlin(@obj.Ypi2ObjectiveFnc,x0,[],[],options);
+        Y90Amp = real(x0(1));
+        q_offset = real(x0(2));
+        fprintf('Found Y90Amp: %.4f\n', Y90Amp);
+        fprintf('Found Q offset: %.4f\n\n\n', q_offset);
+        
+        % update channelParams
+        obj.channelParams.pi2Amp = Y90Amp;
+        obj.channelParams.q_offset = q_offset;
+        % update T matrix with ratio X90Amp/Y90Amp
+        obj.channelParams.ampFactor = obj.channelParams.ampFactor*X90Amp/Y90Amp;
+        fprintf('ampFactor: %.3f\n', obj.channelParams.ampFactor);
+    end
     
-    x0 = lsqnonlin(@obj.Ypi2ObjectiveFnc,x0,[],[],options);
-    Y90Amp = real(x0(1));
-    q_offset = real(x0(2));
-    fprintf('Found Y90Amp: %.4f\n', Y90Amp);
-    fprintf('Found Q offset: %.4f\n\n\n', q_offset);
-    
-    % update channelParams
-    obj.channelParams.pi2Amp = Y90Amp;
-    obj.channelParams.q_offset = q_offset;
-    % update T matrix with ratio X90Amp/Y90Amp
-    obj.channelParams.ampFactor = obj.channelParams.ampFactor*X90Amp/Y90Amp;
-    fprintf('ampFactor: %.3f\n', obj.channelParams.ampFactor);
     % update QGL library
     updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 end
