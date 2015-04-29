@@ -1,4 +1,4 @@
-function optvalue = analyzeCalCR(caltype, CRdata,channel, varargin)
+function optvalue = analyzeCalCR(caltype, CRdata,channel, CRname, varargin)
 %simple fit function to get optimum length/phase in a CR calibration
 %and set in pulse params
 
@@ -8,7 +8,7 @@ function optvalue = analyzeCalCR(caltype, CRdata,channel, varargin)
 
 %channel: channel with the target data
 
-CRpulsename = 'CR';
+CRpulsename = CRname;
 
 data = real(CRdata.data{channel});   
 xpoints = CRdata.xpoints{channel}(1:(length(data)-8)/2);
@@ -20,7 +20,7 @@ data1 = data(length(data)/2+1:end);
 sinf = @(p,t) p(1)*cos(2*pi/p(2)*t+p(3))+p(4);
 
 if(caltype==1)
-    p=[1,4*xpoints(end),0,0];
+    p=[1,2*xpoints(end),0,0];
 else
     p=[1,xpoints(end),0,0];
 end
@@ -29,32 +29,34 @@ end
 [beta0,~,~] = nlinfit(xpoints, data0(:),sinf,p);
 [beta1,~,~] = nlinfit(xpoints, data1(:),sinf,p);
 %todo: make fit xpoints finer
+%xpoints = linspace(xpoints(1),xpoints(end),1001);
 yfit0 = sinf(beta0,xpoints);
 yfit1 = sinf(beta1,xpoints);
 
 if(caltype==1) 
     yfit0c = yfit0(1:min(round(abs(beta0(2))/2/(xpoints(2)-xpoints(1))),end)); %select the first half period or less
     yfit1c = yfit1(1:min(round(abs(beta1(2))/2/(xpoints(2)-xpoints(1))),end));
-    [~, indmin0] = min(abs(yfit0c(:)));  %min returns the index of the first zero crossing
-    [~, indmin1] = min(abs(yfit1c(:)));  %min returns the index of the first zero crossing
-    optlen = mean([xpoints(indmin0),xpoints(indmin1)]);
+    [~, indmin0] = min(abs(yfit0c(:)));%-beta0(4));  %min returns the index of the first zero crossing
+    [~, indmin1] = min(abs(yfit1c(:)));%-beta1(4));  %min returns the index of the first zero crossing
+    optlen = round(mean([xpoints(indmin0),xpoints(indmin1)])/10)*10;
     fprintf('Length index for CNOT = %f\n', mean([indmin0, indmin1])); 
     fprintf('Optimum length = %f ns\n', optlen)
     fprintf('Mismatch between |0> and |1> = %f ns\n', abs(xpoints(indmin1)-xpoints(indmin0)))
 elseif(caltype==2)
     %find max contrast
     ctrfit = yfit0-yfit1;
-    [~, indmax] = max(ctrfit);
+    [maxctr, indmax] = max(ctrfit);
     optphase = xpoints(indmax);
     fprintf('Phase index for maximum contrast = %d\n', indmax)
     fprintf('Optimum phase = %f\n', optphase)
+    fprintf('Contrast = %f\n', maxctr/2);
 else
     frpintf('Calibration type not supported')
     return
 end
 
-if nargin>3
-    figure(varargin{1});  %I need to find a consistent way to deal with plots, DR
+if nargin>4
+    figure(varargin{1});  
 else
     figure(101)
 end

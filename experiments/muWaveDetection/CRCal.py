@@ -17,6 +17,6 @@ q1 = QubitFactory(args.target)
 CR = QubitFactory(args.CR)
 
 if args.caltype==1:
-	EchoCRLen(q2,q1,CR,args.length*1e-9*np.arange(2,21),showPlot=False)
+	EchoCRLen(q2,q1,CR,args.length*1e-9*np.arange(2,21),showPlot=False,riseFall=20e-9)
 else:
-	EchoCRPhase(q2,q1,CR,np.linspace(0,2*np.pi,19),length=args.length*1e-9, showPlot=False)
+	EchoCRPhase(q2,q1,CR,np.linspace(0,2*np.pi,19),length=args.length*1e-9, showPlot=False,riseFall=20e-9)

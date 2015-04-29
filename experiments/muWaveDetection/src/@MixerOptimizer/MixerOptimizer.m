@@ -131,7 +131,8 @@ classdef MixerOptimizer < handle
             obj.sa.peakAmplitude();
             
             %Ask whether to write to file or not
-            happy = questdlg('Are you happy with the result?','Optimize Mixer Wrap-up');
+            %happy = questdlg('Are you happy with the result?','Optimize Mixer Wrap-up');
+            happy=1;
             switch happy
                 case 'Yes'
             

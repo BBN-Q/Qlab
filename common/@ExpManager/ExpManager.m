@@ -55,7 +55,7 @@ classdef ExpManager < handle
         CWMode = false
         saveVariances = false
         dataFileHeader = struct();
-        dataTimeout = 60 % timeout in seconds
+        dataTimeout = 600 % timeout in seconds
         saveAllSettings = true;
     end
     
@@ -273,6 +273,7 @@ classdef ExpManager < handle
                    copyfile(getpref('qlab','InstrumentLibraryFile'),fullfile(pathname,strcat(basename,'_cfg'),'Instruments.json'));
                    copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Measurements'),fullfile(pathname,strcat(basename,'_cfg'),'Measurements.json'));
                    copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Sweeps'),fullfile(pathname,strcat(basename,'_cfg'),'Sweeps.json'));
+                   copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','QuickPicks'),fullfile(pathname,strcat(basename,'_cfg'),'QuickPicks.json'));
                 end
             end
             

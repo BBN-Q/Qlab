@@ -1,4 +1,4 @@
-function mykernel = make_kernel(filename,qubit,varargin)
+function [gavg,eavg] = make_kernel(filename,qubit,varargin)
 %inputs: a) filename of saved average traces for qubit in |0> and |1>
 % b) qubit string defining the file name for the kernel
 
