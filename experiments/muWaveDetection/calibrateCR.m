@@ -1,4 +1,4 @@
-function [optlen, optphase] = calibrateCR(control, target, CR, chan)
+function [optlen, optphase] = calibrateCR(control, target, CR, chan, lenstep)
 %function to calibrate length and phase of CR pulse. It assumes that the
 %sequence EchoCR is loaded
 CalParams = struct();
@@ -6,7 +6,7 @@ CalParams.control = control;
 CalParams.target = target;
 CalParams.CR = CR;
 CalParams.channel = chan; %meas. channel for target qubit
-CalParams.lenstep = 20; %step in length calibration (in ns)
+CalParams.lenstep = lenstep; %step in length calibration (in ns)
 
 cfgpath=getpref('qlab','CurScripterFile');
 %sweepPath=strrep(cfgpath,'ChannelParams','Sweeps');
