@@ -73,9 +73,6 @@ chiIdeal = choi2chi(choiIdeal);
 processFidelity = real(trace(chiExp*chiIdeal))
 gateFidelity = (2^nbrQubits*processFidelity+1)/(2^nbrQubits+1)
 
-processFidelity_lsq = real(trace(choi2chi(choiLSQ)*chiIdeal))
-gateFidelity_lsq = (2^nbrQubits*processFidelity_lsq+1)/(2^nbrQubits+1)
-
 %Create the pauli map for plotting
 pauliMapIdeal = choi2pauliMap(choiIdeal);
 pauliMapLSQ = choi2pauliMap(choiLSQ);

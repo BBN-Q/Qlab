@@ -15,13 +15,9 @@ else
     plotTitle = '';
 end
 
-% seqlengths = [2, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96];
-% seqlengths = [2, 4, 8, 16, 32, 64, 96, 128, 192, 256, 320];
-%seqlengths = [4,8,16, 32, 64, 128, 192, 256, 320];
-%seqlengths = [4,8,16,32, 64, 128, 192, 256];
-seqlengths = [16,32, 64, 128, 192,256];
-%seqlengths = [4, 8, 16, 32, 64, 128, 256,384];
-% seqlengths = [1 2 4 8 16 32 64 126 252];
+%     seqlengths = [2, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96];
+%     seqlengths = [2, 4, 8, 16, 32, 64, 96, 128, 192, 256, 320];
+seqlengths = [1 2 4 8 16 32 64 126 252];
 numRepeats = length(ypts)/length(seqlengths);
 
 xpts2 = seqlengths(1 + floor((0:length(ypts)-1)./numRepeats));

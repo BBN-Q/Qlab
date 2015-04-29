@@ -4,7 +4,7 @@ function [Zmat, fidvec, betas] = analyze_twirl(data, gateseq, nqubits)
 %gateseq = name of sequence corresponding to the .csv file containing the
 %Clifford indeces and the measurement operators
 
-%indvec = [1,2,6]; %indeces for measurements for M1, M2, M3, M12, M23, M13, M123... sorting is unnecessary
+%indvec = [3,1,2]; %indeces for measurements for M1, M2, M3, M12, M23, M13, M123... sorting is unnecessary
 indvec=1:2^nqubits-1;  %if all qubits and correlations are measured
 segnum=data.expSettings.sweeps.SegmentNumWithCals.numPoints-data.expSettings.sweeps.SegmentNumWithCals.numCals;
 

@@ -118,13 +118,13 @@ classdef SingleShot < MeasFilters.MeasFilter
            
                 %reduce fidelities so that it doesn't integrate longer than
                 %necessary, DR 150112 
-                dfid = diff(fidelities(1:2:end));
-                for kk=1:2:length(fidelities)-2
-                    if abs(dfid((kk+1)/2))<0.001 && fidelities(kk)>0.6  %set some threshold to prevent noise giving false steady state
-                        break
-                    end
-                end
-                [maxFidelity_I, intPt] = max(fidelities(1:kk));
+%                 dfid = diff(fidelities(1:2:end));
+%                 for kk=1:2:length(fidelities)-2
+%                     if abs(dfid((kk+1)/2))<0.001 && fidelities(kk)>0.6  %set some threshold to prevent noise giving false steady state
+%                         break
+%                     end
+%                 end
+%                 [maxFidelity_I, intPt] = max(fidelities(1:kk));
                 [maxFidelity_I, intPt] = max(fidelities);
                 obj.bestIntegrationTime = intPt;
                 fprintf('Best integration time found at %d decimated points out of %d\n', intPt, numTimePts);
