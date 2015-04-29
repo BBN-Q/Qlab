@@ -55,6 +55,10 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         initializeProcessing
         done
         processingTimer
+        bufferct
+        idx
+        sumDataA
+        sumDataB
     end
     
     properties (Dependent = true)
@@ -222,26 +226,25 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         end
         
         function process_buffer(obj, ~, ~)
-            persistent bufferct idx partialBufs bufStride
-            persistent sumDataA sumDataB
+            persistent partialBufs bufStride
             % first call initialization
             if obj.initializeProcessing
                 obj.initializeProcessing = false;
-                bufferct = 0;
+                obj.bufferct = 0;
                 
                 if strcmp(obj.acquireMode, 'averager')
-                    sumDataA = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
-                    sumDataB = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
+                    obj.sumDataA = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
+                    obj.sumDataB = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
                 else
-                    sumDataA = [];
-                    sumDataB = [];
+                    obj.sumDataA = [];
+                    obj.sumDataB = [];
                 end
                 
                 %If we are only getting partial round robins per buffer
                 %initialize some indices
                 if (obj.buffers.roundRobinsPerBuffer < 1)
                     partialBufs = true;
-                    idx = 1;
+                    obj.idx = 1;
                     bufStride = obj.buffers.recordsPerBuffer*obj.settings.averager.recordLength;
                     switch obj.acquireMode
                         case 'digitizer'
@@ -259,11 +262,11 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             %Total number of buffers to process
             totNumBuffers = round(obj.settings.averager.nbrRoundRobins/obj.buffers.roundRobinsPerBuffer);
-            if bufferct >= totNumBuffers
+            if obj.bufferct >= totNumBuffers
                 if strcmp(obj.acquireMode, 'averager')
                     %Average the summed data
-                    obj.data{1} = sumDataA/totNumBuffers;
-                    obj.data{2} = sumDataB/totNumBuffers;
+                    obj.data{1} = obj.sumDataA/totNumBuffers;
+                    obj.data{2} = obj.sumDataB/totNumBuffers;
                 end
                 obj.done = true;
                 stop(obj.processingTimer);
@@ -273,7 +276,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             % continue checking for new data until there are no more
             % waiting buffers to process
             while true
-                bufferNum = mod(bufferct, obj.buffers.numBuffers) + 1;
+                bufferNum = mod(obj.bufferct, obj.buffers.numBuffers) + 1;
                 [retCode, ~, bufferOut] = ...
                     calllib('ATSApi', 'AlazarWaitAsyncBufferComplete', obj.boardHandle, obj.buffers.bufferPtrs{bufferNum}, 0);
                 if retCode == obj.defs('ApiWaitTimeout')
@@ -299,11 +302,11 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 % scale data to floating point using MEX function, i.e. map (0,255) to (-Vs,Vs)
                 if strcmp(obj.acquireMode, 'digitizer')
                     if partialBufs
-                        [obj.data{1}(idx:idx+bufStride-1), obj.data{2}(idx:idx+bufStride-1)] = ...
+                        [obj.data{1}(obj.idx:obj.idx+bufStride-1), obj.data{2}(obj.idx:obj.idx+bufStride-1)] = ...
                             obj.processBuffer(bufferOut.Value, obj.verticalScale);
-                        idx = idx + bufStride;
-                        if ((idx-1) == numel(obj.data{1}))
-                            idx = 1;
+                        obj.idx = obj.idx + bufStride;
+                        if ((obj.idx-1) == numel(obj.data{1}))
+                            obj.idx = 1;
                             notify(obj, 'DataReady');
                         end
                     else
@@ -315,20 +318,20 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 else
                     % scale with averaging over repeats (waveforms and round robins)
                     if partialBufs
-                        [obj.data{1}(idx:idx+bufStride-1), obj.data{2}(idx:idx+bufStride-1)] = obj.processBufferAvg(bufferOut.Value, [obj.settings.averager.recordLength,...
+                        [obj.data{1}(obj.idx:obj.idx+bufStride-1), obj.data{2}(obj.idx:obj.idx+bufStride-1)] = obj.processBufferAvg(bufferOut.Value, [obj.settings.averager.recordLength,...
                             obj.settings.averager.nbrWaveforms, round(obj.settings.averager.nbrSegments*obj.buffers.roundRobinsPerBuffer), 1], obj.verticalScale);
-                        idx = idx + bufStride;
-                        if ((idx-1) == numel(obj.data{1}))
-                            idx = 1;
-                            sumDataA = sumDataA + obj.data{1};
-                            sumDataB = sumDataB + obj.data{2};
+                        obj.idx = obj.idx + bufStride;
+                        if ((obj.idx-1) == numel(obj.data{1}))
+                            obj.idx = 1;
+                            obj.sumDataA = obj.sumDataA + obj.data{1};
+                            obj.sumDataB = obj.sumDataB + obj.data{2};
                             notify(obj, 'DataReady');
                         end
                     else
                         [obj.data{1}, obj.data{2}] = obj.processBufferAvg(bufferOut.Value, [obj.settings.averager.recordLength,...
                             obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments, obj.buffers.roundRobinsPerBuffer], obj.verticalScale);
-                        sumDataA = sumDataA + obj.data{1};
-                        sumDataB = sumDataB + obj.data{2};
+                        obj.sumDataA = obj.sumDataA + obj.data{1};
+                        obj.sumDataB = obj.sumDataB + obj.data{2};
                         notify(obj, 'DataReady');
                     end
                 end
@@ -339,7 +342,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                     stop(obj.processingTimer);
                 end
 
-                bufferct = bufferct+1;
+                obj.bufferct = obj.bufferct+1;
             end
         end
         
