@@ -47,7 +47,9 @@ classdef PulseCalibration < handle
                 case 'deviceDrivers.AlazarATS9870'
                     averagerSettings = obj.experiment.scopes{1}.averager;
                     averagerSettings.nbrSegments = length(segmentPoints);
-                    obj.experiment.scopes{1}.averager = averagerSettings;
+                    for scopeind=1:length(obj.experiment.scopes)
+                        obj.experiment.scopes{scopeind}.averager = averagerSettings;
+                    end
                 case 'X6'
                     x6 = obj.experiment.scopes{1};
                     set_averager_settings(x6, x6.recordLength, length(segmentPoints), x6.nbrWaveforms, x6.nbrRoundRobins);
