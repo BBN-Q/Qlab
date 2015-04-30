@@ -70,17 +70,16 @@ classdef SingleShotFidelity < handle
                 end
                 if ExpManager.is_scope(instr)
                     scopeName = instrument{1};
+                    % set scope to digitizer mode
+                    obj.experiment.instrSettings.(scopeName).acquireMode = 'digitizer';
+                    % set digitizer with the appropriate number of segments and
+                    % round robins
+                    obj.experiment.instrSettings.(scopeName).averager.nbrSegments = settings.numShots;
+                    obj.experiment.instrSettings.(scopeName).averager.nbrRoundRobins = 1;
                 end
                 add_instrument(obj.experiment, instrument{1}, instr, instrSettings.(instrument{1}));
             end
-            
-            % set scope to digitizer mode
-            obj.experiment.instrSettings.(scopeName).acquireMode = 'digitizer';
-            
-            % set digitizer with the appropriate number of segments and
-            % round robins
-            obj.experiment.instrSettings.(scopeName).averager.nbrSegments = settings.numShots;
-            obj.experiment.instrSettings.(scopeName).averager.nbrRoundRobins = 1;
+                      
             
             %Add the instrument sweeps
             sweepSettings = settings.sweeps;
