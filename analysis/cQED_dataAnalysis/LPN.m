@@ -35,8 +35,10 @@ for nvotes=1:maxqueries
                 for kk = 1:ndataqubits
                     samplemat(1,kk) = -0.5*(signvec(1+kk)-1)*(samplemat(1,kk)>=thrvec(1+kk)) + 0.5*(signvec(1+kk)+1)*(samplemat(1,kk)<thrvec(1+kk));
                 end
+                majvote = samplemat;
+            else
+                majvote = mode(samplemat);
             end
-            majvote = mode(samplemat);
             if majvote == str2num(reshape(xmat(codeID,:)',[],1))'; 
                 successvec(nvotes)=successvec(nvotes)+1;
             end
