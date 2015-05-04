@@ -25,6 +25,8 @@ classdef SingleShotFidelity < handle
         experiment % an instance of the ExpManager class
         settings % a structure of instrument/measurement/sweep settings
         qubit %which qubit we are on
+        controlAWG
+        readoutAWG
     end
     
     methods
@@ -49,6 +51,16 @@ classdef SingleShotFidelity < handle
             headerStruct = expSettings;
             headerStruct.singleshot = settings;
             obj.experiment.dataFileHeader = headerStruct;
+                     
+            warning('off', 'json:fieldNameConflict');
+            channelLib = json.read(getpref('qlab','ChannelParamsFile'));
+            warning('on', 'json:fieldNameConflict');
+            channelLib = channelLib.channelDict;
+            
+            tmpStr = regexp(channelLib.(obj.qubit).physChan, '-', 'split');
+            obj.controlAWG = tmpStr{1};
+            tmpStr = regexp(channelLib.(strcat('M0x2D',obj.qubit)).physChan, '-', 'split');  %do the same for readout. Then only enable control and readout AWGs
+            obj.readoutAWG = tmpStr{1};
             
             % add instruments
             for instrument = fieldnames(instrSettings)'
@@ -56,7 +68,10 @@ classdef SingleShotFidelity < handle
                 instr = InstrumentFactory(instrument{1}, instrSettings.(instrument{1}));
                 %If it is an AWG, point it at the correct file
                 if ExpManager.is_AWG(instr)
-                    if isa(instr, 'deviceDrivers.APS') || isa(instr, 'APS2') || isa(instr, 'APS')
+                    if ~strcmp(instrument,obj.controlAWG) && ~strcmp(instrument,obj.readoutAWG)
+                        %ignores the AWGs which are not either driving or reading this qubit
+                        continue
+                    elseif isa(instr, 'deviceDrivers.APS') || isa(instr, 'APS2') || isa(instr, 'APS')
                         ext = 'h5';
                     else
                         ext = 'awg';
@@ -80,8 +95,7 @@ classdef SingleShotFidelity < handle
                     obj.experiment.instrSettings.(scopeName).averager.nbrSegments = settings.numShots;
                     obj.experiment.instrSettings.(scopeName).averager.nbrRoundRobins = 1;
                 end
-            end
-                      
+            end          
             
             %Add the instrument sweeps
             sweepSettings = settings.sweeps;
