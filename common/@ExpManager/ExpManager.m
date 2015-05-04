@@ -462,6 +462,11 @@ classdef ExpManager < handle
             obj.instrSettings.(name) = settings;
         end
         
+        function remove_instrument(obj, name, instr, settings)
+            obj.instruments = rmfield(obj.instruments,name);
+            obj.instrSettings = rmfield(obj.instrSettings,name);                      
+        end
+        
         function add_measurement(obj, name, meas)
             obj.measurements.(name) = meas;
         end
