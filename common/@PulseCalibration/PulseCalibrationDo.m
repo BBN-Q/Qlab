@@ -60,13 +60,17 @@ end
 
 %% Ramsey
 if settings.DoRamsey
-    % generate Ramsey sequence (TODO)
-    [filenames, segmentPoints] = obj.RamseyChannelSequence(settings.Qubit);
+    % generate Ramsey sequence 
+    [filenames, segmentPoints] = obj.RamseyChannelSequence(settings.Qubit, settings.RamseyStop, settings.NumRamseySteps);
     obj.loadSequence(filenames, 1);
     
     %Approach is to take one point, move half-way there and then see if
     %frequency moves in desired direction
-    qubitSource = obj.experiment.instruments.(obj.channelMap.(settings.Qubit).source);
+    warning('off', 'json:fieldNameConflict');
+    channelLib = json.read(getpref('qlab','ChannelParamsFile'));
+    warning('on', 'json:fieldNameConflict');
+    mangledPhysChan = genvarname(obj.channelParams.physChan);
+    qubitSource = obj.experiment.instruments.(channelLib.channelDict.(mangledPhysChan).generator);
     
     %Deliberately shift off by 1MHz
     origFreq = qubitSource.frequency;
