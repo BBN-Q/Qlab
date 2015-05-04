@@ -23,6 +23,7 @@ classdef PulseCalibration < handle
         settings
         channelParams
         controlAWG % name of control AWG
+        readoutAWG % name of readout AWG
         AWGs
         AWGSettings
         testMode = false;
@@ -184,14 +185,25 @@ classdef PulseCalibration < handle
             % intialize the ExpManager
             init(obj.experiment);
             
-            obj.AWGs = struct_filter(@(x) ExpManager.is_AWG(x), obj.experiment.instruments);
-            obj.AWGSettings = cellfun(@(awg) obj.experiment.instrSettings.(awg), fieldnames(obj.AWGs)', 'UniformOutput', false);
-            obj.AWGSettings = cell2struct(obj.AWGSettings, fieldnames(obj.AWGs)', 2);
-
             tmpStr = regexp(channelLib.(settings.Qubit).physChan, '-', 'split');
             obj.controlAWG = tmpStr{1};
             obj.channelParams.physChan = channelLib.(settings.Qubit).physChan;
-
+            tmpStr = regexp(channelLib.(strcat('M0x2D',settings.Qubit)).physChan, '-', 'split');  %do the same for readout. Then only enable control and readout AWGs
+            obj.readoutAWG = tmpStr{1};
+            
+            %removes the AWGs which are not either driving or reading the calibrated qubit
+            for instrname = fieldnames(obj.experiment.instruments)'
+                instrname = instrname{1};
+                instr = obj.experiment.instruments.(instrname);
+                if ExpManager.is_AWG(instr) && ~strcmp(instrname,obj.controlAWG) && ~strcmp(instrname,obj.readoutAWG)
+                    obj.experiment.remove_instrument(instrname)
+                end
+            end
+            
+            obj.AWGs = struct_filter(@(x) ExpManager.is_AWG(x), obj.experiment.instruments);
+            obj.AWGSettings = cellfun(@(awg) obj.experiment.instrSettings.(awg), fieldnames(obj.AWGs)', 'UniformOutput', false);
+            obj.AWGSettings = cell2struct(obj.AWGSettings, fieldnames(obj.AWGs)', 2);
+            
             if ~obj.testMode
                 % pull in physical channel parameters into channelParams
                 % Note: need to use genvarname to match the field name in
