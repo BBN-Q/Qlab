@@ -49,6 +49,7 @@ for instrument = fieldnames(instrSettings)'
         if ExpManager.is_AWG(instr)
             if isfield(expSettings, 'AWGs') && sum(strcmp(instrument{1}, expSettings.AWGs))==0
                 %if a list of AWGs is specified, disregard the remaining ones 
+                expSettings.instruments = rmfield(expSettings.instruments, instrument{1});
                 continue
             end
             fprintf('Enabling %s\n', instrument{1});
@@ -99,5 +100,14 @@ end
 
 exp.init();
 exp.run();
+
+if exp.saveAllSettings
+    %saves a specific ExpSettings file, without overwriting the
+    %DefaultExpSettings (already saved by ExpManager)
+    fileName = exp.dataFileHandler.fileName;
+    [pathname,basename,~] = fileparts(fileName);
+    json.write(expSettings, fullfile(pathname,strcat(basename,'_cfg'),'ExpSettings.json'), 'indent', 2);  
+end
+
 toc;
 end
