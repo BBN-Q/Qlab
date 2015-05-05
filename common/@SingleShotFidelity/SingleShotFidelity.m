@@ -59,7 +59,7 @@ classdef SingleShotFidelity < handle
             
             tmpStr = regexp(channelLib.(obj.qubit).physChan, '-', 'split');
             obj.controlAWG = tmpStr{1};
-            tmpStr = regexp(channelLib.(strcat('M0x2D',obj.qubit)).physChan, '-', 'split');  %do the same for readout. Then only enable control and readout AWGs
+            tmpStr = regexp(channelLib.(strcat(genvarname('M-'),obj.qubit)).physChan, '-', 'split'); 
             obj.readoutAWG = tmpStr{1};
             
             % add instruments

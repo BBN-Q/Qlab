@@ -188,7 +188,7 @@ classdef PulseCalibration < handle
             tmpStr = regexp(channelLib.(settings.Qubit).physChan, '-', 'split');
             obj.controlAWG = tmpStr{1};
             obj.channelParams.physChan = channelLib.(settings.Qubit).physChan;
-            tmpStr = regexp(channelLib.(strcat('M0x2D',settings.Qubit)).physChan, '-', 'split');  %do the same for readout. Then only enable control and readout AWGs
+            tmpStr = regexp(channelLib.(strcat(genvarname('M-'),settings.Qubit)).physChan, '-', 'split');  %do the same for readout. Then only enable control and readout AWGs
             obj.readoutAWG = tmpStr{1};
             
             %removes the AWGs which are not either driving or reading the calibrated qubit
