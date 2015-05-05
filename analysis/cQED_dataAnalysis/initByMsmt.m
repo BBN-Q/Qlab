@@ -1,4 +1,4 @@
-function [bins, PDFvec, PDFvec_con,data_con] = initByMsmt(data,numSegments,numMeas,indMeas,selectMeas,selectSign,threshold,docond)
+function [bins, PDFvec, PDFvec_con,data_con,opt_thr,datamat] = initByMsmt(data,numSegments,numMeas,indMeas,selectMeas,selectSign,threshold,docond)
 %numSegments = number of distinct segments in the sequence
 %numMeas = number of meauserements per segments
 %indMeas = list of indeces of the msmt's to compare for fidelity
