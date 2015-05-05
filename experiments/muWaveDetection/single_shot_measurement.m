@@ -4,7 +4,7 @@ deviceName = 'IBM_v112037W3';
 ExpParams.fileName = DataNamer.get_data_filename(deviceName, expName);
 
 ExpParams.qubit = qubit;
-ExpParams.dataSource = 'Ch1Raw'; %'M1Demod';
+ExpParams.dataSource = strcat('M',qubit(2),'Demod');
 ExpParams.cfgFile = getpref('qlab', 'CurScripterFile');
 %Update some relevant parameters
 ExpParams.numShots = 10000;
