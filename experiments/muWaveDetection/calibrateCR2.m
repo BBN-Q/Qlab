@@ -26,6 +26,10 @@ tmpStr = regexp(chanSettings.(CR).physChan, '-', 'split');
 expSettings.AWGs{2} = tmpStr{1};
 tmpStr = regexp(chanSettings.(strcat(genvarname('M-'),target)).physChan, '-', 'split');
 expSettings.AWGs{3} = tmpStr{1};
+tmpStr = regexp(chanSettings.(control).physChan, '-', 'split');
+expSettings.AWGs{4} = tmpStr{1};
+tmpStr = regexp(chanSettings.(strcat(genvarname('M-'),control)).physChan, '-', 'split');
+expSettings.AWGs{5} = tmpStr{1};
 expSettings.AWGs = unique(expSettings.AWGs); %remove duplicates
 
 %disable unused measurements. Not sure if this is useful yet 
@@ -69,7 +73,7 @@ expSettings.sweeps.SegmentNumWithCals.step = (expSettings.sweeps.SegmentNumWithC
 expSettings.sweeps.SegmentNumWithCals.axisLabel = 'Pulse phase (deg)';
 
 %run the sequence
-ExpScripter2('CRcal_ph', 'lockSegments');
+ExpScripter2('CRcal_ph', expSettings, 'lockSegments');
 
 %analyze the sequence and updates CR pulse
 data=load_data('latest');
