@@ -137,7 +137,7 @@ classdef MixerOptimizer < handle
             %Ask whether to write to file or not
                 happy = questdlg('Are you happy with the result?','Optimize Mixer Wrap-up');
             else
-                happy = 1;
+                happy = 'Yes';
             end
                 
             switch happy
