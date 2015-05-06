@@ -1,4 +1,4 @@
-function beta = fit_two_freq(xdata, ydata)
+function [t2, detuning, detuning2] = fit_two_freq(xdata, ydata)
 % Fits ramsey data in time range (x-axis) from start to end using a decaying
 % sinusoid.
 

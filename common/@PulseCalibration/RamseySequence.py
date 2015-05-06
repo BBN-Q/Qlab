@@ -14,4 +14,4 @@ execfile(os.path.join(args.pyqlabpath, 'startup.py'))
 
 q = QubitFactory(args.qubit)
 
-Ramsey(q,np.linspace(0,args.ramseystop,args.npoints), showPlot = False) 
+Ramsey(q,np.linspace(0,args.ramseystop,args.npoints), showPlot = False, calRepeats=0) 

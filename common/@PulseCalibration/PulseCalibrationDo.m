@@ -72,9 +72,10 @@ if settings.DoRamsey
     mangledPhysChan = genvarname(obj.channelParams.physChan);
     qubitSource = obj.experiment.instruments.(channelLib.channelDict.(mangledPhysChan).generator);
     
-    %Deliberately shift off by 1MHz
+    %Deliberately shift off by 200 kHz
+    added_detuning = - 0.0002;
     origFreq = qubitSource.frequency;
-    qubitSource.frequency = origFreq - 0.001;
+    qubitSource.frequency = origFreq + added_detuning;
 
     % measure
     data = obj.take_data(segmentPoints);
@@ -82,23 +83,33 @@ if settings.DoRamsey
     quick_scale = @(d) 2*(d-mean(d))/(max(d)-min(d));
     
     % analyze
-    [~, detuningA] = fitramsey(segmentPoints, quick_scale(data));
+    %single frequency
+    %[~, detuningA] = fitramsey(segmentPoints, quick_scale(data));
+    
+    %double frequency for charge-sensitive qubits
+    [~, detuning1, detuning2] = fit_two_freq(segmentPoints, quick_scale(data));
+    detuningA = (detuning1 + detuning2)/2; 
 
     % adjust drive frequency
-    qubitSource.frequency = origFreq - 0.001 + detuningA/2;
+    qubitSource.frequency = origFreq + added_detuning + detuningA/2;
 
     % measure
     data = obj.take_data(segmentPoints);
 
     % analyze
-    [~, detuningB] = fitramsey(segmentPoints, quick_scale(data));
+    %single frequency
+    %[~, detuningB] = fitramsey(segmentPoints, quick_scale(data));
+    
+    %double frequency for charge-sensitive qubits
+    [~, detuning1, detuning2] = fit_two_freq(segmentPoints, quick_scale(data));
+    detuningB = (detuning1 + detuning2)/2; 
     
     %If we have gotten smaller we are moving in the right direction
     %Average the two fits
     if detuningB < detuningA
-        qubitSource.frequency = origFreq - 0.001 + 0.5*(detuningA + detuningA/2+detuningB);
+        qubitSource.frequency = origFreq + added_detuning + 0.5*(detuningA + detuningA/2+detuningB);
     else
-        qubitSource.frequency = origFreq - 0.001 - 0.5*(detuningA - detuningA/2+detuningB);
+        qubitSource.frequency = origFreq + added_detuning - 0.5*(detuningA - detuningA/2+detuningB);
     end
         
 end
@@ -256,7 +267,9 @@ instrLib.instrDict.(obj.controlAWG).channels(iChan).offset = round(1e4*obj.chann
 instrLib.instrDict.(obj.controlAWG).channels(qChan).offset = round(1e4*obj.channelParams.q_offset)/1e4;
 %Drive frequency from Ramsey
 if settings.DoRamsey
+    warning('off', 'json:fieldNameConflict');
     channelLib = json.read(getpref('qlab','ChannelParamsFile'));
+    warning('on', 'json:fieldNameConflict');
     sourceName = channelLib.channelDict.(mangledPhysChan).generator;
     instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
 end
