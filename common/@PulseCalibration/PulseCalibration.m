@@ -157,9 +157,19 @@ classdef PulseCalibration < handle
             % turn on variances
             obj.experiment.saveVariances = true;
             
+            tmpStr = regexp(channelLib.(settings.Qubit).physChan, '-', 'split');
+            obj.controlAWG = tmpStr{1};
+            obj.channelParams.physChan = channelLib.(settings.Qubit).physChan;
+            tmpStr = regexp(channelLib.(strcat(genvarname('M-'),settings.Qubit)).physChan, '-', 'split');  %do the same for readout. Then only enable control and readout AWGs
+            obj.readoutAWG = tmpStr{1};
+            
             % add instruments
             for instrument = fieldnames(instrSettings)'
                 instr = InstrumentFactory(instrument{1});
+                if ExpManager.is_AWG(instr) && ~strcmp(instrument{1},obj.controlAWG) && ~strcmp(instrument{1},obj.readoutAWG) && ~instrSettings.(instrument{1}).isMaster
+                    %ignores the AWGs which are not either driving or reading this qubit
+                    continue
+                end
                 add_instrument(obj.experiment, instrument{1}, instr, instrSettings.(instrument{1}));
             end
             
@@ -184,22 +194,7 @@ classdef PulseCalibration < handle
 
             % intialize the ExpManager
             init(obj.experiment);
-            
-            tmpStr = regexp(channelLib.(settings.Qubit).physChan, '-', 'split');
-            obj.controlAWG = tmpStr{1};
-            obj.channelParams.physChan = channelLib.(settings.Qubit).physChan;
-            tmpStr = regexp(channelLib.(strcat(genvarname('M-'),settings.Qubit)).physChan, '-', 'split');  %do the same for readout. Then only enable control and readout AWGs
-            obj.readoutAWG = tmpStr{1};
-            
-            %removes the AWGs which are not either driving or reading the calibrated qubit
-            for instrname = fieldnames(obj.experiment.instruments)'
-                instrname = instrname{1};
-                instr = obj.experiment.instruments.(instrname);
-                if ExpManager.is_AWG(instr) && ~strcmp(instrname,obj.controlAWG) && ~strcmp(instrname,obj.readoutAWG)
-                    obj.experiment.remove_instrument(instrname)
-                end
-            end
-            
+                     
             obj.AWGs = struct_filter(@(x) ExpManager.is_AWG(x), obj.experiment.instruments);
             obj.AWGSettings = cellfun(@(awg) obj.experiment.instrSettings.(awg), fieldnames(obj.AWGs)', 'UniformOutput', false);
             obj.AWGSettings = cell2struct(obj.AWGSettings, fieldnames(obj.AWGs)', 2);
