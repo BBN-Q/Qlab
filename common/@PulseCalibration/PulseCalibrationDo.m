@@ -83,13 +83,15 @@ if settings.DoRamsey
     quick_scale = @(d) 2*(d-mean(d))/(max(d)-min(d));
     
     % analyze
-    %single frequency
-    %[~, detuningA] = fitramsey(segmentPoints, quick_scale(data));
+    if ~settings.Ramsey2f
+        %single frequency
+        [~, detuningA] = fitramsey(segmentPoints, quick_scale(data));
+    else
+        %double frequency for charge-sensitive qubits
+        [~, detuning1, detuning2] = fit_two_freq(segmentPoints, quick_scale(data));
+        detuningA = (detuning1 + detuning2)/2; 
+    end
     
-    %double frequency for charge-sensitive qubits
-    [~, detuning1, detuning2] = fit_two_freq(segmentPoints, quick_scale(data));
-    detuningA = (detuning1 + detuning2)/2; 
-
     % adjust drive frequency
     qubitSource.frequency = origFreq + added_detuning + detuningA/2;
 
@@ -97,12 +99,14 @@ if settings.DoRamsey
     data = obj.take_data(segmentPoints);
 
     % analyze
-    %single frequency
-    %[~, detuningB] = fitramsey(segmentPoints, quick_scale(data));
-    
-    %double frequency for charge-sensitive qubits
-    [~, detuning1, detuning2] = fit_two_freq(segmentPoints, quick_scale(data));
-    detuningB = (detuning1 + detuning2)/2; 
+    if ~settings.Ramsey2f
+        %single frequency
+        [~, detuningB] = fitramsey(segmentPoints, quick_scale(data));
+    else
+        %double frequency for charge-sensitive qubits
+        [~, detuning1, detuning2] = fit_two_freq(segmentPoints, quick_scale(data));
+        detuningB = (detuning1 + detuning2)/2;
+    end
     
     %If we have gotten smaller we are moving in the right direction
     %Average the two fits
