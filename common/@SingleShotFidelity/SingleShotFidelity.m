@@ -27,6 +27,7 @@ classdef SingleShotFidelity < handle
         qubit %which qubit we are on
         controlAWG
         readoutAWG
+        autoSelectAWGs;
     end
     
     methods
@@ -62,16 +63,21 @@ classdef SingleShotFidelity < handle
             tmpStr = regexp(channelLib.(strcat(genvarname('M-'),obj.qubit)).physChan, '-', 'split'); 
             obj.readoutAWG = tmpStr{1};
             
+            obj.autoSelectAWGs = settings.autoSelectAWGs;
+            
             % add instruments
             for instrument = fieldnames(instrSettings)'
                 fprintf('Connecting to %s\n', instrument{1});
                 instr = InstrumentFactory(instrument{1}, instrSettings.(instrument{1}));
                 %If it is an AWG, point it at the correct file
                 if ExpManager.is_AWG(instr)
-                    if ~strcmp(instrument,obj.controlAWG) && ~strcmp(instrument,obj.readoutAWG) && ~instrSettings.(instrument{1}).isMaster
+                    if obj.autoSelectAWGs
+                        if ~strcmp(instrument,obj.controlAWG) && ~strcmp(instrument,obj.readoutAWG) && ~instrSettings.(instrument{1}).isMaster
                         %ignores the AWGs which are not either driving or reading this qubit
                         continue
-                    elseif isa(instr, 'deviceDrivers.APS') || isa(instr, 'APS2') || isa(instr, 'APS')
+                        end
+                    end
+                    if isa(instr, 'deviceDrivers.APS') || isa(instr, 'APS2') || isa(instr, 'APS')
                         ext = 'h5';
                     else
                         ext = 'awg';
