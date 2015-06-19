@@ -20,6 +20,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
     % Class-specific constant properties
     properties (Constant = true)
         MAX_DEVICES = 64;
+        MAX_RETRIES = 3;
     end % end constant properties
     
     
@@ -34,6 +35,17 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
         max_freq = 10; % GHz
         min_freq = 5; % GHz
         pulseModeEnabled = 0;
+        
+        % status codes from vnx_fmssynth.h
+        status_INVALID_DEVID     = hex2dec('80000000') % MSB is set if the device ID is invalid
+        status_DEV_CONNECTED     = hex2dec('00000001') % LSB is set if a device is connected
+        status_DEV_OPENED        = hex2dec('00000002') % set if the device is opened
+        status_SWP_ACTIVE	       = hex2dec('00000004') % set if the device is sweeping
+        status_SWP_UP	           = hex2dec('00000008') % set if the device is sweeping up in frequency
+        status_SWP_REPEAT	       = hex2dec('00000010') % set if the device is in continuous sweep mode
+        status_SWP_BIDIRECTIONAL = hex2dec('00000020') % set if the device is in bidirectional sweep mode
+        status_PLL_LOCKED	       = hex2dec('00000040') % set if the PLL lock status is TRUE (both PLL's are locked)
+        status_FAST_PULSE_OPTION = hex2dec('00000080') % set if the fast pulse mode option is installed
     end % end private properties
     
     % Device properties correspond to instrument parameters
@@ -46,6 +58,8 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
         alc
         pulse
         pulseSource = 'ext';
+        
+        pllLocked;
         
         % device specific
         refSource
@@ -105,6 +119,11 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
                 end
             obj.open = 0;
             end
+        end
+        
+        function flag = get_dev_status(obj, status_code)
+           val = calllib('vnx_fmsynth', 'fnLMS_GetDeviceStatus', obj.devID);
+           flag = (bitand(val, status_code) == status_code);
         end
         
         % get a list of connected Labbricks
@@ -190,6 +209,10 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             val = calllib('vnx_fmsynth', 'fnLMS_GetUseInternalRef', obj.devID);
             if val == true, val = 'int'; end
             if val == false, val = 'ext'; end
+        end
+        
+        function val = get.pllLocked(obj)
+            val = obj.get_dev_status(obj.status_PLL_LOCKED);
         end
         
         % property setters
@@ -278,6 +301,18 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             end
             
             calllib('vnx_fmsynth', 'fnLMS_SetUseInternalRef', obj.devID, checkMapObj(lower(value)));
+          
+            if (strncmpi(value,'ext', 3) )
+              % test for PLL lock
+              retries = 0;
+              while (~obj.pllLocked && (retries < obj.MAX_RETRIES))
+                retries = retries + 1;
+                pause(0.5);
+              end
+              if (~obj.pllLocked) 
+                  error('Labbrick PLL is not locked');
+              end
+            end
         end
     end % end instrument parameter accessors
     
