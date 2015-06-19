@@ -40,11 +40,11 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
         status_INVALID_DEVID     = hex2dec('80000000') % MSB is set if the device ID is invalid
         status_DEV_CONNECTED     = hex2dec('00000001') % LSB is set if a device is connected
         status_DEV_OPENED        = hex2dec('00000002') % set if the device is opened
-        status_SWP_ACTIVE	       = hex2dec('00000004') % set if the device is sweeping
-        status_SWP_UP	           = hex2dec('00000008') % set if the device is sweeping up in frequency
-        status_SWP_REPEAT	       = hex2dec('00000010') % set if the device is in continuous sweep mode
+        status_SWP_ACTIVE        = hex2dec('00000004') % set if the device is sweeping
+        status_SWP_UP            = hex2dec('00000008') % set if the device is sweeping up in frequency
+        status_SWP_REPEAT        = hex2dec('00000010') % set if the device is in continuous sweep mode
         status_SWP_BIDIRECTIONAL = hex2dec('00000020') % set if the device is in bidirectional sweep mode
-        status_PLL_LOCKED	       = hex2dec('00000040') % set if the PLL lock status is TRUE (both PLL's are locked)
+        status_PLL_LOCKED        = hex2dec('00000040') % set if the PLL lock status is TRUE (both PLL's are locked)
         status_FAST_PULSE_OPTION = hex2dec('00000080') % set if the fast pulse mode option is installed
     end % end private properties
     
