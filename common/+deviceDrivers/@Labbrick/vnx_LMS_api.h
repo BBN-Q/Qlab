@@ -1,13 +1,13 @@
 // Include file for 64 Bit Vaunix Lab Brick LMS Synthesizer DLL
 //
-// 10/2013	RD	64 Bit DLL version.	
-// 
+// 10/2013	RD	64 Bit DLL version.
+//
 
 
-// The following ifdef block is the standard way of creating macros which make exporting 
+// The following ifdef block is the standard way of creating macros which make exporting
 // from a DLL simpler. All files within this DLL are compiled with the VNX_FSYNSTH_EXPORTS
 // symbol defined on the command line. this symbol should not be defined on any project
-// that uses this DLL. This way any other project whose source files include this file see 
+// that uses this DLL. This way any other project whose source files include this file see
 // VNX_LMS_API functions as being imported from a DLL, wheras this DLL sees symbols
 // defined with this macro as being exported.
 
@@ -32,7 +32,7 @@ extern "C" {
 // ----------- Mode Bit Masks ------------
 #define MODE_RFON	0x00000010			// bit is 1 for RF on, 0 if RF is off
 #define MODE_INTREF	0x00000020			// bit is 1 for internal osc., 0 for external reference
-#define MODE_SWEEP	0x0000000F			// bottom 4 bits are used to keep the sweep control bits				
+#define MODE_SWEEP	0x0000000F			// bottom 4 bits are used to keep the sweep control bits
 #define MODE_PWMON	0x00000100			// we keep a copy of the PWM control bits here, 1 for int PWM on
 #define MODE_EXTPWM	0x00000200			// 1 for ext. PWM input enabled
 #define PWM_MASK	0x00000300
@@ -66,7 +66,7 @@ VNX_LMS_API void fnLMS_SetTestMode(bool testmode);
 VNX_LMS_API int fnLMS_GetNumDevices();
 VNX_LMS_API int fnLMS_GetDevInfo(DEVID *ActiveDevices);
 VNX_LMS_API int fnLMS_GetModelNameA(DEVID deviceID, char *ModelName);
-VNX_LMS_API int fnLMS_GetModelNameW(DEVID deviceID, wchar_t *ModelName);
+// VNX_LMS_API int fnLMS_GetModelNameW(DEVID deviceID, wchar_t *ModelName);
 VNX_LMS_API int fnLMS_InitDevice(DEVID deviceID);
 VNX_LMS_API int fnLMS_CloseDevice(DEVID deviceID);
 VNX_LMS_API int fnLMS_GetSerialNumber(DEVID deviceID);
