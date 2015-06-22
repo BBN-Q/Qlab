@@ -302,16 +302,21 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
 
             calllib('vnx_fmsynth', 'fnLMS_SetUseInternalRef', obj.devID, checkMapObj(lower(value)));
 
-            if (strncmpi(value,'ext', 3) )
-              % test for PLL lock
-              retries = 0;
-              while (~obj.pllLocked && (retries < obj.MAX_RETRIES))
-                retries = retries + 1;
-                pause(0.5);
-              end
-              if (~obj.pllLocked)
-                  error('Labbrick PLL is not locked');
-              end
+            if (strncmpi(value,'ext', 3))
+                % test for PLL lock to make sure external reference is there
+                if (~obj.pllLocked)
+                    error('Labbrick PLL is not locked');
+                end
+            else
+                %Try to catch intermittent PLL-lock when external reference is applied
+                ct = 0;
+                while (ct < 5)
+                    if (~obj.pllLocked)
+                        error('Labbrick PLL is not locked. Make sure external reference is not applied when using internal reference.');
+                    end
+                    pause(0.1);
+                    ct = ct + 1;
+                end
             end
         end
     end % end instrument parameter accessors
