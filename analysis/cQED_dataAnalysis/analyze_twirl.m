@@ -7,6 +7,7 @@ function [Zmat, fidvec, betas] = analyze_twirl(data, gateseq, nqubits)
 %indvec = [3,1,2]; %indeces for measurements for M1, M2, M3, M12, M23, M13, M123... sorting is unnecessary
 indvec=1:2^nqubits-1;  %if all qubits and correlations are measured
 segnum=data.expSettings.sweeps.SegmentNumWithCals.numPoints-data.expSettings.sweeps.SegmentNumWithCals.numCals;
+calRepeat = 1; %number of repetition per calibration sequence
 
 %example of M for nqubits=2
 % M = [ 1  1  1  1  0  0  0  0  0  0  0  0;
@@ -40,12 +41,13 @@ end
 
 Mcals = zeros(2^nqubits, 2^nqubits-1); 
 for kk=1:2^nqubits-1
-    Mcals(:,kk) = mean(reshape(real(data.data{indvec(kk)}(segnum+1:end)), 2, 2^nqubits), 1);
+    Mcals(:,kk) = mean(reshape(real(data.data{indvec(kk)}(segnum+1:end)), calRepeat, 2^nqubits), 1);
 end
 
 Mcals = transpose(Mcals);
 
 offvec = mean(Mcals,2);
+
 Mcals = Mcals - repmat(offvec,1,2^nqubits);
 
 Mcals = Mcals(:);
@@ -66,7 +68,7 @@ for ii = 1:segnum
     Zmat(ii,:) = Mop \ Mvec;  
  end
 
-seqfile = strcat('C:/users/qlab/Documents/twirl_',gateseq,'.csv');
+seqfile = strcat('C:/users/qlab/Documents/Julia/Twirl/twirl_',gateseq,'.csv');
 seq = fopen(seqfile,'r');
 
 %saves a copy of the file with list of cliffords and measurements
