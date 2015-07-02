@@ -19,6 +19,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         
         %How long to wait for a buffer to fill (seconds)
         timeOut = 30;
+        lastBufferTimeStamp = 0;
         
         %All the settings for the device
         settings
@@ -214,6 +215,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             
             obj.initializeProcessing = true;
             obj.done = false;
+            obj.lastBufferTimeStamp = tic();
             obj.processingTimer = timer('TimerFcn', @obj.process_buffer, 'StopFcn', @(~,~)obj.stop, 'Period', 0.01, 'ExecutionMode', 'fixedDelay');
             start(obj.processingTimer);
         end
@@ -289,6 +291,10 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 end
             
                 % we have a new buffer to process
+                
+                % set the last buffer timestamp
+                obj.lastBufferTimeStamp = tic();
+                
                 % convert from DAC values to reals and accumulate
                 % Since we have turned off interleaving, records are arranged in the buffer as follows:
                 % R0A, R1A, R2A ... RnA, R0B, R1B, R2B ...
@@ -353,8 +359,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             end
             
             %Loop until all are processed
-            t = tic();
-            while toc(t) < timeOut
+            while toc(obj.lastBufferTimeStamp) < timeOut
                 if obj.done
                     status = 0;
                     return

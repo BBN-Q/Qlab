@@ -55,7 +55,7 @@ classdef ExpManager < handle
         CWMode = false
         saveVariances = false
         dataFileHeader = struct();
-        dataTimeout = 60 % timeout in seconds
+        dataTimeout = 10 % timeout in seconds
         saveAllSettings = true;
     end
     
