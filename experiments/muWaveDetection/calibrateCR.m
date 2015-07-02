@@ -51,6 +51,7 @@ expSettings.sweeps.SegmentNumWithCals.step = (expSettings.sweeps.SegmentNumWithC
 expSettings.sweeps.SegmentNumWithCals.axisLabel = 'Pulse top length (ns)';
 
 expSettings.instruments = instrSettings;
+expSettings.saveAllSettings = false;
 
 %run the sequence
 ExpScripter2('CRcal_len', expSettings, 'lockSegments');
