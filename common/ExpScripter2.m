@@ -40,7 +40,16 @@ exp.CWMode = expSettings.CWMode;
 instrSettings = expSettings.instruments;
 sweepSettings = expSettings.sweeps;
 measSettings = expSettings.measurements;
-exp.saveAllSettings = true;
+if isfield(expSettings, 'saveAllSettings')
+    exp.saveAllSettings = expSettings.saveAllSettings;
+else
+    exp.saveAllSettings = true;
+end
+if isfield(expSettings, 'saveData')
+    exp.saveData = expSettings.saveData;
+else
+    exp.saveData = true;
+end
 sweep = fieldnames(sweepSettings)';
 
 for instrument = fieldnames(instrSettings)'
