@@ -249,7 +249,9 @@ classdef ExpManager < handle
                         end
                         plotResetFlag = all(ct == 1);
                         obj.plot_data(plotResetFlag);
-                        obj.save_data(stepData, stepVar);
+                        if obj.saveData
+                            obj.save_data(stepData, stepVar);
+                        end
                     end
                 else
                     %We've rolled over so reset this sweeps counter and
