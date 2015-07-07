@@ -57,6 +57,7 @@ classdef ExpManager < handle
         dataFileHeader = struct();
         dataTimeout = 10 % timeout in seconds
         saveAllSettings = true;
+        saveData = true;
     end
     
     methods
