@@ -96,15 +96,13 @@ classdef SingleShot < MeasFilters.MeasFilter
                 %apply matched filter
                 weightedGround = bsxfun(@times, obj.groundData, kernel);
                 weightedExited = bsxfun(@times, obj.excitedData, kernel);
-                groundIData = sum(real(weightedGround)) - real(bias);
-                excitedIData = sum(real(weightedExited)) - real(bias);
-                groundQData = sum(imag(weightedGround)) - imag(bias);
-                excitedQData = sum(imag(weightedExited)) - imag(bias);
-                Imin = min(min(groundIData, excitedIData));
-                Imax = max(max(groundIData, excitedIData));
                 
                 if obj.optIntegrationTime 
                     %Take cummulative sum up to each timestep
+                    groundIData = real(weightedGround) - real(bias);
+                    excitedIData = real(weightedExited) - real(bias);
+                    groundQData = imag(weightedGround) - imag(bias);
+                    excitedQData = imag(weightedExited) - imag(bias);
                     intGroundIData = cumsum(groundIData, 1) - real(bias);
                     intExcitedIData = cumsum(excitedIData, 1) - real(bias);
                     intGroundQData = cumsum(groundQData, 1) - imag(bias);
@@ -136,6 +134,12 @@ classdef SingleShot < MeasFilters.MeasFilter
                     gPDF = ksdensity(intGroundIData(intPt,:), bins);
                     ePDF = ksdensity(intExcitedIData(intPt,:), bins);
                 else
+                    groundIData = sum(real(weightedGround)) - real(bias);
+                    excitedIData = sum(real(weightedExited)) - real(bias);
+                    groundQData = sum(imag(weightedGround)) - imag(bias);
+                    excitedQData = sum(imag(weightedExited)) - imag(bias);
+                    Imin = min(min(groundIData, excitedIData));
+                    Imax = max(max(groundIData, excitedIData));
                     bins = linspace(Imin, Imax);
                     gPDF = ksdensity(groundIData, bins);
                     ePDF = ksdensity(excitedIData, bins);
