@@ -120,7 +120,7 @@ classdef SingleShotFidelity < handle
             % add single-shot measurement filter
             measSettings = expSettings.measurements;
             add_measurement(obj.experiment, 'SingleShot',...
-                MeasFilters.SingleShot('SingleShot', struct('dataSource', obj.settings.dataSource, 'plotMode', 'real/imag', 'plotScope', true, 'logisticRegression', obj.settings.logisticRegression, 'saveKernel', obj.settings.saveKernel)));
+                MeasFilters.SingleShot('SingleShot', struct('dataSource', obj.settings.dataSource, 'plotMode', 'real/imag', 'plotScope', true, 'logisticRegression', obj.settings.logisticRegression, 'saveKernel', obj.settings.saveKernel, 'optIntegrationTime', obj.settings.optIntegrationTime)));
             curSource = obj.settings.dataSource;
             while (true)
                sourceParams = measSettings.(curSource);
