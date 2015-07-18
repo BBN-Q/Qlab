@@ -7,6 +7,17 @@ function [rhoLSQ, rhoSDP] = analyzeStateTomo(datastruct, nbrQubits, nbrPulses, n
 
 %First separate out the data
 data=datastruct.data;
+
+%For the single qubit/single measurement case data will not be a cell.  For
+%compatability we convert here
+if ~iscell(data)
+    fprintf('Converting data to cells...\n');
+    data = {data};
+    datastruct.realvar = {datastruct.realvar};
+    datastruct.imagvar = {datastruct.imagvar};
+    datastruct.prodvar = {datastruct.prodvar};
+end
+
 numMeas = length(data);
 measOps = cell(numMeas,1);
 tomoData = [];
