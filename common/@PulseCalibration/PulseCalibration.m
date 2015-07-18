@@ -204,12 +204,13 @@ classdef PulseCalibration < handle
                 % Note: need to use genvarname to match the field name in
                 % the JSON struct
                 physChan = genvarname(channelLib.(settings.Qubit).physChan);
+                logicalChan = genvarname(channelLib.(settings.Qubit).label);
                 obj.channelParams.ampFactor = channelLib.(physChan).ampFactor;
                 obj.channelParams.phaseSkew = channelLib.(physChan).phaseSkew;
                 controlAWGsettings = obj.AWGSettings.(obj.controlAWG);
                 obj.channelParams.i_offset = controlAWGsettings.(['chan_' physChan(end-1)]).offset;
                 obj.channelParams.q_offset = controlAWGsettings.(['chan_' physChan(end)]).offset;
-                obj.channelParams.SSBFreq = channelLib.(physChan).SSBFreq;
+                obj.channelParams.SSBFreq = channelLib.(logicalChan).frequency;
             else
                 % setup parameters compatible with unit test
                 obj.channelParams.piAmp = 0.65;
