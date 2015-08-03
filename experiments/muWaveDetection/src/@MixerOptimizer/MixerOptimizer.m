@@ -44,7 +44,7 @@ classdef MixerOptimizer < handle
         end
         
         %% class methods
-        function Init(obj, cfgFile, chan, prompt)
+        function Init(obj, cfgFile, chan, prompt, overrideSSBFreq)
             
             % pull in channel parameters from requested logical channel in the Qubit2ChannelMap
             %Quiet down warnings from '-''s in fieldnames
@@ -62,8 +62,10 @@ classdef MixerOptimizer < handle
             
             % ignore SSBFreq value in cfgFile 
             % override with frequency lookup from logical channel
-            obj.expParams.SSBFreq = MixerOptimizer.lookup_logical_channel_frequency(obj.channelParams, ...
-              obj.expParams.SSBFreq);
+            if overrideSSBFreq
+              obj.expParams.SSBFreq = MixerOptimizer.lookup_logical_channel_frequency(obj.channelParams, ...
+                obj.expParams.SSBFreq);
+            end
             
             %Get references to the AWG, uW source, and spectrum analyzer
             tmpStr = regexp(obj.channelParams.physChan, '-', 'split'); % split on '-'
