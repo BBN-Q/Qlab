@@ -60,6 +60,11 @@ classdef MixerOptimizer < handle
             obj.expParams = settings.ExpParams;
             instrSettings = settings.InstrParams;
             
+            % ignore SSBFreq value in cfgFile 
+            % override with frequency lookup from logical channel
+            obj.expParams.SSBFreq = MixerOptimizer.lookup_logical_channel_frequency(obj.channelParams, ...
+              obj.expParams.SSBFreq);
+            
             %Get references to the AWG, uW source, and spectrum analyzer
             tmpStr = regexp(obj.channelParams.physChan, '-', 'split'); % split on '-'
             awgName = tmpStr{1};
@@ -278,5 +283,20 @@ classdef MixerOptimizer < handle
         %Forward reference a static helper that fits the typical sweep
         %curves
         [bestOffset, goodOffsetPts, measPowers] = find_null_offset(measPowers, xPts)
+        
+        
+        function frequency = lookup_logical_channel_frequency(channel, defaultFrequency)
+          % look up logical channel frequency information for optimizing
+          % the mixer
+          frequency = defaultFrequency;
+          switch channel.x__class__
+            case 'Qubit'
+              frequency = channel.frequency; 
+            case 'Measurement'
+              if strcmp(channel.measType,'autodyne')
+                frequency = channel.autodyneFreq;
+              end
+          end
+        end
     end
 end
