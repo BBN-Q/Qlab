@@ -38,6 +38,7 @@ classdef (Sealed) BNC845 < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBor
                     break;
                 end
                 pause(0.5);
+                ct = ct + 1;
             end
             if locked ~= '1'
                 warning('BNC %s unlocked.', address);
