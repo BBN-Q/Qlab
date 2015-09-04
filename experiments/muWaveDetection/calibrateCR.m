@@ -40,7 +40,7 @@ for measname = fieldnames(expSettings.measurements)'
 end
 
 %create a sequence with desired range of CR pulse lengths
-CRCalSequence(CalParams.control, CalParams.target, CalParams.CR, 1, CalParams.lenstep)
+CRCalSequence(CalParams.control, CalParams.target, 1, CalParams.lenstep)
 
 %updates sweep settings 
 expSettings.sweeps.SegmentNumWithCals.start = CalParams.lenstep*2;
@@ -62,7 +62,7 @@ optlen = analyzeCalCR(1,data,CalParams.channel, CalParams.CR);
 
 %create a sequence with calibrated length and variable phase
 
-CRCalSequence(CalParams.control, CalParams.target, CalParams.CR, 2, optlen) 
+CRCalSequence(CalParams.control, CalParams.target, 2, optlen) 
 
 %updates sweep settings
 %instrSettings = json.read(cfgpath);

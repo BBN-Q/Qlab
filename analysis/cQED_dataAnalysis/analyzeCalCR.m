@@ -22,7 +22,7 @@ sinf = @(p,t) p(1)*cos(2*pi/p(2)*t+p(3))+p(4);
 if(caltype==1)
     p=[1,2*xpoints(end),0,0];
 else
-    p=[1,xpoints(end),pi/2,0];
+    p=[1,xpoints(end),pi,0];
 end
 
 %fit sine curves
