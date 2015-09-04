@@ -13,7 +13,6 @@ execfile(os.path.join(args.pyqlabpath, 'startup.py'))
 
 q2 = QubitFactory(args.control)
 q1 = QubitFactory(args.target)
-CR = EdgeFactory(q2, q1)
 
 if args.caltype==1:
 	EchoCRLen(q2,q1,args.length*1e-9*np.arange(2,21),riseFall=20e-9,showPlot=False)
