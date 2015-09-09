@@ -1,4 +1,4 @@
-function [bins, PDFvec, PDFvec_con,data_con,opt_thr,datamat] = initByMsmt(data,numSegments,numMeas,indMeas,selectMeas,selectSign,threshold,docond)
+function [bins, PDFvec, PDFvec_con,data_con,opt_thr,datamat, fidvec_un, err0, err1] = initByMsmt(data,numSegments,numMeas,indMeas,selectMeas,selectSign,threshold,docond)
 %numSegments = number of distinct segments in the sequence
 %numMeas = number of meauserements per segments
 %indMeas = list of indeces of the msmt's to compare for fidelity
@@ -15,18 +15,22 @@ ind1=indMeas(2,:);
 numShots = floor(length(data)/(numMeas*numSegments));
 data=real(data)';
 datamat = splitdata(data,numShots,numMeas*numSegments);
-bins = linspace(min(min(datamat)), max(max(datamat)));
+bins = linspace(min(min(datamat)), max(max(datamat)),500);
 
 PDFvec = zeros(length(bins),numMeas*numSegments);
 PDFvec_con = zeros(length(bins),numMeas*numSegments);
 
 for kk=1:numMeas*numSegments
     PDFvec(:,kk) = ksdensity(datamat(:,kk), bins);
+    %PDFvec(:,kk) = hist(datamat(:,kk), bins);
+
 end
 
 opt_thr = zeros(length(ind0),1);
 fidvec_un = zeros(length(ind0),1);
 fidvec_con = zeros(length(ind0),1);
+err0 = zeros(length(ind0),1);
+err1 = zeros(length(ind0),1);
 data_con = zeros(numSegments, numMeas-length(selectMeas));
 
 
@@ -39,6 +43,13 @@ for kk=1:length(ind0)
     fidvec_un(kk) = 1-0.5*(1-0.5*sum(abs(PDFvec(:,ind0(kk))-PDFvec(:,ind1(kk)))));
     [~,indmax] = max(abs(cumsum(PDFvec(:,ind0(kk)))-cumsum(PDFvec(:,ind1(kk)))));
     fprintf('Optimum unconditioned fid. for segm. %d and %d = %.3f\n', ind0(kk), ind1(kk), fidvec_un(kk));  
+    tempvec0 = cumsum(abs(PDFvec(:,ind0(kk))));
+    [~, indc] = min(abs(bins+0.3789));
+    err0(kk) = tempvec0(indmax); %(indmax); %indc to keep it fixed to the 0000 vs 0001 value
+    %fprintf('Error for |0> for segm. %d and %d = %.3f\n', ind0(kk), ind1(kk), tempvec0(indmax));
+    tempvec1 = 1-cumsum(abs(PDFvec(:,ind1(kk))));
+    err1(kk) = tempvec1(indmax); %(indmax);
+    %fprintf('Error for |1> for segm. %d and %d = %.3f\n', ind0(kk), ind1(kk), tempvec1(indmax)); 
     opt_thr(kk) = bins(indmax);
     fprintf('Optimum threshold for segments %d and %d = %.4f\n', ind0(kk), ind1(kk), opt_thr(kk));  
 end
@@ -80,7 +91,7 @@ end
 
 for kk=1:length(ind0)
     fidvec_con(kk) = 1-0.5*(1-0.5*sum(abs(PDFvec_con(:,ind0(kk))-PDFvec_con(:,ind1(kk)))));
-    fprintf('Optimum conditioned fid. for segm. %d and %d = %.3f\n', ind0(kk), ind1(kk), fidvec_con(kk));  
+    %fprintf('Optimum conditioned fid. for segm. %d and %d = %.3f\n', ind0(kk), ind1(kk), fidvec_con(kk));  
 end
 
 end
