@@ -37,10 +37,10 @@ if n>3:
 seqkey = args.seqkey
 seqtype = args.seqtype
 
-seqCRd1 = ZX90_CR(a,CRd1)
-seqCRd2 = ZX90_CR(a,CRd2)
+seqCRd1 = ZX90_CR(a,d1,CRd1)
+seqCRd2 = ZX90_CR(a,d2,CRd2)
 if n>2:
-	seqCRd3 = ZX90_CR(a,CRd3)
+	seqCRd3 = ZX90_CR(a,d3,CRd3)
 
 if n==3: #currently largest LPN exp.
 	if seqtype == 'q':
