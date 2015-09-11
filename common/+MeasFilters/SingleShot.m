@@ -89,8 +89,8 @@ classdef SingleShot < MeasFilters.MeasFilter
                 end
                 
                 if obj.saveKernel
-                    dlmwrite(strcat('kernel_',obj.dataSource,'_real.csv'), real(kernel));
-                    dlmwrite(strcat('kernel_',obj.dataSource,'_imag.csv'), imag(kernel));
+                    dlmwrite(strcat('kernel_',obj.dataSource,'_real.csv'), real(kernel(1:end-1)));
+                    dlmwrite(strcat('kernel_',obj.dataSource,'_imag.csv'), imag(kernel(1:end-1)));
                 end
                 
                 %apply matched filter
