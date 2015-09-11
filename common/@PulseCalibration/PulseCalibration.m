@@ -44,18 +44,18 @@ classdef PulseCalibration < handle
             obj.experiment.sweeps{1}.points = segmentPoints;
 
             % set digitizer with the appropriate number of segments
-            switch class(obj.experiment.scopes{1})
-                case 'deviceDrivers.AlazarATS9870'
-                    averagerSettings = obj.experiment.scopes{1}.averager;
-                    averagerSettings.nbrSegments = length(segmentPoints);
-                    for scopeind=1:length(obj.experiment.scopes)
+            for scopeind = 1:length(obj.experiment.scopes)
+                switch class(obj.experiment.scopes{scopeind})
+                    case 'deviceDrivers.AlazarATS9870'
+                        averagerSettings = obj.experiment.scopes{scopeind}.averager;
+                        averagerSettings.nbrSegments = length(segmentPoints);
                         obj.experiment.scopes{scopeind}.averager = averagerSettings;
-                    end
-                case 'X6'
-                    x6 = obj.experiment.scopes{1};
-                    set_averager_settings(x6, x6.recordLength, length(segmentPoints), x6.nbrWaveforms, x6.nbrRoundRobins);
-                otherwise
-                    error('Unknown scope type.');
+                    case 'X6'
+                        x6 = obj.experiment.scopes{scopeind};
+                        set_averager_settings(x6, x6.recordLength, length(segmentPoints), x6.nbrWaveforms, x6.nbrRoundRobins);
+                    otherwise
+                        error('Unknown scope type.');
+                end
             end
             
             obj.experiment.run();
