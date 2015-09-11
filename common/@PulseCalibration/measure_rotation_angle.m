@@ -36,7 +36,13 @@ function [phase, sigma] = measure_rotation_angle(obj, amp, direction, target)
         pause(.1);
     end
     
-    [phase, sigma] = obj.PhaseEstimation(data, vardata);
+    mtemp = fieldnames(obj.experiment.measurements(1));
+    if strcmp(class(obj.experiment.measurements(1).(mtemp{1})),'MeasFilters.StreamSelector')
+        varscale = obj.numShots;
+    else
+        varscale = 0;
+    end
+    [phase, sigma] = obj.PhaseEstimation(data, vardata, varscale);
     % correct for some errors related to 2pi uncertainties
     if sign(phase) ~= sign(amp)
         phase = phase + sign(amp)*2*pi;
