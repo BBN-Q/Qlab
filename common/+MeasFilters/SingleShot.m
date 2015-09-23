@@ -27,6 +27,7 @@ classdef SingleShot < MeasFilters.MeasFilter
         logisticRegression = false
         saveKernel = true
         optIntegrationTime = true
+        setThreshold = false
     end
     
     methods
@@ -40,6 +41,9 @@ classdef SingleShot < MeasFilters.MeasFilter
             end
             if isfield(settings, 'optIntegrationTime')
                 obj.optIntegrationTime = settings.optIntegrationTime;
+            end
+            if isfield(settings, 'setThreshold')
+                obj.setThreshold = settings.setThreshold;
             end
         end
         
@@ -148,6 +152,12 @@ classdef SingleShot < MeasFilters.MeasFilter
                 obj.pdfData.bins_I = bins;
                 obj.pdfData.gPDF_I = gPDF;
                 obj.pdfData.ePDF_I = ePDF;
+                
+                 if obj.setThreshold
+                    [~,indmax] = max(abs(cumsum(gPDF/sum(gPDF))-cumsum(ePDF/sum(ePDF))));
+                    obj.pdfData.thr_I = bins(indmax);
+                    fprintf('threshold = %.3f\n', bins(indmax));
+                end
                 
                 if obj.optIntegrationTime
                     [mu_g, sigma_g] = normfit(intGroundIData(intPt,:));

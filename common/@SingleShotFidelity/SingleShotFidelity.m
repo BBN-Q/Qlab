@@ -27,7 +27,8 @@ classdef SingleShotFidelity < handle
         qubit %which qubit we are on
         controlAWG
         readoutAWG
-        autoSelectAWGs;
+        autoSelectAWGs
+        threshold
     end
     
     methods
@@ -120,7 +121,9 @@ classdef SingleShotFidelity < handle
             % add single-shot measurement filter
             measSettings = expSettings.measurements;
             add_measurement(obj.experiment, 'SingleShot',...
-                MeasFilters.SingleShot('SingleShot', struct('dataSource', obj.settings.dataSource, 'plotMode', 'real/imag', 'plotScope', true, 'logisticRegression', obj.settings.logisticRegression, 'saveKernel', obj.settings.saveKernel, 'optIntegrationTime', obj.settings.optIntegrationTime)));
+                MeasFilters.SingleShot('SingleShot', struct('dataSource', obj.settings.dataSource, 'plotMode', 'real/imag', 'plotScope', true,...
+                'logisticRegression', obj.settings.logisticRegression, 'saveKernel', obj.settings.saveKernel, 'optIntegrationTime', ...
+                obj.settings.optIntegrationTime, 'setThreshold', obj.settings.setThreshold)));
             curSource = obj.settings.dataSource;
             while (true)
                sourceParams = measSettings.(curSource);
@@ -145,8 +148,22 @@ classdef SingleShotFidelity < handle
             obj.experiment.run();
             drawnow();
             SSData = obj.experiment.data.SingleShot;
+            if obj.settings.setThreshold
+                obj.Set_threshold()
+            end
         end
         
+        function Set_threshold(obj)
+             obj.threshold = obj.experiment.measurements.SingleShot.pdfData.thr_I;
+             expSettings = json.read(obj.settings.cfgFile);
+             source = expSettings.measurements.(obj.settings.dataSource).dataSource;
+             stream = expSettings.measurements.(obj.settings.dataSource).stream;
+             expSettings.instruments.(source).channels.(['s' stream(2) '1']).threshold = obj.experiment.measurements.SingleShot.pdfData.thr_I;
+             instrLib = json.read(getpref('qlab', 'InstrumentLibraryFile'));
+             instrLib.instrDict.(source).channels.(['s' stream(2) num2str(obj.settings.setThreshold)]).threshold = ...
+                 round(1e4*obj.experiment.measurements.SingleShot.pdfData.thr_I)/1e4; 
+             json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
+        end
     end
     
 end
