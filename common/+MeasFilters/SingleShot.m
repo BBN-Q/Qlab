@@ -81,8 +81,8 @@ classdef SingleShot < MeasFilters.MeasFilter
                 %at the beginning of the record
                 kernel = kernel.*(abs(groundMean-excitedMean)>(1e-3*distance));
                 fprintf('norm: %g\n', sum(abs(kernel)));
-                % normalize
-                kernel = abs(2.0/distance) * kernel / sum(abs(kernel));
+                %normalize between -1 and 1.
+                kernel = kernel/max(abs(kernel));
                 
                 if isreal(kernel)
                     kernel = myhilbert(kernel);
@@ -98,15 +98,15 @@ classdef SingleShot < MeasFilters.MeasFilter
                 weightedExited = bsxfun(@times, obj.excitedData, kernel);
                 
                 if obj.optIntegrationTime 
-                    %Take cummulative sum up to each timestep
-                    groundIData = real(weightedGround) - real(bias);
-                    excitedIData = real(weightedExited) - real(bias);
-                    groundQData = imag(weightedGround) - imag(bias);
-                    excitedQData = imag(weightedExited) - imag(bias);
-                    intGroundIData = cumsum(groundIData, 1) - real(bias);
-                    intExcitedIData = cumsum(excitedIData, 1) - real(bias);
-                    intGroundQData = cumsum(groundQData, 1) - imag(bias);
-                    intExcitedQData = cumsum(excitedQData, 1) - imag(bias);
+                    %Take cumulative sum up to each timestep
+                    groundIData = real(weightedGround); 
+                    excitedIData = real(weightedExited);
+                    groundQData = imag(weightedGround); 
+                    excitedQData = imag(weightedExited); 
+                    intGroundIData = cumsum(groundIData, 1); 
+                    intExcitedIData = cumsum(excitedIData, 1);
+                    intGroundQData = cumsum(groundQData, 1); 
+                    intExcitedQData = cumsum(excitedQData, 1); 
                     Imins = min(min(intGroundIData, intExcitedIData), [], 2);
                     Imaxes = max(max(intGroundIData, intExcitedIData), [], 2);
                     
