@@ -35,8 +35,8 @@ function [phase, sigma] = measure_rotation_angle(obj, amp, direction, target)
         drawnow()
         pause(.1);
     end
-    
-    [phase, sigma] = obj.PhaseEstimation(data, vardata);
+    % scale vardata by numShots to get variance of the mean
+    [phase, sigma] = obj.PhaseEstimation(data, vardata/obj.numShots);
     % correct for some errors related to 2pi uncertainties
     if sign(phase) ~= sign(amp)
         phase = phase + sign(amp)*2*pi;

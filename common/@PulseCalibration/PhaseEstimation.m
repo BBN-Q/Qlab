@@ -3,6 +3,7 @@ function [phase, sigma] = PhaseEstimation(data, vardata, verbose)
     % of the form 2^n. Uses the modified phase estimation algorithm from 
     % Kimmel et al, quant-ph/1502.02677 (2015).
     % Every experiment is doubled.
+    % vardata should be the variance of the mean
     if nargin < 3
         verbose = false;
     end
