@@ -1,9 +1,9 @@
-function [phase, sigma] = PhaseEstimation(data, vardata, varscale, verbose)
+function [phase, sigma] = PhaseEstimation(data, vardata, verbose)
     % Estimates pulse rotation angle from a sequence of P^k experiments, where k is 
     % of the form 2^n. Uses the modified phase estimation algorithm from 
     % Kimmel et al, quant-ph/1502.02677 (2015).
     % Every experiment is doubled.
-    if nargin < 4
+    if nargin < 3
         verbose = false;
     end
     
@@ -18,13 +18,9 @@ function [phase, sigma] = PhaseEstimation(data, vardata, varscale, verbose)
     % similar scaling with variances
     vardata = (vardata(1:2:end) + vardata(2:2:end))/2;
     vardata = vardata(3:end) * 2/abs(avgdata(1) - avgdata(2))^2;
-    %the X6 card returns the variance of single shots, not of the mean
-    if varscale>0
-        vardata = vardata/varscale;
-    end
     zvar = vardata(1:2:end);
     xvar = vardata(2:2:end);
-    
+
     phases = atan2(xdata, zdata);
     distances = sqrt(xdata.^2 + zdata.^2);
 
