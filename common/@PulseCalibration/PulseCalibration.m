@@ -43,13 +43,15 @@ classdef PulseCalibration < handle
             % set number of segments in the sweep
             obj.experiment.sweeps{1}.points = segmentPoints;
 
-            % set digitizer with the appropriate number of segments
+            % set digitizer with the appropriate number of segments and, if ATS, in
+            % digitizer mode to return the variance
             for scopeind = 1:length(obj.experiment.scopes)
                 switch class(obj.experiment.scopes{scopeind})
                     case 'deviceDrivers.AlazarATS9870'
                         averagerSettings = obj.experiment.scopes{scopeind}.averager;
                         averagerSettings.nbrSegments = length(segmentPoints);
                         obj.experiment.scopes{scopeind}.averager = averagerSettings;
+                        obj.experiment.scopes{scopeind}.acquireMode = 'digitizer';
                     case 'X6'
                         x6 = obj.experiment.scopes{scopeind};
                         set_averager_settings(x6, x6.recordLength, length(segmentPoints), x6.nbrWaveforms, x6.nbrRoundRobins);
