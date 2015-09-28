@@ -156,7 +156,7 @@ classdef SingleShotFidelity < handle
         function Set_threshold(obj)
              obj.threshold = obj.experiment.measurements.SingleShot.pdfData.thr_I;
              expSettings = json.read(obj.settings.cfgFile);
-             if ~strcmp(expSettings.measurements.(obj.settings.dataSource).filterType, 'RawStream')
+             if ~strcmp(expSettings.measurements.(obj.settings.dataSource).filterType, 'StreamSelector')
                 warning('Threshold not set. Measurement type is not a stream');
                 return
              end
