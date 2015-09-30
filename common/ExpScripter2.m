@@ -76,7 +76,7 @@ for instrument = fieldnames(instrSettings)'
         add_instrument(exp, instrument{1}, instr, instrSettings.(instrument{1}));
         
         if ExpManager.is_scope(instr) && nargin>1 && lockSegments==1
-            exp.instrSettings.(instrument{1}).averager.nbrSegments =  sweepSettings.(sweep{1}).numPoints;
+            exp.instrSettings.(instrument{1}).averager.nbrSegments =  sweepSettings.(sweep{end}).numPoints;
         end
 end
     
