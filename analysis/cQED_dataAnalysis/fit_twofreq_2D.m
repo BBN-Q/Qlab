@@ -36,11 +36,14 @@ for cnt=1:numScans
     else
         idx2 = 1;
     end
-    % model A + B Exp(-t/C) * cos(D t + F) + G Exp(-t/H) * cos(I t + J)
     model = @(p, t) p(1) + p(2)*exp(-t/p(3)).*cos(p(4)*t + p(5)) + p(6)*exp(-t/p(7)).*cos(p(8)*t + p(9));
     
     p = [mean(y) amps(idx1) Ts(idx1) 2*pi*freqs(idx1) phases(idx1) amps(idx2) Ts(idx2) 2*pi*freqs(idx2) phases(idx2)];
-    [beta,r,j] = nlinfit(xdata, y, model, p);
+    try
+        [beta,r,j] = nlinfit(xdata, y, model, p);
+    catch
+        fprintf('Fit failed')
+    end
 
     figure(100)
     subplot(3,1,2:3)
@@ -59,9 +62,9 @@ for cnt=1:numScans
     ylabel('Residuals [V]')
     
     subplot(3,1,2:3)
-    %ylim([-1.05 1.05])
+    ylim([-1.05 1.05])
     
-    %pause(.2)
+    pause(.1)
 
     t2 = beta(3);
     ci = nlparci(beta,r,j);
@@ -92,12 +95,12 @@ for cnt=1:numScans
         dfreqsA(cnt) = detuningBerror;
         dfreqsB(cnt) = detuningAerror;
     end
-    if abs(detuningAerror/detuningA)<0.03 %disregards bad fits
+    if abs(detuningAerror/detuningA)<0.1 %disregards bad fits
         freqsA(cnt) = detuningA;
     else
         freqsA(cnt) = NaN;
     end
-    if abs(detuningBerror/detuningB)<0.03
+    if abs(detuningBerror/detuningB)<0.1
         freqsB(cnt) = detuningB;
     else
         freqsB(cnt) = NaN;
@@ -107,6 +110,10 @@ for cnt=1:numScans
     dfreqsA(cnt) = detuningAerror;
     dfreqsB(cnt) = detuningBerror;
 end
+freqsAt = max(freqsA, freqsB);
+freqsBt = min(freqsA, freqsB);
+freqsA = freqsAt;
+freqsB = freqsBt;
     figure(202);
     xaxis=1:length(T2sA);
     errorbar(xaxis, freqsA*1000,dfreqsA*1000,'r.-','MarkerSize',12)

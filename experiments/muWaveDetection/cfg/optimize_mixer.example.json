@@ -5,6 +5,7 @@
 			"resolution_bw": 10000,
 			"sweep_points": 20,
 			"sweep_mode": "single",
+			"LOsource": "Source1",
 			"video_averaging": 0
 		}
 	},

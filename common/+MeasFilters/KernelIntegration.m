@@ -15,12 +15,12 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 classdef KernelIntegration < MeasFilters.MeasFilter
-    
+
     properties
         kernel
         bias
     end
-    
+
     methods
         function obj = KernelIntegration(label, settings)
             obj = obj@MeasFilters.MeasFilter(label, settings);
@@ -32,7 +32,7 @@ classdef KernelIntegration < MeasFilters.MeasFilter
             obj.kernel = tmp(1:2:end) + 1j*tmp(2:2:end);
             obj.bias = settings.bias;
         end
-        
+
         function apply(obj, src, ~)
             % match kernel length to data
             if size(src.latestData,1) ~= size(obj.kernel,1)
@@ -42,9 +42,10 @@ classdef KernelIntegration < MeasFilters.MeasFilter
 %             obj.latestData = sum(bsxfun(@times, src.latestData, conj(obj.kernel))) + obj.bias;
             obj.latestData = MeasFilters.dotFirstDim(src.latestData, single(obj.kernel));
             obj.latestData = obj.latestData + obj.bias;
-             
+
             accumulate(obj);
             notify(obj, 'DataReady');
+
         end
     end
 end

@@ -44,7 +44,7 @@ classdef Correlator < MeasFilters.MeasFilter
             if minSize > 0
                 % take the product along the stacked dimension
                 sizes = size(obj.data.(obj.filters{1}.label));
-                sizes(end) = minSize;
+                sizes(4) = minSize;
                 sizes = [sizes, length(obj.filters)];
                 filterData = zeros(sizes);
                 for ct = 1:length(obj.filters)

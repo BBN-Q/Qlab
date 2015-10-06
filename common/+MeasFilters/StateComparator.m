@@ -17,23 +17,23 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 classdef StateComparator < MeasFilters.MeasFilter
-    
+
     properties
         integrationTime = -1
         threshold = 0
     end
-    
+
     methods
-        function obj = StateComparator(childFilter, settings)
-            obj = obj@MeasFilters.MeasFilter(childFilter, struct('plotMode', 'real/imag'));
+        function obj = StateComparator(label, settings)
+            obj = obj@MeasFilters.MeasFilter(label,settings);
             obj.integrationTime = settings.integrationTime;
             obj.threshold = settings.threshold;
+            obj.saved = false;
         end
-        
-        function out = apply(obj, data)
-            % apply child filter
-            data = apply@MeasFilters.MeasFilter(obj, data);
 
+        function apply(obj, src, ~)
+            data = src.latestData;
+            
             % integrate and threshold
             if obj.integrationTime < 0
                 obj.integrationTime = size(data,1);
@@ -42,45 +42,10 @@ classdef StateComparator < MeasFilters.MeasFilter
             % better to cast to int32, but need to update the data file handler to support it
             obj.latestData = double(real(sumdata) > obj.threshold) + 1j*double(imag(sumdata) > obj.threshold);
             
-            obj.accumulate();
-            out = obj.latestData;
+            accumulate(obj);
+            notify(obj, 'DataReady');
+
         end
 
-        function accumulate(obj)
-            % data comes back from the scope as either 2D (time x segment)
-            % or 4D (time x waveforms x segment x roundRobinsPerBuffer)
-            % in the 4D case, we want to average over waveforms and round
-            % robins
-            assert(ndims(obj.latestData) == 4, 'State comparator expects single-shot data, so latestData should be 4D');
-            numShots = size(obj.latestData,2)*size(obj.latestData,4);
-            tmpData = squeeze(sum(sum(obj.latestData, 4), 2));
-            tmpVar = struct();
-            tmpVar.real = squeeze(sum(sum(real(obj.latestData).^2, 4), 2));
-            tmpVar.imag = squeeze(sum(sum(imag(obj.latestData).^2, 4), 2));
-            tmpVar.prod = squeeze(sum(sum(real(obj.latestData).*imag(obj.latestData), 4), 2));
-            obj.varct = obj.varct + numShots;
-            
-            if isempty(obj.accumulatedData)
-                obj.accumulatedData = tmpData;
-                obj.accumulatedVar = tmpVar;
-            else
-                obj.accumulatedData = obj.accumulatedData + tmpData;
-                obj.accumulatedVar.real = obj.accumulatedVar.real + tmpVar.real;
-                obj.accumulatedVar.imag = obj.accumulatedVar.imag + tmpVar.imag;
-                obj.accumulatedVar.prod = obj.accumulatedVar.prod + tmpVar.prod;
-            end
-            obj.avgct = obj.avgct + numShots;
-        end
-        
-                
-        function out = get_var(obj)
-            out = struct();
-            if ~isempty(obj.accumulatedVar)
-                out.realvar = (1/obj.varct)*obj.accumulatedVar.real - real(get_data(obj)).^2;
-                out.imagvar = (1/obj.varct)*obj.accumulatedVar.imag - imag(get_data(obj)).^2;
-                out.prodvar = (1/obj.varct)*obj.accumulatedVar.prod - abs(get_data(obj)).^2;
-            end
-        end
-        
     end
 end

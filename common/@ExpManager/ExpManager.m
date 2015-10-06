@@ -55,15 +55,16 @@ classdef ExpManager < handle
         CWMode = false
         saveVariances = false
         dataFileHeader = struct();
-        dataTimeout = 60 % timeout in seconds
+        dataTimeout = 10 % timeout in seconds
         saveAllSettings = true;
+        saveData = true;
     end
-    
+
     methods
         %Constructor
         function obj = ExpManager()
         end
-        
+
         %Destructor
         function delete(obj)
             % turn off uW sources
@@ -72,24 +73,24 @@ classdef ExpManager < handle
                     instr.output = 0;
                 end
             end
-            structfun(@turn_uwave_off, obj.instruments); 
-            
+            structfun(@turn_uwave_off, obj.instruments);
+
             %If we botched something and ctrl-c'd out then mark the file as
             %incomplete
             if isa(obj.dataFileHandler, 'HDF5DataHandler') && obj.dataFileHandler.fileOpen == 1
                 obj.dataFileHandler.close();
                 obj.dataFileHandler.markAsIncomplete();
             end
-            
+
             %clean up DataReady listeners and plot timer
             cellfun(@delete, obj.listeners);
             delete(obj.plotScopeTimer);
             fprintf('ExpManager Finished!\n');
         end
-        
+
         %Initialize
         function init(obj)
-            
+
             %For initialize each instrument via setAll()
             instrNames = fieldnames(obj.instruments);
             for instr = instrNames'
@@ -107,10 +108,10 @@ classdef ExpManager < handle
                     end
                 end
             end
-            
+
             %Rearrange the AWG list to put the Master first
             obj.AWGs([1, masterAWGIndex]) = obj.AWGs([masterAWGIndex, 1]);
-            
+
             %Stop all the AWGs if not in CWMode
             if(~obj.CWMode)
                 cellfun(@(awg) stop(awg), obj.AWGs);
@@ -133,24 +134,28 @@ classdef ExpManager < handle
                 % add measurement names to dataInfo structs
                 measNames = fieldnames(obj.measurements);
                 dataInfos = {};
+                openDataFile = false;
                 for ct = 1:length(measNames)
                     if obj.measurements.(measNames{ct}).saved
                         dataInfos{end+1} = dataInfo;
                         dataInfos{end}.name = measNames{ct};
+                        openDataFile = true;
                     end
                 end
                 %Open data file
-                obj.dataFileHandler.open(obj.dataFileHeader, dataInfos, obj.saveVariances);
+                if openDataFile
+                    obj.dataFileHandler.open(obj.dataFileHeader, dataInfos, obj.saveVariances);
+                end
             end
-            
+
         end
-        
+
         function connect_meas_to_source(obj, meas)
             instrNames = fieldnames(obj.instruments);
             function connect_to_source(meas, src)
                 %First look for an instrument (scope)
                 if (~isempty(find(strcmp(src, instrNames))))
-                    obj.listeners{end+1} = addlistener(obj.instruments.(src), 'DataReady', @meas.apply);          
+                    obj.listeners{end+1} = addlistener(obj.instruments.(src), 'DataReady', @meas.apply);
                 %Otherwise assume another measurement
                 else
                     obj.listeners{end+1} = addlistener(obj.measurements.(src), 'DataReady', @meas.apply);
@@ -163,7 +168,7 @@ classdef ExpManager < handle
                 connect_to_source(meas, meas.dataSource);
             end
         end
-        
+
         %Runner
         function run(obj)
             %Connect a polling scope plotter
@@ -171,14 +176,14 @@ classdef ExpManager < handle
 
             %Connect measurement consumers to producers
             structfun(@(x) obj.connect_meas_to_source(x), obj.measurements);
-            
+
             %Set the cleanup function so that even if we ctrl-c out we
             %correctly cleanup
             c = onCleanup(@() obj.cleanUp());
-            
+
             %Start the plot timer
             start(obj.plotScopeTimer);
-            
+
             %Loop over all the sweeps
             idx = 1;
             ct = zeros(1, length(obj.sweeps));
@@ -190,9 +195,9 @@ classdef ExpManager < handle
             % initialize data storage
             obj.data = structfun(@(x) struct('mean', complex(nan(sizes),nan(sizes)), 'realvar', nan(sizes), 'imagvar', nan(sizes), 'prodvar', nan(sizes)),...
                 obj.measurements, 'UniformOutput', false);
-            
+
             fprintf('Taking data....\n');
-            
+
             % generic nested loop sweeper through "stack"
             while idx > 0 && ct(1) <= stops(1)
                 if ct(idx) < stops(idx)
@@ -212,6 +217,7 @@ classdef ExpManager < handle
                             fprintf('Stepping sweep %d: %d of %d\n', idx, ct(idx), stops(idx));
                         end
                     end
+
                     obj.sweeps{idx}.step(ct(idx));
                     if ~isempty(obj.sweep_callbacks{idx})
                         feval(obj.sweep_callbacks{idx}, obj);
@@ -249,7 +255,9 @@ classdef ExpManager < handle
                         end
                         plotResetFlag = all(ct == 1);
                         obj.plot_data(plotResetFlag);
-                        obj.save_data(stepData, stepVar);
+                        if obj.saveData
+                            obj.save_data(stepData, stepVar);
+                        end
                     end
                 else
                     %We've rolled over so reset this sweeps counter and
@@ -258,25 +266,28 @@ classdef ExpManager < handle
                     idx = idx - 1;
                 end
             end
-            
-            % close data file
+
             if ~isempty(obj.dataFileHandler)
+                % close data file
                 obj.dataFileHandler.close();
+
+                if obj.saveAllSettings
+                   %saves json settings files
+                   fileName = obj.dataFileHandler.fileName;
+                   [pathname,basename,~] = fileparts(fileName);
+                   mkdir(fullfile(pathname,strcat(basename,'_cfg')));
+                   copyfile(getpref('qlab','CurScripterFile'),fullfile(pathname,strcat(basename,'_cfg'),'DefaultExpSettings.json'));
+                   copyfile(getpref('qlab','ChannelParamsFile'),fullfile(pathname,strcat(basename,'_cfg'),'ChannelParams.json'));
+                   copyfile(getpref('qlab','InstrumentLibraryFile'),fullfile(pathname,strcat(basename,'_cfg'),'Instruments.json'));
+                   copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Measurements'),fullfile(pathname,strcat(basename,'_cfg'),'Measurements.json'));
+                   copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Sweeps'),fullfile(pathname,strcat(basename,'_cfg'),'Sweeps.json'));
+                   %copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','QuickPicks'),fullfile(pathname,strcat(basename,'_cfg'),'QuickPicks.json'));
+                end
             end
-            
-            if obj.saveAllSettings
-               %saves json settings files
-               fileName = obj.dataFileHandler.fileName;
-               [pathname,basename,~] = fileparts(fileName);
-               mkdir(fullfile(pathname,strcat(basename,'_cfg')));
-               copyfile(getpref('qlab','CurScripterFile'),fullfile(pathname,strcat(basename,'_cfg'),'DefaultExpSettings.json'));
-               copyfile(getpref('qlab','ChannelParamsFile'),fullfile(pathname,strcat(basename,'_cfg'),'ChannelParams.json'));
-               copyfile(getpref('qlab','InstrumentLibraryFile'),fullfile(pathname,strcat(basename,'_cfg'),'Instruments.json'));
-               copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Measurements'),fullfile(pathname,strcat(basename,'_cfg'),'Measurements.json'));
-               copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Sweeps'),fullfile(pathname,strcat(basename,'_cfg'),'Sweeps.json'));
-            end
+
+
         end
-        
+
         function cleanUp(obj)
             % stop the scopes
             cellfun(@(scope) stop(scope), obj.scopes);
@@ -287,35 +298,35 @@ classdef ExpManager < handle
             delete(obj.plotScopeTimer);
             %clean up DataReady listeners
             cellfun(@delete, obj.listeners);
-            
+
         end
-        
+
         %Helper function to take data (basically, start/stop AWGs and
         %digitizers)
         function take_data(obj)
-            
+
             %Clear all the measurement filters
             structfun(@(m) reset(m), obj.measurements);
-            
+
             %Ready the digitizers
             cellfun(@(scope) acquire(scope), obj.scopes);
-            
+
             if(~obj.CWMode)
                 %Start the slaves up again
                 cellfun(@(awg) run(awg), obj.AWGs(2:end))
                 %And the master
                 run(obj.AWGs{1});
             end
-            
+
             %Wait for data taking to finish
             obj.scopes{1}.wait_for_acquisition(obj.dataTimeout);
-            
+
             if(~obj.CWMode)
                 %Stop all the AWGs
                 cellfun(@(awg) stop(awg), obj.AWGs);
             end
         end
-        
+
         function save_data(obj, stepData, stepVar)
             if isempty(obj.dataFileHandler) || obj.dataFileHandler.fileOpen == 0
                 return
@@ -334,32 +345,32 @@ classdef ExpManager < handle
                 savect = savect + 1;
             end
         end
-        
+
         function plot_data(obj, reset)
             %Plot the accumulated swept data
             %We keep track of figure handles to not pop new ones up all the
             %time
-            
-            %TODO: Handle changes in data size 
+
+            %TODO: Handle changes in data size
             persistent figHandles plotHandles
             if isempty(figHandles)
                 figHandles = struct();
                 plotHandles = struct();
             end
-            
+
             % available plotting modes
             plotMap = struct();
             plotMap.abs = struct('label','Amplitude', 'func', @abs);
             plotMap.phase = struct('label','Phase (degrees)', 'func', @(x) (180/pi)*angle(x));
             plotMap.real = struct('label','Real Quad.', 'func', @real);
             plotMap.imag = struct('label','Imag. Quad.', 'func', @imag);
-            
+
             for measName = fieldnames(obj.data)'
                 measData = squeeze(obj.data.(measName{1}).mean);
                 if isempty(measData)
                     continue;
                 end
-                
+
                 switch obj.measurements.(measName{1}).plotMode
                     case 'amp/phase'
                         toPlot = {plotMap.abs, plotMap.phase};
@@ -432,15 +443,15 @@ classdef ExpManager < handle
             end
             drawnow()
         end
-        
+
         function plot_scope_callback(obj, ~, ~)
             %We keep track of figure handles to not pop new ones up all the
             %time
-            persistent figHandles 
+            persistent figHandles
             if isempty(figHandles)
                 figHandles = struct();
             end
-            
+
             for measName = fieldnames(obj.measurements)'
                 if obj.measurements.(measName{1}).plotScope
                     if ~isfield(figHandles, measName{1}) || ~ishandle(figHandles.(measName{1}))
@@ -452,17 +463,22 @@ classdef ExpManager < handle
             end
             drawnow()
         end
-        
+
         %Helpers to flesh out properties
         function add_instrument(obj, name, instr, settings)
             obj.instruments.(name) = instr;
             obj.instrSettings.(name) = settings;
         end
-        
+
+        function remove_instrument(obj, name)
+            obj.instruments = rmfield(obj.instruments,name);
+            obj.instrSettings = rmfield(obj.instrSettings,name);
+        end
+
         function add_measurement(obj, name, meas)
             obj.measurements.(name) = meas;
         end
-        
+
         function add_sweep(obj, order, sweep, callback)
             % order = 1-indexed position to insert the sweep in the list of sweeps
             % sweep = a sweep object
@@ -474,18 +490,18 @@ classdef ExpManager < handle
                 obj.sweep_callbacks{order} = [];
             end
         end
-        
+
         function clear_sweeps(obj)
             obj.sweeps = {};
             obj.sweep_callbacks = {};
         end
-        
+
     end
-    
+
     methods (Static)
         %forward reference static methods
         out = is_scope(instr)
         out = is_AWG(instr)
     end
-    
+
 end
