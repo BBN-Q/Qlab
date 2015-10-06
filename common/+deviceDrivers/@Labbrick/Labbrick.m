@@ -99,7 +99,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             end
             status = calllib('vnx_fmsynth', 'fnLMS_InitDevice', obj.devID);
             if status ~= 0
-                %serror('Could not open device with id: %i, returned error %i', [obj.devID status])
+                error('Could not open device with id: %i, returned error %i', [obj.devID status])
             end
 
             % populate some device properties

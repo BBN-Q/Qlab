@@ -28,7 +28,7 @@ classdef StateComparator < MeasFilters.MeasFilter
             obj = obj@MeasFilters.MeasFilter(label,settings);
             obj.integrationTime = settings.integrationTime;
             obj.threshold = settings.threshold;
-            obj.saved = true;
+            obj.saved = false;
         end
 
         function apply(obj, src, ~)
