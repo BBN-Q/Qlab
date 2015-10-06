@@ -72,6 +72,7 @@ classdef RawStream < MeasFilters.MeasFilter
             
             accumulate(obj);
             notify(obj, 'DataReady');
+            fprintf(1,'Done %s\n',obj.label)
         end
     end
 end

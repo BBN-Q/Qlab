@@ -134,14 +134,18 @@ classdef ExpManager < handle
                 % add measurement names to dataInfo structs
                 measNames = fieldnames(obj.measurements);
                 dataInfos = {};
+                openDataFile = false;
                 for ct = 1:length(measNames)
                     if obj.measurements.(measNames{ct}).saved
                         dataInfos{end+1} = dataInfo;
                         dataInfos{end}.name = measNames{ct};
+                        openDataFile = true;
                     end
                 end
                 %Open data file
-                obj.dataFileHandler.open(obj.dataFileHeader, dataInfos, obj.saveVariances);
+                if openDataFile
+                    obj.dataFileHandler.open(obj.dataFileHeader, dataInfos, obj.saveVariances);
+                end
             end
             
         end
@@ -213,6 +217,7 @@ classdef ExpManager < handle
                             fprintf('Stepping sweep %d: %d of %d\n', idx, ct(idx), stops(idx));
                         end
                     end
+                    
                     obj.sweeps{idx}.step(ct(idx));
                     if ~isempty(obj.sweep_callbacks{idx})
                         feval(obj.sweep_callbacks{idx}, obj);
@@ -221,6 +226,7 @@ classdef ExpManager < handle
                         idx = idx + 1;
                     else % inner most loop... take data
                         obj.take_data();
+                        fprintf(1,'Here\n');
                         % pull data out of measurements
                         stepData = structfun(@(m) m.get_data(), obj.measurements, 'UniformOutput', false);
                         stepVar = structfun(@(m) m.get_var(), obj.measurements, 'UniformOutput', false);
@@ -276,7 +282,7 @@ classdef ExpManager < handle
                    copyfile(getpref('qlab','InstrumentLibraryFile'),fullfile(pathname,strcat(basename,'_cfg'),'Instruments.json'));
                    copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Measurements'),fullfile(pathname,strcat(basename,'_cfg'),'Measurements.json'));
                    copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Sweeps'),fullfile(pathname,strcat(basename,'_cfg'),'Sweeps.json'));
-                   copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','QuickPicks'),fullfile(pathname,strcat(basename,'_cfg'),'QuickPicks.json'));
+                   %copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','QuickPicks'),fullfile(pathname,strcat(basename,'_cfg'),'QuickPicks.json'));
                 end
             end
             
