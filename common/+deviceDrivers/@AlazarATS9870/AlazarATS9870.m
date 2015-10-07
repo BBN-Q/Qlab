@@ -593,7 +593,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %Sort out whether we can fit full round robins into the buffer
             recordsPerRoundRobin = avgSet.nbrSegments*avgSet.nbrWaveforms;
 
-            if (guessRecsPerBuffer > recordsPerRoundRobin)
+            if (guessRecsPerBuffer >= recordsPerRoundRobin)
                 %Our first guess is just the rounded division
                 %However, we also need it to divide into the total number
                 %of round robins
