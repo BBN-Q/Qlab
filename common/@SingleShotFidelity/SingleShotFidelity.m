@@ -25,6 +25,10 @@ classdef SingleShotFidelity < handle
         experiment % an instance of the ExpManager class
         settings % a structure of instrument/measurement/sweep settings
         qubit %which qubit we are on
+        controlAWG
+        readoutAWG
+        autoSelectAWGs
+        threshold
     end
     
     methods
@@ -49,6 +53,18 @@ classdef SingleShotFidelity < handle
             headerStruct = expSettings;
             headerStruct.singleshot = settings;
             obj.experiment.dataFileHeader = headerStruct;
+                     
+            warning('off', 'json:fieldNameConflict');
+            channelLib = json.read(getpref('qlab','ChannelParamsFile'));
+            warning('on', 'json:fieldNameConflict');
+            channelLib = channelLib.channelDict;
+            
+            tmpStr = regexp(channelLib.(obj.qubit).physChan, '-', 'split');
+            obj.controlAWG = tmpStr{1};
+            tmpStr = regexp(channelLib.(strcat(genvarname('M-'),obj.qubit)).physChan, '-', 'split'); 
+            obj.readoutAWG = tmpStr{1};
+            
+            obj.autoSelectAWGs = settings.autoSelectAWGs;
             
             % add instruments
             for instrument = fieldnames(instrSettings)'
@@ -56,11 +72,18 @@ classdef SingleShotFidelity < handle
                 instr = InstrumentFactory(instrument{1}, instrSettings.(instrument{1}));
                 %If it is an AWG, point it at the correct file
                 if ExpManager.is_AWG(instr)
+                    if obj.autoSelectAWGs
+                        if ~strcmp(instrument,obj.controlAWG) && ~strcmp(instrument,obj.readoutAWG) && ~instrSettings.(instrument{1}).isMaster
+                        %ignores the AWGs which are not either driving or reading this qubit
+                        continue
+                        end
+                    end
                     if isa(instr, 'deviceDrivers.APS') || isa(instr, 'APS2') || isa(instr, 'APS')
                         ext = 'h5';
                     else
                         ext = 'awg';
                     end
+                    fprintf('Enabling %s\n', instrument{1});
                 %To get a different sequence loaded into the APS1 when used as a slave for the msm't only.
                     %if isa(instr,'deviceDrivers.APS') && instrSettings.(instrument{1}).isMaster == 0
                     %    instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), 'Reset', ['MeasReset-' instrument{1} '.' ext]);
@@ -72,15 +95,15 @@ classdef SingleShotFidelity < handle
                     scopeName = instrument{1};
                 end
                 add_instrument(obj.experiment, instrument{1}, instr, instrSettings.(instrument{1}));
-            end
-            
-            % set scope to digitizer mode
-            obj.experiment.instrSettings.(scopeName).acquireMode = 'digitizer';
-            
-            % set digitizer with the appropriate number of segments and
-            % round robins
-            obj.experiment.instrSettings.(scopeName).averager.nbrSegments = settings.numShots;
-            obj.experiment.instrSettings.(scopeName).averager.nbrRoundRobins = 1;
+                if ExpManager.is_scope(instr)
+                    % set scope to digitizer mode
+                    obj.experiment.instrSettings.(scopeName).acquireMode = 'digitizer';
+                    % set digitizer with the appropriate number of segments and
+                    % round robins
+                    obj.experiment.instrSettings.(scopeName).averager.nbrSegments = settings.numShots;
+                    obj.experiment.instrSettings.(scopeName).averager.nbrRoundRobins = 1;
+                end
+            end          
             
             %Add the instrument sweeps
             sweepSettings = settings.sweeps;
@@ -98,7 +121,9 @@ classdef SingleShotFidelity < handle
             % add single-shot measurement filter
             measSettings = expSettings.measurements;
             add_measurement(obj.experiment, 'SingleShot',...
-                MeasFilters.SingleShot('SingleShot', struct('dataSource', obj.settings.dataSource, 'plotMode', 'real/imag', 'plotScope', true)));
+                MeasFilters.SingleShot('SingleShot', struct('dataSource', obj.settings.dataSource, 'plotMode', 'real/imag', 'plotScope', true,...
+                'logisticRegression', obj.settings.logisticRegression, 'saveKernel', obj.settings.saveKernel, 'optIntegrationTime', ...
+                obj.settings.optIntegrationTime, 'setThreshold', obj.settings.setThreshold)));
             curSource = obj.settings.dataSource;
             while (true)
                sourceParams = measSettings.(curSource);
@@ -123,8 +148,26 @@ classdef SingleShotFidelity < handle
             obj.experiment.run();
             drawnow();
             SSData = obj.experiment.data.SingleShot;
+            if obj.settings.setThreshold
+                obj.Set_threshold()
+            end
         end
         
+        function Set_threshold(obj)
+             obj.threshold = obj.experiment.measurements.SingleShot.pdfData.thr_I;
+             expSettings = json.read(obj.settings.cfgFile);
+             if ~strcmp(expSettings.measurements.(obj.settings.dataSource).filterType, 'StreamSelector')
+                warning('Threshold not set. Measurement type is not a stream');
+                return
+             end
+             source = expSettings.measurements.(obj.settings.dataSource).dataSource;
+             stream = expSettings.measurements.(obj.settings.dataSource).stream;
+             expSettings.instruments.(source).channels.(['s' stream(2) '1']).threshold = obj.experiment.measurements.SingleShot.pdfData.thr_I;
+             instrLib = json.read(getpref('qlab', 'InstrumentLibraryFile'));
+             instrLib.instrDict.(source).channels.(['s' stream(2) num2str(obj.settings.setThreshold)]).threshold = ...
+                 round(1e4*obj.experiment.measurements.SingleShot.pdfData.thr_I)/1e4; 
+             json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
+        end
     end
     
 end

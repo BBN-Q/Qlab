@@ -55,8 +55,9 @@ classdef ExpManager < handle
         CWMode = false
         saveVariances = false
         dataFileHeader = struct();
-        dataTimeout = 60 % timeout in seconds
+        dataTimeout = 10 % timeout in seconds
         saveAllSettings = true;
+        saveData = true;
     end
     
     methods
@@ -249,7 +250,9 @@ classdef ExpManager < handle
                         end
                         plotResetFlag = all(ct == 1);
                         obj.plot_data(plotResetFlag);
-                        obj.save_data(stepData, stepVar);
+                        if obj.saveData
+                            obj.save_data(stepData, stepVar);
+                        end
                     end
                 else
                     %We've rolled over so reset this sweeps counter and
@@ -259,22 +262,25 @@ classdef ExpManager < handle
                 end
             end
             
-            % close data file
             if ~isempty(obj.dataFileHandler)
+                % close data file
                 obj.dataFileHandler.close();
+                
+                if obj.saveAllSettings
+                   %saves json settings files
+                   fileName = obj.dataFileHandler.fileName;
+                   [pathname,basename,~] = fileparts(fileName);
+                   mkdir(fullfile(pathname,strcat(basename,'_cfg')));
+                   copyfile(getpref('qlab','CurScripterFile'),fullfile(pathname,strcat(basename,'_cfg'),'DefaultExpSettings.json'));
+                   copyfile(getpref('qlab','ChannelParamsFile'),fullfile(pathname,strcat(basename,'_cfg'),'ChannelParams.json'));
+                   copyfile(getpref('qlab','InstrumentLibraryFile'),fullfile(pathname,strcat(basename,'_cfg'),'Instruments.json'));
+                   copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Measurements'),fullfile(pathname,strcat(basename,'_cfg'),'Measurements.json'));
+                   copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Sweeps'),fullfile(pathname,strcat(basename,'_cfg'),'Sweeps.json'));
+                   copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','QuickPicks'),fullfile(pathname,strcat(basename,'_cfg'),'QuickPicks.json'));
+                end
             end
             
-            if obj.saveAllSettings
-               %saves json settings files
-               fileName = obj.dataFileHandler.fileName;
-               [pathname,basename,~] = fileparts(fileName);
-               mkdir(fullfile(pathname,strcat(basename,'_cfg')));
-               copyfile(getpref('qlab','CurScripterFile'),fullfile(pathname,strcat(basename,'_cfg'),'DefaultExpSettings.json'));
-               copyfile(getpref('qlab','ChannelParamsFile'),fullfile(pathname,strcat(basename,'_cfg'),'ChannelParams.json'));
-               copyfile(getpref('qlab','InstrumentLibraryFile'),fullfile(pathname,strcat(basename,'_cfg'),'Instruments.json'));
-               copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Measurements'),fullfile(pathname,strcat(basename,'_cfg'),'Measurements.json'));
-               copyfile(strrep(getpref('qlab','InstrumentLibraryFile'),'Instruments','Sweeps'),fullfile(pathname,strcat(basename,'_cfg'),'Sweeps.json'));
-            end
+           
         end
         
         function cleanUp(obj)
@@ -457,6 +463,11 @@ classdef ExpManager < handle
         function add_instrument(obj, name, instr, settings)
             obj.instruments.(name) = instr;
             obj.instrSettings.(name) = settings;
+        end
+        
+        function remove_instrument(obj, name)
+            obj.instruments = rmfield(obj.instruments,name);
+            obj.instrSettings = rmfield(obj.instrSettings,name);                      
         end
         
         function add_measurement(obj, name, meas)

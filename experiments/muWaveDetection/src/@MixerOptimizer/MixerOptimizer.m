@@ -35,6 +35,7 @@ classdef MixerOptimizer < handle
         expParams
         optimMode = 'sweep' %optimize by naive sweeping ('sweep') or clever searching ('search')
         results = struct('iOffset',0, 'qOffset',0, 'ampFactor', 1, 'phaseSkew', 0)
+        prompt %if 1, user input is required to accept the calibration result
     end
     
     methods
@@ -43,7 +44,7 @@ classdef MixerOptimizer < handle
         end
         
         %% class methods
-        function Init(obj, cfgFile, chan)
+        function Init(obj, cfgFile, chan, prompt)
             
             % pull in channel parameters from requested logical channel in the Qubit2ChannelMap
             %Quiet down warnings from '-''s in fieldnames
@@ -83,6 +84,8 @@ classdef MixerOptimizer < handle
             obj.uwsource.mod = 0;
             obj.uwsource.pulse = 0;
             obj.uwsource.output = 1;
+            
+            obj.prompt = prompt;
         end
         
         function Do(obj)
@@ -130,8 +133,13 @@ classdef MixerOptimizer < handle
             obj.sa.sweep();
             obj.sa.peakAmplitude();
             
+            if obj.prompt
             %Ask whether to write to file or not
-            happy = questdlg('Are you happy with the result?','Optimize Mixer Wrap-up');
+                happy = questdlg('Are you happy with the result?','Optimize Mixer Wrap-up');
+            else
+                happy = 'Yes';
+            end
+                
             switch happy
                 case 'Yes'
             

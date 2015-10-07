@@ -85,9 +85,13 @@ classdef HolzworthHS9000 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.li
             % this method is non-static because it depends on the DLL being
             % loaded
             deviceStr = calllib('HolzworthMulti', 'getAttachedDevices');
-            % split result on commas
-            devices = textscan(deviceStr, '%s', 'Delimiter', ',');
-            devices = devices{1};
+            if ~isempty(deviceStr)
+                % split result on commas
+                devices = textscan(deviceStr, '%s', 'Delimiter', ',');
+                devices = devices{1};
+            else
+                devices = {};
+            end
         end
         
         function out = unique_serials(obj)

@@ -60,17 +60,22 @@ end
 
 %% Ramsey
 if settings.DoRamsey
-    % generate Ramsey sequence (TODO)
-    [filenames, segmentPoints] = obj.RamseyChannelSequence(settings.Qubit);
+    % generate Ramsey sequence 
+    [filenames, segmentPoints] = obj.RamseyChannelSequence(settings.Qubit, settings.RamseyStop, settings.NumRamseySteps);
     obj.loadSequence(filenames, 1);
     
     %Approach is to take one point, move half-way there and then see if
     %frequency moves in desired direction
-    qubitSource = obj.experiment.instruments.(obj.channelMap.(settings.Qubit).source);
+    warning('off', 'json:fieldNameConflict');
+    channelLib = json.read(getpref('qlab','ChannelParamsFile'));
+    warning('on', 'json:fieldNameConflict');
+    mangledPhysChan = genvarname(obj.channelParams.physChan);
+    qubitSource = obj.experiment.instruments.(channelLib.channelDict.(mangledPhysChan).generator);
     
-    %Deliberately shift off by 1MHz
+    %Deliberately shift off by 200 kHz
+    added_detuning = - 0.0002;
     origFreq = qubitSource.frequency;
-    qubitSource.frequency = origFreq - 0.001;
+    qubitSource.frequency = origFreq + added_detuning;
 
     % measure
     data = obj.take_data(segmentPoints);
@@ -78,23 +83,37 @@ if settings.DoRamsey
     quick_scale = @(d) 2*(d-mean(d))/(max(d)-min(d));
     
     % analyze
-    [~, detuningA] = fitramsey(segmentPoints, quick_scale(data));
-
+    if ~settings.Ramsey2f
+        %single frequency
+        [~, detuningA] = fitramsey(segmentPoints, quick_scale(data));
+    else
+        %double frequency for charge-sensitive qubits
+        [~, detuning1, detuning2] = fit_two_freq(segmentPoints, quick_scale(data));
+        detuningA = (detuning1 + detuning2)/2; 
+    end
+    
     % adjust drive frequency
-    qubitSource.frequency = origFreq - 0.001 + detuningA/2;
+    qubitSource.frequency = origFreq + added_detuning + detuningA/2;
 
     % measure
     data = obj.take_data(segmentPoints);
 
     % analyze
-    [~, detuningB] = fitramsey(segmentPoints, quick_scale(data));
+    if ~settings.Ramsey2f
+        %single frequency
+        [~, detuningB] = fitramsey(segmentPoints, quick_scale(data));
+    else
+        %double frequency for charge-sensitive qubits
+        [~, detuning1, detuning2] = fit_two_freq(segmentPoints, quick_scale(data));
+        detuningB = (detuning1 + detuning2)/2;
+    end
     
     %If we have gotten smaller we are moving in the right direction
     %Average the two fits
     if detuningB < detuningA
-        qubitSource.frequency = origFreq - 0.001 + 0.5*(detuningA + detuningA/2+detuningB);
+        qubitSource.frequency = origFreq + added_detuning + 0.5*(detuningA + detuningA/2+detuningB);
     else
-        qubitSource.frequency = origFreq - 0.001 - 0.5*(detuningA - detuningA/2+detuningB);
+        qubitSource.frequency = origFreq + added_detuning - 0.5*(detuningA - detuningA/2+detuningB);
     end
         
 end
@@ -116,21 +135,44 @@ if settings.DoPi2Cal
     fprintf('Found I offset: %.4f\n\n\n', i_offset);
     
     % calibrate amplitude and offset for +/- Y90
-    x0(2) = obj.channelParams.q_offset;
+    if obj.channelParams.SSBFreq==0
+        x0(2) = obj.channelParams.q_offset;
+        
+        x0 = lsqnonlin(@obj.Ypi2ObjectiveFnc,x0,[],[],options);
+        Y90Amp = real(x0(1));
+        q_offset = real(x0(2));
+        fprintf('Found Y90Amp: %.4f\n', Y90Amp);
+        fprintf('Found Q offset: %.4f\n\n\n', q_offset);
+        
+        % update channelParams
+        obj.channelParams.pi2Amp = Y90Amp;
+        obj.channelParams.q_offset = q_offset;
+        % update T matrix with ratio X90Amp/Y90Amp
+        obj.channelParams.ampFactor = obj.channelParams.ampFactor*X90Amp/Y90Amp;
+        fprintf('ampFactor: %.3f\n', obj.channelParams.ampFactor);
+    end
     
-    x0 = lsqnonlin(@obj.Ypi2ObjectiveFnc,x0,[],[],options);
-    Y90Amp = real(x0(1));
-    q_offset = real(x0(2));
-    fprintf('Found Y90Amp: %.4f\n', Y90Amp);
-    fprintf('Found Q offset: %.4f\n\n\n', q_offset);
-    
-    % update channelParams
-    obj.channelParams.pi2Amp = Y90Amp;
-    obj.channelParams.q_offset = q_offset;
-    % update T matrix with ratio X90Amp/Y90Amp
-    obj.channelParams.ampFactor = obj.channelParams.ampFactor*X90Amp/Y90Amp;
-    fprintf('ampFactor: %.3f\n', obj.channelParams.ampFactor);
     % update QGL library
+    updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
+end
+
+%% Pi/2 calibration via phase estimation
+if settings.DoPi2PhaseCal
+    % calibrate amplitude for X90
+    X90Amp = obj.optimize_amplitude(obj.channelParams.pi2Amp, 'X', pi/2);
+    obj.channelParams.pi2Amp = X90Amp;
+    fprintf('Found X90Amp: %.4f\n\n', X90Amp);
+
+    % calibrate Y90 if not using SSB
+    if obj.channelParams.SSBFreq == 0
+        Y90Amp = obj.optimize_amplitude(X90Amp, 'Y', pi/2);
+        fprintf('Found Y90Amp: %.4f\n', Y90Amp);
+
+        obj.channelParams.pi2Amp = Y90Amp;
+        % update T matrix with ratio X90Amp/Y90Amp
+        obj.channelParams.ampFactor = obj.channelParams.ampFactor*X90Amp/Y90Amp;
+        fprintf('ampFactor: %.3f\n\n', obj.channelParams.ampFactor);
+    end
     updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 end
 
@@ -150,6 +192,15 @@ if settings.DoPiCal
     % update channelParams
     obj.channelParams.piAmp = X180Amp;
     obj.channelParams.i_offset = i_offset;
+    updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
+end
+
+%% Pi calibration via phase estimation
+if settings.DoPiPhaseCal
+    % calibrate amplitude for X90
+    X180Amp = obj.optimize_amplitude(obj.channelParams.piAmp, 'X', pi);
+    obj.channelParams.piAmp = X180Amp;
+    fprintf('Found X180Amp: %.4f\n\n', X180Amp);
     updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 end
 
@@ -220,7 +271,9 @@ instrLib.instrDict.(obj.controlAWG).channels(iChan).offset = round(1e4*obj.chann
 instrLib.instrDict.(obj.controlAWG).channels(qChan).offset = round(1e4*obj.channelParams.q_offset)/1e4;
 %Drive frequency from Ramsey
 if settings.DoRamsey
+    warning('off', 'json:fieldNameConflict');
     channelLib = json.read(getpref('qlab','ChannelParamsFile'));
+    warning('on', 'json:fieldNameConflict');
     sourceName = channelLib.channelDict.(mangledPhysChan).generator;
     instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
 end
