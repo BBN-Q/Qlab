@@ -92,11 +92,6 @@ classdef SingleShot < MeasFilters.MeasFilter
                     kernel = myhilbert(kernel);
                 end
                 
-                if obj.saveKernel
-                    dlmwrite(strcat('kernel_',obj.dataSource,'_real.csv'), real(kernel(1:end-1)));
-                    dlmwrite(strcat('kernel_',obj.dataSource,'_imag.csv'), imag(kernel(1:end-1)));
-                end
-                
                 %apply matched filter
                 weightedGround = bsxfun(@times, obj.groundData, kernel);
                 weightedExited = bsxfun(@times, obj.excitedData, kernel);
@@ -148,6 +143,15 @@ classdef SingleShot < MeasFilters.MeasFilter
                     gPDF = ksdensity(groundIData, bins);
                     ePDF = ksdensity(excitedIData, bins);
                 end
+                
+                if obj.saveKernel
+                    if ~obj.optIntegrationTime
+                        intPt = length(kernel);
+                    end
+                    dlmwrite(strcat('kernel_',obj.dataSource,'_real.csv'), real(kernel)); 
+                    dlmwrite(strcat('kernel_',obj.dataSource,'_imag.csv'), imag(kernel));
+                end
+                
                 obj.pdfData.maxFidelity_I = 1-0.5*(1-0.5*(bins(2)-bins(1))*sum(abs(gPDF-ePDF)));
                 obj.pdfData.bins_I = bins;
                 obj.pdfData.gPDF_I = gPDF;
