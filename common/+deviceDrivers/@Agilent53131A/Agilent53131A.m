@@ -173,7 +173,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
 			end
 			
 			gpib_string = '';
-			obj.Write(gpib_string);
+			obj.write(gpib_string);
 			fclose(obj.deviceObj_ag53131A);
 			delete(obj.deviceObj_ag53131A);
         end
@@ -185,10 +185,10 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             %       "@" Within a method, a superclass method of the same
             %       name is called by saying method@superclass.  The left
             %       operand of "@" must be the method name.
-            %   Write@dev.DAObject.GPIB.GPIBWrapper(obj,'*RST')
+            %   write@dev.DAObject.GPIB.GPIBWrapper(obj,'*RST')
             
-            %	obj.Write('*RST');
-            obj.Write('*RST');
+            %	obj.write('*RST');
+            obj.write('*RST');
 			disp('Agilent 53131A reset.');
         end
         
@@ -199,10 +199,10 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             %   1. See page 3-38 in Agilent Counter Manual.
             %
             reset(obj);
-            obj.Write('*CLS');          % Reset the counter
-            obj.Write('*SRE 0');        % Clear event registers and error queue    
-            obj.Write('*ESE 0');        % Clear event status enable register
-            obj.Write(':STAT:PRES');    % Preset enable registers and transition
+            obj.write('*CLS');          % Reset the counter
+            obj.write('*SRE 0');        % Clear event registers and error queue    
+            obj.write('*ESE 0');        % Clear event status enable register
+            obj.write(':STAT:PRES');    % Preset enable registers and transition
                                         %   filters for Operation and 
                                         %   Questionable status structures.
         end
@@ -215,7 +215,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             %   Remarks:
             %       1. The only way to cancel the hold off is to 
             %           power cycle the counter or issue the rest command.          
-            obj.Write('*WAI');
+            obj.write('*WAI');
         end
         
         function recall_config(obj, val)
@@ -233,7 +233,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
                 error('');
             end
             gpib_string = ['*RCL ' num2str(val)];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         
         function save_config(obj, val)
@@ -251,7 +251,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
                 error('');
             end
             gpib_string = ['*SAV ' num2str(val)];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
         end
         
         function val = last_error(obj)
@@ -260,7 +260,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             %   Returns:
             %      val  A string with error code and description.
             %
-            val = obj.Query(':SYST:ERR?');
+            val = obj.query(':SYST:ERR?');
         end
         
         function optimize_throughput(obj)
@@ -312,7 +312,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
                 case 3
                     if strcmp(toggle_query, 'read')
                         gpib_string = ':CONFigure?';
-                        val = obj.Query(gpib_string);
+                        val = obj.query(gpib_string);
                         return;
                     elseif strcmp(toggle_query, 'write')
                         gpib_string = [':CONFigure' ...
@@ -329,12 +329,12 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
                 otherwise
                     error('');
             end
-			obj.Write(gpib_string);
+			obj.write(gpib_string);
             val = true;
 		end
 		
 		function initiate(obj)
-			obj.Write(':INITiate');
+			obj.write(':INITiate');
 		end
 		
 		function val = measure(obj)
@@ -370,7 +370,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
                 otherwise
                     error('');
             end
-			val = obj.Query(gpib_string);
+			val = obj.query(gpib_string);
 		end
 		
 		function val = sense(obj, option)
@@ -394,12 +394,12 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
 			%		'totalize_cont'
 			%		'totalize_timed'
 			gpib_string = ':SENSe ';
-			val = obj.Query(gpib_string);
+			val = obj.query(gpib_string);
 		end
 		
 		function val = read_instr(obj)
 			%READ_INSTR initiates a measurement and queries the result.
-			val = obj.Query(':READ?');
+			val = obj.query(':READ?');
 		end
 		
 		function result = fetch(obj)
@@ -409,13 +409,13 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             %   Returns: 
             %       result      A double for the current measurement
             %                     result.
-			temp = obj.Query(':FETCH?');
+			temp = obj.query(':FETCH?');
             result = str2double(temp);
 		end
 		
 		function abort(obj)
             %ABORT ends the current measurement routine.
-			obj.Write(':ABORt');
+			obj.write(':ABORt');
 		end
 		
 		function enableFastThroughput(obj)
@@ -428,57 +428,57 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
 		% trigger
 		function val = get.trigger_auto(obj)
 			gpib_string = [':SENSe:EVENt' obj.input_chan_value ':LEVel:AUTO?'];
-			val = obj.Query(gpib_string);
+			val = obj.query(gpib_string);
 		end	
 		function val = get.trigger_level(obj)
 			gpib_string = [':SENSe:EVENTt' obj.input_chan_value ' :LEVel?'];
-			val = obj.Query(gpib_string);
+			val = obj.query(gpib_string);
 		end
 		function val = get.trigger_slope(obj)
 			gpib_string = [':SENSe:EVENt' obj.input_chan_value ':SLOPe?'];
-			val = obj.Query(gpib_string);
+			val = obj.query(gpib_string);
 		end
 		function val = get.trigger_sensitivity(obj)
 			gpib_string = [':SENSe:EVENt' obj.input_chan_value ':HYSTeresis:RELative?'];
-			val = obj.Query(gpib_string); 
+			val = obj.query(gpib_string); 
 		end  
 	
 		% channel measurement
 		function val = get.initiate_auto(obj)
 			gpib_string = ':INITiate:AUTO?';
-			val = obj.Query(gpib_string);
+			val = obj.query(gpib_string);
 		end
 		function val = get.initiate_continuous(obj)
 			gpib_string = ':INITiate:CONTinuous?';
-			val = obj.Query(gpib_string);
+			val = obj.query(gpib_string);
 		end 
 		
 		% input parameters
 		function val = get.input_attenuation(obj)
 			gpib_string = [':INPut' obj.input_chan_value ':ATTenuation?'];
-			val = obj.Query(gpib_string);
+			val = obj.query(gpib_string);
 		end
 		function val = get.input_coupling(obj)
 			gpib_string = [':INPut' obj.input_chan_value ':COUPling?'];
-			val = obj.Query(gpib_string);
+			val = obj.query(gpib_string);
 		end
 		function val = get.input_filter_enable(obj)
 			gpib_string = [':INPut' obj.input_chan_value ':STATe?'];
-			val = obj.Query(gpib_string);
+			val = obj.query(gpib_string);
 		end
 		function val = get.input_filter_frequency(obj)
 			gpib_string = [':INPut' obj.input_chan_value ':STATe:FREQuency?'];
-			val = obj.Query(gpib_string);
+			val = obj.query(gpib_string);
 		end
 		function val = get.input_impedance(obj)
 			gpib_string = [':INPut' obj.input_chan_value ':IMPedance?'];
-			val = obj.Query(gpib_string);
+			val = obj.query(gpib_string);
         end
 		
 		% oscillator
 		function val = get.source_oscillator(obj)
 			gpib_string = [':SENSE:ROSCillator:SOURce?'];
-			val = obj.Query(gpib_string);
+			val = obj.query(gpib_string);
         end
 		
         % arming functions
@@ -486,50 +486,50 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             gpib_string = ':SENSe:FREQuency:ARM:STARt';
             gpib_string0 = [gpib_string ':SLOPe?'];
             gpib_string1 = [gpib_string ':SOURce?'];
-			val = struct('slope', obj.Query(gpib_string0),...
-			 'source', obj.Query(gpib_string1));
+			val = struct('slope', obj.query(gpib_string0),...
+			 'source', obj.query(gpib_string1));
         end
         function val = get.freq_arm_stop(obj)
             gpib_string = ':SENSe:FREQuency:ARM:STOP';
             gpib_string0 = [gpib_string ':SLOPe?'];
             gpib_string1 = [gpib_string ':SOURce?'];
-			val = struct('slope', obj.Query(gpib_string0),...
-			 'source', obj.Query(gpib_string1));
+			val = struct('slope', obj.query(gpib_string0),...
+			 'source', obj.query(gpib_string1));
         end
         function val = get.phase_arm_start(obj)
             gpib_string = ':SENSe:PHASe:ARM:STARt';
             gpib_string0 = [gpib_string ':SLOPe?'];
             gpib_string1 = [gpib_string ':SOURce?'];
-			val = struct('slope', obj.Query(gpib_string0),...
-			 'source', obj.Query(gpib_string1));
+			val = struct('slope', obj.query(gpib_string0),...
+			 'source', obj.query(gpib_string1));
         end
         function val = get.tot_arm_start(obj)
             gpib_string = ':SENSe:TOTalize:ARM:STARt';
             gpib_string0 = [gpib_string ':SLOPe?'];
             gpib_string1 = [gpib_string ':SOURce?'];
-			val = struct('slope', obj.Query(gpib_string0),...
-			 'source', obj.Query(gpib_string1));
+			val = struct('slope', obj.query(gpib_string0),...
+			 'source', obj.query(gpib_string1));
         end
         function val = get.tot_arm_stop(obj)
             gpib_string = ':SENSe:TOTalize:ARM:STOP';
             gpib_string0 = [gpib_string ':SLOPe?'];
             gpib_string1 = [gpib_string ':SOURce?'];
-			val = struct('slope', obj.Query(gpib_string0),...
-			 'source', obj.Query(gpib_string1));
+			val = struct('slope', obj.query(gpib_string0),...
+			 'source', obj.query(gpib_string1));
         end
         function val = get.tint_arm_start(obj)
             gpib_string = ':SENSe:TINTerval:ARM:STARt';
             gpib_string0 = [gpib_string ':SLOPe?'];
             gpib_string1 = [gpib_string ':SOURce?'];
-			val = struct('slope', obj.Query(gpib_string0),...
-			 'source', obj.Query(gpib_string1));
+			val = struct('slope', obj.query(gpib_string0),...
+			 'source', obj.query(gpib_string1));
         end		
         function val = get.tint_arm_stop(obj)
             gpib_string = ':SENSe:TINTerval:ARM:STOP';
             gpib_string0 = [gpib_string ':SLOPe?'];
             gpib_string1 = [gpib_string ':SOURce?'];
-			val = struct('slope', obj.Query(gpib_string0),...
-			 'source', obj.Query(gpib_string1));
+			val = struct('slope', obj.query(gpib_string0),...
+			 'source', obj.query(gpib_string1));
         end		
         
 		
@@ -543,7 +543,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             
 			gpib_string = [':SENSe:EVENt' obj.input_chan_value ...
                 ':LEVel:AUTO ' checkMapObj(value)];
-			obj.Write(gpib_string);
+			obj.write(gpib_string);
 			obj.trigger_auto = value;
 		end
 		function obj = set.trigger_level(obj, value)
@@ -558,7 +558,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             
 			gpib_string = [':SENSe:EVENt' obj.input_chan_value ...
                 ':LEVel ' num2str(value)];
-			obj.Write(gpib_string);
+			obj.write(gpib_string);
 			obj.trigger_level = value;
 		end
 		function obj = set.trigger_slope(obj, value)
@@ -570,7 +570,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             
 			gpib_string = [':SENSe:EVENt' obj.input_chan_value ...
                 ':SLOPe ' checkMapObj(value)];
-			obj.Write(gpib_string);
+			obj.write(gpib_string);
 			obj.trigger_slope = value;
 		end
 		function obj = set.trigger_sensitivity(obj, value)
@@ -582,7 +582,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             
 			gpib_string = [':SENSe:EVENt' obj.input_chan_value ...
                 ':HYSTeresis:RELative ' checkMapObj(value)];
-			obj.Write(gpib_string);
+			obj.write(gpib_string);
 			obj.trigger_sensitivity = value;
 		end		
 		
@@ -593,7 +593,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             end
             
 			gpib_string = [':INITiate:AUTO ' checkMapObj(value)];
-			obj.Write(gpib_string);
+			obj.write(gpib_string);
 			obj.initiate_auto = value;
 		end
 		function obj = set.initiate_continuous(obj, value)
@@ -603,7 +603,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             end
             
 			gpib_string = [':INITiate:CONTinuous ' checkMapObj(value)];
-			obj.Write(gpib_string);
+			obj.write(gpib_string);
 			obj.initiate_continuous = value;
 		end
 		
@@ -615,7 +615,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             
 			gpib_string = [':INPut' obj.input_chan_value ...
                 ':ATTenuation ' checkMapObj(value)];
-			obj.Write(gpib_string);
+			obj.write(gpib_string);
 			obj.input_attenuation = value;
 		end
 		function obj = set.input_coupling(obj, value)
@@ -626,7 +626,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             
 			gpib_string = [':INPut' obj.input_chan_value ...
                 ':COUPling ' checkMapObj(value)];
-			obj.Write(gpib_string);
+			obj.write(gpib_string);
 			obj.input_coupling = value;
 		end
 		function obj = set.input_filter_enable(obj, value)
@@ -637,7 +637,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             
 			gpib_string = [':INPut' obj.input_chan_value ... 
                 ':STATe ' checkMapObj(value)];
-			obj.Write(gpib_string);
+			obj.write(gpib_string);
 			obj.input_filter_enable = value;
 		end
 		function obj = set.input_impedance(obj, value)
@@ -648,7 +648,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             
 			gpib_string = [':INPut' obj.input_chan_value ... 
                 ':IMPedance ' checkMapObj(value)];
-			obj.Write(gpib_string);
+			obj.write(gpib_string);
 			obj.input_impedance = value;
 		end     
         
@@ -667,7 +667,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             end
             
 			gpib_string = [':SENSE:ROSCillator:SOURce' checkMapObj(value)];
-			obj.Write(gpib_string);
+			obj.write(gpib_string);
 			obj.source_oscillator = value;
         end
         
@@ -696,7 +696,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             end
             
             gpib_string = [gpib_string checkMapObj(value.(names{1}))];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
             obj.freq_arm_start = value;
         end
         function set.freq_arm_stop(obj, value)
@@ -724,7 +724,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             end
             
             gpib_string = [gpib_string checkMapObj(value.(names{1}))];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
             obj.freq_arm_stop = value;
         end
         function set.phase_arm_start(obj, value)
@@ -751,7 +751,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             end
             
             gpib_string = [gpib_string checkMapObj(value.(names{1}))];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
             obj.phase_arm_start = value;
         end
         function set.tot_arm_start(obj, value)
@@ -778,7 +778,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             end
             
             gpib_string = [gpib_string checkMapObj(value.(names{1}))];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
             obj.tot_arm_start = value;
         end
         function set.tot_arm_stop(obj, value)
@@ -806,7 +806,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             end
             
             gpib_string = [gpib_string checkMapObj(value.(names{1}))];
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
             obj.tot_arm_stop = value;
         end
         function set.tint_arm_start(obj, value)
@@ -834,7 +834,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             
             gpib_string = [gpib_string checkMapObj(value.(names{1}))];
 
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
             obj.tint_arm_start = value;
         end		
         function set.tint_arm_stop(obj, value)
@@ -862,7 +862,7 @@ classdef (Sealed) Agilent53131A < deviceDrivers.lib.GPIB
             
             gpib_string = [gpib_string checkMapObj(value.(names{1}))];
 
-            obj.Write(gpib_string);
+            obj.write(gpib_string);
             obj.tint_arm_stop = value;
         end		
 	end % end method definitions 

@@ -18,10 +18,10 @@ classdef (Sealed) Keithley195A < deviceDrivers.lib.GPIB
                 id = 0;
             end
             % Initialize Super class
-            obj = obj@deviceDrivers.lib.GPIB(vendor,id);
-            obj.autoRange = 0;
-            obj.mode = 'none';
-            obj.Name = 'Keithley195A';
+            %obj = obj@deviceDrivers.lib.GPIB(vendor,id);
+            %obj.autoRange = 0;
+            %obj.mode = 'none';
+            %obj.Name = 'Keithley195A';
         end
         
         function setAll(obj,init_params)
@@ -40,7 +40,7 @@ classdef (Sealed) Keithley195A < deviceDrivers.lib.GPIB
             
             obj.autoRange = value;
             if value
-                obj.Write('R0X');
+                obj.write('R0X');
             end
         end
         
@@ -59,11 +59,11 @@ classdef (Sealed) Keithley195A < deviceDrivers.lib.GPIB
         function set.mode(obj,value)
             switch value
                 case {'I','i'}
-                    obj.Write('F3X');
+                    obj.write('F3X');
                 case {'V','v'}
-                    obj.Write('F0X');
+                    obj.write('F0X');
                 case {'R','r'}
-                    obj.Write('F2X');
+                    obj.write('F2X');
                 otherwise
                     MException('DMM:BadInput', ...
                         'Value: %i is invalid',value);
@@ -73,10 +73,10 @@ classdef (Sealed) Keithley195A < deviceDrivers.lib.GPIB
         end
         
         function rc = get.value(obj)
-            obj.Write('READ?');
+            %Edited July 2015 by Evan Walsh
+            rc1=obj.query('READ?');
             pause(.1);
-            rc = obj.Read();
-            rc = str2num(rc(5:end));
+            rc = str2num(rc1(5:end));
         end
     end
 end
