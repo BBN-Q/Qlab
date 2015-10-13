@@ -29,6 +29,7 @@ classdef SingleShotFidelity < handle
         readoutAWG
         autoSelectAWGs
         threshold
+        singleScope = true
     end
     
     methods
@@ -133,6 +134,16 @@ classdef SingleShotFidelity < handle
                    break;
                end
                curSource = sourceParams.dataSource;
+            end
+            
+            %Disable unused scopes
+            if obj.singleScope
+                for instrName = fieldnames(obj.experiment.instruments)'
+                    instr = obj.experiment.instruments.(instrName{1});
+                    if((isa(instr,'X6') || isa(instr,'deviceDrivers.AlazarATS9870')) && ~strcmp(curFilter.dataSource, instrName{1}))
+                        obj.experiment.remove_instrument(instrName{1})
+                    end
+                end
             end
             
             %Create the sequence of alternating QId, 180 inversion pulses
