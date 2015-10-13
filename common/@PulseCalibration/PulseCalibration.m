@@ -26,11 +26,12 @@ classdef PulseCalibration < handle
         readoutAWG % name of readout AWG
         AWGs
         AWGSettings
-        testMode = false;
+        testMode = false
         noiseVar % estimated variance of the noise from repeats
         numShots % also participates in noise variance estimate
         finished = false
         initialParams
+        singleScope = true
     end
     methods
         % Class constructor
@@ -193,8 +194,19 @@ classdef PulseCalibration < handle
                measSettings = expSettings.measurements.(measName);
                curFilter = MeasFilters.(measSettings.filterType)(measName, measSettings);
             end
-
-            % intialize the ExpManager
+            
+            if obj.singleScope
+                %removes the unnecessary scopes, preventing them
+                %from hanging waiting for a possibly absent trigger
+                for instrName = fieldnames(obj.experiment.instruments)'
+                    instr = obj.experiment.instruments.(instrName{1});
+                    if((isa(instr,'X6') || isa(instr,'deviceDrivers.AlazarATS9870')) && ~strcmp(curFilter.dataSource, instrName{1}))
+                        obj.experiment.remove_instrument(instrName{1})
+                    end
+                end
+            end
+            
+            % initialize the ExpManager
             init(obj.experiment);
                      
             obj.AWGs = struct_filter(@(x) ExpManager.is_AWG(x), obj.experiment.instruments);
