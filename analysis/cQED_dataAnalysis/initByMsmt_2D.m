@@ -1,6 +1,7 @@
 function [bins, PDFvec,data_con,var_con,opt_thr,datamat, fidvec_un, err0, err1] = initByMsmt_2D(data,Anum,numSegments,numMeas,indMeas,selectMeas,selectSign,threshold,docond,numCal)
 %data = data qubits
 %data = single ancilla qubit. Data to be postselected on
+%Anum = index of ancilla measurement
 %numSegments = number of distinct segments in the sequence
 %numMeas = number of meauserements per segments
 %indMeas = list of indeces of the msmt's to compare for fidelity
@@ -94,7 +95,7 @@ if(docond)
      datamat{nn} = dataslice;
      end
    
-    fprintf('Fraction kept = %.2f\n',  sum(sum(~isnan(dataslice)))/(size(dataslice,1)*size(dataslice,2)));
+    fprintf('Fraction kept = %.2f\n',  sum(sum(~isnan(dataslice(:,1:end-numCal))))/(size(dataslice,1)*(size(dataslice,2)-numCal)));
 end
 
 for nn=1:size(data_D,2)
@@ -108,8 +109,8 @@ for jj=1:numSegments
         %if(size(find(kk==selectMeas),1)==0) %this condition is necessary
         %not to condition a measurement on itself. This does not occur with
         %feed-forward schemes (i.e., data qubits conditioned on ancilla)
-                datatemp(jj, thismeas) = nanmean(dataslice(:,numMeas*(jj-1)+kk));
-                vartemp(jj, thismeas) = nanvar(dataslice(:, numMeas*(jj-1)+kk));
+            datatemp(jj, thismeas) = nanmean(dataslice(:,numMeas*(jj-1)+kk));
+            vartemp(jj, thismeas) = nanvar(dataslice(:, numMeas*(jj-1)+kk));
             thismeas=thismeas+1;
         %end
     end
