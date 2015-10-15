@@ -86,7 +86,7 @@ classdef SingleShot < MeasFilters.MeasFilter
                 kernel = kernel.*(abs(groundMean-excitedMean)>(1e-3*distance));
                 fprintf('norm: %g\n', sum(abs(kernel)));
                 %normalize between -1 and 1.
-                kernel = kernel/max(abs(kernel));
+                kernel = kernel/max([real(kernel); imag(kernel)]);
                 
                 if isreal(kernel)
                     kernel = myhilbert(kernel);
