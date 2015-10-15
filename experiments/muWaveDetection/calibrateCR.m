@@ -31,10 +31,10 @@ tmpStr = regexp(chanSettings.(strcat(genvarname('M-'),control)).physChan, '-', '
 expSettings.AWGs{5} = tmpStr{1};
 expSettings.AWGs = unique(expSettings.AWGs); %remove duplicates
 
-%disable unused measurements. Not sure if this is useful yet. Warning: it
-%doesn't work with correlators (it leaves all enabled)
+%disable unused measurements, including correlators
 for measname = fieldnames(expSettings.measurements)'
-    if sum(strfind(measname{1},strcat('M',target(2))))+sum(strfind(measname{1},strcat('M',control(2))))==0 && ~isempty(strfind(measname{1},'M'))
+    if (sum(strfind(measname{1},strcat('M',target(2))))+sum(strfind(measname{1},strcat('M',control(2))))==0 && ~isempty(strfind(measname{1},'M')))...
+            || sum(strfind(measname{1},'M'))>1
         expSettings.measurements = rmfield(expSettings.measurements, measname{1});
     end
 end
