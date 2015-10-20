@@ -24,9 +24,6 @@ classdef StreamSelector < MeasFilters.MeasFilter
         fileHandleImag
         headerWritten = false;
         streamMode
-    end
-
-    constants
         DIGITZER_STREAM = 0;
         AVERAGER_STREAM = 1;
     end
@@ -108,9 +105,8 @@ classdef StreamSelector < MeasFilters.MeasFilter
                 out.imagvar = obj.accumulatedVar.imag;
                 out.prodvar = obj.accumulatedVar.prod;
             else
-                out = get_var@MeasFilters(obj);
+                out = get_var@MeasFilters.MeasFilter(obj);
+            end
         end
     end
-
-
 end
