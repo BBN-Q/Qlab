@@ -24,6 +24,8 @@ classdef StreamSelector < MeasFilters.MeasFilter
         fileHandleImag
         headerWritten = false;
         streamMode
+    end
+    properties(Constant)
         DIGITZER_STREAM = 0;
         AVERAGER_STREAM = 1;
     end
