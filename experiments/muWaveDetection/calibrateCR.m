@@ -42,7 +42,11 @@ end
 %create a sequence with desired range of CR pulse lengths
 CRCalSequence(CalParams.control, CalParams.target, 1, CalParams.lenstep)
 
-%updates sweep settings 
+%updates sweep settings
+expSettings.sweeps={};
+expSettings.sweeps.SegmentNumWithCals={};
+expSettings.sweeps.SegmentNumWithCals.order=1;
+expSettings.sweeps.SegmentNumWithCals.type='SegmentNum';
 expSettings.sweeps.SegmentNumWithCals.start = CalParams.lenstep*2;
 expSettings.sweeps.SegmentNumWithCals.stop = CalParams.lenstep*40-CalParams.lenstep;
 expSettings.sweeps.SegmentNumWithCals.numPoints = 46;
@@ -52,6 +56,7 @@ expSettings.sweeps.SegmentNumWithCals.axisLabel = 'Pulse top length (ns)';
 
 expSettings.instruments = instrSettings;
 expSettings.saveAllSettings = false;
+pause(0.5);
 
 %run the sequence
 ExpScripter2('CRcal_len', expSettings, 'lockSegments');
@@ -65,7 +70,6 @@ optlen = analyzeCalCR(1,data,CalParams.channel, CalParams.CR);
 CRCalSequence(CalParams.control, CalParams.target, 2, optlen) 
 
 %updates sweep settings
-%instrSettings = json.read(cfgpath);
 expSettings.sweeps.SegmentNumWithCals.start = 0;
 expSettings.sweeps.SegmentNumWithCals.stop = 720;
 expSettings.sweeps.SegmentNumWithCals.numPoints = 46;
