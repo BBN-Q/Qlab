@@ -39,7 +39,7 @@ tmpLine = plot(axesH,offsetPts, measPowers1, 'b*');
 hold on
 set(get(get(tmpLine,'Annotation'),'LegendInformation'),...
     'IconDisplayStyle','off'); % Exclude line from legend
-xlabel('Offset Voltage (V)');
+xlabel(['Offset Voltage ' obj.chan ' (V)']);
 ylabel('Peak Power (dBm)');
 for ct = 1:length(offsetPts)
     vertex.a = offsetPts(ct); vertex.b = 0;

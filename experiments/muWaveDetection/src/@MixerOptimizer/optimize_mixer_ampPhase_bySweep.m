@@ -42,6 +42,7 @@ tmpLine = plot(axesHAmp, ampPts/awgAmp, measPowers1, 'b*');
 hold on
 xlabel('Amplitude Factor');
 ylabel('Peak Power (dBm)');
+title(obj.chan);
 
 axesHPhase = subplot(2,1,2);
 hold on
