@@ -35,7 +35,7 @@ fprintf('\nStarting sweep search for optimal amp/phase\n');
 %First we scan the amplitude with the phase at zero
 ampPts = linspace(ExpParams.Sweep.ampFactor.start*awgAmp, ExpParams.Sweep.ampFactor.stop*awgAmp, ExpParams.Sweep.ampFactor.numPoints);
 
-figure();
+figure(302); clf;
 axesHAmp = subplot(2,1,1);
 measPowers1 = nan(1, length(ampPts));
 tmpLine = plot(axesHAmp, ampPts/awgAmp, measPowers1, 'b*');

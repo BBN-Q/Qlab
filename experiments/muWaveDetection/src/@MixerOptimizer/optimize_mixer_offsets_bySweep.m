@@ -33,7 +33,7 @@ offsetPts = linspace(ExpParams.Sweep.offset.start, ExpParams.Sweep.offset.stop, 
 vertex = struct();
 %Sweep the I with Q at 0
 measPowers1 = nan(1, length(offsetPts));
-figure();
+figure(301); clf;
 axesH = axes();
 tmpLine = plot(axesH,offsetPts, measPowers1, 'b*');
 hold on

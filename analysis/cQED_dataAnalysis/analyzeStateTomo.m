@@ -53,13 +53,13 @@ varMat = diag(varData);
 %First least squares
 rhoLSQ = QST_LSQ(tomoData, varMat, measPulseMap, measOpMap, measPulseUs, measOps, nbrQubits);
 
-pauliSetPlot(rho2pauli(rhoLSQ));
+pauliSetPlot(rho2pauli(rhoLSQ),401);
 title('LSQ Inversion Pauli Decomposition');
 
 %Now constrained SDP
 rhoSDP = QST_SDP_uncorrelated(tomoData, varMat, measPulseMap, measOpMap, measPulseUs, measOps, nbrQubits);
 
-pauliSetPlot(rho2pauli(rhoSDP));
+pauliSetPlot(rho2pauli(rhoSDP),402);
 title('SDP Inversion Pauli Decomposition');
 
 
