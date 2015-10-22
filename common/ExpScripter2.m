@@ -11,27 +11,21 @@ deviceName = 'IBMv11_2037W3';
 exp.dataFileHandler = HDF5DataHandler(DataNamer.get_data_filename(deviceName, expName));
 expSettings = json.read(getpref('qlab', 'CurScripterFile'));
 
-%this is lenghty, but I don't know how to handle optional arguments in
-%matlab efficiently
-if nargin>1
-    if isstruct(varargin{1})
-        expSettings = varargin{1};
-    elseif ischar(varargin{1})
-        if strcmp(varargin{1}, 'lockSegments')
+lockSegments=0; 
+singleShot=0;
+
+%handle optional arguments
+for n = 2:nargin
+    if isstruct(varargin{n-1})
+        expSettings = varargin{n-1};
+    elseif ischar(varargin{n-1})
+        if strcmp(varargin{n-1}, 'lockSegments')
             lockSegments=1;
+        elseif strcmp(varargin{n-1}, 'singleShot')
+            singleShot=1;
         end
     end
 end
-if nargin>2
-    if isstruct(varargin{2})
-        expSettings = varargin{2};
-    elseif ischar(varargin{2})
-        if strcmp(varargin{2}, 'lockSegments')
-            lockSegments=1;
-        end
-    end
-end
-            
 
 %Save all the settings in the hdf5 file
 exp.dataFileHeader = expSettings;
@@ -75,13 +69,18 @@ for instrument = fieldnames(instrSettings)'
         end
         add_instrument(exp, instrument{1}, instr, instrSettings.(instrument{1}));
         
-        if ExpManager.is_scope(instr) && nargin>1 && lockSegments==1
-            if isfield(sweepSettings, 'SegmentNum')
-                exp.instrSettings.(instrument{1}).averager.nbrSegments =  sweepSettings.SegmentNum.numPoints;
-            elseif isfield(sweepSettings, 'SegmentNumWithCals')
-                exp.instrSettings.(instrument{1}).averager.nbrSegments =  sweepSettings.SegmentNumWithCals.numPoints;
-            else
-                warning('Sweeps do not include segments')
+        if ExpManager.is_scope(instr) && nargin>1 
+            if lockSegments==1
+                if isfield(sweepSettings, 'SegmentNum')
+                    exp.instrSettings.(instrument{1}).averager.nbrSegments =  sweepSettings.SegmentNum.numPoints;
+                elseif isfield(sweepSettings, 'SegmentNumWithCals')
+                    exp.instrSettings.(instrument{1}).averager.nbrSegments =  sweepSettings.SegmentNumWithCals.numPoints;
+                else
+                    warning('Sweeps do not include segments')
+                end
+            end
+            if singleShot==1
+                exp.instrSettings.(instrument{1}).averager.nbrRoundRobins = 1;
             end
         end
 end
