@@ -19,6 +19,11 @@
 
 function [ampFactor, phaseSkew] = optimize_mixer_ampPhase_bySweep(obj)
 
+persistent figHandles
+if isempty(figHandles)
+                figHandles = struct();
+end
+
 % unpack constants from cfg file
 ExpParams = obj.expParams;
 awgAmp = obj.awgAmp;
@@ -35,7 +40,11 @@ fprintf('\nStarting sweep search for optimal amp/phase\n');
 %First we scan the amplitude with the phase at zero
 ampPts = linspace(ExpParams.Sweep.ampFactor.start*awgAmp, ExpParams.Sweep.ampFactor.stop*awgAmp, ExpParams.Sweep.ampFactor.numPoints);
 
-figure(302); clf;
+if ~isfield(figHandles, 'mixAmpPhase') || ~ishandle(figHandles.('mixAmpPhase'))
+figHandles.('mixAmpPhase') = figure('Name', 'I-Q Amp/Skew'); 
+else
+    figure(figHandles.('mixAmpPhase')); clf;
+end
 axesHAmp = subplot(2,1,1);
 measPowers1 = nan(1, length(ampPts));
 tmpLine = plot(axesHAmp, ampPts/awgAmp, measPowers1, 'b*');
