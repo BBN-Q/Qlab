@@ -1,5 +1,10 @@
 function pauliSetPlot(pauliVec, varargin)
 
+persistent figHandles
+if isempty(figHandles)
+    figHandles = struct();
+end
+
 nbrQubits = log2(length(pauliVec))/2;
 [~, pauliStrs] = paulis(nbrQubits);
 
@@ -9,9 +14,13 @@ weights = cellfun(@pauliHamming, pauliStrs);
 pauliStrs = pauliStrs(weightIdx);
 pauliVec = pauliVec(weightIdx);
 
-if nargin>1
-    figure(varargin{1}); clf;
-else 
+if ~isempty(varargin)
+    if ~isfield(figHandles, varargin{1}) || ~ishandle(figHandles.(varargin{1}))
+        figHandles.(varargin{1}) = figure('Name', varargin{1});
+    else
+        figure(figHandles.(varargin{1})); clf;
+    end
+else
     figure();
 end
 bar(pauliVec);
