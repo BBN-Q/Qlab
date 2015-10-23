@@ -24,7 +24,7 @@ function [i_offset, q_offset] = optimize_mixer_offsets_bySweep(obj)
 
 persistent figHandles
 if isempty(figHandles)
-                figHandles = struct();
+    figHandles = struct();
 end
 
 % unpack constants from cfg file

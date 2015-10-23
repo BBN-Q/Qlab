@@ -1,4 +1,4 @@
-function optvalue = analyzeCalCR(caltype, CRdata,channel, CRname, varargin)
+function optvalue = analyzeCalCR(caltype, CRdata,channel, CRname)
 %simple fit function to get optimum length/phase in a CR calibration
 %and set in pulse params
 
@@ -7,6 +7,11 @@ function optvalue = analyzeCalCR(caltype, CRdata,channel, CRname, varargin)
 % 2 - phase
 
 %channel: channel with the target data
+
+persistent figHandles
+if isempty(figHandles)
+    figHandles = struct();
+end
 
 CRpulsename = CRname;
 
@@ -42,6 +47,7 @@ if(caltype==1)
     fprintf('Length index for CNOT = %f\n', mean([indmin0, indmin1])); 
     fprintf('Optimum length = %f ns\n', optlen)
     fprintf('Mismatch between |0> and |1> = %f ns\n', abs(xpoints(indmin1)-xpoints(indmin0)))
+    CRfigname = 'CRlength';
 elseif(caltype==2)
     %find max contrast
     ctrfit = yfit0-yfit1;
@@ -50,15 +56,16 @@ elseif(caltype==2)
     fprintf('Phase index for maximum contrast = %d\n', indmax)
     fprintf('Optimum phase = %f\n', optphase)
     fprintf('Contrast = %f\n', maxctr/2);
+    CRfigname = 'CRphase';
 else
     frpintf('Calibration type not supported')
     return
 end
 
-if nargin>4
-    figure(varargin{1});  
+if ~isfield(figHandles, CRfigname) || ~ishandle(figHandles.(CRfigname))
+    figHandles.(CRfigname) = figure('Name', CRfigname);
 else
-    figure(101)
+    figure(figHandles.(CRfigname)); clf;
 end
 plot(xpoints, data0, 'b.', xpoints, data1, 'r.', xpoints, yfit0, 'b-', xpoints, yfit1, 'r-','MarkerSize',16);
 legend('ctrlQ in |0>','ctrlQ in |1>');

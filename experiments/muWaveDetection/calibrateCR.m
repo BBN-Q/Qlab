@@ -82,4 +82,4 @@ ExpScripter2('CRcal_ph', expSettings, 'lockSegments');
 
 %analyze the sequence and updates CR pulse
 data=load_data('latest');
-optphase = analyzeCalCR(2,data,CalParams.channel,CalParams.CR, 102);
+optphase = analyzeCalCR(2,data,CalParams.channel,CalParams.CR);

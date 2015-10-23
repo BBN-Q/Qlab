@@ -21,7 +21,7 @@ function [ampFactor, phaseSkew] = optimize_mixer_ampPhase_bySweep(obj)
 
 persistent figHandles
 if isempty(figHandles)
-                figHandles = struct();
+    figHandles = struct();
 end
 
 % unpack constants from cfg file
