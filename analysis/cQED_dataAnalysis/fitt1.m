@@ -3,6 +3,12 @@ function [t1, t1error] = fitt1(xdata, ydata)
 % usage: [t1, t1error] = fitt1(data, xstart, xend)
 
 % if no input arguments, try to get the data from the current figure
+
+persistent figHandles
+if isempty(figHandles)
+    figHandles = struct();
+end
+
 if nargin < 2 
     h = gcf;
     line = findall(h, 'Type', 'Line');
@@ -11,7 +17,12 @@ if nargin < 2
     % save figure title
     plotTitle = get(get(gca, 'Title'), 'String');
 else
-    h = figure;
+    if ~isfield(figHandles, 'T1') || ~ishandle(figHandles.('T1'))
+        figHandles.('T1') = figure('Name', 'T1');
+        h = figHandles.('T1');
+    else
+        h = figure(figHandles.('T1')); clf;
+    end
     plotTitle = '';
 end
 xdata = xdata(:);
