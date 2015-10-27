@@ -22,6 +22,11 @@
 
 function [i_offset, q_offset] = optimize_mixer_offsets_bySweep(obj)
 
+persistent figHandles
+if isempty(figHandles)
+    figHandles = struct();
+end
+
 % unpack constants from cfg file
 ExpParams = obj.expParams;
 awg_I_channel = str2double(obj.channelParams.physChan(end-1));
@@ -33,13 +38,17 @@ offsetPts = linspace(ExpParams.Sweep.offset.start, ExpParams.Sweep.offset.stop, 
 vertex = struct();
 %Sweep the I with Q at 0
 measPowers1 = nan(1, length(offsetPts));
-figure();
+if ~isfield(figHandles, 'mixOffset') || ~ishandle(figHandles.('mixOffset'))
+    figHandles.('mixOffset') = figure('Name', 'I-Q offsets'); 
+else
+    figure(figHandles.('mixOffset')); clf;
+end
 axesH = axes();
 tmpLine = plot(axesH,offsetPts, measPowers1, 'b*');
 hold on
 set(get(get(tmpLine,'Annotation'),'LegendInformation'),...
     'IconDisplayStyle','off'); % Exclude line from legend
-xlabel('Offset Voltage (V)');
+xlabel(['Offset Voltage ' obj.chan ' (V)']);
 ylabel('Peak Power (dBm)');
 for ct = 1:length(offsetPts)
     vertex.a = offsetPts(ct); vertex.b = 0;

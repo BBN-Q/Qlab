@@ -5,6 +5,11 @@ function [T2s, freqs] = fitramsey2D(xdata, ydata)
 % xdata : vector of time samples
 % ydata : matrix of data (each Ramsey experiment along a row)
 
+persistent figHandles
+if isempty(figHandles)
+    figHandles = struct();
+end
+
 numScans = size(ydata,1);
 T2s = zeros(numScans, 1);
 freqs = zeros(numScans, 1);
@@ -23,7 +28,11 @@ for cnt=1:numScans
     p = [mean(y) abs(amps(biggestC)) Ts(biggestC) 2*pi*freqs(biggestC) 0];
     [beta,r,j] = nlinfit(xdata, y, rabif, p);
 
-    figure(100)
+    if ~isfield(figHandles, 'Ramsey') || ~ishandle(figHandles.('Ramsey'))
+        figHandles.('Ramsey') = figure('Name', 'Ramsey');
+    else
+        figure(figHandles.('Ramsey')); clf;
+    end
     subplot(3,1,2:3)
     plot(xdata,y,'o')
     hold on

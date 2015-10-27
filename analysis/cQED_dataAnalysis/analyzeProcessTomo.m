@@ -1,7 +1,21 @@
-function [gateFidelity, choiSDP, choiLSQ] = analyzeProcessTomo(data, idealProcess, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrCalRepeats)
+function [gateFidelity, choiSDP, choiLSQ] = analyzeProcessTomo(data, idealProcess, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrCalRepeats, varargin)
 %analyzeProcess Performs SDP tomography, calculates gates fidelites and plots pauli maps.
 %
 % [gateFidelity, choiSDP] = analyzeProcessTomo(data, idealProcessStr, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrRepeats) 
+
+% optional argument: newplot. If true, make new figure windows
+% (default = false)
+
+persistent figHandles
+if isempty(figHandles)
+    figHandles = struct();
+end
+
+if(isempty(varargin))
+    newplot = false;
+else
+    newplot = varargin{1};
+end
 
 %seperate calibration experiments from tomography data and flatten the
 %experiment data
@@ -91,7 +105,15 @@ pauliStrs = pauliStrs(weightIdx);
 cmap = [hot(50); 1-hot(50)];
 cmap = cmap(19:19+63,:); % make a 64-entry colormap
 
-figure()
+if newplot
+    figure();
+else
+    if ~isfield(figHandles, 'pauliMapLSQ') || ~ishandle(figHandles.('pauliMapLSQ'))
+        figHandles.('pauliMapLSQ') = figure('Name', 'pauliMapLSQ');
+    else
+        figure(figHandles.('pauliMapLSQ')); clf;
+    end
+end
 imagesc(real(pauliMapLSQ),[-1,1])
 colormap(cmap)
 colorbar
@@ -105,7 +127,15 @@ xlabel('Input Pauli Operator');
 ylabel('Output Pauli Operator');
 title('LSQ Reconstruction');
 
-figure()
+if newplot
+    figure();
+else
+    if ~isfield(figHandles, 'pauliMapExp') || ~ishandle(figHandles.('pauliMapExp'))
+        figHandles.('pauliMapExp') = figure('Name', 'pauliMapExp');
+    else
+        figure(figHandles.('pauliMapExp')); clf;
+    end
+end
 imagesc(real(pauliMapExp),[-1,1])
 colormap(cmap)
 colorbar
@@ -119,7 +149,15 @@ xlabel('Input Pauli Operator');
 ylabel('Output Pauli Operator');
 title('MLE Reconstruction');
 
-figure()
+if newplot
+    figure();
+else
+    if ~isfield(figHandles, 'pauliMapIdeal') || ~ishandle(figHandles.('pauliMapIdeal'))
+        figHandles.('pauliMapIdeal') = figure('Name', 'pauliMapIdeal');
+    else
+        figure(figHandles.('pauliMapIdeal')); clf;
+    end
+end
 imagesc(real(pauliMapIdeal),[-1,1])
 colormap(cmap)
 colorbar
