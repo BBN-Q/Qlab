@@ -85,12 +85,13 @@ classdef SingleShot < MeasFilters.MeasFilter
                 %at the beginning of the record
                 kernel = kernel.*(abs(groundMean-excitedMean)>(1e-3*distance));
                 fprintf('norm: %g\n', sum(abs(kernel)));
-                %normalize between -1 and 1.
-                kernel = kernel/max([real(kernel); imag(kernel)]);
-                
+                               
                 if isreal(kernel)
                     kernel = myhilbert(kernel);
                 end
+                
+                %normalize between -1 and 1.
+                kernel = kernel/max([abs(real(kernel)); abs(imag(kernel))]);
                 
                 %apply matched filter
                 weightedGround = bsxfun(@times, obj.groundData, kernel);
