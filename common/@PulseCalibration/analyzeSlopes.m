@@ -1,5 +1,10 @@
 function bestParam = analyzeSlopes(data, numPsQId, paramRange, numShots)
 
+persistent figHandles
+if isempty(figHandles)
+    figHandles = struct();
+end
+
 %Assume that we have nbrRepeats = 1 for now
 nbrRepeats = 1;
 data = mean(reshape(data,nbrRepeats,[]),1);
@@ -14,7 +19,13 @@ measNoise = var(scaledData(1:numPsQId+1:end-1));
 shotNoise = 1/numShots;
 % actual variance should be measurement noise plus shot noise
 varEstimate = sqrt(measNoise^2 + shotNoise^2);
-figure;
+
+if ~isfield(figHandles, 'DRAG') || ~ishandle(figHandles.('DRAG'))
+    figHandles.('DRAG') = figure('Name', 'DRAG');
+else
+    figure(figHandles.('DRAG')); clf;
+end
+
 h = axes();
 plot(h, 1:length(scaledData), scaledData); hold on;
 
