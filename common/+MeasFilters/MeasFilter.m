@@ -116,7 +116,7 @@ classdef MeasFilter < handle
         
         function out = get_var(obj)
             out = struct();
-            if ~isempty(obj.accumulatedVar)
+            if ~isempty(obj.accumulatedVar) && ~isempty(get_data(obj))
                 out.realvar = obj.accumulatedVar.real/(obj.varct) - real(get_data(obj)).^2;
                 out.imagvar = obj.accumulatedVar.imag/(obj.varct) - imag(get_data(obj)).^2;
                 out.prodvar = obj.accumulatedVar.prod/(obj.varct) - real(get_data(obj)).*imag(get_data(obj));
