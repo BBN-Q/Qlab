@@ -138,7 +138,7 @@ classdef HolzworthHS9000 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.li
         end
         
         function set.frequency(obj, freq)
-            obj.write(obj.channel, [':FREQ:' num2str(freq) 'GHz']);
+            obj.write(obj.channel, [':FREQ:' num2str(freq, '%.12f') 'GHz']); % 0.001Hz resolution according to datasheet
             obj.frequency = freq;
         end
         
