@@ -251,7 +251,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             % don't know why I need them, but without the pause commands
             % the SetRFOn command is occasionally ignored
             pause(0.1);
-            %calllib('vnx_fmsynth', 'fnLMS_SetRFOn', obj.devID, obj.cast_boolean(value));
+            calllib('vnx_fmsynth', 'fnLMS_SetRFOn', obj.devID, obj.cast_boolean(value));
             pause(0.1);
         end
 
@@ -301,11 +301,11 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             end
 
             calllib('vnx_fmsynth', 'fnLMS_SetUseInternalRef', obj.devID, checkMapObj(lower(value)));
+
             if (strncmpi(value,'ext', 3))
                 % test for PLL lock to make sure external reference is there
                 if (~obj.pllLocked)
-                    fprintf(['Labbrick PLL was not locked for ' num2str(obj.serialNum) '\n']); 
-                    %error('Labbrick PLL is not locked');
+                    error('Labbrick PLL is not locked');
                 end
             else
                 %Try to catch intermittent PLL-lock when external reference is applied

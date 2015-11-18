@@ -30,7 +30,7 @@ classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDriv
 			val = logical(str2double(query(instr, 'LEDS?')));
 		end
 
-		function set.leds(instr, val)
+		function set.leds(obj, val)
 			write(instr, sprintf('LEDS %d', val));
 		end
 
