@@ -5,6 +5,17 @@
  bufferA assumed to be N-D, where N > 1
  bufferB assumed to be 1D with length matching size(bufferA,1)
  returns the dot product along the first dimension
+
+ Compilation instructions:
+
+ GCC
+ mex COPTIMFLAGS="-O2 -DNDEBUG -ftree-vectorize -ftree-vectorizer-verbose=2 -ffast-math -msse2" dotFirstDim.c
+
+ ICC
+ mex COMPFLAGS="$COMPFLAGS /Qvec-report:2" dotFirstDim.c
+
+ Clang
+ mex COPTIMFLAGS="-O3 -DNDEBUG -ffast-math -Rpass=loop-vectorize -Rpass-analysis=loop-vectorize" dotFirstDim.c
  */
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
