@@ -85,9 +85,11 @@ classdef (Sealed) DigitalAttenuator < deviceDrivers.lib.Serial
             end
             if (value < obj.MIN_VALUE)
                 value = obj.MIN_VALUE;
+                warning('Digital attenuation exceeds min value. Set to %.1f dB', obj.MIN_VALUE');
             end
             if (value > obj.MAX_VALUE)
                 value = obj.MAX_VALUE;
+                warning('Digital attenuation exceeds max value. Set to %.1f dB', obj.MAX_VALUE);
             end
             
             cmd = sprintf('SET %d %.1f', [channel value]);
