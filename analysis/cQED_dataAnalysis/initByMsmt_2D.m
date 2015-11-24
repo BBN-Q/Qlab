@@ -1,9 +1,9 @@
-function [bins, PDFvec,data_con,var_con,opt_thr,datamat, fidvec_un, err0, err1] = initByMsmt_2D(data,Anum,numSegments,numMeas,indMeas,selectMeas,selectSign,threshold,docond,numCal)
+function [bins, PDFvec,data_con,var_con,opt_thr,datamat, fidvec_un, err0, err1] = initByMsmt_2D(data,Anum,numSegments,numMeas_A,indMeas,selectMeas,selectSign,threshold,docond,numCal)
 %data = data qubits
 %data = single ancilla qubit. Data to be postselected on
 %Anum = index of ancilla measurement
 %numSegments = number of distinct segments in the sequence
-%numMeas = number of meauserements per segments
+%numMeas_A = number of ancilla measurements per segments (including those to be conditioned on)
 %indMeas = list of indeces of the msmt's to compare for fidelity
 %selectMeas = indeces of msms't to postselect on. All the msm'ts in a
      %segment will be postselected on this one
@@ -11,6 +11,14 @@ function [bins, PDFvec,data_con,var_con,opt_thr,datamat, fidvec_un, err0, err1] 
      %-1 = keep smaller than
 %threshold
 %docond. If 1, do postselection
+%numCal = number of calibration sequences. Currently, it assumes that they only have 1
+%measurement per qubit.
+
+numMeas_D=numMeas_A; 
+%the number of data measurements can be different from numMeas_A. For
+%instance, there may be multiple conditioning rounds before data
+%tomography. However, there is currently the constraint that all channels,
+%even if in different cards, acquire the same number of shots. 
 
 ind0=indMeas(1,:);
 ind1=indMeas(2,:);
@@ -29,18 +37,18 @@ for kk = 1:size(data.data,2)-1
         ind=ind+1;
 end
 
-numShots = floor(length(data_A)/(numMeas*numSegments));
+numShots_A = floor(length(data_A)/(numMeas_A*(numSegments-numCal)+numCal));
 for kk = 1:size(data_D,2)
-    datamat{kk} = splitdata(real(data_D{kk}),numShots,numMeas*numSegments);
+    datamat{kk} = splitdata(real(data_D{kk}),numShots_A,numMeas_D*(numSegments-numCal)+numCal);
 end
 data_A=real(data_A);
-datamat_A = splitdata(data_A,numShots,numMeas*numSegments);
+datamat_A = splitdata(data_A,numShots_A,numMeas_A*(numSegments-numCal)+numCal);
 bins = linspace(min(min(datamat_A)), max(max(datamat_A)),500);
 
-PDFvec = zeros(length(bins),numMeas*numSegments);
+PDFvec = zeros(length(bins),numMeas_A*(numSegments-numCal)+numCal);
 %PDFvec_con = zeros(length(bins),numMeas*numSegments);
 
-for kk=1:numMeas*numSegments
+for kk=1:numMeas_A*(numSegments-numCal)+numCal
     PDFvec(:,kk) = ksdensity(datamat_A(:,kk), bins);
     %PDFvec(:,kk) = hist(datamat(:,kk), bins);
 
@@ -51,8 +59,8 @@ fidvec_un = zeros(length(ind0),1);
 %fidvec_con = zeros(length(ind0),1);
 err0 = zeros(length(ind0),1);
 err1 = zeros(length(ind0),1);
-datatemp = zeros(numSegments, numMeas-length(selectMeas));
-vartemp = zeros(numSegments, numMeas-length(selectMeas));
+datatemp = zeros(numSegments, numMeas_D)%-length(selectMeas));
+vartemp = zeros(numSegments, numMeas_D)%-length(selectMeas));
 
 
 for kk=1:size(PDFvec,2)
@@ -82,11 +90,11 @@ if(docond)
             for kk=1:length(selectMeas)
                 ind = selectMeas(kk);
                 
-                for jj=1:numShots
-                    if selectSign == 1 && datamat_A(jj,numMeas*(mm-1)+ind) < threshold
-                        dataslice(jj,numMeas*(mm-1)+1:numMeas*(mm-1)+numMeas)=NaN;
-                    elseif selectSign == -1 && datamat_A(jj,numMeas*(mm-1)+ind) > threshold
-                        dataslice(jj,numMeas*(mm-1)+1:numMeas*(mm-1)+numMeas)=NaN;
+                for jj=1:numShots_A*numMeas_A/numMeas_D
+                    if selectSign(kk) == 1 && datamat_A(jj,numMeas_A*(mm-1)+ind) < threshold
+                        dataslice(jj,numMeas_A*(mm-1)+1:numMeas_A*(mm-1)+numMeas_A)=NaN;
+                    elseif selectSign(kk) == -1 && datamat_A(jj,numMeas_A*(mm-1)+ind) > threshold
+                        dataslice(jj,numMeas_A*(mm-1)+1:numMeas_A*(mm-1)+numMeas_A)=NaN;
                     end
                 end
                 
@@ -102,17 +110,21 @@ for nn=1:size(data_D,2)
     dataslice = datamat{nn};
 for jj=1:numSegments
     thismeas=1;
-    for kk=1:numMeas
+    for kk=1:numMeas_D
         %PDFvec_con(:,(jj-1)*numMeas+kk) =
         %ksdensity(datamat(:,numMeas*(jj-1)+kk), bins); ignore for now.
         %This is the conditioned distribution of data qubit results
         %if(size(find(kk==selectMeas),1)==0) %this condition is necessary
         %not to condition a measurement on itself. This does not occur with
         %feed-forward schemes (i.e., data qubits conditioned on ancilla)
-            datatemp(jj, thismeas) = nanmean(dataslice(:,numMeas*(jj-1)+kk));
-            vartemp(jj, thismeas) = nanvar(dataslice(:, numMeas*(jj-1)+kk));
-            thismeas=thismeas+1;
-        %end
+        if jj<numSegments-numCal+1
+            datatemp(jj, thismeas) = nanmean(dataslice(:,numMeas_D*(jj-1)+kk)); 
+            vartemp(jj, thismeas) = nanvar(dataslice(:, numMeas_D*(jj-1)+kk));
+        else
+            datatemp(jj, thismeas) = nanmean(dataslice(:,numMeas_D*(numSegments-numCal) + (jj-(numSegments-numCal))));
+            vartemp(jj, thismeas) = nanvar(dataslice(:,numMeas_D*(numSegments-numCal) + (jj-(numSegments-numCal)))); %same cal. points for all data measurements
+        end
+        thismeas=thismeas+1;
     end
 end
     data_con{nn} = datatemp;
