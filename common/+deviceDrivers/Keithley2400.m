@@ -13,7 +13,8 @@
 % limitations under the License.
 %
 % File: Kiethley2400.m
-% Author: Jesse Crossno (crossno@seas.harvard.edu)
+% Authors: Jesse Crossno (crossno@seas.harvard.edu)
+%          Evan Walsh (evanwalsh@seas.harvard.edu)
 %
 % Description: Instrument driver for the Kiethley 2400 sourcemeter.
 % 
@@ -26,12 +27,68 @@ classdef Keithley2400 < deviceDrivers.lib.GPIB
         Current
         CurrentRange
         VoltageRange
+        Measure
+        output
+        mode
+        value
     end
     
     methods
         function obj = Keithley2400()
         end        
 
+        %get value (voltage or current) regardless of mode
+        function val = get.value(obj)
+            data=obj.query(':READ?');
+            
+            if strcmp(strtrim(obj.query(':SENSE:FUNCTION?')),'"VOLT:DC"')
+                val = str2num(data(1:13));
+            elseif strcmp(strtrim(obj.query(':SENSE:FUNCTION?')),'"CURR:DC"')
+                val = str2num(data(15:27));
+            end
+        end
+        
+        %get mode
+        function val = get.mode(obj)
+            val = strtrim(obj.query(':SOURCE:FUNCTION?'));
+        end
+        
+        %get output state (on or off)
+        function val = get.output(obj)
+            val = str2double(obj.query(':OUTPUT:STATE?'));
+        end
+        
+        %set value (voltage or current) regardless of mode
+        function obj = set.value(obj, value)
+            
+            if strcmp(strtrim(obj.query(':SOURCE:FUNCTION?')),'VOLT')
+                obj.write([':SOURCE:VOLT:LEVEL ' num2str(value)]);
+            elseif strcmp(strtrim(obj.query(':SOURCE:FUNCTION?')),'CURR')
+                obj.write([':SOURCE:CURR:LEVEL ' num2str(value)]);
+            end
+        end
+        
+        %set mode
+        function obj = set.mode(obj, mode)
+            valid_modes = {'current', 'curr', 'voltage', 'volt'};
+            if ~ismember(mode, valid_modes)
+                error('Invalid mode');
+            end
+            obj.write([':SOURCE:FUNCTION ' mode]);
+        end
+        
+        %set output state (on or off)
+        function obj = set.output(obj, value)
+            if isnumeric(value) || islogical(value)
+                value = num2str(value);
+            end
+            valid_inputs = ['on', '1', 'off', '0'];
+            if ~ismember(value, valid_inputs)
+                error('Invalid input');
+            end         
+            obj.write([':OUTPUT:STATE ' value]);
+        end
+            
         % place in current source mode
         function CurrentMode(obj)
             obj.write('SOURce:FUNC:MODE CURR;');
