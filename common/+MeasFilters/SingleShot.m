@@ -28,6 +28,7 @@ classdef SingleShot < MeasFilters.MeasFilter
         saveKernel = true
         optIntegrationTime = true
         setThreshold = false
+        kernelNumber = NaN
     end
     
     methods
@@ -44,6 +45,9 @@ classdef SingleShot < MeasFilters.MeasFilter
             end
             if isfield(settings, 'setThreshold')
                 obj.setThreshold = settings.setThreshold;
+            end
+            if isfield(settings, 'kernelNumber')
+                obj.kernelNumber = settings.kernelNumber;
             end
         end
         
@@ -149,8 +153,13 @@ classdef SingleShot < MeasFilters.MeasFilter
                     if ~obj.optIntegrationTime
                         intPt = length(kernel);
                     end
-                    dlmwrite(strcat('kernel_',obj.dataSource,'_real.csv'), real(kernel)); 
-                    dlmwrite(strcat('kernel_',obj.dataSource,'_imag.csv'), imag(kernel));
+                    if ~isnan(obj.kernelNumber)
+                        kernelSuffix = [obj.dataSource '_' num2str(obj.kernelNumber)];
+                    else
+                        kernelSuffix = obj.dataSource;
+                    end
+                    dlmwrite(strcat('kernel_',kernelSuffix,'_real.csv'), real(kernel)); 
+                    dlmwrite(strcat('kernel_',kernelSuffix,'_imag.csv'), imag(kernel));
                 end
                 
                 obj.pdfData.maxFidelity_I = 1-0.5*(1-0.5*(bins(2)-bins(1))*sum(abs(gPDF-ePDF)));

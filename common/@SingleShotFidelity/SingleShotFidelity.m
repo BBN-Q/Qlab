@@ -67,6 +67,10 @@ classdef SingleShotFidelity < handle
             
             obj.autoSelectAWGs = settings.autoSelectAWGs;
             
+            if ~isfield(settings,'kernelNumber')
+                obj.settings.kernelNumber = NaN;
+            end
+            
             % add instruments
             for instrument = fieldnames(instrSettings)'
                 fprintf('Connecting to %s\n', instrument{1});
@@ -124,7 +128,7 @@ classdef SingleShotFidelity < handle
             add_measurement(obj.experiment, 'SingleShot',...
                 MeasFilters.SingleShot('SingleShot', struct('dataSource', obj.settings.dataSource, 'plotMode', 'real/imag', 'plotScope', true,...
                 'logisticRegression', obj.settings.logisticRegression, 'saveKernel', obj.settings.saveKernel, 'optIntegrationTime', ...
-                obj.settings.optIntegrationTime, 'setThreshold', obj.settings.setThreshold)));
+                obj.settings.optIntegrationTime, 'setThreshold', obj.settings.setThreshold, 'kernelNumber', obj.settings.kernelNumber)));
             curSource = obj.settings.dataSource;
             while (true)
                sourceParams = measSettings.(curSource);
