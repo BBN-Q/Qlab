@@ -33,10 +33,11 @@ end
 %fit sine curves
 [beta0,~,~] = nlinfit(xpoints, data0(:),sinf,p);
 [beta1,~,~] = nlinfit(xpoints, data1(:),sinf,p);
-%todo: make fit xpoints finer
-%xpoints = linspace(xpoints(1),xpoints(end),1001);
+xpoints_f = linspace(xpoints(1),xpoints(end),1001);
 yfit0 = sinf(beta0,xpoints);
 yfit1 = sinf(beta1,xpoints);
+yfit0_f = sinf(beta0,xpoints_f);
+yfit1_f = sinf(beta1,xpoints_f);
 
 if(caltype==1) 
     yfit0c = yfit0(1:min(round(abs(beta0(2))/2/(xpoints(2)-xpoints(1))),end)); %select the first half period or less
@@ -50,9 +51,9 @@ if(caltype==1)
     CRfigname = 'CRlength';
 elseif(caltype==2)
     %find max contrast
-    ctrfit = yfit0-yfit1;
+    ctrfit = yfit0_f-yfit1_f;
     [maxctr, indmax] = max(ctrfit);
-    optphase = xpoints(indmax)-180; %set the phase for ZX90
+    optphase = xpoints_f(indmax)-180; %set the phase for ZX90
     fprintf('Phase index for maximum contrast = %d\n', indmax)
     fprintf('Optimum phase = %f\n', optphase)
     fprintf('Contrast = %f\n', maxctr/2);
