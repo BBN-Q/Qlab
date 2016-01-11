@@ -1,6 +1,7 @@
-function [optlen, optphase] = calibrateCR(control, target, CR, chan, lenstep)
+function [optlen, optphase, contrast] = calibrateCR(control, target, CR, chan, lenstep, varargin)
 %function to calibrate length and phase of CR pulse. It assumes that the
 %sequence EchoCR is loaded. Need to change it to load all sequences. 
+%optional argument: expSettings 
 CalParams = struct();
 CalParams.control = control;
 CalParams.target = target;
@@ -10,7 +11,11 @@ CalParams.lenstep = lenstep; %step in length calibration (in ns)
 
 warning('off', 'json:fieldNameConflict');
 chanSettings = json.read(getpref('qlab', 'ChannelParamsFile'));
-expSettings = json.read(getpref('qlab', 'CurScripterFile'));
+if isempty(varargin)
+    expSettings = json.read(getpref('qlab', 'CurScripterFile'));
+else
+    expSettings = varargin{1};
+end
 instrSettings = expSettings.instruments;
 warning('on', 'json:fieldNameConflict');
 chanSettings = chanSettings.channelDict;
@@ -82,4 +87,4 @@ ExpScripter2('CRcal_ph', expSettings, 'lockSegments');
 
 %analyze the sequence and updates CR pulse
 data=load_data('latest');
-optphase = analyzeCalCR(2,data,CalParams.channel,CalParams.CR);
+[optphase, contrast] = analyzeCalCR(2,data,CalParams.channel,CalParams.CR);
