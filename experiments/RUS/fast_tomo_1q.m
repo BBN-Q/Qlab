@@ -1,6 +1,7 @@
 function [bins, PDFvec, data_con, rhoa,rhob]=fast_tomo_1q(cond, threshold, opcode, varargin)
 %load tomo from single shots, postselect on ancilla
 %cond = 1,-1,0 for conditioned (>, <), unconditioned
+%opcode = 1:serial, 2: parallel
 %threshold = ancilla value for postselection.
 numSegmentsvec = [10,14];
 ASegmentsvec = [[8;10],[11;13]];

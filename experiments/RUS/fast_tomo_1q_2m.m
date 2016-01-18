@@ -16,7 +16,7 @@ else
     data=load_data('latest');
 end
 alldata=reshape_cells(data);
-if cond~=0
+if any(cond)
     docond=1;
 else
     docond=0;
