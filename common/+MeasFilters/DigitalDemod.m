@@ -16,7 +16,7 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 classdef DigitalDemod < MeasFilters.MeasFilter
-    
+
     properties
         saveRecords
         fileHandleReal
@@ -32,92 +32,92 @@ classdef DigitalDemod < MeasFilters.MeasFilter
         nBandwidth
         nIFfreq
     end
-    
+
     methods
         function obj = DigitalDemod(label, settings)
             obj = obj@MeasFilters.MeasFilter(label, settings);
             obj.saved = false; %until we figure out a new data format then we don't save the raw streams
-            
+
             obj.saveRecords = settings.saveRecords;
             if obj.saveRecords
                 obj.fileHandleReal = fopen([settings.recordsFilePath, '.real'], 'wb');
                 obj.fileHandleImag = fopen([settings.recordsFilePath, '.imag'], 'wb');
             end
-            
+
             obj.IFfreq = settings.IFfreq;
             obj.bandwidth = settings.bandwidth;
             obj.samplingRate = settings.samplingRate;
-            
+
             %normalize frequencies to Nyquist
             obj.nBandwidth= obj.bandwidth/(obj.samplingRate/2);
             obj.nIFfreq = obj.IFfreq/(obj.samplingRate/2);
-            
+
             obj.decimFactor1 = settings.decimFactor1;
             if ( obj.decimFactor1 > floor(0.45/(2*obj.nIFfreq + obj.nBandwidth/2)) )
                 warning('First stage decimation factor is too high and 2*omega signal will alias.');
             end
             obj.nBandwidth = obj.nBandwidth * obj.decimFactor1;
             obj.nIFfreq = obj.nIFfreq * obj.decimFactor1;
-            
+
             obj.decimFactor2 = settings.decimFactor2;
             obj.nBandwidth = obj.nBandwidth * obj.decimFactor2;
             if ( obj.nBandwidth < 0.05 )
                 warning('Insufficient first and second stage decimation. IIR filter will be unstable.');
             end
-            
+
             obj.decimFactor3 = settings.decimFactor3;
-            
-            obj.phase = settings.phase;
-            
+
+            obj.phase = deg2rad(settings.phase);
+
         end
-        
+
         function delete(obj)
             if obj.saveRecords
                 fclose(obj.fileHandleReal);
                 fclose(obj.fileHandleImag);
             end
         end
-        
+
         
         function apply(obj, src, ~)
-            
+
             data = src.latestData;
-            
+
             %Digitally demodulates a signal at frequency IFfreq down to DC. Does this
             %by moving to the IFfreq rotating frame and low-passing the result.
-            
+
             % If the IFfreq is too small, the resulting IIR lowpass is unstable. So, we
             % use a first stage of decimation as long as the 2*omega signal won't alias
             % when we digitally downconvert
             if obj.decimFactor1 > 1
                 data = MeasFilters.polyDecimator(data, obj.decimFactor1);
             end
-            
+
             %Create the weighted reference signal (the size of a single acquisition is
             %given by the first dimension of data)
-            refSignal = single(exp(1i*pi*obj.nIFfreq*(1:size(data,1)))');
+            refSignal = single(exp(1i*pi*(obj.nIFfreq*(1:size(data,1)) + obj.phase))');
             % efficiently compute data .* refSignal (with singleton dimension
             % expansion)
             prodSignal = bsxfun(@times, data, refSignal);
-            
+
             % We next want to low-pass filter the result, but if nbandwidth < 0.05, the
             % IIR filter will be unstable, so check if we need to decimate first.
             if obj.decimFactor2 > 1
                 prodSignal = MeasFilters.polyDecimator(real(prodSignal), obj.decimFactor2) + 1i*MeasFilters.polyDecimator(imag(prodSignal), obj.decimFactor2);
             end
-            
+
             %Get butterworth low-pass filter coefficients from a pre-computed lookup table
             [b,a] = MeasFilters.DigitalDemod.my_butter(obj.nBandwidth);
             % low-pass filter
             % factor of 2 to recover half of signal we filtered away
             demodSignal = 2*filter(b,a, prodSignal);
-            
+
             if obj.decimFactor3 > 1
                 demodSignal = MeasFilters.polyDecimator(real(demodSignal), obj.decimFactor3) +1i*MeasFilters.polyDecimator(imag(demodSignal), obj.decimFactor3);
             end
-            
+
             obj.latestData = demodSignal;
-            
+
             %If we have a file to save to then do so
             if obj.saveRecords
                 if ~obj.headerWritten
@@ -131,29 +131,29 @@ classdef DigitalDemod < MeasFilters.MeasFilter
                     fwrite(obj.fileHandleImag, sizes(1:3), 'int32');
                     obj.headerWritten = true;
                 end
-                
+
                 fwrite(obj.fileHandleReal, real(obj.latestData), 'single');
                 fwrite(obj.fileHandleImag, imag(obj.latestData), 'single');
             end
-            
+
             accumulate(obj);
             notify(obj, 'DataReady');
         end
     end
-    
+
     methods(Static)
-        
+
         function [b,a] = my_butter(normIFFreq)
             %Steal variable-order butter-worth filter design from scipy in a table
             %form. These are created in create_butter_table.py.
             %We discretize at 0.01 of the sampling frequency
-            
+
             %Find the closest cut-off frequency in percentage
             %For single-precision arithmetic, we need the normalized cutoff to be at
             %least 0.05 for filter coefficients to be greater than eps('single')
             assert(normIFFreq >= 0.05 && normIFFreq < 1, 'Oops! The normalized cutoff is not between 0.05 and 1')
             roundedCutOff = floor(normIFFreq*100)+1;
-            
+
             %Create the arrays of a's and b's
             filterCoeffs.a = {...
                 [ 1.         -4.94903918  9.79745281 -9.69810303  4.80000454 -0.95031514];...
@@ -255,8 +255,8 @@ classdef DigitalDemod < MeasFilters.MeasFilter
                 [ 1.          1.28657997  0.48112883];...
                 [ 1.          0.00336691];...
                 [ 1.          0.33643223]};
-            
-            
+
+
             filterCoeffs.b = {...
                 [  2.95072728e-11   1.47536364e-10   2.95072728e-10   2.95072728e-10  1.47536364e-10   2.95072728e-11];...
                 [  9.21602999e-10   4.60801499e-09   9.21602999e-09   9.21602999e-09  4.60801499e-09   9.21602999e-10];...
@@ -357,14 +357,14 @@ classdef DigitalDemod < MeasFilters.MeasFilter
                 [ 0.6919272  1.3838544  0.6919272];...
                 [ 0.50168346  0.50168346];...
                 [ 0.66821612  0.66821612]};
-            
-            
+
+
             %Pick out the row of coefficients.
             b = single(filterCoeffs.b{roundedCutOff-1});
             a = single(filterCoeffs.a{roundedCutOff-1});
-            
+
         end
-        
+
     end
-    
+
 end
