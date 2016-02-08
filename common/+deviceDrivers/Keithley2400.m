@@ -30,6 +30,9 @@ classdef Keithley2400 < deviceDrivers.lib.GPIB
         Measure
         output
         mode
+        avg_mode
+        avg_count
+        NPLC
         value
     end
     
@@ -56,6 +59,16 @@ classdef Keithley2400 < deviceDrivers.lib.GPIB
         %get output state (on or off)
         function val = get.output(obj)
             val = str2double(obj.query(':OUTPUT:STATE?'));
+        end
+            
+        %get number of counts per average
+        function val = get.avg_count(obj)
+            val = str2double(obj.query('SENS:AVER:COUN?'));
+        end
+        
+        %get NPLC
+        function val = get.NPLC(obj)
+            val = str2double(obj.query('SENS:VOLT:NPLC?'));
         end
         
         %set value (voltage or current) regardless of mode
@@ -133,6 +146,32 @@ classdef Keithley2400 < deviceDrivers.lib.GPIB
             assert(isnumeric(value), 'Invalid input');
             obj.write(sprintf('SOURce:VOLT:LEV:IMM:AMP %G;',value));
         end
+        
+        function set.avg_mode(obj, value)
+            if isnumeric(value) || islogical(value)
+                value = num2str(value);
+            end
+            valid_inputs = ['MOV', 'REP'];
+            if ~ismember(value, valid_inputs)
+                error('Invalid input');
+            end        
+            obj.write(['SENS:AVER:TCON ' value]);
+        end
+        
+        function set.avg_count(obj,value)
+            if ~isnumeric(value) || value<1 || value>100
+                error('Invalid input')
+            end
+            obj.write('SENS:AVER:COUN %G',value);
+        end
+        
+        function set.NPLC(obj,value)
+            if ~isnumeric(value) || value<.01 || value>10
+                error('Invalid input')
+            end
+            obj.write('SENS:VOLT:NPLC %G',value);
+        end
+        
         
         % set voltage protection
         function set.VoltageLimit(obj, value)
