@@ -88,6 +88,8 @@ classdef SingleShot < MeasFilters.MeasFilter
                 %too small (also prevents kernel from diverging when var->0
                 %at the beginning of the record
                 kernel = kernel.*(abs(groundMean-excitedMean)>(1e-3*distance));
+                %subtract offset to cancel low-frequency fluctuations
+                kernel = kernel - mean(kernel);
                 fprintf('norm: %g\n', sum(abs(kernel)));
                                
                 if isreal(kernel)
