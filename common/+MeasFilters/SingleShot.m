@@ -29,6 +29,7 @@ classdef SingleShot < MeasFilters.MeasFilter
         optIntegrationTime = true
         setThreshold = false
         kernelNumber = NaN
+        zeroMean = false
     end
     
     methods
@@ -48,6 +49,9 @@ classdef SingleShot < MeasFilters.MeasFilter
             end
             if isfield(settings, 'kernelNumber')
                 obj.kernelNumber = settings.kernelNumber;
+            end
+             if isfield(settings, 'zeroMean')
+                obj.zeroMean = settings.zeroMean;
             end
         end
         
@@ -88,8 +92,11 @@ classdef SingleShot < MeasFilters.MeasFilter
                 %too small (also prevents kernel from diverging when var->0
                 %at the beginning of the record
                 kernel = kernel.*(abs(groundMean-excitedMean)>(1e-3*distance));
-                %subtract offset to cancel low-frequency fluctuations
-                kernel = kernel - mean(kernel);
+                %subtract offset to cancel low-frequency fluctuations when
+                %integrating the raw data (not demod)
+                if obj.zeroMean
+                    kernel = kernel - mean(kernel);
+                end
                 fprintf('norm: %g\n', sum(abs(kernel)));
                                
                 if isreal(kernel)
@@ -140,10 +147,10 @@ classdef SingleShot < MeasFilters.MeasFilter
                     gPDF = ksdensity(intGroundIData(intPt,:), bins);
                     ePDF = ksdensity(intExcitedIData(intPt,:), bins);
                 else
-                    groundIData = sum(real(weightedGround)) - real(bias);
-                    excitedIData = sum(real(weightedExited)) - real(bias);
-                    groundQData = sum(imag(weightedGround)) - imag(bias);
-                    excitedQData = sum(imag(weightedExited)) - imag(bias);
+                    groundIData = sum(real(weightedGround)); %- real(bias);
+                    excitedIData = sum(real(weightedExited)); %- real(bias);
+                    groundQData = sum(imag(weightedGround)); %- imag(bias);
+                    excitedQData = sum(imag(weightedExited)); %- imag(bias);
                     Imin = min(min(groundIData, excitedIData));
                     Imax = max(max(groundIData, excitedIData));
                     bins = linspace(Imin, Imax);
