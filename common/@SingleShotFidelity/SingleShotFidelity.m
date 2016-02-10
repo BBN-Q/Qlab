@@ -30,7 +30,6 @@ classdef SingleShotFidelity < handle
         autoSelectAWGs
         threshold
         singleScope = true
-        zeroMean
     end
     
     methods
@@ -130,7 +129,7 @@ classdef SingleShotFidelity < handle
                 MeasFilters.SingleShot('SingleShot', struct('dataSource', obj.settings.dataSource, 'plotMode', 'real/imag', 'plotScope', true,...
                 'logisticRegression', obj.settings.logisticRegression, 'saveKernel', obj.settings.saveKernel, 'optIntegrationTime', ...
                 obj.settings.optIntegrationTime, 'setThreshold', obj.settings.setThreshold, 'kernelNumber', obj.settings.kernelNumber, ...
-                'zeroMean', obj.zeroMean)));
+                'zeroMean', obj.settings.zeroMean)));
             curSource = obj.settings.dataSource;
             while (true)
                sourceParams = measSettings.(curSource);
