@@ -118,7 +118,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
         function obj = set.offset(obj, value)
             obj.write(['VOLT:OFFSET ' num2str(value)]);
         end
-        function obj = set.high(obj. high)
+        function obj = set.high(obj, high)
             obj.write(['VOLT:HIGH ' num2str(high)]);
         end
         function obj = set.low(obj, low)
