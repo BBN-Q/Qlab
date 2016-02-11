@@ -276,6 +276,9 @@ if settings.DoRamsey
     warning('on', 'json:fieldNameConflict');
     sourceName = channelLib.channelDict.(mangledPhysChan).generator;
     instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
+    expSettings = json.read(getpref('qlab', 'CurScripterFile'));
+    expSettings.instruments.(sourceName).frequency = qubitSource.frequency;
+    json.write(expSettings, getpref('qlab', 'CurScripterFile'), 'indent', 2);
 end
 
 json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
