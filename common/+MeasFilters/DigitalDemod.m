@@ -67,7 +67,7 @@ classdef DigitalDemod < MeasFilters.MeasFilter
 
             obj.decimFactor3 = settings.decimFactor3;
 
-            obj.phase = deg2rad(settings.phase);
+            obj.phase = settings.phase/180*pi;
 
         end
 
