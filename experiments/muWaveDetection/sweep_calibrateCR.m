@@ -11,8 +11,8 @@ expSettings = json.read(getpref('qlab', 'CurScripterFile'));
 warning('on', 'json:fieldNameConflict');
 tmpStr = regexp(chanSettings.(CR).physChan, '-', 'split');
 
-optlenvec = zeros(length(ampvec),1)*NaN;
-contrastvec = zeros(length(ampvec),1)*NaN;
+optlenvec = nan(length(ampvec),1);
+contrastvec = nan(length(ampvec),1);
 
 for k = 1:length(ampvec)
     amp  = ampvec(k);

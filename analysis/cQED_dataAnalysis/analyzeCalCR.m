@@ -93,7 +93,7 @@ else
     outlen = chDict.(CRpulsename).pulseParams.length;
     outphase = optphase;
     optvalue = optphase;
-    contrast = maxctr;
+    contrast = maxctr/2;
 end
 updateLengthPhase(CRpulsename, outlen, outphase);
 end
