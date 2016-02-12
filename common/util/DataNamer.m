@@ -31,7 +31,7 @@ classdef DataNamer < handle
                 while (ct > 0)
                     fileList = dir(fullfile(obj.dataDir, obj.deviceName, folderNames{ct}, '*.h5'));
                     % pull out the number from ###_device_experiment.out
-                    tokens = regexp({fileList.name}, '(\d+)_.*\.h5', 'tokens', 'once');
+                    tokens = regexp({fileList.name}, '(\d+).*\.h5', 'tokens', 'once');
                     if ~isempty(tokens)
                         expNums = cellfun(@str2double, tokens);
                         newval = max(expNums);
