@@ -13,19 +13,24 @@ expSettings = json.read(getpref('qlab', 'CurScripterFile'));
 
 lockSegments=0; 
 singleShot=0;
+seqAPSII=0;
 
 %handle optional arguments
 for n = 2:nargin
     if isstruct(varargin{n-1})
         expSettings = varargin{n-1};
     elseif ischar(varargin{n-1})
-        if strcmp(varargin{n-1}, 'lockSegments')
+        if strcmp(varargin{n-1}, 'lockSegments') %set number of card segments equal to SegmentNum 
             lockSegments=1;
-        elseif strcmp(varargin{n-1}, 'singleShot')
+        elseif strcmp(varargin{n-1}, 'singleShot') %set round robins in all cards to 1
             singleShot=1;
+        elseif strcmp(varargin(n-1), 'seqAPSII') %only load sequences into APSII
+            seqAPSII=1;
         end
     end
 end
+
+
 
 %Save all the settings in the hdf5 file
 exp.dataFileHeader = expSettings;
@@ -44,6 +49,11 @@ if isfield(expSettings, 'saveData')
 else
     exp.saveData = true;
 end
+
+if exp.saveData
+    exp.dataFileHandler = HDF5DataHandler(DataNamer.get_data_filename(deviceName, expName));
+end
+
 sweep = fieldnames(sweepSettings)';
 
 for instrument = fieldnames(instrSettings)'
@@ -61,7 +71,7 @@ for instrument = fieldnames(instrSettings)'
             else
                 ext = 'awg';
             end
-            if isfield(expSettings, 'AWGfilename')
+            if isfield(expSettings, 'AWGfilename') && (~seqAPSII || isa(instr, 'APS2')) %if seqAPSII, only load seq. in APS2s
                 %if a sequence name is specified, load this sequence in all
                 %AWGs
                 instrSettings.(instrument{1}).seqFile = fullfile(getpref('qlab', 'awgDir'), expSettings.AWGfilename, [expSettings.AWGfilename '-' instrument{1} '.' ext]);
@@ -115,7 +125,7 @@ end
 exp.init();
 exp.run();
 
-if exp.saveAllSettings
+if exp.saveAllSettings && exp.saveData
     %saves a specific ExpSettings file, without overwriting the
     %DefaultExpSettings (already saved by ExpManager)
     fileName = exp.dataFileHandler.fileName;
