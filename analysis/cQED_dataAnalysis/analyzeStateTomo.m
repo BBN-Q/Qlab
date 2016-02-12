@@ -64,7 +64,7 @@ rhoLSQ = QST_LSQ(tomoData, varMat, measPulseMap, measOpMap, measPulseUs, measOps
 if ~newplot
     pauliSetPlot(rho2pauli(rhoLSQ),'StateTomo_LSQ');
 else
-    pauliSetPlot(rho2pauli(rhoLSQ));
+    pauliSetPlot(rho2pauli(rhoLSQ), newplot);
 end
 title('LSQ Inversion Pauli Decomposition');
 
@@ -74,7 +74,7 @@ rhoSDP = QST_SDP_uncorrelated(tomoData, varMat, measPulseMap, measOpMap, measPul
 if ~newplot
     pauliSetPlot(rho2pauli(rhoSDP),'StateTomo_SDP');
 else
-    pauliSetPlot(rho2pauli(rhoSDP));
+    pauliSetPlot(rho2pauli(rhoSDP), newplot);
 end
 title('SDP Inversion Pauli Decomposition');
 
