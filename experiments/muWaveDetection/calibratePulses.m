@@ -6,6 +6,10 @@ if ~exist('qubit', 'var')
     qubit = 'q1';
 end
 
+%optional logging of frequency and amplitudes over time
+dolog = true;
+calpath = 'C:\Users\qlab\Documents\data\Cal_Logs';
+
 % construct minimal cfg file
 ExpParams = struct();
 ExpParams.Qubit = qubit;
@@ -47,4 +51,24 @@ pulseCal = PulseCalibration();
 pulseCal.Init(ExpParams);
 pulseCal.Do();
 
+%log
+if dolog
+    expSettings = json.read(getpref('qlab', 'CurScripterFile'));
+    warning('off', 'json:fieldNameConflict');
+    chanSettings = json.read(getpref('qlab', 'ChannelParamsFile'));
+    warning('on', 'json:fieldNameConflict');
+    channelParams = chanSettings.channelDict.(qubit);
+    mangledPhysChan = genvarname(channelParams.physChan);
+    qubitSource = expSettings.instruments.(chanSettings.channelDict.(mangledPhysChan).generator);
+    freq = qubitSource.frequency;
+    piamp = chanSettings.channelDict.(qubit).pulseParams.piAmp;
+    pi2amp = chanSettings.channelDict.(qubit).pulseParams.pi2Amp;
+    amps = [piamp, pi2amp];
+    fid = fopen(fullfile(calpath, 'freqvec_', qubit, '.csv'), 'at');
+    fprintf(fid, '%s\t%.9f\n', datestr(now,31), freq)
+    fclose(fid);
+    fid = fopen(fullfile(calpath, 'ampvec_', qubit, '.csv'), 'at');
+    fprintf(fid, '%s\t%.9f\t%.4f\n', datestr(now,31), amps(1), amps(2))
+    fclose(fid);
+end
 end
