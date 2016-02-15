@@ -68,7 +68,7 @@ if dolog
     fprintf(fid, '%s\t%.9f\n', datestr(now,31), freq)
     fclose(fid);
     fid = fopen(fullfile(calpath, ['ampvec_' qubit '.csv']), 'at');
-    fprintf(fid, '%s\t%.9f\t%.4f\n', datestr(now,31), amps(1), amps(2))
+    fprintf(fid, '%s\t%.4f\t%.4f\n', datestr(now,31), amps(1), amps(2))
     fclose(fid);
 end
 end
