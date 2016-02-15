@@ -156,7 +156,11 @@ classdef MixerOptimizer < handle
                 instrLib.instrDict.(awgName).channels(iChan).offset = round(1e4*obj.results.iOffset)/1e4;
                 instrLib.instrDict.(awgName).channels(qChan).offset = round(1e4*obj.results.qOffset)/1e4;
                 json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
-                
+                instrLib = json.read(getpref('qlab', 'CurScripterFile'));
+                instrLib.instruments.(awgName).channels(iChan).offset = round(1e4*obj.results.iOffset)/1e4;
+                instrLib.instruments.(awgName).channels(qChan).offset = round(1e4*obj.results.qOffset)/1e4;
+                json.write(instrLib, getpref('qlab', 'CurScripterFile'), 'indent', 2);
+
                 case {'No','Cancel'}
                     fprintf('Not writing to file...');
             end
