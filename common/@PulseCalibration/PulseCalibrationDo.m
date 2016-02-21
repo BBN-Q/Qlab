@@ -294,6 +294,26 @@ obj.finished = true;
         
     end
 
+%log
+if settings.dolog
+    expSettings = json.read(getpref('qlab', 'CurScripterFile'));
+    warning('off', 'json:fieldNameConflict');
+    chanSettings = json.read(getpref('qlab', 'ChannelParamsFile'));
+    warning('on', 'json:fieldNameConflict');
+    channelParams = chanSettings.channelDict.(settings.Qubit);
+    mangledPhysChan = genvarname(channelParams.physChan);
+    qubitSource = expSettings.instruments.(chanSettings.channelDict.(mangledPhysChan).generator);
+    freq = qubitSource.frequency;
+    piamp = chanSettings.channelDict.(settings.Qubit).pulseParams.piAmp;
+    pi2amp = chanSettings.channelDict.(settings.Qubit).pulseParams.pi2Amp;
+    amps = [piamp, pi2amp];
+    fid = fopen(fullfile(settings.calpath, ['freqvec_' settings.Qubit '.csv']), 'at');
+    fprintf(fid, '%s\t%.9f\n', datestr(now,31), freq);
+    fclose(fid);
+    fid = fopen(fullfile(settings.calpath, ['ampvec_' settings.Qubit '.csv']), 'at');
+    fprintf(fid, '%s\t%.4f\t%.4f\n', datestr(now,31), amps(1), amps(2));
+    fclose(fid);
+end
 
 end
 

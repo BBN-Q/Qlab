@@ -32,6 +32,10 @@ ExpParams.dataType = 'real'; %'amp', 'phase', 'real', or 'imag';
 ExpParams.cfgFile = getpref('qlab', 'CurScripterFile');
 ExpParams.SoftwareDevelopmentMode = 0;
 
+%optional logging of frequency and amplitudes over time
+ExpParams.dolog = false;
+ExpParams.calpath = 'C:\Users\qlab\Documents\data\Cal_Logs';
+
 if nargin>1 %updates ExpParams with optional input settings
 %Remove overlapping fields from default ExpParams
 ExpParams = rmfield(ExpParams, intersect(fieldnames(ExpParams), fieldnames(varargin{1})));
