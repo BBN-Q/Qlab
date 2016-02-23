@@ -72,8 +72,8 @@ if settings.DoRamsey
     mangledPhysChan = genvarname(obj.channelParams.physChan);
     qubitSource = obj.experiment.instruments.(channelLib.channelDict.(mangledPhysChan).generator);
     
-    %Deliberately shift off by 200 kHz
-    added_detuning = - 0.0002;
+    %Deliberately shift off by the set RamseyDetuning (in kHz)
+    added_detuning = obj.settings.RamseyDetuning*1e-6;
     origFreq = qubitSource.frequency;
     qubitSource.frequency = origFreq + added_detuning;
 
@@ -275,10 +275,14 @@ if settings.DoRamsey
     channelLib = json.read(getpref('qlab','ChannelParamsFile'));
     warning('on', 'json:fieldNameConflict');
     sourceName = channelLib.channelDict.(mangledPhysChan).generator;
-    instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
-    expSettings = json.read(getpref('qlab', 'CurScripterFile'));
-    expSettings.instruments.(sourceName).frequency = qubitSource.frequency;
-    json.write(expSettings, getpref('qlab', 'CurScripterFile'), 'indent', 2);
+    if abs(instrLib.instrDict.(sourceName).frequency - qubitSource.frequency) < obj.settings.RamseyDetuning*1e-6
+        instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
+        expSettings = json.read(getpref('qlab', 'CurScripterFile'));
+        expSettings.instruments.(sourceName).frequency = qubitSource.frequency;
+        json.write(expSettings, getpref('qlab', 'CurScripterFile'), 'indent', 2);
+    else
+        warning('Bad fit for the qubit source frequency. Leave frequency as it was.')
+    end
 end
 
 json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
