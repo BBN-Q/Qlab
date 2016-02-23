@@ -269,6 +269,7 @@ iChan = str2double(obj.channelParams.physChan(end-1));
 qChan = str2double(obj.channelParams.physChan(end));
 instrLib.instrDict.(obj.controlAWG).channels(iChan).offset = round(1e4*obj.channelParams.i_offset)/1e4;
 instrLib.instrDict.(obj.controlAWG).channels(qChan).offset = round(1e4*obj.channelParams.q_offset)/1e4;
+expSettings = json.read(getpref('qlab', 'CurScripterFile'));
 %Drive frequency from Ramsey
 if settings.DoRamsey
     warning('off', 'json:fieldNameConflict');
@@ -277,15 +278,14 @@ if settings.DoRamsey
     sourceName = channelLib.channelDict.(mangledPhysChan).generator;
     if abs(instrLib.instrDict.(sourceName).frequency - qubitSource.frequency) < obj.settings.RamseyDetuning*1e-6
         instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
-        expSettings = json.read(getpref('qlab', 'CurScripterFile'));
         expSettings.instruments.(sourceName).frequency = qubitSource.frequency;
-        json.write(expSettings, getpref('qlab', 'CurScripterFile'), 'indent', 2);
     else
         warning('Bad fit for the qubit source frequency. Leave frequency as it was.')
     end
 end
 
 json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
+json.write(expSettings, getpref('qlab', 'CurScripterFile'), 'indent', 2);
 
 % Display the final results
 obj.channelParams
