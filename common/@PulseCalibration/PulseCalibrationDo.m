@@ -136,7 +136,7 @@ if settings.DoPi2Cal
         warning('X90Amp over range!');
     end
     fprintf('Found I offset: %.4f\n\n\n', i_offset);
-    
+
     % calibrate amplitude and offset for +/- Y90
     if obj.channelParams.SSBFreq==0
         x0(2) = obj.channelParams.q_offset;
@@ -295,11 +295,11 @@ if settings.DoRamsey
     channelLib = json.read(getpref('qlab','ChannelParamsFile'));
     warning('on', 'json:fieldNameConflict');
     sourceName = channelLib.channelDict.(mangledPhysChan).generator;
-    if abs(instrLib.instrDict.(sourceName).frequency - qubitSource.frequency) < obj.settings.RamseyDetuning*1e-6
+    if abs(instrLib.instrDict.(sourceName).frequency - qubitSource.frequency) < abs(obj.settings.RamseyDetuning)*1e-6
         instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
         expSettings.instruments.(sourceName).frequency = qubitSource.frequency;
     else
-        warning('Bad fit for the qubit source frequency. Leave frequency as it was.')
+        warning('Bad fit for the qubit frequency. Leave source frequency as it was.')
     end
 end
 
