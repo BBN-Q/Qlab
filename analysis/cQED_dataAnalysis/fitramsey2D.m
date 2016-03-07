@@ -1,4 +1,4 @@
-function [T2s, freqs] = fitramsey2D(xdata, ydata)
+function [T2s, fit_freqs] = fitramsey2D(xdata, ydata)
 % Fits 2D Ramsey scan
 %
 % [times, freqs] = fitramsey2D(xdata, ydata)
@@ -12,7 +12,7 @@ end
 
 numScans = size(ydata,1);
 T2s = zeros(numScans, 1);
-freqs = zeros(numScans, 1);
+fit_freqs = zeros(numScans, 1);
 
 beta = zeros(1,4);
 
@@ -58,5 +58,5 @@ for cnt=1:numScans
     t2error = (ci(3,2)-ci(3,1))/2;
     detuning = abs(beta(4))/2/pi; % in GHz, assuming time is in ns
     T2s(cnt) = t2;
-    freqs(cnt) = detuning;
+    fit_freqs(cnt) = detuning;
 end
