@@ -1,4 +1,4 @@
-function [choiSDP, choiLSQ] = QPT_SDP(expResults, measOps, measMap, U_preps, U_meas, nbrQubits)
+function [choiSDP, choiLSQ] = QPT_SDP(expResults, measOps, measMap, U_preps, U_meas, nbrQubits, varargin)
 %QPT_SDP SDP constrained maximum liklihood quantum process tomography. 
 % QPT_SDP finds the closest physical map that minimizes the error between the 
 % predicted and measured results. Trace preservation is not contstrained. We work
@@ -12,6 +12,8 @@ function [choiSDP, choiLSQ] = QPT_SDP(expResults, measOps, measMap, U_preps, U_m
 %   U_preps: cell array of the preparation unitaries 
 %   U_meas: cell array of read-out unitaries 
 %   nbrQubits: the number of qubits
+% optional inputs
+%   weightMat: matrix of weights (1/variance)
 % Returns
 %	choiSDP = the constrained physical process Choi matrix
 % 
@@ -35,9 +37,16 @@ choiSDP_yalmip = sdpvar(d2, d2, 'hermitian', 'complex');
 % Now each measurement result corresponds to a linear combination of Choi
 % matrix (S) elements: for a given rhoIn and measOp then measResult = Tr(S*kron(rhoIn.', measOp))
 fprintf('Setting up predictor matrix....');
-predictorMat = zeros(numPrep*numMeas, d4, 'double');
+predictorMat = zeros(length(expResults), d4, 'double');
 prepIdx = 1;
 measIdx = 1;
+
+if ~isempty(varargin)
+    weightMat = transpose(varargin{1});
+    weightMat = weightMat(:);
+else
+    weightMat = ones(1,length(expResults));
+end
 
 for expct = 1:length(expResults)
     %Assume perfect preparation in the ground state
@@ -54,7 +63,7 @@ for expct = 1:length(expResults)
     % We can use the usual trick that trace(A*B) = trace(B*A) = sum(tranpose(B).*A)
     % predictorMat(prepct, measct) = trace(choiSDP*kron(rhoPreps{prepct}.', measurementoptsset{measMap(prepct,measct)}{measct}))*d;
     tmpMat = transpose(kron(rhoIn.', measOp));
-    predictorMat(expct, :) = d*tmpMat(:); 
+    predictorMat(expct, :) = d*weightMat(expct)*tmpMat(:); 
 
     %Roll the counters
     measIdx = measIdx + 1;
@@ -68,7 +77,7 @@ for expct = 1:length(expResults)
 end    
     
 %We want to minimize the difference between predicted results and experimental results
-optGoal = norm(predictorMat*choiSDP_yalmip(:) - expResults(:),2);
+optGoal = norm(predictorMat*choiSDP_yalmip(:) - expResults(:).*weightMat(:),2);
 fprintf('Done!\n.')
 
 % Constrain the Choi matrix to be positive semi-definite and
@@ -87,6 +96,6 @@ fprintf('Done\n')
 choiSDP = double(choiSDP_yalmip);
 
 if (nargout == 2)
-    choiLSQ = predictorMat\expResults(:);
+    choiLSQ = factorize(predictorMat)\(expResults(:).*weightMat(:));
     choiLSQ = reshape(choiLSQ,d2,d2);
 end
