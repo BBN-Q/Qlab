@@ -8,8 +8,8 @@ parser.add_argument('seq', type=int, help='sequence file identifier')
 
 args = parser.parse_args()
 
-sys.path.append(args.pyqlabpath)
-execfile(os.path.join(args.pyqlabpath, 'startup.py'))
+from QGL import *
+
 execfile(os.path.join(args.juliapath, 'twirl_seq.py'))
 
 

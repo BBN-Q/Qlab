@@ -8,8 +8,7 @@ parser.add_argument('caltype', type=float, help='1 for length, 2 for phase')
 parser.add_argument('length', type=float, help='step for length calibration or fixed length in phase calibration (ns)')
 args = parser.parse_args()
 
-sys.path.append(args.pyqlabpath)
-execfile(os.path.join(args.pyqlabpath, 'startup.py'))
+from QGL import *
 
 q2 = QubitFactory(args.control)
 q1 = QubitFactory(args.target)

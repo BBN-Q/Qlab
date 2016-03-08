@@ -8,8 +8,7 @@ parser.add_argument('CR', help='CR pulse name')
 
 args = parser.parse_args()
 
-sys.path.append(args.pyqlabpath)
-execfile(os.path.join(args.pyqlabpath, 'startup.py'))
+from QGL import *
 
 qt = QubitFactory(args.target)
 qc = QubitFactory(args.control)

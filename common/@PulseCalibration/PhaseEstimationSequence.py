@@ -10,8 +10,7 @@ parser.add_argument('numPulses', type=int, help='log2(n) of the longest sequence
 parser.add_argument('amplitude', type=float, help='pulse amplitude')
 args = parser.parse_args()
 
-sys.path.append(args.pyqlabpath)
-execfile(os.path.join(args.pyqlabpath, 'startup.py'))
+from QGL import *
 
 q = QubitFactory(args.qubit)
 
