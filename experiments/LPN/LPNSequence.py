@@ -19,8 +19,7 @@ parser.add_argument('CR3', help='CR gate 3 name')
 
 args = parser.parse_args()
 
-sys.path.append(args.pyqlabpath)
-execfile(os.path.join(args.pyqlabpath, 'startup.py'))
+from QGL import *
 
 n = args.datanum
 
