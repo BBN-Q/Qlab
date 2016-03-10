@@ -4,36 +4,29 @@ function [gateFidelitySDP, gateFidelityLSQ, choiSDP, choiLSQ] = analyzeProcessTo
 % [gateFidelity, choiSDP] = analyzeProcessTomo(data, idealProcessStr, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrRepeats) 
 
 % optional arguments: 
-% vardata: variance matrix 
 % newplot: If true, make new figure windows
+% vardata: variance matrix 
 
 persistent figHandles
 if isempty(figHandles)
     figHandles = struct();
 end
 
-if(isempty(varargin))
-    newplot = false;
-    vardata = [];
-elseif length(varargin)==1
-    if iscell(varargin{1})
-        vardata = varargin{1};
-        newplot = false;
-    else
-        vardata=[];
-        newplot = varargin{1};
-    end
-else
-    if iscell(varargin{1})
-        vardata = varargin{1};
-        newplot = varargin{2};
-    else
-        vardata = varargin{2};
-        newplot = varargin{1};
-    end
-end
+p = inputParser;
+addRequired(p, 'data')
+addRequired(p, 'idealProcess')
+addRequired(p, 'nbrQubits')
+addRequired(p, 'nbrPrepPulses')
+addRequired(p, 'nbrReadoutPulses')
+addRequired(p, 'nbrCalRepeats')
+addParameter(p,'newplot',false,@islogical)
+addParameter(p,'vardata',[],@iscell)
+parse(p,data, idealProcess, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrCalRepeats, varargin{:});
+p.Results
+newplot = p.Results.newplot; 
+vardata = p.Results.vardata;
 
-%seperate calibration experiments from tomography data and flatten the
+%separate calibration experiments from tomography data and flatten the
 %experiment data
 
 %The data comes in as a matrix (numSeqs X numExpsPerSeq) with
