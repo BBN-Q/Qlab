@@ -1,10 +1,14 @@
-function [T2sA, T2sB, freqsA, freqsB] = fit_twofreq_2D(xdata, ydata,filename)
+function [T2sA, T2sB, dT2sA, dT2sB, freqsA, freqsB, dfreqsA, dfreqsB] = fit_twofreq_2D(xdata, ydata)
 % Fits 2D Ramsey scan
 %
-% [times, freqs] = fit_twofreq_2D(xdata, ydata)
 % xdata : vector of time samples
 % ydata : matrix of data (each Ramsey experiment along a row)
 % filename: data identifier
+
+persistent figHandles
+if isempty(figHandles)
+    figHandles = struct();
+end
 
 numScans = size(ydata,1);
 T2sA = zeros(numScans, 1);
@@ -36,16 +40,63 @@ for cnt=1:numScans
     else
         idx2 = 1;
     end
-    model = @(p, t) p(1) + p(2)*exp(-t/p(3)).*cos(p(4)*t + p(5)) + p(6)*exp(-t/p(7)).*cos(p(8)*t + p(9));
     
+
+    model = @(p, t) p(1) + p(2)*exp(-t/p(3)).*cos(p(4)*t + p(5)) + p(6)*exp(-t/p(7)).*cos(p(8)*t + p(9));
     p = [mean(y) amps(idx1) Ts(idx1) 2*pi*freqs(idx1) phases(idx1) amps(idx2) Ts(idx2) 2*pi*freqs(idx2) phases(idx2)];
+
     try
         [beta,r,j] = nlinfit(xdata, y, model, p);
+        t2A = beta(3);
+        ci = nlparci(beta,r,j);
+        t2Aerror = (ci(3,2)-ci(3,1))/2;
+        t2B = beta(7);
+        ci = nlparci(beta,r,j);
+        t2Berror = (ci(7,2)-ci(7,1))/2;
+        detuningA = abs(beta(4))/2/pi; % in GHz, assuming time is in ns
+        detuningAerror = (ci(4,2)-ci(4,1))/2;
+        detuningB = abs(beta(8))/2/pi;
+        detuningBerror = (ci(8,2)-ci(8,1))/2;   
     catch
-        fprintf('Fit failed')
+        warning('2-freq fit failed.')
+        %fit single freq.
+        [t2A, detuningA, t2Aerror, detuningAerror] = fitramsey(xdata, ydata);
+        t2B = t2A; t2Berror = t2Aerror;
+        detuningB = detuningA; detuningBerror = detuningAerror;
     end
-
-    figure(100)
+    T2sA(cnt) = t2A;
+    T2sB(cnt) = t2B;
+    detuningvec = [detuningA, detuningB];
+    [freqsA(cnt),indmax] = max(detuningvec);
+    [freqsB(cnt),~] = min(detuningvec);
+    if indmax(1)==1
+        dfreqsA(cnt) = detuningAerror;
+        dfreqsB(cnt) = detuningBerror;
+    else
+        dfreqsA(cnt) = detuningBerror;
+        dfreqsB(cnt) = detuningAerror;
+    end
+    if abs(detuningAerror/detuningA)<0.1 %disregards bad fits
+        freqsA(cnt) = detuningA;
+    else
+        freqsA(cnt) = NaN;
+        T2sA(cnt) = NaN;
+    end
+    if abs(detuningBerror/detuningB)<0.1
+        freqsB(cnt) = detuningB;
+    else
+        freqsB(cnt) = NaN;
+        T2sB(cnt) = NaN;
+    end
+    dT2sA(cnt) = t2Aerror;
+    dT2sB(cnt) = t2Berror;
+    dfreqsA(cnt) = detuningAerror;
+    dfreqsB(cnt) = detuningBerror;
+    if ~isfield(figHandles, 'Ramsey') || ~ishandle(figHandles.('Ramsey'))
+        figHandles.('Ramsey') = figure('Name', 'Ramsey');
+    else
+        figure(figHandles.('Ramsey')); clf;
+    end
     subplot(3,1,2:3)
     plot(xdata,y,'o')
     hold on
@@ -66,61 +117,31 @@ for cnt=1:numScans
     
     pause(.1)
 
-    t2 = beta(3);
-    ci = nlparci(beta,r,j);
-    t2error = (ci(3,2)-ci(3,1))/2;
-    detuning = abs(beta(4))/2/pi; % in GHz, assuming time is in ns
-    T2s(cnt) = t2;
-    freqs(cnt) = detuning;
-    
-    t2A = beta(3);
-    ci = nlparci(beta,r,j);
-    t2Aerror = (ci(3,2)-ci(3,1))/2;
-    t2B = beta(7);
-    ci = nlparci(beta,r,j);
-    t2Berror = (ci(7,2)-ci(7,1))/2;
-    detuningA = abs(beta(4))/2/pi; % in GHz, assuming time is in ns
-    detuningAerror = (ci(4,2)-ci(4,1))/2;
-    detuningB = abs(beta(8))/2/pi;
-    detuningBerror = (ci(8,2)-ci(8,1))/2;
-    T2sA(cnt) = t2A;
-    T2sB(cnt) = t2B;
-    detuningvec = [detuningA, detuningB];
-    [freqsA(cnt),indmax] = max(detuningvec);
-    [freqsB(cnt),~] = min(detuningvec);
-    if indmax(1)==1
-        dfreqsA(cnt) = detuningAerror;
-        dfreqsB(cnt) = detuningBerror;
-    else
-        dfreqsA(cnt) = detuningBerror;
-        dfreqsB(cnt) = detuningAerror;
-    end
-    if abs(detuningAerror/detuningA)<0.1 %disregards bad fits
-        freqsA(cnt) = detuningA;
-    else
-        freqsA(cnt) = NaN;
-    end
-    if abs(detuningBerror/detuningB)<0.1
-        freqsB(cnt) = detuningB;
-    else
-        freqsB(cnt) = NaN;
-    end
-    dT2sA(cnt) = t2Aerror;
-    dT2sB(cnt) = t2Berror;
-    dfreqsA(cnt) = detuningAerror;
-    dfreqsB(cnt) = detuningBerror;
+   
 end
 freqsAt = max(freqsA, freqsB);
 freqsBt = min(freqsA, freqsB);
 freqsA = freqsAt;
 freqsB = freqsBt;
-    figure(202);
+    if ~isfield(figHandles, 'Ramsey_freqs') || ~ishandle(figHandles.('Ramsey_freqs'))
+        figHandles.('Ramsey_freqs') = figure('Name', 'Ramsey_freqs');
+    else
+        figure(figHandles.('Ramsey_freqs')); clf;
+    end
     xaxis=1:length(T2sA);
     errorbar(xaxis, freqsA*1000,dfreqsA*1000,'r.-','MarkerSize',12)
     hold on; errorbar(xaxis, freqsB*1000, dfreqsB*1000, 'b.-', 'MarkerSize',12);
+    title(strrep(filename, '_', '\_'));
     ylim([0,inf]);
     xlabel('Repeat number');
     ylabel('detuning (MHz)');
+    if ~isfield(figHandles, 'Ramsey_T2s') || ~ishandle(figHandles.('Ramsey_T2s'))
+        figHandles.('Ramsey_T2s') = figure('Name', 'Ramsey_T2s');
+    else
+        figure(figHandles.('Ramsey_T2s')); clf;
+    end
+    xaxis=1:length(T2sA);
+    errorbar(xaxis, T2sA/1000, dT2sA/1000,'r.-','MarkerSize',12)
+    hold on; errorbar(xaxis, T2sB/1000, dT2sB/1000, 'b.-', 'MarkerSize',12);
     title(strrep(filename, '_', '\_'));
-    %fprintf('Average T1 = %.1f us\n', mean(T1/1000));
 end

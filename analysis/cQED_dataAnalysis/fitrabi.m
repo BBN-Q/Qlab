@@ -14,7 +14,6 @@ else
     h = figure;
     plotTitle = '';
 end
-%y = ydata .* 1000;
 y = ydata(:);
 
 % if xdata is a single value, assume that it is the time step
@@ -30,8 +29,8 @@ xdata_finer = xdata_finer(:);
 % model A + B Exp(-t/tau) * cos(w t + phi)
 rabif = inline('p(1) + p(2)*exp(-tdata/p(3)).*cos(p(4)*tdata + p(5))','p','tdata');
 
-% initial guess for amplitude is y(1) - mean
-amp = y(1) - mean(y);
+% initial guess for amplitude is y(max) - mean
+amp = y(max) - mean(y);
 
 % initial guess for Rabi time is length/3
 trabi = max(xdata)/3.;
