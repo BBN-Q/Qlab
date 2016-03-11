@@ -1,11 +1,11 @@
 function [gateFidelitySDP, gateFidelityLSQ, choiSDP, choiLSQ] = analyzeProcessTomo(data, idealProcess, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrCalRepeats, varargin)
 %analyzeProcess Performs SDP tomography, calculates gates fidelites and plots pauli maps.
 %
-% [gateFidelity, choiSDP] = analyzeProcessTomo(data, idealProcessStr, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrRepeats) 
+% [gateFidelity, choiSDP] = analyzeProcessTomo(data, idealProcessStr, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrRepeats)
 
-% optional arguments: 
+% optional arguments:
 % newplot: If true, make new figure windows
-% vardata: variance matrix 
+% vardata: variance matrix
 
 persistent figHandles
 if isempty(figHandles)
@@ -13,17 +13,10 @@ if isempty(figHandles)
 end
 
 p = inputParser;
-addRequired(p, 'data')
-addRequired(p, 'idealProcess')
-addRequired(p, 'nbrQubits')
-addRequired(p, 'nbrPrepPulses')
-addRequired(p, 'nbrReadoutPulses')
-addRequired(p, 'nbrCalRepeats')
-addParameter(p,'newplot',false,@islogical)
-addParameter(p,'vardata',[],@iscell)
-parse(p,data, idealProcess, nbrQubits, nbrPrepPulses, nbrReadoutPulses, nbrCalRepeats, varargin{:});
-p.Results
-newplot = p.Results.newplot; 
+addParameter(p,'newplot', false, @islogical)
+addParameter(p,'vardata', [], @iscell)
+parse(p, varargin{:});
+newplot = p.Results.newplot;
 vardata = p.Results.vardata;
 
 %separate calibration experiments from tomography data and flatten the
@@ -49,7 +42,7 @@ numExps = numPreps*numMeas*numMeasChans;
 numCals = 2^(nbrQubits)*nbrCalRepeats;
 
 if isempty(vardata)
-%Rough rescaling by the variance to equalize things for the least squares 
+%Rough rescaling by the variance to equalize things for the least squares
     approxScale = std(data(:,end-numCals+1:end), 0, 2);
     data = bsxfun(@rdivide, data, approxScale);
 end
@@ -65,7 +58,7 @@ else
     weightMat = ones(size(data,1),numMeas);
 end
 
-%Pull out the calibration data as measurement operators and assign each exp. to a meas. operator 
+%Pull out the calibration data as measurement operators and assign each exp. to a meas. operator
 measOps = cell(size(data,1),1);
 measMap = nan(numExps,1);
 results = nan(numExps,1);
