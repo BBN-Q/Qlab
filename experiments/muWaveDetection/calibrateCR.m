@@ -81,7 +81,7 @@ if calSteps(1)
     data=load_data('latest');
     optlen = analyzeCalCR(1,data,CalParams.channel, CalParams.CR);
 else
-    optlen = chanSettings.(CR).pulseParams.length;
+    optlen = chanSettings.(CR).pulseParams.length*1e9;
 end
 
 if calSteps(2)
