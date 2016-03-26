@@ -1,23 +1,37 @@
-function [T2s, fit_freqs] = fitramsey2D(xdata, ydata)
+function [T2s, fit_freqs] = fitramsey2D(xdata, data)
 % Fits 2D Ramsey scan
 %
 % [times, freqs] = fitramsey2D(xdata, ydata)
 % xdata : vector of time samples
 % ydata : matrix of data (each Ramsey experiment along a row)
 
+% if no input arguments, try to get the data from the current figure
+if nargin < 2
+    h = gcf;
+    image = findall(h, 'Type', 'Image');
+    xdata = get(image(1), 'xdata');
+    ydata = get(image(1), 'ydata');
+    data = get(image(1), 'CData');
+    % save figure title
+    plotTitle = get(get(gca, 'Title'), 'String');
+else
+    h = figure;
+    plotTitle = 'Fit to a Damped Sinusoid';
+end
+
 persistent figHandles
 if isempty(figHandles)
     figHandles = struct();
 end
 
-numScans = size(ydata,1);
+numScans = size(data,1);
 T2s = zeros(numScans, 1);
 fit_freqs = zeros(numScans, 1);
 
 beta = zeros(1,4);
 
 for cnt=1:numScans
-    y = ydata(cnt,:);
+    y = data(cnt,:);
 
     %Use KT estimation to get initial guesses
     [freqs, Ts, amps] = KT_estimation(y, xdata(2)-xdata(1),2);
