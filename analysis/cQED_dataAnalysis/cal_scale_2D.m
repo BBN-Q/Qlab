@@ -1,4 +1,4 @@
-function calScale2D(nbrRepeats)
+function cal_scale_2D(nbrRepeats)
 
 if ~exist('nbrRepeats', 'var')
     nbrRepeats = 2;
