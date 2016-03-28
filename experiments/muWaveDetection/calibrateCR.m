@@ -44,6 +44,12 @@ tmpStr = regexp(chanSettings.(control).physChan, '-', 'split');
 expSettings.AWGs{4} = tmpStr{1};
 tmpStr = regexp(chanSettings.(strcat(genvarname('M-'),control)).physChan, '-', 'split');
 expSettings.AWGs{5} = tmpStr{1};
+for instr = fieldnames(instrSettings)'
+    if isfield(instrSettings.(instr{1}),'isMaster') && instrSettings.(instr{1}).isMaster
+        expSettings.AWGs{6} = instr{1};
+        break
+    end
+end
 expSettings.AWGs = unique(expSettings.AWGs); %remove duplicates
 
 %disable unused measurements, including correlators
