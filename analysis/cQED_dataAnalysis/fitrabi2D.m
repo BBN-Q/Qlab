@@ -14,15 +14,8 @@ numScans = size(ydata,1);
 frabivec = zeros(numScans, 1);
 dfrabivec = zeros(numScans, 1);
 
-beta = zeros(1,4);
-
 for cnt=1:numScans
     y = ydata(cnt,:);
-
-xdata_finer = linspace(0, max(xdata), 4*length(xdata));
-
-%xdata = xdata(:);
-xdata_finer = xdata_finer(:);
 
 % model A + B Exp(-t/tau) * cos(w t + phi)
 %rabif = inline('p(1) + p(2)*exp(-tdata/p(3)).*cos(p(4)*tdata + p(5))','p','tdata');
@@ -31,17 +24,13 @@ rabif = inline('p(1) + p(2).*cos(p(3)*tdata + p(4))','p','tdata');
 % initial guess for amplitude is y(1) - mean
 amp = max(y) - mean(y);
 
-% initial guess for Rabi time is length/3
-trabi = max(xdata)*100.;
-
-    % model A + B Exp(-t/tau) * cos(w t + phi)
-   yfft = fft(y);
-[freqamp, freqpos] = max(abs( yfft(2:floor(end/2)) ));
+% model A + B Exp(-t/tau) * cos(w t + phi)
+yfft = fft(y);
+[~, freqpos] = max(abs( yfft(2:floor(end/2)) ));
 frabi = 2*pi*(freqpos*1)/xdata(end);
 
 %p = [mean(y) amp trabi frabi pi/2];
 p = [mean(y) amp frabi 0];
-
 
 tic
 [beta,r,j] = nlinfit(xdata, y, rabif, p);
@@ -72,11 +61,7 @@ toc
     
     pause(.2)
 
-    t3 = beta(3);
 ci = nlparci(beta,r,j);
-t3error = (ci(3,2)-ci(3,1))/2;
-% frabivec(cnt) = abs(beta(4))/2/pi; % in GHz, assuming time is in ns
-% dfrabivec(cnt) = abs(ci(4,2)-ci(4,1))/4/pi; %in GHZ
 frabivec(cnt) = abs(beta(3))/2/pi; % in GHz, assuming time is in ns
 dfrabivec(cnt) = abs(ci(3,2)-ci(3,1))/4/pi; %in GHZ
 pause(0.1)
