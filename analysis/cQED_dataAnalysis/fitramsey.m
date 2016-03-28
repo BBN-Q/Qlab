@@ -1,4 +1,4 @@
-function [t2, detuning] = fitramsey(xdata, ydata)
+function [t2, detuning, t2error, detuningError] = fitramsey(xdata, ydata)
 % Fits ramsey data in time range (x-axis) from start to end using a decaying
 % sinusoid.
 
