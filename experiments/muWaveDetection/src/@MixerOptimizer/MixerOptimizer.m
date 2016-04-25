@@ -241,14 +241,14 @@ classdef MixerOptimizer < handle
                     obj.awg.run();
                 case 'APS2'
 
-                    awg_amp = get_channel_scale(obj.awg, iChan)
+                    awg_amp = get_channel_scale(obj.awg, iChan);
 
                     %Setup a SSB waveform with a 1200 pt (1us) sinusoid for both
                     %channels. Scale by 0.5 to give room for sweeps
                     obj.awg.stop();
-                    load_waveform(obj.awg, iChan, 0.5*ones(1200));
-                    load_waveform(obj.awg, qChan, zeros(1200));
-                    set_waveform_frequency(obj.awg, obj.expParams.SSBFreq);
+                    load_waveform(obj.awg, iChan, 0.5*ones(1200,1));
+                    load_waveform(obj.awg, qChan, zeros(1200,1));
+                    set_waveform_frequency(obj.awg, -obj.expParams.SSBFreq);
                     for ct = 1:2
                       obj.awg.set_channel_enabled(ct, true);
                     end
