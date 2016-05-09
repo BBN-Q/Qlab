@@ -73,7 +73,7 @@ for cnt=1:numScans
         detuningB = abs(beta(8))/2/pi;
         detuningBerror = (ci(8,2)-ci(8,1))/2;   
     catch
-        warning('2-freq fit failed on step %i\n', cnt)
+        warning('2-freq fit failed on step %i.  Trying single-freq fit...\n', cnt)
         %fit single freq.
         [t2A, detuningA, t2Aerror, detuningAerror] = fitramsey(xdata, ydata);
         t2B = t2A; t2Berror = t2Aerror;
