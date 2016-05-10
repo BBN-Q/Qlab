@@ -72,8 +72,8 @@ if settings.DoRamsey
     mangledPhysChan = genvarname(obj.channelParams.physChan);
     qubitSource = obj.experiment.instruments.(channelLib.channelDict.(mangledPhysChan).generator);
     
-    %Deliberately shift off by 200 kHz
-    added_detuning = - 0.0002;
+    %Deliberately shift off by the set RamseyDetuning (in kHz)
+    added_detuning = obj.settings.RamseyDetuning*1e-6;
     origFreq = qubitSource.frequency;
     qubitSource.frequency = origFreq + added_detuning;
 
@@ -132,8 +132,11 @@ if settings.DoPi2Cal
     i_offset = real(x0(2));
     obj.channelParams.i_offset = i_offset;
     fprintf('Found X90Amp: %.4f\n', X90Amp);
+    if X90Amp>1
+        warning('X90Amp over range!');
+    end
     fprintf('Found I offset: %.4f\n\n\n', i_offset);
-    
+
     % calibrate amplitude and offset for +/- Y90
     if obj.channelParams.SSBFreq==0
         x0(2) = obj.channelParams.q_offset;
@@ -142,6 +145,9 @@ if settings.DoPi2Cal
         Y90Amp = real(x0(1));
         q_offset = real(x0(2));
         fprintf('Found Y90Amp: %.4f\n', Y90Amp);
+        if X90Amp>1
+            warning('Y90Amp over range!');
+        end
         fprintf('Found Q offset: %.4f\n\n\n', q_offset);
         
         % update channelParams
@@ -162,11 +168,17 @@ if settings.DoPi2PhaseCal
     X90Amp = obj.optimize_amplitude(obj.channelParams.pi2Amp, 'X', pi/2);
     obj.channelParams.pi2Amp = X90Amp;
     fprintf('Found X90Amp: %.4f\n\n', X90Amp);
+    if X90Amp>1
+        warning('X90Amp over range!');
+    end
 
     % calibrate Y90 if not using SSB
     if obj.channelParams.SSBFreq == 0
         Y90Amp = obj.optimize_amplitude(X90Amp, 'Y', pi/2);
         fprintf('Found Y90Amp: %.4f\n', Y90Amp);
+        if Y90Amp>1
+            warning('Y90Amp over range!');
+        end
 
         obj.channelParams.pi2Amp = Y90Amp;
         % update T matrix with ratio X90Amp/Y90Amp
@@ -188,7 +200,10 @@ if settings.DoPiCal
     X180Amp = real(x0(1));
     i_offset = real(x0(2));
     fprintf('Found X180Amp: %.4f\n\n\n', X180Amp);
-    
+    if X180Amp>1
+        warning('X180Amp over range!');
+    end
+
     % update channelParams
     obj.channelParams.piAmp = X180Amp;
     obj.channelParams.i_offset = i_offset;
@@ -201,6 +216,10 @@ if settings.DoPiPhaseCal
     X180Amp = obj.optimize_amplitude(obj.channelParams.piAmp, 'X', pi);
     obj.channelParams.piAmp = X180Amp;
     fprintf('Found X180Amp: %.4f\n\n', X180Amp);
+    if X180Amp>1
+        warning('X180Amp over range!');
+    end
+
     updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 end
 
@@ -269,19 +288,23 @@ iChan = str2double(obj.channelParams.physChan(end-1));
 qChan = str2double(obj.channelParams.physChan(end));
 instrLib.instrDict.(obj.controlAWG).channels(iChan).offset = round(1e4*obj.channelParams.i_offset)/1e4;
 instrLib.instrDict.(obj.controlAWG).channels(qChan).offset = round(1e4*obj.channelParams.q_offset)/1e4;
+expSettings = json.read(getpref('qlab', 'CurScripterFile'));
 %Drive frequency from Ramsey
 if settings.DoRamsey
     warning('off', 'json:fieldNameConflict');
     channelLib = json.read(getpref('qlab','ChannelParamsFile'));
     warning('on', 'json:fieldNameConflict');
     sourceName = channelLib.channelDict.(mangledPhysChan).generator;
-    instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
-    expSettings = json.read(getpref('qlab', 'CurScripterFile'));
-    expSettings.instruments.(sourceName).frequency = qubitSource.frequency;
-    json.write(expSettings, getpref('qlab', 'CurScripterFile'), 'indent', 2);
+    if abs(instrLib.instrDict.(sourceName).frequency - qubitSource.frequency) < abs(obj.settings.RamseyDetuning)*1e-6
+        instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
+        expSettings.instruments.(sourceName).frequency = qubitSource.frequency;
+    else
+        warning('Bad fit for the qubit frequency. Leave source frequency as it was.')
+    end
 end
 
 json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
+json.write(expSettings, getpref('qlab', 'CurScripterFile'), 'indent', 2);
 
 % Display the final results
 obj.channelParams
