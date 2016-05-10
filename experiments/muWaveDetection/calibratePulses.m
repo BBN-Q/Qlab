@@ -15,6 +15,7 @@ ExpParams.DoRabiAmp = 0;
 ExpParams.DoRamsey = 1;
 ExpParams.Ramsey2f = 1;
 ExpParams.RamseyStop = 60000; %in ns
+ExpParams.RamseyDetuning =  -150; %in kHz
 ExpParams.NumRamseySteps = 101;
 ExpParams.NumPi2s = 8;
 ExpParams.DoPi2Cal = 0;
