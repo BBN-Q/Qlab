@@ -64,7 +64,7 @@ function [phase, sigma] = PhaseEstimation(data, vardata, verbose)
         end
     end
     phase = curGuess;
-    sigma = max(abs(curGuess - lowerBound), abs(curGuess - upperBound));
+    sigma = max(abs(mod(curGuess - lowerBound + pi, 2*pi) - pi), abs(mod(curGuess - upperBound + pi, 2*pi) - pi));
 end
 
 function out = restrict(phase)
