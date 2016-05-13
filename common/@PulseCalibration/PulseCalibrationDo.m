@@ -188,6 +188,18 @@ if settings.DoPi2PhaseCal
     updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 end
 
+%% controlled pi/2 calibration via phase estimation
+for k=1:length(obj.settings.CRpulses)/2
+    qt = obj.settings.CRpulses(2*k-1);
+    CRchan = obj.settings.CRpulses(2*k);
+    %calibrate all CR with q as control
+    %calibrate amplitude for X90
+    ZX90Amp = obj.optimize_amplitude(obj.CRchanParams.(CRchan{1}).amp, 'X', pi/2, qt{1});
+    obj.CRchanParams.(CRchan{1}).amp = ZX90Amp;
+    fprintf('Found ZX90Amp: %.4f\n\n', ZX90Amp);
+    updateLengthPhase(CRchan{1}, obj.CRchanParams.(CRchan{1}).length, obj.CRchanParams.(CRchan{1}).phase, ZX90Amp);
+end
+
 %% Pi Calibration
 if settings.DoPiCal
     % calibrate amplitude and offset for +/- X180
