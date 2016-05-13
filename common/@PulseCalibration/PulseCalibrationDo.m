@@ -164,28 +164,35 @@ end
 
 %% Pi/2 calibration via phase estimation
 if settings.DoPi2PhaseCal
-    % calibrate amplitude for X90
-    X90Amp = obj.optimize_amplitude(obj.channelParams.pi2Amp, 'X', pi/2);
-    obj.channelParams.pi2Amp = X90Amp;
-    fprintf('Found X90Amp: %.4f\n\n', X90Amp);
-    if X90Amp>1
-        warning('X90Amp over range!');
-    end
-
-    % calibrate Y90 if not using SSB
-    if obj.channelParams.SSBFreq == 0
-        Y90Amp = obj.optimize_amplitude(X90Amp, 'Y', pi/2);
-        fprintf('Found Y90Amp: %.4f\n', Y90Amp);
-        if Y90Amp>1
-            warning('Y90Amp over range!');
+    if ~isfield(settings, 'CRpulses')
+        % calibrate amplitude for X90
+        X90Amp = obj.optimize_amplitude(obj.channelParams.pi2Amp, 'X', pi/2);
+        obj.channelParams.pi2Amp = X90Amp;
+        fprintf('Found X90Amp: %.4f\n\n', X90Amp);
+        
+        % calibrate Y90 if not using SSB
+        if obj.channelParams.SSBFreq == 0
+            Y90Amp = obj.optimize_amplitude(X90Amp, 'Y', pi/2);
+            fprintf('Found Y90Amp: %.4f\n', Y90Amp);
+            
+            obj.channelParams.pi2Amp = Y90Amp;
+            % update T matrix with ratio X90Amp/Y90Amp
+            obj.channelParams.ampFactor = obj.channelParams.ampFactor*X90Amp/Y90Amp;
+            fprintf('ampFactor: %.3f\n\n', obj.channelParams.ampFactor);
         end
-
-        obj.channelParams.pi2Amp = Y90Amp;
-        % update T matrix with ratio X90Amp/Y90Amp
-        obj.channelParams.ampFactor = obj.channelParams.ampFactor*X90Amp/Y90Amp;
-        fprintf('ampFactor: %.3f\n\n', obj.channelParams.ampFactor);
+        updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
+    else
+        %% controlled pi/2 calibration via phase estimation
+        for k=1:length(obj.settings.CRpulses)/2
+            qt = obj.settings.CRpulses(2*k-1);
+            CRchan = obj.settings.CRpulses(2*k);
+            %calibrate amplitude for ZX90
+            ZX90Amp = obj.optimize_amplitude(obj.CRchanParams.(CRchan{1}).amp, 'X', pi/2, qt{1});
+            obj.CRchanParams.(CRchan{1}).amp = ZX90Amp;
+            fprintf('Found ZX90Amp: %.4f\n\n', ZX90Amp);
+            updateLengthPhase(CRchan{1}, obj.CRchanParams.(CRchan{1}).length, obj.CRchanParams.(CRchan{1}).phase, ZX90Amp);
+        end
     end
-    updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 end
 
 %% Pi Calibration

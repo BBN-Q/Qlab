@@ -32,6 +32,9 @@ classdef PulseCalibration < handle
         finished = false
         initialParams
         singleScope = true
+        CRchanParams
+        targetAWG % name of target qubit AWG (for CR cal)
+        CRAWG % name of AWG with CR channel
     end
     methods
         % Class constructor
@@ -136,6 +139,13 @@ classdef PulseCalibration < handle
             channelLib = channelLib.channelDict;
             assert(isfield(channelLib, settings.Qubit), 'Qubit %s not found in channel library', settings.Qubit);
             obj.channelParams = channelLib.(settings.Qubit).pulseParams;
+            if isfield(settings, 'CRpulses')
+                for CRpulse = settings.CRpulses
+                    obj.CRchanParams.(CRpulse{1}) = channelLib.(CRpulse{1}).pulseParams;
+                end
+                qt = settings.CRpulses(1);
+                CRchan = settings.CRpulses(2);
+            end
             
             if isfield(obj.settings, 'SoftwareDevelopmentMode') && obj.settings.SoftwareDevelopmentMode
                 obj.testMode = true;
@@ -165,12 +175,20 @@ classdef PulseCalibration < handle
             obj.channelParams.physChan = channelLib.(settings.Qubit).physChan;
             tmpStr = regexp(channelLib.(strcat(genvarname('M-'),settings.Qubit)).physChan, '-', 'split');  %do the same for readout. Then only enable control and readout AWGs
             obj.readoutAWG = tmpStr{1};
+            if isfield(settings, 'CRpulses')
+                tmpStr = regexp(channelLib.(qt{1}).physChan, '-', 'split');
+                obj.targetAWG = tmpStr{1};
+                tmpStr = regexp(channelLib.(CRchan{1}).physChan, '-', 'split');
+                obj.CRAWG = tmpStr{1};
+                tmpStr = regexp(channelLib.(strcat(genvarname('M-'),qt{1})).physChan, '-', 'split'); %readout is on the target
+                obj.readoutAWG = tmpStr{1};
+            end
             
             % add instruments
             for instrument = fieldnames(instrSettings)'
                 instr = InstrumentFactory(instrument{1});
-                if ExpManager.is_AWG(instr) && ~strcmp(instrument{1},obj.controlAWG) && ~strcmp(instrument{1},obj.readoutAWG) && ~instrSettings.(instrument{1}).isMaster
-                    %ignores the AWGs which are not either driving or reading this qubit
+                if ExpManager.is_AWG(instr) && ~strcmp(instrument{1},obj.controlAWG) && ~strcmp(instrument{1},obj.readoutAWG) && ~instrSettings.(instrument{1}).isMaster...
+                        && ~(isfield(settings, 'CRpulses') && (strcmp(instrument{1},obj.targetAWG) || strcmp(instrument{1},obj.CRAWG)))
                     continue
                 end
                 add_instrument(obj.experiment, instrument{1}, instr, instrSettings.(instrument{1}));
