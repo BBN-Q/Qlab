@@ -18,7 +18,7 @@ expSettingsIn = p.Results.expSettings;
 ExpParams = struct();
 ExpParams.Qubit = qc; %control qubit
 ExpParams.measurement = ['M' qt(end) 'Kernel'];
-ExpParams.DoPi2PhaseCal = 1;  
+ExpParams.DoZXPi2PhaseCal = 1;  
 ExpParams.NumPi2s = 5;
 ExpParams.dataType = 'real'; %'amp', 'phase', 'real', or 'imag';
 ExpParams.CRpulses = {qt, CR}; 
@@ -29,6 +29,7 @@ ExpParams.DoRamsey = 0;
 ExpParams.DoPi2Cal = 0;
 ExpParams.DoPiCal = 0;
 ExpParams.DoPiPhaseCal = 0;
+ExpParams.DoPi2PhaseCal = 0;
 ExpParams.DoDRAGCal = 0;
 ExpParams.DoSPAMCal = 0;
 
