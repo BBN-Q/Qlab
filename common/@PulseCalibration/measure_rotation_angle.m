@@ -1,4 +1,4 @@
-function [phase, sigma] = measure_rotation_angle(obj, amp, direction, target)
+function [phase, sigma] = measure_rotation_angle(obj, amp, direction, target, varargin)
     % inputs:
     %   amp - pulse amplitude
     %   direction - 'X' or 'Y'
@@ -25,7 +25,11 @@ function [phase, sigma] = measure_rotation_angle(obj, amp, direction, target)
     
     % create sequence and measure
     if ~obj.testMode
-        [filenames, segmentPoints] = obj.PhaseEstimationSequence(obj.settings.Qubit, direction, numPulses, amp);
+        if isfield(obj.settings, 'CRpulses')
+            [filenames, segmentPoints] = obj.PhaseEstimationSequence2q(obj.settings.Qubit, varargin{1}, numPulses, amp); %target
+        else
+            [filenames, segmentPoints] = obj.PhaseEstimationSequence(obj.settings.Qubit, direction, numPulses, amp);
+        end
         obj.loadSequence(filenames, 1);
         [data, vardata] = obj.take_data(segmentPoints);
     else

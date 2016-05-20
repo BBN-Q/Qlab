@@ -1,15 +1,20 @@
-function amp = optimize_amplitude(obj, amp, direction, target)
+function amp = optimize_amplitude(obj, amp, direction, target, varargin)
     % inputs:
     %   amp - initial guess for pulse amplitude
     %   direction - 'X' or 'Y'
     %   target - target angle (e.g. pi/2 or pi)
     %
     % Attempts to optimize the pulse amplitude for a pi/2 or pi pulse about X or Y.
+    % Optional input: name of target qubit, for CR calibration
 
     done = false;
     ct = 1;
     while ~done
-        [phase, sigma] = obj.measure_rotation_angle(amp, direction, target);
+        if ~isempty(varargin)
+            [phase, sigma] = obj.measure_rotation_angle(amp, direction, target, varargin{1});
+        else
+            [phase, sigma] = obj.measure_rotation_angle(amp, direction, target);
+        end
         ampTarget = target/phase * amp;
         ampError = amp - ampTarget;
         fprintf('Amplitude error: %.4f\n', ampError);
