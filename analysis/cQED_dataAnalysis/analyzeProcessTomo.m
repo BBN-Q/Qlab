@@ -48,14 +48,14 @@ if isempty(vardata)
 end
 
 %Pull out the raw experimental data
-rawData = data(:, 1:numMeas);
+rawData = data(:, 1:end-numCals);
 if ~isempty(vardata)
     vardata = cat(1, vardata{:});
-    varMat = vardata(:, 1:numMeas);
+    varMat = vardata(:, 1:end-numCals);
     weightMat = 1./sqrt(varMat);
     weightMat = weightMat/sum(weightMat(:));
 else
-    weightMat = ones(size(data,1),numMeas);
+    weightMat = ones(size(data,1),size(data,2)-numCals);
 end
 
 %Pull out the calibration data as measurement operators and assign each exp. to a meas. operator
