@@ -118,7 +118,7 @@ if settings.DoRamsey
     if abs(origFreq - fit_freq) < added_detuning
         qubitSource.frequency = fit_freq;
     else
-        warning('Bad fit for the qubit frequency. Leave source frequency as it was.')
+        warning('Bad fit for the qubit frequency. Leaving source frequency as it was.')
     end
 end
 
