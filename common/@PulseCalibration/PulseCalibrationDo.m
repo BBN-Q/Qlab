@@ -111,11 +111,15 @@ if settings.DoRamsey
     %If we have gotten smaller we are moving in the right direction
     %Average the two fits
     if detuningB < detuningA
-        qubitSource.frequency = origFreq + added_detuning + 0.5*(detuningA + detuningA/2+detuningB);
+        fit_freq = origFreq + added_detuning + 0.5*(detuningA + detuningA/2+detuningB);
     else
-        qubitSource.frequency = origFreq + added_detuning - 0.5*(detuningA - detuningA/2+detuningB);
+        fit_freq = origFreq + added_detuning - 0.5*(detuningA - detuningA/2+detuningB);
     end
-        
+    if abs(origFreq - fit_freq) < 2*added_detuning
+        qubitSource.frequency = fit_freq;
+    else
+        warning('Bad fit for the qubit frequency. Leaving source frequency as it was.')
+    end
 end
 
 %% Pi/2 Calibration
@@ -302,12 +306,8 @@ if settings.DoRamsey
     channelLib = json.read(getpref('qlab','ChannelParamsFile'));
     warning('on', 'json:fieldNameConflict');
     sourceName = channelLib.channelDict.(mangledPhysChan).generator;
-    if abs(instrLib.instrDict.(sourceName).frequency - qubitSource.frequency) < abs(obj.settings.RamseyDetuning)*1e-6
-        instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
-        expSettings.instruments.(sourceName).frequency = qubitSource.frequency;
-    else
-        warning('Bad fit for the qubit frequency. Leave source frequency as it was.')
-    end
+    instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
+    expSettings.instruments.(sourceName).frequency = qubitSource.frequency;
 end
 
 json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
