@@ -35,8 +35,15 @@ for k = 1:nloops
         
         chanSettings = chanSettings.channelDict;
         
-        expSettings.AWGs = {'APSII4'}; %master AWG
-        
+        %find master AWG
+        for instr = fieldnames(instrSettings)'
+            if isfield(instrSettings.(instr{1}), 'isMaster')
+                if instrSettings.(instr{1}).isMaster
+                    expSettings.AWGs = {instr{1}};
+                end
+            end
+        end
+               
         qubit = qubitlist{q}
         %select the relevant AWGs
         tmpStr = regexp(chanSettings.(qubit).physChan, '-', 'split');
