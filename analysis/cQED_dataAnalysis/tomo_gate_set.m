@@ -1,4 +1,4 @@
-function gateSet = tomo_gate_set(nbrQubits, nbrPulses)
+function gateSet = tomo_gate_set(nbrQubits, nbrPulses, varargin)
 %tomo_gate_set Returns a set of state preparation or readout unitary gates.
 % 
 % tomo_gate_set(nbrQubits, nbrPulses)
@@ -9,14 +9,36 @@ Y = [0,-1i; 1i,0];
 Z = [1 0; 0 -1];
 I = eye(2);
 
+p = inputParser;
+addParameter(p, 'type', 'Clifford', @ischar) %prepared states/meas. axes
+addParameter(p, 'prep_meas', 1, @isnumeric) %1 for prep., 2 for meas. pulses
+parse(p, varargin{:});
+type = p.Results.type;
+prep_meas = p.Results.prep_meas;
 
 switch nbrPulses
     case 4
         %Four pulse set
-        Uset1Q{1}=eye(2);
-        Uset1Q{2}=expm(-1i*(pi/4)*X);
-        Uset1Q{3}=expm(-1i*(pi/4)*Y);
-        Uset1Q{4}=expm(-1i*(pi/2)*X);
+        if strcmp(type, 'Clifford')
+            Uset1Q{1}=eye(2);
+            Uset1Q{2}=expm(-1i*(pi/4)*X);
+            Uset1Q{3}=expm(-1i*(pi/4)*Y);
+            Uset1Q{4}=expm(-1i*(pi/2)*X);
+        elseif strcmp(type, 'Tetra')
+            if prep_meas==1
+                Uset1Q{1}=eye(2);
+                Uset1Q{2}=expm(-1i*acos(-1/3)*X);
+                Uset1Q{3}=expm(-1i*2*pi/3*Z)*expm(-1i*acos(-1/3)*X);
+                Uset1Q{4}=expm(1i*2*pi/3*Z)*expm(-1i*acos(-1/3)*X);
+            else
+                Uset1Q{1}=eye(2);
+                Uset1Q{2}=expm(1i*acos(-1/3)*X);
+                Uset1Q{3}=expm(1i*acos(-1/3)*X)*expm(1i*2*pi/3*Z);
+                Uset1Q{4}=expm(1i*acos(-1/3)*X)*expm(-1i*2*pi/3*Z);
+            end
+        else
+            error('Invalid prep./meas. pulse type')
+        end
     case 6
         %Six pulse set
         Uset1Q{1}=eye(2);
