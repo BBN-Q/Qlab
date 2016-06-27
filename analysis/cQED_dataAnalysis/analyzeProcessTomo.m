@@ -27,13 +27,24 @@ vardata = p.Results.vardata;
 %through each column and extract the calibration data and record a map of
 %which measurement operator each experiment corresponds to.
 
-%First cat multi-measurement data together
+% Cell array signals multi-measurement data
 if iscell(data)
     numMeasChans = length(data);
+    
+    % Figure out whether data is split into multiple sequences if we have more
+    % than one non-singleton dimension then assume each row is an AWGSequence
+    % with cals at end of rows. 
+    if sum(size(data{1}) > 1) == 1
+        data = cellfun(@transpose, data, 'UniformOutput', false);
+    end
     data = cat(1, data{:});
 else
     numMeasChans = 1;
+    if sum(size(data) > 1) == 1
+        data = transpose(data);
+    end
 end
+
 
 %Number of different preparations and readouts
 numPreps = nbrPrepPulses^nbrQubits;

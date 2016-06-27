@@ -3,12 +3,12 @@ function T1T2series(qubitlist, nloops)
 % qubitlist, e.g. {'q1','q3','q5'};
 % nloops: number of repeats
 
-doT1 = true;
+doT1 = false;
 doRamsey = true;
 doSeqs = true; %generate the seqs
 
 T1Stop = 200e3; T1Step = 2000;
-RamseyStop = 80e3; RamseyStep = 800;
+RamseyStop = 10e3; RamseyStep = 100;
 
 if doSeqs
     [thisPath, ~] = fileparts(mfilename('fullpath'));
