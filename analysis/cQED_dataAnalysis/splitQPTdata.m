@@ -15,14 +15,16 @@ else
    varmat = cell(3,1);
 end
     
+totPulses = numPulses^nqubits;
+
 for kk=1:size(data,2)
-    datamat{kk} = zeros((numPulses^nqubits+numCals),numPulses^nqubits);
-    for jj=1:numPulses^nqubits
-        datamat{kk}(1:numPulses^nqubits,jj)=data{kk}(1+(jj-1)*numPulses^nqubits:(jj)*numPulses^nqubits);
-        datamat{kk}(1+numPulses^nqubits:numPulses^nqubits+numCals,jj)=data{kk}(end-numCals+1:end);
+    datamat{kk} = zeros((totPulses+numCals),totPulses);
+    for jj=1:totPulses
+        datamat{kk}(1:totPulses,jj)=data{kk}(1+(jj-1)*totPulses:(jj)*totPulses);
+        datamat{kk}(1+totPulses:totPulses+numCals,jj)=data{kk}(end-numCals+1:end);
         if isfield(data, 'realvar')
-            varmat{kk}(1:numPulses^nqubits,jj)=data.realvar{kk}(1+(jj-1)*numPulses^nqubits:(jj)*numPulses^nqubits);
-            varmat{kk}(1+numPulses^nqubits:numPulses^nqubits+numCals,jj)=data.realvar{kk}(end-numCals+1:end);
+            varmat{kk}(1:totPulses,jj)=data.realvar{kk}(1+(jj-1)*totPulses:(jj)*totPulses);
+            varmat{kk}(1+totPulses:totPulses+numCals,jj)=data.realvar{kk}(end-numCals+1:end);
         end
     end
     datamat{kk}=real(transpose(datamat{kk}));
