@@ -15,9 +15,11 @@ end
 p = inputParser;
 addParameter(p,'newplot', false, @islogical)
 addParameter(p,'vardata', [], @iscell)
+addParameter(p,'prep_meas_axes', 'Clifford', @ischar)
 parse(p, varargin{:});
 newplot = p.Results.newplot;
 vardata = p.Results.vardata;
+prep_meas_axes = p.Results.prep_meas_axes;
 
 %separate calibration experiments from tomography data and flatten the
 %experiment data
@@ -86,8 +88,8 @@ for row = 1:size(rawData,1)
 end
 
 %Setup the state preparation and measurement pulse sets
-U_preps = tomo_gate_set(nbrQubits, nbrPrepPulses);
-U_meas  = tomo_gate_set(nbrQubits, nbrReadoutPulses);
+U_preps = tomo_gate_set(nbrQubits, nbrPrepPulses, 'type', prep_meas_axes, 'prep_meas', 1);
+U_meas  = tomo_gate_set(nbrQubits, nbrReadoutPulses, 'type', prep_meas_axes, 'prep_meas', 2);
 
 %Call the SDP program to do the constrained optimization
 [choiSDP, choiLSQ] = QPT_SDP(results, measOps, measMap, U_preps, U_meas, nbrQubits, weightMat);
