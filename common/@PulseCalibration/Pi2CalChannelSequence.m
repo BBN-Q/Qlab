@@ -12,7 +12,7 @@ end
 
 [thisPath, ~] = fileparts(mfilename('fullpath'));
 scriptName = fullfile(thisPath, 'Pi2Cal.py');
-[status, result] = system(sprintf('python "%s" "%s" %s %s %d %f', scriptName, getpref('qlab', 'PyQLabDir'), qubit, direction, numPulses, obj.channelParams.pi2Amp), '-echo');
+[status, result] = system(sprintf('python "%s" "%s" %s %s %d %f', scriptName, qubit, direction, numPulses, obj.channelParams.pi2Amp), '-echo');
 
 nbrRepeats = 2;
 segmentPoints = 1:nbrRepeats*(1+2*numPulses);
@@ -20,4 +20,3 @@ segmentPoints = 1:nbrRepeats*(1+2*numPulses);
 filename = obj.getAWGFileNames('Pi2Cal');
 
 end
-

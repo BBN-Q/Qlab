@@ -1,7 +1,6 @@
 import argparse
 import sys, os
 parser = argparse.ArgumentParser()
-parser.add_argument('pyqlabpath', help='path to PyQLab directory')
 parser.add_argument('qubit', help='qubit name')
 parser.add_argument('direction', help='direction (X or Y)')
 parser.add_argument('numPulses', type=int, help='maximum number of 180s')

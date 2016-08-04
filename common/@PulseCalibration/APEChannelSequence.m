@@ -6,7 +6,7 @@ end
 
 [thisPath, ~] = fileparts(mfilename('fullpath'));
 scriptName = fullfile(thisPath, 'APE.py');
-[status, result] = system(sprintf('python "%s" "%s" %s --deltas %s', scriptName, getpref('qlab', 'PyQLabDir'), qubit, sprintf('%f ', deltas)), '-echo');
+[status, result] = system(sprintf('python "%s" "%s" %s --deltas %s', scriptName, qubit, sprintf('%f ', deltas)), '-echo');
 
 numPsId = 8;
 segmentPoints = 1:(1+numPsId)*length(deltas)+1;

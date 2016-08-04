@@ -3,7 +3,6 @@ import sys, os
 import numpy as np
 from copy import copy
 parser = argparse.ArgumentParser()
-parser.add_argument('pyqlabpath', help='path to PyQLab directory')
 parser.add_argument('qc', help='control qubit')
 parser.add_argument('qt', help='target qubit')
 parser.add_argument('numPulses', type=int, help='log2(n) of the longest sequence n')
