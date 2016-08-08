@@ -6,7 +6,7 @@ end
 
 [thisPath, ~] = fileparts(mfilename('fullpath'));
 scriptName = fullfile(thisPath, 'RabiAmp.py');
-[status, result] = system(sprintf('python "%s" "%s" %s', scriptName, getpref('qlab', 'PyQLabDir'), qubit), '-echo');
+[status, result] = system(sprintf('python "%s" "%s" %s', scriptName, qubit), '-echo');
 
 numsteps = 40; %should be even
 stepsize = 2/numsteps;

@@ -3,7 +3,6 @@ import sys, os
 import numpy as np
 from copy import copy
 parser = argparse.ArgumentParser()
-parser.add_argument('pyqlabpath', help='path to PyQLab directory')
 parser.add_argument('qubit', help='qubit name')
 parser.add_argument('direction', help='direction (X or Y)')
 parser.add_argument('numPulses', type=int, help='log2(n) of the longest sequence n')
@@ -21,15 +20,14 @@ else:
     pPulse = Ytheta(q, amp=args.amplitude)
     mPulse = Y90m(q)
 
-# Exponentially growing amplications of the target pulse
+# Exponentially growing repetitions of the target pulse, e.g.
 # (1, 2, 4, 8, 16, 32, 64, 128, ...) x X90
-# first two sequence give measurement calibration
 seqs = [[pPulse]*n for n in 2**np.arange(args.numPulses+1)]
 
 # measure each along Z or X/Y
 seqs = [s + m for s in seqs for m in [ [MEAS(q)], [mPulse, MEAS(q)] ]]
 
-# tack on calibrations
+# tack on calibrations to the beginning
 seqs = [[Id(q), MEAS(q)], [X(q), MEAS(q)]] + seqs
 
 # repeat each
