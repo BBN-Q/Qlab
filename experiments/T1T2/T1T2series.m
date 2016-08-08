@@ -32,9 +32,9 @@ for k = 1:nloops
         expSettings = json.read(getpref('qlab', 'CurScripterFile'));
         instrSettings = expSettings.instruments;
         warning('on', 'json:fieldNameConflict');
-        
+
         chanSettings = chanSettings.channelDict;
-        
+
         %find master AWG
         for instr = fieldnames(instrSettings)'
             if isfield(instrSettings.(instr{1}), 'isMaster')
@@ -43,7 +43,7 @@ for k = 1:nloops
                 end
             end
         end
-               
+
         qubit = qubitlist{q}
         %select the relevant AWGs
         tmpStr = regexp(chanSettings.(qubit).physChan, '-', 'split');
@@ -51,7 +51,7 @@ for k = 1:nloops
         tmpStr = regexp(chanSettings.(strcat(genvarname('M-'),qubit)).physChan, '-', 'split');
         expSettings.AWGs{3} = tmpStr{1};
         expSettings.AWGs = unique(expSettings.AWGs); %remove duplicates
-        
+
         %add the relevant meas filters and sources
         measSettings = {};
         mstr = strcat('M',qubit(2),'Kernel');
@@ -59,7 +59,7 @@ for k = 1:nloops
         dataSource = expSettings.measurements.(mstr).dataSource;
         for m=1:3
             %recursively add sources (measurements or instruments)
-            if (~isempty(strfind(dataSource, 'X6')) || ~isempty(strfind(dataSource, 'ATS'))) 
+            if (~isempty(strfind(dataSource, 'X6')) || ~isempty(strfind(dataSource, 'ATS')))
                 for instrName = fieldnames(expSettings.instruments)'
                     if ((~isempty(strfind(instrName{1}, 'X6')) || ~isempty(strfind(instrName{1}, 'ATS'))) && ~strcmp(dataSource, instrName{1}))
                         expSettings.instruments = rmfield(expSettings.instruments, instrName{1});
@@ -74,21 +74,21 @@ for k = 1:nloops
             end
         end
         expSettings.measurements = measSettings;
-        
+
         if doT1
             expSettings.AWGfilename = strcat('T1_', qubit);
             expSettings.sweeps.SegmentNumWithCals.start = 0;
             expSettings.sweeps.SegmentNumWithCals.stop = T1Stop;
             expSettings.sweeps.SegmentNumWithCals.step = T1Step;
-            ExpScripter2(strcat('T1_',qubit), 'lockSegments', expSettings);
+            ExpScripter2(strcat('T1_',qubit), strcat('T1_',qubit), expSettings);
         end
-        
+
         if doRamsey
             expSettings.AWGfilename = strcat('Ramsey_', qubit);
             expSettings.sweeps.SegmentNumWithCals.start = 0;
             expSettings.sweeps.SegmentNumWithCals.stop = RamseyStop;
             expSettings.sweeps.SegmentNumWithCals.step = RamseyStep;
-            ExpScripter2(strcat('Ramsey_',qubit), 'lockSegments', expSettings);
+            ExpScripter2(strcat('Ramsey_',qubit), strcat('Ramsey_',qubit), expSettings);
         end
     end
 
