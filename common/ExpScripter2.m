@@ -64,6 +64,11 @@ for instrument = fieldnames(instrSettings)'
         end
         if ~isempty(metaInfo)
             instrSettings.(instrument{1}).averager.nbrSegments = metaInfo.num_measurements;
+            if isfield(sweepSettings, 'SegmentNum')
+                sweepSettings.SegmentNum.numPoints = metaInfo.num_measurements;
+            elseif isfield(sweepSettings, 'SegmentNumWithCals')
+                sweepSettings.SegmentNumWithCals.numPoints =   metaInfo.num_measurements;
+            end
         end
     end
     add_instrument(exp, instrument{1}, instr, instrSettings.(instrument{1}));
