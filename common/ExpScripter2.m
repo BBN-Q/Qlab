@@ -61,6 +61,9 @@ for instrument = fieldnames(instrSettings)'
     if ExpManager.is_scope(instr)
         if singleShot==1
             instrSettings.(instrument{1}).averager.nbrRoundRobins = 1;
+            if isfield(sweepSettings, 'SegmentNum')
+                instrSettings.(instrument{1}).averager.nbrSegments =  sweepSettings.SegmentNum.numPoints;
+            end
         end
         if ~isempty(metaInfo)
             instrSettings.(instrument{1}).averager.nbrSegments = metaInfo.num_measurements;   
