@@ -63,15 +63,18 @@ for instrument = fieldnames(instrSettings)'
             instrSettings.(instrument{1}).averager.nbrRoundRobins = 1;
         end
         if ~isempty(metaInfo)
-            instrSettings.(instrument{1}).averager.nbrSegments = metaInfo.num_measurements;
-            if isfield(sweepSettings, 'SegmentNum')
-                sweepSettings.SegmentNum.numPoints = metaInfo.num_measurements;
-            elseif isfield(sweepSettings, 'SegmentNumWithCals')
-                sweepSettings.SegmentNumWithCals.numPoints =   metaInfo.num_measurements;
-            end
+            instrSettings.(instrument{1}).averager.nbrSegments = metaInfo.num_measurements;   
         end
     end
     add_instrument(exp, instrument{1}, instr, instrSettings.(instrument{1}));
+end
+
+if ~isempty(metaInfo)
+    if isfield(sweepSettings, 'SegmentNum')
+        sweepSettings.SegmentNum.numPoints = metaInfo.num_measurements;
+    elseif isfield(sweepSettings, 'SegmentNumWithCals')
+        sweepSettings.SegmentNumWithCals.numPoints =   metaInfo.num_measurements;
+    end
 end
 
 for sweep = fieldnames(sweepSettings)'
