@@ -64,7 +64,7 @@ classdef (Sealed) YokoGS200 < deviceDrivers.lib.deviceDriverBase & deviceDrivers
             
             obj.write([':OUTPUT ' value]);
         end
-        function flag = ramp2V(obj,Vset)
+        function flag = ramp2V(obj,Vset,delay)
             CurrentV = str2double(obj.query(':SOURCE:LEVEL?'));
             DeltaV = Vset-CurrentV;
             %if the difference is greater than 1mv, ramp slowly
@@ -72,6 +72,7 @@ classdef (Sealed) YokoGS200 < deviceDrivers.lib.deviceDriverBase & deviceDrivers
                 for j=1:floor(abs(DeltaV*1000))                   
                     CurrentV=CurrentV+0.001*sign(DeltaV);
                     obj.write([':SOURCE:LEVEL ' num2str(CurrentV)]);
+                    pause(delay)
                 end
             end
             obj.write([':SOURCE:LEVEL ' num2str(Vset)]);
