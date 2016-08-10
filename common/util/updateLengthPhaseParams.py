@@ -9,13 +9,15 @@ parser.add_argument('amplitude', type=float, help='amplitude')
 args = parser.parse_args()
 
 sys.path.append(args.pyqlabpath)
-from Libraries import channelLib
+from QGL.ChannelLibrary import channelLib
 
 if args.qubit not in channelLib.channelDict:
 	sys.exit(1)
+	print "here"
 
 channelLib[args.qubit].pulseParams['length'] = args.length
 channelLib[args.qubit].pulseParams['phase'] = args.phase
 channelLib[args.qubit].pulseParams['amp'] = args.amplitude
 
 channelLib.write_to_file()
+print "there"
