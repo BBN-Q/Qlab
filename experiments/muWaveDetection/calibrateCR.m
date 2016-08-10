@@ -127,4 +127,14 @@ if calSteps(3)
     %analyze the sequence and updates CR pulse
     data=load_data('latest');
     optamp = analyzeCalCR(3,data,CalParams.channel, CalParams.CR);
+    
+    calpath = 'C:\Users\qlab\Documents\data\Cal_Logs';
+    expSettings = json.read(getpref('qlab', 'CurScripterFile'));
+    warning('off', 'json:fieldNameConflict');
+    chanSettings = json.read(getpref('qlab', 'ChannelParamsFile'));
+    warning('on', 'json:fieldNameConflict');
+    CRcalvec = [optlen, optphase, optamp];
+    CRfile = fopen(fullfile(calpath, ['CRvec_' control(2) target(2) '.csv']), 'at');
+    fprintf(CRfile, '%s\t%.4f\t%.4f\t%.4f\n', datestr(now,31), CRcalvec(1), CRcalvec(2), CRcalvec(3));
+    fclose(CRfile);
 end
