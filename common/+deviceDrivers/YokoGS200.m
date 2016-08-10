@@ -64,16 +64,15 @@ classdef (Sealed) YokoGS200 < deviceDrivers.lib.deviceDriverBase & deviceDrivers
             
             obj.write([':OUTPUT ' value]);
         end
-        function flag = ramp2V(obj,Vset,delay)
+        function flag = ramp2V(obj, Vset, rate)
+            %rate in V/s
             CurrentV = str2double(obj.query(':SOURCE:LEVEL?'));
             DeltaV = Vset-CurrentV;
-            %if the difference is greater than 1mv, ramp slowly
-            if abs(DeltaV)>0.001
-                for j=1:floor(abs(DeltaV*1000))                   
-                    CurrentV=CurrentV+0.001*sign(DeltaV);
-                    obj.write([':SOURCE:LEVEL ' num2str(CurrentV)]);
-                    pause(delay)
-                end
+            step = rate*1e3; %1 ms step
+            for j=1:nsteps
+                CurrentV=CurrentV+j*step;
+                obj.write([':SOURCE:LEVEL ' num2str(CurrentV)]);
+                pause(1e-3)
             end
             obj.write([':SOURCE:LEVEL ' num2str(Vset)]);
             flag = true;
