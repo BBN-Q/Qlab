@@ -3,7 +3,12 @@ function [t2, detuning, t2error, detuningError] = fitramsey(xdata, ydata)
 % sinusoid.
 
 % if no input arguments, try to get the data from the current figure
-if nargin < 2
+persistent figHandles
+if isempty(figHandles)
+    figHandles = struct();
+end
+
+if nargin < 2 
     h = gcf;
     line = findall(h, 'Type', 'Line');
     xdata = get(line(1), 'xdata');
@@ -11,8 +16,13 @@ if nargin < 2
     % save figure title
     plotTitle = get(get(gca, 'Title'), 'String');
 else
-    h = figure;
-    plotTitle = 'Fit to a Damped Sinusoid';
+    if ~isfield(figHandles, 'Ramsey') || ~ishandle(figHandles.('Ramsey'))
+        figHandles.('Ramsey') = figure('Name', 'Ramsey');
+        h = figHandles.('Ramsey');
+    else
+        h = figure(figHandles.('Ramsey')); clf;
+    end
+    plotTitle = 'Fit to a damped sinusoid';
 end
 
 y = ydata(:);
