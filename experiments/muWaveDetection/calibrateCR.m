@@ -128,7 +128,7 @@ if calSteps(3)
     data=load_data('latest');
     optamp = analyzeCalCR(3,data,CalParams.channel, CalParams.CR);
     
-    calpath = 'C:\Users\qlab\Documents\data\Cal_Logs';
+    calpath = fullfile(getpref('qlab','dataDir'),'Cal_Logs');
     expSettings = json.read(getpref('qlab', 'CurScripterFile'));
     warning('off', 'json:fieldNameConflict');
     chanSettings = json.read(getpref('qlab', 'ChannelParamsFile'));
