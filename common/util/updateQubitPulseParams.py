@@ -9,7 +9,7 @@ parser.add_argument('dragScaling', type=float, help='dragScaling')
 args = parser.parse_args()
 
 sys.path.append(args.pyqlabpath)
-from Libraries import channelLib
+from QGL.ChannelLibrary import channelLib
 
 if args.qubit not in channelLib.channelDict:
 	sys.exit(1)
