@@ -16,27 +16,31 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
  classdef SegmentNum < sweeps.Sweep
-	properties
-	end
-	
-	methods
-		% constructor
-		function obj = SegmentNum(sweepParams, ~)
-			obj.axisLabel = sweepParams.axisLabel;
-			start = sweepParams.start;
-			step = sweepParams.step;
-            stop = start+step*(sweepParams.numPoints-1);
-			
-			% Generate inferred sweep points
-			obj.points = start:step:stop;
-            
+    properties
+    end
+
+    methods
+        % constructor
+        function obj = SegmentNum(sweepParams, ~)
+            obj.axisLabel = sweepParams.axisLabel;
+            if isfield(sweepParams, 'points')
+                obj.points = sweepParams.points;
+            else
+                start = sweepParams.start;
+                step = sweepParams.step;
+                stop = start+step*(sweepParams.numPoints-1);
+
+                % Generate inferred sweep points
+                obj.points = start:step:stop;
+            end
+
             %Since this is done on the AWG the number of steps is actually
             %1
             obj.numSteps = 1;
-		end
-		
-		% frequency stepper
-		function step(obj, ~)
-		end
-	end
+        end
+
+        % frequency stepper
+        function step(obj, ~)
+        end
+    end
 end

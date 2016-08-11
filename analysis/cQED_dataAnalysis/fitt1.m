@@ -1,4 +1,4 @@
-function [t1, t1error] = fitt1(xdata, ydata)
+function [t1, t1error, y0, y0error] = fitt1(xdata, ydata)
 % extract and fit sliding T1
 % usage: [t1, t1error] = fitt1(data, xstart, xend)
 
@@ -44,13 +44,20 @@ p = [max(y)-min(y) max(xdata)/3. y(end)];
 %p = max(xdata)/3.;
 
 tic
-[beta,r,j,cov] = nlinfit(xdata, y, t1f, p);
+try
+   [beta,r,j,cov] = nlinfit(xdata, y, t1f, p);
+catch
+   t1 = NaN; t1error = NaN; y0 = NaN; y0error = NaN;
+   return
+end
 toc
 
 t1 = beta(2);
+y0=beta(3);
 %t1 = beta(1);
 ci = nlparci(beta,r,j);
 t1error = (ci(2,2)-ci(2,1))/2;
+y0error = (ci(3,2)-ci(3,1))/2;
 %t1error = (ci(1,2)-ci(1,1))/2;
 %fprintf('Covariancdae matrix:\n');
 %disp(cov)
@@ -62,6 +69,7 @@ subplot(3,1,2:3)
 plot(xdata/1e3,y,'o')
 hold on
 plot(xdata/1e3,t1f(beta,xdata),'-r')
+ylim([-1,1])
 xlabel('Time [\mus]')
 ylabel('<\sigma_z>')
 hold off

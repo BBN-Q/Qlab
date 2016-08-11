@@ -10,6 +10,7 @@ exp.dataFileHandler = HDF5DataHandler(DataNamer.get_data_filename(deviceName, ex
 expSettings = json.read(getpref('qlab', 'CurScripterFile'));
 
 singleShot = 0;
+numShots = 1;
 metaInfo = [];
 
 %handle optional arguments
@@ -30,6 +31,9 @@ for n = 2:nargin
             % load info from meta file
             metaInfo = json.read(metaFile);
         end
+    elseif isnumeric(varargin{n-1})
+        % numeric arguments are number of shots
+        numShots = varargin{n-1};
     end
 end
 
@@ -63,7 +67,7 @@ for instrument = fieldnames(instrSettings)'
             instrSettings.(instrument{1}).averager.nbrRoundRobins = 1;
         end
         if ~isempty(metaInfo)
-            instrSettings.(instrument{1}).averager.nbrSegments = metaInfo.num_measurements;   
+            instrSettings.(instrument{1}).averager.nbrSegments = numShots * metaInfo.num_measurements;
         end
     end
     add_instrument(exp, instrument{1}, instr, instrSettings.(instrument{1}));
