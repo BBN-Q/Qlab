@@ -167,6 +167,11 @@ classdef PulseCalibration < handle
                 end
             end
             
+            % check number of round robins/waveforms and warn user if too low
+            if obj.numShots < 500 % the number 500 is arbitrary
+                warning('Number of experiments is low.  Error estimate could be inaccurate!');
+            end
+    
             % turn on variances
             obj.experiment.saveVariances = true;
             
