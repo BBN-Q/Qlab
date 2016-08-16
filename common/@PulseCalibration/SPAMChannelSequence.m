@@ -6,7 +6,7 @@ end
 
 [thisPath, ~] = fileparts(mfilename('fullpath'));
 scriptName = fullfile(thisPath, 'SPAM.py');
-[status, result] = system(sprintf('python "%s" "%s" %s', scriptName, qubit), '-echo');
+[status, result] = system(sprintf('python "%s" %s', scriptName, qubit), '-echo');
 
 numPsId = 10; % number pseudoidentities
 numAngles = 9;
