@@ -28,7 +28,7 @@ classdef PulseCalibration < handle
         AWGSettings
         testMode = false
         noiseVar % estimated variance of the noise from repeats
-        numShots % also participates in noise variance estimate
+        numShots = 1 % also participates in noise variance estimate
         finished = false
         initialParams
         singleScope = true
@@ -157,12 +157,9 @@ classdef PulseCalibration < handle
             % load ExpManager settings
             expSettings = json.read(obj.settings.cfgFile);
             instrSettings = expSettings.instruments;
-            instrNames = fieldnames(instrSettings);
-            ct = 0;
-            while (true)
-                ct = ct+1;
-                if strcmp(instrSettings.(instrNames{ct}).deviceName, 'AlazarATS9870') || strcmp(instrSettings.(instrNames{ct}).deviceName, 'X6')
-                    obj.numShots = instrSettings.(instrNames{ct}).averager.nbrRoundRobins * instrSettings.(instrNames{ct}).averager.nbrWaveforms;
+            for instrument = fieldnames(instrSettings)'
+                if strcmp(instrSettings.(instrument{1}).deviceName, 'AlazarATS9870') || strcmp(instrSettings.(instrument{1}).deviceName, 'X6')
+                    obj.numShots = instrSettings.(instrument{1}).averager.nbrRoundRobins * instrSettings.(instrument{1}).averager.nbrWaveforms;
                     break;
                 end
             end
