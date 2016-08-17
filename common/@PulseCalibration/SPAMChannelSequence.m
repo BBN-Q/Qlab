@@ -1,4 +1,4 @@
-function [filename, segmentPoints] = SPAMChannelSequence(obj, qubit, makePlot)
+function [metainfo, segmentPoints] = SPAMChannelSequence(obj, qubit, makePlot)
 
 if ~exist('makePlot', 'var')
     makePlot = false;
@@ -12,6 +12,6 @@ numPsId = 10; % number pseudoidentities
 numAngles = 9;
 segmentPoints = 1:numPsId*(1 + numAngles);
 
-filename = obj.getAWGFileNames('SPAM');
+metainfo = obj.getMetaInfo('SPAM');
 
 end

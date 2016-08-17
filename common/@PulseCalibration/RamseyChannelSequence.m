@@ -1,4 +1,4 @@
-function [filename, segmentPoints] = RamseyChannelSequence(obj, qubit, RamseyStop, nSteps)
+function [metainfo, segmentPoints] = RamseyChannelSequence(obj, qubit, RamseyStop, nSteps)
 
 
 [thisPath, ~] = fileparts(mfilename('fullpath'));
@@ -9,6 +9,6 @@ scriptName = fullfile(thisPath, 'RamseySequence.py');
 RamseyStep = RamseyStop/(nSteps-1);
 segmentPoints = 0:RamseyStep:RamseyStop;
 
-filename = obj.getAWGFileNames('Ramsey');
+metainfo = obj.getMetaInfo('Ramsey');
 
 end

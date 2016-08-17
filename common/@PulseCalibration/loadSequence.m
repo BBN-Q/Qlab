@@ -1,4 +1,4 @@
-function loadSequence(obj, paths, numRepeats)
+function loadSequence(obj, metainfo)
     % loadSequence(paths)
     % Load a set of pattern files onto one or more AWGs
     
@@ -18,9 +18,10 @@ function loadSequence(obj, paths, numRepeats)
     awgNames = fieldnames(obj.AWGs)';
     for ct = 1:length(awgNames)
         params = obj.AWGSettings.(awgNames{ct});
-        params.seqFile = paths{ct};
-        params.seqForce = 1;
-        params.miniLLRepeat = numRepeats-1;
-        obj.AWGs.(awgNames{ct}).setAll(params);
+        if isfield(metainfo.instruments, awgNames{ct})
+            params.seqFile = metainfo.instruments.(awgNames{ct});
+            params.seqForce = 1;
+            obj.AWGs.(awgNames{ct}).setAll(params);
+        end
     end
 end

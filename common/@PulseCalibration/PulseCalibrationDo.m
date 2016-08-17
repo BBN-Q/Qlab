@@ -32,9 +32,9 @@ end
 
 %% Rabi
 if settings.DoRabiAmp
-   [filenames, segmentPoints] = obj.rabiAmpChannelSequence(settings.Qubit);
+   [metainfo, segmentPoints] = obj.rabiAmpChannelSequence(settings.Qubit);
    if ~obj.testMode
-       obj.loadSequence(filenames, 1);
+       obj.loadSequence(metainfo);
    end
    
    piAmpGuesses = zeros([3,1]);
@@ -46,7 +46,7 @@ if settings.DoRabiAmp
    [piAmpGuesses(1), offsetPhases(1)] = obj.analyzeRabiAmp(data(1:end/2));
    % analyze Y data
    [piAmpGuesses(2), offsetPhases(2)] = obj.analyzeRabiAmp(data(end/2+1:end));
-   %Arbitary extra division by two so that it doesn't push the offset too far. 
+   %Arbitary extra division by two so that it doesn't push the offset too far.
    amp2offset = 0.5/obj.settings.offset2amp;
    
    obj.channelParams.piAmp = piAmpGuesses(1);
@@ -60,9 +60,9 @@ end
 
 %% Ramsey
 if settings.DoRamsey
-    % generate Ramsey sequence 
-    [filenames, segmentPoints] = obj.RamseyChannelSequence(settings.Qubit, settings.RamseyStop, settings.NumRamseySteps);
-    obj.loadSequence(filenames, 1);
+    % generate Ramsey sequence
+    [metainfo, segmentPoints] = obj.RamseyChannelSequence(settings.Qubit, settings.RamseyStop, settings.NumRamseySteps);
+    obj.loadSequence(metainfo);
     
     %Approach is to take one point, move half-way there and then see if
     %frequency moves in desired direction
@@ -89,7 +89,7 @@ if settings.DoRamsey
     else
         %double frequency for charge-sensitive qubits
         [~, detuning1, detuning2] = fit_two_freq(segmentPoints, quick_scale(data));
-        detuningA = (detuning1 + detuning2)/2; 
+        detuningA = (detuning1 + detuning2)/2;
     end
     
     % adjust drive frequency
@@ -234,7 +234,7 @@ if settings.DoPiPhaseCal
     updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 end
 
-%% DRAG calibration    
+%% DRAG calibration
 if settings.DoDRAGCal
     % generate DRAG calibration sequence
     if isfield(settings,'DRAGparams')
@@ -242,8 +242,8 @@ if settings.DoDRAGCal
     else
         deltas = linspace(-2,0,11)';
     end
-    [filenames, segmentPoints] = obj.APEChannelSequence(settings.Qubit, deltas);
-    obj.loadSequence(filenames, 1);
+    [metainfo, segmentPoints] = obj.APEChannelSequence(settings.Qubit, deltas);
+    obj.loadSequence(metainfo);
 
     % measure
     data = obj.take_data(segmentPoints);
@@ -266,11 +266,11 @@ if settings.DoDRAGCal
     end
 end
 
-%% SPAM calibration    
+%% SPAM calibration
 if settings.DoSPAMCal
     % generate DRAG calibration sequence
-    [filenames, segmentPoints] = obj.SPAMChannelSequence(settings.Qubit);
-    obj.loadSequence(filenames, 1);
+    [metainfo, segmentPoints] = obj.SPAMChannelSequence(settings.Qubit);
+    obj.loadSequence(metainfo);
 
     % measure
     data = obj.take_data(segmentPoints);
@@ -346,4 +346,3 @@ if settings.dolog
 end
 
 end
-

@@ -1,4 +1,4 @@
-function [filename, segmentPoints] = Pi2CalChannelSequence(obj, qubit, direction, numPulses, makePlot)
+function [metainfo, segmentPoints] = Pi2CalChannelSequence(obj, qubit, direction, numPulses, makePlot)
 
 if ~exist('direction', 'var')
     direction = 'X';
@@ -17,6 +17,6 @@ scriptName = fullfile(thisPath, 'Pi2Cal.py');
 nbrRepeats = 2;
 segmentPoints = 1:nbrRepeats*(1+2*numPulses);
 
-filename = obj.getAWGFileNames('Pi2Cal');
+metainfo = obj.getMetaInfo('Pi2Cal');
 
 end

@@ -1,4 +1,4 @@
-function [filename, segmentPoints] = PulsePhaseEstimate2q(obj, control, target, numPulses, amplitude)
+function [metainfo, segmentPoints] = PulsePhaseEstimate2q(obj, control, target, numPulses, amplitude)
 
 [thisPath, ~] = fileparts(mfilename('fullpath'));
 scriptName = fullfile(thisPath, 'PhaseEstimationSequence2q.py');
@@ -6,6 +6,6 @@ scriptName = fullfile(thisPath, 'PhaseEstimationSequence2q.py');
 
 segmentPoints = -1:0.25:numPulses+0.75;
 
-filename = obj.getAWGFileNames('RepeatCal');
+metainfo = obj.getMetaInfo('RepeatCal');
 
 end
