@@ -1,4 +1,4 @@
-function [filename, segmentPoints] = APEChannelSequence(obj, qubit, deltas, makePlot)
+function [metainfo, segmentPoints] = APEChannelSequence(obj, qubit, deltas, makePlot)
 
 if ~exist('makePlot', 'var')
     makePlot = false;
@@ -11,6 +11,6 @@ scriptName = fullfile(thisPath, 'APE.py');
 numPsId = 8;
 segmentPoints = 1:(1+numPsId)*length(deltas)+1;
 
-filename = obj.getAWGFileNames('APE');
+metainfo = obj.getMetaInfo('APE');
 
 end

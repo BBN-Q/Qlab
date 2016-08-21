@@ -1,4 +1,4 @@
-function [filename, segmentPoints] = rabiAmpChannelSequence(obj, qubit, makePlot)
+function [metainfo, segmentPoints] = rabiAmpChannelSequence(obj, qubit, makePlot)
 
 if ~exist('makePlot', 'var')
     makePlot = false;
@@ -13,6 +13,6 @@ stepsize = 2/numsteps;
 amps = [-1:stepsize:-stepsize stepsize:stepsize:1];
 segmentPoints = [amps amps];
 
-filename = obj.getAWGFileNames('Rabi');
+metainfo = obj.getMetaInfo('Rabi');
 
 end
