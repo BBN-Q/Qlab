@@ -68,13 +68,13 @@ classdef (Sealed) YokoGS200 < deviceDrivers.lib.deviceDriverBase & deviceDrivers
             %rate in V/s
             CurrentV = str2double(obj.query(':SOURCE:LEVEL?'));
             DeltaV = Vset-CurrentV;
-            step = rate*1e3; %1 ms step
+            step = rate*1e-3; %1 ms step
+            nsteps = round(abs(DeltaV/step));
             for j=1:nsteps
                 CurrentV=CurrentV+j*step;
                 obj.write([':SOURCE:LEVEL ' num2str(CurrentV)]);
-                pause(1e-3)
+                pause(0.6e-3) %each set instruction takes ~0.4 ms
             end
-            obj.write([':SOURCE:LEVEL ' num2str(Vset)]);
             flag = true;
         end
         function obj = set.range(obj, range)
