@@ -68,12 +68,12 @@ classdef (Sealed) YokoGS200 < deviceDrivers.lib.deviceDriverBase & deviceDrivers
             %rate in V/s
             CurrentV = str2double(obj.query(':SOURCE:LEVEL?'));
             % approximate number of steps as 1ms /step
-            num_steps = round( abs( Vset-CurrentV / (rate*1e-3) ) )
-            if num_steps = 1
+            num_steps = round( abs( (Vset-CurrentV) / (rate*1e-3) ) )
+            if num_steps == 1
               obj.write([':SOURCE:LEVEL ' num2str(Vset)]);
             else
               voltage_ramp = linspace(CurrentV, Vset, num_steps )
-              for v = voltage_ramp[2:end]
+              for v = voltage_ramp(2:end)
                   obj.write([':SOURCE:LEVEL ' num2str(v)]);
                   pause(0.6e-3) %each set instruction takes ~0.4 ms
               end
