@@ -75,9 +75,16 @@ end
 
 if ~isempty(metaInfo)
     if isfield(sweepSettings, 'SegmentNum')
-        sweepSettings.SegmentNum.numPoints = metaInfo.num_measurements;
+        sweepSettings.SegmentNum.points = metaInfo.axis_descriptor(1).points;
+        sweepSettings.SegmentNum.axisLabel = [metaInfo.axis_descriptor(1).name ' (' metaInfo.axis_descriptor(1).unit ')'];
     elseif isfield(sweepSettings, 'SegmentNumWithCals')
-        sweepSettings.SegmentNumWithCals.numPoints =   metaInfo.num_measurements;
+        points =  metaInfo.axis_descriptor(1).points;
+        num_cals = length(metaInfo.axis_descriptor(2).points);
+        % tack on calibration points assuming linear step
+        step = (points(end) - points(1)) / max([1, (length(points) - 1)]);
+        points = [points, points(end) + (1:num_cals)*step];
+        sweepSettings.SegmentNumWithCals.points = points;
+        sweepSettings.SegmentNumWithCals.axisLabel = [metaInfo.axis_descriptor(1).name ' (' metaInfo.axis_descriptor(1).unit ')'];
     end
 end
 

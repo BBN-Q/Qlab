@@ -74,20 +74,12 @@ for k = 1:nloops
             end
         end
         expSettings.measurements = measSettings;
-
+        
         if doT1
-            expSettings.AWGfilename = strcat('T1_', qubit);
-            expSettings.sweeps.SegmentNumWithCals.start = 0;
-            expSettings.sweeps.SegmentNumWithCals.stop = T1Stop;
-            expSettings.sweeps.SegmentNumWithCals.step = T1Step;
             ExpScripter2(strcat('T1_',qubit), fullfile(strcat('T1_',qubit), strcat('T1_',qubit)), expSettings);
         end
 
         if doRamsey
-            expSettings.AWGfilename = strcat('Ramsey_', qubit);
-            expSettings.sweeps.SegmentNumWithCals.start = 0;
-            expSettings.sweeps.SegmentNumWithCals.stop = RamseyStop;
-            expSettings.sweeps.SegmentNumWithCals.step = RamseyStep;
             ExpScripter2(strcat('Ramsey_',qubit), fullfile(strcat('Ramsey_',qubit), strcat('Ramsey_',qubit)), expSettings);
         end
     end
