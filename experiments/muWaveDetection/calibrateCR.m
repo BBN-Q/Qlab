@@ -59,22 +59,10 @@ for measname = fieldnames(expSettings.measurements)'
     end
 end
 
-expSettings.sweeps={};
-expSettings.sweeps.SegmentNumWithCals={};
-expSettings.sweeps.SegmentNumWithCals.order=1;
-expSettings.sweeps.SegmentNumWithCals.type='SegmentNum';
-expSettings.sweeps.SegmentNumWithCals.numPoints = 46;
-expSettings.sweeps.SegmentNumWithCals.numCals = 8;
-
 if calSteps(1)
     %create a sequence with desired range of CR pulse lengths
     CRCalSequence(CalParams.control, CalParams.target, 1, CalParams.lenstep)
 
-    %updates sweep settings
-    expSettings.sweeps.SegmentNumWithCals.start = CalParams.lenstep;
-    expSettings.sweeps.SegmentNumWithCals.stop = CalParams.lenstep*38;
-    expSettings.sweeps.SegmentNumWithCals.step = (expSettings.sweeps.SegmentNumWithCals.stop-expSettings.sweeps.SegmentNumWithCals.start)/(expSettings.sweeps.SegmentNumWithCals.numPoints-expSettings.sweeps.SegmentNumWithCals.numCals-1);
-    expSettings.sweeps.SegmentNumWithCals.axisLabel = 'Pulse top length (ns)';
 
     expSettings.instruments = instrSettings;
     expSettings.saveAllSettings = false;
@@ -84,7 +72,7 @@ if calSteps(1)
 
     %analyze the sequence and updates CR pulse
     data=load_data('latest');
-    optlen = analyzeCalCR(1,data,CalParams.channel, CalParams.CR);
+    optlen = analyzeCalCR(1,data,CalParams.channel, CalParams.CR)*1e3;
 else
     optlen = chanSettings.(CR).pulseParams.length*1e9;
 end
@@ -93,12 +81,6 @@ if calSteps(2)
     %create a sequence with calibrated length and variable phase
 
     CRCalSequence(CalParams.control, CalParams.target, 2, optlen)
-
-    %updates sweep settings
-    expSettings.sweeps.SegmentNumWithCals.start = 0;
-    expSettings.sweeps.SegmentNumWithCals.stop = 720;
-    expSettings.sweeps.SegmentNumWithCals.step = (expSettings.sweeps.SegmentNumWithCals.stop-expSettings.sweeps.SegmentNumWithCals.start)/(expSettings.sweeps.SegmentNumWithCals.numPoints-expSettings.sweeps.SegmentNumWithCals.numCals-1);
-    expSettings.sweeps.SegmentNumWithCals.axisLabel = 'Pulse phase (deg)';
 
     %run the sequence
     ExpScripter2('CRcal_ph', expSettings, 'EchoCR/EchoCR');
