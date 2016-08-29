@@ -15,6 +15,14 @@ if nargin < 2
     ydata = get(line(1), 'ydata');
     % save figure title
     plotTitle = get(get(gca, 'Title'), 'String');
+    %convert xaxis to ns
+    if ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), '\mus')) || ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), 'us'))
+        xdata = xdata*1e3;
+    elseif ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), 'ms'))
+        xdata = xdata*1e6;
+    elseif ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), 's'))
+        xdata = xdata*1e9;
+    end
 else
     if ~isfield(figHandles, 'Ramsey') || ~ishandle(figHandles.('Ramsey'))
         figHandles.('Ramsey') = figure('Name', 'Ramsey');
