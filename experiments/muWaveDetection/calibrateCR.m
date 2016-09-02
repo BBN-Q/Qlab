@@ -59,13 +59,12 @@ for measname = fieldnames(expSettings.measurements)'
     end
 end
 
+expSettings.instruments = instrSettings;
+expSettings.saveAllSettings = false;
+
 if calSteps(1)
     %create a sequence with desired range of CR pulse lengths
-    CRCalSequence(CalParams.control, CalParams.target, 1, CalParams.lenstep)
-
-
-    expSettings.instruments = instrSettings;
-    expSettings.saveAllSettings = false;
+    CRCalSequence(CalParams.control, CalParams.target, 1, CalParams.lenstep)  
 
     %run the sequence
     ExpScripter2('CRcal_len', expSettings, 'EchoCR/EchoCR');
@@ -93,15 +92,6 @@ end
 if calSteps(3)
     %create a sequence with desired range of CR pulse amplitudes
     CRCalSequence(CalParams.control, CalParams.target, 3, optlen)
-
-    %updates sweep settings;
-    expSettings.sweeps.SegmentNumWithCals.start = 0.6;
-    expSettings.sweeps.SegmentNumWithCals.stop = 1.4;
-    expSettings.sweeps.SegmentNumWithCals.step = (expSettings.sweeps.SegmentNumWithCals.stop-expSettings.sweeps.SegmentNumWithCals.start)/(expSettings.sweeps.SegmentNumWithCals.numPoints-expSettings.sweeps.SegmentNumWithCals.numCals-1);
-    expSettings.sweeps.SegmentNumWithCals.axisLabel = 'Pulse amplitude (V)';
-
-    expSettings.instruments = instrSettings;
-    expSettings.saveAllSettings = false;
 
     %run the sequence
     ExpScripter2('CRcal_amp', expSettings, 'EchoCR/EchoCR');
