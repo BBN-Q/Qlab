@@ -116,7 +116,13 @@ if settings.DoRamsey
         fit_freq = origFreq + added_detuning - 0.5*(detuningA - detuningA/2+detuningB);
     end
     if abs(origFreq - fit_freq) < 2*abs(added_detuning)
-        qubitSource.frequency = fit_freq;
+        if settings.tuneSource
+            qubitSource.frequency = fit_freq;
+        else
+            %update QGL library
+            fit_SSB = channelLib.channelDict.(settings.Qubit).frequency + (fit_freq - origFreq)*1e9;
+            updateQubitFreq(settings.Qubit, fit_SSB)
+        end
     else
         warning('Bad fit for the qubit frequency. Leaving source frequency as it was.')
     end
@@ -305,9 +311,11 @@ if settings.DoRamsey
     warning('off', 'json:fieldNameConflict');
     channelLib = json.read(getpref('qlab','ChannelParamsFile'));
     warning('on', 'json:fieldNameConflict');
-    sourceName = channelLib.channelDict.(mangledPhysChan).generator;
-    instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
-    expSettings.instruments.(sourceName).frequency = qubitSource.frequency;
+    if settings.tuneSource
+        sourceName = channelLib.channelDict.(mangledPhysChan).generator;
+        instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
+        expSettings.instruments.(sourceName).frequency = qubitSource.frequency; 
+      end
 end
 
 json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
