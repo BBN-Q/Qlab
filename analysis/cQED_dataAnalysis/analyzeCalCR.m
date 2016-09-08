@@ -52,16 +52,16 @@ if(caltype==1)
     yfit1c = yfit1(1:min(round(abs(beta1(2))/2/(xpoints(2)-xpoints(1))),end));
     [~, indmin0] = min(abs(yfit0c(:)));%-beta0(4));  %min returns the index of the first zero crossing
     [~, indmin1] = min(abs(yfit1c(:)));%-beta1(4));  %min returns the index of the first zero crossing
-    optlen = round(mean([xpoints(indmin0),xpoints(indmin1)])/10)*10;
-    fprintf('Length index for CNOT = %f\n', mean([indmin0, indmin1])); 
-    fprintf('Optimum length = %f ns\n', optlen)
-    fprintf('Mismatch between |0> and |1> = %f ns\n', abs(xpoints(indmin1)-xpoints(indmin0)))
+    optlen = round(mean([xpoints(indmin0),xpoints(indmin1)])/0.01)*0.01;
+    fprintf('Length index for CNOT = %d\n', mean([indmin0, indmin1])); 
+    fprintf('Optimum length = %d ns\n', optlen*1e3)
+    fprintf('Mismatch between |0> and |1> = %d ns\n', abs(xpoints(indmin1)-xpoints(indmin0))*1e3)
     CRfigname = 'CRlength';
 elseif(caltype==2)
     %find max contrast
     ctrfit = yfit0_f-yfit1_f;
     [maxctr, indmax] = max(ctrfit);
-    optphase = xpoints_f(indmax)-180; %set the phase for ZX90
+    optphase = xpoints_f(indmax)-pi; %set the phase for ZX90
     fprintf('Phase index for maximum contrast = %d\n', indmax)
     fprintf('Optimum phase = %f\n', optphase)
     fprintf('Contrast = %f\n', maxctr/2);
@@ -84,13 +84,7 @@ plot(xpoints, data0, 'b.', xpoints, data1, 'r.', xpoints_f, yfit0_f, 'b-', xpoin
 legend('ctrlQ in |0>','ctrlQ in |1>');
 ylim([-1,1]); ylabel('<Z>'); 
 
-if(caltype==1)
-    xlabel ('CR flat pulse length (ns)');
-elseif(caltype==2)
-    xlabel ('Phase (deg)');
-elseif(caltype==3)
-    xlabel('Amplitude (V)');
-end
+xlabel(CRdata.xlabel{1})
 title(strrep(CRdata.filename, '_', '\_'));
 
 %update length/phase in CR pulse parameters
@@ -99,7 +93,7 @@ channelLib = json.read(getpref('qlab','ChannelParamsFile'));
 warning('on', 'json:fieldNameConflict');
 chDict = channelLib.channelDict;
 if(caltype==1)
-    outlen = optlen*1e-9;
+    outlen = optlen*1e-6;
     outphase = chDict.(CRpulsename).pulseParams.phase;
     outamp = chDict.(CRpulsename).pulseParams.amp;
     optvalue = optlen;
