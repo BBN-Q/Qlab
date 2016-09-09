@@ -11,48 +11,28 @@ bop.output = true;
 srs = deviceDrivers.SRS830();
 srs.connect(8);
 
-yoko = deviceDrivers.YokoGS200();
-yoko.connect(2);
+%yoko = deviceDrivers.YokoGS200();
+%yoko.connect(2);
 
 ppl = deviceDrivers.Picosec10070A();
 ppl.connect(5);
+ppl.enable = true;
 
 %% Field only
 
 %Ramp from start to end and back to start
 startCur=-20;
-endCur=20;
-steps=100;
+endCur=5;
+steps=50;
 fieldScan = [linspace(startCur,endCur,steps), linspace(endCur,startCur,steps)];
 
-signal = nan(length(fieldScan),1);
-
-figure();
-plotHandle = scatter(fieldScan, signal, [],  [zeros(steps,1); ones(steps,1)], 'filled');
-xlabel('Current (A)');
-ylabel('Relative Voltage (V)');
-% slow ramp of bop to start  current
-ramp(bop,startCur,50);
-
-for ct = 1:length(fieldScan)
-    %Set the current
-    bop.value = fieldScan(ct);
-    %Wait to settle
-    pause(1);
-
-    %Read the value
-    signal(ct) = srs.R;
-    set(plotHandle, 'YData', signal);
-end
-%  slow rampdown of bop back to zero
-ramp(bop,0,50);
-
+results = field_sweep(fieldScan, bop, srs);
 %% Current only
 
-curScan = [linspace(0e-3, 3e-3, 40),linspace(3e-3,-3e-3, 80),linspace(-3e-3,0e-3, 40)];
+curScan = [linspace(0e-3, 4e-3, 40),linspace(4e-3,-4e-3, 80),linspace(-4e-3,0e-3, 40)];
 signal = nan(length(curScan),1);
 
-    Bval=7.5;
+    Bval=-20;
     figure();
     plotHandle = plot(curScan, signal, '*');
     xlabel('Current (A)');
@@ -62,9 +42,8 @@ signal = nan(length(curScan),1);
 %         bop.value = -ct;
 %         pause(1)
 %     end
-    endCur=7.5;
      %bop.value = -4;
-     bop.value = endCur;
+     bop.value = Bval;
      yoko.value = 0e-3;
      pause(3)
     for ct2 = 1:length(curScan)
@@ -85,7 +64,7 @@ signal = nan(length(curScan),1);
     
     %% field only with pulsing
 maxCur=0;
-prebiascur1=3;
+prebiascur1=4;
 prebiascur2=4;
 biascur=4.4;
 %endcur=-3;
@@ -152,3 +131,30 @@ end
         bop.value = (round(finmaxCur)+(1-ct));
         pause(1)
     end
+    
+    %% Field only
+
+%Ramp from start to end and back to start
+startCur=0;
+endCur=1000;
+steps=1000;
+fieldScan = [linspace(startCur,endCur,steps)];
+
+signal = nan(length(fieldScan),1);
+%yoko.value = -2E-3;
+figure();
+plotHandle = scatter(fieldScan, signal, [],  [zeros(steps,1)], 'filled');
+xlabel('Sec');
+ylabel('Relative Voltage (V)');
+
+
+for ct = 1:length(fieldScan)
+    %Set the current
+    %bop.value = fieldScan(ct);
+    %Wait to settle
+    pause(10);
+
+    %Read the value
+    signal(ct) = srs.R;
+    set(plotHandle, 'YData', signal);
+end

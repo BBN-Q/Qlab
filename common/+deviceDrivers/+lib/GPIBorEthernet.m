@@ -77,7 +77,7 @@ classdef GPIBorEthernet < hgsetget
         end
         
         function write(obj, varargin)
-            fprintf(obj.interface, varargin{:});
+            fprintf(obj.interface, sprintf(varargin{:}));
         end
         
         function val = query(obj, string)

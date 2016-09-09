@@ -43,7 +43,7 @@ for axesH = axesHandles'
 end
 
 %Save a png for Plont
-imageFile = [dataObj.path strrep(dataObj.filename, '.h5', '.png')];
+imageFile = fullfile(dataObj.path, strrep(dataObj.filename, '.h5', '.png'));
 saveas(figHandle, imageFile)
 
 %Default to today's date

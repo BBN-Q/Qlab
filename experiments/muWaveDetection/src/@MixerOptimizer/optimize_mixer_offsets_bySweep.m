@@ -22,25 +22,33 @@
 
 function [i_offset, q_offset] = optimize_mixer_offsets_bySweep(obj)
 
+persistent figHandles
+if isempty(figHandles)
+    figHandles = struct();
+end
+
 % unpack constants from cfg file
 ExpParams = obj.expParams;
 awg_I_channel = str2double(obj.channelParams.physChan(end-1));
 awg_Q_channel = str2double(obj.channelParams.physChan(end));
 
 obj.awg.run();
-obj.awg.waitForAWGtoStartRunning();
 
 offsetPts = linspace(ExpParams.Sweep.offset.start, ExpParams.Sweep.offset.stop, ExpParams.Sweep.offset.numPoints);
 vertex = struct();
 %Sweep the I with Q at 0
 measPowers1 = nan(1, length(offsetPts));
-figure();
+if ~isfield(figHandles, 'mixOffset') || ~ishandle(figHandles.('mixOffset'))
+    figHandles.('mixOffset') = figure('Name', 'I-Q offsets');
+else
+    figure(figHandles.('mixOffset')); clf;
+end
 axesH = axes();
 tmpLine = plot(axesH,offsetPts, measPowers1, 'b*');
 hold on
 set(get(get(tmpLine,'Annotation'),'LegendInformation'),...
     'IconDisplayStyle','off'); % Exclude line from legend
-xlabel('Offset Voltage (V)');
+xlabel(['Offset Voltage ' obj.chan ' (V)']);
 ylabel('Peak Power (dBm)');
 for ct = 1:length(offsetPts)
     vertex.a = offsetPts(ct); vertex.b = 0;
@@ -113,21 +121,20 @@ drawnow()
     end
 
     function setOffsets(vertex)
-        
+
         switch class(obj.awg)
             case 'deviceDrivers.Tek5014'
                 obj.awg.(['chan_' num2str(awg_I_channel)]).offset = vertex.a;
                 obj.awg.(['chan_' num2str(awg_Q_channel)]).offset = vertex.b;
                 obj.awg.operationComplete();
-                pause(0.1);
-            case 'deviceDrivers.APS'
+            case {'deviceDrivers.APS', 'APS'}
                 obj.awg.setOffset(awg_I_channel, vertex.a);
                 obj.awg.setOffset(awg_Q_channel, vertex.b);
-                pause(0.1);
+            case 'APS2'
+                set_channel_offset(obj.awg, awg_I_channel, vertex.a);
+                set_channel_offset(obj.awg, awg_Q_channel, vertex.b);
         end
-        
+        pause(0.1)
     end
 
 end
-
-

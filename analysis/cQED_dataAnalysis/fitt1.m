@@ -1,17 +1,36 @@
-function [t1, t1error] = fitt1(xdata, ydata)
+function [t1, t1error, y0, y0error] = fitt1(xdata, ydata)
 % extract and fit sliding T1
 % usage: [t1, t1error] = fitt1(data, xstart, xend)
 
 % if no input arguments, try to get the data from the current figure
-if nargin < 2
+
+persistent figHandles
+if isempty(figHandles)
+    figHandles = struct();
+end
+
+if nargin < 2 
     h = gcf;
     line = findall(h, 'Type', 'Line');
     xdata = get(line(1), 'xdata');
     ydata = get(line(1), 'ydata');
     % save figure title
     plotTitle = get(get(gca, 'Title'), 'String');
+    %convert xaxis to ns
+    if ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), '\mus')) || ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), 'us'))
+        xdata = xdata*1e3;
+    elseif ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), 'ms'))
+        xdata = xdata*1e6;
+    elseif ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), 's'))
+        xdata = xdata*1e9;
+    end
 else
-    h = figure;
+    if ~isfield(figHandles, 'T1') || ~ishandle(figHandles.('T1'))
+        figHandles.('T1') = figure('Name', 'T1');
+        h = figHandles.('T1');
+    else
+        h = figure(figHandles.('T1')); clf;
+    end
     plotTitle = '';
 end
 xdata = xdata(:);
@@ -33,8 +52,24 @@ p = [max(y)-min(y) max(xdata)/3. y(end)];
 %p = max(xdata)/3.;
 
 tic
-[beta,r,j,cov] = nlinfit(xdata, y, t1f, p);
+try
+   [beta,r,j,cov] = nlinfit(xdata, y, t1f, p);
+catch
+   t1 = NaN; t1error = NaN; y0 = NaN; y0error = NaN;
+   return
+end
 toc
+
+t1 = beta(2);
+y0=beta(3);
+%t1 = beta(1);
+ci = nlparci(beta,r,j);
+t1error = (ci(2,2)-ci(2,1))/2;
+y0error = (ci(3,2)-ci(3,1))/2;
+%t1error = (ci(1,2)-ci(1,1))/2;
+%fprintf('Covariancdae matrix:\n');
+%disp(cov)
+
 
 figure(h)
 clf
@@ -42,6 +77,7 @@ subplot(3,1,2:3)
 plot(xdata/1e3,y,'o')
 hold on
 plot(xdata/1e3,t1f(beta,xdata),'-r')
+ylim([-1,1])
 xlabel('Time [\mus]')
 ylabel('<\sigma_z>')
 hold off
@@ -52,14 +88,6 @@ axis tight
 ylabel('<\sigma_z>')
 xlabel('Time [\mus]')
 title(plotTitle)
-
-t1 = beta(2);
-%t1 = beta(1);
-ci = nlparci(beta,r,j);
-t1error = (ci(2,2)-ci(2,1))/2;
-%t1error = (ci(1,2)-ci(1,1))/2;
-%fprintf('Covariance matrix:\n');
-%disp(cov)
 
 % annotate the graph with T_1 result
 subplot(3,1,2:3)

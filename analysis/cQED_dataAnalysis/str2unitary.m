@@ -3,8 +3,8 @@ function Uout = str2unitary(strIn)
 
 %Basic Pauli operators
 X = [0,1; 1,0];
-Y = [0,-1i,1i,0];
-Z = [1 0;0 -1];
+Y = [0,-1i; 1i,0];
+Z = [1, 0; 0, -1];
 I = eye(2);
 
 switch strIn
@@ -12,6 +12,8 @@ switch strIn
         Uout =  [1,0,0,0;0,1,0,0;0,0,0,1;0,0,1,0];
     case 'InvCNOT12'
         Uout =  [0,1,0,0;1,0,0,0;0,0,1,0;0,0,0,1];
+    case 'CNOT21'
+        Uout =  [1,0,0,0;0,0,0,1;0,0,1,0;0,1,0,0];
     case '1QId'
         Uout = I;
     case '1QX90p'
@@ -54,6 +56,14 @@ switch strIn
         Uout = expm(-1i*kron(Y,I)*pi/4);
     case 'IY_2'
         Uout = expm(-1i*kron(I,Y)*pi/4);
+    case 'XZ90'
+        Uout = expm(-1i*kron(X,Z)*pi/4);
+    case 'ZX90'
+        Uout = expm(-1i*kron(Z,X)*pi/4);
+    case 'XZm90'
+        Uout = expm(1i*kron(X,Z)*pi/4);
+    case 'ZXm90'
+        Uout = expm(1i*kron(Z,X)*pi/4);
     case 'X_8I'
         Uout = expm(-1i*kron(X,I)*pi/16);
     case 'X_4I'
@@ -62,6 +72,16 @@ switch strIn
         Uout = expm(-1i*kron(I,X)*pi/16);
     case 'IX_4'
         Uout = expm(-1i*kron(I,X)*pi/8);
+    case 'CNOT12_y'
+        Uout =  [1,0,0,0;0,1,0,0;0,0,-1i,0;0,0,0,1i];
+    case 'X90ZX90'
+        Uout = [1,0,0,0;0,0,0,-i;0,0,1,0;0,-i,0,0];
+    case 'XX'
+        Uout = expm(-i*kron(X,I)*pi/2)*expm(-i*kron(I,X)*pi/2);
+    case 'X90X90'
+        Uout = expm(-i*kron(X,I)*pi/4)*expm(-i*kron(I,X)*pi/4);
+    case 'Y90Y90'
+        Uout = expm(-i*kron(Y,I)*pi/4)*expm(-i*kron(I,Y)*pi/4);
     otherwise
         error('Unrecognized gate');
 end

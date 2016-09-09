@@ -91,6 +91,10 @@ for ii = 1:data.nbrDataSets
         data.prodvar{ii} = h5read(fullpath, ['/DataSet' num2str(ii) '/prodvar']);
     end
     
+    %Check for measurement name
+    if any(strcmp({groupInfo.Attributes.Name}, 'name'))
+        data.measNames{ii} = h5readatt(fullpath, ['/DataSet' num2str(ii)], 'name');
+    end
 end
 
 data.filename = [filename, ext];
@@ -138,7 +142,7 @@ if ~isempty(plotMode)
             axesH = subplot(numRows, numCols, ct, 'Parent', figH);
                 switch data.dimension{ii}
                     case 1
-                        plot(axesH, data.xpoints{ii}, toPlot{ct}.func(data.data{ii}));
+                        plot(axesH, data.xpoints{ii}, toPlot{ct}.func(data.data{ii}),'.-');
                         xlabel(axesH, data.xlabel{ii});
                         ylabel(axesH, toPlot{ct}.label)
                         title(sanitizedFileName);

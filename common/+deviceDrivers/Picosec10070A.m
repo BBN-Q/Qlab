@@ -80,7 +80,11 @@ classdef (Sealed) Picosec10070A < deviceDrivers.lib.GPIB
             val = inverseMap(strtrim(obj.query('enable?')));
         end
         function obj = set.enable(obj, enable)
-            obj.write('enable %s', obj.enableMap(logical(enable)));
+            if enable
+                obj.write('enable');
+            else
+                obj.write('disable');
+            end
         end
         
         %repetition frequency

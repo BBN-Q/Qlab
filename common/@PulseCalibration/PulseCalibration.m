@@ -23,49 +23,74 @@ classdef PulseCalibration < handle
         settings
         channelParams
         controlAWG % name of control AWG
+        readoutAWG % name of readout AWG
         AWGs
         AWGSettings
-        testMode = false;
+        testMode = false
         noiseVar % estimated variance of the noise from repeats
-        numShots % also participates in noise variance estimate
+        numShots = 1 % also participates in noise variance estimate
         finished = false
         initialParams
+        singleScope = true
+        CRchanParams
+        targetAWG % name of target qubit AWG (for CR cal)
+        CRAWG % name of AWG with CR channel
     end
     methods
         % Class constructor
         function obj = PulseCalibration()
         end
 
-        function out = homodyneMeasurement(obj, segmentPoints)
+        function [out, outvar] = take_data(obj, segmentPoints)
             % runs the pulse sequence and returns the data
             
             % set number of segments in the sweep
             obj.experiment.sweeps{1}.points = segmentPoints;
 
-            % set digitizer with the appropriate number of segments
-            averagerSettings = obj.experiment.scopes{1}.averager;
-            averagerSettings.nbrSegments = length(segmentPoints);
-            obj.experiment.scopes{1}.averager = averagerSettings;
+            % set digitizer with the appropriate number of segments and, if ATS, in
+            % digitizer mode to return the variance
+            for scopeind = 1:length(obj.experiment.scopes)
+                switch class(obj.experiment.scopes{scopeind})
+                    case 'deviceDrivers.AlazarATS9870'
+                        averagerSettings = obj.experiment.scopes{scopeind}.averager;
+                        averagerSettings.nbrSegments = length(segmentPoints);
+                        obj.experiment.scopes{scopeind}.averager = averagerSettings;
+                        obj.experiment.scopes{scopeind}.acquireMode = 'digitizer';
+                    case 'X6'
+                        x6 = obj.experiment.scopes{scopeind};
+                        set_averager_settings(x6, x6.recordLength, length(segmentPoints), x6.nbrWaveforms, x6.nbrRoundRobins);
+                    otherwise
+                        error('Unknown scope type.');
+                end
+            end
             
             obj.experiment.run();
             
-            % pull out data from the first measurement
-            measNames = fieldnames(obj.experiment.measurements);
-            data = obj.experiment.data.(measNames{1}).mean;
+            % pull out data from the specified
+            data = obj.experiment.data.(obj.settings.measurement).mean;
+            realvar = obj.experiment.data.(obj.settings.measurement).realvar;
+            imagvar = obj.experiment.data.(obj.settings.measurement).imagvar;
             
             % return amplitude or phase data
             switch obj.settings.dataType
                 case 'amp'
                     out = abs(data);
+                    outvar = realvar + imagvar;
                 case 'phase'
                     % unwrap phase jumps
                     out = 180/pi * unwrap(angle(data));
+                    % This is a bit messy to do precisely. Let's approximate the noise as 'circular'.
+                    stddata = sqrt(realvar + imagvar);
+                    stdtheta = 180/pi * 2 * atan(stddata ./ abs(data));
+                    outvar = stdtheta .^ 2;
                 case 'real'
                     out = real(data);
+                    outvar = realvar;
                 case 'imag'
                     out = imag(data);
+                    outvar = imagvar;
                 otherwise
-                    error('Unknown dataType can only be "amp" or "phase"');
+                    error('Unknown dataType can only be "real", "imag", "amp" or "phase"');
             end
         end
 
@@ -95,9 +120,9 @@ classdef PulseCalibration < handle
         end
 
         function stop = LMStoppingCondition(obj, ~, optimValues, ~)
-            %Assume that if the variance of the residuals is less than some 
+            %Assume that if the variance of the residuals is less than some
             %multiple of the variance of the noise then we are as good as it gets
-            %Anecdotally 2-3 seems to be reasonable 
+            %Anecdotally 2-3 seems to be reasonable
             if var(optimValues.residual) < 3*obj.noiseVar
                 stop = true;
             else
@@ -114,6 +139,13 @@ classdef PulseCalibration < handle
             channelLib = channelLib.channelDict;
             assert(isfield(channelLib, settings.Qubit), 'Qubit %s not found in channel library', settings.Qubit);
             obj.channelParams = channelLib.(settings.Qubit).pulseParams;
+            if isfield(settings, 'CRpulses')
+                for CRpulse = settings.CRpulses
+                    obj.CRchanParams.(CRpulse{1}) = channelLib.(CRpulse{1}).pulseParams;
+                end
+                qt = settings.CRpulses(1);
+                CRchan = settings.CRpulses(2);
+            end
             
             if isfield(obj.settings, 'SoftwareDevelopmentMode') && obj.settings.SoftwareDevelopmentMode
                 obj.testMode = true;
@@ -125,45 +157,89 @@ classdef PulseCalibration < handle
             % load ExpManager settings
             expSettings = json.read(obj.settings.cfgFile);
             instrSettings = expSettings.instruments;
-            obj.numShots = instrSettings.scope.averager.nbrRoundRobins * instrSettings.scope.averager.nbrWaveforms;
+            for instrument = fieldnames(instrSettings)'
+                if strcmp(instrSettings.(instrument{1}).deviceName, 'AlazarATS9870') || strcmp(instrSettings.(instrument{1}).deviceName, 'X6')
+                    obj.numShots = instrSettings.(instrument{1}).averager.nbrRoundRobins * instrSettings.(instrument{1}).averager.nbrWaveforms;
+                    break;
+                end
+            end
+            
+            % turn on variances
+            obj.experiment.saveVariances = true;
+            
+            tmpStr = regexp(channelLib.(settings.Qubit).physChan, '-', 'split');
+            obj.controlAWG = tmpStr{1};
+            obj.channelParams.physChan = channelLib.(settings.Qubit).physChan;
+            tmpStr = regexp(channelLib.(strcat(genvarname('M-'),settings.Qubit)).physChan, '-', 'split');  %do the same for readout. Then only enable control and readout AWGs
+            obj.readoutAWG = tmpStr{1};
+            if isfield(settings, 'CRpulses')
+                tmpStr = regexp(channelLib.(qt{1}).physChan, '-', 'split');
+                obj.targetAWG = tmpStr{1};
+                tmpStr = regexp(channelLib.(CRchan{1}).physChan, '-', 'split');
+                obj.CRAWG = tmpStr{1};
+                tmpStr = regexp(channelLib.(strcat(genvarname('M-'),qt{1})).physChan, '-', 'split'); %readout is on the target
+                obj.readoutAWG = tmpStr{1};
+            end
             
             % add instruments
             for instrument = fieldnames(instrSettings)'
                 instr = InstrumentFactory(instrument{1});
+                if ExpManager.is_AWG(instr) && ~strcmp(instrument{1},obj.controlAWG) && ~strcmp(instrument{1},obj.readoutAWG) && ~instrSettings.(instrument{1}).isMaster...
+                        && ~(isfield(settings, 'CRpulses') && (strcmp(instrument{1},obj.targetAWG) || strcmp(instrument{1},obj.CRAWG)))
+                    continue
+                end
                 add_instrument(obj.experiment, instrument{1}, instr, instrSettings.(instrument{1}));
             end
             
             % create a generic SegmentNum sweep
             add_sweep(obj.experiment, 1, sweeps.SegmentNum(struct('axisLabel', 'Segment', 'start', 0, 'step', 1, 'numPoints', 2)));
             
-            % add measurement M1
-            import MeasFilters.*
-            measSettings = expSettings.measurements;
-            dh = DigitalHomodyne(measSettings.(obj.settings.measurement));
-            add_measurement(obj.experiment, obj.settings.measurement, dh);
+            % add the appropriate measurement stack
+            measSettings = expSettings.measurements.(obj.settings.measurement);
+            measName = obj.settings.measurement;
+            curFilter = MeasFilters.(measSettings.filterType)(measName, measSettings);
+            while (true)
+               %add the current filter
+               add_measurement(obj.experiment, measName, curFilter);
+               if isa(curFilter, 'MeasFilters.RawStream') || isa(curFilter, 'MeasFilters.StreamSelector')
+                   break;
+               end
+               %setup for the data source filter
+               measName = measSettings.dataSource;
+               measSettings = expSettings.measurements.(measName);
+               curFilter = MeasFilters.(measSettings.filterType)(measName, measSettings);
+            end
             
-            % intialize the ExpManager
+            if obj.singleScope
+                %removes the unnecessary scopes, preventing them
+                %from hanging waiting for a possibly absent trigger
+                for instrName = fieldnames(obj.experiment.instruments)'
+                    instr = obj.experiment.instruments.(instrName{1});
+                    if((isa(instr,'X6') || isa(instr,'deviceDrivers.AlazarATS9870')) && ~strcmp(curFilter.dataSource, instrName{1}))
+                        obj.experiment.remove_instrument(instrName{1})
+                    end
+                end
+            end
+            
+            % initialize the ExpManager
             init(obj.experiment);
-            
+                     
             obj.AWGs = struct_filter(@(x) ExpManager.is_AWG(x), obj.experiment.instruments);
             obj.AWGSettings = cellfun(@(awg) obj.experiment.instrSettings.(awg), fieldnames(obj.AWGs)', 'UniformOutput', false);
             obj.AWGSettings = cell2struct(obj.AWGSettings, fieldnames(obj.AWGs)', 2);
-
-            tmpStr = regexp(channelLib.(settings.Qubit).physChan, '-', 'split');
-            obj.controlAWG = tmpStr{1};
-            obj.channelParams.physChan = channelLib.(settings.Qubit).physChan;
-
+            
             if ~obj.testMode
                 % pull in physical channel parameters into channelParams
                 % Note: need to use genvarname to match the field name in
                 % the JSON struct
                 physChan = genvarname(channelLib.(settings.Qubit).physChan);
+                logicalChan = genvarname(channelLib.(settings.Qubit).label);
                 obj.channelParams.ampFactor = channelLib.(physChan).ampFactor;
                 obj.channelParams.phaseSkew = channelLib.(physChan).phaseSkew;
                 controlAWGsettings = obj.AWGSettings.(obj.controlAWG);
                 obj.channelParams.i_offset = controlAWGsettings.(['chan_' physChan(end-1)]).offset;
                 obj.channelParams.q_offset = controlAWGsettings.(['chan_' physChan(end)]).offset;
-                obj.channelParams.SSBFreq = channelLib.(physChan).SSBFreq;
+                obj.channelParams.SSBFreq = channelLib.(logicalChan).frequency;
             else
                 % setup parameters compatible with unit test
                 obj.channelParams.piAmp = 0.65;
@@ -184,19 +260,9 @@ classdef PulseCalibration < handle
             obj.PulseCalibrationDo();
         end
         
-        function filenames = getAWGFileNames(obj, basename)
-            pathAWG = fullfile(getpref('qlab', 'awgDir'), basename);
-            awgNames = fieldnames(obj.AWGs)';
-            for awgct = 1:length(awgNames)
-                switch class(obj.AWGs.(awgNames{awgct}))
-                    case 'deviceDrivers.Tek5014'
-                        filenames{awgct} = fullfile(pathAWG, [basename '-' awgNames{awgct}, '.awg']);
-                    case 'deviceDrivers.APS'
-                        filenames{awgct} = fullfile(pathAWG, [basename '-' awgNames{awgct}, '.h5']);
-                    otherwise
-                        error('Unknown AWG type.');
-                end
-            end
+        function meta = getMetaInfo(obj, basename)
+            filename = fullfile(getpref('qlab', 'awgDir'), basename, [basename '-meta.json']);
+            meta = json.read(filename);
         end
 
         function cleanup(obj)
@@ -221,6 +287,7 @@ classdef PulseCalibration < handle
         
         % externally defined static methods
         [cost, J, noiseVar] = RepPulseCostFunction(data, angle, numPulses);
+        [phase, sigma] = PhaseEstimation(data, vardata, verbose);
         [amp, offsetPhase]  = analyzeRabiAmp(data);
         bestParam = analyzeSlopes(data, numPsQIds, paramRange, numShots);
         
@@ -228,14 +295,16 @@ classdef PulseCalibration < handle
             % construct settings struct
             ExpParams = struct();
             ExpParams.Qubit = 'q1';
-            ExpParams.measurement = 'M1';
+            ExpParams.measurement = 'KernelM1';
             ExpParams.DoMixerCal = 0;
             ExpParams.DoRabiAmp = 0;
             ExpParams.DoRamsey = 0;
             ExpParams.NumPi2s = 9;
             ExpParams.DoPi2Cal = 1;
+            ExpParams.DoPi2PhaseCal = 0;
             ExpParams.NumPis = 9;
             ExpParams.DoPiCal = 1;
+            ExpParams.DoPiPhaseCal = 0;
             ExpParams.DoDRAGCal = 0;
             ExpParams.DoSPAMCal = 0;
             ExpParams.OffsetNorm = 2;
@@ -274,6 +343,11 @@ classdef PulseCalibration < handle
             %fprintf('Pi2Cost for more realistic data. Cost: %.4f, Jacobian: (%.4f, %.4f)\n', sum(cost.^2/length(cost)), sum(J(:,1)), sum(J(:,2)));
             %cost = pulseCal.PiCostFunction(data);
             %fprintf('PiCost for more realistic data: %f\n', cost);
+
+            % phase estimation
+            % pulseCal.settings = ExpParams;
+            % pulseCal.testMode = true;
+            % pulseCal.optimize_amplitude(0.55, 'X', pi);
             
             pulseCal.Init(ExpParams);
             pulseCal.Do();

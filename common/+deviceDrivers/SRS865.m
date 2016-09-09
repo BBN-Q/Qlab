@@ -1,4 +1,3 @@
-
 % CLASS SRS865 - Instrument driver for the SRS 865 lock-in
 
 % Original Author for SR830: Colm Ryan (colm.ryan@bbn.com)
@@ -31,6 +30,7 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
         scanInterval %number of seconds spent at each point in scan
         scanDC_start %beginning voltage for a DC scan
         scanDC_end %ending voltage for a DC scan
+
     end
 
     properties (SetAccess=private)
@@ -156,9 +156,6 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
             obj.write('APHS');
         end
         
-        function clrbuff(obj)
-           obj.write('SDC'); 
-        end
         
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        
 %Scan Functions
@@ -202,6 +199,16 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
         
         %Set Scan Time
         function obj=set.scanTime(obj, value)
+
+        function enable_scan(obj)
+            obj.write('SCNENBL ON')
+        end
+        
+        function run_scan(obj)
+            obj.write('SCNRUN')
+        end
+        
+        function scan_time_set(obj, value)
             assert(isnumeric(value) && (value >= 0) && (value <= 1728000), 'Oops! The scan time must be between 0 and 1728000 s (20 days)');
             obj.write('SCNSEC %E',value);
         end
@@ -232,6 +239,10 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
         
         %Set Beginning Voltage for DC Scan
         function obj=set.scanDC_start(obj, value)
+            obj.write('SCNPAR REFDc')
+        end
+        
+        function DC_scan_begin_set(obj, value)
             assert(isnumeric(value) && (value >= -5) && (value <= 5), 'Oops! The DC voltage must be between -5 V and 5 V');
             obj.write('SCNDC BEGin, %E',value);
         end
@@ -251,6 +262,12 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
         %Get Ending Votlage for DC Scan
         function val=get.scanDC_end(obj)
             val=str2num(obj.query('SCNDC? END'));
+            assert(isnumeric(value) && (value >= -5) && (value <= 5), 'Oops! The DC voltage must be between -5 V and 5 V');
+            obj.write('SCNDC END, %E',value);
+        end
+        
+        function clrbuff(obj)
+           obj.write('SDC'); 
         end
         
     end

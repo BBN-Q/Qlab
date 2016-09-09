@@ -17,7 +17,6 @@
 % limitations under the License.
 classdef AWGChannel < sweeps.Sweep
     properties
-        AWGType
         mode
         channelList
     end
@@ -30,16 +29,6 @@ classdef AWGChannel < sweeps.Sweep
             % look for the AWG instrument object
             assert(isfield(Instr, sweepParams.instr), 'Could not find AWG instrument');
             obj.Instr = Instr.(sweepParams.instr);
-            
-            switch sweepParams.instr(1:6)
-                case 'TekAWG'
-                    obj.AWGType = 'Tek';
-                case 'BBNAPS'
-                    obj.AWGType = 'APS';
-                otherwise
-                    error('Unrecognized AWG type');
-            end
-            
             obj.mode = sweepParams.mode;
             
             % construct channel list
@@ -68,13 +57,27 @@ classdef AWGChannel < sweeps.Sweep
         
         function stepAmplitude(obj, index)
             for ch = obj.channelList
-                obj.Instr.setAmplitude(ch, obj.points(index));
+                switch class(obj.Instr)
+                    case {'TekAWG', 'deviceDrivers.APS', 'APS'}
+                        obj.Instr.setAmplitude(ch, obj.points(index));
+                    case 'APS2'
+                        set_channel_scale(obj.Instr, ch, obj.points(index));
+                    otherwise
+                        error('Unrecognized AWG type');
+                end
             end
         end
         
         function stepOffset(obj, index)
             for ch = obj.channelList
-                obj.Instr.setOffset(ch, obj.points(index));
+                switch class(obj.Instr)
+                    case {'TekAWG', 'deviceDrivers.APS', 'APS'}
+                        obj.Instr.setOffset(ch, obj.points(index));
+                    case 'APS2'
+                        obj.Instr.set_channel_offset(ch, obj.points(index));
+                    otherwise
+                        error('Unrecognized AWG type');
+                end
             end
         end
         

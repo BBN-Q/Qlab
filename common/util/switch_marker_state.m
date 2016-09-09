@@ -48,7 +48,7 @@ switch class(awg)
         
         
         awg.stop();
-	case 'deviceDrivers.APS'                    
+	case {'deviceDrivers.APS', 'APS'}
    
 		pg = PatternGen('linkListMode', true);
 		patSeq = {pg.pulse('QId')};
@@ -75,7 +75,7 @@ switch class(awg)
 		awg.triggerInterval = 0.1;
 		awg.loadConfig(fullfile(tempdir, 'SwitchMarker.h5'));
 		awg.run();
-        pause(0.09);
+        pause(0.5);
 		awg.stop();
 
 end

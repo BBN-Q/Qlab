@@ -20,9 +20,10 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
     % Class-specific constant properties
     properties (Constant = true)
         MAX_DEVICES = 64;
+        MAX_RETRIES = 3;
     end % end constant properties
-    
-    
+
+
     % Class-specific private properties
     properties (Access = private)
         devID;
@@ -34,8 +35,19 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
         max_freq = 10; % GHz
         min_freq = 5; % GHz
         pulseModeEnabled = 0;
+
+        % status codes from vnx_fmssynth.h
+        STATUS_INVALID_DEVID     = hex2dec('80000000') % MSB is set if the device ID is invalid
+        STATUS_DEV_CONNECTED     = hex2dec('00000001') % LSB is set if a device is connected
+        STATUS_DEV_OPENED        = hex2dec('00000002') % set if the device is opened
+        STATUS_SWP_ACTIVE        = hex2dec('00000004') % set if the device is sweeping
+        STATUS_SWP_UP            = hex2dec('00000008') % set if the device is sweeping up in frequency
+        STATUS_SWP_REPEAT        = hex2dec('00000010') % set if the device is in continuous sweep mode
+        STATUS_SWP_BIDIRECTIONAL = hex2dec('00000020') % set if the device is in bidirectional sweep mode
+        STATUS_PLL_LOCKED        = hex2dec('00000040') % set if the PLL lock status is TRUE (both PLL's are locked)
+        STATUS_FAST_PULSE_OPTION = hex2dec('00000080') % set if the fast pulse mode option is installed
     end % end private properties
-    
+
     % Device properties correspond to instrument parameters
     properties (Access = public)
         output
@@ -46,11 +58,13 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
         alc
         pulse
         pulseSource = 'ext';
-        
+
+        pllLocked;
+
         % device specific
         refSource
     end % end device properties
-    
+
     methods
         %Constructor
         function obj = Labbrick()
@@ -58,7 +72,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             % build library path
             path = [fileparts(mfilename('fullpath')) filesep];
             if ~libisloaded('vnx_fmsynth')
-                loadlibrary([path 'vnx_fmsynth.dll'], [path 'vnx_fmsynth.h']);
+                loadlibrary([path 'vnx_fmsynth.dll'], [path 'vnx_LMS_api.h']);
                 calllib('vnx_fmsynth', 'fnLMS_SetTestMode', false);
             end
         end
@@ -69,14 +83,14 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
                 obj.disconnect();
             end
         end
-        
+
         % open the connection to the Labbrick with the given serial number
         function connect(obj, serial)
             if ~isnumeric(serial)
                 serial = str2double(serial);
             end
             obj.serialNum = serial;
-            
+
             % find the devID of the Labbrick with the given serial number
             [devIDs, serial_nums] = obj.enumerate();
             obj.devID = devIDs(serial_nums == serial);
@@ -87,7 +101,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             if status ~= 0
                 error('Could not open device with id: %i, returned error %i', [obj.devID status])
             end
-            
+
             % populate some device properties
             obj.open = 1;
             obj.max_power = calllib('vnx_fmsynth', 'fnLMS_GetMaxPwr', obj.devID) / 4;
@@ -95,7 +109,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             obj.max_freq = calllib('vnx_fmsynth', 'fnLMS_GetMaxFreq', obj.devID) / 1e8;
             obj.min_freq = calllib('vnx_fmsynth', 'fnLMS_GetMinFreq', obj.devID) / 1e8;
         end
-        
+
         function disconnect(obj)
             if obj.open
                 status = calllib('vnx_fmsynth', 'fnLMS_CloseDevice', obj.devID);
@@ -106,7 +120,12 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             obj.open = 0;
             end
         end
-        
+
+        function flag = get_dev_status(obj, status_code)
+           val = calllib('vnx_fmsynth', 'fnLMS_GetDeviceStatus', obj.devID);
+           flag = (bitand(val, status_code) == status_code);
+        end
+
         % get a list of connected Labbricks
         % NB: There is a bug in the Labbrick DLL that causes
         % fnLMS_GetDevInfo to only return device IDs in order until it
@@ -122,9 +141,9 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             if isempty(previous_num_devices)
                 previous_num_devices = 0;
             end
-            
+
             %num_devices = calllib('vnx_fmsynth','fnLMS_GetNumDevices');
-            
+
             %if (num_devices > previous_num_devices) || isempty(devIDs)
             if isempty(devIDs)
                 num_devices = calllib('vnx_fmsynth','fnLMS_GetNumDevices');
@@ -141,13 +160,13 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             ids = devIDs;
             serials = serial_nums;
         end
-        
+
         % get model name
         function name = model_name(obj)
-            [~, obj.model] = calllib('vnx_fmsynth', 'fnLMS_GetModelName', obj.devID, '          ');
+            [~, obj.model] = calllib('vnx_fmsynth', 'fnLMS_GetModelNameA', obj.devID, '          ');
             name = obj.model;
         end
-		
+
 		% Instrument parameter accessors
         % getters
         function val = get.frequency(obj)
@@ -185,17 +204,21 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             %if val == true, val = 'ext'; end
             val = obj.pulseSource;
         end
-        
+
         function val = get.refSource(obj)
             val = calllib('vnx_fmsynth', 'fnLMS_GetUseInternalRef', obj.devID);
             if val == true, val = 'int'; end
             if val == false, val = 'ext'; end
         end
-        
+
+        function val = get.pllLocked(obj)
+            val = obj.get_dev_status(obj.STATUS_PLL_LOCKED);
+        end
+
         % property setters
         function obj = set.frequency(obj, value)
             % value: frequency to set in GHz
-            
+
             % error check that the frequency is within the bounds of
             % the device
             if value > obj.max_freq
@@ -205,7 +228,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
                 value = obj.min_freq;
                 warning('Frequency out of range');
             end
-            
+
             % write frequency in 10s of Hz
             calllib('vnx_fmsynth', 'fnLMS_SetFrequency', obj.devID, value*1e8);
         end
@@ -218,7 +241,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
                 value = obj.min_power;
                 warning('Power out of range');
             end
-            
+
             % write power as a multiple of 0.25dBm
             value = int32(value*4);
             %fprintf('Writing value %i\n', value);
@@ -235,10 +258,10 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
         function obj = set.mod(obj, ~)
             %not supported by hardware
         end
-        
+
         function obj = set.pulse(obj, value)
             obj.pulseModeEnabled = obj.cast_boolean(value);
-            
+
             switch obj.pulseSource
                 case 'int'
                     calllib('vnx_fmsynth', 'fnLMS_SetUseExternalPulseMod', obj.devID, false);
@@ -250,7 +273,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
                     disp('Labbrick: Unknown pulse source');
             end
         end
-        function obj = set.pulseSource(obj, value)            
+        function obj = set.pulseSource(obj, value)
             % Validate input
             value = lower(value);
             checkMapObj = containers.Map({'int','internal','ext','external'},...
@@ -263,12 +286,12 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             else
                 obj.pulseSource = 'int';
             end
-            
+
             if obj.pulseModeEnabled
                 obj.pulse = 1; % set the pulse parameter to update the device
             end
         end
-        
+
         function obj = set.refSource(obj, value)
             % Validate input
             checkMapObj = containers.Map({'int','internal','ext','external'},...
@@ -276,13 +299,30 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
             if not (checkMapObj.isKey( lower(value) ))
                 error('Invalid input');
             end
-            
+
             calllib('vnx_fmsynth', 'fnLMS_SetUseInternalRef', obj.devID, checkMapObj(lower(value)));
+
+            if (strncmpi(value,'ext', 3))
+                % test for PLL lock to make sure external reference is there
+                if (~obj.pllLocked)
+                    error('Labbrick PLL is not locked');
+                end
+            else
+                %Try to catch intermittent PLL-lock when external reference is applied
+                ct = 0;
+                while (ct < 5)
+                    if (~obj.pllLocked)
+                        error('Labbrick PLL is not locked. Make sure external reference is not applied when using internal reference.');
+                    end
+                    pause(0.1);
+                    ct = ct + 1;
+                end
+            end
         end
     end % end instrument parameter accessors
-    
+
     methods (Static)
-       
+
         %Helper function to cast boolean inputs to 'on'/'off' strings
         function out = cast_boolean(in)
             if isnumeric(in)
@@ -298,7 +338,7 @@ classdef (Sealed) Labbrick < deviceDrivers.lib.uWSource
                 error('Unable to cast to boolean');
             end
         end
-        
+
     end
-    
+
 end % end class definition

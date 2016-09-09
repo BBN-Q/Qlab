@@ -1,12 +1,10 @@
 import argparse
 import sys, os
 parser = argparse.ArgumentParser()
-parser.add_argument('pyqlabpath', help='path to PyQLab directory')
 parser.add_argument('qubit', help='qubit name')
 args = parser.parse_args()
 
-sys.path.append(args.pyqlabpath)
-execfile(os.path.join(args.pyqlabpath, 'startup.py'))
+from QGL import *
 
 q = QubitFactory(args.qubit)
 
@@ -21,5 +19,5 @@ for angle in angleShifts:
 # pi pulse for scaling
 seqs += [[X(q), MEAS(q)]]
 
-fileNames = compile_to_hardware(seqs, fileName='SPAM/SPAM', nbrRepeats=1)
+fileNames = compile_to_hardware(seqs, fileName='SPAM/SPAM')
 # plot_pulse_files(fileNames)

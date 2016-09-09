@@ -32,21 +32,21 @@ end
 
 %% Rabi
 if settings.DoRabiAmp
-   [filenames, segmentPoints] = obj.rabiAmpChannelSequence(settings.Qubit);
+   [metainfo, segmentPoints] = obj.rabiAmpChannelSequence(settings.Qubit);
    if ~obj.testMode
-       obj.loadSequence(filenames, 1);
+       obj.loadSequence(metainfo);
    end
    
    piAmpGuesses = zeros([3,1]);
    offsetPhases = zeros([3,1]);
    
    %Run a sequence and fit it
-   data = obj.homodyneMeasurement(segmentPoints);
+   data = obj.take_data(segmentPoints);
    % analyze X data
    [piAmpGuesses(1), offsetPhases(1)] = obj.analyzeRabiAmp(data(1:end/2));
    % analyze Y data
    [piAmpGuesses(2), offsetPhases(2)] = obj.analyzeRabiAmp(data(end/2+1:end));
-   %Arbitary extra division by two so that it doesn't push the offset too far. 
+   %Arbitary extra division by two so that it doesn't push the offset too far.
    amp2offset = 0.5/obj.settings.offset2amp;
    
    obj.channelParams.piAmp = piAmpGuesses(1);
@@ -60,43 +60,72 @@ end
 
 %% Ramsey
 if settings.DoRamsey
-    % generate Ramsey sequence (TODO)
-    [filenames, segmentPoints] = obj.RamseyChannelSequence(settings.Qubit);
-    obj.loadSequence(filenames, 1);
+    % generate Ramsey sequence
+    [metainfo, segmentPoints] = obj.RamseyChannelSequence(settings.Qubit, settings.RamseyStop, settings.NumRamseySteps);
+    obj.loadSequence(metainfo);
     
     %Approach is to take one point, move half-way there and then see if
     %frequency moves in desired direction
-    qubitSource = obj.experiment.instruments.(obj.channelMap.(settings.Qubit).source);
+    warning('off', 'json:fieldNameConflict');
+    channelLib = json.read(getpref('qlab','ChannelParamsFile'));
+    warning('on', 'json:fieldNameConflict');
+    mangledPhysChan = genvarname(obj.channelParams.physChan);
+    qubitSource = obj.experiment.instruments.(channelLib.channelDict.(mangledPhysChan).generator);
     
-    %Deliberately shift off by 1MHz
+    %Deliberately shift off by the set RamseyDetuning (in kHz)
+    added_detuning = obj.settings.RamseyDetuning*1e-6;
     origFreq = qubitSource.frequency;
-    qubitSource.frequency = origFreq - 0.001;
+    qubitSource.frequency = origFreq + added_detuning;
 
     % measure
-    data = obj.homodyneMeasurement(segmentPoints);
+    data = obj.take_data(segmentPoints);
 
     quick_scale = @(d) 2*(d-mean(d))/(max(d)-min(d));
     
     % analyze
-    [~, detuningA] = fitramsey(segmentPoints, quick_scale(data));
-
+    if ~settings.Ramsey2f
+        %single frequency
+        [~, detuningA] = fitramsey(segmentPoints, quick_scale(data));
+    else
+        %double frequency for charge-sensitive qubits
+        [~, detuning1, detuning2] = fit_two_freq(segmentPoints, quick_scale(data));
+        detuningA = (detuning1 + detuning2)/2;
+    end
+    
     % adjust drive frequency
-    qubitSource.frequency = origFreq - 0.001 + detuningA/2;
+    qubitSource.frequency = origFreq + added_detuning + detuningA/2;
 
     % measure
-    data = obj.homodyneMeasurement(segmentPoints);
+    data = obj.take_data(segmentPoints);
 
     % analyze
-    [~, detuningB] = fitramsey(segmentPoints, quick_scale(data));
+    if ~settings.Ramsey2f
+        %single frequency
+        [~, detuningB] = fitramsey(segmentPoints, quick_scale(data));
+    else
+        %double frequency for charge-sensitive qubits
+        [~, detuning1, detuning2] = fit_two_freq(segmentPoints, quick_scale(data));
+        detuningB = (detuning1 + detuning2)/2;
+    end
     
     %If we have gotten smaller we are moving in the right direction
     %Average the two fits
     if detuningB < detuningA
-        qubitSource.frequency = origFreq - 0.001 + 0.5*(detuningA + detuningA/2+detuningB);
+        fit_freq = origFreq + added_detuning + 0.5*(detuningA + detuningA/2+detuningB);
     else
-        qubitSource.frequency = origFreq - 0.001 - 0.5*(detuningA - detuningA/2+detuningB);
+        fit_freq = origFreq + added_detuning - 0.5*(detuningA - detuningA/2+detuningB);
     end
-        
+    if abs(origFreq - fit_freq) < 2*abs(added_detuning)
+        if settings.tuneSource
+            qubitSource.frequency = fit_freq;
+        else
+            %update QGL library
+            fit_SSB = channelLib.channelDict.(settings.Qubit).frequency + (fit_freq - origFreq)*1e9;
+            updateQubitFreq(settings.Qubit, fit_SSB)
+        end
+    else
+        warning('Bad fit for the qubit frequency. Leaving source frequency as it was.')
+    end
 end
 
 %% Pi/2 Calibration
@@ -113,25 +142,67 @@ if settings.DoPi2Cal
     i_offset = real(x0(2));
     obj.channelParams.i_offset = i_offset;
     fprintf('Found X90Amp: %.4f\n', X90Amp);
+    if X90Amp>1
+        warning('X90Amp over range!');
+    end
     fprintf('Found I offset: %.4f\n\n\n', i_offset);
-    
+
     % calibrate amplitude and offset for +/- Y90
-    x0(2) = obj.channelParams.q_offset;
+    if obj.channelParams.SSBFreq==0
+        x0(2) = obj.channelParams.q_offset;
+        
+        x0 = lsqnonlin(@obj.Ypi2ObjectiveFnc,x0,[],[],options);
+        Y90Amp = real(x0(1));
+        q_offset = real(x0(2));
+        fprintf('Found Y90Amp: %.4f\n', Y90Amp);
+        if X90Amp>1
+            warning('Y90Amp over range!');
+        end
+        fprintf('Found Q offset: %.4f\n\n\n', q_offset);
+        
+        % update channelParams
+        obj.channelParams.pi2Amp = Y90Amp;
+        obj.channelParams.q_offset = q_offset;
+        % update T matrix with ratio X90Amp/Y90Amp
+        obj.channelParams.ampFactor = obj.channelParams.ampFactor*X90Amp/Y90Amp;
+        fprintf('ampFactor: %.3f\n', obj.channelParams.ampFactor);
+    end
     
-    x0 = lsqnonlin(@obj.Ypi2ObjectiveFnc,x0,[],[],options);
-    Y90Amp = real(x0(1));
-    q_offset = real(x0(2));
-    fprintf('Found Y90Amp: %.4f\n', Y90Amp);
-    fprintf('Found Q offset: %.4f\n\n\n', q_offset);
-    
-    % update channelParams
-    obj.channelParams.pi2Amp = Y90Amp;
-    obj.channelParams.q_offset = q_offset;
-    % update T matrix with ratio X90Amp/Y90Amp
-    obj.channelParams.ampFactor = obj.channelParams.ampFactor*X90Amp/Y90Amp;
-    fprintf('ampFactor: %.3f\n', obj.channelParams.ampFactor);
     % update QGL library
     updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
+end
+
+%% Pi/2 calibration via phase estimation
+if settings.DoPi2PhaseCal
+    if ~isfield(settings, 'CRpulses')
+        % calibrate amplitude for X90
+        X90Amp = obj.optimize_amplitude(obj.channelParams.pi2Amp, 'X', pi/2);
+        obj.channelParams.pi2Amp = X90Amp;
+        fprintf('Found X90Amp: %.4f\n\n', X90Amp);
+        
+        % calibrate Y90 if not using SSB
+        if obj.channelParams.SSBFreq == 0
+            Y90Amp = obj.optimize_amplitude(X90Amp, 'Y', pi/2);
+            fprintf('Found Y90Amp: %.4f\n', Y90Amp);
+            
+            obj.channelParams.pi2Amp = Y90Amp;
+            % update T matrix with ratio X90Amp/Y90Amp
+            obj.channelParams.ampFactor = obj.channelParams.ampFactor*X90Amp/Y90Amp;
+            fprintf('ampFactor: %.3f\n\n', obj.channelParams.ampFactor);
+        end
+        updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
+    else
+        %% controlled pi/2 calibration via phase estimation
+        for k=1:length(obj.settings.CRpulses)/2
+            qt = obj.settings.CRpulses(2*k-1);
+            CRchan = obj.settings.CRpulses(2*k);
+            %calibrate amplitude for ZX90
+            ZX90Amp = obj.optimize_amplitude(obj.CRchanParams.(CRchan{1}).amp, 'X', pi/2, qt{1});
+            obj.CRchanParams.(CRchan{1}).amp = ZX90Amp;
+            fprintf('Found ZX90Amp: %.4f\n\n', ZX90Amp);
+            updateLengthPhase(CRchan{1}, obj.CRchanParams.(CRchan{1}).length, obj.CRchanParams.(CRchan{1}).phase, ZX90Amp);
+        end
+    end
 end
 
 %% Pi Calibration
@@ -146,14 +217,30 @@ if settings.DoPiCal
     X180Amp = real(x0(1));
     i_offset = real(x0(2));
     fprintf('Found X180Amp: %.4f\n\n\n', X180Amp);
-    
+    if X180Amp>1
+        warning('X180Amp over range!');
+    end
+
     % update channelParams
     obj.channelParams.piAmp = X180Amp;
     obj.channelParams.i_offset = i_offset;
     updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
 end
 
-%% DRAG calibration    
+%% Pi calibration via phase estimation
+if settings.DoPiPhaseCal
+    % calibrate amplitude for X90
+    X180Amp = obj.optimize_amplitude(obj.channelParams.piAmp, 'X', pi);
+    obj.channelParams.piAmp = X180Amp;
+    fprintf('Found X180Amp: %.4f\n\n', X180Amp);
+    if X180Amp>1
+        warning('X180Amp over range!');
+    end
+
+    updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
+end
+
+%% DRAG calibration
 if settings.DoDRAGCal
     % generate DRAG calibration sequence
     if isfield(settings,'DRAGparams')
@@ -161,11 +248,11 @@ if settings.DoDRAGCal
     else
         deltas = linspace(-2,0,11)';
     end
-    [filenames, segmentPoints] = obj.APEChannelSequence(settings.Qubit, deltas);
-    obj.loadSequence(filenames, 1);
+    [metainfo, segmentPoints] = obj.APEChannelSequence(settings.Qubit, deltas);
+    obj.loadSequence(metainfo);
 
     % measure
-    data = obj.homodyneMeasurement(segmentPoints);
+    data = obj.take_data(segmentPoints);
 
     % analyze for the best value to two digits
     numPsQId = 8; % number pseudoidentities
@@ -185,14 +272,14 @@ if settings.DoDRAGCal
     end
 end
 
-%% SPAM calibration    
+%% SPAM calibration
 if settings.DoSPAMCal
     % generate DRAG calibration sequence
-    [filenames, segmentPoints] = obj.SPAMChannelSequence(settings.Qubit);
-    obj.loadSequence(filenames, 1);
+    [metainfo, segmentPoints] = obj.SPAMChannelSequence(settings.Qubit);
+    obj.loadSequence(metainfo);
 
     % measure
-    data = obj.homodyneMeasurement(segmentPoints);
+    data = obj.take_data(segmentPoints);
     
     % analyze for the best value to two digits
     numPsQId = 10; % number pseudoidentities
@@ -218,14 +305,21 @@ iChan = str2double(obj.channelParams.physChan(end-1));
 qChan = str2double(obj.channelParams.physChan(end));
 instrLib.instrDict.(obj.controlAWG).channels(iChan).offset = round(1e4*obj.channelParams.i_offset)/1e4;
 instrLib.instrDict.(obj.controlAWG).channels(qChan).offset = round(1e4*obj.channelParams.q_offset)/1e4;
+expSettings = json.read(getpref('qlab', 'CurScripterFile'));
 %Drive frequency from Ramsey
 if settings.DoRamsey
+    warning('off', 'json:fieldNameConflict');
     channelLib = json.read(getpref('qlab','ChannelParamsFile'));
-    sourceName = channelLib.channelDict.(mangledPhysChan).generator;
-    instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
+    warning('on', 'json:fieldNameConflict');
+    if settings.tuneSource
+        sourceName = channelLib.channelDict.(mangledPhysChan).generator;
+        instrLib.instrDict.(sourceName).frequency = qubitSource.frequency;
+        expSettings.instruments.(sourceName).frequency = qubitSource.frequency; 
+      end
 end
 
 json.write(instrLib, getpref('qlab', 'InstrumentLibraryFile'), 'indent', 2);
+json.write(expSettings, getpref('qlab', 'CurScripterFile'), 'indent', 2);
 
 % Display the final results
 obj.channelParams
@@ -238,6 +332,25 @@ obj.finished = true;
         
     end
 
-
+%log
+if settings.dolog
+    expSettings = json.read(getpref('qlab', 'CurScripterFile'));
+    warning('off', 'json:fieldNameConflict');
+    chanSettings = json.read(getpref('qlab', 'ChannelParamsFile'));
+    warning('on', 'json:fieldNameConflict');
+    channelParams = chanSettings.channelDict.(settings.Qubit);
+    mangledPhysChan = genvarname(channelParams.physChan);
+    qubitSource = expSettings.instruments.(chanSettings.channelDict.(mangledPhysChan).generator);
+    freq = qubitSource.frequency;
+    piamp = chanSettings.channelDict.(settings.Qubit).pulseParams.piAmp;
+    pi2amp = chanSettings.channelDict.(settings.Qubit).pulseParams.pi2Amp;
+    amps = [piamp, pi2amp];
+    fid = fopen(fullfile(settings.calpath, ['freqvec_' settings.Qubit '.csv']), 'at');
+    fprintf(fid, '%s\t%.9f\n', datestr(now,31), freq);
+    fclose(fid);
+    fid = fopen(fullfile(settings.calpath, ['ampvec_' settings.Qubit '.csv']), 'at');
+    fprintf(fid, '%s\t%.4f\t%.4f\n', datestr(now,31), amps(1), amps(2));
+    fclose(fid);
 end
 
+end

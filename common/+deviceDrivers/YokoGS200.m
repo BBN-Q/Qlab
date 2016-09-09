@@ -23,7 +23,7 @@ classdef (Sealed) YokoGS200 < deviceDrivers.lib.deviceDriverBase & deviceDrivers
         mode % 'current', or 'voltage'
         value
     end
-    
+
     methods
         function obj = YokoGS200()
         end
@@ -41,7 +41,7 @@ classdef (Sealed) YokoGS200 < deviceDrivers.lib.deviceDriverBase & deviceDrivers
         function val = get.range(obj)
             val = str2double(obj.query(':SOURCE:RANGE?'));
         end
-        
+
         % setters
         function obj = set.value(obj, value)
             obj.write([':SOURCE:LEVEL ' num2str(value)]);
@@ -61,8 +61,23 @@ classdef (Sealed) YokoGS200 < deviceDrivers.lib.deviceDriverBase & deviceDrivers
             if ~ismember(value, valid_inputs)
                 error('Invalid input');
             end
-            
+
             obj.write([':OUTPUT ' value]);
+        end
+        function ramp2V(obj, Vset, rate)
+            %rate in V/s
+            CurrentV = str2double(obj.query(':SOURCE:LEVEL?'));
+            % approximate number of steps as 1ms /step
+            num_steps = round( abs( (Vset-CurrentV) / (rate*1e-3) ) )
+            if num_steps == 1
+              obj.write([':SOURCE:LEVEL ' num2str(Vset)]);
+            else
+              voltage_ramp = linspace(CurrentV, Vset, num_steps )
+              for v = voltage_ramp(2:end)
+                  obj.write([':SOURCE:LEVEL ' num2str(v)]);
+                  pause(0.6e-3) %each set instruction takes ~0.4 ms
+              end
+            end
         end
         function obj = set.range(obj, range)
             valid_ranges = [1e-3, 10e-3, 100e-3, 200e-3, 1, 10, 30];
@@ -72,7 +87,7 @@ classdef (Sealed) YokoGS200 < deviceDrivers.lib.deviceDriverBase & deviceDrivers
             if ~ismember(range, valid_ranges)
                 error('Invalid range: %f', range);
             end
-            
+
             obj.write([':SOURCE:RANGE ' num2str(range)]);
         end
     end
