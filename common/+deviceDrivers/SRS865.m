@@ -1,3 +1,4 @@
+
 % CLASS SRS865 - Instrument driver for the SRS 865 lock-in
 
 % Original Author for SR830: Colm Ryan (colm.ryan@bbn.com)
@@ -25,6 +26,11 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
         sineAmp % output amplitude of the sin output (0.004 to 5.000V)
         sineFreq % reference frequency (Hz)
         DC % DC voltage offset for the sine output
+        scanMode % 0 = once, 1 = repeat, 2 = repeat up/down
+        scanTime %total scan time in seconds
+        scanInterval %number of seconds spent at each point in scan
+        scanDC_start %beginning voltage for a DC scan
+        scanDC_end %ending voltage for a DC scan
     end
 
     properties (SetAccess=private)
@@ -34,6 +40,7 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
         Y % read Y value of signal
         XNoise % read XNoise value of signal
         YNoise % read YNoise value of signal
+        scanState %0=disabled, 1=reset, 2=running, 3=paused, 4=done
     end
 
     properties(Constant)
@@ -136,33 +143,76 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
         end
 
         %Getter for signal XNoise
-        function X = get.XNoise(obj)
-            X = str2double(obj.query('OUTP? 10'));
+        function XNoise = get.XNoise(obj)
+            XNoise = str2double(obj.query('OUTP? 10'));
         end
         
         %Getter for signal YNoise
-        function Y = get.YNoise(obj)
-            Y = str2double(obj.query('OUTP? 11'));
+        function YNoise = get.YNoise(obj)
+            YNoise = str2double(obj.query('OUTP? 11'));
         end        
         
         function auto_phase(obj)
             obj.write('APHS');
         end
         
-        function enable_scan(obj)
+        function clrbuff(obj)
+           obj.write('SDC'); 
+        end
+        
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        
+%Scan Functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        
+        
+        %Getter for scanMode
+        function val = get.scanMode(obj)
+            val = str2double(obj.query('SCNEND?'));
+        end
+        
+        %Setter for scanMode
+        function obj = set.scanMode(obj,val)
+            obj.write('SCNEND %d',val)
+        end
+        
+        %Enable Scan (Sets Scan Parameter to beginning value - DOES NOT
+        %START SCAN)
+        function scanEnable(obj)
             obj.write('SCNENBL ON')
         end
         
-        function run_scan(obj)
+        %Disable Scan
+        function scanDisable(obj)
+            obj.write('SCNENBL OFF')
+        end
+        
+        %Start Scan
+        function scanRun(obj)
             obj.write('SCNRUN')
         end
         
-        function scan_time_set(obj, value)
+        %Reset Scan (required after running in ONCE mode before next scan)
+        function scanReset(obj)
+            obj.write('SCNRST')
+        end
+        
+        %Getter for Scan State
+        function val = get.scanState(obj)
+            val=str2num(obj.query('SCNSTATE?'));
+        end
+        
+        %Set Scan Time
+        function obj=set.scanTime(obj, value)
             assert(isnumeric(value) && (value >= 0) && (value <= 1728000), 'Oops! The scan time must be between 0 and 1728000 s (20 days)');
             obj.write('SCNSEC %E',value);
         end
         
-        function scan_interval_set(obj, value)
+        %Get Scan Time
+        function val=get.scanTime(obj)
+            val=str2num(obj.query('SCNSEC?'));
+        end
+        
+        %Set Scan Interval
+        function obj=set.scanInterval(obj, value)
             assert(isnumeric(value) && (value >= .008) && (value <= 2700), 'Oops! The scan interval must be between 8 ms and 2700 s (45 min)');
             inverseMap = invertMap(obj.scanIntervalMap);
             mapKeys = keys(inverseMap);
@@ -170,22 +220,37 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
             obj.write('SCNINRVL %d', inverseMap(mapKeys{index}));
         end
         
-        function DC_scan_set(obj)
+        function val=get.scanInterval(obj)
+            mapVal=str2num(obj.query('SCNINRVL?'));
+            val=obj.scanIntervalMap(mapVal);
+        end
+        
+        %Set Scan Parameter to reference DC
+        function scanDC_set(obj)
             obj.write('SCNPAR REFDc')
         end
         
-        function DC_scan_begin_set(obj, value)
+        %Set Beginning Voltage for DC Scan
+        function obj=set.scanDC_start(obj, value)
             assert(isnumeric(value) && (value >= -5) && (value <= 5), 'Oops! The DC voltage must be between -5 V and 5 V');
             obj.write('SCNDC BEGin, %E',value);
         end
         
-        function DC_scan_end_set(obj, value)
+        %Get Beginning Voltage for DC Scan
+        function val=get.scanDC_start(obj)
+            val=str2num(obj.query('SCNDC? BEGin'));
+        end
+        
+        
+        %Set Ending Voltage for DC Scan
+        function obj=set.scanDC_end(obj, value)
             assert(isnumeric(value) && (value >= -5) && (value <= 5), 'Oops! The DC voltage must be between -5 V and 5 V');
             obj.write('SCNDC END, %E',value);
         end
-        
-        function clrbuff(obj)
-           obj.write('SDC'); 
+
+        %Get Ending Votlage for DC Scan
+        function val=get.scanDC_end(obj)
+            val=str2num(obj.query('SCNDC? END'));
         end
         
     end
