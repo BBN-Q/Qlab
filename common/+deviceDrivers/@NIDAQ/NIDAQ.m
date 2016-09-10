@@ -28,7 +28,8 @@ classdef NIDAQ < handle
         
         function val = getDataAI0(obj)
             pydata = py.NIDAQai0.getData(obj.taskHandle,obj.points);
-            val = double(py.array.array('d',py.numpy.nditer(pydata)));
+            val.voltage = double(py.array.array('d',py.numpy.nditer(pydata)));
+            val.time = ((1:double(obj.points))-1)*1/obj.samplingRate;
             py.NIDAQai0.killTask(obj.taskHandle);
         end
         
@@ -45,8 +46,9 @@ classdef NIDAQ < handle
         function val = getDataAI0AI1(obj)
             pydata = py.NIDAQai0ai1.getData(obj.taskHandle,obj.points);
             matdata = double(py.array.array('d',py.numpy.nditer(pydata)));
-            val(1,:) = matdata(1:double(obj.points));
-            val(2,:) = matdata(double(obj.points)+1:end);
+            val.voltage(1,:) = matdata(1:double(obj.points));
+            val.voltage(2,:) = matdata(double(obj.points)+1:end);
+            val.time = ((1:double(obj.points))-1)*1/obj.samplingRate;
             py.NIDAQai0ai1.killTask(obj.taskHandle);
         end
         

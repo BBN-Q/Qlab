@@ -53,12 +53,12 @@ classdef Keysight34410A < deviceDrivers.lib.GPIB
         
         % get current range
         function val = get.CurrentRange(obj)
-            val = obj.query('SENSE:CURR:RANGE?');
+            val = str2num(obj.query('SENSE:CURR:RANGE?'));
         end
         
         % get voltage range
         function val = get.VoltageRange(obj)
-            val = obj.query('SENSE:VOLT:RANGE?');
+            val = str2num(obj.query('SENSE:VOLT:RANGE?'));
         end
         
         %set mode
