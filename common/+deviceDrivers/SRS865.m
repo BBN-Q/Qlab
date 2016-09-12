@@ -199,6 +199,7 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
         
         %Set Scan Time
         function obj=set.scanTime(obj, value)
+        end
 
         function enable_scan(obj)
             obj.write('SCNENBL ON')
@@ -270,7 +271,5 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
            obj.write('SDC'); 
         end
         
-    end
-    
+        end 
 end
-
