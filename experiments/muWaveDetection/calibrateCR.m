@@ -8,9 +8,11 @@ function [optlen, optphase, contrast, optamp] = calibrateCR(control, target, CR,
 p = inputParser;
 addParameter(p,'expSettings', json.read(getpref('qlab', 'CurScripterFile')), @isstruct)
 addParameter(p,'calSteps', [1,1,0])
+addParameter(p,'amplitude',0.8)
 parse(p, varargin{:});
 expSettings = p.Results.expSettings;
 calSteps = p.Results.calSteps;
+amplitude = p.Results.amplitude;
 
 optphase = NaN;
 contrast = NaN;
@@ -22,6 +24,7 @@ CalParams.target = target;
 CalParams.CR = CR;
 CalParams.channel = chan; %meas. channel for target qubit
 CalParams.lenstep = lenstep; %step in length calibration (in ns)
+CalParams.amp = amplitude; %starting pulse amplitude
 
 warning('off', 'json:fieldNameConflict');
 chanSettings = json.read(getpref('qlab', 'ChannelParamsFile'));
@@ -64,7 +67,7 @@ expSettings.saveAllSettings = false;
 
 if calSteps(1)
     %create a sequence with desired range of CR pulse lengths
-    CRCalSequence(CalParams.control, CalParams.target, 1, CalParams.lenstep)  
+    CRCalSequence(CalParams.control, CalParams.target, 1, CalParams.lenstep, CalParams.amp)  
 
     %run the sequence
     ExpScripter2('CRcal_len', expSettings, 'EchoCR/EchoCR');
@@ -79,7 +82,7 @@ end
 if calSteps(2)
     %create a sequence with calibrated length and variable phase
 
-    CRCalSequence(CalParams.control, CalParams.target, 2, optlen)
+    CRCalSequence(CalParams.control, CalParams.target, 2, optlen, CalParams.amp)
 
     %run the sequence
     ExpScripter2('CRcal_ph', expSettings, 'EchoCR/EchoCR');
@@ -91,7 +94,7 @@ end
 
 if calSteps(3)
     %create a sequence with desired range of CR pulse amplitudes
-    CRCalSequence(CalParams.control, CalParams.target, 3, optlen)
+    CRCalSequence(CalParams.control, CalParams.target, 3, optlen, CalParams.amp)
 
     %run the sequence
     ExpScripter2('CRcal_amp', expSettings, 'EchoCR/EchoCR');
