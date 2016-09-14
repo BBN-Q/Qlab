@@ -65,6 +65,12 @@ function [fit_params, fit_errors] = fit_resonance_circle(varargin)
     assert(length(freq) == length(data), 'Frequency and transmission data must me the same length!');
     assert(length(data) > 20, 'Too few points!');
     
+    freq = freq(:)';
+    data = data(:)';
+    
+    size(freq)
+    size(data)
+    
     [tau, alpha, A] = calibrate_resonance(freq, data, show_plot);
     S21_corr = apply_calibration(tau, alpha, A, freq, data);
     [f0, Qi, Qc, phi] = fit_calibrated_resonance(freq, S21_corr, show_plot);
@@ -204,11 +210,12 @@ end
 
 %%%%% Functions for frequency-phase fit of circle
 
-function sse = phase_model(params, f, data)
+function sse = phase_model(params, f, data, slope)
+    %check direction of data
     theta0 = params(1);
     Q = params(2);
     f0 = params(3);
-    fitfunc = theta0 + 2*atan(2*Q*(1 - f/f0));
+    fitfunc = theta0 + 2*slope*atan(2*Q*(1 - f/f0));
     sse = sum((fitfunc - unwrap(angle(data))).^2);
     
 %     figure(445);clf;
@@ -224,13 +231,20 @@ function [f0, Q, theta, fit] = fit_phase(f, data)
     %some initial guesses
     phi = unwrap(angle(data));
     %initial guesses
-    [~,idx] = min(abs(phi-mean(phi)));   
-    j = find(phi-phi(idx) < pi/2, 1, 'first');
-    k = find(phi-phi(idx) < -pi/2, 1, 'first');
+    [~,idx] = min(abs(phi-mean(phi)));  
+    if mean(phi(1:10)) > mean(phi(end-9:end))
+        j = find(phi-phi(idx) < pi/2, 1, 'first');
+        k = find(phi-phi(idx) < -pi/2, 1, 'first');
+        slope = 1;
+    else
+        j = find(phi-phi(idx) > pi/2, 1, 'first');
+        k = find(phi-phi(idx) > -pi/2, 1, 'first');
+        slope = -1;
+    end
     Qg = f(idx)/abs(f(j)-f(k));
-    model = @(p) phase_model(p, f, data);
+    model = @(p) phase_model(p, f, data, slope);
     pmin = fminsearch(model, [phi(idx), Qg, f(idx)]);
-    fit = pmin(1) + 2*atan(2*pmin(2)*(1 - f/pmin(3)));
+    fit = pmin(1) + 2*slope*atan(2*pmin(2)*(1 - f/pmin(3)));
     f0 = pmin(3); 
     Q = pmin(2);
     theta = pmin(1);
