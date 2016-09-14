@@ -29,15 +29,16 @@ function [fit_params, fit_errors] = fit_resonance_circle(varargin)
 % Optional string-value pairs:
 %   - 'show_plot': Boolean, plot fits.
 %   - 'demo': make some fake data and fit it.
-    
-    parser = inputParser;
-    
+    persistent figHandles;
+    if isempty(figHandles)
+        figHandles = struct();
+    end
+    parser = inputParser; 
     addRequired(parser, 'freq', @isnumeric);
     addRequired(parser, 'data', @isnumeric);
     addParameter(parser, 'show_plot', 0);
     addParameter(parser, 'demo', 0);
     parse(parser, varargin{:})
-    
     if parser.Results.demo
         %generate example data
         f0 = 7.1;
@@ -55,37 +56,36 @@ function [fit_params, fit_errors] = fit_resonance_circle(varargin)
         rand_amp = 0.01*randn(size(freq));
         data = data.*exp(-1i*rand_phase).*(1+rand_amp);
         show_plot = 1;
-        
     else
         show_plot = parser.Results.show_plot;
         freq = parser.Results.freq;
         data = parser.Results.data;
     end
-    
     assert(length(freq) == length(data), 'Frequency and transmission data must me the same length!');
     assert(length(data) > 20, 'Too few points!');
-    
     freq = freq(:)';
-    data = data(:)';
-    
-    size(freq)
-    size(data)
-    
-    [tau, alpha, A] = calibrate_resonance(freq, data, show_plot);
+    data = data(:)'; 
+    [tau, alpha, A, figHandles] = calibrate_resonance(freq, data, show_plot, figHandles);
     S21_corr = apply_calibration(tau, alpha, A, freq, data);
-    [f0, Qi, Qc, phi] = fit_calibrated_resonance(freq, S21_corr, show_plot);
-    
+    [f0, Qi, Qc, phi, figHandles] = fit_calibrated_resonance(freq, S21_corr, show_plot, figHandles);
     fprintf('Resonant frequency: %f\n', f0);
     fprintf('Internal quality factor: %f\n', Qi);
     fprintf('Coupling quality factor: %f\n', Qc);
     fprintf('Impedance mismatch angle: %f\n', phi);
-    
     fit_params.f0 = f0;
     fit_params.Qi = Qi;
     fit_params.Qc = Qc;
     fit_params.phi = phi;
-    
     fit_errors = []; %to do...
+    
+    if show_plot
+        Q = 1./(1/Qi + real(1./(Qc*exp(-1i*phi))));
+        fit = resonance_model([f0,abs(phi),Q,Qc,tau,alpha,A],freq);
+        figure(figHandles.('calibration_plot'));
+        subplot(2,1,1);hold on;
+        plot(freq, 20*log10(abs(fit)), '-', 'LineWidth', 2);
+        legend('data', 'fit');
+    end
 
 end
 
@@ -100,7 +100,7 @@ function S21 = resonance_model(params, f)
     S21 = A*exp(1i*alpha).*exp(-2*pi*1i*f*tau).*(1 - (Q/abs(Qc))*exp(1i*phi)./(1 + 2*1i*Q*(f/fr - 1)));
 end
 
-function [f0, Qi, Qc, phi] = fit_calibrated_resonance(f, scaled_data, show_plot)
+function [f0, Qi, Qc, phi, figHandles] = fit_calibrated_resonance(f, scaled_data, show_plot, figHandles)
     %Finally, extract experimental data from scaled data.
     [R, xc, yc] = fit_circle(real(scaled_data), imag(scaled_data));
     phi = -asin(yc/R);
@@ -110,7 +110,11 @@ function [f0, Qi, Qc, phi] = fit_calibrated_resonance(f, scaled_data, show_plot)
     Qi = 1./(1./Qfit - real(1./Qc));  
     Qc = abs(Qc);
     if show_plot
-        figure(2);clf;
+        if ~isfield(figHandles, 'fit_plot') || ~ishandles(figHandles.('fit_plot'))
+            figHandles.('fit_plot') = figure('Name', 'Resonator Fit');
+        else
+            figure(figHandles.('fit_plot')); clf;
+        end
         subplot(2,1,1);hold on;
         plot(real(scaled_data), imag(scaled_data), '.', 'MarkerSize', 15);
         th = linspace(0,2*pi,101);
@@ -127,6 +131,7 @@ function [f0, Qi, Qc, phi] = fit_calibrated_resonance(f, scaled_data, show_plot)
         xlabel('Frequency', 'FontSize', 14);
         ylabel('Phase [rad]', 'FontSize', 14);
         set(gca, 'FontSize', 14);
+
     end
     
 end
@@ -143,7 +148,7 @@ function scaled_data = apply_calibration(tau, alpha, a, f, data)
     end
 end
 
-function [tau, alpha, a] = calibrate_resonance(f, data, show_plot)
+function [tau, alpha, a, figHandles] = calibrate_resonance(f, data, show_plot, figHandles)
     %%%Calibrate out cable delay and overall system gain in order to 
     %translate resonance circle to "canonical" position.
         
@@ -161,7 +166,11 @@ function [tau, alpha, a] = calibrate_resonance(f, data, show_plot)
     alpha = angle(P);
     Scorr = apply_calibration(tau, alpha, a, f, data);
     if show_plot  
-        figure(1);clf;
+        if ~isfield(figHandles, 'calibration_plot') || ~ishandles(figHandles.('calibration_plot'))
+            figHandles.('calibration_plot') = figure('Name', 'Resonator Fit Calibration');
+        else
+            figure(figHandles.('calibration_plot')); clf;
+        end
         subplot(2,1,1);
         plot(f, 20*log10(abs(data)), '.', 'MarkerSize', 15);
         grid on;
@@ -189,13 +198,6 @@ function sse = delay_model(tau, f, data)
     [R, xc, yc] = fit_circle(real(data), imag(data));
     X = real(data); Y = imag(data);
     sse = sum(R.^2 - (X-xc).^2 - (Y-yc).^2);
-    
-    %uncomment to see live plot of fit
-%     figure(444);clf;
-%     plot(X, Y, '.', 'MarkerSize', 15);
-%     title(['Fitting Cable Delay. SSE = ' num2str(sse), ' tau = ' num2str(tau)]);
-%     pause(0.2);
-    
 end
 
 function tau = fit_delay(f, data)   
@@ -217,14 +219,6 @@ function sse = phase_model(params, f, data, slope)
     f0 = params(3);
     fitfunc = theta0 + 2*slope*atan(2*Q*(1 - f/f0));
     sse = sum((fitfunc - unwrap(angle(data))).^2);
-    
-%     figure(445);clf;
-%     plot(f, unwrap(angle(data)), '.', 'MarkerSize', 15);
-%     hold on;
-%     plot(f, fitfunc, '-', 'LineWidth', 2);
-%     legend('data', 'fit');
-%     title(['SSE = ' num2str(sse)]);
-%     pause(0.2);
 end
 
 function [f0, Q, theta, fit] = fit_phase(f, data)
