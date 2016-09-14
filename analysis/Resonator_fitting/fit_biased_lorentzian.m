@@ -15,7 +15,10 @@ function [fit_params, fit_vars] = fit_biased_lorentzian(freq, data, varargin)
 %   Optional string-value parameters:
 %       - 'MaxIter': Maximum number of fminsearch iterations. Default 2000.
 %       - 'Plot': Plot result of fit
-
+persistent figHandles;
+if isempty(figHandles)
+        figHandles = struct();
+end
 parser = inputParser;
 defaultDim = 1;
 defaultMaxIter = 2000;
@@ -75,7 +78,11 @@ if parser.Results.Plot
         ffit = bias_lorentz(fit_params(1,:), freq);
         [~, pband] = lorentz_variance(fit_params(1,:), freq, ssemin(1));
         
-        figure();
+        if ~isfield(figHandles, 'fit_plot') || ~ishandles(figHandles.('fit_plot'))
+            figHandles.('fit_plot') = figure('Name', 'Lorentzian Fit');
+        else
+            figure(figHandles.('fit_plot')); clf;
+        end
         hold on;
         plot(freq, data, '.', 'MarkerSize', 15);
         plot(freq, ffit, 'r-', 'LineWidth', 2);
@@ -97,7 +104,11 @@ if parser.Results.Plot
             fit(:,m) = bias_lorentz(fit_params(m,:), freq);
         end
         
-        figure();
+        if ~isfield(figHandles, 'fit_plot') || ~ishandles(figHandles.('fit_plot'))
+            figHandles.('fit_plot') = figure('Name', '2D Data Lorentzian Fit');
+        else
+            figure(figHandles.('fit_plot')); clf;
+        end
         subplot(1,2,1);
         imagesc(freq, 1:M, data'); axis square;
         xlabel('Frequency', 'FontSize', 15);
@@ -109,7 +120,11 @@ if parser.Results.Plot
         title('Fit', 'FontSize', 12);
         set(gca, 'FontSize', 14);
         
-        figure();
+        if ~isfield(figHandles, 'fit_params') || ~ishandles(figHandles.('fit_params'))
+            figHandles.('fit_params') = figure('Name', 'Fit Parameters');
+        else
+            figure(figHandles.('fit_params')); clf;
+        end
         subplot(2,1,1);
         errorbar(1:M, fit_params(:,2), 1.96*sqrt(fit_vars(:,2)), '.', 'MarkerSize', 15, 'LineWidth', 2);
         ylabel('f_0', 'FontSize', 15); set(gca, 'FontSize', 14); grid on;
