@@ -271,7 +271,46 @@ if settings.DoDRAGCal
         warning('Bad fit for the DRAG scaling.  Leaving scaling as it was.');
     end
 end
+%% DRAG calibration v2
+if settings.DoDRAGCal2
+    %generate DRAG calibration sequence
+    if isfield(settings,'DRAGparams')
+        deltas = settings.DRAGparams(:);
+    else
+        deltas = linspace(-2,0,11)';
+    end
+    num_pulses = 16:4:64;
+    
+    [metainfo, segmentPoints] = obj.DRAGCalSequence(settings.Qubit, deltas, num_pulses);
+    obj.loadSequence(metainfo);
+    
+    % measure 1st coarse pass
+    data = obj.take_data(segmentPoints);
 
+    % analyze
+    [fitDragScaling, errorDragScaling] = obj.fit_DRAG_cal(data, deltas, num_pulses);
+    %TODO: check fit goodness
+    
+    %second pass, higher res.
+    deltas = fitDragScaling(end)-0.25:0.02:fitDragScaling(end)+0.25;
+    num_pulses = 56:8:104;
+    
+    [metainfo, segmentPoints] = obj.DRAGCalSequence(settings.Qubit, deltas, num_pulses);
+    obj.loadSequence(metainfo);
+    
+    % measure 2nd finer pass
+    data = obj.take_data(segmentPoints);
+
+    % analyze
+    [fitDragScaling, errorDragScaling] = obj.fit_DRAG_cal(data, deltas, num_pulses);
+    
+    if all(abs(errorDragScaling)./fitDragScaling < 0.1)
+        obj.channelParams.dragScaling = fitDragScaling(end);
+        updateQubitPulseParams(obj.settings.Qubit, obj.channelParams);
+    else
+       warning('Bad fit for the DRAG scaling.  Leaving scaling as it was.');
+    end 
+end  
 %% SPAM calibration
 if settings.DoSPAMCal
     % generate DRAG calibration sequence
