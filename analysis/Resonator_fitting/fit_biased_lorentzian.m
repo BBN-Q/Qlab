@@ -78,7 +78,7 @@ if parser.Results.Plot
         ffit = bias_lorentz(fit_params(1,:), freq);
         [~, pband] = lorentz_variance(fit_params(1,:), freq, ssemin(1));
         
-        if ~isfield(figHandles, 'fit_plot') || ~ishandles(figHandles.('fit_plot'))
+        if ~isfield(figHandles, 'fit_plot') || ~ishandle(figHandles.('fit_plot'))
             figHandles.('fit_plot') = figure('Name', 'Lorentzian Fit');
         else
             figure(figHandles.('fit_plot')); clf;
@@ -104,7 +104,7 @@ if parser.Results.Plot
             fit(:,m) = bias_lorentz(fit_params(m,:), freq);
         end
         
-        if ~isfield(figHandles, 'fit_plot') || ~ishandles(figHandles.('fit_plot'))
+        if ~isfield(figHandles, 'fit_plot') || ~ishandle(figHandles.('fit_plot'))
             figHandles.('fit_plot') = figure('Name', '2D Data Lorentzian Fit');
         else
             figure(figHandles.('fit_plot')); clf;
@@ -120,7 +120,7 @@ if parser.Results.Plot
         title('Fit', 'FontSize', 12);
         set(gca, 'FontSize', 14);
         
-        if ~isfield(figHandles, 'fit_params') || ~ishandles(figHandles.('fit_params'))
+        if ~isfield(figHandles, 'fit_params') || ~ishandle(figHandles.('fit_params'))
             figHandles.('fit_params') = figure('Name', 'Fit Parameters');
         else
             figure(figHandles.('fit_params')); clf;
@@ -189,12 +189,20 @@ function params = initial_guess(x, data)
     end
     b = x(idx);
     half = (median(data) + data(idx)) / 2;
-    idx_l = find(data > half, 1, 'first');
-    idx_r = find(data > half, 1, 'last');
+    if max(data) - median(data) <= min(data) - median(data)
+        idx_l = find(data > half, 1, 'first');
+        idx_r = find(data > half, 1, 'last');
+    else
+        idx_l = find(data < half, 1, 'first');
+        idx_r = find(data < half, 1, 'last');
+    end
     c = abs(x(idx_l) - x(idx_r));
     a = c^2*(max(data)-min(data))/4;
+    if max(data) - median(data) > min(data) - median(data)
+        a = -a;
+    end
     d = (data(end) - data(1))/(x(end) - x(1));
-    params = [a, b, c, 0., e];
+    params = [a, b, c, d, e];
 end
     
     
