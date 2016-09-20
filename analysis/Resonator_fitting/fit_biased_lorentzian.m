@@ -78,7 +78,7 @@ if parser.Results.Plot
         ffit = bias_lorentz(fit_params(1,:), freq);
         [~, pband] = lorentz_variance(fit_params(1,:), freq, ssemin(1));
         
-        if ~isfield(figHandles, 'fit_plot') || ~ishandles(figHandles.('fit_plot'))
+        if ~isfield(figHandles, 'fit_plot') || ~ishandle(figHandles.('fit_plot'))
             figHandles.('fit_plot') = figure('Name', 'Lorentzian Fit');
         else
             figure(figHandles.('fit_plot')); clf;
@@ -104,7 +104,7 @@ if parser.Results.Plot
             fit(:,m) = bias_lorentz(fit_params(m,:), freq);
         end
         
-        if ~isfield(figHandles, 'fit_plot') || ~ishandles(figHandles.('fit_plot'))
+        if ~isfield(figHandles, 'fit_plot') || ~ishandle(figHandles.('fit_plot'))
             figHandles.('fit_plot') = figure('Name', '2D Data Lorentzian Fit');
         else
             figure(figHandles.('fit_plot')); clf;
@@ -120,7 +120,7 @@ if parser.Results.Plot
         title('Fit', 'FontSize', 12);
         set(gca, 'FontSize', 14);
         
-        if ~isfield(figHandles, 'fit_params') || ~ishandles(figHandles.('fit_params'))
+        if ~isfield(figHandles, 'fit_params') || ~ishandle(figHandles.('fit_params'))
             figHandles.('fit_params') = figure('Name', 'Fit Parameters');
         else
             figure(figHandles.('fit_params')); clf;
