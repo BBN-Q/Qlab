@@ -189,12 +189,20 @@ function params = initial_guess(x, data)
     end
     b = x(idx);
     half = (median(data) + data(idx)) / 2;
-    idx_l = find(data > half, 1, 'first');
-    idx_r = find(data > half, 1, 'last');
+    if max(data) - median(data) <= min(data) - median(data)
+        idx_l = find(data > half, 1, 'first');
+        idx_r = find(data > half, 1, 'last');
+    else
+        idx_l = find(data < half, 1, 'first');
+        idx_r = find(data < half, 1, 'last');
+    end
     c = abs(x(idx_l) - x(idx_r));
     a = c^2*(max(data)-min(data))/4;
+    if max(data) - median(data) > min(data) - median(data)
+        a = -a;
+    end
     d = (data(end) - data(1))/(x(end) - x(1));
-    params = [a, b, c, 0., e];
+    params = [a, b, c, d, e];
 end
     
     
