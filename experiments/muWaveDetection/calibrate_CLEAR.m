@@ -90,8 +90,10 @@ for ct = 1:3
         data = load_data('latest');
         caldata = real(cal_scale(data.data));
         n1vec(k) = fit_photon_number(xpoints, caldata, [kappa, ramsey_freq, 2*chi, T2, T1factor, 1]);
-        figure(figHandles.('CLEAR'));
+        figure(figHandles.('CLEAR')); 
+        set(gcf,'position',[550,300,1000,350])
         subplot(1,3,ct)
+        hold off
         plot(xpts(1:k), n0vec(1:k), '.-','markerSize', 10, 'Color', ColOrd(1,:));
         hold on;
         plot(xpts(1:k), n1vec(1:k), '.-','markerSize', 10, 'Color', ColOrd(2,:));
@@ -119,11 +121,11 @@ for ct = 1:3
     [~, fit_x0] = min(quadf(beta0, xfine));
     figure(figHandles.('CLEAR'));
     hold on;
-    plot(xfine, quadf(beta0, xfine), 'Color', ColOrd(1,:));
+    plot(xfine, quadf(beta0, xfine), '--', 'Color', ColOrd(1,:));
     [beta1,~,~] = nlinfit(xpts', n1vec, quadf, p1);
     [~, fit_x1] = min(quadf(beta1, xfine));
     hold on;
-    plot(xfine, quadf(beta1, xfine), 'Color', ColOrd(2,:));
+    plot(xfine, quadf(beta1, xfine), '--', 'Color', ColOrd(2,:));
     legend('0', '1', 'fit, 0', 'fit, 1')
     ylim([-0.2,3])
     opt_scaling = (xfine(fit_x0)+xfine(fit_x1))/2;
@@ -132,7 +134,10 @@ for ct = 1:3
     %update best eps1, eps2
     eps1_0 = eps1_0*opt_scaling;
     eps2_0 = eps2_0*opt_scaling;
-    fprintf('Updated \epsilon_1 =  %.3f, \epsilon_2 = %.3f\n', eps1_0, eps2_0);
+    str1 = '$$ \epsilon_1 $$';
+    str2 = '$$ \epsilon_2 $$';
+    %eps1_s = num2str(eps1_0)
+    text(0, 0.2, [str1 ' = ' num2str(eps1_0,3) '; ' str2 ' = ' num2str(eps2_0,3)],'HorizontalAlignment', 'left', 'VerticalAlignment', 'top','Interpreter','latex');
 end
 %TODO: update pulse shape. Make these parameters?
 end
