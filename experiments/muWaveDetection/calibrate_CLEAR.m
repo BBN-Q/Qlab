@@ -59,7 +59,7 @@ ColOrd = get(gca,'ColorOrder');
 %Sweep amplitude of CLEAR steps, keeping the ration eps2/eps1 constant
 for ct = 1:3
     if ~calsteps(ct)
-        break
+        continue
     end
     fprintf('Calibration step %d\n', ct);
     xpts = linspace(1-calsteps(ct), 1+calsteps(ct), nsteps);
@@ -132,12 +132,20 @@ for ct = 1:3
     fprintf('Optimum scaling factor: %.2f\n', opt_scaling);
     
     %update best eps1, eps2
-    eps1_0 = eps1_0*opt_scaling;
-    eps2_0 = eps2_0*opt_scaling;
+    switch ct
+        case 1
+            eps1_0 = eps1_0*opt_scaling;
+            eps2_0 = eps2_0*opt_scaling;
+        case 2
+            eps1_0 = eps1_0*opt_scaling;
+        case 3
+            eps2_0 = eps2_0*opt_scaling;
+    end
+    
     str1 = '$$ \epsilon_1 $$';
     str2 = '$$ \epsilon_2 $$';
     %eps1_s = num2str(eps1_0)
-    text(0, 0.2, [str1 ' = ' num2str(eps1_0,3) '; ' str2 ' = ' num2str(eps2_0,3)],'HorizontalAlignment', 'left', 'VerticalAlignment', 'top','Interpreter','latex');
+    text(0.2, 0.2, [str1 ' = ' num2str(eps1_0,3) '; ' str2 ' = ' num2str(eps2_0,3)],'HorizontalAlignment', 'left', 'VerticalAlignment', 'top','Interpreter','latex');
 end
 %TODO: update pulse shape. Make these parameters?
 end
