@@ -29,6 +29,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
         high            % high voltage
         low             % low voltage
         period          % in seconds
+        output          % output state
     end
 
     methods
@@ -73,6 +74,10 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
         end
         function val = get.period(obj)
             temp = obj.query('PULSE:PERIOD?');
+            val = str2double(temp);
+        end
+        function val = get.output(obj)
+            temp = obj.query('OUTPut?');
             val = str2double(temp);
         end
 
@@ -127,5 +132,22 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
         function obj = set.period(obj, value)
             obj.write(['PULSE:PERIOD ' num2str(value)]);
         end
+        function obj = set.output(obj, value)
+            if islogical(value) || isnumeric(value)
+                if value
+                    value = 'ON';
+                else
+                    value = 'OFF';
+                end
+            else
+                if ~strmatch(upper(value), {'ON','OFF'})
+                    error(sprintf('Invalid input: %s.', value))
+                end
+            end
+            obj.write(sprintf('OUTPut %s', upper(value)))
+        end
+            
+        
+        
     end
 end
