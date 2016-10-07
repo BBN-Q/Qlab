@@ -17,7 +17,7 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
-classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
+classdef (Sealed) Agilent33220A < deviceDrivers.lib.deviceDriverBase & deviceDrivers.lib.GPIBorEthernet
 
     properties (Access = public)
         outputLoad      % output impedance (1 - 1e-4 Ohms)

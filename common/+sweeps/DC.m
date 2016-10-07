@@ -37,7 +37,11 @@ classdef DC < sweeps.Sweep
 		
 		% DC stepper
 		function step(obj, index)
-			obj.Instr.value = obj.points(index);
+            if isa(obj.Instr, 'deviceDrivers.Agilent33220A')
+                obj.Instr.offset = obj.points(index);
+            else
+                obj.Instr.value = obj.points(index);
+            end
 			pause(0.5); % pause 500 ms for settling
 		end
 	end
