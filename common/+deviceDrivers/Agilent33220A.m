@@ -22,7 +22,7 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
     properties (Access = public)
         outputLoad      % output impedance (1 - 1e-4 Ohms)
         triggerSource   % {IMMediate|EXTernal|BUS}
-        numCycles    % for use in burst mode
+        numCycles       % for use in burst mode
         burstMode       % {TRIGgered|GATed}
         burstState      % {ON|OFF}
         offset          % in Volts
@@ -30,6 +30,9 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
         low             % low voltage
         period          % in seconds
         output          % output state
+        voltage         % voltage amplitude
+        outputFunction  % output type
+        frequency       % output freq  
     end
 
     methods
@@ -42,7 +45,8 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
         function trigger(obj)
             obj.write('*TRG');
         end
-
+        
+        %%getters
         function val = get.outputLoad(obj)
             temp = obj.query('OUTPut:LOAD?');
             val = str2double(temp);
@@ -80,7 +84,19 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
             temp = obj.query('OUTPut?');
             val = str2double(temp);
         end
-
+        function val = get.voltage(obj)
+            temp = obj.query('VOLTage?');
+            val = str2double(temp);
+        end
+        function val = get.frequency(obj)   
+            temp = obj.query('FREQuency?');
+            val = str2double(temp);
+        end
+        function val = get.outputFunction(obj)
+            val = obj.query('FUNCtion?');
+        end
+        
+        %%setters
         function obj = set.outputLoad(obj, value)
             obj.write(['OUTPut:LOAD ' num2str(value)]);
         end
@@ -140,13 +156,31 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
                     value = 'OFF';
                 end
             else
-                if ~strmatch(upper(value), {'ON','OFF'})
-                    error(sprintf('Invalid input: %s.', value))
-                end
+                value = valideatestring(value, {'ON', 'OFF'});
             end
-            obj.write(sprintf('OUTPut %s', upper(value)))
+            obj.write(sprintf('OUTPut %s', value))
         end
-            
+        function obj = set.voltage(obj, value)
+            if isnumeric(value)
+                obj.write(sprintf('VOLTage %f', value))
+            else 
+                value = validatestring(value, {'MIN', 'MAX'});
+                obj.write(sprintf('VOLTage %s', value))
+            end
+        end
+        function obj = set.frequency(obj, value)
+            if isnumeric(value)
+                obj.write(sprintf('FREQuency %f', value));
+            else
+                value = validatestring(value, {'MIN', 'MAX'});
+                obj.write(sprintf('VOLTage %s', value))
+            end
+        end
+        function obj = set.outputFunction(obj, value)
+            value = validatestring(value, {'SIN', 'SQU', 'RAMP', 'PULS', ...
+                'NOISE', 'DC', 'USER'});
+            obj.write(sprintf('FUNCtion %s', value))
+        end
         
         
     end
