@@ -138,10 +138,10 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
         end
         function obj = set.offset(obj, value)
             if isnumeric(value)
-                obj.write(sprintf('OFFSet %f', value));
+                obj.write(sprintf('VOLT:OFFSET %f', value));
             else
                 value = validatestring(value, {'MIN', 'MAX'});
-                obj.write(sprintf('OFFSet %s', value))
+                obj.write(sprintf('VOLT:OFFSET %s', value))
             end
         end
         function obj = set.high(obj, high)
