@@ -166,7 +166,7 @@ function [tau, alpha, a, figHandles] = calibrate_resonance(f, data, show_plot, f
     alpha = angle(P);
     Scorr = apply_calibration(tau, alpha, a, f, data);
     if show_plot  
-        if ~isfield(figHandles, 'calibration_plot') || ~ishandles(figHandles.('calibration_plot'))
+        if ~isfield(figHandles, 'calibration_plot') || ~ishandle(figHandles.('calibration_plot'))
             figHandles.('calibration_plot') = figure('Name', 'Resonator Fit Calibration');
         else
             figure(figHandles.('calibration_plot')); clf;
