@@ -312,7 +312,7 @@ classdef ExpManager < handle
             end
             
             %Wait for data taking to finish
-            obj.scopes{1}.wait_for_acquisition(obj.dataTimeout);
+            cellfun(@(scope) wait_for_acquisition(scope, obj.dataTimeout), obj.scopes); 
             
             if(~obj.CWMode)
                 %Stop all the AWGs
