@@ -10,12 +10,12 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
         address = 1
         name = '';
         
-        %The single-shot or averaged data (depending on the acquireMode)
+        %The single-shot or averaged data (depending on the digitizerMode)
         data
         
         %Acquire mode controls whether we return single-shot results or
         %averaged data
-        acquireMode = 'averager';
+        digitizerMode = 'averager';
         
         %How long to wait for a buffer to fill (seconds)
         timeOut = 30;
@@ -234,7 +234,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 obj.initializeProcessing = false;
                 obj.bufferct = 0;
                 
-                if strcmp(obj.acquireMode, 'averager')
+                if strcmp(obj.digitizerMode, 'averager')
                     obj.sumDataA = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
                     obj.sumDataB = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrSegments]);
                 else
@@ -248,7 +248,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                     partialBufs = true;
                     obj.idx = 1;
                     bufStride = obj.buffers.recordsPerBuffer*obj.settings.averager.recordLength;
-                    switch obj.acquireMode
+                    switch obj.digitizerMode
                         case 'digitizer'
                             obj.data{1} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments], 'single');
                             obj.data{2} = zeros([obj.settings.averager.recordLength, obj.settings.averager.nbrWaveforms, obj.settings.averager.nbrSegments], 'single');
@@ -265,7 +265,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
             %Total number of buffers to process
             totNumBuffers = round(obj.settings.averager.nbrRoundRobins/obj.buffers.roundRobinsPerBuffer);
             if obj.bufferct >= totNumBuffers
-                if strcmp(obj.acquireMode, 'averager')
+                if strcmp(obj.digitizerMode, 'averager')
                     %Average the summed data
                     obj.data{1} = obj.sumDataA/totNumBuffers;
                     obj.data{2} = obj.sumDataB/totNumBuffers;
@@ -306,7 +306,7 @@ classdef AlazarATS9870 < deviceDrivers.lib.deviceDriverBase
                 setdatatype(bufferOut, 'uint8Ptr', 1, obj.buffers.bufferSize);
 
                 % scale data to floating point using MEX function, i.e. map (0,255) to (-Vs,Vs)
-                if strcmp(obj.acquireMode, 'digitizer')
+                if strcmp(obj.digitizerMode, 'digitizer')
                     if partialBufs
                         [obj.data{1}(obj.idx:obj.idx+bufStride-1), obj.data{2}(obj.idx:obj.idx+bufStride-1)] = ...
                             obj.processBuffer(bufferOut.Value, obj.verticalScale);
