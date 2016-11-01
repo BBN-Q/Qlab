@@ -98,7 +98,7 @@ classdef SingleShotFidelity < handle
                 elseif ExpManager.is_scope(instr)
                     scopeName = instrument{1};
                     % set scope to digitizer mode
-                    instrSettings.(scopeName).acquireMode = 'digitizer';
+                    instrSettings.(scopeName).digitizerMode = 'digitizer';
                     % set digitizer with the appropriate number of segments and
                     % round robins
                     instrSettings.(scopeName).averager.nbrSegments = settings.numShots;
