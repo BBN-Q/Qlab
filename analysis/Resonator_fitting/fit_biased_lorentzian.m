@@ -129,7 +129,7 @@ if parser.Results.Plot
         errorbar(1:M, fit_params(:,2), 1.96*sqrt(fit_vars(:,2)), '.', 'MarkerSize', 15, 'LineWidth', 2);
         ylabel('f_0', 'FontSize', 15); set(gca, 'FontSize', 14); grid on;
         subplot(2,1,2);
-        errorbar(1:M, fit_params(:,3), 1.96*sqrt(fit_vars(:,3)), '.', 'MarkerSize', 15, 'LineWidth', 2);
+        errorbar(1:M, 2*fit_params(:,3), 1.96*sqrt(fit_vars(:,3)), '.', 'MarkerSize', 15, 'LineWidth', 2);
         ylabel('FWHM', 'FontSize', 15); set(gca, 'FontSize', 14); grid on;
         xlabel('Frequency');
         
