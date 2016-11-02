@@ -199,6 +199,8 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
         
         %Set Scan Time
         function obj=set.scanTime(obj, value)
+            assert(isnumeric(value) && (value >= 0) && (value <= 1728000), 'Oops! The scan time must be between 0 and 1728000 s (20 days)');
+            obj.write('SCNSEC %E, value')
         end
 
         function enable_scan(obj)
@@ -208,12 +210,7 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
         function run_scan(obj)
             obj.write('SCNRUN')
         end
-        
-        function scan_time_set(obj, value)
-            assert(isnumeric(value) && (value >= 0) && (value <= 1728000), 'Oops! The scan time must be between 0 and 1728000 s (20 days)');
-            obj.write('SCNSEC %E',value);
-        end
-        
+                
         %Get Scan Time
         function val=get.scanTime(obj)
             val=str2num(obj.query('SCNSEC?'));
@@ -240,20 +237,15 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
         
         %Set Beginning Voltage for DC Scan
         function obj=set.scanDC_start(obj, value)
-            obj.write('SCNPAR REFDc')
-        end
-        
-        function DC_scan_begin_set(obj, value)
             assert(isnumeric(value) && (value >= -5) && (value <= 5), 'Oops! The DC voltage must be between -5 V and 5 V');
             obj.write('SCNDC BEGin, %E',value);
         end
-        
+               
         %Get Beginning Voltage for DC Scan
         function val=get.scanDC_start(obj)
             val=str2num(obj.query('SCNDC? BEGin'));
         end
-        
-        
+
         %Set Ending Voltage for DC Scan
         function obj=set.scanDC_end(obj, value)
             assert(isnumeric(value) && (value >= -5) && (value <= 5), 'Oops! The DC voltage must be between -5 V and 5 V');
