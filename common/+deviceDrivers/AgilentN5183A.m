@@ -18,6 +18,7 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
         alc
         pulse
         pulseSource
+        pulseWidth
     end % end device properties
     
     methods
@@ -50,6 +51,9 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
         end
         function val = get.pulseSource(obj)
             val = obj.query(':pulm:source?;');
+        end
+        function val = get.pulseWidth(obj)
+            val = str2double(obj.query(':PULM:INTernal:PWIDth?'));
         end
         
         % property setters
@@ -116,7 +120,11 @@ classdef (Sealed) AgilentN5183A < deviceDrivers.lib.uWSource & deviceDrivers.lib
             end
             obj.write([':pulm:source ' checkMapObj(value) ';']);
         end
-                
+        function obj = set.pulseWidth(obj, value)
+            assert(isnumeric(value), 'Requires numeric input');
+            obj.write(sprintf(':PULM:INTernal:PWIDth %1.3e', value));
+        end
+        
         function errs=check_errors(obj)
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % Check for errors

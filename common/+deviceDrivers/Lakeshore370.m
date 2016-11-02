@@ -13,7 +13,7 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
-classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.lib.GPIBorVISA
+classdef (Sealed) Lakeshore370 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.lib.GPIBorVISA
     properties (Access = public)
 		leds
     end
@@ -35,7 +35,7 @@ classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDriv
 			% leaving channel as dummy for consistency with Lakeshore 335
 			%assert(chan == 'A' || chan == 'B', 'Channel must be "A" or "B"');
 			%val = str2double(query(instr, sprintf('KRDG? %c', chan)));
-            val = str2double(query(instr, sprintf('RDGK? %c', chan)));
+            val = str2double(query(instr, sprintf('RDGK? %d', chan)));
 		end
 
 		function [val, temp] = get_curve_val(instr, curve, index)
