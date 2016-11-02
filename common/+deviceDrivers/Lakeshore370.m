@@ -1,9 +1,6 @@
-% Class Lakeshore335 - Instrument driver for the Lakeshore 335 Temperature Controller
-
-% Original Author: Colm Ryan (cryan@bbn.com)
-
+% Class Lakeshore370 - Instrument driver for the Lakeshore 370 Temperature Controller
+% Original Author: KC Fong (kc.fong@bbn.com)
 % Copyright 2015 Raytheon BBN Technologies
-%
 % Licensed under the Apache License, Version 2.0 (the "License");
 % you may not use this file except in compliance with the License.
 % You may obtain a copy of the License at
@@ -22,7 +19,7 @@ classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDriv
     end
 
 	methods
-        function instr = Lakeshore335()
+        function instr = Lakeshore370()
         end
 
 		%Getter/setter for front-panel LEDs as boolean
@@ -35,9 +32,10 @@ classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDriv
 		end
 
 		function val = get_temperature(instr, chan)
-			%Get current temperature in Kelvin for a specified channel
-			assert(chan == 'A' || chan == 'B', 'Channel must be "A" or "B"');
-			val = str2double(query(instr, sprintf('KRDG? %c', chan)));
+			% leaving channel as dummy for consistency with Lakeshore 335
+			%assert(chan == 'A' || chan == 'B', 'Channel must be "A" or "B"');
+			%val = str2double(query(instr, sprintf('KRDG? %c', chan)));
+            val = str2double(query(instr, sprintf('RDGK? %c', chan)));
 		end
 
 		function [val, temp] = get_curve_val(instr, curve, index)
@@ -61,9 +59,10 @@ classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDriv
         end
 
         function set_setpoint(instr, chan, value)
-			% Control Setpoint Command, channel: 1 or 2
-			assert(chan == 1 || chan == 2, 'Channel must be 1 or 2');
-            write(instr, sprintf('SETP %d,%.3f', chan, value));
+			% leaving instr and channel as dummy for consistency with Lakeshore 335
+			%assert(chan == 1 || chan == 2, 'Channel must be 1 or 2');
+            %write(instr, sprintf('SETP %d,%.3f', chan, value));
+            write(instr, sprintf('SETP %.3f', value));
 		end
 	end
 
