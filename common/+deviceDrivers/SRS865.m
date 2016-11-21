@@ -200,7 +200,7 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
         %Set Scan Time
         function obj=set.scanTime(obj, value)
             assert(isnumeric(value) && (value >= 0) && (value <= 1728000), 'Oops! The scan time must be between 0 and 1728000 s (20 days)');
-            obj.write('SCNSEC %E, value')
+            obj.write('SCNSEC %E', value)
         end
 
         function enable_scan(obj)
