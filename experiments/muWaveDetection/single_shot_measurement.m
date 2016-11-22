@@ -14,6 +14,7 @@ ExpParams.saveKernel = true;
 ExpParams.optIntegrationTime = true;
 ExpParams.setThreshold = 0; %0 = false; 1 = stream s_x1; 2 = stream s_x2;
 
+ExpParams.zeroMean=0;
 %Whether to auto-enable only the relevant AWGs
 ExpParams.autoSelectAWGs = true;
 
