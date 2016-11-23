@@ -13,8 +13,6 @@ from QGL import *
 q = QubitFactory(args.qubit)
 RamseyStop = args.stop
 RamseyStep = args.step
-print RamseyStep
-print RamseyStop
 Ramsey(q, np.arange(0,RamseyStop/1e9,RamseyStep/1e9), suffix=True) 
 
 
