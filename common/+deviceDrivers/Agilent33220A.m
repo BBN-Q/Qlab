@@ -2,6 +2,7 @@
 
 % Original author: Will Kelly
 % Updated by: Blake Johnson on 10/4/12
+% Updated by: Evan Walsh on 10/19/16
 
 % Copyright 2010 Raytheon BBN Technologies
 %
@@ -20,15 +21,19 @@
 classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
 
     properties (Access = public)
+        output          % output ON (1) or OFF (0)
+        sync            % sync ON (1) or OFF (0)
         outputLoad      % output impedance (1 - 1e-4 Ohms)
         triggerSource   % {IMMediate|EXTernal|BUS}
-        numCycles    % for use in burst mode
+        numCycles       % for use in burst mode
         burstMode       % {TRIGgered|GATed}
         burstState      % {ON|OFF}
         offset          % in Volts
         high            % high voltage
         low             % low voltage
         period          % in seconds
+        frequency       % in Hz
+        rampSymmetry    % 0% ramps from high to low, 100% from low to high, 50% does round trip low to high to low
     end
 
     methods
@@ -42,6 +47,14 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
             obj.write('*TRG');
         end
 
+        function val = get.output(obj)
+            val = obj.query('OUTP?');
+        end
+        
+        function val = get.sync(obj)
+            val = obj.query('OUTP:SYNC?');
+        end
+        
         function val = get.outputLoad(obj)
             temp = obj.query('OUTPut:LOAD?');
             val = str2double(temp);
@@ -75,7 +88,26 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
             temp = obj.query('PULSE:PERIOD?');
             val = str2double(temp);
         end
+        
+        function val = get.frequency(obj)
+            val = str2double(obj.query('FREQ?'));
+        end
+        
+        function val = get.rampSymmetry(obj)
+            val = str2double(obj.query('FUNC:RAMP:SYMM?'));
+        end
 
+        
+        function obj = set.output(obj,value)
+            % Set value = 0 for OFF and value =1 for ON
+            obj.write(['OUTP ' num2str(value)]);
+        end
+        
+        function obj = set.sync(obj,value)
+            % Set value = 0 for OFF and value =1 for ON
+            obj.write(['OUTP:SYNC ' num2str(value)]);
+        end
+        
         function obj = set.outputLoad(obj, value)
             obj.write(['OUTPut:LOAD ' num2str(value)]);
         end
@@ -127,5 +159,14 @@ classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
         function obj = set.period(obj, value)
             obj.write(['PULSE:PERIOD ' num2str(value)]);
         end
+        
+        function obj = set.frequency(obj, value)
+            obj.write(['FREQ ' num2str(value)]);
+        end
+        
+        function obj = set.rampSymmetry(obj, value)
+            obj.write(['FUNC:RAMP:SYMM ' num2str(value)]);
+        end
+        
     end
 end
