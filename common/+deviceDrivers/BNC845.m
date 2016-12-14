@@ -34,13 +34,13 @@ classdef (Sealed) BNC845 < deviceDrivers.lib.uWSource & deviceDrivers.lib.GPIBor
             ct = 0;
             while ct < 10
                 locked = query(obj, 'SOURCE:ROSC:LOCKED?');
-                if locked == '1'
+                if strcmp(locked, '1')
                     break;
                 end
                 pause(0.5);
                 ct = ct + 1;
             end
-            if locked ~= '1'
+            if ~strcmp(locked, '1')
                 warning('BNC %s unlocked.', address);
             end
 
