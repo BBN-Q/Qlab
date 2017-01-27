@@ -1,4 +1,4 @@
-function [filename, segmentPoints] = PiCalChannelSequence(obj, qubit, direction, numPulses, makePlot)
+function [metainfo, segmentPoints] = PiCalChannelSequence(obj, qubit, direction, numPulses, makePlot)
 
 if ~exist('direction', 'var')
     direction = 'X';
@@ -17,6 +17,6 @@ scriptName = fullfile(thisPath, 'PiCal.py');
 nbrRepeats = 2;
 segmentPoints = 1:nbrRepeats*(1+2*numPulses);
 
-filename = obj.getAWGFileNames('PiCal');
+metainfo = obj.getMetaInfo('PiCal');
 
 end
