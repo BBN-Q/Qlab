@@ -255,8 +255,12 @@ classdef MixerOptimizer < handle
                     obj.awg.set_run_mode('CW_WAVEFORM');
 
                     %Reset current mixer correction
-                    set_mixer_amplitude_imbalance(obj.awg, 1)
-                    set_mixer_phase_skew(obj.awg, 0)
+                    set_mixer_amplitude_imbalance(obj.awg, 1);
+                    set_mixer_phase_skew(obj.awg, 0);
+                    
+                    % set the offsets
+                    set_channel_offset(obj.awg, 1, i_offset);
+                    set_channel_offset(obj.awg, 2, q_offset);
 
                     %Get the AWG going
                     obj.awg.run();
