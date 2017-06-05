@@ -110,7 +110,7 @@ function [f0, Qi, Qc, phi, figHandles] = fit_calibrated_resonance(f, scaled_data
     Qi = 1./(1./Qfit - real(1./Qc));  
     Qc = abs(Qc);
     if show_plot
-        if ~isfield(figHandles, 'fit_plot') || ~ishandles(figHandles.('fit_plot'))
+        if ~isfield(figHandles, 'fit_plot') || ~ishandle(figHandles.('fit_plot'))
             figHandles.('fit_plot') = figure('Name', 'Resonator Fit');
         else
             figure(figHandles.('fit_plot')); clf;
