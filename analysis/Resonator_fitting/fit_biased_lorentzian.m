@@ -67,9 +67,14 @@ ssemin = zeros(M,1);
 for idx = 1:M  
     p0 = initial_guess(freq, data(:,idx));
     model = @(p)bias_lorentz_model(p, freq, data(:,idx));
-    [p, ssemin(idx)] = fminsearch(model, p0, options);
-    fit_params(idx, :) = p;
-    fit_vars(idx, :) = lorentz_variance(p, freq, ssemin(idx))';
+    [p, ssemin(idx), exitflag] = fminsearch(model, p0, options);
+    if exitflag == 1
+        fit_params(idx, :) = p;
+        fit_vars(idx, :) = lorentz_variance(p, freq, ssemin(idx))';
+    else
+        fit_params(idx,:) = [NaN, NaN, NaN, NaN, NaN];
+        %fit_vars(idx, :) = [NaN, NaN, NaN, NaN, NaN];
+    end
 end
 
 if parser.Results.Plot 
