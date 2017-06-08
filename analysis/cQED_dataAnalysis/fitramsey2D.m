@@ -1,4 +1,4 @@
-function [T2s, fit_freqs] = fitramsey2D(xdata, data)
+function [T2s, t2error, fit_freqs, fit_freqs_err] = fitramsey2D(xdata, data)
 % Fits 2D Ramsey scan
 %
 % [times, freqs] = fitramsey2D(xdata, ydata)
@@ -24,9 +24,11 @@ if isempty(figHandles)
     figHandles = struct();
 end
 
+% data = data';
 numScans = size(data,1);
 T2s = zeros(numScans, 1);
 fit_freqs = zeros(numScans, 1);
+xdata = xdata';
 
 beta = zeros(1,4);
 
@@ -69,8 +71,9 @@ for cnt=1:numScans
 
     t2 = beta(3);
     ci = nlparci(beta,r,j);
-    t2error = (ci(3,2)-ci(3,1))/2;
+    t2error(cnt) = (ci(3,2)-ci(3,1))/2;
     detuning = abs(beta(4))/2/pi; % in GHz, assuming time is in ns
+    fit_freqs_err(cnt) = abs(ci(3,2)-ci(3,1))/4/pi;
     T2s(cnt) = t2;
     fit_freqs(cnt) = detuning;
 end
