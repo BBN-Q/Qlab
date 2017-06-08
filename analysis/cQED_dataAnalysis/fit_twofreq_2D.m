@@ -1,25 +1,32 @@
-function [T2sA, T2sB, dT2sA, dT2sB, freqsA, freqsB, dfreqsA, dfreqsB] = fit_twofreq_2D(xdata, ydata, filename)
+function [T2sA, T2sB, dT2sA, dT2sB, freqsA, freqsB, dfreqsA, dfreqsB] = fit_twofreq_2D(xpoints, ypoints, data, filename)
 % Fits 2D Ramsey scan
 %
-% xdata : vector of time samples
-% ydata : matrix of data (each Ramsey experiment along a row)
-% filename: data identifier
+% xpoints : vector of time samples
+% ypoints : vector of data scan # 
+% data : matrix of data (each Ramsey experiment along a row)
+% filename : data identifier
 
 % if no input arguments, try to get the data from the current figure
 if nargin < 2
     h = gcf;
-    image = findall(h, 'Type', 'Image');
-    xdata = get(image(1), 'xdata');
-    ydata = get(image(1), 'ydata');
+    % only works with a 2D plot
+    image = findall(h, 'Type', 'Image'); % assuming image type in figure data
+    xpoints = get(image(1), 'xdata');
+    ypoints = get(image(1), 'ydata');
     data = get(image(1), 'CData');
     % save figure title
     plotTitle = get(get(gca, 'Title'), 'String');
+    filename = plotTitle;
 else
     h = figure;
     plotTitle = 'Fit to a Damped Sinusoid';
+    filename = plotTitle;
 end
 
-numScans = size(ydata,1);
+if isempty(filename)
+    filename = 'data_plot';
+end
+numScans = size(ypoints,1);
 
 persistent figHandles
 if isempty(figHandles)
@@ -38,10 +45,10 @@ dfreqsB = zeros(numScans, 1);
 beta = zeros(1,9);
 
 for cnt=1:numScans
-    y = data(cnt,:);
+    y = data(:,cnt);
 
     %Use KT estimation to get initial guesses
-    [freqs, Ts, amps] = KT_estimation(y, xdata(2)-xdata(1),2);
+    [freqs, Ts, amps] = KT_estimation(y, xpoints(2)-xpoints(1),2);
 
     filterIdx = Ts > 0;
     freqs = freqs(filterIdx);
@@ -56,12 +63,20 @@ for cnt=1:numScans
         idx2 = 1;
     end
     
+    % check to see if KT_estimation worked
+    if isempty(freqs) || isempty(Ts) || isempty(amps)
+        warning('KT estimation failed')
+        freqs = [NaN, NaN];
+        Ts = [NaN, NaN];
+        phases = [NaN, NaN];
+        amps = [NaN, NaN];
+    end    
 
     model = @(p, t) p(1) + p(2)*exp(-t/p(3)).*cos(p(4)*t + p(5)) + p(6)*exp(-t/p(7)).*cos(p(8)*t + p(9));
     p = [mean(y) amps(idx1) Ts(idx1) 2*pi*freqs(idx1) phases(idx1) amps(idx2) Ts(idx2) 2*pi*freqs(idx2) phases(idx2)];
 
     try
-        [beta,r,j] = nlinfit(xdata, y, model, p);
+        [beta,r,j] = nlinfit(xpoints, y, model, p);
         t2A = beta(3);
         ci = nlparci(beta,r,j);
         t2Aerror = (ci(3,2)-ci(3,1))/2;
@@ -75,7 +90,7 @@ for cnt=1:numScans
     catch
         warning('2-freq fit failed on step %i.  Trying single-freq fit...\n', cnt)
         %fit single freq.
-        [t2A, detuningA, t2Aerror, detuningAerror] = fitramsey(xdata, ydata);
+        [t2A, detuningA, t2Aerror, detuningAerror] = fitramsey(xpoints, y);
         t2B = t2A; t2Berror = t2Aerror;
         detuningB = detuningA; detuningBerror = detuningAerror;
     end
@@ -113,16 +128,16 @@ for cnt=1:numScans
         figure(figHandles.('Ramsey')); clf;
     end
     subplot(3,1,2:3)
-    plot(xdata,y,'o')
+    plot(xpoints,y,'o')
     hold on
     % construct finer step tdata for plotting fit
-    xdata_finer = linspace(0, max(xdata), 4*length(xdata))';
-    plot(xdata_finer,model(beta,xdata_finer),'-r')
+    xpoints_finer = linspace(0, max(xpoints), 4*length(xpoints))';
+    plot(xpoints_finer,model(beta,xpoints_finer),'-r')
     xlabel('Time [ns]')
     ylabel('<\sigma_z>')
     hold off
     subplot(3,1,1)
-    bar(xdata,r)
+%    bar(xpoints,r)
     axis tight
     xlabel('Time [ns]')
     ylabel('Residuals [V]')
