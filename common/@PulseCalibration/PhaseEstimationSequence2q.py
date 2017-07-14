@@ -18,7 +18,7 @@ amp = args.amplitude
 CRchan = ChannelLibrary.EdgeFactory(qc, qt)
 CRchan.pulseParams['amp'] = amp
 
-pPulse = ZX90_CR(qc,qt)
+pPulse = ZX90_CR(qc,qt).seq
 mPulse = X90m(qt)
 
 # Exponentially growing amplications of the target pulse
