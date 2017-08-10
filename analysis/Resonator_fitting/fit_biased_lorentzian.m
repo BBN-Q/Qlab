@@ -95,8 +95,8 @@ if parser.Results.Plot
         plot(freq, ffit-1.96*pband, 'r--', 'LineWidth', 2);
         grid on;
         xlabel('Frequency', 'FontSize', 15);
-        ylabel('Amplitude', 'FontSize', 15);
-        title(sprintf('Biased Lorentzian Fit, f_0 = %.3f, FWHM = %.3f', fit_params(2), 2*fit_params(3)), 'FontSize', 12);
+        ylabel('Amplitude', 'FontSize', 15);    
+        title(sprintf('Biased Lorentzian Fit, f_0 = %.3f, FWHM = %.5f', fit_params(2), fit_params(3)), 'FontSize', 12);
         legend('Data', 'Fit', '95% C.I.');
         set(gca, 'FontSize', 14);
         
@@ -134,7 +134,7 @@ if parser.Results.Plot
         errorbar(1:M, fit_params(:,2), 1.96*sqrt(fit_vars(:,2)), '.', 'MarkerSize', 15, 'LineWidth', 2);
         ylabel('f_0', 'FontSize', 15); set(gca, 'FontSize', 14); grid on;
         subplot(2,1,2);
-        errorbar(1:M, 2*fit_params(:,3), 1.96*sqrt(fit_vars(:,3)), '.', 'MarkerSize', 15, 'LineWidth', 2);
+        errorbar(1:M, fit_params(:,3), 1.96*sqrt(fit_vars(:,3)), '.', 'MarkerSize', 15, 'LineWidth', 2);
         ylabel('FWHM', 'FontSize', 15); set(gca, 'FontSize', 14); grid on;
         xlabel('Frequency');
         
