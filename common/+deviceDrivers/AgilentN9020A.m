@@ -65,6 +65,18 @@ classdef AgilentN9020A < deviceDrivers.lib.GPIBorEthernet
 
 
     methods (Access = public)
+        function SAFreqRange(obj,range)
+            % For group functions, OBJ is the group object. For
+            % base device functions, OBJ is the device object.
+
+            % Get the interface object
+            interface=get(obj,'interface');
+
+            fprintf(interface,[':SENSe:FREQuency:STARt ', num2str(range(1))]);
+            fprintf(interface,[':SENSe:FREQuency:STOP ', num2str(range(2))]);
+
+        end
+        
         function InitCaptureData(obj)
             % For group functions, OBJ is the group object. For
             % base device functions, OBJ is the device object.
@@ -202,8 +214,12 @@ classdef AgilentN9020A < deviceDrivers.lib.GPIBorEthernet
             %fprintf(interface,':INIT:CONT OFF');
 
             % Trigger the sweep and wait for it to complete
+
             fprintf(interface,':INIT:IMM');
             opc=query(interface,'*OPC?');
+
+            %fprintf(interface,':INIT:IMM');
+            %opc=query(interface,'*OPC?');
 
             % Get the data back
             fprintf(interface,':TRACE:DATA? TRACE1');
@@ -217,6 +233,7 @@ classdef AgilentN9020A < deviceDrivers.lib.GPIBorEthernet
             CF = str2double(query(interface,':FREQ:CENT?'));
             StartF = CF-SPAN/2;
             dF=SPAN./1000;
+
             freq=zeros(SP+1,1);
             for n=1:SP+1
                 freq(n)=StartF+(n-1)*dF;

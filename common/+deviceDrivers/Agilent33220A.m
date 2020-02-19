@@ -2,7 +2,7 @@
 
 % Original author: Will Kelly
 % Updated by: Blake Johnson on 10/4/12
-%L. Ranzani added channel output on/off switch 08/25/2016
+% Updated by: Evan Walsh on 10/19/16
 
 % Copyright 2010 Raytheon BBN Technologies
 %
@@ -18,21 +18,22 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
-classdef (Sealed) TekAFG3102 < deviceDrivers.lib.GPIBorVISA
+classdef (Sealed) Agilent33220A < deviceDrivers.lib.GPIBorEthernet
 
     properties (Access = public)
+        output          % output ON (1) or OFF (0)
+        sync            % sync ON (1) or OFF (0)
         outputLoad      % output impedance (1 - 1e-4 Ohms)
         triggerSource   % {IMMediate|EXTernal|BUS}
-        numCycles    % for use in burst mode
+        numCycles       % for use in burst mode
         burstMode       % {TRIGgered|GATed}
         burstState      % {ON|OFF}
         offset          % in Volts
         high            % high voltage
         low             % low voltage
         period          % in seconds
-        width           % in seconds
-        rmsAmp          % in Volt rms
         frequency       % in Hz
+        rampSymmetry    % 0% ramps from high to low, 100% from low to high, 50% does round trip low to high to low
     end
 
     methods
@@ -45,9 +46,15 @@ classdef (Sealed) TekAFG3102 < deviceDrivers.lib.GPIBorVISA
         function trigger(obj)
             obj.write('*TRG');
         end
-        function obj = outState(obj, ch, value)
-            obj.write(['OUTP' num2str(ch) ':STAT ' value]);
+
+        function val = get.output(obj)
+            val = obj.query('OUTP?');
         end
+        
+        function val = get.sync(obj)
+            val = obj.query('OUTP:SYNC?');
+        end
+        
         function val = get.outputLoad(obj)
             temp = obj.query('OUTPut:LOAD?');
             val = str2double(temp);
@@ -81,10 +88,26 @@ classdef (Sealed) TekAFG3102 < deviceDrivers.lib.GPIBorVISA
             temp = obj.query('PULSE:PERIOD?');
             val = str2double(temp);
         end
-        function val = get.width(obj)
-            temp = obj.query('PULSE:WIDTH?');
-            val = str2double(temp);
+        
+        function val = get.frequency(obj)
+            val = str2double(obj.query('FREQ?'));
         end
+        
+        function val = get.rampSymmetry(obj)
+            val = str2double(obj.query('FUNC:RAMP:SYMM?'));
+        end
+
+        
+        function obj = set.output(obj,value)
+            % Set value = 0 for OFF and value =1 for ON
+            obj.write(['OUTP ' num2str(value)]);
+        end
+        
+        function obj = set.sync(obj,value)
+            % Set value = 0 for OFF and value =1 for ON
+            obj.write(['OUTP:SYNC ' num2str(value)]);
+        end
+        
         function obj = set.outputLoad(obj, value)
             obj.write(['OUTPut:LOAD ' num2str(value)]);
         end
@@ -129,26 +152,20 @@ classdef (Sealed) TekAFG3102 < deviceDrivers.lib.GPIBorVISA
         end
         function obj = set.high(obj, high)
             obj.write(['VOLT:HIGH ' num2str(high)]);
-            obj.write(['SOUR2:VOLT:HIGH ' num2str(high)]);
         end
         function obj = set.low(obj, low)
             obj.write(['VOLT:LOW ' num2str(low)]);
-            obj.write(['SOUR2:VOLT:LOW ' num2str(low)]);
         end
         function obj = set.period(obj, value)
             obj.write(['PULSE:PERIOD ' num2str(value)]);
-            obj.write(['SOURCE2:PULSE:PERIOD ' num2str(value)]);
         end
-        function obj = set.width(obj, value)
-            obj.write(['PULSE:WIDTH ' num2str(value)]);
-            obj.write(['SOURCE2:PULSE:WIDTH ' num2str(value)]);
-        end
-        function obj = set.rmsAmp(obj, value)
-            obj.write(['SOUR1:VOLT:LEV:IMM:AMPL ' num2str(value) 'VRMS']);
-        end
+        
         function obj = set.frequency(obj, value)
-            obj.write(['SOUR1:FREQ:CW ' num2str(value)]);
-            obj.write(['SOUR2:FREQ:CW ' num2str(value)]);
+            obj.write(['FREQ ' num2str(value)]);
+        end
+        
+        function obj = set.rampSymmetry(obj, value)
+            obj.write(['FUNC:RAMP:SYMM ' num2str(value)]);
         end
         
     end
