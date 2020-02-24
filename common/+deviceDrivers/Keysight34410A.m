@@ -17,7 +17,9 @@
 %
 % Description: Instrument driver for the Keysight 34410A DMM.
 % 
-classdef Keysight34410A < deviceDrivers.lib.GPIB
+
+classdef Keysight34410A < deviceDrivers.lib.GPIBorEthernet
+
     
     properties
         CurrentRange
@@ -29,7 +31,17 @@ classdef Keysight34410A < deviceDrivers.lib.GPIB
     
     methods
         function obj = Keysight34410A()
-        end        
+
+        end
+        
+        function Trigger(obj)
+            obj.write(':TRIGger:COUNt 1');
+        end
+        
+        function Initiate(obj)
+            obj.write(':INITiate');
+        end
+
 
         %get value (voltage or current) regardless of mode
         function val = get.value(obj)

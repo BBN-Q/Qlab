@@ -50,11 +50,11 @@ classdef AgilentN9020A < deviceDrivers.lib.GPIBorEthernet
         SAVBWAuto %Sets or queries the resolution bandwidth auto mode
         SAYunits %Sets or queries the y axis units
         WavAcquisitionTime %Set the measurement acquisition time.
-        WavAver %Waveform—Averaging State. Preset is ON.
+        WavAver %Waveformâ€”Averaging State. Preset is ON.
         WavCurrentCapture %Returns the current record that being read from the data capture buffer.
         WavFirstCapture %Specifies the first data record that will be routed to the input to be played back. 
         WavHardAvg %Sets the number of time averages to be made
-        WavIFWidth %Selects either the wideband input hardware or the standard “narrowband” path.
+        WavIFWidth %Selects either the wideband input hardware or the standard â€œnarrowbandâ€ path.
         WavLastCapture %Specifies the last data record that will be routed to the input to be played back.
         WavNextCapture %Specfies the next record that will be read from the data capture buffer.
         WavRBW %Set the resolution bandwidth.
@@ -65,6 +65,18 @@ classdef AgilentN9020A < deviceDrivers.lib.GPIBorEthernet
 
 
     methods (Access = public)
+        function SAFreqRange(obj,range)
+            % For group functions, OBJ is the group object. For
+            % base device functions, OBJ is the device object.
+
+            % Get the interface object
+            interface=get(obj,'interface');
+
+            fprintf(interface,[':SENSe:FREQuency:STARt ', num2str(range(1))]);
+            fprintf(interface,[':SENSe:FREQuency:STOP ', num2str(range(2))]);
+
+        end
+        
         function InitCaptureData(obj)
             % For group functions, OBJ is the group object. For
             % base device functions, OBJ is the device object.
@@ -202,6 +214,12 @@ classdef AgilentN9020A < deviceDrivers.lib.GPIBorEthernet
             %fprintf(interface,':INIT:CONT OFF');
 
             % Trigger the sweep and wait for it to complete
+
+
+            fprintf(interface,':INIT:IMM');
+            opc=query(interface,'*OPC?');
+
+
             %fprintf(interface,':INIT:IMM');
             %opc=query(interface,'*OPC?');
 

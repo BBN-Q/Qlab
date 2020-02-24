@@ -19,13 +19,22 @@
 classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.lib.GPIBorVISA
     properties (Access = public)
 		leds
+    PID
+
     end
 
 	methods
         function instr = Lakeshore335()
         end
-
+        function val = get.PID(instr)
+			val =(query(instr, 'PID?'));
+        end
+        
+     	function set.PID(instr, val)
+			write(instr, ['PID ', val]);
+		end
 		%Getter/setter for front-panel LEDs as boolean
+
 		function val = get.leds(instr)
 			val = logical(str2double(query(instr, 'LEDS?')));
 		end
@@ -71,6 +80,7 @@ classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDriv
 			% Control Setpoint Command, channel: 1 or 2
 			assert(chan == 1 || chan == 2, 'Channel must be 1 or 2');
             write(instr, sprintf('SETP %d,%.3f', chan, value));
+
         end
         function set_pid(instr, chan, pvalue, ivalue, dvalue)
 			% Control Setpoint Command, channel: 1 or 2
