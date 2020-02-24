@@ -153,7 +153,7 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
                 if status ~= 0
                     break
                 end
-                pause(0.1)
+                pause(1)
             end
         end
         
@@ -440,7 +440,7 @@ classdef AgilentE8363C < deviceDrivers.lib.GPIBorEthernet
             obj.sweep_points = value;
         end
         function obj = set.power(obj, value)
-            gpib_string = ':SOURce:POWer:LEVel:IMMediate:AMPLitude';
+            gpib_string = ':SOURce:POWer2:LEVel:IMMediate:AMPLitude';
             
             % Validate input
             check_val = class(value);

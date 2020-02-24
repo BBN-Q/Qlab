@@ -215,12 +215,13 @@ classdef AgilentN9020A < deviceDrivers.lib.GPIBorEthernet
             SPAN = str2double(query(interface,':FREQ:SPAN?'));
             SP = str2double(query(interface,'OBW:SWE:POIN?'));
             CF = str2double(query(interface,':FREQ:CENT?'));
-            StartF = CF-SPAN/2;
-            dF=SPAN./1000;
-            freq=zeros(SP,1);
-            for n=1:SP
-                freq(n)=StartF+(n-1)*dF;
-            end
+            %StartF = CF-SPAN/2;
+            freq = linspace(CF-SPAN/2, CF+SPAN/2, SP);
+            %dF=SPAN./1000;
+            %freq=zeros(SP,1);
+            %for n=1:SP
+            %    freq(n)=StartF+(n-1)*dF;
+            %end
             
             %fprintf(interface,':INIT:CONT ON');
         end
