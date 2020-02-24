@@ -68,6 +68,7 @@ classdef (Sealed) Labbrick64 < deviceDrivers.lib.uWSource
             if ~libisloaded('hidapi')
                 loadlibrary(fullfile(base_path, 'hidapi.dll'), @obj.hidapi_proto);
             end
+            warning('This driver is deprecated and will be removed. Use Labbrick()');
         end
         
         function delete(obj)

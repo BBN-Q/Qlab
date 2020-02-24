@@ -50,11 +50,11 @@ classdef AgilentN9020A < deviceDrivers.lib.GPIBorEthernet
         SAVBWAuto %Sets or queries the resolution bandwidth auto mode
         SAYunits %Sets or queries the y axis units
         WavAcquisitionTime %Set the measurement acquisition time.
-        WavAver %Waveform—Averaging State. Preset is ON.
+        WavAver %Waveformâ€”Averaging State. Preset is ON.
         WavCurrentCapture %Returns the current record that being read from the data capture buffer.
         WavFirstCapture %Specifies the first data record that will be routed to the input to be played back. 
         WavHardAvg %Sets the number of time averages to be made
-        WavIFWidth %Selects either the wideband input hardware or the standard “narrowband” path.
+        WavIFWidth %Selects either the wideband input hardware or the standard â€œnarrowbandâ€ path.
         WavLastCapture %Specifies the last data record that will be routed to the input to be played back.
         WavNextCapture %Specfies the next record that will be read from the data capture buffer.
         WavRBW %Set the resolution bandwidth.
@@ -215,8 +215,10 @@ classdef AgilentN9020A < deviceDrivers.lib.GPIBorEthernet
 
             % Trigger the sweep and wait for it to complete
 
+
             fprintf(interface,':INIT:IMM');
             opc=query(interface,'*OPC?');
+
 
             %fprintf(interface,':INIT:IMM');
             %opc=query(interface,'*OPC?');
@@ -231,13 +233,13 @@ classdef AgilentN9020A < deviceDrivers.lib.GPIBorEthernet
             SPAN = str2double(query(interface,':FREQ:SPAN?'));
             SP = str2double(query(interface,'OBW:SWE:POIN?'));
             CF = str2double(query(interface,':FREQ:CENT?'));
-            StartF = CF-SPAN/2;
-            dF=SPAN./1000;
-
-            freq=zeros(SP+1,1);
-            for n=1:SP+1
-                freq(n)=StartF+(n-1)*dF;
-            end
+            %StartF = CF-SPAN/2;
+            freq = linspace(CF-SPAN/2, CF+SPAN/2, SP);
+            %dF=SPAN./1000;
+            %freq=zeros(SP,1);
+            %for n=1:SP
+            %    freq(n)=StartF+(n-1)*dF;
+            %end
             
             %fprintf(interface,':INIT:CONT ON');
         end

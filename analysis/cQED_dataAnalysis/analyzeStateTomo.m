@@ -1,12 +1,31 @@
-function [rhoLSQ, rhoSDP] = analyzeStateTomo(datastruct, nbrQubits, nbrPulses, nbrCalRepeats)
+function [rhoLSQ, rhoSDP] = analyzeStateTomo(datastruct, nbrQubits, nbrPulses, nbrCalRepeats, varargin)
 % analyzeStateTomo Wrapper function for state tomography.
 %
 % [rhoLSQ, rhoSDP, rhoWizard] = analyzeStateTomo(data, nbrQubits, nbrPulses, nbrCalRepeats)
 %
 % Expects tomography data then calibration data
+% optional argument: newplot. If true, make new figure windows
+% (default = false)
+
+if(isempty(varargin))
+    newplot = false;
+else
+    newplot = varargin{1};
+end
 
 %First separate out the data
 data=datastruct.data;
+
+%For the single qubit/single measurement case data will not be a cell.  For
+%compatability we convert here
+if ~iscell(data)
+    fprintf('Converting data to cells...\n');
+    data = {data};
+    datastruct.realvar = {datastruct.realvar};
+    datastruct.imagvar = {datastruct.imagvar};
+    datastruct.prodvar = {datastruct.prodvar};
+end
+
 numMeas = length(data);
 measOps = cell(numMeas,1);
 tomoData = [];
@@ -42,13 +61,21 @@ varMat = diag(varData);
 %First least squares
 rhoLSQ = QST_LSQ(tomoData, varMat, measPulseMap, measOpMap, measPulseUs, measOps, nbrQubits);
 
-pauliSetPlot(rho2pauli(rhoLSQ));
+if ~newplot
+    pauliSetPlot(rho2pauli(rhoLSQ),'StateTomo_LSQ');
+else
+    pauliSetPlot(rho2pauli(rhoLSQ), newplot);
+end
 title('LSQ Inversion Pauli Decomposition');
 
 %Now constrained SDP
 rhoSDP = QST_SDP_uncorrelated(tomoData, varMat, measPulseMap, measOpMap, measPulseUs, measOps, nbrQubits);
 
-pauliSetPlot(rho2pauli(rhoSDP));
+if ~newplot
+    pauliSetPlot(rho2pauli(rhoSDP),'StateTomo_SDP');
+else
+    pauliSetPlot(rho2pauli(rhoSDP), newplot);
+end
 title('SDP Inversion Pauli Decomposition');
 
 

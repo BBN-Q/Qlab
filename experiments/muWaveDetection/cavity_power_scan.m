@@ -29,7 +29,7 @@ c = 0.2;
 delayedPhases(delayedPhases > c) = delayedPhases(delayedPhases > c)-2*pi;
 
 figure()
-imagesc(freqs/1e9, powerScan-fixedAtten, delayedPhases);
+imagesc(freqs/1e9, powerScan-fixedAtten, 20*log10(abs(rawData)));
 xlabel('Frequency (GHz)');
 ylabel('Drive Power (dBm)');
 

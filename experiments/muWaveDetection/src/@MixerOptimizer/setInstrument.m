@@ -1,6 +1,6 @@
 function setInstrument(obj, amp, phase)
     %Helper function to set the amplitude and phase for IQ calibration
-    
+
     fssb = 2*pi*obj.expParams.SSBFreq;
     samplingRate = obj.awg.samplingRate;
     I_channel = str2double(obj.channelParams.physChan(end-1));
@@ -8,7 +8,7 @@ function setInstrument(obj, amp, phase)
     % restrict phase to range [-pi, pi]
     phase = mod(phase, 2*pi);
     if phase > pi, phase = phase - 2*pi; end
-    
+
     switch class(obj.awg)
         case 'deviceDrivers.Tek5014'
             obj.awg.(['chan_' num2str(I_channel)]).amplitude = amp;
@@ -28,27 +28,15 @@ function setInstrument(obj, amp, phase)
 
             % scale I waveform
             obj.awg.setAmplitude(I_channel, amp);
-            
+
             % generate new Q waveform with phase shift
             qwf = -0.5 * sin(fssb.*tpts + phase);
 
             obj.awg.loadWaveform(Q_channel, qwf);
-            
+
         case 'APS2'
-            % on the APS we generate a new waveform and upload it
-            waveform_length = 1200;
-            timeStep = 1/samplingRate;
-            tpts = timeStep*(0:(waveform_length-1));
-
-            % scale I waveform
-            obj.awg.stop();
-            obj.awg.set_channel_scale(I_channel, amp);
-            
-            % generate new Q waveform with phase shift
-            qwf = -0.5 * sin(fssb.*tpts + phase);
-            
-            obj.awg.load_waveform(Q_channel, qwf);
-            obj.awg.run();
-
+            % on the APS2 we can directly set mixer correction
+            set_mixer_amplitude_imbalance(obj.awg, amp/obj.awgAmp)
+            set_mixer_phase_skew(obj.awg, phase)
     end
 end

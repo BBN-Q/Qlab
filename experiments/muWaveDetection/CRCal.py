@@ -4,19 +4,19 @@ parser = argparse.ArgumentParser()
 parser.add_argument('pyqlabpath', help='path to PyQLab directory')
 parser.add_argument('control', help='control qubit name')
 parser.add_argument('target', help='target qubit name')
-parser.add_argument('CR',help='CR pulse name')
-parser.add_argument('caltype', type=float, help='1 for length, 2 for phase')
+parser.add_argument('caltype', type=float, help='1 for length, 2 for phase, 3 for amplitude')
 parser.add_argument('length', type=float, help='step for length calibration or fixed length in phase calibration (ns)')
+parser.add_argument('amplitude', type=float, help='starting pulse amplitude')
 args = parser.parse_args()
 
-sys.path.append(args.pyqlabpath)
-execfile(os.path.join(args.pyqlabpath, 'startup.py'))
+from QGL import *
 
 q2 = QubitFactory(args.control)
 q1 = QubitFactory(args.target)
-CR = QubitFactory(args.CR)
 
 if args.caltype==1:
-	EchoCRLen(q2,q1,CR,args.length*1e-9*np.arange(2,21),showPlot=False)
+	EchoCRLen(q2,q1,args.length*1e-9*np.arange(1,20),riseFall=40e-9,amp=args.amplitude,showPlot=False)
+elif args.caltype==2:
+	EchoCRPhase(q2,q1,np.linspace(0,2*np.pi,19),length=args.length*1e-9,amp=args.amplitude,riseFall=40e-9, showPlot=False)
 else:
-	EchoCRPhase(q2,q1,CR,np.linspace(0,2*np.pi,19),length=args.length*1e-9, showPlot=False)
+	EchoCRAmp(q2,q1,np.linspace(args.amplitude*0.8,args.amplitude*1.2,19),length=args.length*1e-9,riseFall=40e-9,showPlot=False)

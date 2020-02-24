@@ -1,4 +1,4 @@
-function beta = fit_two_freq(xdata, ydata)
+function [t2, detuning, detuning2] = fit_two_freq(xdata, ydata)
 % Fits ramsey data in time range (x-axis) from start to end using a decaying
 % sinusoid.
 
@@ -10,8 +10,16 @@ if nargin < 2
     ydata = get(line(1), 'ydata');
     % save figure title
     plotTitle = get(get(gca, 'Title'), 'String');
+    %convert xaxis to ns
+    if ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), '\mus')) || ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), 'us'))
+        xdata = xdata*1e3;
+    elseif ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), 'ms'))
+        xdata = xdata*1e6;
+    elseif ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), 's'))
+        xdata = xdata*1e9;
+    end
 else
-    h = figure;
+    h = figure(401); %fixed window for this figure
     plotTitle = '';
 end
 
@@ -40,13 +48,27 @@ idx2 = 2;
 
 fprintf('KT Estimation results\n');
 fprintf('tau1 = %.1fus; f1 = %.0fkHz\n', Ts(idx1)/1e3, freqs(idx1)*1e6);
-fprintf('tau2 = %.1fus; f2 = %.0fkHz\n', Ts(idx2)/1e3, freqs(idx2)*1e6);
-
-% model A + B Exp(-t/C) * cos(D t + F) + G Exp(-t/H) * cos(I t + J)
-model = @(p, t) p(1) + p(2)*exp(-t/p(3)).*cos(p(4)*t + p(5)) + p(6)*exp(-t/p(7)).*cos(p(8)*t + p(9));
-p = [mean(y) amps(idx1) Ts(idx1) 2*pi*freqs(idx1) phases(idx1) amps(idx2) Ts(idx2) 2*pi*freqs(idx2) phases(idx2)];
-
-[beta,r,j] = nlinfit(xdata, y, model, p);
+if length(freqs)>1
+    fprintf('tau2 = %.1fus; f2 = %.0fkHz\n', Ts(idx2)/1e3, freqs(idx2)*1e6);
+    
+    % model A + B Exp(-t/C) * cos(D t + F) + G Exp(-t/H) * cos(I t + J)
+    model = @(p, t) p(1) + p(2)*exp(-t/p(3)).*cos(p(4)*t + p(5)) + p(6)*exp(-t/p(7)).*cos(p(8)*t + p(9));
+    p = [mean(y) amps(idx1) Ts(idx1) 2*pi*freqs(idx1) phases(idx1) amps(idx2) Ts(idx2) 2*pi*freqs(idx2) phases(idx2)];
+    
+    try
+        [beta,r,j] = nlinfit(xdata, y, model, p);
+    catch
+        fprintf('2-freq. fit failed\n')
+        [t2, detuning] = fitramsey(xdata, ydata);
+        detuning2 = detuning;
+        return
+    end
+else
+    fprintf('2-freq. fit failed\n')
+    [t2, detuning] = fitramsey(xdata, ydata);
+    detuning2 = detuning;
+    return
+end
 
 figure(h)
 subplot(3,1,2:3)

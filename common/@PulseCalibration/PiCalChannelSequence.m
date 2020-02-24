@@ -1,4 +1,4 @@
-function [filename, segmentPoints] = PiCalChannelSequence(obj, qubit, direction, numPulses, makePlot)
+function [metainfo, segmentPoints] = PiCalChannelSequence(obj, qubit, direction, numPulses, makePlot)
 
 if ~exist('direction', 'var')
     direction = 'X';
@@ -12,11 +12,11 @@ end
 
 [thisPath, ~] = fileparts(mfilename('fullpath'));
 scriptName = fullfile(thisPath, 'PiCal.py');
-[status, result] = system(sprintf('python "%s" "%s" %s %s %d %f', scriptName, getpref('qlab', 'PyQLabDir'), qubit, direction, numPulses, obj.channelParams.piAmp), '-echo');
+[status, result] = system(sprintf('python "%s" %s %s %d %f', scriptName, qubit, direction, numPulses, obj.channelParams.piAmp), '-echo');
 
 nbrRepeats = 2;
 segmentPoints = 1:nbrRepeats*(1+2*numPulses);
 
-filename = obj.getAWGFileNames('PiCal');
+metainfo = obj.getMetaInfo('PiCal');
 
 end

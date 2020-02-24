@@ -1,18 +1,36 @@
-function [t2, detuning] = fitramsey(xdata, ydata)
+function [t2, detuning, t2error, detuningError] = fitramsey(xdata, ydata)
 % Fits ramsey data in time range (x-axis) from start to end using a decaying
 % sinusoid.
 
 % if no input arguments, try to get the data from the current figure
-if nargin < 2
+persistent figHandles
+if isempty(figHandles)
+    figHandles = struct();
+end
+
+if nargin < 2 
     h = gcf;
     line = findall(h, 'Type', 'Line');
     xdata = get(line(1), 'xdata');
     ydata = get(line(1), 'ydata');
     % save figure title
     plotTitle = get(get(gca, 'Title'), 'String');
+    %convert xaxis to ns
+    if ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), '\mus')) || ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), 'us'))
+        xdata = xdata*1e3;
+    elseif ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), 'ms'))
+        xdata = xdata*1e6;
+    elseif ~isempty(strfind(get(get(gca, 'xlabel'), 'String'), 's'))
+        xdata = xdata*1e9;
+    end
 else
-    h = figure;
-    plotTitle = 'Fit to a Damped Sinusoid';
+    if ~isfield(figHandles, 'Ramsey') || ~ishandle(figHandles.('Ramsey'))
+        figHandles.('Ramsey') = figure('Name', 'Ramsey');
+        h = figHandles.('Ramsey');
+    else
+        h = figure(figHandles.('Ramsey')); clf;
+    end
+    plotTitle = 'Fit to a damped sinusoid';
 end
 
 y = ydata(:);

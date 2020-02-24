@@ -1,18 +1,39 @@
-function [T2s, freqs] = fitramsey2D(xdata, ydata)
+function [T2s, t2error, fit_freqs, fit_freqs_err] = fitramsey2D(xdata, data)
 % Fits 2D Ramsey scan
 %
 % [times, freqs] = fitramsey2D(xdata, ydata)
 % xdata : vector of time samples
 % ydata : matrix of data (each Ramsey experiment along a row)
 
-numScans = size(ydata,1);
+% if no input arguments, try to get the data from the current figure
+if nargin < 2
+    h = gcf;
+    image = findall(h, 'Type', 'Image');
+    xdata = get(image(1), 'xdata');
+    ydata = get(image(1), 'ydata');
+    data = get(image(1), 'CData');
+    % save figure title
+    plotTitle = get(get(gca, 'Title'), 'String');
+else
+    h = figure;
+    plotTitle = 'Fit to a Damped Sinusoid';
+end
+
+persistent figHandles
+if isempty(figHandles)
+    figHandles = struct();
+end
+
+% data = data';
+numScans = size(data,1);
 T2s = zeros(numScans, 1);
-freqs = zeros(numScans, 1);
+fit_freqs = zeros(numScans, 1);
+xdata = xdata';
 
 beta = zeros(1,4);
 
 for cnt=1:numScans
-    y = ydata(cnt,:);
+    y = data(cnt,:);
 
     %Use KT estimation to get initial guesses
     [freqs, Ts, amps] = KT_estimation(y, xdata(2)-xdata(1),2);
@@ -23,7 +44,11 @@ for cnt=1:numScans
     p = [mean(y) abs(amps(biggestC)) Ts(biggestC) 2*pi*freqs(biggestC) 0];
     [beta,r,j] = nlinfit(xdata, y, rabif, p);
 
-    figure(100)
+    if ~isfield(figHandles, 'Ramsey') || ~ishandle(figHandles.('Ramsey'))
+        figHandles.('Ramsey') = figure('Name', 'Ramsey');
+    else
+        figure(figHandles.('Ramsey')); clf;
+    end
     subplot(3,1,2:3)
     plot(xdata,y,'o')
     hold on
@@ -46,8 +71,9 @@ for cnt=1:numScans
 
     t2 = beta(3);
     ci = nlparci(beta,r,j);
-    t2error = (ci(3,2)-ci(3,1))/2;
+    t2error(cnt) = (ci(3,2)-ci(3,1))/2;
     detuning = abs(beta(4))/2/pi; % in GHz, assuming time is in ns
+    fit_freqs_err(cnt) = abs(ci(3,2)-ci(3,1))/4/pi;
     T2s(cnt) = t2;
-    freqs(cnt) = detuning;
+    fit_freqs(cnt) = detuning;
 end

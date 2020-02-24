@@ -36,6 +36,9 @@ classdef (Sealed) Lakeshore370 < deviceDrivers.lib.deviceDriverBase & deviceDriv
 			%assert(chan == 'A' || chan == 'B', 'Channel must be "A" or "B"');
 			%val = str2double(query(instr, sprintf('KRDG? %c', chan)));
             val = str2double(query(instr, sprintf('RDGK? %d', chan)));
+
+            %val = str2double(query(instr, sprintf('RDGR? %d', chan)));
+
 		end
 
 		function [val, temp] = get_curve_val(instr, curve, index)

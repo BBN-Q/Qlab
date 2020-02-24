@@ -4,7 +4,7 @@ function [cost, J] = pi2ObjectiveFunction(obj, x, direction)
     fprintf('pi2Amp: %.4f, offset: %.4f\n', pi2Amp, offset);
     % create sequence
     obj.channelParams.pi2Amp = pi2Amp;
-    [filenames, segmentPoints] = obj.Pi2CalChannelSequence(obj.settings.Qubit, direction, obj.settings.NumPi2s, false);
+    [metainfo, segmentPoints] = obj.Pi2CalChannelSequence(obj.settings.Qubit, direction, obj.settings.NumPi2s, false);
     
     % set channel offset
     switch direction
@@ -18,7 +18,7 @@ function [cost, J] = pi2ObjectiveFunction(obj, x, direction)
     if ~obj.testMode
         obj.channelParams.(chan) = offset;
         % load sequence
-        obj.loadSequence(filenames, 1);  
+        obj.loadSequence(metainfo);
     end
     
     % measure

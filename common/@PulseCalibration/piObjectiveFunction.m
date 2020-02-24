@@ -4,7 +4,7 @@ function [cost, J] = piObjectiveFunction(obj, x, direction)
     fprintf('piAmp: %.4f, offset: %.4f\n', piAmp, offset);
     % create sequence
     obj.channelParams.piAmp = piAmp;
-    [filenames segmentPoints] = obj.PiCalChannelSequence(obj.settings.Qubit, direction, obj.settings.NumPis);
+    [metainfo, segmentPoints] = obj.PiCalChannelSequence(obj.settings.Qubit, direction, obj.settings.NumPis);
     
     % set channel offset
     switch direction
@@ -18,7 +18,7 @@ function [cost, J] = piObjectiveFunction(obj, x, direction)
     if ~obj.testMode
         obj.channelParams.(chan) = offset;
         % load sequence
-        obj.loadSequence(filenames, 1);  
+        obj.loadSequence(metainfo);
     end
     
     % measure

@@ -1,4 +1,5 @@
 function out = SweepFactory(settings, instruments)
-    sweepType = settings.type;
-    out = sweeps.(sweepType)(settings, instruments);
+    import sweeps.*
+    sweepType = str2func(settings.type);
+    out = sweepType(settings, instruments);
 end

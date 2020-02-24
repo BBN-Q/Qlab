@@ -61,9 +61,7 @@ classdef AWGChannel < sweeps.Sweep
                     case {'TekAWG', 'deviceDrivers.APS', 'APS'}
                         obj.Instr.setAmplitude(ch, obj.points(index));
                     case 'APS2'
-                        stop(obj.Instr);
                         set_channel_scale(obj.Instr, ch, obj.points(index));
-                        run(obj.Instr);
                     otherwise
                         error('Unrecognized AWG type');
                 end

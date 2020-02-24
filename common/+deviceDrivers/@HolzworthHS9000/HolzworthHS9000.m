@@ -85,9 +85,13 @@ classdef HolzworthHS9000 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.li
             % this method is non-static because it depends on the DLL being
             % loaded
             deviceStr = calllib('HolzworthMulti', 'getAttachedDevices');
-            % split result on commas
-            devices = textscan(deviceStr, '%s', 'Delimiter', ',');
-            devices = devices{1};
+            if ~isempty(deviceStr)
+                % split result on commas
+                devices = textscan(deviceStr, '%s', 'Delimiter', ',');
+                devices = devices{1};
+            else
+                devices = {};
+            end
         end
         
         function out = unique_serials(obj)
@@ -134,7 +138,7 @@ classdef HolzworthHS9000 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.li
         end
         
         function set.frequency(obj, freq)
-            obj.write(obj.channel, [':FREQ:' num2str(freq) 'GHz']);
+            obj.write(obj.channel, [':FREQ:' num2str(freq, '%.12f') 'GHz']); % 0.001Hz resolution according to datasheet
             obj.frequency = freq;
         end
         

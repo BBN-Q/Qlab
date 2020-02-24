@@ -19,13 +19,13 @@
 classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDrivers.lib.GPIBorVISA
     properties (Access = public)
 		leds
-        PID
+    PID
+
     end
 
 	methods
         function instr = Lakeshore335()
         end
-        
         function val = get.PID(instr)
 			val =(query(instr, 'PID?'));
         end
@@ -34,7 +34,7 @@ classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDriv
 			write(instr, ['PID ', val]);
 		end
 		%Getter/setter for front-panel LEDs as boolean
-        
+
 		function val = get.leds(instr)
 			val = logical(str2double(query(instr, 'LEDS?')));
 		end
@@ -47,8 +47,15 @@ classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDriv
 			%Get current temperature in Kelvin for a specified channel
 			assert(chan == 'A' || chan == 'B', 'Channel must be "A" or "B"');
 			val = str2double(query(instr, sprintf('KRDG? %c', chan)));
-		end
+        end
 
+		function val = get_resistance(instr, chan)
+			%Get current temperature in Kelvin for a specified channel
+			assert(chan == 'A' || chan == 'B', 'Channel must be "A" or "B"');
+			val = str2double(query(instr, sprintf('SRDG? %c', chan)));
+		end
+        
+        
 		function [val, temp] = get_curve_val(instr, curve, index)
 			%Get a calibration curve tuple for a curve at a specified index
 			strs = strsplit(query(instr, sprintf('CRVPT? %d,%d'), curve, index), ',');
@@ -73,6 +80,12 @@ classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDriv
 			% Control Setpoint Command, channel: 1 or 2
 			assert(chan == 1 || chan == 2, 'Channel must be 1 or 2');
             write(instr, sprintf('SETP %d,%.3f', chan, value));
+
+        end
+        function set_pid(instr, chan, pvalue, ivalue, dvalue)
+			% Control Setpoint Command, channel: 1 or 2
+			assert(chan == 1 || chan == 2, 'Channel must be 1 or 2');
+            write(instr, sprintf('PID %d,%.1f,%.1f,%.1f', chan, pvalue, ivalue, dvalue));
 		end
 	end
 

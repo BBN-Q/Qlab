@@ -4,6 +4,17 @@ typedef unsigned char uint8_t;
 
 /*
  dataA, dataB = processBufferSum(buffer, bufferDims, verticalScale)
+
+ Compilation instructions:
+
+ GCC
+ mex COPTIMFLAGS="-O2 -DNDEBUG -ftree-vectorize -ftree-vectorizer-verbose=2 -ffast-math -msse2" processBufferAvg.c
+
+ ICC
+ mex COMPFLAGS="$COMPFLAGS /Qvec-report:2" processBufferAvg.c
+
+ Clang
+ mex COPTIMFLAGS="-O3 -DNDEBUG -ffast-math -Rpass=loop-vectorize -Rpass-analysis=loop-vectorize" processBufferAvg.c
  */
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {

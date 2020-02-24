@@ -1,13 +1,11 @@
 import argparse
 import sys, os
 parser = argparse.ArgumentParser()
-parser.add_argument('pyqlabpath', help='path to PyQLab directory')
 parser.add_argument('qubit', help='qubit name')
 parser.add_argument('--deltas', type=float, required=True, nargs='+', help='list of drag scaling values')
 args = parser.parse_args()
 
-sys.path.append(args.pyqlabpath)
-execfile(os.path.join(args.pyqlabpath, 'startup.py'))
+from QGL import *
 
 q = QubitFactory(args.qubit)
 
