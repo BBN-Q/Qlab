@@ -17,7 +17,7 @@
 %
 % Description: Instrument driver for the Keysight 34410A DMM.
 % 
-classdef Keysight34410A < deviceDrivers.lib.GPIB
+classdef Keysight34410A < deviceDrivers.lib.GPIBorEthernet
     
     properties
         CurrentRange
