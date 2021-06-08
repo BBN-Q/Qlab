@@ -3,6 +3,8 @@
 % Original Author for SR830: Colm Ryan (colm.ryan@bbn.com)
 % Editor for SR865: Evan Walsh (evanwalsh@seas.harvard.edu)
 
+% Revised May 2021 by Caleb Fried - added Ethernet compatability
+
 % Copyright 2013 Raytheon BBN Technologies
 %
 % Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +19,7 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
-classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
+classdef (Sealed) SRS865 < deviceDrivers.lib.GPIBorTelnet
     
     properties
         timeConstant % time constant for the filter in seconds
@@ -79,7 +81,7 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
             val = str2double(obj.query('FREQ?'));
         end
         function obj = set.sineFreq(obj, value)
-            assert(isnumeric(value) && (value >= 0.001) && (value <= 2000000), 'Oops! The reference frequency must be between 1 mHz and 2 MHz');
+            assert(isnumeric(value) && (value >= 0.001) && (value <= 200000000), 'Oops! The reference frequency must be between 1 mHz and 2 MHz');
             obj.write('FREQ %E',value);
         end
         
@@ -255,8 +257,8 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIB
         %Get Ending Votlage for DC Scan
         function val=get.scanDC_end(obj)
             val=str2num(obj.query('SCNDC? END'));
-            assert(isnumeric(value) && (value >= -5) && (value <= 5), 'Oops! The DC voltage must be between -5 V and 5 V');
-            obj.write('SCNDC END, %E',value);
+            assert(isnumeric(val) && (val >= -5) && (val <= 5), 'Oops! The DC voltage must be between -5 V and 5 V');
+            obj.write('SCNDC END, %E',val);
         end
         
         function clrbuff(obj)
