@@ -61,7 +61,12 @@ classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDriv
 			strs = strsplit(query(instr, sprintf('CRVPT? %d,%d'), curve, index), ',');
 			val = str2double(strs{1});
 			temp = str2double(strs{2});
-		end
+        end
+        
+        function val = get_heater(instr, chan)
+            %Gets the heater output in % for channel 1 or 2.
+            
+        end
 
 		function set_curve_val(instr, curve, index, val, temp)
 			%Set a calibration curve (val, temp) tuple for a curve at a specified index
@@ -86,7 +91,12 @@ classdef (Sealed) Lakeshore335 < deviceDrivers.lib.deviceDriverBase & deviceDriv
 			% Control Setpoint Command, channel: 1 or 2
 			assert(chan == 1 || chan == 2, 'Channel must be 1 or 2');
             write(instr, sprintf('PID %d,%.1f,%.1f,%.1f', chan, pvalue, ivalue, dvalue));
-		end
+        end
+        function val = get_pid(instr, chan)
+            % Get the PID values for channel 1 or 2
+            assert(chan == 1 || chan == 2, 'Channel must be 1 or 2');
+			val = query(instr, sprintf('PID? %d', chan));
+        end
 	end
 
 end
