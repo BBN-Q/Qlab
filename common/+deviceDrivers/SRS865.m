@@ -19,7 +19,7 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
-classdef (Sealed) SRS865 < deviceDrivers.lib.GPIBorTelnet
+classdef (Sealed) SRS865 < deviceDrivers.lib.GPIBorVISA
     
     properties
         timeConstant % time constant for the filter in seconds
@@ -90,7 +90,7 @@ classdef (Sealed) SRS865 < deviceDrivers.lib.GPIBorTelnet
             val = str2double(obj.query('SLVL?'));
         end
         function obj = set.sineAmp(obj, value)
-            assert(isnumeric(value) && (value >= 0.000000001) && (value <= 2.000000000), 'Oops! The sine amplitude must be between 1 nV and 2 V');
+            assert(isnumeric(value) && (value >= 0.00000000) && (value <= 2.000000000), 'Oops! The sine amplitude must be between 1 nV and 2 V');
             obj.write('SLVL %E',value);
         end
         
