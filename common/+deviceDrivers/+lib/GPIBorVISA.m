@@ -32,11 +32,16 @@ classdef GPIBorVISA < hgsetget
         function connect(obj, address)
             % determine whether to use GPIB or VISA by the form of the
             % address
+            ip_re = '\d+\.\d+\.\d+\.\d+';
+            gpib_re = '^\d+$';
             % Recognize VISA addresses by the '::' separator
             if ischar(address) && ~isempty(strfind(address, '::'))
                 % create a VISA object
                 obj.interface = visa('ni', address);
-            elseif ischar(address)
+            elseif ischar(address) && ~isempty(regexp(address, ip_re, 'once'))
+                % Create a TCPIP object.
+                obj.interface = visa('ni',strcat('TCPIP::',address,'::INSTR'));
+            elseif ischar(address) && ~isempty(regexp(address, gpib_re, 'once'))
                 % create a GPIB object
                 obj.interface = gpib('ni', 0, str2double(address));
             elseif isnumeric(address)
@@ -56,8 +61,8 @@ classdef GPIBorVISA < hgsetget
             delete(obj.interface);
         end
         
-        function write(obj, string)
-            fprintf(obj.interface, string);
+        function write(obj, varargin)
+            fprintf(obj.interface, sprintf(varargin{:}));
         end
         
         function val = query(obj, varargin)
