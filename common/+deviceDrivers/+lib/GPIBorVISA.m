@@ -33,7 +33,7 @@ classdef GPIBorVISA < hgsetget
             % determine whether to use GPIB or VISA by the form of the
             % address
             ip_re = '\d+\.\d+\.\d+\.\d+';
-            gpib_re = '^\d+$';
+%             gpib_re = '^\d+$';
             % Recognize VISA addresses by the '::' separator
             if ischar(address) && ~isempty(strfind(address, '::'))
                 % create a VISA object
@@ -41,7 +41,7 @@ classdef GPIBorVISA < hgsetget
             elseif ischar(address) && ~isempty(regexp(address, ip_re, 'once'))
                 % Create a TCPIP object.
                 obj.interface = visa('ni',strcat('TCPIP::',address,'::INSTR'));
-            elseif ischar(address) && ~isempty(regexp(address, gpib_re, 'once'))
+            elseif ischar(address)
                 % create a GPIB object
                 obj.interface = gpib('ni', 0, str2double(address));
             elseif isnumeric(address)
